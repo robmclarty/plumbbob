@@ -10,3 +10,7 @@ coverage/
 .claude/settings.local.json
 .pnpm-store/
 tsconfig.tsbuildinfo
+
+# Plumbline sidecar: never tracked (D17 — a tracked sidecar lets `revert`
+# destroy park-list lines; checkpoint commits must stay clean of sidecar churn)
+.plumbline/
