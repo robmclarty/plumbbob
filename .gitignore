@@ -1,0 +1,12 @@
+node_modules/
+/dist
+.check/
+.fallow/
+.stryker-tmp/
+stryker.incremental.json
+coverage/
+*.log
+.DS_Store
+.claude/settings.local.json
+.pnpm-store/
+tsconfig.tsbuildinfo
