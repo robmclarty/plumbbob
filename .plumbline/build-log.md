@@ -1,6 +1,6 @@
 # Build log — Implement Plumbline v1 from the spec
 
-**Current step:** none (DESIGN — open questions pending) · **STATE:** DESIGN
+**Current step:** none (DESIGN — decided; ready for `build 1`) · **STATE:** DESIGN
 **Heavy check:** `pnpm check`
 
 ## Steps
@@ -56,3 +56,8 @@ Triage results this boundary:
   session gets a retrofitted baseline (step 5), Q3 narrowed to its true
   residual after C4 forced D17 (sidecar untracked). Now 17 decisions,
   8 constraints, 8 steps; resolve Q1–Q4 + Q7c before `build 1`.
+- 2026-06-10 — All seven open questions resolved interactively with Rob, each
+  on the proposed default → D18–D26. Three deliberate spec deviations on
+  record (main-tree lock during SPIKE, archive local-only, no tsc in light
+  tier). DESIGN decide-phase complete; next act is `build 1` (steps 1–4 run
+  on the heavy gate alone until the hooks land in step 5).

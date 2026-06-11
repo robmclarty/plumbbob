@@ -23,7 +23,7 @@ check`); from step 5's live probe onward, the tool enforces its own build. -->
   shows the muzzle blocking an out-of-seam edit; `pnpm check` is green.
 - **Explicitly NOT doing:** Ridgeline integration; archive indexing/retrieval;
   plugin packaging (it would rename `/park` to `/plumbline:park`); Windows;
-  multi-user; an adversarial-proof muzzle (it is a fence, not a wall — see Q4);
+  multi-user; an adversarial-proof muzzle (it is a fence, not a wall — D21);
   spike timebox enforcement.
 
 ## Architecture sketch
@@ -42,7 +42,7 @@ check`); from step 5's live probe onward, the tool enforces its own build. -->
         .plumbline/ sidecar  ◄── greps ──  hooks (POSIX sh, global,
           STATE SEAM STEP checkpoints      session-gated: no STATE → allow)
           intent.md build-log.md             pre-edit.sh   muzzle+seam-guard
-          report.md archive/                 bash-guard.sh per Q4
+          report.md archive/                 bash-guard.sh per D21
                  │                           post-edit.sh  light feedback
                  ▼
         git — additive only: baseline, `plumbline: step n done`
@@ -72,7 +72,7 @@ check`); from step 5's live probe onward, the tool enforces its own build. -->
   always blocked — *because* suffix matching would whitelist archived copies.
 - D7: A `STEP` sidecar file holds the in-flight step number — *because* `done`
   needs it and control state must never require markdown parsing.
-- D8: `done` stages `git add -A` (sidecar invisible to git per Q3) and warns,
+- D8: `done` stages `git add -A` (sidecar invisible to git per D17) and warns,
   listing any committed paths outside the SEAM — *because* the checkpoint must
   capture the whole step while still surfacing scope drift.
 - D9: SPIKE allows edits with no seam constraint (mode table, muzzle rule, and
@@ -112,8 +112,50 @@ check`); from step 5's live probe onward, the tool enforces its own build. -->
 - D17: `.plumbline/` is untracked: `start` appends it to `.git/info/exclude`
   — *because* a tracked sidecar makes C4 unsatisfiable (`reset --hard` would
   wipe every park line and intent edit made after the checkpoint — destroying
-  exactly the captured attention the revert exists to protect). The residual
-  archive question stays open as Q3.
+  exactly the captured attention the revert exists to protect). The archive
+  consequence is D20.
+- D18: Spike verbs: `plumbline spike "<slug>"` creates sibling worktrees +
+  `spike/<slug>-<opt>` branches OUTSIDE the repo root (hook-dormant by
+  construction — "throwaway" freedom is free) and sets STATE=SPIKE;
+  `plumbline spike done` removes all spike worktrees and branches and returns
+  to DESIGN with a verdict reminder. The MAIN tree behaves like DESIGN during
+  SPIKE (deliberate deviation from the mode table's main-tree "✅ throwaway")
+  — *because* the experimenting happens in the worktrees, and locking the main
+  tree protects the half-done step while you compare.
+- D19: FINISH survives as a real state, entered by a small sanctioned verb
+  (working name `plumbline wrap`; final name decided at step 6) that the
+  report skill instructs you to run. Muzzle whitelist:
+  `<root>/.plumbline/{intent,build-log,report}.md` writable in every state;
+  `docs/**` writable only in FINISH; `archive/**` never — *because* FINISH
+  earns its existence as the one state where documentation can be projected.
+- D20: The archive is local-only in v1 and the README says so plainly —
+  *because* D17 keeps the sidecar out of git; a `finish --commit-archive`
+  flag is parked as a future Plumbline.
+- D21: The muzzle is an assistive fence, not a wall, and the README declares
+  it: `bash-guard.sh` blocks Bash commands that touch `.plumbline/STATE` or
+  `SEAM` or invoke `plumbline mode`, plus obvious write patterns (`>`, `>>`,
+  `tee`, `sed -i`, `git apply`) outside BUILD/SPIKE; transition verbs refuse
+  under the CLAUDECODE env var (park exempt); the residual gap is documented
+  — *because* full shell-write detection is unsolvable and aggressive
+  filtering taxes legitimate mechanism work.
+- D22: `start` refuses on a dirty tree; `--allow-dirty` records HEAD anyway
+  with a loud warning that revert-to-baseline discards the dirty work —
+  *because* safety by default, escape hatch for the experienced.
+- D23: SEAM grammar: exact repo-relative file lines, plus one extension — a
+  line ending in `/` grants that directory by prefix match — *because* steps
+  that legitimately spawn files (tests, fixtures) shouldn't demand
+  clairvoyance, while src/ paths stay named decisions.
+- D24: The heavy check command comes from a `check=` line in
+  `.plumbline/config`, written by `start` (default `pnpm run check`, warn if
+  the target repo lacks it) — *because* review/done must gate in non-pnpm
+  repos too.
+- D25: Light tier runs file-scoped oxlint + ast-grep only; tsc is deferred to
+  the heavy tier (deliberate deviation from the spec's "type errors compound")
+  — *because* tsc has no true single-file mode and seconds-per-edit churn
+  isn't "light"; a tsc-daemon revisit is parked as a future Plumbline.
+- D26: This repo's `pnpm check` gates on knip; fallow stays out-of-band as the
+  MCP server for interactive audits — *because* the two overlap on dead-code
+  detection and fallow's gate invocation is unspecified.
 
 ## Constraints
 
@@ -136,7 +178,7 @@ check`); from step 5's live probe onward, the tool enforces its own build. -->
 
 1. [ ] Toolchain bootstrap: heavy gate green, CLI stub, first commit —
    **done when:** `pnpm install` and `pnpm check` (tsc, oxlint, ast-grep,
-   vitest, knip, markdownlint; fallow per the Q7c ruling) exit 0;
+   vitest, knip, markdownlint; fallow excluded per D26) exit 0;
    `node src/cli.ts help` prints the verb table; `git rev-parse --verify HEAD`
    resolves (initial commit exists)
    - seam: `package.json`, `pnpm-lock.yaml`, `.gitignore`, `tsconfig.json`,
@@ -146,12 +188,13 @@ check`); from step 5's live probe onward, the tool enforces its own build. -->
 2. [ ] Sidecar + git lib and session verbs: `start`, `status`, `mode`, `park`
    — **done when:** vitest passes in fixture repos: `start` scaffolds
    `.plumbline/` at the git toplevel (STATE=DESIGN, templates copied,
-   `baseline <sha>` line 1 of checkpoints, sidecar excluded per Q3), refuses
+   `baseline <sha>` line 1 of checkpoints, sidecar excluded per D17), refuses
    on dirty tree / existing session / non-git dir, re-scaffolds after finish
    without touching `archive/`; `park` appends one raw line under the Park
-   list; `status` prints state or NO ACTIVE SESSION; the Q4 ruling for
-   model-invoked verbs is enforced once in dispatch (transition verbs refuse
-   under CLAUDECODE, park exempt) and tested
+   list; `status` prints state or NO ACTIVE SESSION; D21's model-invoked-verb
+   refusal is enforced once in dispatch (transition verbs refuse under
+   CLAUDECODE, park exempt) and tested; `start` writes the D24 `check=` config
+   line and refuses on dirty tree per D22
    - seam: `src/lib/sidecar.ts`, `src/lib/git.ts`, `src/verbs/start.ts`,
      `src/verbs/status.ts`, `src/verbs/mode.ts`, `src/verbs/park.ts`,
      `src/cli.ts`, `templates/intent.md`, `templates/build-log.md`,
@@ -172,13 +215,14 @@ check`); from step 5's live probe onward, the tool enforces its own build. -->
      `src/verbs/review.ts`, `src/verbs/done.ts`, `src/verbs/revert.ts`,
      `src/cli.ts`, `test/intent.test.ts`, `test/build-loop.test.ts`
 4. [ ] Hooks: `pre-edit.sh` (muzzle+seam-guard combined), `bash-guard.sh`
-   (per Q4), `post-edit.sh` (light feedback) — **done when:** hook tests pass
+   (per D21), `post-edit.sh` (light feedback per D25) — **done when:** hook tests pass
    via synthetic stdin JSON: dormant allow with no sidecar; DESIGN blocks a
    src/ write with a model-directed park message (exit 2); anchored doc
    whitelist allows the two docs in every state and blocks `archive/**`; BUILD
    allows an absolute path matching a SEAM line from a subdirectory cwd and
-   blocks out-of-seam, with matching semantics per the Q6 ruling (exact lines,
-   plus `dir/` prefix if adopted); MultiEdit/NotebookEdit matched;
+   blocks out-of-seam, with matching semantics per D23 (exact lines plus
+   `dir/` prefix grants); the D19 whitelist verified per state;
+   `bash-guard.sh` behavior per D21; MultiEdit/NotebookEdit matched;
    `post-edit.sh` always exits 0, reports file-scoped lint failures via
    additionalContext, no-ops when tools are absent
    - seam: `hooks/pre-edit.sh`, `hooks/bash-guard.sh`, `hooks/post-edit.sh`,
@@ -200,8 +244,8 @@ check`); from step 5's live probe onward, the tool enforces its own build. -->
    report (spec: "finish lists the SHAs in the report"), archives intent +
    build-log + report to `archive/<date>-<slug>/`, clears actives, deletes
    STATE/SEAM/STEP last, leaves git untouched; second session archives
-   alongside the first; FINISH entry and spike verb behavior match the Q1
-   ruling
+   alongside the first; FINISH entry per D19 (`wrap` verb) and spike
+   lifecycle per D18 (sibling worktrees, main tree DESIGN-locked)
    - seam: `src/verbs/finish.ts`, `src/verbs/spike.ts`, `src/lib/archive.ts`,
      `src/cli.ts`, `test/finish.test.ts`, `test/spike.test.ts`
 7. [ ] The five skills with enforced contracts — **done when:**
@@ -226,72 +270,35 @@ check`); from step 5's live probe onward, the tool enforces its own build. -->
    repeat-byte-identical), warns on PATH/restart; `test/e2e.test.ts` drives a
    full session in a fixture repo (start → build 1 → hook blocks out-of-seam,
    allows in-seam → done → park → report → finish → archive populated);
-   README documents install, the as-built verb table, and the residual gaps
-   ratified in Q4/Q7; this session itself is finished through its own gate
+   README documents install, the as-built verb table, and the ratified
+   residual gaps (D20 archive local-only, D21 fence-not-wall, D25 tsc
+   deferral); this session itself is finished through its own gate
    - seam: `src/verbs/setup.ts`, `src/lib/settings.ts`, `src/cli.ts`,
      `test/setup.test.ts`, `test/e2e.test.ts`, `README.md`,
      `scripts/dev-install.sh`
 
 ## Open questions
 
-*(The interrogation confirmed these as genuine forks the spec does not settle.
-Each has a proposed default — resolve by striking or amending the line, then
-fold into Decisions. Q1–Q4 shape the verb table and hook logic, and Q7c is
-consumed by step 1: resolve all of those before `build 1`. Q5–Q6 and Q7a/b can
-wait until the step that consumes them.)*
-
-- Q1: **SPIKE/FINISH reachability** — the state table has five states but no
-  verb sets SPIKE or FINISH (and the spec disclaims `mode` as not-the-flow).
-  *Proposed:* add `plumbline spike "<slug>"` (sibling worktrees + spike/
-  branches, STATE=SPIKE) and `plumbline spike done` (remove worktrees+branches,
-  STATE=DESIGN, verdict reminder); for FINISH either collapse it into DESIGN
-  (finish stays the gate) or keep it entered via a small verb the report skill
-  instructs you to run — keeping it is only worth it if Q2 gives FINISH a
-  mechanical difference (docs/ writable). Sub-fork: during SPIKE should the
-  MAIN tree stay DESIGN-locked (spec says throwaway-allowed; locking protects
-  the half-done step)? — *resolve by:* decide
-- Q2: **Muzzle whitelist scope** — as specced, the muzzle blocks the report
-  and docs/ writes that FINISH requires (confirmed contradiction).
-  *Proposed:* always allow `<root>/.plumbline/{intent,build-log,report}.md`;
-  allow `docs/**` only when STATE=FINISH; never repo-wide `*.md`. —
-  *resolve by:* decide
-- Q3: **Archive is local-only in v1** — D17 settles untracked (C4 forces it:
-  a tracked sidecar makes revert destroy captured attention), which means the
-  archive never enters version control, against one reading of the spec's
-  "history accumulates". *Proposed:* accept local-only for v1, state it in the
-  README; a `finish --commit-archive` flag is parked as a future Plumbline. —
-  *resolve by:* decide (confirm or veto D17's consequence)
-- Q4: **Threat model for Bash** — the muzzle is fully porous to Bash (`cat >`,
-  `sed -i`, `plumbline mode BUILD`, even self-editing STATE/SEAM), and the
-  model could self-certify `plumbline done`. *Proposed:* declare it an
-  assistive fence, not a wall, in the README; add one cheap `bash-guard.sh`
-  blocking commands that touch STATE/SEAM or invoke `plumbline mode`, plus
-  obvious write-redirect patterns outside BUILD/SPIKE; transition verbs refuse
-  under the CLAUDECODE env var (park exempt); document the residual gap. —
-  *resolve by:* decide
-- Q5: **Dirty tree at `start`** — baseline excludes uncommitted work, so
-  revert-to-baseline would destroy it. *Proposed:* refuse by default;
-  `--allow-dirty` records HEAD with a loud revert warning. — *resolve by:*
-  decide (consumed by step 2)
-- Q6: **SEAM grammar extension** — exact files mean new files must be named in
-  advance. *Proposed:* exact repo-relative file lines, plus one extension: a
-  line ending in `/` grants the directory by prefix match. — *resolve by:*
-  decide (consumed by steps 3–4: the parser writes it, the guard matches it)
-- Q7: **Check-stack policy** — (a) heavy check command: hardcode `pnpm run
-  check` vs a `check=` line in `.plumbline/config` written by start;
-  (b) light tier drops tsc (file-scoped oxlint+ast-grep only; tsc heavy-only
-  until a daemon) against the spec's letter that type errors compound;
-  (c) knip AND fallow are redundant in this repo's own check — keep which?
-  *Proposed:* config line with pnpm default; bless the tsc deferral; keep knip,
-  run fallow via MCP out-of-band. — *resolve by:* decide (Q7c consumed by
-  step 1, so it joins the before-`build 1` group; Q7a by steps 2–3 — start
-  writes the config line, review/done read it; Q7b by step 4)
+*(None open. All seven forks surfaced by the interrogation were resolved with
+the author on 2026-06-10 — see D18–D26 and the Verdicts below. New holes found
+mid-build land here, never as silent guesses.)*
 
 ## Verdicts
 
 - 2026-06-10 — Interrogation run (6 lenses, 57 agents, every hole
   adversarially verified against the spec): 45 holes confirmed → folded into
-  D3–D9/D15 and Q1–Q7; 3 claimed holes refuted — SPIKE-is-seamless is already
-  settled by the spec's prose (→ D9), skills as sanctioned transition sources
-  is already implied (→ Q1 mechanism), and interrogate's problem-space-only
-  scoping is prompt-level by design (→ D13).
+  D3–D9/D15 and seven open questions; 3 claimed holes refuted —
+  SPIKE-is-seamless is already settled by the spec's prose (→ D9), skills as
+  sanctioned transition sources is already implied (→ D19's mechanism), and
+  interrogate's problem-space-only scoping is prompt-level by design (→ D13).
+- 2026-06-10 — All seven open questions resolved with the author, walked
+  through one by one; every ruling matched the proposed default:
+  spike verb pair with main tree DESIGN-locked → D18; FINISH kept, entered by
+  a `wrap`-style verb, docs/ writable only there → D19; archive local-only in
+  v1 → D20; muzzle is a fence with a targeted bash-guard and CLAUDECODE verb
+  refusal → D21; start refuses dirty trees (`--allow-dirty` escape) → D22;
+  SEAM = exact files + `dir/` prefix grants → D23; check command via
+  `check=` config line, pnpm default → D24; tsc deferred to the heavy tier →
+  D25; knip gates this repo, fallow stays MCP-interactive → D26. Deliberate
+  spec deviations accepted in D18 (main-tree lock during SPIKE), D20 (archive
+  not in git), D25 (no tsc in light tier).
