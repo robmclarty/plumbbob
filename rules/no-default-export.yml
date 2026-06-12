@@ -1,0 +1,9 @@
+id: no-default-export
+language: typescript
+severity: error
+message: 'C1: no default exports — use named exports so every symbol has a stable name.'
+files:
+  - 'src/**/*.ts'
+  - 'test/**/*.ts'
+rule:
+  pattern: export default $$$REST

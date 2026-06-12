@@ -1,0 +1,7 @@
+# pnpm 11 gates dependency build scripts behind an explicit allowlist. ast-grep's
+# postinstall swaps its JS launcher for the raw native binary, which breaks under
+# pnpm's `node`-invoking bin shim (it tries to parse the Mach-O as JS). Deny the
+# build: the JS launcher resolves the platform binary at runtime and works
+# cross-platform — the only cost is a one-line per-invocation stderr notice.
+allowBuilds:
+  '@ast-grep/cli': false
