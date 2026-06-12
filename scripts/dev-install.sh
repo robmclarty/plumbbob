@@ -1,9 +1,11 @@
 #!/bin/sh
-# dev-install.sh — register Plumbline's hooks in the global Claude Code settings
-# for dogfooding, pointing them at THIS working tree's hooks/ (so edits to the
-# hooks take effect with no re-copy). Step 8's `plumbline setup` is the real
-# installer that copies hooks into ~/.claude/. This one is idempotent (run twice
-# => byte-identical settings.json), writes a backup, and supports --uninstall.
+# dev-install.sh — the DEVELOPMENT installer: register Plumbline's hooks in the
+# global Claude Code settings pointing at THIS working tree's hooks/ (so edits to
+# the hooks take effect with no re-copy). Use this while hacking on the hooks
+# themselves. `plumbline setup` is the production installer — it COPIES the hooks
+# and skills into ~/.claude/ and supports the D27 registration scopes; use it to
+# install Plumbline for real. This one is idempotent (run twice => byte-identical
+# settings.json), writes a backup, and supports --uninstall.
 #
 # Usage:
 #   scripts/dev-install.sh              install / re-sync

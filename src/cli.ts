@@ -14,6 +14,7 @@ import { revert } from './verbs/revert.ts'
 import { spike } from './verbs/spike.ts'
 import { wrap } from './verbs/wrap.ts'
 import { finish } from './verbs/finish.ts'
+import { setup } from './verbs/setup.ts'
 
 type Verb = {
   readonly name: string
@@ -32,7 +33,7 @@ const VERBS: ReadonlyArray<Verb> = [
   { name: 'wrap', summary: 'set STATE=FINISH so /plumbline-report and /plumbline-docs can run' },
   { name: 'finish', summary: 'refuse unless a report is archived; archive; clear; muzzle off' },
   { name: 'mode', summary: 'mode <x>: set STATE directly (hidden escape hatch)' },
-  { name: 'setup', summary: 'install hooks + skills globally; merge ~/.claude/settings.json' },
+  { name: 'setup', summary: 'install hooks + skills; register them (default global; --project / --local per D27)' },
 ]
 
 // D21: deciding/transition verbs are human-only. In a Claude Code session
@@ -84,8 +85,7 @@ function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): numbe
     case 'finish':
       return finish(cwd)
     case 'setup':
-      process.stderr.write(`plumbline: '${verb}' is not implemented yet — it lands in a later build step.\n`)
-      return 1
+      return setup(cwd, rest)
     default:
       process.stderr.write(`plumbline: unknown verb '${verb}'. Run 'plumbline help' for the verb table.\n`)
       return 1
