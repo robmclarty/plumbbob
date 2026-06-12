@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 // plumbline CLI — hand-rolled argv dispatch, zero runtime deps, node: builtins
 // only (D1/C2). Functional/procedural: no classes, no `this`, no default
-// export (C1). This step-1 stub knows the full verb table and serves `help`;
-// each verb is wired up in a later build step.
+// export (C1). Verbs are wired up build step by build step.
+
+import { start } from './verbs/start.ts'
+import { status } from './verbs/status.ts'
+import { mode } from './verbs/mode.ts'
+import { park } from './verbs/park.ts'
 
 type Verb = {
   readonly name: string
@@ -23,36 +27,78 @@ const VERBS: ReadonlyArray<Verb> = [
   { name: 'setup', summary: 'install hooks + skills globally; merge ~/.claude/settings.json' },
 ]
 
+// D21: deciding/transition verbs are human-only. In a Claude Code session
+// (CLAUDECODE set) the dispatch refuses them so the model cannot drive a state
+// transition. `park` and `status` are the deliberate exceptions — dumb capture
+// and read-only inspection are model-safe.
+const TRANSITION_VERBS: ReadonlySet<string> = new Set([
+  'start',
+  'build',
+  'review',
+  'done',
+  'revert',
+  'spike',
+  'finish',
+  'mode',
+])
+
 function formatHelp(): string {
   const width = Math.max(...VERBS.map((v) => v.name.length))
   const rows = VERBS.map((v) => `  ${v.name.padEnd(width)}  ${v.summary}`)
-  return [
-    'plumbline — attention-first build process',
-    '',
-    'Usage: plumbline <verb> [args]',
-    '',
-    'Verbs:',
-    ...rows,
-    '',
-  ].join('\n')
+  return ['plumbline — attention-first build process', '', 'Usage: plumbline <verb> [args]', '', 'Verbs:', ...rows, ''].join(
+    '\n',
+  )
 }
 
-function isKnownVerb(verb: string): boolean {
-  return VERBS.some((v) => v.name === verb)
+function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): number {
+  switch (verb) {
+    case 'start':
+      return start(cwd, rest)
+    case 'status':
+      return status(cwd)
+    case 'mode':
+      return mode(cwd, rest)
+    case 'park':
+      return park(cwd, rest)
+    case 'build':
+    case 'review':
+    case 'done':
+    case 'revert':
+    case 'spike':
+    case 'finish':
+    case 'setup':
+      process.stderr.write(`plumbline: '${verb}' is not implemented yet — it lands in a later build step.\n`)
+      return 1
+    default:
+      process.stderr.write(`plumbline: unknown verb '${verb}'. Run 'plumbline help' for the verb table.\n`)
+      return 1
+  }
 }
 
 function run(argv: ReadonlyArray<string>): number {
   const verb = argv[0] ?? 'help'
+  const rest = argv.slice(1)
+
   if (verb === 'help' || verb === '--help' || verb === '-h') {
     process.stdout.write(`${formatHelp()}\n`)
     return 0
   }
-  if (isKnownVerb(verb)) {
-    process.stderr.write(`plumbline: '${verb}' is not implemented yet — it lands in a later build step.\n`)
+
+  if (TRANSITION_VERBS.has(verb) && process.env.CLAUDECODE) {
+    process.stderr.write(
+      `plumbline: '${verb}' is a deciding verb — only the human runs it (you appear to be in a Claude Code session). ` +
+        `Do not retry. Ask the human to run \`plumbline ${verb}\` in their terminal.\n`,
+    )
     return 1
   }
-  process.stderr.write(`plumbline: unknown verb '${verb}'. Run 'plumbline help' for the verb table.\n`)
-  return 1
+
+  try {
+    return dispatch(verb, process.cwd(), rest)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    process.stderr.write(`plumbline: ${verb} failed: ${message}\n`)
+    return 1
+  }
 }
 
 process.exit(run(process.argv.slice(2)))
