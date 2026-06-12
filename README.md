@@ -123,3 +123,7 @@ pointing at this working tree's `hooks/` (so hook edits take effect with no
 re-copy), where `plumbline setup` copies them into `~/.claude/`. Use
 `dev-install.sh` while hacking on the hooks themselves; use `plumbline setup` to
 install Plumbline for real.
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE).
