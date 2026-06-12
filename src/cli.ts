@@ -11,6 +11,9 @@ import { build } from './verbs/build.ts'
 import { review } from './verbs/review.ts'
 import { done } from './verbs/done.ts'
 import { revert } from './verbs/revert.ts'
+import { spike } from './verbs/spike.ts'
+import { wrap } from './verbs/wrap.ts'
+import { finish } from './verbs/finish.ts'
 
 type Verb = {
   readonly name: string
@@ -26,6 +29,7 @@ const VERBS: ReadonlyArray<Verb> = [
   { name: 'revert', summary: 'revert [--to n]: git reset --hard to a checkpoint SHA; STATE=DESIGN' },
   { name: 'park', summary: 'park "<text>": append a raw line to the park list' },
   { name: 'spike', summary: 'spike "<slug>" | spike done: throwaway worktree experiment' },
+  { name: 'wrap', summary: 'set STATE=FINISH so /plumbline-report and /plumbline-docs can run' },
   { name: 'finish', summary: 'refuse unless a report is archived; archive; clear; muzzle off' },
   { name: 'mode', summary: 'mode <x>: set STATE directly (hidden escape hatch)' },
   { name: 'setup', summary: 'install hooks + skills globally; merge ~/.claude/settings.json' },
@@ -42,6 +46,7 @@ const TRANSITION_VERBS: ReadonlySet<string> = new Set([
   'done',
   'revert',
   'spike',
+  'wrap',
   'finish',
   'mode',
 ])
@@ -73,7 +78,11 @@ function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): numbe
     case 'revert':
       return revert(cwd, rest)
     case 'spike':
+      return spike(cwd, rest)
+    case 'wrap':
+      return wrap(cwd)
     case 'finish':
+      return finish(cwd)
     case 'setup':
       process.stderr.write(`plumbline: '${verb}' is not implemented yet — it lands in a later build step.\n`)
       return 1
