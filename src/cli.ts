@@ -7,6 +7,10 @@ import { start } from './verbs/start.ts'
 import { status } from './verbs/status.ts'
 import { mode } from './verbs/mode.ts'
 import { park } from './verbs/park.ts'
+import { build } from './verbs/build.ts'
+import { review } from './verbs/review.ts'
+import { done } from './verbs/done.ts'
+import { revert } from './verbs/revert.ts'
 
 type Verb = {
   readonly name: string
@@ -61,9 +65,13 @@ function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): numbe
     case 'park':
       return park(cwd, rest)
     case 'build':
+      return build(cwd, rest)
     case 'review':
+      return review(cwd)
     case 'done':
+      return done(cwd)
     case 'revert':
+      return revert(cwd, rest)
     case 'spike':
     case 'finish':
     case 'setup':

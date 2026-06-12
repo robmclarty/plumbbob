@@ -20,6 +20,16 @@ function statePath(root: string): string {
   return join(root, DIRNAME, 'STATE')
 }
 
+// SEAM and STEP carry the in-flight step (D4/D7): a plain path list and a bare
+// number, so the hooks read them with a grep and no markdown parsing.
+export function seamPath(root: string): string {
+  return join(root, DIRNAME, 'SEAM')
+}
+
+export function stepPath(root: string): string {
+  return join(root, DIRNAME, 'STEP')
+}
+
 export function checkpointsPath(root: string): string {
   return join(root, DIRNAME, 'checkpoints')
 }

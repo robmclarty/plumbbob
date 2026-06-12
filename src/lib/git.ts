@@ -43,3 +43,31 @@ export function hasCommit(root: string): boolean {
 export function isDirty(root: string): boolean {
   return runGit(root, ['status', '--porcelain']).length > 0
 }
+
+// --- mutation helpers (build-loop: done checkpoints, revert resets). Additive
+// only (C5): stage/commit forward, reset --hard to a recorded checkpoint SHA. ---
+
+export function stageAll(root: string): void {
+  runGit(root, ['add', '-A'])
+}
+
+export function stagedPaths(root: string): ReadonlyArray<string> {
+  const out = runGit(root, ['diff', '--cached', '--name-only'])
+  return out.length === 0 ? [] : out.split('\n')
+}
+
+export function untrackedPaths(root: string): ReadonlyArray<string> {
+  const out = runGit(root, ['ls-files', '--others', '--exclude-standard'])
+  return out.length === 0 ? [] : out.split('\n')
+}
+
+// Commit whatever is staged as a checkpoint and return its SHA. --allow-empty so
+// a step that touched only ignored files still gets a checkpoint to revert to.
+export function commit(root: string, message: string): string {
+  runGit(root, ['commit', '--allow-empty', '-m', message])
+  return headSha(root)
+}
+
+export function resetHard(root: string, sha: string): void {
+  runGit(root, ['reset', '--hard', sha])
+}
