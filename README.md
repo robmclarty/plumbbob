@@ -113,6 +113,11 @@ pnpm install
 pnpm check     # tsc, oxlint, ast-grep, vitest, knip, markdownlint
 ```
 
+**The pnpm pin.** `package.json` pins `devEngines.packageManager` to an *exact*
+pnpm version (`11.1.2`) rather than a range, because the `^` range broke every
+pnpm command at the time of writing. That exact pin will need bumping by hand on
+the next pnpm upgrade; moving back to a ranged constraint is a future revisit.
+
 `scripts/dev-install.sh` is the development installer: it registers the hooks
 pointing at this working tree's `hooks/` (so hook edits take effect with no
 re-copy), where `plumbline setup` copies them into `~/.claude/`. Use
