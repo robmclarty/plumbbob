@@ -1,6 +1,6 @@
 {
   "name": "plumbline",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Attention-first build process: a CLI + hooks that enforce the deciding/executing boundary.",
   "type": "module",
   "private": true,
