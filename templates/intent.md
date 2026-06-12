@@ -45,8 +45,8 @@ holes the interrogation surfaces, and as blockers fold in during BUILD.)*
 
 ## Steps
 
-*(The build plan. Each step carries its own seam — the paths `plumbline build <n>`
-writes into `.plumbline/SEAM` and the seam-guard enforces. Keep each step small
+*(The build plan. Each step carries its own seam — the paths `plumbbob build <n>`
+writes into `.plumbbob/SEAM` and the seam-guard enforces. Keep each step small
 enough to verify in one review pass. A blocker may rewrite a step's seam: fold the
 new decision, revise the seam here, then `build <n>` again.)*
 

@@ -1,6 +1,6 @@
-// `plumbline finish` (D19/D20) — the closing gate, symmetric with the step gate.
+// `plumbbob finish` (D19/D20) — the closing gate, symmetric with the step gate.
 // Refuses unless a report exists, appends the checkpoint SHA list to it, archives
-// intent + build-log + report under .plumbline/archive/, clears the active files,
+// intent + build-log + report under .plumbbob/archive/, clears the active files,
 // and deletes SEAM, STEP, then STATE LAST (deleting STATE is what switches the
 // muzzle off, so it happens exactly at session end). Never touches git (C5).
 
@@ -21,12 +21,12 @@ import { archiveSession, reportPath } from '../lib/archive.ts'
 export function finish(cwd: string): number {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
-    process.stderr.write('plumbline: no active session. Run `plumbline start "<title>"` first.\n')
+    process.stderr.write('plumbbob: no active session. Run `plumbbob start "<title>"` first.\n')
     return 1
   }
   if (!existsSync(reportPath(root))) {
     process.stderr.write(
-      'plumbline: finish refuses without a report — run `/plumbline-report` first (it writes .plumbline/report.md). ' +
+      'plumbbob: finish refuses without a report — run `/plumbbob-report` first (it writes .plumbbob/report.md). ' +
         'The closing gate is symmetric with the step gate: you do not walk away without capturing what happened.\n',
     )
     return 1
@@ -47,8 +47,8 @@ export function finish(cwd: string): number {
   rmSync(join(sidecarDir(root), 'STATE'), { force: true })
 
   process.stdout.write(
-    `plumbline: finished — archived to ${relative(root, archived)}. STATE cleared (muzzle off). ` +
-      'Run `plumbline start "<title>"` to begin the next task.\n',
+    `plumbbob: finished — archived to ${relative(root, archived)}. STATE cleared (muzzle off). ` +
+      'Run `plumbbob start "<title>"` to begin the next task.\n',
   )
   return 0
 }

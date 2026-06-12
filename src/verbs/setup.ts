@@ -1,5 +1,5 @@
-// `plumbline setup` — the production installer (D27, replacing dev-install.sh).
-// Copies the hooks to ~/.claude/plumbline/hooks/ and the skills to
+// `plumbbob setup` — the production installer (D27, replacing dev-install.sh).
+// Copies the hooks to ~/.claude/plumbbob/hooks/ and the skills to
 // ~/.claude/skills/, then merges the hook registration into the settings file the
 // chosen scope selects:
 //   (default)   ~/.claude/settings.json            — global, this machine
@@ -28,7 +28,7 @@ export function setup(cwd: string, args: ReadonlyArray<string>): number {
   const settingsFile = resolveSettingsFile(scope, cwd, home)
   if (settingsFile === null) {
     process.stderr.write(
-      `plumbline: --${scope} writes <repo>/.claude/, but this is not a git repository. Run setup from inside the repo, or use the default global scope.\n`,
+      `plumbbob: --${scope} writes <repo>/.claude/, but this is not a git repository. Run setup from inside the repo, or use the default global scope.\n`,
     )
     return 1
   }
@@ -36,13 +36,13 @@ export function setup(cwd: string, args: ReadonlyArray<string>): number {
   if (args.includes('--uninstall')) {
     writeSettings(settingsFile, stripRegistration(readSettings(settingsFile)))
     process.stdout.write(
-      `plumbline: removed the hook registration from ${settingsFile}. The installed hooks/skills under ~/.claude/ were left in place.\n`,
+      `plumbbob: removed the hook registration from ${settingsFile}. The installed hooks/skills under ~/.claude/ were left in place.\n`,
     )
     return 0
   }
 
   // Hooks + skills install once under ~/.claude/ regardless of scope.
-  const installedHooksDir = join(home, '.claude', 'plumbline', 'hooks')
+  const installedHooksDir = join(home, '.claude', 'plumbbob', 'hooks')
   const installedSkillsDir = join(home, '.claude', 'skills')
   cpSync(packageDir('hooks'), installedHooksDir, { recursive: true })
   for (const file of HOOK_FILES) {
@@ -53,14 +53,14 @@ export function setup(cwd: string, args: ReadonlyArray<string>): number {
   // D27: global registers absolute command paths (its settings file is itself
   // under ~); the repo-scoped files register `~`-prefixed paths so committed
   // settings carry no machine-absolute home dir.
-  const commandDir = scope === 'global' ? installedHooksDir : '~/.claude/plumbline/hooks'
+  const commandDir = scope === 'global' ? installedHooksDir : '~/.claude/plumbbob/hooks'
   writeSettings(settingsFile, mergeRegistration(readSettings(settingsFile), commandDir))
 
   process.stdout.write(
-    `plumbline: installed hooks → ${installedHooksDir}, skills → ${installedSkillsDir}.\n` +
-      `plumbline: registered the hooks in ${settingsFile} (${scope} scope).\n` +
-      'plumbline: restart Claude Code (or reload settings) for the hooks to take effect.\n' +
-      "plumbline: if `plumbline` is not on your PATH, add it (e.g. `alias plumbline='node <repo>/src/cli.ts'`) so the skills' status pre-injection resolves.\n",
+    `plumbbob: installed hooks → ${installedHooksDir}, skills → ${installedSkillsDir}.\n` +
+      `plumbbob: registered the hooks in ${settingsFile} (${scope} scope).\n` +
+      'plumbbob: restart Claude Code (or reload settings) for the hooks to take effect.\n' +
+      "plumbbob: installed from npm, `plumbbob` (and its `pb` alias) is already on your PATH; from a dev checkout add `alias plumbbob='node <repo>/src/cli.ts'` so the skills' status pre-injection resolves.\n",
   )
   return 0
 }

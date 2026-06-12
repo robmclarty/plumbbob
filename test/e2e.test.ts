@@ -1,7 +1,7 @@
-// End-to-end dogfood drive (step 8 done-when): a full Plumbline session in a
+// End-to-end dogfood drive (step 8 done-when): a full Plumbbob session in a
 // fixture repo, start → build → the LIVE pre-edit hook gating in/out of seam →
 // done → park → report → wrap → finish → archive populated. The report SKILL is
-// a Claude skill, so the e2e writes .plumbline/report.md as its artifact (the CLI
+// a Claude skill, so the e2e writes .plumbbob/report.md as its artifact (the CLI
 // path under test is everything around it). Stub check per D14.
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
@@ -13,7 +13,7 @@ import { preEdit } from './helpers/run-hook.ts'
 afterAll(cleanupFixtures)
 
 function writeSidecar(dir: string, name: string, content: string): void {
-  writeFileSync(join(dir, '.plumbline', name), content)
+  writeFileSync(join(dir, '.plumbbob', name), content)
 }
 function writeRepo(dir: string, rel: string, content: string): void {
   const path = join(dir, rel)
@@ -21,7 +21,7 @@ function writeRepo(dir: string, rel: string, content: string): void {
   writeFileSync(path, content)
 }
 
-describe('e2e: a full Plumbline session under live enforcement', () => {
+describe('e2e: a full Plumbbob session under live enforcement', () => {
   it('drives start → build → hook gate → done → park → report → finish → archive', () => {
     const dir = makeFixtureRepo({ withCheckScript: true })
 
@@ -60,11 +60,11 @@ describe('e2e: a full Plumbline session under live enforcement', () => {
     expect(runCli(dir, ['finish']).status).toBe(0)
 
     // archive populated; the parked line and the SHA list survived into it.
-    const names = readdirSync(join(dir, '.plumbline', 'archive'))
+    const names = readdirSync(join(dir, '.plumbbob', 'archive'))
     expect(names).toHaveLength(1)
     const name = names[0] ?? ''
     expect(name).toMatch(/^\d{4}-\d{2}-\d{2}-e2e-demo$/)
-    const archived = join(dir, '.plumbline', 'archive', name)
+    const archived = join(dir, '.plumbbob', 'archive', name)
     expect(existsSync(join(archived, 'intent.md'))).toBe(true)
     expect(readFileSync(join(archived, 'build-log.md'), 'utf8')).toContain('a deferred idea for later')
     expect(readFileSync(join(archived, 'report.md'), 'utf8')).toMatch(/- step 1 [0-9a-f]{7,}/)

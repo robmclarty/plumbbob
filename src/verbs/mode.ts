@@ -1,4 +1,4 @@
-// `plumbline mode <x>` — the hidden escape hatch: set STATE directly when reality
+// `plumbbob mode <x>` — the hidden escape hatch: set STATE directly when reality
 // and the machine desync. Not part of the normal flow; a transition verb, so the
 // dispatch refuses it under CLAUDECODE (D21).
 
@@ -8,16 +8,16 @@ import { hasSession, readState, writeState, VALID_STATES } from '../lib/sidecar.
 export function mode(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
-    process.stderr.write('plumbline: no active session. Run `plumbline start "<title>"` first.\n')
+    process.stderr.write('plumbbob: no active session. Run `plumbbob start "<title>"` first.\n')
     return 1
   }
   const target = args[0]
   if (target === undefined) {
-    process.stderr.write(`plumbline: mode needs a state — one of: ${VALID_STATES.join(', ')}.\n`)
+    process.stderr.write(`plumbbob: mode needs a state — one of: ${VALID_STATES.join(', ')}.\n`)
     return 1
   }
   if (!VALID_STATES.includes(target)) {
-    process.stderr.write(`plumbline: '${target}' is not a valid state — one of: ${VALID_STATES.join(', ')}.\n`)
+    process.stderr.write(`plumbbob: '${target}' is not a valid state — one of: ${VALID_STATES.join(', ')}.\n`)
     return 1
   }
   const previous = readState(root) ?? 'UNKNOWN'

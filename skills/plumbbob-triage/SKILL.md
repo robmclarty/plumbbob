@@ -1,23 +1,23 @@
 ---
-name: plumbline-triage
+name: plumbbob-triage
 description: DESIGN-phase, step-boundary triage — propose one class per parked item, write only after the human confirms each.
 disable-model-invocation: true
 model: opus
-allowed-tools: Read, Edit, Bash(plumbline status:*)
+allowed-tools: Read, Edit, Bash(plumbbob status:*)
 ---
 
-# Plumbline — triage the park list
+# Plumbbob — triage the park list
 
-Current session state (injected when this skill runs): !`plumbline status`
+Current session state (injected when this skill runs): !`plumbbob status`
 
 ## Wrong-state refusal
 
 This skill runs in **DESIGN only**, at a **step boundary** (after the step's check has gone green). Read the state injected above and **stop before writing anything** if it is not `DESIGN`:
 
-- `STATE: BUILD` or `STATE: REVIEW` — finish the step first with `plumbline done`, which returns you to DESIGN; then triage.
-- `STATE: SPIKE` — close the experiment with `plumbline spike done` first.
+- `STATE: BUILD` or `STATE: REVIEW` — finish the step first with `plumbbob done`, which returns you to DESIGN; then triage.
+- `STATE: SPIKE` — close the experiment with `plumbbob spike done` first.
 - `STATE: FINISH` — too late to triage; the report skill folds the park list in instead.
-- `NO ACTIVE SESSION` — start one with `plumbline start "<title>"`.
+- `NO ACTIVE SESSION` — start one with `plumbbob start "<title>"`.
 
 When the state is wrong, refuse in one line naming the verb above.
 

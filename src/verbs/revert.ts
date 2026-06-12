@@ -1,4 +1,4 @@
-// `plumbline revert [--to n]` — git reset --hard to a checkpoint SHA (the most
+// `plumbbob revert [--to n]` — git reset --hard to a checkpoint SHA (the most
 // recent step, or `--to n`, with the baseline as fallback), then remove untracked
 // files under the SEAM only. The sidecar is git-excluded (D17), so the reset
 // never touches it — park lines and intent edits survive the revert (C4).
@@ -12,13 +12,13 @@ import { matchesSeam } from '../lib/intent.ts'
 export function revert(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
-    process.stderr.write('plumbline: no active session. Run `plumbline start "<title>"` first.\n')
+    process.stderr.write('plumbbob: no active session. Run `plumbbob start "<title>"` first.\n')
     return 1
   }
 
   const to = parseTo(args)
   if (to === 'invalid') {
-    process.stderr.write('plumbline: revert --to needs a step number. Try: plumbline revert --to 2.\n')
+    process.stderr.write('plumbbob: revert --to needs a step number. Try: plumbbob revert --to 2.\n')
     return 1
   }
 
@@ -29,13 +29,13 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
   } else {
     const entry = checkpoints.steps.find((e) => e.n === to)
     if (entry === undefined) {
-      process.stderr.write(`plumbline: no checkpoint recorded for step ${to}.\n`)
+      process.stderr.write(`plumbbob: no checkpoint recorded for step ${to}.\n`)
       return 1
     }
     sha = entry.sha
   }
   if (sha === undefined) {
-    process.stderr.write('plumbline: no baseline recorded in checkpoints — cannot revert.\n')
+    process.stderr.write('plumbbob: no baseline recorded in checkpoints — cannot revert.\n')
     return 1
   }
 
@@ -53,7 +53,7 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
   writeState(root, 'DESIGN')
 
   process.stdout.write(
-    `plumbline: reverted to ${sha.slice(0, 9)} — STATE=DESIGN. Park lines and intent edits were preserved.\n`,
+    `plumbbob: reverted to ${sha.slice(0, 9)} — STATE=DESIGN. Park lines and intent edits were preserved.\n`,
   )
   return 0
 }

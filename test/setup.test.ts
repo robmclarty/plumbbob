@@ -1,4 +1,4 @@
-// `plumbline setup` (D27): copies hooks + skills under ~/.claude/, then registers
+// `plumbbob setup` (D27): copies hooks + skills under ~/.claude/, then registers
 // the hooks in the settings file the chosen scope selects — idempotently. HOME is
 // pinned to a throwaway dir per test so the real ~/.claude is never touched; the
 // repo scopes use a fixture git repo. These are subprocess-driven (D14).
@@ -14,7 +14,7 @@ type Cmd = { readonly command: string }
 type Entry = { readonly matcher?: string; readonly hooks?: ReadonlyArray<Cmd> }
 type Parsed = { hooks?: { PreToolUse?: Entry[]; PostToolUse?: Entry[] }; model?: unknown }
 
-const SKILLS = ['plumbline-interrogate', 'park', 'plumbline-triage', 'plumbline-report', 'plumbline-docs']
+const SKILLS = ['plumbbob-interrogate', 'park', 'plumbbob-triage', 'plumbbob-report', 'plumbbob-docs']
 const HOOKS = ['pre-edit.sh', 'bash-guard.sh', 'post-edit.sh']
 
 function setupIn(repo: string, home: string, ...flags: string[]): ReturnType<typeof runCli> {
@@ -32,17 +32,17 @@ function ourCommands(s: Parsed): string[] {
   const post = s.hooks?.PostToolUse ?? []
   return [...pre, ...post]
     .flatMap((e) => (e.hooks ?? []).map((h) => h.command))
-    .filter((c) => c.includes('.claude/plumbline/hooks/'))
+    .filter((c) => c.includes('.claude/plumbbob/hooks/'))
 }
 
-describe('plumbline setup — global scope', () => {
+describe('plumbbob setup — global scope', () => {
   it('installs hooks + skills under ~/.claude and registers them in ~/.claude/settings.json', () => {
     const home = makeNonGitDir()
     const repo = makeFixtureRepo()
     expect(setupIn(repo, home).status).toBe(0)
 
     for (const h of HOOKS) {
-      const hookPath = join(home, '.claude', 'plumbline', 'hooks', h)
+      const hookPath = join(home, '.claude', 'plumbbob', 'hooks', h)
       expect(existsSync(hookPath)).toBe(true)
       expect(statSync(hookPath).mode & 0o100).not.toBe(0) // owner-executable
     }
@@ -131,7 +131,7 @@ describe('plumbline setup — global scope', () => {
   })
 })
 
-describe('plumbline setup — D27 scopes write only their own settings file', () => {
+describe('plumbbob setup — D27 scopes write only their own settings file', () => {
   it('--project writes <repo>/.claude/settings.json with ~-portable command paths', () => {
     const home = makeNonGitDir()
     const repo = makeFixtureRepo()
@@ -145,7 +145,7 @@ describe('plumbline setup — D27 scopes write only their own settings file', ()
     const cmds = ourCommands(readJson(projectFile))
     expect(cmds).toHaveLength(3)
     // committable settings carry NO machine-absolute home dir
-    expect(cmds.every((c) => c.startsWith('~/.claude/plumbline/hooks/'))).toBe(true)
+    expect(cmds.every((c) => c.startsWith('~/.claude/plumbbob/hooks/'))).toBe(true)
   })
 
   it('--local writes only <repo>/.claude/settings.local.json', () => {

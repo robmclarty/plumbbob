@@ -1,4 +1,4 @@
-// `plumbline start "<title>"` — scaffold the sidecar, record the baseline, enter
+// `plumbbob start "<title>"` — scaffold the sidecar, record the baseline, enter
 // DESIGN. Refuses on a dirty tree (D22), an existing session, or a non-git dir.
 
 import { fileURLToPath } from 'node:url'
@@ -24,38 +24,38 @@ export function start(cwd: string, args: ReadonlyArray<string>): number {
   const title = (positionals[0] ?? '').trim()
 
   if (title.length === 0) {
-    process.stderr.write('plumbline: start needs a title. Try: plumbline start "what you are building".\n')
+    process.stderr.write('plumbbob: start needs a title. Try: plumbbob start "what you are building".\n')
     return 1
   }
 
   const root = findRepoRoot(cwd)
   if (root === null) {
     process.stderr.write(
-      'plumbline: not a git repository. Plumbline records a baseline commit — run `git init` and make an initial commit first.\n',
+      'plumbbob: not a git repository. Plumbbob records a baseline commit — run `git init` and make an initial commit first.\n',
     )
     return 1
   }
   if (!hasCommit(root)) {
     process.stderr.write(
-      'plumbline: this repository has no commits yet. Make an initial commit so `start` can record a baseline.\n',
+      'plumbbob: this repository has no commits yet. Make an initial commit so `start` can record a baseline.\n',
     )
     return 1
   }
   if (hasSession(root)) {
     process.stderr.write(
-      'plumbline: a session is already active here. Run `plumbline finish` to close it before starting another.\n',
+      'plumbbob: a session is already active here. Run `plumbbob finish` to close it before starting another.\n',
     )
     return 1
   }
   if (isDirty(root)) {
     if (!allowDirty) {
       process.stderr.write(
-        'plumbline: the working tree is dirty. Commit or stash first, or `plumbline start --allow-dirty "<title>"` to record the current HEAD as the baseline.\n',
+        'plumbbob: the working tree is dirty. Commit or stash first, or `plumbbob start --allow-dirty "<title>"` to record the current HEAD as the baseline.\n',
       )
       return 1
     }
     process.stderr.write(
-      'plumbline: WARNING --allow-dirty: recording HEAD as baseline with a dirty tree. A later revert-to-baseline will DISCARD the uncommitted work.\n',
+      'plumbbob: WARNING --allow-dirty: recording HEAD as baseline with a dirty tree. A later revert-to-baseline will DISCARD the uncommitted work.\n',
     )
   }
 
@@ -72,11 +72,11 @@ export function start(cwd: string, args: ReadonlyArray<string>): number {
 
   if (check.warn) {
     process.stderr.write(
-      `plumbline: WARNING the heavy check '${check.command}' is not defined in this repo's package.json. Edit .plumbline/config (check=...) to set the real gate before \`review\`/\`done\`.\n`,
+      `plumbbob: WARNING the heavy check '${check.command}' is not defined in this repo's package.json. Edit .plumbbob/config (check=...) to set the real gate before \`review\`/\`done\`.\n`,
     )
   }
   process.stdout.write(
-    `plumbline: started "${title}" — STATE=DESIGN, baseline ${sha.slice(0, 9)}. Frame and decide in .plumbline/intent.md; flip to BUILD only once the decisions are made.\n`,
+    `plumbbob: started "${title}" — STATE=DESIGN, baseline ${sha.slice(0, 9)}. Frame and decide in .plumbbob/intent.md; flip to BUILD only once the decisions are made.\n`,
   )
   return 0
 }

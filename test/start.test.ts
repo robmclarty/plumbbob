@@ -10,8 +10,8 @@ function headSha(dir: string): string {
   return execFileSync('git', ['-C', dir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
 }
 
-describe('plumbline start', () => {
-  it('scaffolds .plumbline/ at the git root: DESIGN, baseline, config, stamped templates', () => {
+describe('plumbbob start', () => {
+  it('scaffolds .plumbbob/ at the git root: DESIGN, baseline, config, stamped templates', () => {
     const dir = makeFixtureRepo({ withCheckScript: true })
     const result = runCli(dir, ['start', 'My change'])
 
@@ -31,10 +31,10 @@ describe('plumbline start', () => {
     runCli(dir, ['start', 'Excluded'])
 
     const exclude = readFileSync(join(dir, '.git', 'info', 'exclude'), 'utf8')
-    expect(exclude.split('\n')).toContain('.plumbline/')
+    expect(exclude.split('\n')).toContain('.plumbbob/')
 
     const porcelain = execFileSync('git', ['-C', dir, 'status', '--porcelain'], { encoding: 'utf8' })
-    expect(porcelain).not.toContain('.plumbline')
+    expect(porcelain).not.toContain('.plumbbob')
   })
 
   it('refuses on a dirty tree, but --allow-dirty records HEAD with a warning', () => {
@@ -87,12 +87,12 @@ describe('plumbline start', () => {
     expect(runCli(dir, ['start', 'Round one']).status).toBe(0)
 
     // Simulate a finish: an archive exists; the active control files are cleared.
-    const archived = join(dir, '.plumbline', 'archive', '2026-01-01-round-one')
+    const archived = join(dir, '.plumbbob', 'archive', '2026-01-01-round-one')
     mkdirSync(archived, { recursive: true })
     writeFileSync(join(archived, 'report.md'), 'preserved\n')
-    rmSync(join(dir, '.plumbline', 'STATE'))
-    rmSync(join(dir, '.plumbline', 'intent.md'))
-    rmSync(join(dir, '.plumbline', 'build-log.md'))
+    rmSync(join(dir, '.plumbbob', 'STATE'))
+    rmSync(join(dir, '.plumbbob', 'intent.md'))
+    rmSync(join(dir, '.plumbbob', 'build-log.md'))
 
     const second = runCli(dir, ['start', 'Round two'])
     expect(second.status).toBe(0)

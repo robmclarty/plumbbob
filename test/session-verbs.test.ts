@@ -3,7 +3,7 @@ import { cleanupFixtures, makeFixtureRepo, makeNonGitDir, readSidecar, runCli, s
 
 afterAll(cleanupFixtures)
 
-describe('plumbline status', () => {
+describe('plumbbob status', () => {
   it('prints NO ACTIVE SESSION with no session', () => {
     const result = runCli(makeFixtureRepo(), ['status'])
     expect(result.status).toBe(0)
@@ -23,7 +23,7 @@ describe('plumbline status', () => {
   })
 })
 
-describe('plumbline mode (escape hatch)', () => {
+describe('plumbbob mode (escape hatch)', () => {
   it('sets STATE directly', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Modey'])
@@ -46,7 +46,7 @@ describe('plumbline mode (escape hatch)', () => {
   })
 })
 
-describe('plumbline park', () => {
+describe('plumbbob park', () => {
   it('appends raw lines under the Park list, in order, before Triage', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Parky'])

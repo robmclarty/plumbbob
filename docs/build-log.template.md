@@ -1,5 +1,5 @@
 <!--
-build-log.md — Plumbline live ledger for the BUILD phase. Your working memory
+build-log.md — Plumbbob live ledger for the BUILD phase. Your working memory
 during execution: you append constantly, reorganize at step boundaries. The
 antidote to "my plan got lost in the noise."
 
@@ -7,7 +7,7 @@ Four jobs:
   Steps     : where you are. One step in flight at a time.
   Park list : where ideas go so you don't chase them. CAPTURE, never act inline.
   Triage    : the boundary ritual that keeps you on one branch.
-  Log        : the audit trail. Feeds /plumbline-report, then gets archived.
+  Log        : the audit trail. Feeds /plumbbob-report, then gets archived.
 -->
 
 # Build log — <change title>
@@ -18,7 +18,7 @@ Four jobs:
 ## Steps
 
 *(Mirror of intent.md's Steps, with live status. Only ONE step is `▶ in flight`.
-A step is `✔ done` only after `plumbline done` — check green + checkpoint taken.)*
+A step is `✔ done` only after `plumbbob done` — check green + checkpoint taken.)*
 
 - ✔ 1. <step> — done, checkpoint `<sha>`
 - ▶ 2. <step> — done when: <criterion>
@@ -28,7 +28,7 @@ A step is `✔ done` only after `plumbline done` — check green + checkpoint ta
 
 > Mid-step, every new problem / idea / "ooh what if" lands HERE, untouched, and
 > you go straight back to the step. Acting the instant an idea arrives is the
-> disease. Capture is one line (`/park` composes it, or raw `plumbline park`).
+> disease. Capture is one line (`/park` composes it, or raw `plumbbob park`).
 > Triage happens only at the boundary.
 
 - [ ] <parked item> — <when it occurred to you>
@@ -51,14 +51,14 @@ naming it before acting is what keeps you from sprawling across branches.
 Triage results this boundary:
 
 - <item> → tangent → killed
-- <item> → tangent → spun out as a future Plumbline
+- <item> → tangent → spun out as a future Plumbbob
 - <item> → blocker → folded into intent.md as D<n>
 
 ## Log
 
 *(Append-only. One decision or event per line, dated. What you point at to say
-"I did that — the LLM helped, but those were my calls." `/plumbline-report` reads
-this; `plumbline finish` archives it under `.plumbline/archive/`.)*
+"I did that — the LLM helped, but those were my calls." `/plumbbob-report` reads
+this; `plumbbob finish` archives it under `.plumbbob/archive/`.)*
 
 - <date> — <decision / event / what shipped this step> — checkpoint `<sha>`
 - <date> — …

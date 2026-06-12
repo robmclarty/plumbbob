@@ -10,7 +10,7 @@ import { dirname } from 'node:path'
 // A registration entry is "ours" iff one of its hook commands points into our
 // installed hooks dir. This marker matches BOTH the absolute (global) and the
 // `~`-prefixed (repo-scoped) command forms, so uninstall finds either.
-const OURS_MARKER = '.claude/plumbline/hooks/'
+const OURS_MARKER = '.claude/plumbbob/hooks/'
 
 // The PreToolUse edit matcher covers all four editing tools (D5).
 const EDIT_MATCHER = 'Edit|Write|MultiEdit|NotebookEdit'

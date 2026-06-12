@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// plumbline CLI — hand-rolled argv dispatch, zero runtime deps, node: builtins
+// plumbbob CLI — hand-rolled argv dispatch, zero runtime deps, node: builtins
 // only (D1/C2). Functional/procedural: no classes, no `this`, no default
 // export (C1). Verbs are wired up build step by build step.
 
@@ -22,7 +22,7 @@ type Verb = {
 }
 
 const VERBS: ReadonlyArray<Verb> = [
-  { name: 'start', summary: 'scaffold .plumbline/; STATE=DESIGN; record the baseline commit' },
+  { name: 'start', summary: 'scaffold .plumbbob/; STATE=DESIGN; record the baseline commit' },
   { name: 'status', summary: 'print the session state, or NO ACTIVE SESSION' },
   { name: 'build', summary: 'build <n>: write SEAM from step n; STATE=BUILD' },
   { name: 'review', summary: 'run the heavy check; if green flip to STATE=REVIEW' },
@@ -30,7 +30,7 @@ const VERBS: ReadonlyArray<Verb> = [
   { name: 'revert', summary: 'revert [--to n]: git reset --hard to a checkpoint SHA; STATE=DESIGN' },
   { name: 'park', summary: 'park "<text>": append a raw line to the park list' },
   { name: 'spike', summary: 'spike "<slug>" | spike done: throwaway worktree experiment' },
-  { name: 'wrap', summary: 'set STATE=FINISH so /plumbline-report and /plumbline-docs can run' },
+  { name: 'wrap', summary: 'set STATE=FINISH so /plumbbob-report and /plumbbob-docs can run' },
   { name: 'finish', summary: 'refuse unless a report is archived; archive; clear; muzzle off' },
   { name: 'mode', summary: 'mode <x>: set STATE directly (hidden escape hatch)' },
   { name: 'setup', summary: 'install hooks + skills; register them (default global; --project / --local per D27)' },
@@ -55,7 +55,7 @@ const TRANSITION_VERBS: ReadonlySet<string> = new Set([
 function formatHelp(): string {
   const width = Math.max(...VERBS.map((v) => v.name.length))
   const rows = VERBS.map((v) => `  ${v.name.padEnd(width)}  ${v.summary}`)
-  return ['plumbline — attention-first build process', '', 'Usage: plumbline <verb> [args]', '', 'Verbs:', ...rows, ''].join(
+  return ['plumbbob — attention-first build process', '', 'Usage: plumbbob <verb> [args]', '', 'Verbs:', ...rows, ''].join(
     '\n',
   )
 }
@@ -87,7 +87,7 @@ function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): numbe
     case 'setup':
       return setup(cwd, rest)
     default:
-      process.stderr.write(`plumbline: unknown verb '${verb}'. Run 'plumbline help' for the verb table.\n`)
+      process.stderr.write(`plumbbob: unknown verb '${verb}'. Run 'plumbbob help' for the verb table.\n`)
       return 1
   }
 }
@@ -103,8 +103,8 @@ function run(argv: ReadonlyArray<string>): number {
 
   if (TRANSITION_VERBS.has(verb) && process.env.CLAUDECODE) {
     process.stderr.write(
-      `plumbline: '${verb}' is a deciding verb — only the human runs it (you appear to be in a Claude Code session). ` +
-        `Do not retry. Ask the human to run \`plumbline ${verb}\` in their terminal.\n`,
+      `plumbbob: '${verb}' is a deciding verb — only the human runs it (you appear to be in a Claude Code session). ` +
+        `Do not retry. Ask the human to run \`plumbbob ${verb}\` in their terminal.\n`,
     )
     return 1
   }
@@ -113,7 +113,7 @@ function run(argv: ReadonlyArray<string>): number {
     return dispatch(verb, process.cwd(), rest)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    process.stderr.write(`plumbline: ${verb} failed: ${message}\n`)
+    process.stderr.write(`plumbbob: ${verb} failed: ${message}\n`)
     return 1
   }
 }

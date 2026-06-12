@@ -1,4 +1,4 @@
-// `plumbline park "<text>"` — the dumb capture path: append one raw line under
+// `plumbbob park "<text>"` — the dumb capture path: append one raw line under
 // the build-log's Park list. No model turn, no composition (that is /park's job).
 // Exempt from the CLAUDECODE transition refusal so capture is always available.
 
@@ -10,7 +10,7 @@ export function park(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
     process.stderr.write(
-      'plumbline: no active session — nothing to park to. Run `plumbline start "<title>"` first.\n',
+      'plumbbob: no active session — nothing to park to. Run `plumbbob start "<title>"` first.\n',
     )
     return 1
   }
@@ -19,13 +19,13 @@ export function park(cwd: string, args: ReadonlyArray<string>): number {
     .join(' ')
     .trim()
   if (text.length === 0) {
-    process.stderr.write('plumbline: park needs text. Try: plumbline park "the idea you do not want to chase right now".\n')
+    process.stderr.write('plumbbob: park needs text. Try: plumbbob park "the idea you do not want to chase right now".\n')
     return 1
   }
   const path = buildLogPath(root)
   const updated = insertParkItem(readFileSync(path, 'utf8'), text)
   if (updated === null) {
-    process.stderr.write('plumbline: could not find a "## Park list" section in build-log.md.\n')
+    process.stderr.write('plumbbob: could not find a "## Park list" section in build-log.md.\n')
     return 1
   }
   writeFileSync(path, updated)

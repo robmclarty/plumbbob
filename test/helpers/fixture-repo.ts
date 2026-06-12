@@ -20,7 +20,7 @@ type FixtureOptions = {
 }
 
 export function makeFixtureRepo(options: FixtureOptions = {}): string {
-  const dir = mkdtempSync(join(tmpdir(), 'plumbline-'))
+  const dir = mkdtempSync(join(tmpdir(), 'plumbbob-'))
   execFileSync('git', ['init', '-q', '-b', 'main', dir], { stdio: 'ignore' })
   git(dir, ['config', 'user.email', 'fixture@example.com'])
   git(dir, ['config', 'user.name', 'Fixture'])
@@ -40,7 +40,7 @@ export function makeFixtureRepo(options: FixtureOptions = {}): string {
 }
 
 export function makeNonGitDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'plumbline-nogit-'))
+  const dir = mkdtempSync(join(tmpdir(), 'plumbbob-nogit-'))
   created.push(dir)
   return dir
 }
@@ -72,9 +72,9 @@ export function runCli(dir: string, args: ReadonlyArray<string>, extraEnv: Recor
 }
 
 export function readSidecar(dir: string, name: string): string {
-  return readFileSync(join(dir, '.plumbline', name), 'utf8')
+  return readFileSync(join(dir, '.plumbbob', name), 'utf8')
 }
 
 export function sidecarExists(dir: string, name: string): boolean {
-  return existsSync(join(dir, '.plumbline', name))
+  return existsSync(join(dir, '.plumbbob', name))
 }

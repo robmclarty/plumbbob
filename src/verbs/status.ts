@@ -1,4 +1,4 @@
-// `plumbline status` — print the session state, or NO ACTIVE SESSION. Read-only,
+// `plumbbob status` — print the session state, or NO ACTIVE SESSION. Read-only,
 // always exits 0. Skills pre-inject this output to gate their own behavior.
 
 import { findRepoRoot } from '../lib/git.ts'

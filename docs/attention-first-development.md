@@ -124,7 +124,7 @@ built it, and mean it.
 
 ---
 
-*Plumbline is one concrete instantiation of this posture for small-to-medium work:
+*Plumbbob is one concrete instantiation of this posture for small-to-medium work:
 a small state machine and a handful of tools that put the deciding-and-executing
 boundary under enforcement rather than willpower. The concept does not depend on
 it. Any process that treats attention as the scarce resource, externalizes the

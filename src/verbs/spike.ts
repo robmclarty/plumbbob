@@ -1,4 +1,4 @@
-// `plumbline spike` (D18) — the spike lifecycle for a genuine fork the design
+// `plumbbob spike` (D18) — the spike lifecycle for a genuine fork the design
 // phase couldn't settle. `spike "<slug>" [opt…]` creates a sibling git worktree +
 // `spike/<slug>-<opt>` branch per option OUTSIDE the repo root (default opts a/b)
 // and sets STATE=SPIKE; the main tree stays DESIGN-locked while you experiment in
@@ -8,7 +8,7 @@
 //
 // Worktree git calls run directly here rather than via lib/git.ts (which holds the
 // shared additive read/commit helpers): worktree management is spike-local, and
-// this is the only place Plumbline creates branches.
+// this is the only place Plumbbob creates branches.
 
 import { execFileSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
@@ -21,7 +21,7 @@ const DEFAULT_OPTIONS: ReadonlyArray<string> = ['a', 'b']
 export function spike(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
-    process.stderr.write('plumbline: no active session. Run `plumbline start "<title>"` first.\n')
+    process.stderr.write('plumbbob: no active session. Run `plumbbob start "<title>"` first.\n')
     return 1
   }
   const positionals = args.filter((a) => !a.startsWith('--'))
@@ -34,19 +34,19 @@ export function spike(cwd: string, args: ReadonlyArray<string>): number {
 function spikeStart(root: string, positionals: ReadonlyArray<string>): number {
   const state = readState(root)
   if (state === 'SPIKE') {
-    process.stderr.write('plumbline: already in a spike. Run `plumbline spike done` to close it first.\n')
+    process.stderr.write('plumbbob: already in a spike. Run `plumbbob spike done` to close it first.\n')
     return 1
   }
   if (state !== 'DESIGN') {
     process.stderr.write(
-      `plumbline: spike starts from DESIGN (current state is ${state ?? 'UNKNOWN'}). ` +
+      `plumbbob: spike starts from DESIGN (current state is ${state ?? 'UNKNOWN'}). ` +
         'A spike is a deliberate fork — close the current step first with `done`.\n',
     )
     return 1
   }
   const slug = sanitize(positionals[0] ?? '')
   if (slug.length === 0) {
-    process.stderr.write('plumbline: spike needs a slug. Try: plumbline spike "auth-store" a b.\n')
+    process.stderr.write('plumbbob: spike needs a slug. Try: plumbbob spike "auth-store" a b.\n')
     return 1
   }
   const explicit = positionals.slice(1).map(sanitize).filter((o) => o.length > 0)
@@ -56,7 +56,7 @@ function spikeStart(root: string, positionals: ReadonlyArray<string>): number {
   for (const opt of options) {
     const path = join(dirname(root), `${basename(root)}-spike-${slug}-${opt}`)
     if (existsSync(path)) {
-      process.stderr.write(`plumbline: ${path} already exists — remove it or run \`plumbline spike done\` first.\n`)
+      process.stderr.write(`plumbbob: ${path} already exists — remove it or run \`plumbbob spike done\` first.\n`)
       return 1
     }
     git(root, ['worktree', 'add', '-b', `spike/${slug}-${opt}`, path, 'HEAD'])
@@ -65,9 +65,9 @@ function spikeStart(root: string, positionals: ReadonlyArray<string>): number {
 
   writeState(root, 'SPIKE')
   process.stdout.write(
-    `plumbline: STATE=SPIKE — the main tree stays DESIGN-locked. Experiment in the throwaway worktrees:\n${created
+    `plumbbob: STATE=SPIKE — the main tree stays DESIGN-locked. Experiment in the throwaway worktrees:\n${created
       .map((p) => `  ${p}`)
-      .join('\n')}\nWhen you've decided, record the verdict in intent.md and run \`plumbline spike done\`.\n`,
+      .join('\n')}\nWhen you've decided, record the verdict in intent.md and run \`plumbbob spike done\`.\n`,
   )
   return 0
 }
@@ -75,7 +75,7 @@ function spikeStart(root: string, positionals: ReadonlyArray<string>): number {
 function spikeDone(root: string): number {
   const state = readState(root)
   if (state !== 'SPIKE') {
-    process.stderr.write(`plumbline: no active spike (state is ${state ?? 'UNKNOWN'}).\n`)
+    process.stderr.write(`plumbbob: no active spike (state is ${state ?? 'UNKNOWN'}).\n`)
     return 1
   }
   for (const path of spikeWorktrees(root)) {
@@ -87,7 +87,7 @@ function spikeDone(root: string): number {
   }
   writeState(root, 'DESIGN')
   process.stdout.write(
-    'plumbline: spike closed — STATE=DESIGN, worktrees and branches removed. ' +
+    'plumbbob: spike closed — STATE=DESIGN, worktrees and branches removed. ' +
       'Record the verdict (which option won, and why) in intent.md before you `build`.\n',
   )
   return 0

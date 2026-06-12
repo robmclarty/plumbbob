@@ -1,5 +1,5 @@
 <!--
-intent.md — Plumbline canonical intent. Written in DESIGN, before any code. This
+intent.md — Plumbbob canonical intent. Written in DESIGN, before any code. This
 is the head. The chat is the hand. When the model floods you, read this, not your
 memory.
 
@@ -53,8 +53,8 @@ surfaces holes and you resolve them, and as blockers fold in during BUILD.)*
 
 ## Steps
 
-*(The build plan. Each step carries its own SEAM — the paths `plumbline build <n>`
-writes into `.plumbline/SEAM` and the seam-guard enforces. Keep each step small
+*(The build plan. Each step carries its own SEAM — the paths `plumbbob build <n>`
+writes into `.plumbbob/SEAM` and the seam-guard enforces. Keep each step small
 enough to verify in one review pass. A blocker may rewrite a step's seam: that's
 expected — fold the new decision, revise the seam here, then `build <n>` again.)*
 

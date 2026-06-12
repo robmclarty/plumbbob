@@ -19,7 +19,7 @@ function spikeBranches(dir: string): string[] {
   return out.length === 0 ? [] : out.split('\n').filter((b) => b.length > 0)
 }
 
-describe('plumbline spike', () => {
+describe('plumbbob spike', () => {
   it('creates a sibling worktree + branch per option and enters SPIKE', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Spiking a fork'])

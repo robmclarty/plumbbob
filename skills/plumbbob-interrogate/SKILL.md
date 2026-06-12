@@ -1,23 +1,23 @@
 ---
-name: plumbline-interrogate
+name: plumbbob-interrogate
 description: DESIGN-phase frame interrogation — attack the plan for holes and append them as Open questions, without deciding anything.
 disable-model-invocation: true
 model: opus
-allowed-tools: Read, Edit, Bash(plumbline status:*)
+allowed-tools: Read, Edit, Bash(plumbbob status:*)
 ---
 
-# Plumbline — interrogate the frame
+# Plumbbob — interrogate the frame
 
-Current session state (injected when this skill runs): !`plumbline status`
+Current session state (injected when this skill runs): !`plumbbob status`
 
 ## Wrong-state refusal
 
 This skill runs in **DESIGN only**. Read the state injected above and **stop before touching anything** if it is not `DESIGN`:
 
-- `STATE: BUILD` or `STATE: REVIEW` — you are mid-step. Return to DESIGN first: finish the step with `plumbline done`, or drop a half-built step with `plumbline revert`. Then re-invoke.
-- `STATE: SPIKE` — close the experiment with `plumbline spike done` first.
+- `STATE: BUILD` or `STATE: REVIEW` — you are mid-step. Return to DESIGN first: finish the step with `plumbbob done`, or drop a half-built step with `plumbbob revert`. Then re-invoke.
+- `STATE: SPIKE` — close the experiment with `plumbbob spike done` first.
 - `STATE: FINISH` — the session is wrapping up; there is nothing left to interrogate.
-- `NO ACTIVE SESSION` — start one with `plumbline start "<title>"`.
+- `NO ACTIVE SESSION` — start one with `plumbbob start "<title>"`.
 
 When the state is wrong, refuse in one line naming the verb above, and edit nothing.
 

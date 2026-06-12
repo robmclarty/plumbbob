@@ -1,5 +1,5 @@
 {
-  // Plumbline docs are hand-written prose and templates. Disable the rules that
+  // Plumbbob docs are hand-written prose and templates. Disable the rules that
   // fight prose wrapping and the HTML-comment headers the templates open with;
   // keep the structural rules that catch real markdown mistakes.
   "default": true,

@@ -21,10 +21,10 @@ function fileExists(dir: string, rel: string): boolean {
   return existsSync(join(dir, rel))
 }
 function writeIntent(dir: string, stepsBody: string): void {
-  writeFileSync(join(dir, '.plumbline', 'intent.md'), `# Fix\n\n## Steps\n\n${stepsBody}\n`)
+  writeFileSync(join(dir, '.plumbbob', 'intent.md'), `# Fix\n\n## Steps\n\n${stepsBody}\n`)
 }
 function setCheck(dir: string, command: string): void {
-  writeFileSync(join(dir, '.plumbline', 'config'), `check=${command}\n`)
+  writeFileSync(join(dir, '.plumbbob', 'config'), `check=${command}\n`)
 }
 function gitSubjects(dir: string): string {
   return execFileSync('git', ['-C', dir, 'log', '--format=%s'], { encoding: 'utf8' })
@@ -39,7 +39,7 @@ function startedSession(options: { seam: string; check?: string } = { seam: '`sr
   return dir
 }
 
-describe('plumbline build', () => {
+describe('plumbbob build', () => {
   it('writes the normalized SEAM + STEP and enters BUILD', () => {
     const dir = startedSession({ seam: '`src/a.ts`, `notes/`' })
     const result = runCli(dir, ['build', '1'])
@@ -59,7 +59,7 @@ describe('plumbline build', () => {
   })
 })
 
-describe('plumbline review', () => {
+describe('plumbbob review', () => {
   it('flips to REVIEW only when the check is green', () => {
     const dir = startedSession({ seam: '`src/`', check: 'true' })
     runCli(dir, ['build', '1'])
@@ -76,7 +76,7 @@ describe('plumbline review', () => {
   })
 })
 
-describe('plumbline done', () => {
+describe('plumbbob done', () => {
   it('refuses on a red check', () => {
     const dir = startedSession({ seam: '`src/`', check: 'false' })
     runCli(dir, ['build', '1'])
@@ -92,7 +92,7 @@ describe('plumbline done', () => {
     write(dir, 'src/a.ts', 'export const a = 1\n')
     const result = runCli(dir, ['done'])
     expect(result.status).toBe(0)
-    expect(gitSubjects(dir)).toContain('plumbline: step 1 done')
+    expect(gitSubjects(dir)).toContain('plumbbob: step 1 done')
     expect(readSidecar(dir, 'checkpoints')).toMatch(/\nstep 1 [0-9a-f]{7,}/)
     expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
     expect(sidecarExists(dir, 'STEP')).toBe(false)
@@ -127,7 +127,7 @@ describe('build re-entry from REVIEW', () => {
   })
 })
 
-describe('plumbline revert', () => {
+describe('plumbbob revert', () => {
   it('resets --hard to baseline and removes untracked files under SEAM only', () => {
     const dir = makeFixtureRepo()
     write(dir, 'src/thing.ts', 'export const thing = 0\n')

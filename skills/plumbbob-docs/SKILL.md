@@ -1,18 +1,18 @@
 ---
-name: plumbline-docs
+name: plumbbob-docs
 description: FINISH-phase, optional docs update — conservatively project canonical intent into real docs/, only when warranted.
 disable-model-invocation: true
 model: opus
-allowed-tools: Read, Edit, Write, Bash(plumbline status:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*)
 ---
 
-# Plumbline — update the docs
+# Plumbbob — update the docs
 
-Current session state (injected when this skill runs): !`plumbline status`
+Current session state (injected when this skill runs): !`plumbbob status`
 
 ## Wrong-state refusal
 
-`docs/` is writable **only in FINISH** (D19) — the muzzle blocks it everywhere else. Read the state injected above and **refuse if it is not `FINISH`**, naming `plumbline wrap` as the verb that enters FINISH (the report skill runs first; this docs pass is the optional second Finish step). If the state is `NO ACTIVE SESSION` the hooks are dormant and there is nothing for this skill to gate — just edit docs the ordinary way.
+`docs/` is writable **only in FINISH** (D19) — the muzzle blocks it everywhere else. Read the state injected above and **refuse if it is not `FINISH`**, naming `plumbbob wrap` as the verb that enters FINISH (the report skill runs first; this docs pass is the optional second Finish step). If the state is `NO ACTIVE SESSION` the hooks are dormant and there is nothing for this skill to gate — just edit docs the ordinary way.
 
 ## What this skill does
 

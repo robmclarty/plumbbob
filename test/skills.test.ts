@@ -34,14 +34,14 @@ function parseSkill(dir: string): { data: Record<string, string>; body: string }
   return { data, body: lines.slice(end + 1).join('\n') }
 }
 
-const ALL = ['plumbline-interrogate', 'park', 'plumbline-triage', 'plumbline-report', 'plumbline-docs'] as const
+const ALL = ['plumbbob-interrogate', 'park', 'plumbbob-triage', 'plumbbob-report', 'plumbbob-docs'] as const
 
 const MODEL_PINS: Record<string, string> = {
-  'plumbline-interrogate': 'opus',
+  'plumbbob-interrogate': 'opus',
   park: 'haiku',
-  'plumbline-triage': 'opus',
-  'plumbline-report': 'opus',
-  'plumbline-docs': 'opus',
+  'plumbbob-triage': 'opus',
+  'plumbbob-report': 'opus',
+  'plumbbob-docs': 'opus',
 }
 
 describe('every skill (the three reinforcing layers)', () => {
@@ -62,11 +62,11 @@ describe('every skill (the three reinforcing layers)', () => {
       })
 
       it('opens its body with the status pre-injection', () => {
-        expect(body).toContain('!`plumbline status`')
+        expect(body).toContain('!`plumbbob status`')
       })
 
-      it('grants Bash(plumbline status) so the pre-injection can run', () => {
-        expect(data['allowed-tools']).toMatch(/Bash\(plumbline status/)
+      it('grants Bash(plumbbob status) so the pre-injection can run', () => {
+        expect(data['allowed-tools']).toMatch(/Bash\(plumbbob status/)
       })
 
       it('carries a wrong-state refusal', () => {
@@ -76,8 +76,8 @@ describe('every skill (the three reinforcing layers)', () => {
   }
 })
 
-describe('plumbline-interrogate — DESIGN-only, Open-questions-only (D13)', () => {
-  const { data, body } = parseSkill('plumbline-interrogate')
+describe('plumbbob-interrogate — DESIGN-only, Open-questions-only (D13)', () => {
+  const { data, body } = parseSkill('plumbbob-interrogate')
 
   it('is opus with Read + Edit and no Write', () => {
     expect(data.model).toBe('opus')
@@ -112,9 +112,9 @@ describe('park — capture via the dumb CLI, never an edit (D12)', () => {
     expect(data['allowed-tools']).not.toMatch(/\bWrite\b/)
   })
 
-  it('captures by shelling plumbline park', () => {
-    expect(data['allowed-tools']).toMatch(/Bash\(plumbline park/)
-    expect(body).toContain('plumbline park')
+  it('captures by shelling plumbbob park', () => {
+    expect(data['allowed-tools']).toMatch(/Bash\(plumbbob park/)
+    expect(body).toContain('plumbbob park')
   })
 
   it('requires in-turn human approval before the append', () => {
@@ -123,8 +123,8 @@ describe('park — capture via the dumb CLI, never an edit (D12)', () => {
   })
 })
 
-describe('plumbline-triage — propose, the human confirms (D13)', () => {
-  const { data, body } = parseSkill('plumbline-triage')
+describe('plumbbob-triage — propose, the human confirms (D13)', () => {
+  const { data, body } = parseSkill('plumbbob-triage')
 
   it('is opus and DESIGN-only', () => {
     expect(data.model).toBe('opus')
@@ -145,21 +145,21 @@ describe('plumbline-triage — propose, the human confirms (D13)', () => {
   })
 })
 
-describe('plumbline-report — FINISH, writes exactly report.md', () => {
-  const { data, body } = parseSkill('plumbline-report')
+describe('plumbbob-report — FINISH, writes exactly report.md', () => {
+  const { data, body } = parseSkill('plumbbob-report')
 
   it('is opus and may Write', () => {
     expect(data.model).toBe('opus')
     expect(data['allowed-tools']).toMatch(/\bWrite\b/)
   })
 
-  it('writes exactly .plumbline/report.md', () => {
-    expect(body).toContain('.plumbline/report.md')
+  it('writes exactly .plumbbob/report.md', () => {
+    expect(body).toContain('.plumbbob/report.md')
   })
 
   it('tells the human to wrap when not in FINISH (D28)', () => {
     expect(body).toMatch(/FINISH/)
-    expect(body).toContain('plumbline wrap')
+    expect(body).toContain('plumbbob wrap')
   })
 
   it('pins all five required sections', () => {
@@ -172,8 +172,8 @@ describe('plumbline-report — FINISH, writes exactly report.md', () => {
   })
 })
 
-describe('plumbline-docs — FINISH-only, conservative by default (D19)', () => {
-  const { data, body } = parseSkill('plumbline-docs')
+describe('plumbbob-docs — FINISH-only, conservative by default (D19)', () => {
+  const { data, body } = parseSkill('plumbbob-docs')
 
   it('is opus and may touch docs (Edit + Write)', () => {
     expect(data.model).toBe('opus')

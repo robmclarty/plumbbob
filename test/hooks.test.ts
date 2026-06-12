@@ -7,7 +7,7 @@ import { bashGuard, postEdit, preEdit } from './helpers/run-hook.ts'
 afterAll(cleanupFixtures)
 
 function writeIntent(dir: string, stepsBody: string): void {
-  writeFileSync(join(dir, '.plumbline', 'intent.md'), `# T\n\n## Steps\n\n${stepsBody}\n`)
+  writeFileSync(join(dir, '.plumbbob', 'intent.md'), `# T\n\n## Steps\n\n${stepsBody}\n`)
 }
 function makeDir(dir: string, rel: string): void {
   mkdirSync(join(dir, rel), { recursive: true })
@@ -45,11 +45,11 @@ describe('pre-edit muzzle: doc whitelist (D6/D19)', () => {
     runCli(dir, ['start', 'Docs'])
     for (const state of ['DESIGN', 'REVIEW', 'FINISH']) {
       runCli(dir, ['mode', state])
-      expect(preEdit(dir, { rel: '.plumbline/intent.md' }).status).toBe(0)
-      expect(preEdit(dir, { rel: '.plumbline/build-log.md' }).status).toBe(0)
-      expect(preEdit(dir, { rel: '.plumbline/report.md' }).status).toBe(0)
+      expect(preEdit(dir, { rel: '.plumbbob/intent.md' }).status).toBe(0)
+      expect(preEdit(dir, { rel: '.plumbbob/build-log.md' }).status).toBe(0)
+      expect(preEdit(dir, { rel: '.plumbbob/report.md' }).status).toBe(0)
     }
-    expect(preEdit(dir, { rel: '.plumbline/archive/2026-01-01-x/intent.md' }).status).toBe(2)
+    expect(preEdit(dir, { rel: '.plumbbob/archive/2026-01-01-x/intent.md' }).status).toBe(2)
   })
 
   it('allows docs/ only in FINISH', () => {
@@ -95,17 +95,19 @@ describe('bash-guard (D21)', () => {
     expect(bashGuard(dir, 'echo hi > out.txt').status).toBe(0)
   })
 
-  it('blocks touching .plumbline/STATE or SEAM in any state', () => {
+  it('blocks touching .plumbbob/STATE or SEAM in any state', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Guarded'])
-    expect(bashGuard(dir, 'echo BUILD > .plumbline/STATE').status).toBe(2)
-    expect(bashGuard(dir, 'cat .plumbline/SEAM').status).toBe(2)
+    expect(bashGuard(dir, 'echo BUILD > .plumbbob/STATE').status).toBe(2)
+    expect(bashGuard(dir, 'cat .plumbbob/SEAM').status).toBe(2)
   })
 
-  it('blocks `plumbline mode` from the shell', () => {
+  it('blocks `plumbbob mode` from the shell (and the pb / legacy plumbbob spellings)', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Guarded'])
-    expect(bashGuard(dir, 'plumbline mode BUILD').status).toBe(2)
+    expect(bashGuard(dir, 'plumbbob mode BUILD').status).toBe(2)
+    expect(bashGuard(dir, 'pb mode BUILD').status).toBe(2)
+    expect(bashGuard(dir, 'plumbbob mode BUILD').status).toBe(2)
   })
 
   it('blocks file-writing patterns outside BUILD/SPIKE but allows them in BUILD', () => {

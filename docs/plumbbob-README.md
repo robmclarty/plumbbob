@@ -1,12 +1,12 @@
-# Plumbline
+# Plumbbob
 
 A manual, attention-first process for building software *with* an LLM instead of
 being dragged behind one. The layer below Ridgeline: where Ridgeline runs
-autonomously without you, Plumbline keeps you in the driver's seat for the small-
+autonomously without you, Plumbbob keeps you in the driver's seat for the small-
 to-medium work that doesn't justify a full autonomous build — a feature, a bug, a
 refactor — while staying deliberate rather than vibing.
 
-> Ridgeline is the line. Plumbline establishes *true* before you build.
+> Ridgeline is the line. Plumbbob establishes *true* before you build.
 > The LLM is a hand, not a head.
 
 ## The one law
@@ -15,7 +15,7 @@ refactor — while staying deliberate rather than vibing.
 
 Vibing is fine — *once every decision being carried out was already made on a
 surface outside the chat.* It becomes a slot machine only when the deciding
-happens inside the stream while code is flowing. The whole job of Plumbline is to
+happens inside the stream while code is flowing. The whole job of Plumbbob is to
 keep decisions and execution from fusing:
 
 - The **human** owns convergence. You decide, choose, pick the branch.
@@ -31,7 +31,7 @@ never "prompt better." It's "stop, leave the chat, go decide, come back."
 
 The exhaustion is a working-memory problem. You can't *produce* intent and
 *consume* the model's output at once — consuming overwrites producing. So
-Plumbline externalizes your plan onto two flat files that survive the flood:
+Plumbbob externalizes your plan onto two flat files that survive the flood:
 
 - `intent.md` — what you decided, before any code. Your canonical intent.
 - `build-log.md` — the live ledger of steps, parked ideas, and decisions.
@@ -41,8 +41,8 @@ ephemeral; the docs persist. **The chat is a hand; the docs are the head.**
 
 ## The mode machine
 
-Plumbline is a small state machine. The current mode lives in one word in
-`.plumbline/STATE`, and the hooks read it. The machine encodes exactly one fact
+Plumbbob is a small state machine. The current mode lives in one word in
+`.plumbbob/STATE`, and the hooks read it. The machine encodes exactly one fact
 the hooks care about — *are code edits allowed right now?* — so it stays small.
 
 | STATE    | What's happening                                          | Code edits      |
@@ -65,34 +65,34 @@ than marching in a line. The fine-grained phase label lives as a field in
 
 **You almost never set STATE by hand.** It's a side effect of the verbs you type
 and the skills you invoke. You think "build step 2" or "I'm done with this step,"
-never "set state to BUILD." A raw `plumbline mode <x>` exists as a hidden escape
+never "set state to BUILD." A raw `plumbbob mode <x>` exists as a hidden escape
 hatch for when reality and the machine desync, but it's not part of the flow.
 
 ## The verb contract
 
-What you actually type. Mechanical verbs are a dumb `plumbline` CLI run from the
+What you actually type. Mechanical verbs are a dumb `plumbbob` CLI run from the
 integrated terminal; the judgment work is skills invoked from the chat pane. Both
 live inside one editor — the split is judgment-vs-mechanism, not app-vs-app.
 
 | Verb / skill              | Does                                                                    | Kind          |
 |---------------------------|-------------------------------------------------------------------------|---------------|
-| `plumbline start "<t>"`   | scaffold `.plumbline/`; `STATE=DESIGN`; baseline commit recorded        | CLI           |
-| `/plumbline-interrogate`  | `DESIGN`; attack the frame for holes; **no code**                       | skill (Opus)  |
-| `plumbline build <n>`     | write `SEAM` from step n; `STATE=BUILD` (re-entering a step just flips) | CLI           |
-| `plumbline review`        | run the heavy check; if green → `STATE=REVIEW` (muzzle back on)         | CLI           |
-| `plumbline done`          | ensure check green; **checkpoint commit** + record SHA; `STATE=DESIGN`  | CLI           |
-| `plumbline park "<text>"` | append a raw line to the park list; model never sees it                 | CLI (dumb)    |
+| `plumbbob start "<t>"`   | scaffold `.plumbbob/`; `STATE=DESIGN`; baseline commit recorded        | CLI           |
+| `/plumbbob-interrogate`  | `DESIGN`; attack the frame for holes; **no code**                       | skill (Opus)  |
+| `plumbbob build <n>`     | write `SEAM` from step n; `STATE=BUILD` (re-entering a step just flips) | CLI           |
+| `plumbbob review`        | run the heavy check; if green → `STATE=REVIEW` (muzzle back on)         | CLI           |
+| `plumbbob done`          | ensure check green; **checkpoint commit** + record SHA; `STATE=DESIGN`  | CLI           |
+| `plumbbob park "<text>"` | append a raw line to the park list; model never sees it                 | CLI (dumb)    |
 | `/park`                   | compose one tidy tagged line, you approve/edit, then append             | skill (Haiku) |
-| `/plumbline-triage`       | `DESIGN`; classify the park list blocker/tangent/pivot                  | skill (Opus)  |
-| `plumbline revert [--to n]`| `git reset --hard` to a checkpoint SHA; `STATE=DESIGN`                  | CLI           |
-| `/plumbline-report`       | `FINISH`; synthesize the conclusion from intent + log                   | skill (Opus)  |
-| `/plumbline-docs`         | `FINISH`; update `docs/` from canonical intent (optional)               | skill (Opus)  |
-| `plumbline finish`        | **refuse unless a report is archived**; archive; clear; muzzle off      | CLI           |
-| `plumbline mode <x>`      | escape hatch: set STATE directly (not part of the normal flow)          | CLI (hidden)  |
+| `/plumbbob-triage`       | `DESIGN`; classify the park list blocker/tangent/pivot                  | skill (Opus)  |
+| `plumbbob revert [--to n]`| `git reset --hard` to a checkpoint SHA; `STATE=DESIGN`                  | CLI           |
+| `/plumbbob-report`       | `FINISH`; synthesize the conclusion from intent + log                   | skill (Opus)  |
+| `/plumbbob-docs`         | `FINISH`; update `docs/` from canonical intent (optional)               | skill (Opus)  |
+| `plumbbob finish`        | **refuse unless a report is archived**; archive; clear; muzzle off      | CLI           |
+| `plumbbob mode <x>`      | escape hatch: set STATE directly (not part of the normal flow)          | CLI (hidden)  |
 
 Why this split, mechanically: invoking a skill *is* invoking the model, so there
 is no model-free skill. The truly dumb capture path is therefore the terminal
-`plumbline park`, not a skill. Three reinforcing layers encode judgment-vs-
+`plumbbob park`, not a skill. Three reinforcing layers encode judgment-vs-
 mechanism, so the philosophy holds without willpower:
 
 - terminal CLI vs skill → mechanism vs needs-a-model
@@ -110,7 +110,7 @@ mechanism, so the philosophy holds without willpower:
    Sketch the architecture by hand. The slowness is the feature: it forms your
    model before the LLM's can colonize it. This is the one mode with no mechanical
    backing — framing-before-chat is yours to keep.
-2. **Interrogate** *(`/plumbline-interrogate`, Opus)* — hand it the frame, ask it
+2. **Interrogate** *(`/plumbbob-interrogate`, Opus)* — hand it the frame, ask it
    to attack: ambiguities, edge cases, hidden assumptions, collisions with
    existing code. The only divergence you want this early, and it's in the
    *problem* space, not the solution space.
@@ -133,16 +133,16 @@ Then flip to BUILD — and only then. Everything above happens code-locked.
    its SHA, and returns to `DESIGN` ready for the next step or finish.
 4. **Capture, don't chase.** Every new problem/idea mid-step goes to the park
    list, untouched — `/park` (Haiku composes a legible line) when heads-down and
-   you want it written for you, or raw `plumbline park` when you don't want a model
+   you want it written for you, or raw `plumbbob park` when you don't want a model
    turn at all. Acting on ideas the instant they arrive is the disease.
-5. **Triage at the boundary.** After a step is green, `/plumbline-triage` proposes
+5. **Triage at the boundary.** After a step is green, `/plumbbob-triage` proposes
    a class for each parked item and *you* call it: **blocker** (plan was wrong →
    fold into `intent.md`, handle now), **tangent** (different, not clearly better →
    defer or kill; the default), **pivot signal** (evidence the whole approach is
    wrong → stop and replan). Almost everything that feels like a pivot is a tangent.
 
 **The blocker path.** A true blocker can't wait for the boundary — there's no
-green to reach. Treat hitting the wall as a boundary: `plumbline revert` to the
+green to reach. Treat hitting the wall as a boundary: `plumbbob revert` to the
 last done-checkpoint (discarding the half-done step), flip to DESIGN, fold the new
 decision into `intent.md`, revise the step, and `build <n>` again. The seam-guard
 blocking an edit *outside* the declared seam is often how a blocker first reveals
@@ -158,34 +158,34 @@ with a forced end.
 
 ### Finish phase — `FINISH`
 
-Three parts, in order, because two read from `.plumbline/` before it resets:
+Three parts, in order, because two read from `.plumbbob/` before it resets:
 
-1. **`/plumbline-report`** reads `intent.md` + `build-log.md` and writes the
+1. **`/plumbbob-report`** reads `intent.md` + `build-log.md` and writes the
    conclusion: what shipped, the decisions and why, what was parked and how each
    was triaged, final status, and the deferred tangents that become future
-   Plumblines. The "yeah, I did that" artifact.
-2. **`/plumbline-docs`** *(optional)* updates real documentation in `docs/` from
+   Plumbbobs. The "yeah, I did that" artifact.
+2. **`/plumbbob-docs`** *(optional)* updates real documentation in `docs/` from
    the canonical parts of `intent.md`. Conservative by design — a bug fix usually
    shouldn't spawn a doc.
-3. **`plumbline finish`** *(run last)* **refuses unless a report exists** — the
+3. **`plumbbob finish`** *(run last)* **refuses unless a report exists** — the
    closing gate, symmetric with the step gate, so you can't walk away without
    capturing what happened. It then archives `intent.md` + `build-log.md` + report
-   to `.plumbline/archive/<date>-<slug>/`, clears the active files, and deletes
+   to `.plumbbob/archive/<date>-<slug>/`, clears the active files, and deletes
    `STATE` and `SEAM`. Deleting `STATE` last is what switches the muzzle off
    exactly when the session ends.
 
 "Reset for the next task" means **archive-then-clear, never destroy.** Because the
-archive lives inside `.plumbline/`, history accumulates while the active files
+archive lives inside `.plumbbob/`, history accumulates while the active files
 reset. The archive is plain markdown; indexing past builds for retrieval is a
 possible later step, deliberately out of scope here.
 
 ## Hooks — mechanize the boundaries
 
 Three hooks, all **session-gated**: each one's first act is to check for
-`.plumbline/STATE` and short-circuit to *allow* if there's no session. "Always
+`.plumbbob/STATE` and short-circuit to *allow* if there's no session. "Always
 runs" is not "always enforces" — the check is a microsecond `test -f`. So a quick
 fix in a repo with no active session behaves like plain Claude Code; the process
-is opt-in per task, not per repo. The hook walks up from cwd to find `.plumbline/`
+is opt-in per task, not per repo. The hook walks up from cwd to find `.plumbbob/`
 the way git finds `.git`, so it works from subdirectories. Register globally in
 `~/.claude/settings.json`; it sleeps until you `start`.
 
@@ -193,7 +193,7 @@ the way git finds `.git`, so it works from subdirectories. Register globally in
    `intent.md`/`build-log.md` → allow (doc whitelist). `STATE ∈ {BUILD, SPIKE}` →
    allow. Else block.
 2. **Seam-guard** — `PreToolUse` on `Edit`/`Write`. In BUILD, block any path not
-   listed in `.plumbline/SEAM`. The sidecar is a plain path list precisely so the
+   listed in `.plumbbob/SEAM`. The sidecar is a plain path list precisely so the
    hook is a trivial grep with no markdown parsing.
 3. **Light feedback** — `PostToolUse`, **non-blocking**. Incremental `tsc` +
    `oxlint` + `ast-grep` on changed files; injects failures into the model's
@@ -202,14 +202,14 @@ the way git finds `.git`, so it works from subdirectories. Register globally in
 
 ```sh
 # combined pre-edit hook (pseudocode)
-root=$(find_up .plumbline) || exit 0          # no session anywhere: allow
-[ -f "$root/.plumbline/STATE" ] || exit 0     # dormant: allow
+root=$(find_up .plumbbob) || exit 0          # no session anywhere: allow
+[ -f "$root/.plumbbob/STATE" ] || exit 0     # dormant: allow
 case "$EDIT_PATH" in
   */intent.md|*/build-log.md) exit 0 ;;       # docs always editable
 esac
-mode=$(cat "$root/.plumbline/STATE")
+mode=$(cat "$root/.plumbbob/STATE")
 case "$mode" in
-  BUILD|SPIKE) grep -qFx "$EDIT_PATH" "$root/.plumbline/SEAM" && exit 0
+  BUILD|SPIKE) grep -qFx "$EDIT_PATH" "$root/.plumbbob/SEAM" && exit 0
                echo "blocked: $EDIT_PATH outside SEAM" >&2; exit 2 ;;
   *) echo "blocked: edits not allowed in $mode" >&2; exit 2 ;;
 esac
@@ -232,18 +232,18 @@ light hook exists only because Claude can't see those.
 
 ## Git footprint — additive only
 
-Plumbline commits, and it resets to its own commits. **It never rewrites history.**
-The checkpoint commits (`plumbline: step n done`) are cheap WIP markers on your
+Plumbbob commits, and it resets to its own commits. **It never rewrites history.**
+The checkpoint commits (`plumbbob: step n done`) are cheap WIP markers on your
 feature branch; your normal squash-merge collapses them at PR time. `start`
 records the baseline HEAD so the session has a known origin. `revert [--to n]`
 does `git reset --hard` to a recorded SHA. `finish` lists the SHAs in the report
-and clears the sidecar — it does not touch git. Nothing Plumbline does is
+and clears the sidecar — it does not touch git. Nothing Plumbbob does is
 destructive to pushed history.
 
-## The `.plumbline/` folder
+## The `.plumbbob/` folder
 
 ```
-.plumbline/
+.plumbbob/
   STATE          # one word: DESIGN | BUILD | REVIEW | SPIKE | FINISH
   SEAM           # allowed edit paths for the current step (one per line)
   checkpoints    # "step N <git-sha>", one per verified done
@@ -266,7 +266,7 @@ The fastest way to abandon this is ceremony on a one-liner. The discipline is
   `interrogate` if there are no holes; one or two steps; skip `review` on trivial
   steps and go BUILD-green → `done`.
 - **Medium** (a feature touching a few modules): the full loop above.
-- **Large / architectural**: that's Ridgeline's job, not Plumbline's.
+- **Large / architectural**: that's Ridgeline's job, not Plumbbob's.
 
 Calibration is the skill. When in doubt, smaller.
 

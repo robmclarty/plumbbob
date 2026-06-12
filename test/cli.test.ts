@@ -23,7 +23,7 @@ function runCli(args: ReadonlyArray<string>): CliResult {
   }
 }
 
-describe('plumbline help', () => {
+describe('plumbbob help', () => {
   it('prints the full verb table', () => {
     const { stdout, status } = runCli(['help'])
     expect(status).toBe(0)
@@ -36,7 +36,7 @@ describe('plumbline help', () => {
   it('prints help when given no args', () => {
     const { stdout, status } = runCli([])
     expect(status).toBe(0)
-    expect(stdout).toContain('Usage: plumbline <verb>')
+    expect(stdout).toContain('Usage: plumbbob <verb>')
   })
 
   it('exits non-zero on an unknown verb', () => {

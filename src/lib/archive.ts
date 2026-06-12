@@ -1,5 +1,5 @@
 // The finish-phase archive helper (D20: archive is local-only markdown in v1).
-// `finish` copies the three active files into .plumbline/archive/<date>-<slug>/
+// `finish` copies the three active files into .plumbbob/archive/<date>-<slug>/
 // before clearing the actives — "archive-then-clear, never destroy" (C4).
 // Functional/procedural, node builtins only (C1/C2).
 
@@ -8,7 +8,7 @@ import { join } from 'node:path'
 import { sidecarDir, intentPath, buildLogPath } from './sidecar.ts'
 
 // report.md lives beside intent.md / build-log.md in the sidecar. It is written by
-// /plumbline-report and is the gate `finish` refuses without (D19). Derived from
+// /plumbbob-report and is the gate `finish` refuses without (D19). Derived from
 // the exported sidecarDir so this module needs nothing new from sidecar.ts.
 export function reportPath(root: string): string {
   return join(sidecarDir(root), 'report.md')

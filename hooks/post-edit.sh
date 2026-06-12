@@ -8,7 +8,7 @@
 find_root() {
   d=$(pwd -P)
   while [ -n "$d" ]; do
-    if [ -f "$d/.plumbline/STATE" ]; then
+    if [ -f "$d/.plumbbob/STATE" ]; then
       printf '%s' "$d"
       return 0
     fi

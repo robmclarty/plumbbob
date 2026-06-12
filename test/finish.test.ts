@@ -6,7 +6,7 @@ import { cleanupFixtures, makeFixtureRepo, readSidecar, runCli, sidecarExists } 
 afterAll(cleanupFixtures)
 
 function writeSidecar(dir: string, name: string, content: string): void {
-  writeFileSync(join(dir, '.plumbline', name), content)
+  writeFileSync(join(dir, '.plumbbob', name), content)
 }
 function writeRepo(dir: string, rel: string, content: string): void {
   const path = join(dir, rel)
@@ -14,11 +14,11 @@ function writeRepo(dir: string, rel: string, content: string): void {
   writeFileSync(path, content)
 }
 function archiveNames(dir: string): string[] {
-  const root = join(dir, '.plumbline', 'archive')
+  const root = join(dir, '.plumbbob', 'archive')
   return existsSync(root) ? readdirSync(root) : []
 }
 function readArchived(dir: string, archiveName: string, file: string): string {
-  return readFileSync(join(dir, '.plumbline', 'archive', archiveName, file), 'utf8')
+  return readFileSync(join(dir, '.plumbbob', 'archive', archiveName, file), 'utf8')
 }
 
 // Start a session with a one-step intent + stub check so build/done work, and stamp
@@ -29,7 +29,7 @@ function started(dir: string, title: string): void {
   writeSidecar(dir, 'config', 'check=true\n')
 }
 
-describe('plumbline finish', () => {
+describe('plumbbob finish', () => {
   it('refuses without a report and leaves the session intact', () => {
     const dir = makeFixtureRepo()
     started(dir, 'No report yet')
@@ -56,8 +56,8 @@ describe('plumbline finish', () => {
     expect(names).toHaveLength(1)
     const name = names[0] ?? ''
     expect(name).toMatch(/^\d{4}-\d{2}-\d{2}-ship-the-widget$/)
-    expect(existsSync(join(dir, '.plumbline', 'archive', name, 'intent.md'))).toBe(true)
-    expect(existsSync(join(dir, '.plumbline', 'archive', name, 'build-log.md'))).toBe(true)
+    expect(existsSync(join(dir, '.plumbbob', 'archive', name, 'intent.md'))).toBe(true)
+    expect(existsSync(join(dir, '.plumbbob', 'archive', name, 'build-log.md'))).toBe(true)
 
     const report = readArchived(dir, name, 'report.md')
     expect(report).toContain('Shipped the widget')
@@ -107,7 +107,7 @@ describe('plumbline finish', () => {
   })
 })
 
-describe('plumbline wrap', () => {
+describe('plumbbob wrap', () => {
   it('enters FINISH from DESIGN', () => {
     const dir = makeFixtureRepo()
     started(dir, 'Wrapping up')

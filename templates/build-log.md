@@ -5,7 +5,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
   Steps     : where you are. One step in flight at a time.
   Park list : where ideas go so you do not chase them. CAPTURE, never act inline.
   Triage    : the boundary ritual that keeps you on one branch.
-  Log       : the audit trail. Feeds /plumbline-report, then gets archived.
+  Log       : the audit trail. Feeds /plumbbob-report, then gets archived.
 -->
 
 # Build log — {{TITLE}}
@@ -16,7 +16,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 ## Steps
 
 *(Mirror of intent.md's Steps, with live status. Only ONE step is in flight. A step
-is done only after `plumbline done` — check green + checkpoint taken.)*
+is done only after `plumbbob done` — check green + checkpoint taken.)*
 
 - ☐ 1. <step>
 
@@ -24,7 +24,7 @@ is done only after `plumbline done` — check green + checkpoint taken.)*
 
 > Mid-step, every new problem / idea / "ooh what if" lands HERE, untouched, and you
 > go straight back to the step. Acting the instant an idea arrives is the disease.
-> Capture is one line (`/park` composes it, or raw `plumbline park`). Triage happens
+> Capture is one line (`/park` composes it, or raw `plumbbob park`). Triage happens
 > only at the boundary.
 
 ## Triage  *(run at each step boundary, after green)*
@@ -48,7 +48,7 @@ Triage results this boundary:
 ## Log
 
 *(Append-only. One decision or event per line, dated. What you point at to say "I
-did that — the LLM helped, but those were my calls." `/plumbline-report` reads this;
-`plumbline finish` archives it under `.plumbline/archive/`.)*
+did that — the LLM helped, but those were my calls." `/plumbbob-report` reads this;
+`plumbbob finish` archives it under `.plumbbob/archive/`.)*
 
 - <date> — <decision / event / what shipped this step>

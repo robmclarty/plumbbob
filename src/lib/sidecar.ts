@@ -1,4 +1,4 @@
-// The .plumbline/ sidecar: control state lives in flat files so the hooks can
+// The .plumbbob/ sidecar: control state lives in flat files so the hooks can
 // read it with a grep and no markdown parsing (D7). Functional/procedural,
 // node builtins only (C1/C2).
 
@@ -6,7 +6,7 @@ import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs
 import { join } from 'node:path'
 import { gitDir } from './git.ts'
 
-const DIRNAME = '.plumbline'
+const DIRNAME = '.plumbbob'
 
 // The five legal control states (README mode machine). `mode` validates against
 // this; the muzzle allows edits iff STATE is BUILD or SPIKE.
@@ -64,7 +64,7 @@ export function writeState(root: string, state: string): void {
   writeFileSync(statePath(root), `${state}\n`)
 }
 
-// D17: keep the sidecar untracked by appending `.plumbline/` to the repo's
+// D17: keep the sidecar untracked by appending `.plumbbob/` to the repo's
 // git/info/exclude. Idempotent — a re-`start` after finish must not double-add.
 export function excludeSidecar(root: string): void {
   const exclude = join(gitDir(root), 'info', 'exclude')

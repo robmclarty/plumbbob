@@ -1,6 +1,6 @@
 #!/bin/sh
-# pre-edit.sh — Plumbline muzzle + seam-guard. PreToolUse on
-# Edit|Write|MultiEdit|NotebookEdit. Session-gated: a repo with no .plumbline/
+# pre-edit.sh — Plumbbob muzzle + seam-guard. PreToolUse on
+# Edit|Write|MultiEdit|NotebookEdit. Session-gated: a repo with no .plumbbob/
 # session behaves exactly like plain Claude Code (C7). The dormant check is pure
 # sh (test -f) before any JSON parsing, so a no-session edit pays ~nothing (C3).
 # Built from the verified hooks API (D3): input is JSON on stdin
@@ -10,7 +10,7 @@
 find_root() {
   d=$(pwd -P)
   while [ -n "$d" ]; do
-    if [ -f "$d/.plumbline/STATE" ]; then
+    if [ -f "$d/.plumbbob/STATE" ]; then
       printf '%s' "$d"
       return 0
     fi
@@ -39,7 +39,7 @@ in_seam() {
 }
 
 deny() {
-  printf 'plumbline: %s\n' "$1" >&2
+  printf 'plumbbob: %s\n' "$1" >&2
   exit 2
 }
 
@@ -53,7 +53,7 @@ if [ -z "$path" ]; then
 fi
 [ -z "$path" ] && exit 0 # nothing to guard: allow
 
-state=$(tr -d '[:space:]' <"$root/.plumbline/STATE" 2>/dev/null)
+state=$(tr -d '[:space:]' <"$root/.plumbbob/STATE" 2>/dev/null)
 
 # Canonicalize the absolute tool path to repo-relative (D4).
 case "$path" in
@@ -63,7 +63,7 @@ esac
 
 # 1. The archive is read-only history — never writable (D6/D19).
 case "$rel" in
-  .plumbline/archive/*)
+  .plumbbob/archive/*)
     deny "blocked: $rel is archived history (read-only). Do not retry."
     ;;
 esac
@@ -71,7 +71,7 @@ esac
 # 2. The three control docs are writable in every state, so DESIGN and FINISH can
 #    do their work. Anchored exact paths — never a bare */intent.md suffix (D6).
 case "$rel" in
-  .plumbline/intent.md | .plumbline/build-log.md | .plumbline/report.md)
+  .plumbbob/intent.md | .plumbbob/build-log.md | .plumbbob/report.md)
     exit 0
     ;;
 esac
@@ -88,8 +88,8 @@ esac
 #    SPIKE locks the main tree like DESIGN (D18) — spike edits live in dormant
 #    worktrees, so the muzzle never needs to allow SPIKE here.
 if [ "$state" = "BUILD" ]; then
-  in_seam "$rel" "$root/.plumbline/SEAM" && exit 0
-  deny "blocked: $rel is outside the seam for this step. Do not retry — park it (\`plumbline park\`), or ask the human to revise the step's seam in intent.md and re-run \`plumbline build <n>\`."
+  in_seam "$rel" "$root/.plumbbob/SEAM" && exit 0
+  deny "blocked: $rel is outside the seam for this step. Do not retry — park it (\`plumbbob park\`), or ask the human to revise the step's seam in intent.md and re-run \`plumbbob build <n>\`."
 fi
 
-deny "blocked: code edits are not allowed in ${state:-?} (they happen in BUILD). Do not retry — if this needs doing it's a decision: park it (\`plumbline park\`) or ask the human to \`plumbline build <n>\`."
+deny "blocked: code edits are not allowed in ${state:-?} (they happen in BUILD). Do not retry — if this needs doing it's a decision: park it (\`plumbbob park\`) or ask the human to \`plumbbob build <n>\`."

@@ -1,5 +1,5 @@
 // Thin git wrapper over `node:child_process` (C2: node builtins only, zero
-// runtime deps). Functional/procedural, no classes (C1). Plumbline's git
+// runtime deps). Functional/procedural, no classes (C1). Plumbbob's git
 // footprint is additive (C5); these helpers only read and locate.
 
 import { execFileSync } from 'node:child_process'
