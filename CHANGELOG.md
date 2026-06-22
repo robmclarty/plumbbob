@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-06-22
+
+- **Fixed:** `bash-guard` no longer over-blocks read-only redirects outside
+  BUILD/SPIKE. The guard previously denied any command containing `>`, which
+  caught harmless forms that cannot write a real file — stderr merges (`2>&1`)
+  and `/dev/null` sinks (`2>/dev/null`, `&>/dev/null`). These are now scrubbed
+  before the write check, while any surviving `>` is still treated as a real
+  write and blocked.
+
 ## [0.2.0] - 2026-06-22
 
 - **Added:** a self-contained, project-level install shape so Plumbbob can run
