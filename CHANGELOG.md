@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2026-06-22
+
+- **Added:** a `/version` maintainer skill that bumps the `package.json` version
+  by semver (major, minor, or patch), writes a dated Keep a Changelog entry
+  summarizing the commits since the last release, and commits the result as
+  `chore: release A.B.C`. It lives under `.claude/` rather than the published
+  `skills/` directory so it ships to plumbbob's maintainers, not its end users.
+
 ## [0.1.4] - 2026-06-22
 
 - **Fixed:** the published `bin` pointed at the raw TypeScript `src/cli.ts`, so a
