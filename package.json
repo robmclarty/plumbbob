@@ -1,6 +1,6 @@
 {
   "name": "plumbbob",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Attention-first build process: a CLI + hooks that enforce the deciding/executing boundary.",
   "keywords": ["claude-code", "claude", "hooks", "cli", "agent", "attention-first"],
   "homepage": "https://github.com/robmclarty/plumbbob#readme",

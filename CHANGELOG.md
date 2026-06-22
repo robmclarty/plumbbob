@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2026-06-22
+
+- **Fixed:** `plumbbob revert` no longer discards plumbbob's own installed
+  files. The verb does a repo-wide `git reset --hard` to the checkpoint, which
+  reverted every tracked file — including the driver skills a self-contained
+  install copies into `.claude/skills/pb-*`, so an out-of-seam skill edit or a
+  `pnpm up plumbbob` re-setup was silently rolled back along with the half-done
+  step. revert now snapshots plumbbob's own paths (the sidecar, plus each
+  installed skill named in the bundled `skills/` dir) across the reset and
+  restores them afterward. Only plumbbob's own skills are protected — a user's
+  own `.claude/skills/<name>/` still follows the reset, and the git-excluded
+  sidecar is covered too so revert stays robust even where `.plumbbob/` was
+  tracked by mistake.
+
 ## [0.2.2] - 2026-06-22
 
 - **Fixed:** the pre-edit muzzle no longer blocks writes outside the repository
