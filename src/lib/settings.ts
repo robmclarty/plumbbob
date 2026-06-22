@@ -8,9 +8,11 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 
 // A registration entry is "ours" iff one of its hook commands points into our
-// installed hooks dir. This marker matches BOTH the absolute (global) and the
-// `~`-prefixed (repo-scoped) command forms, so uninstall finds either.
-const OURS_MARKER = '.claude/plumbbob/hooks/'
+// hooks dir. This marker matches every command form we emit: the global
+// `~/.claude/plumbbob/hooks/...` copy and the self-contained
+// `$CLAUDE_PROJECT_DIR/node_modules/plumbbob/hooks/...` reference both contain
+// `plumbbob/hooks/`, so uninstall finds either.
+const OURS_MARKER = 'plumbbob/hooks/'
 
 // The PreToolUse edit matcher covers all four editing tools (D5).
 const EDIT_MATCHER = 'Edit|Write|MultiEdit|NotebookEdit'
@@ -23,15 +25,22 @@ interface Settings {
   [key: string]: unknown
 }
 
-// The three hook registration entries, pointing at `hooksDir` (absolute for the
-// global scope; `~`-prefixed for the repo-scoped files so committed settings
-// carry no machine-absolute home dir — a leading `~/` is shell-expanded when the
-// hook command runs). Mirrors the PreToolUse/PostToolUse shape dev-install wrote.
-function registrationEntries(hooksDir: string): { readonly PreToolUse: HookEntry[]; readonly PostToolUse: HookEntry[] } {
+// The three hook registration entries, pointing at `hooksDir`. Two command forms:
+//   global       — a direct absolute path to the +x copy under ~/.claude.
+//   self (viaSh) — `sh "<dir>/<file>"` against the package's hooks/ under
+//                  node_modules, addressed through `$CLAUDE_PROJECT_DIR` so the
+//                  committed/portable form carries no machine-absolute path and
+//                  needs no execute bit (pnpm's store may not preserve one).
+// Mirrors the PreToolUse/PostToolUse shape dev-install wrote.
+function registrationEntries(
+  hooksDir: string,
+  viaSh: boolean,
+): { readonly PreToolUse: HookEntry[]; readonly PostToolUse: HookEntry[] } {
   const dir = hooksDir.endsWith('/') ? hooksDir.slice(0, -1) : hooksDir
+  const command = (file: string): string => (viaSh ? `sh "${dir}/${file}"` : `${dir}/${file}`)
   const entry = (matcher: string, file: string): HookEntry => ({
     matcher,
-    hooks: [{ type: 'command', command: `${dir}/${file}` }],
+    hooks: [{ type: 'command', command: command(file) }],
   })
   return {
     PreToolUse: [entry(EDIT_MATCHER, 'pre-edit.sh'), entry('Bash', 'bash-guard.sh')],
@@ -50,8 +59,8 @@ function stripOurs(list: ReadonlyArray<HookEntry> | undefined): HookEntry[] {
 // Merge our registration into a parsed settings object (strip-then-add). Returns
 // a new object; every unrelated key and unrelated hook is preserved, and key
 // order is stable across runs so a second merge is byte-identical.
-export function mergeRegistration(settings: Settings, hooksDir: string): Settings {
-  const entries = registrationEntries(hooksDir)
+export function mergeRegistration(settings: Settings, hooksDir: string, viaSh = false): Settings {
+  const entries = registrationEntries(hooksDir, viaSh)
   const existing: HookMap = settings.hooks ?? {}
   const hooks: { [event: string]: ReadonlyArray<HookEntry> | undefined } = { ...existing }
   hooks.PreToolUse = [...stripOurs(existing.PreToolUse), ...entries.PreToolUse]

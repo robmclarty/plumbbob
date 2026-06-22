@@ -3,12 +3,12 @@ name: plumbbob-report
 description: FINISH-phase report — synthesize intent + build-log into exactly .plumbbob/report.md with the five required sections.
 disable-model-invocation: true
 model: opus
-allowed-tools: Read, Write, Bash(plumbbob status:*)
+allowed-tools: Read, Write, Bash(__PLUMBBOB_BIN__ status:*)
 ---
 
 # Plumbbob — write the report
 
-Current session state (injected when this skill runs): !`plumbbob status`
+Current session state (injected when this skill runs): !`__PLUMBBOB_BIN__ status`
 
 ## Wrong-state refusal
 

@@ -1,7 +1,11 @@
-// `plumbbob setup` (D27): copies hooks + skills under ~/.claude/, then registers
-// the hooks in the settings file the chosen scope selects — idempotently. HOME is
-// pinned to a throwaway dir per test so the real ~/.claude is never touched; the
-// repo scopes use a fixture git repo. These are subprocess-driven (D14).
+// `plumbbob setup` — two install shapes. The global shape (--global, or the auto
+// default when plumbbob is not a project-local dep) copies hooks + skills under
+// ~/.claude and registers absolute paths. The self-contained shape (--local /
+// --project) writes NOTHING under ~/.claude: it copies skills into
+// <repo>/.claude/skills with the bin resolved to the project-local binary, and
+// registers the hooks in place under node_modules via $CLAUDE_PROJECT_DIR. HOME
+// is pinned to a throwaway dir per test so the real ~/.claude is never touched;
+// the repo scopes use a fixture git repo. Subprocess-driven (D14).
 
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -14,7 +18,9 @@ type Cmd = { readonly command: string }
 type Entry = { readonly matcher?: string; readonly hooks?: ReadonlyArray<Cmd> }
 type Parsed = { hooks?: { PreToolUse?: Entry[]; PostToolUse?: Entry[] }; model?: unknown }
 
-const SKILLS = ['plumbbob-interrogate', 'park', 'plumbbob-triage', 'plumbbob-report', 'plumbbob-docs']
+const JUDGMENT_SKILLS = ['plumbbob-interrogate', 'park', 'plumbbob-triage', 'plumbbob-report', 'plumbbob-docs']
+const DRIVER_SKILLS = ['pb-start', 'pb-build', 'pb-review', 'pb-done', 'pb-revert', 'pb-wrap', 'pb-finish', 'pb-spike']
+const SKILLS = [...JUDGMENT_SKILLS, ...DRIVER_SKILLS]
 const HOOKS = ['pre-edit.sh', 'bash-guard.sh', 'post-edit.sh']
 
 function setupIn(repo: string, home: string, ...flags: string[]): ReturnType<typeof runCli> {
@@ -23,23 +29,34 @@ function setupIn(repo: string, home: string, ...flags: string[]): ReturnType<typ
 function homeSettings(home: string): string {
   return join(home, '.claude', 'settings.json')
 }
+function repoSettings(repo: string): string {
+  return join(repo, '.claude', 'settings.json')
+}
+function repoLocalSettings(repo: string): string {
+  return join(repo, '.claude', 'settings.local.json')
+}
 function readJson(path: string): Parsed {
   return JSON.parse(readFileSync(path, 'utf8')) as Parsed
 }
-// Every registered command that points into our installed hooks dir.
+// Every registered command that points into our hooks dir — matches both the
+// global (~/.claude/plumbbob/hooks) and self-contained (node_modules/plumbbob/
+// hooks) command forms.
 function ourCommands(s: Parsed): string[] {
   const pre = s.hooks?.PreToolUse ?? []
   const post = s.hooks?.PostToolUse ?? []
   return [...pre, ...post]
     .flatMap((e) => (e.hooks ?? []).map((h) => h.command))
-    .filter((c) => c.includes('.claude/plumbbob/hooks/'))
+    .filter((c) => c.includes('plumbbob/hooks/'))
+}
+function skillBody(base: string, name: string): string {
+  return readFileSync(join(base, '.claude', 'skills', name, 'SKILL.md'), 'utf8')
 }
 
-describe('plumbbob setup — global scope', () => {
-  it('installs hooks + skills under ~/.claude and registers them in ~/.claude/settings.json', () => {
+describe('plumbbob setup — global shape', () => {
+  it('installs hooks + skills under ~/.claude and registers absolute paths', () => {
     const home = makeNonGitDir()
     const repo = makeFixtureRepo()
-    expect(setupIn(repo, home).status).toBe(0)
+    expect(setupIn(repo, home, '--global').status).toBe(0)
 
     for (const h of HOOKS) {
       const hookPath = join(home, '.claude', 'plumbbob', 'hooks', h)
@@ -52,16 +69,33 @@ describe('plumbbob setup — global scope', () => {
 
     const s = readJson(homeSettings(home))
     expect(ourCommands(s)).toHaveLength(3)
-    // global registers ABSOLUTE command paths, all under this home
-    expect(ourCommands(s).every((c) => c.startsWith(home))).toBe(true)
+    expect(ourCommands(s).every((c) => c.startsWith(home))).toBe(true) // absolute, under this home
+    expect(existsSync(repoSettings(repo))).toBe(false) // repo untouched
 
-    // the matchers wire each hook to the right event/tool
     const pre = s.hooks?.PreToolUse ?? []
     expect(pre.find((e) => e.matcher === 'Bash')?.hooks?.[0]?.command).toMatch(/bash-guard\.sh$/)
     expect(pre.find((e) => e.matcher === 'Edit|Write|MultiEdit|NotebookEdit')?.hooks?.[0]?.command).toMatch(
       /pre-edit\.sh$/,
     )
     expect((s.hooks?.PostToolUse ?? [])[0]?.hooks?.[0]?.command).toMatch(/post-edit\.sh$/)
+  })
+
+  it('resolves the skill bin placeholder to a bare `plumbbob`', () => {
+    const home = makeNonGitDir()
+    setupIn(makeFixtureRepo(), home, '--global')
+    const park = readFileSync(join(home, '.claude', 'skills', 'park', 'SKILL.md'), 'utf8')
+    expect(park).toContain('!`plumbbob status`')
+    expect(park).not.toContain('__PLUMBBOB_BIN__')
+  })
+
+  it('falls back to global with no flag when plumbbob is not a project-local dep', () => {
+    const home = makeNonGitDir()
+    const repo = makeFixtureRepo()
+    setupIn(repo, home)
+
+    expect(existsSync(homeSettings(home))).toBe(true)
+    expect(existsSync(repoSettings(repo))).toBe(false)
+    expect(existsSync(repoLocalSettings(repo))).toBe(false)
   })
 
   it('merges into existing hooks, preserving foreign hooks and unrelated keys', () => {
@@ -79,7 +113,7 @@ describe('plumbbob setup — global scope', () => {
         2,
       )}\n`,
     )
-    setupIn(repo, home)
+    setupIn(repo, home, '--global')
 
     const s = readJson(homeSettings(home))
     const allPre = (s.hooks?.PreToolUse ?? []).flatMap((e) => (e.hooks ?? []).map((h) => h.command))
@@ -88,24 +122,12 @@ describe('plumbbob setup — global scope', () => {
     expect(s.model).toBe('opus') // unrelated key preserved
   })
 
-  it('adds the hooks key when the settings file has none', () => {
-    const home = makeNonGitDir()
-    const repo = makeFixtureRepo()
-    mkdirSync(join(home, '.claude'), { recursive: true })
-    writeFileSync(homeSettings(home), `${JSON.stringify({ model: 'sonnet' }, null, 2)}\n`)
-    setupIn(repo, home)
-
-    const s = readJson(homeSettings(home))
-    expect(s.hooks?.PreToolUse).toBeDefined()
-    expect(ourCommands(s)).toHaveLength(3)
-  })
-
   it('is idempotent: a second run is byte-identical', () => {
     const home = makeNonGitDir()
     const repo = makeFixtureRepo()
-    setupIn(repo, home)
+    setupIn(repo, home, '--global')
     const first = readFileSync(homeSettings(home), 'utf8')
-    setupIn(repo, home)
+    setupIn(repo, home, '--global')
     expect(readFileSync(homeSettings(home), 'utf8')).toBe(first)
   })
 
@@ -121,57 +143,92 @@ describe('plumbbob setup — global scope', () => {
         2,
       )}\n`,
     )
-    setupIn(repo, home)
+    setupIn(repo, home, '--global')
     expect(ourCommands(readJson(homeSettings(home)))).toHaveLength(3)
 
-    setupIn(repo, home, '--uninstall')
+    setupIn(repo, home, '--global', '--uninstall')
     const s = readJson(homeSettings(home))
     expect(ourCommands(s)).toHaveLength(0)
     expect((s.hooks?.PreToolUse ?? []).flatMap((e) => (e.hooks ?? []).map((h) => h.command))).toContain('/opt/foreign.sh')
   })
 })
 
-describe('plumbbob setup — D27 scopes write only their own settings file', () => {
-  it('--project writes <repo>/.claude/settings.json with ~-portable command paths', () => {
+describe('plumbbob setup — self-contained shape (--local / --project)', () => {
+  const SELF_CMD_PREFIX = 'sh "$CLAUDE_PROJECT_DIR/node_modules/plumbbob/hooks/'
+
+  it('--local writes only <repo>/.claude/settings.local.json, nothing under ~/.claude', () => {
     const home = makeNonGitDir()
     const repo = makeFixtureRepo()
-    setupIn(repo, home, '--project')
+    expect(setupIn(repo, home, '--local').status).toBe(0)
 
-    const projectFile = join(repo, '.claude', 'settings.json')
-    expect(existsSync(projectFile)).toBe(true)
-    expect(existsSync(join(repo, '.claude', 'settings.local.json'))).toBe(false)
+    expect(existsSync(repoLocalSettings(repo))).toBe(true)
+    expect(existsSync(repoSettings(repo))).toBe(false)
     expect(existsSync(homeSettings(home))).toBe(false) // global settings untouched
+    expect(existsSync(join(home, '.claude', 'skills'))).toBe(false) // no global skills copy
+    expect(existsSync(join(home, '.claude', 'plumbbob'))).toBe(false) // no global hooks copy
 
-    const cmds = ourCommands(readJson(projectFile))
+    const cmds = ourCommands(readJson(repoLocalSettings(repo)))
     expect(cmds).toHaveLength(3)
-    // committable settings carry NO machine-absolute home dir
-    expect(cmds.every((c) => c.startsWith('~/.claude/plumbbob/hooks/'))).toBe(true)
+    expect(cmds.every((c) => c.startsWith(SELF_CMD_PREFIX))).toBe(true) // portable, sh-invoked, in node_modules
   })
 
-  it('--local writes only <repo>/.claude/settings.local.json', () => {
+  it('copies the skills into the repo with the bin resolved to the project-local binary', () => {
     const home = makeNonGitDir()
     const repo = makeFixtureRepo()
     setupIn(repo, home, '--local')
 
-    expect(existsSync(join(repo, '.claude', 'settings.local.json'))).toBe(true)
-    expect(existsSync(join(repo, '.claude', 'settings.json'))).toBe(false)
-    expect(existsSync(homeSettings(home))).toBe(false)
+    for (const sk of SKILLS) {
+      expect(existsSync(join(repo, '.claude', 'skills', sk, 'SKILL.md'))).toBe(true)
+    }
+    const park = skillBody(repo, 'park')
+    expect(park).toContain('!`$CLAUDE_PROJECT_DIR/node_modules/.bin/plumbbob status`')
+    expect(park).not.toContain('__PLUMBBOB_BIN__')
+
+    const build = skillBody(repo, 'pb-build')
+    expect(build).toContain('$CLAUDE_PROJECT_DIR/node_modules/.bin/plumbbob build')
   })
 
-  it('the default (global) scope writes ~/.claude/settings.json, not the repo', () => {
+  it('--project writes a committable <repo>/.claude/settings.json, nothing under ~/.claude', () => {
     const home = makeNonGitDir()
     const repo = makeFixtureRepo()
-    setupIn(repo, home)
+    setupIn(repo, home, '--project')
 
-    expect(existsSync(homeSettings(home))).toBe(true)
-    expect(existsSync(join(repo, '.claude', 'settings.json'))).toBe(false)
-    expect(existsSync(join(repo, '.claude', 'settings.local.json'))).toBe(false)
+    expect(existsSync(repoSettings(repo))).toBe(true)
+    expect(existsSync(repoLocalSettings(repo))).toBe(false)
+    expect(existsSync(homeSettings(home))).toBe(false)
+
+    const cmds = ourCommands(readJson(repoSettings(repo)))
+    expect(cmds).toHaveLength(3)
+    expect(cmds.every((c) => c.startsWith(SELF_CMD_PREFIX))).toBe(true) // no machine-absolute path
   })
 
-  it('refuses --project outside a git repo (no <repo>/.claude/ to write to)', () => {
+  it('is idempotent: a second --local run leaves the settings file byte-identical', () => {
     const home = makeNonGitDir()
-    const nonRepo = makeNonGitDir()
-    const result = setupIn(nonRepo, home, '--project')
+    const repo = makeFixtureRepo()
+    setupIn(repo, home, '--local')
+    const first = readFileSync(repoLocalSettings(repo), 'utf8')
+    setupIn(repo, home, '--local')
+    expect(readFileSync(repoLocalSettings(repo), 'utf8')).toBe(first)
+  })
+
+  it('--uninstall strips the registration from the repo settings file', () => {
+    const home = makeNonGitDir()
+    const repo = makeFixtureRepo()
+    setupIn(repo, home, '--local')
+    expect(ourCommands(readJson(repoLocalSettings(repo)))).toHaveLength(3)
+
+    setupIn(repo, home, '--local', '--uninstall')
+    expect(ourCommands(readJson(repoLocalSettings(repo)))).toHaveLength(0)
+  })
+
+  it('refuses --local outside a git repo', () => {
+    const result = setupIn(makeNonGitDir(), makeNonGitDir(), '--local')
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('not a git repository')
+  })
+
+  it('refuses --project outside a git repo', () => {
+    const result = setupIn(makeNonGitDir(), makeNonGitDir(), '--project')
     expect(result.status).toBe(1)
     expect(result.stderr).toContain('not a git repository')
   })

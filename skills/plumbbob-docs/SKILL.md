@@ -3,12 +3,12 @@ name: plumbbob-docs
 description: FINISH-phase, optional docs update — conservatively project canonical intent into real docs/, only when warranted.
 disable-model-invocation: true
 model: opus
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*)
+allowed-tools: Read, Edit, Write, Bash(__PLUMBBOB_BIN__ status:*)
 ---
 
 # Plumbbob — update the docs
 
-Current session state (injected when this skill runs): !`plumbbob status`
+Current session state (injected when this skill runs): !`__PLUMBBOB_BIN__ status`
 
 ## Wrong-state refusal
 

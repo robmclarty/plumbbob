@@ -61,16 +61,68 @@ describe('every skill (the three reinforcing layers)', () => {
         expect(data.model).toBe(MODEL_PINS[dir])
       })
 
-      it('opens its body with the status pre-injection', () => {
-        expect(body).toContain('!`plumbbob status`')
+      it('opens its body with the status pre-injection (bin placeholder, resolved at setup)', () => {
+        expect(body).toContain('!`__PLUMBBOB_BIN__ status`')
       })
 
-      it('grants Bash(plumbbob status) so the pre-injection can run', () => {
-        expect(data['allowed-tools']).toMatch(/Bash\(plumbbob status/)
+      it('grants Bash(__PLUMBBOB_BIN__ status) so the pre-injection can run', () => {
+        expect(data['allowed-tools']).toMatch(/Bash\(__PLUMBBOB_BIN__ status/)
       })
 
       it('carries a wrong-state refusal', () => {
         expect(body).toMatch(/refus/i)
+      })
+    })
+  }
+})
+
+// The pb-* driver skills: human-fired chat triggers for the transition verbs
+// (A). They are pure mechanism — shell one verb, report it verbatim — and so are
+// pinned to haiku, disable model invocation, and carry no Edit/Write.
+const DRIVER_VERB: Record<string, string> = {
+  'pb-start': 'start',
+  'pb-build': 'build',
+  'pb-review': 'review',
+  'pb-done': 'done',
+  'pb-revert': 'revert',
+  'pb-wrap': 'wrap',
+  'pb-finish': 'finish',
+  'pb-spike': 'spike',
+}
+
+describe('driver skills (pb-*) — the human fires the transition from the chat', () => {
+  for (const dir of Object.keys(DRIVER_VERB)) {
+    describe(dir, () => {
+      const { data, body } = parseSkill(dir)
+      const verb = DRIVER_VERB[dir]
+
+      it('names itself after its directory (D12)', () => {
+        expect(data.name).toBe(dir)
+      })
+
+      it('disables model invocation so only the human fires the transition', () => {
+        expect(data['disable-model-invocation']).toBe('true')
+      })
+
+      it('is pinned to haiku (pure mechanism, not judgment)', () => {
+        expect(data.model).toBe('haiku')
+      })
+
+      it('grants exactly its verb + status, and no Edit/Write', () => {
+        expect(data['allowed-tools']).toContain(`Bash(__PLUMBBOB_BIN__ ${verb}`)
+        expect(data['allowed-tools']).toContain('Bash(__PLUMBBOB_BIN__ status')
+        expect(data['allowed-tools']).not.toMatch(/\bEdit\b/)
+        expect(data['allowed-tools']).not.toMatch(/\bWrite\b/)
+      })
+
+      it('opens with the status pre-injection and shells the verb in its body', () => {
+        expect(body).toContain('!`__PLUMBBOB_BIN__ status`')
+        expect(body).toContain(`__PLUMBBOB_BIN__ ${verb}`)
+      })
+
+      it('defers to the CLI: reports verbatim, never retries or works around a refusal', () => {
+        expect(body).toMatch(/verbatim/i)
+        expect(body).toMatch(/never retry/i)
       })
     })
   }
@@ -112,9 +164,9 @@ describe('park — capture via the dumb CLI, never an edit (D12)', () => {
     expect(data['allowed-tools']).not.toMatch(/\bWrite\b/)
   })
 
-  it('captures by shelling plumbbob park', () => {
-    expect(data['allowed-tools']).toMatch(/Bash\(plumbbob park/)
-    expect(body).toContain('plumbbob park')
+  it('captures by shelling the park verb', () => {
+    expect(data['allowed-tools']).toMatch(/Bash\(__PLUMBBOB_BIN__ park/)
+    expect(body).toContain('__PLUMBBOB_BIN__ park')
   })
 
   it('requires in-turn human approval before the append', () => {

@@ -3,12 +3,12 @@ name: plumbbob-triage
 description: DESIGN-phase, step-boundary triage — propose one class per parked item, write only after the human confirms each.
 disable-model-invocation: true
 model: opus
-allowed-tools: Read, Edit, Bash(plumbbob status:*)
+allowed-tools: Read, Edit, Bash(__PLUMBBOB_BIN__ status:*)
 ---
 
 # Plumbbob — triage the park list
 
-Current session state (injected when this skill runs): !`plumbbob status`
+Current session state (injected when this skill runs): !`__PLUMBBOB_BIN__ status`
 
 ## Wrong-state refusal
 

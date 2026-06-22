@@ -3,12 +3,12 @@ name: plumbbob-interrogate
 description: DESIGN-phase frame interrogation — attack the plan for holes and append them as Open questions, without deciding anything.
 disable-model-invocation: true
 model: opus
-allowed-tools: Read, Edit, Bash(plumbbob status:*)
+allowed-tools: Read, Edit, Bash(__PLUMBBOB_BIN__ status:*)
 ---
 
 # Plumbbob — interrogate the frame
 
-Current session state (injected when this skill runs): !`plumbbob status`
+Current session state (injected when this skill runs): !`__PLUMBBOB_BIN__ status`
 
 ## Wrong-state refusal
 
