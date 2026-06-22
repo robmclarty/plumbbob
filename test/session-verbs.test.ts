@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupFixtures, makeFixtureRepo, makeNonGitDir, readSidecar, runCli, sidecarExists } from './helpers/fixture-repo.ts'
+import { cleanupFixtures, makeFixtureRepo, makeNonGitDir, readSidecar, runCli } from './helpers/fixture-repo.ts'
 
 afterAll(cleanupFixtures)
 
@@ -71,13 +71,12 @@ describe('plumbbob park', () => {
   })
 })
 
-describe('D21 model-invoked-verb refusal (CLAUDECODE)', () => {
-  it('refuses a transition verb (start) under CLAUDECODE and writes nothing', () => {
+describe('D21 (revised): transitions run in-session; mode stays human-only (CLAUDECODE)', () => {
+  it('runs a transition verb (start) under CLAUDECODE — driver skills fire it from the chat', () => {
     const dir = makeFixtureRepo()
-    const result = runCli(dir, ['start', 'Should refuse'], { CLAUDECODE: '1' })
-    expect(result.status).toBe(1)
-    expect(result.stderr.toLowerCase()).toContain('deciding verb')
-    expect(sidecarExists(dir, 'STATE')).toBe(false)
+    const result = runCli(dir, ['start', 'Now allowed'], { CLAUDECODE: '1' })
+    expect(result.status).toBe(0)
+    expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
   })
 
   it('refuses mode under CLAUDECODE, leaving STATE unchanged', () => {

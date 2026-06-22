@@ -33,24 +33,20 @@ const VERBS: ReadonlyArray<Verb> = [
   { name: 'wrap', summary: 'set STATE=FINISH so /plumbbob-report and /plumbbob-docs can run' },
   { name: 'finish', summary: 'refuse unless a report is archived; archive; clear; muzzle off' },
   { name: 'mode', summary: 'mode <x>: set STATE directly (hidden escape hatch)' },
-  { name: 'setup', summary: 'install hooks + skills; register them (default global; --project / --local per D27)' },
+  { name: 'setup', summary: 'install hooks + skills; register them (self-contained per-project by default; --global for ~/.claude)' },
 ]
 
-// D21: deciding/transition verbs are human-only. In a Claude Code session
-// (CLAUDECODE set) the dispatch refuses them so the model cannot drive a state
-// transition. `park` and `status` are the deliberate exceptions — dumb capture
-// and read-only inspection are model-safe.
-const TRANSITION_VERBS: ReadonlySet<string> = new Set([
-  'start',
-  'build',
-  'review',
-  'done',
-  'revert',
-  'spike',
-  'wrap',
-  'finish',
-  'mode',
-])
+// D21 (revised): the human owns every transition — but the trigger surface is no
+// longer "terminal vs chat", it is "human-initiated vs model-initiated". The
+// human now fires transitions from the chat through the `pb-*` driver skills
+// (`disable-model-invocation: true`, so the model can never invoke them) just as
+// well as from a terminal, so the blanket in-session refusal is gone. The lone
+// hold-out is `mode`, the hidden escape hatch for desyncs: it stays human-only,
+// refused in-session (CLAUDECODE set) and also blocked from the model's shell by
+// bash-guard.sh. A stray model-initiated transition is caught by Claude Code's
+// permission prompt, since the transition verbs are deliberately kept out of the
+// settings allowlist (only each driver skill self-authorizes its own verb).
+const HUMAN_ONLY_VERBS: ReadonlySet<string> = new Set(['mode'])
 
 function formatHelp(): string {
   const width = Math.max(...VERBS.map((v) => v.name.length))
@@ -101,10 +97,10 @@ function run(argv: ReadonlyArray<string>): number {
     return 0
   }
 
-  if (TRANSITION_VERBS.has(verb) && process.env.CLAUDECODE) {
+  if (HUMAN_ONLY_VERBS.has(verb) && process.env.CLAUDECODE) {
     process.stderr.write(
-      `plumbbob: '${verb}' is a deciding verb — only the human runs it (you appear to be in a Claude Code session). ` +
-        `Do not retry. Ask the human to run \`plumbbob ${verb}\` in their terminal.\n`,
+      `plumbbob: '${verb}' is the human's escape hatch, not a model action (you appear to be in a Claude Code session). ` +
+        `Do not retry. Ask the human to run \`plumbbob ${verb}\` themselves.\n`,
     )
     return 1
   }

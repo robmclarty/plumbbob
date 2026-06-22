@@ -57,8 +57,9 @@ type CliResult = {
   readonly status: number
 }
 
-// Spawns the CLI with CLAUDECODE stripped (simulating the human's terminal) so
-// transition verbs run. Pass `{ CLAUDECODE: '1' }` to exercise the D21 refusal.
+// Spawns the CLI with CLAUDECODE stripped by default. Pass `{ CLAUDECODE: '1' }`
+// to simulate an in-session run — transitions still run (driver skills fire them),
+// but `mode` is refused (D21 revised).
 export function runCli(dir: string, args: ReadonlyArray<string>, extraEnv: Record<string, string> = {}): CliResult {
   const env: Record<string, string | undefined> = { ...process.env }
   delete env.CLAUDECODE

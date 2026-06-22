@@ -1,6 +1,6 @@
 // `plumbbob park "<text>"` — the dumb capture path: append one raw line under
 // the build-log's Park list. No model turn, no composition (that is /park's job).
-// Exempt from the CLAUDECODE transition refusal so capture is always available.
+// Capture is not a transition, so it runs in any context (terminal or in-session).
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'

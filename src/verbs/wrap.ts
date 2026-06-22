@@ -1,8 +1,8 @@
 // `plumbbob wrap` (D19/D28) — the FINISH-entry verb. Sets STATE=FINISH so
 // /plumbbob-report can write report.md and /plumbbob-docs can touch docs/.
 // `finish` stays the closing gate; wrap just opens the one state where
-// documentation may be projected. A transition verb, so dispatch refuses it under
-// CLAUDECODE (D21).
+// documentation may be projected. A transition the human fires — from a terminal
+// or, in-session, via the /pb-wrap driver skill (D21 revised).
 
 import { findRepoRoot } from '../lib/git.ts'
 import { hasSession, readState, writeState } from '../lib/sidecar.ts'

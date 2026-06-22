@@ -125,12 +125,11 @@ describe('plumbbob wrap', () => {
     expect(readSidecar(dir, 'STATE').trim()).toBe('BUILD')
   })
 
-  it('refuses under CLAUDECODE (D21 transition-verb guard)', () => {
+  it('runs under CLAUDECODE — the /pb-wrap driver fires it from the chat (D21 revised)', () => {
     const dir = makeFixtureRepo()
     started(dir, 'Guarded')
     const result = runCli(dir, ['wrap'], { CLAUDECODE: '1' })
-    expect(result.status).toBe(1)
-    expect(result.stderr).toContain('deciding verb')
-    expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
+    expect(result.status).toBe(0)
+    expect(readSidecar(dir, 'STATE').trim()).toBe('FINISH')
   })
 })

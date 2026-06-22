@@ -1,6 +1,7 @@
 // `plumbbob mode <x>` — the hidden escape hatch: set STATE directly when reality
-// and the machine desync. Not part of the normal flow; a transition verb, so the
-// dispatch refuses it under CLAUDECODE (D21).
+// and the machine desync. Not part of the normal flow; the lone human-only verb,
+// so the dispatch refuses it under CLAUDECODE and bash-guard blocks it from the
+// model's shell (D21 revised).
 
 import { findRepoRoot } from '../lib/git.ts'
 import { hasSession, readState, writeState, VALID_STATES } from '../lib/sidecar.ts'
