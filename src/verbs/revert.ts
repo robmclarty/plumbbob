@@ -2,11 +2,19 @@
 // recent step, or `--to n`, with the baseline as fallback), then remove untracked
 // files under the SEAM only. The sidecar is git-excluded (D17), so the reset
 // never touches it — park lines and intent edits survive the revert (C4).
+//
+// Plumbbob also installs its driver skills INTO the repo (.claude/skills/<driver>/
+// for a self-contained install), so a blunt reset would discard an out-of-seam
+// skill edit — or a `pnpm up plumbbob` re-setup — together with the half-done
+// step. revert discards the step's WORK, never plumbbob's own machinery, so those
+// paths are carried across the reset unchanged.
 
-import { readFileSync, rmSync } from 'node:fs'
+import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { findRepoRoot, resetHard, untrackedPaths } from '../lib/git.ts'
-import { checkpointsPath, hasSession, seamPath, stepPath, writeState } from '../lib/sidecar.ts'
+import { checkpointsPath, hasSession, seamPath, sidecarDir, stepPath, writeState } from '../lib/sidecar.ts'
 import { matchesSeam } from '../lib/intent.ts'
 
 export function revert(cwd: string, args: ReadonlyArray<string>): number {
@@ -44,7 +52,7 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
   const seam = readSeamTokens(root)
   const toRemove = untrackedPaths(root).filter((p) => matchesSeam(p, seam))
 
-  resetHard(root, sha)
+  resetPreserving(root, sha, plumbbobOwnedPaths(root))
   for (const rel of toRemove) {
     rmSync(join(root, rel), { force: true, recursive: true })
   }
@@ -56,6 +64,38 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
     `plumbbob: reverted to ${sha.slice(0, 9)} — STATE=DESIGN. Park lines and intent edits were preserved.\n`,
   )
   return 0
+}
+
+// The repo paths that belong to plumbbob, not to the work being reverted: the
+// sidecar (already git-excluded, listed so revert is robust even where `.plumbbob/`
+// was tracked by mistake) and each installed driver skill under .claude/skills/.
+// Skill names come from plumbbob's own bundled `skills/` dir — the same source
+// `setup` copies from — so only plumbbob's own skills are protected, never the
+// user's. Only paths that currently exist are returned.
+function plumbbobOwnedPaths(root: string): ReadonlyArray<string> {
+  const paths = [sidecarDir(root)]
+  try {
+    for (const name of readdirSync(fileURLToPath(new URL('../../skills', import.meta.url)))) {
+      paths.push(join(root, '.claude', 'skills', name))
+    }
+  } catch {
+    // Bundled skills dir not resolvable (unexpected) — protect just the sidecar.
+  }
+  return paths.filter((p) => existsSync(p))
+}
+
+// `git reset --hard <sha>` is repo-wide, so paths that must survive it are copied
+// to a temp snapshot first, then copied back over whatever the reset produced.
+// Restoring on top (no pre-delete) keeps the live sidecar safe if a copy throws.
+function resetPreserving(root: string, sha: string, preserve: ReadonlyArray<string>): void {
+  const snap = mkdtempSync(join(tmpdir(), 'plumbbob-revert-'))
+  try {
+    preserve.forEach((p, i) => cpSync(p, join(snap, String(i)), { recursive: true }))
+    resetHard(root, sha)
+    preserve.forEach((p, i) => cpSync(join(snap, String(i)), p, { recursive: true }))
+  } finally {
+    rmSync(snap, { force: true, recursive: true })
+  }
 }
 
 function parseTo(args: ReadonlyArray<string>): number | null | 'invalid' {
