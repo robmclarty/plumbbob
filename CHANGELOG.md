@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-06-22
+
+- **Fixed:** the pre-edit muzzle no longer blocks writes outside the repository
+  or to git-ignored files inside it. The seam-guard previously treated every
+  path that was not a `.plumbbob/` control doc or a `docs/` file as code subject
+  to the BUILD seam check, so Claude's own plan-mode scratch under
+  `~/.claude/plans` was denied as "outside the seam", and ignored files (fallow
+  data, `dist/`, `coverage/`) hit the same wall. The muzzle is now gated behind
+  `git check-ignore`, so it governs only in-repo, non-ignored paths; `.plumbbob/`
+  is itself git-ignored but stays muzzled via an explicit arm, so control state
+  (STATE/SEAM) is never made writable.
+
 ## [0.2.1] - 2026-06-22
 
 - **Fixed:** `bash-guard` no longer over-blocks read-only redirects outside
