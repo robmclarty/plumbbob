@@ -70,9 +70,11 @@ hatch for when reality and the machine desync, but it's not part of the flow.
 
 ## The verb contract
 
-What you actually type. Mechanical verbs are a dumb `plumbbob` CLI run from the
-integrated terminal; the judgment work is skills invoked from the chat pane. Both
-live inside one editor — the split is judgment-vs-mechanism, not app-vs-app.
+What you actually type. Mechanical verbs are a dumb `plumbbob` CLI; the judgment
+work is skills. You fire the mechanical verbs either from a terminal or, without
+leaving the chat, through the thin `pb-*` driver skills — and the judgment skills
+from the chat too. The split is judgment-vs-mechanism, not app-vs-app and not
+terminal-vs-chat.
 
 | Verb / skill              | Does                                                                    | Kind          |
 |---------------------------|-------------------------------------------------------------------------|---------------|
@@ -90,16 +92,28 @@ live inside one editor — the split is judgment-vs-mechanism, not app-vs-app.
 | `plumbbob finish`        | **refuse unless a report is archived**; archive; clear; muzzle off      | CLI           |
 | `plumbbob mode <x>`      | escape hatch: set STATE directly (not part of the normal flow)          | CLI (hidden)  |
 
-Why this split, mechanically: invoking a skill *is* invoking the model, so there
-is no model-free skill. The truly dumb capture path is therefore the terminal
-`plumbbob park`, not a skill. Three reinforcing layers encode judgment-vs-
-mechanism, so the philosophy holds without willpower:
+Every transition verb above also has a thin `pb-*` driver skill (`/pb-start`,
+`/pb-build`, `/pb-review`, `/pb-done`, `/pb-revert`, `/pb-wrap`, `/pb-finish`,
+`/pb-spike`) that shells exactly that verb, so the loop runs from the chat without
+a terminal. The only verb with no driver is `mode`: the escape hatch stays
+human-only, refused in-session and blocked from the model's shell.
 
-- terminal CLI vs skill → mechanism vs needs-a-model
+Why this holds, mechanically: invoking a skill *is* invoking the model, so there
+is no model-free skill — the truly dumb capture path is the raw `plumbbob park`,
+not `/park`. What keeps the human the sole decider is not *where* you type but
+`disable-model-invocation: true` on every skill: the model can never fire one.
+The `pb-*` drivers lean on exactly that — they shell a transition verb, but only
+*you* can trigger them, so a chat-fired transition is still a human-initiated one.
+A stray *model-initiated* verb (run raw, outside a driver) isn't in your settings
+allowlist, so Claude Code prompts you before it runs. Reinforcing layers make the
+boundary legible without willpower:
+
+- `disable-model-invocation: true` on every skill → *you* own every trigger; the
+  model never decides to converge
+- transition verbs kept out of the allowlist + the permission prompt → a
+  model-initiated transition surfaces; it does not slip through
 - `` !`...` `` pre-injection vs compose-confirm → transition vs composition
 - Haiku vs Opus → transcription vs judgment
-- and `disable-model-invocation: true` on every skill → *you* own every trigger;
-  the model never decides to converge.
 
 ## The loop
 
@@ -186,8 +200,9 @@ Three hooks, all **session-gated**: each one's first act is to check for
 runs" is not "always enforces" — the check is a microsecond `test -f`. So a quick
 fix in a repo with no active session behaves like plain Claude Code; the process
 is opt-in per task, not per repo. The hook walks up from cwd to find `.plumbbob/`
-the way git finds `.git`, so it works from subdirectories. Register globally in
-`~/.claude/settings.json`; it sleeps until you `start`.
+the way git finds `.git`, so it works from subdirectories. Register them
+per-project (self-contained, referenced in place under `node_modules`) or
+globally in `~/.claude/settings.json`; either way they sleep until you `start`.
 
 1. **Muzzle** — `PreToolUse` on `Edit`/`Write`. No session → allow. Path is
    `intent.md`/`build-log.md` → allow (doc whitelist). `STATE ∈ {BUILD, SPIKE}` →

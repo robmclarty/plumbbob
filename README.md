@@ -21,45 +21,65 @@ own enforcement from step 5 onward.
   guard, and a non-blocking light-feedback pass. With no active session they
   short-circuit to allow in microseconds, so a repo without a Plumbbob session
   behaves like plain Claude Code.
-- Five Claude Code skills — the judgment work, each one human-triggered
+- The judgment skills — the design/finish thinking work, each human-triggered
   (`disable-model-invocation: true`): `/plumbbob-interrogate`, `/park`,
   `/plumbbob-triage`, `/plumbbob-report`, `/plumbbob-docs`.
+- The `pb-*` driver skills — thin chat-side triggers for the transition verbs
+  (`/pb-start`, `/pb-build`, `/pb-review`, `/pb-done`, `/pb-revert`, `/pb-wrap`,
+  `/pb-finish`, `/pb-spike`), also `disable-model-invocation: true`, so you can
+  drive the whole loop from the agent window without leaving for a terminal.
 - A `.plumbbob/` sidecar of flat control files (`STATE`, `SEAM`, `checkpoints`,
   `intent.md`, `build-log.md`) that the hooks read with a grep.
 
 ## Install
 
-The npm package is `plumbbob` (the npm name `plumbbob` was taken); it installs
-the CLI as `plumbbob` plus a `pb` shorthand:
+The npm package is `plumbbob`; it installs the CLI as `plumbbob` plus a `pb`
+shorthand, and ships the hooks and skills inside the package. There are two
+install shapes: project-level (self-contained, nothing global) and global.
+
+### Project-level (recommended) — nothing under `~`
+
+Add Plumbbob as a dev dependency and set it up self-contained, so everything
+lives in the repo and `node_modules` with no global install to manage:
+
+```sh
+pnpm add -D plumbbob
+pnpm exec plumbbob setup --local   # or just `setup` — it auto-detects a project-local install
+```
+
+A self-contained `setup` writes **nothing** under `~/.claude`. It copies the
+skills into `<repo>/.claude/skills/` (with their bin invocation pointed at the
+project-local `node_modules/.bin/plumbbob`) and registers the hooks in place at
+`$CLAUDE_PROJECT_DIR/node_modules/plumbbob/hooks/`.
+
+| Command                              | Registers in                         | Use for                          |
+|--------------------------------------|--------------------------------------|----------------------------------|
+| `pnpm exec plumbbob setup --local`   | `<repo>/.claude/settings.local.json` | yourself, this repo (untracked)  |
+| `pnpm exec plumbbob setup --project` | `<repo>/.claude/settings.json`       | enrolling a team (committable)   |
+
+Both forms address the hooks and the skill bin through `$CLAUDE_PROJECT_DIR`, so
+a committed `settings.json` carries no machine-absolute path — a teammate runs
+`pnpm install` and re-runs `setup` to regenerate their skills copy.
+
+### Global — one install, every repo
 
 ```sh
 npm install -g plumbbob
+plumbbob setup --global
 ```
 
-`plumbbob setup` copies the hooks to `~/.claude/plumbbob/hooks/` and the skills
-to `~/.claude/skills/`, then registers the hooks in a Claude Code settings file.
-The hooks and skills always install once under `~/.claude/`; the registration
-scope is a sharing choice, not a behavior choice.
-
-| Command                    | Registers in                         | Use for                              |
-|----------------------------|--------------------------------------|--------------------------------------|
-| `plumbbob setup`          | `~/.claude/settings.json`            | yourself, across every repo (default) |
-| `plumbbob setup --project`| `<repo>/.claude/settings.json`       | enrolling a whole team (committable)  |
-| `plumbbob setup --local`  | `<repo>/.claude/settings.local.json` | yourself, this repo only (untracked)  |
-
-The repo-scoped files register `~`-prefixed command paths, so committed settings
-carry no machine-absolute home directory — a teammate without Plumbbob installed
-gets a non-blocking hook error, not a wall. `plumbbob setup --uninstall` strips
-the registration (the installed files stay in place).
-
-After installing, restart Claude Code (or reload settings) for the hooks to take
-effect. The npm install puts `plumbbob` on your `PATH`, which the skills' status
-pre-injection needs to resolve; from a dev checkout, alias it at the CLI entry
-point instead:
+`setup --global` copies the hooks to `~/.claude/plumbbob/hooks/` and the skills
+to `~/.claude/skills/`, then registers absolute command paths in
+`~/.claude/settings.json`. The skills call a bare `plumbbob`, which the global
+install puts on your `PATH`; from a dev checkout, alias it instead:
 
 ```sh
 alias plumbbob='node /path/to/plumbbob/src/cli.ts'
 ```
+
+`plumbbob setup --uninstall` (with the same scope flag) strips the registration;
+the installed/copied files stay in place. After installing, restart Claude Code
+(or reload settings) for the hooks to take effect.
 
 ## The verbs and skills
 
@@ -83,10 +103,26 @@ work is skills, invoked from the chat pane. The split is judgment-vs-mechanism.
 | `plumbbob finish`         | refuse unless a report exists; archive; clear; muzzle off        | CLI           |
 | `plumbbob spike "<slug>"` | throwaway worktree experiment per option; `spike done` tears down | CLI          |
 | `plumbbob mode <x>`       | escape hatch: set `STATE` directly (not part of the normal flow) | CLI (hidden)  |
-| `plumbbob setup`          | install hooks + skills; register them (D27 scopes above)         | CLI           |
+| `plumbbob setup`          | install hooks + skills; register them (install shapes above)     | CLI           |
 
-In a Claude Code session the deciding/transition verbs refuse to run (they are
-yours to type in a terminal); `status` and `park` are the deliberate exceptions.
+### Driving the transitions from the chat
+
+Every transition verb also has a thin `pb-*` driver skill, so you can run the
+whole loop from the agent window without switching to a terminal: `/pb-start`,
+`/pb-build`, `/pb-review`, `/pb-done`, `/pb-revert`, `/pb-wrap`, `/pb-finish`,
+`/pb-spike`. Each shells exactly its verb and reports the result verbatim; each is
+`disable-model-invocation: true`, so *only you* can fire it.
+
+The boundary the one law protects is **human-initiated vs model-initiated**, not
+terminal-vs-chat. A `disable-model-invocation` skill is a human trigger that
+happens to live in the chat: the model can never invoke it, the deciding still
+happens in `intent.md`, and the verb is still dumb mechanism. So the transition
+verbs run in-session now (a terminal still works too) — the lone hold-out is
+`mode`, the escape hatch, which stays human-only (refused in-session, and blocked
+from the model's shell by the Bash guard). The transition verbs are deliberately
+kept out of your settings allowlist, so a stray *model-initiated* transition
+surfaces a Claude Code permission prompt; each driver skill self-authorizes only
+its own verb, only while you are running it.
 
 ## The core / adapter boundary
 
@@ -135,7 +171,7 @@ the next pnpm upgrade; moving back to a ranged constraint is a future revisit.
 
 `scripts/dev-install.sh` is the development installer: it registers the hooks
 pointing at this working tree's `hooks/` (so hook edits take effect with no
-re-copy), where `plumbbob setup` copies them into `~/.claude/`. Use
+re-copy), where `plumbbob setup --global` copies them into `~/.claude/`. Use
 `dev-install.sh` while hacking on the hooks themselves; use `plumbbob setup` to
 install Plumbbob for real.
 
