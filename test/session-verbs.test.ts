@@ -16,10 +16,13 @@ describe('plumbbob status', () => {
     expect(result.stdout).toContain('NO ACTIVE SESSION')
   })
 
-  it('prints the state when a session is active', () => {
+  it('prints the orientation dashboard when a session is active (D8/D15)', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Statey'])
-    expect(runCli(dir, ['status']).stdout).toContain('STATE: DESIGN')
+    const out = runCli(dir, ['status']).stdout
+    expect(out).toContain('[DESIGN]') // the state, dashboard-style
+    expect(out).toContain('Statey') // the intent title
+    expect(out).toContain('next →') // the inferred next move
   })
 })
 
