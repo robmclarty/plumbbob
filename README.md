@@ -119,7 +119,14 @@ These are deliberate v1 boundaries, decided on the record, not oversights:
 ```sh
 pnpm install
 pnpm check     # tsc, oxlint, ast-grep, vitest, knip, markdownlint
+pnpm build     # emit dist/ (what the published bin runs); prepack runs this for you
 ```
+
+The published `bin` (`plumbbob` / `pb`) points at `dist/cli.js`, not the `.ts`
+source, so a fresh install runs under plain `node` without `tsx`. The `prepack`
+hook rebuilds `dist/` before every pack/publish; you only need `pnpm build` by
+hand when you want to run the compiled output locally. From a dev checkout the
+source still runs directly (`node src/cli.ts`) via Node's type stripping.
 
 **The pnpm pin.** `package.json` pins `devEngines.packageManager` to an *exact*
 pnpm version (`11.1.2`) rather than a range, because the `^` range broke every

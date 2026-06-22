@@ -1,0 +1,15 @@
+{
+  // Publish build: the base config is noEmit (type-check + native strip only).
+  // This one emits runnable JS to dist/ so the published `bin` does not need tsx
+  // or Node type-stripping on the user's machine. rewriteRelativeImportExtensions
+  // turns the `.ts` import specifiers into `.js` in the output; rootDir pins the
+  // layout so dist/ mirrors src/ (verbs resolve hooks/skills/templates via ../../).
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "src",
+    "outDir": "dist",
+    "rewriteRelativeImportExtensions": true
+  },
+  "include": ["src"]
+}

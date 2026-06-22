@@ -1,6 +1,6 @@
 {
   "name": "plumbbob",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Attention-first build process: a CLI + hooks that enforce the deciding/executing boundary.",
   "keywords": ["claude-code", "claude", "hooks", "cli", "agent", "attention-first"],
   "homepage": "https://github.com/robmclarty/plumbbob#readme",
@@ -9,10 +9,13 @@
   "type": "module",
   "license": "Apache-2.0",
   "author": "Rob McLarty <hello@robmclarty.com>",
-  "bin": { "plumbbob": "src/cli.ts", "pb": "src/cli.ts" },
-  "files": ["src", "hooks", "skills", "templates"],
+  "bin": { "plumbbob": "dist/cli.js", "pb": "dist/cli.js" },
+  "files": ["dist", "hooks", "skills", "templates"],
   "engines": { "node": ">=22.18.0" },
   "scripts": {
+    "clean": "rm -rf dist",
+    "build": "tsc -p tsconfig.build.json",
+    "prepack": "pnpm run clean && pnpm run build",
     "check": "pnpm run check:tsc && pnpm run check:oxlint && pnpm run check:astgrep && pnpm run check:test && pnpm run check:knip && pnpm run check:md",
     "check:tsc": "tsc --noEmit",
     "check:oxlint": "oxlint",
