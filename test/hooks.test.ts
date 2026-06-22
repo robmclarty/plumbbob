@@ -120,6 +120,18 @@ describe('bash-guard (D21)', () => {
     runCli(dir, ['mode', 'BUILD'])
     expect(bashGuard(dir, 'echo x > src/a.ts').status).toBe(0) // writes allowed in BUILD
   })
+
+  it('does not over-block read-only redirects (stderr merges, /dev/null sinks)', () => {
+    const dir = makeFixtureRepo()
+    runCli(dir, ['start', 'Guarded']) // DESIGN
+    expect(bashGuard(dir, 'grep foo bar 2>/dev/null').status).toBe(0)
+    expect(bashGuard(dir, 'grep foo bar 2> /dev/null').status).toBe(0)
+    expect(bashGuard(dir, 'find . -name x 2>&1 | head').status).toBe(0)
+    expect(bashGuard(dir, 'cmd >/dev/null 2>&1').status).toBe(0)
+    expect(bashGuard(dir, 'cmd &>/dev/null').status).toBe(0)
+    // A real write that merely also redirects stderr is still blocked.
+    expect(bashGuard(dir, 'echo x > src/a.ts 2>/dev/null').status).toBe(2)
+  })
 })
 
 describe('post-edit light feedback (D25)', () => {

@@ -47,7 +47,11 @@ esac
 case "$state" in
   BUILD | SPIKE) ;;
   *)
-    case "$command" in
+    # Strip redirects that can't write a real file (stderr merges, /dev/null
+    # sinks) so read-only commands aren't over-blocked. Any surviving `>` is a
+    # real write. The residual gap (e.g. `>/dev/nullEVIL`) is accepted (D21).
+    scrubbed=$(printf '%s' "$command" | sed 's/[0-9]*>&[0-9-]//g; s/&\{0,1\}[0-9]*>>* *\/dev\/null//g')
+    case "$scrubbed" in
       *">"* | *"tee "* | *"sed -i"* | *"git apply"*)
         deny "blocked: file-writing shell commands are not allowed in ${state:-?} (code edits happen in BUILD). Do not retry — park it or ask the human to \`plumbbob build <n>\`."
         ;;
