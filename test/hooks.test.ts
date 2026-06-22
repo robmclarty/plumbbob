@@ -1,167 +1,22 @@
 import { chmodSync, mkdirSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { cleanupFixtures, makeFixtureRepo, runCli } from './helpers/fixture-repo.ts'
-import { bashGuard, postEdit, preEdit } from './helpers/run-hook.ts'
+import { postEdit } from './helpers/run-hook.ts'
 
 afterAll(cleanupFixtures)
 
-function writeIntent(dir: string, stepsBody: string): void {
-  writeFileSync(join(dir, '.plumbbob', 'intent.md'), `# T\n\n## Steps\n\n${stepsBody}\n`)
-}
-function makeDir(dir: string, rel: string): void {
-  mkdirSync(join(dir, rel), { recursive: true })
-}
 function makeExecutable(dir: string, rel: string, script: string): void {
   const path = join(dir, rel)
   mkdirSync(dirname(path), { recursive: true })
   writeFileSync(path, script)
   chmodSync(path, 0o755)
 }
-function buildOnSeam(dir: string, seam: string): void {
-  runCli(dir, ['start', 'Hooked'])
-  writeIntent(dir, `1. [ ] Step — **done when:** ok\n   - seam: ${seam}`)
-  runCli(dir, ['build', '1'])
-}
 
-describe('pre-edit muzzle: session gating', () => {
-  it('is dormant (allows) when there is no session', () => {
-    const dir = makeFixtureRepo()
-    expect(preEdit(dir, { rel: 'src/anything.ts' }).status).toBe(0)
-  })
-
-  it('blocks a src/ write in DESIGN with a model-directed park message (exit 2)', () => {
-    const dir = makeFixtureRepo()
-    runCli(dir, ['start', 'Designing'])
-    const result = preEdit(dir, { rel: 'src/cli.ts' })
-    expect(result.status).toBe(2)
-    expect(result.stderr).toContain('park')
-  })
-})
-
-describe('pre-edit muzzle: doc whitelist (D6/D19)', () => {
-  it('allows the control docs in every state and blocks the archive', () => {
-    const dir = makeFixtureRepo()
-    runCli(dir, ['start', 'Docs'])
-    for (const state of ['DESIGN', 'REVIEW', 'FINISH']) {
-      runCli(dir, ['mode', state])
-      expect(preEdit(dir, { rel: '.plumbbob/intent.md' }).status).toBe(0)
-      expect(preEdit(dir, { rel: '.plumbbob/build-log.md' }).status).toBe(0)
-      expect(preEdit(dir, { rel: '.plumbbob/report.md' }).status).toBe(0)
-    }
-    expect(preEdit(dir, { rel: '.plumbbob/archive/2026-01-01-x/intent.md' }).status).toBe(2)
-  })
-
-  it('allows docs/ only in FINISH', () => {
-    const dir = makeFixtureRepo()
-    runCli(dir, ['start', 'Docs'])
-    expect(preEdit(dir, { rel: 'docs/guide.md' }).status).toBe(2) // DESIGN
-    runCli(dir, ['mode', 'FINISH'])
-    expect(preEdit(dir, { rel: 'docs/guide.md' }).status).toBe(0)
-  })
-})
-
-describe('pre-edit seam-guard in BUILD (D23)', () => {
-  it('allows an exact seam path and a dir/ grant, blocks out-of-seam', () => {
-    const dir = makeFixtureRepo()
-    buildOnSeam(dir, '`src/a.ts`, `lib/`')
-    expect(preEdit(dir, { rel: 'src/a.ts' }).status).toBe(0)
-    expect(preEdit(dir, { rel: 'lib/deep/nested.ts' }).status).toBe(0) // dir/ prefix grant
-    const blocked = preEdit(dir, { rel: 'src/b.ts' })
-    expect(blocked.status).toBe(2)
-    expect(blocked.stderr).toContain('outside the seam')
-  })
-
-  it('resolves the absolute path correctly from a subdirectory cwd', () => {
-    const dir = makeFixtureRepo()
-    buildOnSeam(dir, '`src/a.ts`')
-    makeDir(dir, 'src') // cwd must exist
-    expect(preEdit(dir, { rel: 'src/a.ts', cwd: 'src' }).status).toBe(0)
-    expect(preEdit(dir, { rel: 'src/b.ts', cwd: 'src' }).status).toBe(2)
-  })
-
-  it('matches MultiEdit and NotebookEdit too', () => {
-    const dir = makeFixtureRepo()
-    buildOnSeam(dir, '`src/a.ts`')
-    expect(preEdit(dir, { rel: 'src/b.ts', tool: 'MultiEdit' }).status).toBe(2)
-    // NotebookEdit carries notebook_path; a deny proves the path was extracted.
-    expect(preEdit(dir, { rel: 'notebooks/x.ipynb', tool: 'NotebookEdit' }).status).toBe(2)
-  })
-})
-
-describe('pre-edit muzzle: scope is in-repo, non-ignored files only', () => {
-  it('allows writes outside the repo (e.g. Claude plan-mode in ~/.claude/plans) even in BUILD', () => {
-    const dir = makeFixtureRepo()
-    buildOnSeam(dir, '`src/a.ts`')
-    const outside = join(homedir(), '.claude', 'plans', 'session-plan.md')
-    expect(preEdit(dir, { abs: outside }).status).toBe(0)
-  })
-
-  it('does not interfere with git-ignored files inside the repo (fallow data, build output)', () => {
-    const dir = makeFixtureRepo()
-    writeFileSync(join(dir, '.gitignore'), '.fallow/\ndist/\n')
-    runCli(dir, ['start', '--allow-dirty', 'Ignored']) // DESIGN — code edits are normally blocked
-    expect(preEdit(dir, { rel: '.fallow/data.json' }).status).toBe(0)
-    expect(preEdit(dir, { rel: 'dist/out.js' }).status).toBe(0)
-    // A tracked, non-ignored source file is still muzzled in DESIGN.
-    expect(preEdit(dir, { rel: 'src/a.ts' }).status).toBe(2)
-  })
-
-  it('still blocks Edit/Write to .plumbbob control state — the ignore skip never applies there', () => {
-    const dir = makeFixtureRepo()
-    runCli(dir, ['start', 'Locked']) // .plumbbob/ is git-ignored, yet must stay locked
-    expect(preEdit(dir, { rel: '.plumbbob/STATE' }).status).toBe(2)
-    expect(preEdit(dir, { rel: '.plumbbob/SEAM' }).status).toBe(2)
-  })
-})
-
-describe('bash-guard (D21)', () => {
-  it('is dormant when there is no session', () => {
-    const dir = makeFixtureRepo()
-    expect(bashGuard(dir, 'echo hi > out.txt').status).toBe(0)
-  })
-
-  it('blocks touching .plumbbob/STATE or SEAM in any state', () => {
-    const dir = makeFixtureRepo()
-    runCli(dir, ['start', 'Guarded'])
-    expect(bashGuard(dir, 'echo BUILD > .plumbbob/STATE').status).toBe(2)
-    expect(bashGuard(dir, 'cat .plumbbob/SEAM').status).toBe(2)
-  })
-
-  it('blocks `plumbbob mode` from the shell (and the pb / legacy plumbbob spellings)', () => {
-    const dir = makeFixtureRepo()
-    runCli(dir, ['start', 'Guarded'])
-    expect(bashGuard(dir, 'plumbbob mode BUILD').status).toBe(2)
-    expect(bashGuard(dir, 'pb mode BUILD').status).toBe(2)
-    expect(bashGuard(dir, 'plumbbob mode BUILD').status).toBe(2)
-  })
-
-  it('blocks file-writing patterns outside BUILD/SPIKE but allows them in BUILD', () => {
-    const dir = makeFixtureRepo()
-    runCli(dir, ['start', 'Guarded'])
-    expect(bashGuard(dir, 'echo x > src/a.ts').status).toBe(2) // DESIGN
-    expect(bashGuard(dir, 'sed -i "" s/a/b/ src/a.ts').status).toBe(2)
-    expect(bashGuard(dir, 'ls -la').status).toBe(0) // benign
-
-    runCli(dir, ['mode', 'BUILD'])
-    expect(bashGuard(dir, 'echo x > src/a.ts').status).toBe(0) // writes allowed in BUILD
-  })
-
-  it('does not over-block read-only redirects (stderr merges, /dev/null sinks)', () => {
-    const dir = makeFixtureRepo()
-    runCli(dir, ['start', 'Guarded']) // DESIGN
-    expect(bashGuard(dir, 'grep foo bar 2>/dev/null').status).toBe(0)
-    expect(bashGuard(dir, 'grep foo bar 2> /dev/null').status).toBe(0)
-    expect(bashGuard(dir, 'find . -name x 2>&1 | head').status).toBe(0)
-    expect(bashGuard(dir, 'cmd >/dev/null 2>&1').status).toBe(0)
-    expect(bashGuard(dir, 'cmd &>/dev/null').status).toBe(0)
-    // A real write that merely also redirects stderr is still blocked.
-    expect(bashGuard(dir, 'echo x > src/a.ts 2>/dev/null').status).toBe(2)
-  })
-})
-
-describe('post-edit light feedback (D25)', () => {
+// Plumbbob v2 retired the muzzle, the seam-guard, and bash-guard (D1/D13). The
+// only edit-time hook left is the PostToolUse light feedback: it never blocks and
+// exists solely to give the model the diagnostics it cannot otherwise see (D25).
+describe('post-edit light feedback (D25 — the only edit-time hook in v2)', () => {
   it('no-ops (exit 0, no context) when the tools are absent', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Lint'])

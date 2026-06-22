@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupFixtures, makeFixtureRepo, readSidecar, runCli } from './helpers/fixture-repo.ts'
+import { cleanupFixtures, makeFixtureRepo, readSidecar, runCli, setState } from './helpers/fixture-repo.ts'
 
 afterAll(cleanupFixtures)
 
@@ -62,7 +62,7 @@ describe('plumbbob spike', () => {
   it('refuses to start a spike outside DESIGN', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Spiking a fork'])
-    runCli(dir, ['mode', 'BUILD'])
+    setState(dir, 'BUILD')
     const result = runCli(dir, ['spike', 'nope'])
     expect(result.status).toBe(1)
     expect(readSidecar(dir, 'STATE').trim()).toBe('BUILD')

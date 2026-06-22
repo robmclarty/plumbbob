@@ -1,6 +1,6 @@
-// End-to-end dogfood drive (step 8 done-when): a full Plumbbob session in a
-// fixture repo, start → build → the LIVE pre-edit hook gating in/out of seam →
-// done → park → report → wrap → finish → archive populated. The report SKILL is
+// End-to-end dogfood drive: a full Plumbbob session in a fixture repo,
+// start → build → done → park → report → wrap → finish → archive populated.
+// The report SKILL is
 // a Claude skill, so the e2e writes .plumbbob/report.md as its artifact (the CLI
 // path under test is everything around it). Stub check per D14.
 
@@ -8,7 +8,6 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { dirname, join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { cleanupFixtures, makeFixtureRepo, readSidecar, runCli, sidecarExists } from './helpers/fixture-repo.ts'
-import { preEdit } from './helpers/run-hook.ts'
 
 afterAll(cleanupFixtures)
 
@@ -21,8 +20,8 @@ function writeRepo(dir: string, rel: string, content: string): void {
   writeFileSync(path, content)
 }
 
-describe('e2e: a full Plumbbob session under live enforcement', () => {
-  it('drives start → build → hook gate → done → park → report → finish → archive', () => {
+describe('e2e: a full Plumbbob session end to end', () => {
+  it('drives start → build → done → park → report → finish → archive', () => {
     const dir = makeFixtureRepo({ withCheckScript: true })
 
     // start → DESIGN, then stub the heavy check (D14) and write a one-step intent.
@@ -40,11 +39,7 @@ describe('e2e: a full Plumbbob session under live enforcement', () => {
     expect(readSidecar(dir, 'STATE').trim()).toBe('BUILD')
     expect(readSidecar(dir, 'SEAM').trim()).toBe('src/widget.ts')
 
-    // the LIVE hook: blocks an out-of-seam edit, allows the in-seam one.
-    expect(preEdit(dir, { rel: 'src/other.ts' }).status).toBe(2)
-    expect(preEdit(dir, { rel: 'src/widget.ts' }).status).toBe(0)
-
-    // make the allowed edit for real, then checkpoint → DESIGN.
+    // make the edit for real (v2 has no muzzle to gate it), then checkpoint → DESIGN.
     writeRepo(dir, 'src/widget.ts', 'export const widget = 1\n')
     expect(runCli(dir, ['done']).status).toBe(0)
     expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
@@ -73,8 +68,5 @@ describe('e2e: a full Plumbbob session under live enforcement', () => {
     expect(sidecarExists(dir, 'STATE')).toBe(false)
     expect(sidecarExists(dir, 'SEAM')).toBe(false)
     expect(sidecarExists(dir, 'intent.md')).toBe(false)
-
-    // and the hook is dormant again with no session.
-    expect(preEdit(dir, { rel: 'src/widget.ts' }).status).toBe(0)
   })
 })

@@ -21,7 +21,7 @@ type Parsed = { hooks?: { PreToolUse?: Entry[]; PostToolUse?: Entry[] }; model?:
 const JUDGMENT_SKILLS = ['plumbbob-interrogate', 'park', 'plumbbob-triage', 'plumbbob-report', 'plumbbob-docs']
 const DRIVER_SKILLS = ['pb-start', 'pb-build', 'pb-review', 'pb-done', 'pb-revert', 'pb-wrap', 'pb-finish', 'pb-spike']
 const SKILLS = [...JUDGMENT_SKILLS, ...DRIVER_SKILLS]
-const HOOKS = ['pre-edit.sh', 'bash-guard.sh', 'post-edit.sh']
+const HOOKS = ['post-edit.sh']
 
 function setupIn(repo: string, home: string, ...flags: string[]): ReturnType<typeof runCli> {
   return runCli(repo, ['setup', ...flags], { HOME: home })
@@ -68,15 +68,10 @@ describe('plumbbob setup — global shape', () => {
     }
 
     const s = readJson(homeSettings(home))
-    expect(ourCommands(s)).toHaveLength(3)
+    expect(ourCommands(s)).toHaveLength(1)
     expect(ourCommands(s).every((c) => c.startsWith(home))).toBe(true) // absolute, under this home
     expect(existsSync(repoSettings(repo))).toBe(false) // repo untouched
 
-    const pre = s.hooks?.PreToolUse ?? []
-    expect(pre.find((e) => e.matcher === 'Bash')?.hooks?.[0]?.command).toMatch(/bash-guard\.sh$/)
-    expect(pre.find((e) => e.matcher === 'Edit|Write|MultiEdit|NotebookEdit')?.hooks?.[0]?.command).toMatch(
-      /pre-edit\.sh$/,
-    )
     expect((s.hooks?.PostToolUse ?? [])[0]?.hooks?.[0]?.command).toMatch(/post-edit\.sh$/)
   })
 
@@ -118,7 +113,7 @@ describe('plumbbob setup — global shape', () => {
     const s = readJson(homeSettings(home))
     const allPre = (s.hooks?.PreToolUse ?? []).flatMap((e) => (e.hooks ?? []).map((h) => h.command))
     expect(allPre).toContain('/usr/local/bin/audit.sh') // foreign hook preserved
-    expect(ourCommands(s)).toHaveLength(3) // ours added alongside
+    expect(ourCommands(s)).toHaveLength(1) // ours added alongside
     expect(s.model).toBe('opus') // unrelated key preserved
   })
 
@@ -144,7 +139,7 @@ describe('plumbbob setup — global shape', () => {
       )}\n`,
     )
     setupIn(repo, home, '--global')
-    expect(ourCommands(readJson(homeSettings(home)))).toHaveLength(3)
+    expect(ourCommands(readJson(homeSettings(home)))).toHaveLength(1)
 
     setupIn(repo, home, '--global', '--uninstall')
     const s = readJson(homeSettings(home))
@@ -168,7 +163,7 @@ describe('plumbbob setup — self-contained shape (--local / --project)', () => 
     expect(existsSync(join(home, '.claude', 'plumbbob'))).toBe(false) // no global hooks copy
 
     const cmds = ourCommands(readJson(repoLocalSettings(repo)))
-    expect(cmds).toHaveLength(3)
+    expect(cmds).toHaveLength(1)
     expect(cmds.every((c) => c.startsWith(SELF_CMD_PREFIX))).toBe(true) // portable, sh-invoked, in node_modules
   })
 
@@ -198,7 +193,7 @@ describe('plumbbob setup — self-contained shape (--local / --project)', () => 
     expect(existsSync(homeSettings(home))).toBe(false)
 
     const cmds = ourCommands(readJson(repoSettings(repo)))
-    expect(cmds).toHaveLength(3)
+    expect(cmds).toHaveLength(1)
     expect(cmds.every((c) => c.startsWith(SELF_CMD_PREFIX))).toBe(true) // no machine-absolute path
   })
 
@@ -215,7 +210,7 @@ describe('plumbbob setup — self-contained shape (--local / --project)', () => 
     const home = makeNonGitDir()
     const repo = makeFixtureRepo()
     setupIn(repo, home, '--local')
-    expect(ourCommands(readJson(repoLocalSettings(repo)))).toHaveLength(3)
+    expect(ourCommands(readJson(repoLocalSettings(repo)))).toHaveLength(1)
 
     setupIn(repo, home, '--local', '--uninstall')
     expect(ourCommands(readJson(repoLocalSettings(repo)))).toHaveLength(0)

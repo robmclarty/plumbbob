@@ -57,9 +57,9 @@ type CliResult = {
   readonly status: number
 }
 
-// Spawns the CLI with CLAUDECODE stripped by default. Pass `{ CLAUDECODE: '1' }`
-// to simulate an in-session run — transitions still run (driver skills fire them),
-// but `mode` is refused (D21 revised).
+// Spawns the CLI with CLAUDECODE stripped by default so tests are deterministic
+// regardless of the host environment. Pass `{ CLAUDECODE: '1' }` to simulate an
+// in-session run; Plumbbob v2 no longer gates any verb on it.
 export function runCli(dir: string, args: ReadonlyArray<string>, extraEnv: Record<string, string> = {}): CliResult {
   const env: Record<string, string | undefined> = { ...process.env }
   delete env.CLAUDECODE
@@ -78,4 +78,10 @@ export function readSidecar(dir: string, name: string): string {
 
 export function sidecarExists(dir: string, name: string): boolean {
   return existsSync(join(dir, '.plumbbob', name))
+}
+
+// Force the orientation STATE directly. v2 removed the `mode` escape hatch, so
+// tests that need a non-DESIGN fixture state write the control file themselves.
+export function setState(dir: string, state: string): void {
+  writeFileSync(join(dir, '.plumbbob', 'STATE'), `${state}\n`)
 }

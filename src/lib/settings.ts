@@ -14,7 +14,8 @@ import { dirname } from 'node:path'
 // `plumbbob/hooks/`, so uninstall finds either.
 const OURS_MARKER = 'plumbbob/hooks/'
 
-// The PreToolUse edit matcher covers all four editing tools (D5).
+// The edit matcher covers all four editing tools (D5); v2 uses it for the
+// post-edit feedback hook (the only edit-time hook left).
 const EDIT_MATCHER = 'Edit|Write|MultiEdit|NotebookEdit'
 
 type HookCommand = { readonly type: string; readonly command: string }
@@ -25,27 +26,23 @@ interface Settings {
   [key: string]: unknown
 }
 
-// The three hook registration entries, pointing at `hooksDir`. Two command forms:
+// The single hook Plumbbob v2 registers: the PostToolUse light feedback (D11/D25).
+// v1's PreToolUse muzzle + bash-guard are gone (D1/D13); the merge still STRIPS any
+// leftover PreToolUse entry from an older install, it just no longer adds one. Two
+// command forms:
 //   global       — a direct absolute path to the +x copy under ~/.claude.
 //   self (viaSh) — `sh "<dir>/<file>"` against the package's hooks/ under
 //                  node_modules, addressed through `$CLAUDE_PROJECT_DIR` so the
 //                  committed/portable form carries no machine-absolute path and
 //                  needs no execute bit (pnpm's store may not preserve one).
-// Mirrors the PreToolUse/PostToolUse shape dev-install wrote.
-function registrationEntries(
-  hooksDir: string,
-  viaSh: boolean,
-): { readonly PreToolUse: HookEntry[]; readonly PostToolUse: HookEntry[] } {
+function registrationEntries(hooksDir: string, viaSh: boolean): { readonly PostToolUse: HookEntry[] } {
   const dir = hooksDir.endsWith('/') ? hooksDir.slice(0, -1) : hooksDir
   const command = (file: string): string => (viaSh ? `sh "${dir}/${file}"` : `${dir}/${file}`)
   const entry = (matcher: string, file: string): HookEntry => ({
     matcher,
     hooks: [{ type: 'command', command: command(file) }],
   })
-  return {
-    PreToolUse: [entry(EDIT_MATCHER, 'pre-edit.sh'), entry('Bash', 'bash-guard.sh')],
-    PostToolUse: [entry(EDIT_MATCHER, 'post-edit.sh')],
-  }
+  return { PostToolUse: [entry(EDIT_MATCHER, 'post-edit.sh')] }
 }
 
 function isOurs(entry: HookEntry): boolean {
@@ -63,7 +60,11 @@ export function mergeRegistration(settings: Settings, hooksDir: string, viaSh = 
   const entries = registrationEntries(hooksDir, viaSh)
   const existing: HookMap = settings.hooks ?? {}
   const hooks: { [event: string]: ReadonlyArray<HookEntry> | undefined } = { ...existing }
-  hooks.PreToolUse = [...stripOurs(existing.PreToolUse), ...entries.PreToolUse]
+  // Strip any leftover v1 PreToolUse muzzle/bash-guard from an older install, but
+  // add back only the PostToolUse feedback hook — v2 registers no PreToolUse.
+  if (existing.PreToolUse !== undefined) {
+    hooks.PreToolUse = stripOurs(existing.PreToolUse)
+  }
   hooks.PostToolUse = [...stripOurs(existing.PostToolUse), ...entries.PostToolUse]
   return { ...settings, hooks }
 }

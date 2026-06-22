@@ -26,7 +26,7 @@ import { fileURLToPath } from 'node:url'
 import { findRepoRoot } from '../lib/git.ts'
 import { mergeRegistration, readSettings, stripRegistration, writeSettings } from '../lib/settings.ts'
 
-const HOOK_FILES: ReadonlyArray<string> = ['pre-edit.sh', 'bash-guard.sh', 'post-edit.sh']
+const HOOK_FILES: ReadonlyArray<string> = ['post-edit.sh']
 
 // The placeholder every skill carries in place of its `plumbbob` invocation;
 // setup substitutes it with the form the chosen install shape resolves.

@@ -8,10 +8,6 @@ import { gitDir } from './git.ts'
 
 const DIRNAME = '.plumbbob'
 
-// The five legal control states (README mode machine). `mode` validates against
-// this; the muzzle allows edits iff STATE is BUILD or SPIKE.
-export const VALID_STATES: ReadonlyArray<string> = ['DESIGN', 'BUILD', 'REVIEW', 'SPIKE', 'FINISH']
-
 export function sidecarDir(root: string): string {
   return join(root, DIRNAME)
 }

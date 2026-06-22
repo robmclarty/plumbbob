@@ -25,13 +25,13 @@ if ! command -v jq >/dev/null 2>&1; then
   echo "dev-install: jq is required but not found on PATH." >&2
   exit 1
 fi
-for h in pre-edit.sh bash-guard.sh post-edit.sh; do
+for h in post-edit.sh; do
   if [ ! -f "$HOOKS_DIR/$h" ]; then
     echo "dev-install: missing hook $HOOKS_DIR/$h" >&2
     exit 1
   fi
 done
-chmod +x "$HOOKS_DIR"/pre-edit.sh "$HOOKS_DIR"/bash-guard.sh "$HOOKS_DIR"/post-edit.sh
+chmod +x "$HOOKS_DIR"/post-edit.sh
 
 mkdir -p "$SETTINGS_DIR"
 [ -f "$SETTINGS" ] || printf '%s\n' '{}' >"$SETTINGS"
@@ -50,12 +50,6 @@ STRIP='
 
 # shellcheck disable=SC2016
 ADD='
-  | .hooks.PreToolUse += [
-      { matcher: "Edit|Write|MultiEdit|NotebookEdit",
-        hooks: [ { type: "command", command: ($dir + "/pre-edit.sh") } ] },
-      { matcher: "Bash",
-        hooks: [ { type: "command", command: ($dir + "/bash-guard.sh") } ] }
-    ]
   | .hooks.PostToolUse += [
       { matcher: "Edit|Write|MultiEdit|NotebookEdit",
         hooks: [ { type: "command", command: ($dir + "/post-edit.sh") } ] }

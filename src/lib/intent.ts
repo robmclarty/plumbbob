@@ -93,7 +93,7 @@ export function parseStepSeam(content: string, step: number): SeamParse {
 
 // Seam membership (D23): a repo-relative path is in-seam if it equals an exact
 // token, or is prefixed by a `dir/` grant. Shared by `done` (scope-drift warn)
-// and `revert` (untracked cleanup); the pre-edit hook reimplements it in sh.
+// and `revert` (untracked cleanup).
 export function matchesSeam(relPath: string, tokens: ReadonlyArray<string>): boolean {
   return tokens.some((token) => (token.endsWith('/') ? relPath.startsWith(token) : relPath === token))
 }

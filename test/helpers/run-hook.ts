@@ -20,32 +20,6 @@ function runHook(hook: string, cwd: string, input: object): HookResult {
   return { stdout: result.stdout ?? '', stderr: result.stderr ?? '', status: result.status ?? -1 }
 }
 
-// `rel` resolves under the repo; `abs` passes an absolute path verbatim (used to
-// simulate writes outside the repo, e.g. Claude's plan-mode ~/.claude/plans).
-export function preEdit(repo: string, opts: { rel?: string; abs?: string; tool?: string; cwd?: string }): HookResult {
-  const root = realpathSync(repo)
-  const tool = opts.tool ?? 'Edit'
-  const filePath = opts.abs ?? join(root, opts.rel ?? '')
-  const cwd = opts.cwd === undefined ? root : join(root, opts.cwd)
-  const key = tool === 'NotebookEdit' ? 'notebook_path' : 'file_path'
-  return runHook('pre-edit.sh', cwd, {
-    hook_event_name: 'PreToolUse',
-    tool_name: tool,
-    tool_input: { [key]: filePath },
-    cwd,
-  })
-}
-
-export function bashGuard(repo: string, command: string): HookResult {
-  const root = realpathSync(repo)
-  return runHook('bash-guard.sh', root, {
-    hook_event_name: 'PreToolUse',
-    tool_name: 'Bash',
-    tool_input: { command },
-    cwd: root,
-  })
-}
-
 export function postEdit(repo: string, opts: { rel: string; tool?: string }): HookResult {
   const root = realpathSync(repo)
   return runHook('post-edit.sh', root, {

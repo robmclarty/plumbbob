@@ -23,29 +23,6 @@ describe('plumbbob status', () => {
   })
 })
 
-describe('plumbbob mode (escape hatch)', () => {
-  it('sets STATE directly', () => {
-    const dir = makeFixtureRepo()
-    runCli(dir, ['start', 'Modey'])
-    expect(runCli(dir, ['mode', 'BUILD']).status).toBe(0)
-    expect(readSidecar(dir, 'STATE').trim()).toBe('BUILD')
-  })
-
-  it('rejects an invalid state', () => {
-    const dir = makeFixtureRepo()
-    runCli(dir, ['start', 'Modey'])
-    const result = runCli(dir, ['mode', 'NONSENSE'])
-    expect(result.status).toBe(1)
-    expect(result.stderr).toContain('not a valid state')
-  })
-
-  it('refuses without an active session', () => {
-    const result = runCli(makeFixtureRepo(), ['mode', 'BUILD'])
-    expect(result.status).toBe(1)
-    expect(result.stderr).toContain('no active session')
-  })
-})
-
 describe('plumbbob park', () => {
   it('appends raw lines under the Park list, in order, before Triage', () => {
     const dir = makeFixtureRepo()
@@ -70,28 +47,13 @@ describe('plumbbob park', () => {
     expect(runCli(makeFixtureRepo(), ['park', 'orphan idea']).status).toBe(1)
   })
 })
-
-describe('D21 (revised): transitions run in-session; mode stays human-only (CLAUDECODE)', () => {
-  it('runs a transition verb (start) under CLAUDECODE — driver skills fire it from the chat', () => {
+describe('Plumbbob v2: no verb is gated by CLAUDECODE (the lock is gone)', () => {
+  it('runs every verb the same in-session — start, then park, under CLAUDECODE', () => {
     const dir = makeFixtureRepo()
-    const result = runCli(dir, ['start', 'Now allowed'], { CLAUDECODE: '1' })
-    expect(result.status).toBe(0)
+    expect(runCli(dir, ['start', 'In session'], { CLAUDECODE: '1' }).status).toBe(0)
     expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
-  })
-
-  it('refuses mode under CLAUDECODE, leaving STATE unchanged', () => {
-    const dir = makeFixtureRepo()
-    runCli(dir, ['start', 'Modey'])
-    const result = runCli(dir, ['mode', 'BUILD'], { CLAUDECODE: '1' })
-    expect(result.status).toBe(1)
-    expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
-  })
-
-  it('still allows park under CLAUDECODE (capture is exempt)', () => {
-    const dir = makeFixtureRepo()
-    runCli(dir, ['start', 'Parky'])
-    const result = runCli(dir, ['park', 'a captured idea'], { CLAUDECODE: '1' })
-    expect(result.status).toBe(0)
+    const parked = runCli(dir, ['park', 'a captured idea'], { CLAUDECODE: '1' })
+    expect(parked.status).toBe(0)
     expect(readSidecar(dir, 'build-log.md')).toContain('- [ ] a captured idea')
   })
 })

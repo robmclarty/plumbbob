@@ -5,7 +5,6 @@
 
 import { start } from './verbs/start.ts'
 import { status } from './verbs/status.ts'
-import { mode } from './verbs/mode.ts'
 import { park } from './verbs/park.ts'
 import { build } from './verbs/build.ts'
 import { review } from './verbs/review.ts'
@@ -32,21 +31,14 @@ const VERBS: ReadonlyArray<Verb> = [
   { name: 'spike', summary: 'spike "<slug>" | spike done: throwaway worktree experiment' },
   { name: 'wrap', summary: 'set STATE=FINISH so /plumbbob-report and /plumbbob-docs can run' },
   { name: 'finish', summary: 'refuse unless a report is archived; archive; clear; muzzle off' },
-  { name: 'mode', summary: 'mode <x>: set STATE directly (hidden escape hatch)' },
   { name: 'setup', summary: 'install hooks + skills; register them (self-contained per-project by default; --global for ~/.claude)' },
 ]
 
-// D21 (revised): the human owns every transition — but the trigger surface is no
-// longer "terminal vs chat", it is "human-initiated vs model-initiated". The
-// human now fires transitions from the chat through the `pb-*` driver skills
-// (`disable-model-invocation: true`, so the model can never invoke them) just as
-// well as from a terminal, so the blanket in-session refusal is gone. The lone
-// hold-out is `mode`, the hidden escape hatch for desyncs: it stays human-only,
-// refused in-session (CLAUDECODE set) and also blocked from the model's shell by
-// bash-guard.sh. A stray model-initiated transition is caught by Claude Code's
-// permission prompt, since the transition verbs are deliberately kept out of the
-// settings allowlist (only each driver skill self-authorizes its own verb).
-const HUMAN_ONLY_VERBS: ReadonlySet<string> = new Set(['mode'])
+// Plumbbob v2 (D1/D10/D13): the deciding/executing boundary is no longer a lock,
+// so there is nothing to defend — every verb runs the same whether a human or the
+// model triggers it. The old human-only `mode` escape hatch and its CLAUDECODE
+// in-session refusal are gone; what keeps the human the decider is the pause at
+// the step boundary (the skills), not a refusal here.
 
 function formatHelp(): string {
   const width = Math.max(...VERBS.map((v) => v.name.length))
@@ -62,8 +54,6 @@ function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): numbe
       return start(cwd, rest)
     case 'status':
       return status(cwd)
-    case 'mode':
-      return mode(cwd, rest)
     case 'park':
       return park(cwd, rest)
     case 'build':
@@ -95,14 +85,6 @@ function run(argv: ReadonlyArray<string>): number {
   if (verb === 'help' || verb === '--help' || verb === '-h') {
     process.stdout.write(`${formatHelp()}\n`)
     return 0
-  }
-
-  if (HUMAN_ONLY_VERBS.has(verb) && process.env.CLAUDECODE) {
-    process.stderr.write(
-      `plumbbob: '${verb}' is the human's escape hatch, not a model action (you appear to be in a Claude Code session). ` +
-        `Do not retry. Ask the human to run \`plumbbob ${verb}\` themselves.\n`,
-    )
-    return 1
   }
 
   try {
