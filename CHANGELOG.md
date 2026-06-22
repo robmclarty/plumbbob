@@ -5,6 +5,35 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-06-22
+
+- **Added:** a self-contained, project-level install shape so Plumbbob can run
+  entirely from a project (`pnpm exec plumbbob setup --local`) with nothing
+  written under `~/.claude`. The hooks are referenced in place at
+  `$CLAUDE_PROJECT_DIR/node_modules/plumbbob/hooks/` (invoked via `sh`, so no
+  execute bit is needed) and the skills are copied into `<repo>/.claude/skills/`
+  with their bin invocation resolved to the project-local
+  `node_modules/.bin/plumbbob`. `--local` writes `settings.local.json`,
+  `--project` writes a committable `settings.json`, and a bare `setup`
+  auto-detects a project-local dependency.
+- **Added:** the eight `pb-*` driver skills (`/pb-start`, `/pb-build`,
+  `/pb-review`, `/pb-done`, `/pb-revert`, `/pb-wrap`, `/pb-finish`, `/pb-spike`),
+  thin human-fired chat triggers — each `disable-model-invocation: true` — that
+  shell their transition verb and report it verbatim, so the whole loop can run
+  from the agent window without leaving for a terminal. Every skill now carries a
+  `__PLUMBBOB_BIN__` placeholder that `setup` substitutes at copy time.
+- **Changed:** transition verbs now run inside a Claude Code session rather than
+  being refused under `CLAUDECODE`. The deciding/executing boundary is reframed
+  as human-initiated vs model-initiated (not terminal vs chat): the driver skills
+  are the human's in-session trigger, and a stray model-initiated transition is
+  caught by Claude Code's permission prompt because the verbs are kept out of the
+  settings allowlist. `mode` is the lone hold-out — it stays human-only, refused
+  in-session and blocked from the model's shell by the Bash guard.
+- **Changed:** `plumbbob setup` defaults to the self-contained shape when
+  Plumbbob is a project-local dependency; `--global` restores the original
+  `~/.claude` install (copied hooks + skills, absolute command paths, bare
+  `plumbbob` on `PATH`).
+
 ## [0.1.5] - 2026-06-22
 
 - **Added:** a `/version` maintainer skill that bumps the `package.json` version
