@@ -84,6 +84,23 @@ case "$rel" in
     ;;
 esac
 
+# The seam muzzle below governs repo code only (D23). A path *outside* the repo
+# (Claude's own plan-mode scratch in ~/.claude/plans, an editor tmpfile) and a
+# git-ignored path *inside* it (fallow data, dist/, coverage/) are none of its
+# business — never block them. `.plumbbob/` is itself git-ignored but is
+# plumbbob's own control surface, so its non-doc files (STATE/SEAM/...) must stay
+# governed by the muzzle, never skipped here.
+case "$rel" in
+  .plumbbob/*) ;; # control state: stays governed by the muzzle, never skipped
+  *)
+    # git resolves the path via the repo toplevel (robust to symlinked cwds).
+    # check-ignore exit: 0 = ignored, 128 = outside the repo — neither is the
+    # muzzle's business; 1 = in-repo, tracked territory -> fall through to it.
+    git -C "$root" check-ignore -q -- "$path" 2>/dev/null
+    [ "$?" -ne 1 ] && exit 0
+    ;;
+esac
+
 # 4. Everything else is code: allowed only in BUILD, confined to the SEAM (D23).
 #    SPIKE locks the main tree like DESIGN (D18) — spike edits live in dormant
 #    worktrees, so the muzzle never needs to allow SPIKE here.

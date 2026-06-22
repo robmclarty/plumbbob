@@ -20,10 +20,12 @@ function runHook(hook: string, cwd: string, input: object): HookResult {
   return { stdout: result.stdout ?? '', stderr: result.stderr ?? '', status: result.status ?? -1 }
 }
 
-export function preEdit(repo: string, opts: { rel: string; tool?: string; cwd?: string }): HookResult {
+// `rel` resolves under the repo; `abs` passes an absolute path verbatim (used to
+// simulate writes outside the repo, e.g. Claude's plan-mode ~/.claude/plans).
+export function preEdit(repo: string, opts: { rel?: string; abs?: string; tool?: string; cwd?: string }): HookResult {
   const root = realpathSync(repo)
   const tool = opts.tool ?? 'Edit'
-  const filePath = join(root, opts.rel)
+  const filePath = opts.abs ?? join(root, opts.rel ?? '')
   const cwd = opts.cwd === undefined ? root : join(root, opts.cwd)
   const key = tool === 'NotebookEdit' ? 'notebook_path' : 'file_path'
   return runHook('pre-edit.sh', cwd, {

@@ -1,4 +1,5 @@
 import { chmodSync, mkdirSync, writeFileSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { cleanupFixtures, makeFixtureRepo, runCli } from './helpers/fixture-repo.ts'
@@ -86,6 +87,32 @@ describe('pre-edit seam-guard in BUILD (D23)', () => {
     expect(preEdit(dir, { rel: 'src/b.ts', tool: 'MultiEdit' }).status).toBe(2)
     // NotebookEdit carries notebook_path; a deny proves the path was extracted.
     expect(preEdit(dir, { rel: 'notebooks/x.ipynb', tool: 'NotebookEdit' }).status).toBe(2)
+  })
+})
+
+describe('pre-edit muzzle: scope is in-repo, non-ignored files only', () => {
+  it('allows writes outside the repo (e.g. Claude plan-mode in ~/.claude/plans) even in BUILD', () => {
+    const dir = makeFixtureRepo()
+    buildOnSeam(dir, '`src/a.ts`')
+    const outside = join(homedir(), '.claude', 'plans', 'session-plan.md')
+    expect(preEdit(dir, { abs: outside }).status).toBe(0)
+  })
+
+  it('does not interfere with git-ignored files inside the repo (fallow data, build output)', () => {
+    const dir = makeFixtureRepo()
+    writeFileSync(join(dir, '.gitignore'), '.fallow/\ndist/\n')
+    runCli(dir, ['start', '--allow-dirty', 'Ignored']) // DESIGN — code edits are normally blocked
+    expect(preEdit(dir, { rel: '.fallow/data.json' }).status).toBe(0)
+    expect(preEdit(dir, { rel: 'dist/out.js' }).status).toBe(0)
+    // A tracked, non-ignored source file is still muzzled in DESIGN.
+    expect(preEdit(dir, { rel: 'src/a.ts' }).status).toBe(2)
+  })
+
+  it('still blocks Edit/Write to .plumbbob control state — the ignore skip never applies there', () => {
+    const dir = makeFixtureRepo()
+    runCli(dir, ['start', 'Locked']) // .plumbbob/ is git-ignored, yet must stay locked
+    expect(preEdit(dir, { rel: '.plumbbob/STATE' }).status).toBe(2)
+    expect(preEdit(dir, { rel: '.plumbbob/SEAM' }).status).toBe(2)
   })
 })
 
