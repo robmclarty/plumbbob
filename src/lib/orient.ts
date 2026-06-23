@@ -106,10 +106,11 @@ export function parseOpenQuestions(intent: string): number {
     .length
 }
 
-// Parked items: `- [ ] ...` checkbox lines under `## Park list` (the `park` verb's
-// format), never the `(none yet)` placeholder or the blockquote instructions.
+// Open parked items: `- [ ]` lines under `## Park list` (the `park` verb's format).
+// A harvested item is flipped to `- [x]` by `/pb-harvest` and no longer counts; the
+// `(none yet)` placeholder and the blockquote instructions never match.
 export function parseParked(buildLog: string): number {
-  return sectionLines(buildLog, '## Park list').filter((l) => /^-\s+\[[ xX]\]\s+\S/.test(l.trim())).length
+  return sectionLines(buildLog, '## Park list').filter((l) => /^-\s+\[ \]\s+\S/.test(l.trim())).length
 }
 
 export function parseLastCheckpoint(checkpoints: string): Checkpoint | null {

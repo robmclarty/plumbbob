@@ -65,9 +65,10 @@ describe('orient parsers', () => {
     expect(parseOpenQuestions(INTENT)).toBe(2) // Q2, Q3; Q1 is resolved
   })
 
-  it('parseParked counts checkbox items, not the placeholder or instructions', () => {
+  it('parseParked counts only OPEN [ ] items, not harvested [x], the placeholder, or instructions', () => {
     expect(parseParked(BUILDLOG)).toBe(2)
     expect(parseParked('## Park list\n- (none yet)\n## Harvest\n')).toBe(0)
+    expect(parseParked('## Park list\n- [ ] still open\n- [x] already harvested\n## Harvest\n')).toBe(1)
   })
 
   it('parseLastCheckpoint returns the last step line, short sha intact', () => {

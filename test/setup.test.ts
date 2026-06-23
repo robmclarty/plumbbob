@@ -18,7 +18,7 @@ type Cmd = { readonly command: string }
 type Entry = { readonly matcher?: string; readonly hooks?: ReadonlyArray<Cmd> }
 type Parsed = { hooks?: { PreToolUse?: Entry[]; PostToolUse?: Entry[] }; model?: unknown }
 
-const JUDGMENT_SKILLS = ['plumbbob-interrogate', 'park', 'plumbbob-triage', 'plumbbob-report', 'plumbbob-docs']
+const JUDGMENT_SKILLS = ['plumbbob-interrogate', 'pb-park', 'pb-harvest', 'plumbbob-report', 'plumbbob-docs']
 const DRIVER_SKILLS = ['pb-start', 'pb-build', 'pb-review', 'pb-done', 'pb-revert', 'pb-wrap', 'pb-finish', 'pb-spike']
 const SKILLS = [...JUDGMENT_SKILLS, ...DRIVER_SKILLS]
 const HOOKS = ['post-edit.sh']
@@ -78,7 +78,7 @@ describe('plumbbob setup — global shape', () => {
   it('resolves the skill bin placeholder to a bare `plumbbob`', () => {
     const home = makeNonGitDir()
     setupIn(makeFixtureRepo(), home, '--global')
-    const park = readFileSync(join(home, '.claude', 'skills', 'park', 'SKILL.md'), 'utf8')
+    const park = readFileSync(join(home, '.claude', 'skills', 'pb-park', 'SKILL.md'), 'utf8')
     expect(park).toContain('!`plumbbob status`')
     expect(park).not.toContain('__PLUMBBOB_BIN__')
   })
@@ -175,7 +175,7 @@ describe('plumbbob setup — self-contained shape (--local / --project)', () => 
     for (const sk of SKILLS) {
       expect(existsSync(join(repo, '.claude', 'skills', sk, 'SKILL.md'))).toBe(true)
     }
-    const park = skillBody(repo, 'park')
+    const park = skillBody(repo, 'pb-park')
     expect(park).toContain('!`$CLAUDE_PROJECT_DIR/node_modules/.bin/plumbbob status`')
     expect(park).not.toContain('__PLUMBBOB_BIN__')
 

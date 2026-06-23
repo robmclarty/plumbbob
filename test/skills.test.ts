@@ -34,12 +34,12 @@ function parseSkill(dir: string): { data: Record<string, string>; body: string }
   return { data, body: lines.slice(end + 1).join('\n') }
 }
 
-const ALL = ['plumbbob-interrogate', 'park', 'plumbbob-triage', 'plumbbob-report', 'plumbbob-docs'] as const
+const ALL = ['plumbbob-interrogate', 'pb-park', 'pb-harvest', 'plumbbob-report', 'plumbbob-docs'] as const
 
 const MODEL_PINS: Record<string, string> = {
   'plumbbob-interrogate': 'opus',
-  park: 'haiku',
-  'plumbbob-triage': 'opus',
+  'pb-park': 'haiku',
+  'pb-harvest': 'opus',
   'plumbbob-report': 'opus',
   'plumbbob-docs': 'opus',
 }
@@ -290,8 +290,8 @@ describe('plumbbob-interrogate — DESIGN-only, Open-questions-only (D13)', () =
   })
 })
 
-describe('park — capture via the dumb CLI, never an edit (D12)', () => {
-  const { data, body } = parseSkill('park')
+describe('pb-park — capture via the dumb CLI, never an edit', () => {
+  const { data, body } = parseSkill('pb-park')
 
   it('is pinned to haiku (transcription, not judgment)', () => {
     expect(data.model).toBe('haiku')
@@ -313,8 +313,8 @@ describe('park — capture via the dumb CLI, never an edit (D12)', () => {
   })
 })
 
-describe('plumbbob-triage — propose, the human confirms (D13)', () => {
-  const { data, body } = parseSkill('plumbbob-triage')
+describe('pb-harvest — propose, the human confirms', () => {
+  const { data, body } = parseSkill('pb-harvest')
 
   it('is opus and DESIGN-only', () => {
     expect(data.model).toBe('opus')
