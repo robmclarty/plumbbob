@@ -9,6 +9,8 @@ import { park } from './verbs/park.ts'
 import { build } from './verbs/build.ts'
 import { review } from './verbs/review.ts'
 import { done } from './verbs/done.ts'
+import { check } from './verbs/check.ts'
+import { checkpoint } from './verbs/checkpoint.ts'
 import { revert } from './verbs/revert.ts'
 import { spike } from './verbs/spike.ts'
 import { wrap } from './verbs/wrap.ts'
@@ -26,6 +28,8 @@ const VERBS: ReadonlyArray<Verb> = [
   { name: 'build', summary: 'build <n>: write SEAM from step n; STATE=BUILD' },
   { name: 'review', summary: 'run the heavy check; if green flip to STATE=REVIEW' },
   { name: 'done', summary: 'ensure check green; checkpoint commit + record SHA; STATE=DESIGN' },
+  { name: 'check', summary: 'run the heavy check and report; no state change' },
+  { name: 'checkpoint', summary: 'checkpoint [<n>]: gate on green, commit/record SHA, mark step done, STATE=DESIGN (executor-agnostic)' },
   { name: 'revert', summary: 'revert [--to n]: git reset --hard to a checkpoint SHA; STATE=DESIGN' },
   { name: 'park', summary: 'park "<text>": append a raw line to the park list' },
   { name: 'spike', summary: 'spike "<slug>" | spike done: throwaway worktree experiment' },
@@ -62,6 +66,10 @@ function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): numbe
       return review(cwd)
     case 'done':
       return done(cwd)
+    case 'check':
+      return check(cwd)
+    case 'checkpoint':
+      return checkpoint(cwd, rest)
     case 'revert':
       return revert(cwd, rest)
     case 'spike':

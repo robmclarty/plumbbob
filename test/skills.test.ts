@@ -128,6 +128,44 @@ describe('driver skills (pb-*) — the human fires the transition from the chat'
   }
 })
 
+describe('pb-verify — the v2 tick: check, self-review, validate, PAUSE, checkpoint', () => {
+  const { data, body } = parseSkill('pb-verify')
+
+  it('names itself after its directory and disables model invocation', () => {
+    expect(data.name).toBe('pb-verify')
+    expect(data['disable-model-invocation']).toBe('true')
+  })
+
+  it('is opus (the self-review is judgment, not mechanism)', () => {
+    expect(data.model).toBe('opus')
+  })
+
+  it('opens with the status pre-injection', () => {
+    expect(body).toContain('!`__PLUMBBOB_BIN__ status`')
+  })
+
+  it('grants the check + checkpoint verbs and a way to read the diff', () => {
+    expect(data['allowed-tools']).toContain('__PLUMBBOB_BIN__ check')
+    expect(data['allowed-tools']).toContain('__PLUMBBOB_BIN__ checkpoint')
+    expect(data['allowed-tools']).toMatch(/git diff/)
+  })
+
+  it('carries the check → self-review → validate → PAUSE → checkpoint contract', () => {
+    expect(body).toMatch(/self-review/i)
+    expect(body).toMatch(/done.?when/i)
+    expect(body).toMatch(/pause/i)
+    expect(body).toMatch(/approv/i)
+  })
+
+  it('reads the diff, not the author (D3 executor-agnostic)', () => {
+    expect(body).toMatch(/diff, not the author/i)
+  })
+
+  it('leaves version bumps to the human (no auto /version)', () => {
+    expect(body).toMatch(/version/i)
+  })
+})
+
 describe('plumbbob-interrogate — DESIGN-only, Open-questions-only (D13)', () => {
   const { data, body } = parseSkill('plumbbob-interrogate')
 

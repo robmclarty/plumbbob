@@ -80,6 +80,26 @@ export function parseSteps(intent: string): Step[] {
   })
 }
 
+// Flip step N's `[ ]` checkbox to `[x]` within the `## Steps` section — mechanical
+// bookkeeping for `checkpoint` so `status` reflects a checkpointed step. A no-op if
+// the step is absent or already done.
+export function markStepDone(intent: string, n: number): string {
+  let inSteps = false
+  return intent
+    .split('\n')
+    .map((line) => {
+      if (line.trim() === '## Steps') {
+        inSteps = true
+        return line
+      }
+      if (inSteps && line.startsWith('## ')) {
+        inSteps = false
+      }
+      return inSteps && new RegExp(`^${n}\\.\\s+\\[ \\]`).test(line) ? line.replace('[ ]', '[x]') : line
+    })
+    .join('\n')
+}
+
 // Open questions still open: `- Q\d+:` lines that do not say "resolved".
 export function parseOpenQuestions(intent: string): number {
   return sectionLines(intent, '## Open questions').filter((l) => /^- Q\d+:/.test(l.trim()) && !/resolved/i.test(l))
