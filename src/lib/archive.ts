@@ -64,13 +64,16 @@ function uniqueArchiveDir(root: string, base: string): string {
 }
 
 // Copy intent + build-log + report into archive/<date>-<slug>/ and return the
-// directory created. The report must already exist (finish guards that); intent
-// and build-log always exist in an active session.
+// directory created. Intent and build-log always exist in an active session; the
+// report is copied only when present — v2 `reset` does not gate on it (D9), so a
+// close-out without a report still archives the rest.
 export function archiveSession(root: string): string {
   const dir = uniqueArchiveDir(root, `${today()}-${slugify(sessionTitle(root))}`)
   mkdirSync(dir, { recursive: true })
   copyFileSync(intentPath(root), join(dir, 'intent.md'))
   copyFileSync(buildLogPath(root), join(dir, 'build-log.md'))
-  copyFileSync(reportPath(root), join(dir, 'report.md'))
+  if (existsSync(reportPath(root))) {
+    copyFileSync(reportPath(root), join(dir, 'report.md'))
+  }
   return dir
 }

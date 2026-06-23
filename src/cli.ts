@@ -15,6 +15,7 @@ import { revert } from './verbs/revert.ts'
 import { spike } from './verbs/spike.ts'
 import { wrap } from './verbs/wrap.ts'
 import { finish } from './verbs/finish.ts'
+import { reset } from './verbs/reset.ts'
 import { setup } from './verbs/setup.ts'
 
 type Verb = {
@@ -35,6 +36,7 @@ const VERBS: ReadonlyArray<Verb> = [
   { name: 'spike', summary: 'spike "<slug>" | spike done: throwaway worktree experiment' },
   { name: 'wrap', summary: 'set STATE=FINISH so /plumbbob-report and /plumbbob-docs can run' },
   { name: 'finish', summary: 'refuse unless a report is archived; archive; clear; muzzle off' },
+  { name: 'reset', summary: 'v2 close-out: archive intent+log+report (no gate), clear the sidecar, STATE off' },
   { name: 'setup', summary: 'install hooks + skills; register them (self-contained per-project by default; --global for ~/.claude)' },
 ]
 
@@ -78,6 +80,8 @@ function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): numbe
       return wrap(cwd)
     case 'finish':
       return finish(cwd)
+    case 'reset':
+      return reset(cwd)
     case 'setup':
       return setup(cwd, rest)
     default:

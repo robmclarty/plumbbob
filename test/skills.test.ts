@@ -129,6 +129,41 @@ describe('driver skills (pb-*) — the human fires the transition from the chat'
   }
 })
 
+describe('pb-reset — the close-out: report by default, archive, clear (D9)', () => {
+  const { data, body } = parseSkill('pb-reset')
+
+  it('names itself, disables model invocation, is opus', () => {
+    expect(data.name).toBe('pb-reset')
+    expect(data['disable-model-invocation']).toBe('true')
+    expect(data.model).toBe('opus')
+  })
+
+  it('opens with the status pre-injection', () => {
+    expect(body).toContain('!`__PLUMBBOB_BIN__ status`')
+  })
+
+  it('writes the report (Write) and shells reset', () => {
+    expect(data['allowed-tools']).toMatch(/\bWrite\b/)
+    expect(data['allowed-tools']).toContain('__PLUMBBOB_BIN__ reset')
+  })
+
+  it('writes the report by default, never a gate (D9)', () => {
+    expect(body).toMatch(/report by default/i)
+    expect(body).toMatch(/gate/i)
+  })
+
+  it('archives then clears, never destroys (C4)', () => {
+    expect(body).toMatch(/archive/i)
+    expect(body).toMatch(/clear/i)
+  })
+
+  it('pins the required report sections', () => {
+    expect(body).toMatch(/what shipped/i)
+    expect(body).toMatch(/decisions/i)
+    expect(body).toMatch(/final status/i)
+  })
+})
+
 describe('pb-plan — the whole-goal move: scaffold + frame, no code', () => {
   const { data, body } = parseSkill('pb-plan')
 
