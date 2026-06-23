@@ -26,10 +26,6 @@ function writeIntent(dir: string, stepsBody: string): void {
 function setCheck(dir: string, command: string): void {
   writeFileSync(join(dir, '.plumbbob', 'config'), `check=${command}\n`)
 }
-function gitSubjects(dir: string): string {
-  return execFileSync('git', ['-C', dir, 'log', '--format=%s'], { encoding: 'utf8' })
-}
-
 // A started session with a real one-step intent and a stub check command.
 function startedSession(options: { seam: string; check?: string } = { seam: '`src/`' }): string {
   const dir = makeFixtureRepo()
@@ -56,74 +52,6 @@ describe('plumbbob build', () => {
     expect(result.stderr).toContain('glob')
     expect(sidecarExists(dir, 'SEAM')).toBe(false)
     expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
-  })
-})
-
-describe('plumbbob review', () => {
-  it('flips to REVIEW only when the check is green', () => {
-    const dir = startedSession({ seam: '`src/`', check: 'true' })
-    runCli(dir, ['build', '1'])
-    expect(runCli(dir, ['review']).status).toBe(0)
-    expect(readSidecar(dir, 'STATE').trim()).toBe('REVIEW')
-  })
-
-  it('stays in BUILD when the check is red', () => {
-    const dir = startedSession({ seam: '`src/`', check: 'false' })
-    runCli(dir, ['build', '1'])
-    const result = runCli(dir, ['review'])
-    expect(result.status).toBe(1)
-    expect(readSidecar(dir, 'STATE').trim()).toBe('BUILD')
-  })
-})
-
-describe('plumbbob done', () => {
-  it('refuses on a red check', () => {
-    const dir = startedSession({ seam: '`src/`', check: 'false' })
-    runCli(dir, ['build', '1'])
-    write(dir, 'src/a.ts', 'export const a = 1\n')
-    const result = runCli(dir, ['done'])
-    expect(result.status).toBe(1)
-    expect(readSidecar(dir, 'STATE').trim()).toBe('BUILD')
-  })
-
-  it('commits the checkpoint, records the SHA, and returns to DESIGN', () => {
-    const dir = startedSession({ seam: '`src/`', check: 'true' })
-    runCli(dir, ['build', '1'])
-    write(dir, 'src/a.ts', 'export const a = 1\n')
-    const result = runCli(dir, ['done'])
-    expect(result.status).toBe(0)
-    expect(gitSubjects(dir)).toContain('plumbbob: step 1 done')
-    expect(readSidecar(dir, 'checkpoints')).toMatch(/\nstep 1 [0-9a-f]{7,}/)
-    expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
-    expect(sidecarExists(dir, 'STEP')).toBe(false)
-    expect(sidecarExists(dir, 'SEAM')).toBe(false)
-  })
-
-  it('warns about committed paths outside the SEAM (D8)', () => {
-    const dir = startedSession({ seam: '`src/a.ts`', check: 'true' })
-    runCli(dir, ['build', '1'])
-    write(dir, 'src/a.ts', 'export const a = 1\n')
-    write(dir, 'outside.txt', 'drifted\n')
-    const result = runCli(dir, ['done'])
-    expect(result.status).toBe(0)
-    expect(result.stderr).toContain('outside the SEAM')
-    expect(result.stderr).toContain('outside.txt')
-  })
-})
-
-describe('build re-entry from REVIEW', () => {
-  it('re-enters BUILD with the same seam and takes no new checkpoint', () => {
-    const dir = startedSession({ seam: '`src/`', check: 'true' })
-    runCli(dir, ['build', '1'])
-    runCli(dir, ['review'])
-    const checkpointsBefore = readSidecar(dir, 'checkpoints')
-    const seamBefore = readSidecar(dir, 'SEAM')
-
-    const result = runCli(dir, ['build', '1'])
-    expect(result.status).toBe(0)
-    expect(readSidecar(dir, 'STATE').trim()).toBe('BUILD')
-    expect(readSidecar(dir, 'SEAM')).toBe(seamBefore)
-    expect(readSidecar(dir, 'checkpoints')).toBe(checkpointsBefore)
   })
 })
 
@@ -196,7 +124,7 @@ describe('plumbbob revert', () => {
     const dir = startedSession({ seam: '`src/`', check: 'true' })
     runCli(dir, ['build', '1'])
     write(dir, 'src/a.ts', 'export const a = 1\n')
-    runCli(dir, ['done']) // checkpoint step 1
+    runCli(dir, ['checkpoint']) // checkpoint step 1 (v2 tick)
     // a second round of uncommitted work
     runCli(dir, ['build', '1'])
     write(dir, 'src/a.ts', 'export const a = 2\n')

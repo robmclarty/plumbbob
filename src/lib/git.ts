@@ -51,11 +51,6 @@ export function stageAll(root: string): void {
   runGit(root, ['add', '-A'])
 }
 
-export function stagedPaths(root: string): ReadonlyArray<string> {
-  const out = runGit(root, ['diff', '--cached', '--name-only'])
-  return out.length === 0 ? [] : out.split('\n')
-}
-
 export function untrackedPaths(root: string): ReadonlyArray<string> {
   const out = runGit(root, ['ls-files', '--others', '--exclude-standard'])
   return out.length === 0 ? [] : out.split('\n')

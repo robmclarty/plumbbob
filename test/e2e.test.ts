@@ -1,8 +1,7 @@
-// End-to-end dogfood drive: a full Plumbbob session in a fixture repo,
-// start → build → done → park → report → wrap → finish → archive populated.
-// The report SKILL is
-// a Claude skill, so the e2e writes .plumbbob/report.md as its artifact (the CLI
-// path under test is everything around it). Stub check per D14.
+// End-to-end dogfood drive: a full Plumbbob v2 session in a fixture repo,
+// start → build → checkpoint → park → reset → archive populated. The report is
+// written here as the /pb-reset skill would; the CLI path under test is everything
+// around it. Stub check per D14.
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -20,11 +19,11 @@ function writeRepo(dir: string, rel: string, content: string): void {
   writeFileSync(path, content)
 }
 
-describe('e2e: a full Plumbbob session end to end', () => {
-  it('drives start → build → done → park → report → finish → archive', () => {
+describe('e2e: a full Plumbbob v2 session end to end', () => {
+  it('drives start → build → checkpoint → park → reset → archive', () => {
     const dir = makeFixtureRepo({ withCheckScript: true })
 
-    // start → DESIGN, then stub the heavy check (D14) and write a one-step intent.
+    // start → DESIGN; stub the check and write a one-step intent.
     expect(runCli(dir, ['start', 'E2E demo']).status).toBe(0)
     expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
     writeSidecar(dir, 'config', 'check=true\n')
@@ -34,25 +33,25 @@ describe('e2e: a full Plumbbob session end to end', () => {
       '# E2E demo\n\n## Steps\n\n1. [ ] Build the widget — **done when:** ok\n   - seam: `src/widget.ts`\n',
     )
 
-    // build 1 → BUILD with the normalized SEAM.
+    // build 1 → BUILD with the in-flight STEP + SEAM (orientation, not a lock).
     expect(runCli(dir, ['build', '1']).status).toBe(0)
     expect(readSidecar(dir, 'STATE').trim()).toBe('BUILD')
     expect(readSidecar(dir, 'SEAM').trim()).toBe('src/widget.ts')
 
-    // make the edit for real (v2 has no muzzle to gate it), then checkpoint → DESIGN.
+    // implement the step (nothing gates the edit in v2), then checkpoint the tick.
     writeRepo(dir, 'src/widget.ts', 'export const widget = 1\n')
-    expect(runCli(dir, ['done']).status).toBe(0)
+    expect(runCli(dir, ['checkpoint']).status).toBe(0) // no arg → resolves STEP=1
     expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
+    expect(readSidecar(dir, 'checkpoints')).toMatch(/step 1 [0-9a-f]{7,}/)
+    expect(readSidecar(dir, 'intent.md')).toContain('1. [x] Build the widget') // box flipped
 
     // capture a tangent (the dumb CLI path).
     expect(runCli(dir, ['park', 'a deferred idea for later']).status).toBe(0)
     expect(readSidecar(dir, 'build-log.md')).toContain('a deferred idea for later')
 
-    // report artifact, then wrap → FINISH → finish.
+    // close out: write the report (as /pb-reset would), then reset → archive + clear.
     writeSidecar(dir, 'report.md', '# Report — E2E demo\n\n## What shipped\n\nThe widget.\n')
-    expect(runCli(dir, ['wrap']).status).toBe(0)
-    expect(readSidecar(dir, 'STATE').trim()).toBe('FINISH')
-    expect(runCli(dir, ['finish']).status).toBe(0)
+    expect(runCli(dir, ['reset']).status).toBe(0)
 
     // archive populated; the parked line and the SHA list survived into it.
     const names = readdirSync(join(dir, '.plumbbob', 'archive'))
@@ -64,9 +63,9 @@ describe('e2e: a full Plumbbob session end to end', () => {
     expect(readFileSync(join(archived, 'build-log.md'), 'utf8')).toContain('a deferred idea for later')
     expect(readFileSync(join(archived, 'report.md'), 'utf8')).toMatch(/- step 1 [0-9a-f]{7,}/)
 
-    // the session is cleared; the muzzle is off (STATE gone).
+    // the session is cleared — no STATE, so no active session.
     expect(sidecarExists(dir, 'STATE')).toBe(false)
-    expect(sidecarExists(dir, 'SEAM')).toBe(false)
     expect(sidecarExists(dir, 'intent.md')).toBe(false)
+    expect(runCli(dir, ['status']).stdout).toContain('NO ACTIVE SESSION')
   })
 })

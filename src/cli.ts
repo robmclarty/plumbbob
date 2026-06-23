@@ -7,14 +7,10 @@ import { start } from './verbs/start.ts'
 import { status } from './verbs/status.ts'
 import { park } from './verbs/park.ts'
 import { build } from './verbs/build.ts'
-import { review } from './verbs/review.ts'
-import { done } from './verbs/done.ts'
 import { check } from './verbs/check.ts'
 import { checkpoint } from './verbs/checkpoint.ts'
 import { revert } from './verbs/revert.ts'
 import { spike } from './verbs/spike.ts'
-import { wrap } from './verbs/wrap.ts'
-import { finish } from './verbs/finish.ts'
 import { reset } from './verbs/reset.ts'
 import { setup } from './verbs/setup.ts'
 
@@ -26,16 +22,12 @@ type Verb = {
 const VERBS: ReadonlyArray<Verb> = [
   { name: 'start', summary: 'scaffold .plumbbob/; STATE=DESIGN; record the baseline commit' },
   { name: 'status', summary: 'print the session state, or NO ACTIVE SESSION' },
-  { name: 'build', summary: 'build <n>: write SEAM from step n; STATE=BUILD' },
-  { name: 'review', summary: 'run the heavy check; if green flip to STATE=REVIEW' },
-  { name: 'done', summary: 'ensure check green; checkpoint commit + record SHA; STATE=DESIGN' },
+  { name: 'build', summary: 'build <n>: write the seam from step n; STATE=BUILD (orientation, not a lock)' },
   { name: 'check', summary: 'run the heavy check and report; no state change' },
   { name: 'checkpoint', summary: 'checkpoint [<n>]: gate on green, commit/record SHA, mark step done, STATE=DESIGN (executor-agnostic)' },
   { name: 'revert', summary: 'revert [--to n]: git reset --hard to a checkpoint SHA; STATE=DESIGN' },
   { name: 'park', summary: 'park "<text>": append a raw line to the park list' },
   { name: 'spike', summary: 'spike "<slug>" | spike done: throwaway worktree experiment' },
-  { name: 'wrap', summary: 'set STATE=FINISH so /plumbbob-report and /plumbbob-docs can run' },
-  { name: 'finish', summary: 'refuse unless a report is archived; archive; clear; muzzle off' },
   { name: 'reset', summary: 'v2 close-out: archive intent+log+report (no gate), clear the sidecar, STATE off' },
   { name: 'setup', summary: 'install hooks + skills; register them (self-contained per-project by default; --global for ~/.claude)' },
 ]
@@ -64,10 +56,6 @@ function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): numbe
       return park(cwd, rest)
     case 'build':
       return build(cwd, rest)
-    case 'review':
-      return review(cwd)
-    case 'done':
-      return done(cwd)
     case 'check':
       return check(cwd)
     case 'checkpoint':
@@ -76,10 +64,6 @@ function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): numbe
       return revert(cwd, rest)
     case 'spike':
       return spike(cwd, rest)
-    case 'wrap':
-      return wrap(cwd)
-    case 'finish':
-      return finish(cwd)
     case 'reset':
       return reset(cwd)
     case 'setup':
