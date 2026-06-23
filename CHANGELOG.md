@@ -5,6 +5,30 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-06-23
+
+- **Changed:** Plumbbob shifts from enforcement to guidance — the lock becomes a
+  clock. The deciding/executing boundary is no longer held by a hard file lock
+  that refused edits; it is held by a pause you advance. `STATE` is demoted from a
+  gate to pure orientation, and the verify pause — where you approve a step's diff
+  before it is checkpointed — is what now keeps you the decider. The whole surface
+  collapses to eight `pb-*` skills you drive from the IDE, so there are no step
+  numbers to remember and no raw CLI to type.
+- **Added:** the eight-skill surface — `/pb-plan`, `/pb-step`, `/pb-build`,
+  `/pb-verify`, `/pb-park`, `/pb-status`, `/pb-harvest`, and `/pb-reset`.
+  `/pb-status` is a rich orientation dashboard that names your next move;
+  `/pb-verify` is an executor-agnostic tick (check, self-review, validate, pause,
+  checkpoint) that reads the diff and not its author, so hand-written, vibed, or
+  `/pb-build`-generated code all checkpoint the same way; `/pb-build` is now an
+  optional engine that actually implements a planned step; and `/pb-reset` writes
+  the report by default and archives with no gate. New `check`, `checkpoint`, and
+  `reset` CLI verbs back them.
+- **Removed:** the pre-edit muzzle, the seam-guard, and the `bash-guard` hook — the
+  entire enforcement layer that only ever defended a lock. The `mode`, `review`,
+  `done`, `wrap`, and `finish` verbs are gone, along with the v1 driver skills
+  (`pb-start`, `pb-review`, `pb-done`, `pb-wrap`, `pb-finish`) and the
+  `plumbbob-report` and `plumbbob-docs` judgment skills, all folded into the eight.
+
 ## [0.2.3] - 2026-06-22
 
 - **Fixed:** `plumbbob revert` no longer discards plumbbob's own installed
