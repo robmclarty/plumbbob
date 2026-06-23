@@ -129,6 +129,66 @@ describe('driver skills (pb-*) — the human fires the transition from the chat'
   }
 })
 
+describe('pb-plan — the whole-goal move: scaffold + frame, no code', () => {
+  const { data, body } = parseSkill('pb-plan')
+
+  it('names itself, disables model invocation, is opus', () => {
+    expect(data.name).toBe('pb-plan')
+    expect(data['disable-model-invocation']).toBe('true')
+    expect(data.model).toBe('opus')
+  })
+
+  it('opens with the status pre-injection', () => {
+    expect(body).toContain('!`__PLUMBBOB_BIN__ status`')
+  })
+
+  it('scaffolds via start and authors intent (Edit/Write)', () => {
+    expect(data['allowed-tools']).toContain('__PLUMBBOB_BIN__ start')
+    expect(data['allowed-tools']).toMatch(/\bEdit\b/)
+  })
+
+  it('frames before code and leaves Steps to /pb-step (just-in-time, D6)', () => {
+    expect(body).toMatch(/frame/i)
+    expect(body).toMatch(/decisions/i)
+    expect(body).toMatch(/constraints/i)
+    expect(body).toMatch(/\/pb-step/)
+  })
+
+  it('keeps the human the converger — holes are Open questions, not guesses', () => {
+    expect(body).toMatch(/open question/i)
+    expect(body).toMatch(/human/i)
+  })
+})
+
+describe('pb-step — the single-increment move: one verifiable step', () => {
+  const { data, body } = parseSkill('pb-step')
+
+  it('names itself, disables model invocation, is opus', () => {
+    expect(data.name).toBe('pb-step')
+    expect(data['disable-model-invocation']).toBe('true')
+    expect(data.model).toBe('opus')
+  })
+
+  it('opens with the status pre-injection', () => {
+    expect(body).toContain('!`__PLUMBBOB_BIN__ status`')
+  })
+
+  it('proposes a step with a done-when and a seam', () => {
+    expect(body).toMatch(/done.?when/i)
+    expect(body).toMatch(/seam/i)
+  })
+
+  it('appends to ## Steps in the standard format the parser reads', () => {
+    expect(body).toMatch(/## Steps/)
+    expect(body).toMatch(/done when:/i)
+  })
+
+  it('plans one by default and waits for the human to approve', () => {
+    expect(body).toMatch(/\bone\b/i)
+    expect(body).toMatch(/approv|decide/i)
+  })
+})
+
 describe('pb-build — the v2 optional engine: implement the planned step, then verify', () => {
   const { data, body } = parseSkill('pb-build')
 
