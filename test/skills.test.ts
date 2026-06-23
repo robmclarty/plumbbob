@@ -34,14 +34,12 @@ function parseSkill(dir: string): { data: Record<string, string>; body: string }
   return { data, body: lines.slice(end + 1).join('\n') }
 }
 
-const ALL = ['plumbbob-interrogate', 'pb-park', 'pb-harvest', 'plumbbob-report', 'plumbbob-docs'] as const
+const ALL = ['plumbbob-interrogate', 'pb-park', 'pb-harvest'] as const
 
 const MODEL_PINS: Record<string, string> = {
   'plumbbob-interrogate': 'opus',
   'pb-park': 'haiku',
   'pb-harvest': 'opus',
-  'plumbbob-report': 'opus',
-  'plumbbob-docs': 'opus',
 }
 
 describe('every skill (the three reinforcing layers)', () => {
@@ -79,15 +77,12 @@ describe('every skill (the three reinforcing layers)', () => {
 // The pb-* driver skills: human-fired chat triggers for the transition verbs
 // (A). They are pure mechanism — shell one verb, report it verbatim — and so are
 // pinned to haiku, disable model invocation, and carry no Edit/Write.
-// pb-build became the v2 engine (its own contract below), so it is no longer a
-// thin driver. The rest stay drivers until step 8 removes the v1 apparatus.
+// The surviving thin drivers: pb-status (orient) plus the optional power moves
+// pb-revert and pb-spike. pb-build is the v2 engine (own contract); the superseded
+// pb-start/review/done/wrap/finish drivers were removed in step 8.
 const DRIVER_VERB: Record<string, string> = {
-  'pb-start': 'start',
-  'pb-review': 'review',
-  'pb-done': 'done',
+  'pb-status': 'status',
   'pb-revert': 'revert',
-  'pb-wrap': 'wrap',
-  'pb-finish': 'finish',
   'pb-spike': 'spike',
 }
 
@@ -370,48 +365,5 @@ describe('pb-harvest — propose, the human confirms', () => {
   })
 })
 
-describe('plumbbob-report — FINISH, writes exactly report.md', () => {
-  const { data, body } = parseSkill('plumbbob-report')
-
-  it('is opus and may Write', () => {
-    expect(data.model).toBe('opus')
-    expect(data['allowed-tools']).toMatch(/\bWrite\b/)
-  })
-
-  it('writes exactly .plumbbob/report.md', () => {
-    expect(body).toContain('.plumbbob/report.md')
-  })
-
-  it('tells the human to wrap when not in FINISH (D28)', () => {
-    expect(body).toMatch(/FINISH/)
-    expect(body).toContain('plumbbob wrap')
-  })
-
-  it('pins all five required sections', () => {
-    expect(body).toMatch(/what shipped/i)
-    expect(body).toMatch(/decisions and why/i)
-    expect(body).toMatch(/parked items/i)
-    expect(body).toMatch(/triag/i)
-    expect(body).toMatch(/final status/i)
-    expect(body).toMatch(/deferred tangents/i)
-  })
-})
-
-describe('plumbbob-docs — FINISH-only, conservative by default (D19)', () => {
-  const { data, body } = parseSkill('plumbbob-docs')
-
-  it('is opus and may touch docs (Edit + Write)', () => {
-    expect(data.model).toBe('opus')
-    expect(data['allowed-tools']).toMatch(/\bEdit\b/)
-    expect(data['allowed-tools']).toMatch(/\bWrite\b/)
-  })
-
-  it('refuses outside FINISH', () => {
-    expect(body).toMatch(/FINISH/)
-  })
-
-  it('is conservative by default', () => {
-    expect(body).toMatch(/conservative/i)
-    expect(body).toMatch(/bug fix/i)
-  })
-})
+// plumbbob-report and plumbbob-docs were folded into /pb-reset (D9) and removed.
+// interrogate survives as an optional power move; report/docs do not.

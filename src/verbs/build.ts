@@ -32,7 +32,7 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
   writeState(root, 'BUILD')
 
   process.stdout.write(
-    `plumbbob: building step ${step} — STATE=BUILD. Edits are limited to the seam:\n${parsed.seam.map((p) => `  ${p}`).join('\n')}\n`,
+    `plumbbob: building step ${step} — STATE=BUILD. Seam (for orientation; not a lock in v2):\n${parsed.seam.map((p) => `  ${p}`).join('\n')}\n`,
   )
   return 0
 }
