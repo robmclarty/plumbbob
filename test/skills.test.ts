@@ -79,9 +79,10 @@ describe('every skill (the three reinforcing layers)', () => {
 // The pb-* driver skills: human-fired chat triggers for the transition verbs
 // (A). They are pure mechanism — shell one verb, report it verbatim — and so are
 // pinned to haiku, disable model invocation, and carry no Edit/Write.
+// pb-build became the v2 engine (its own contract below), so it is no longer a
+// thin driver. The rest stay drivers until step 8 removes the v1 apparatus.
 const DRIVER_VERB: Record<string, string> = {
   'pb-start': 'start',
-  'pb-build': 'build',
   'pb-review': 'review',
   'pb-done': 'done',
   'pb-revert': 'revert',
@@ -126,6 +127,45 @@ describe('driver skills (pb-*) — the human fires the transition from the chat'
       })
     })
   }
+})
+
+describe('pb-build — the v2 optional engine: implement the planned step, then verify', () => {
+  const { data, body } = parseSkill('pb-build')
+
+  it('names itself after its directory and disables model invocation', () => {
+    expect(data.name).toBe('pb-build')
+    expect(data['disable-model-invocation']).toBe('true')
+  })
+
+  it('is opus (implementing a decided step is judgment-laden)', () => {
+    expect(data.model).toBe('opus')
+  })
+
+  it('opens with the status pre-injection', () => {
+    expect(body).toContain('!`__PLUMBBOB_BIN__ status`')
+  })
+
+  it('can implement (Edit/Write) and drive build + the verify tick', () => {
+    expect(data['allowed-tools']).toMatch(/\bEdit\b/)
+    expect(data['allowed-tools']).toMatch(/\bWrite\b/)
+    expect(data['allowed-tools']).toContain('__PLUMBBOB_BIN__ build')
+    expect(data['allowed-tools']).toContain('__PLUMBBOB_BIN__ checkpoint')
+  })
+
+  it('declares itself optional — the executor is pluggable (D3)', () => {
+    expect(body).toMatch(/optional/i)
+    expect(body).toMatch(/by hand|vibed|another harness/i)
+  })
+
+  it('builds the decided step and parks new ideas instead of sprawling', () => {
+    expect(body).toMatch(/done.?when/i)
+    expect(body).toMatch(/\/pb-park/)
+  })
+
+  it('ends at the verify pause, never auto-advancing past approval', () => {
+    expect(body).toMatch(/pause/i)
+    expect(body).toMatch(/approv/i)
+  })
 })
 
 describe('pb-verify — the v2 tick: check, self-review, validate, PAUSE, checkpoint', () => {
