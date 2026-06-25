@@ -8,7 +8,7 @@ allowed-tools: Read, Edit, Bash(__PLUMBBOB_BIN__ status:*)
 
 # Plumbbob — harvest the park list
 
-Current session state (injected when this skill runs): !`__PLUMBBOB_BIN__ status`
+Current session state (injected when this skill runs): !`__PLUMBBOB_BIN__ status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npx plumbbob setup"`
 
 `/pb-harvest` is the complement of `/pb-park` (D7): you parked ideas as seeds during a
 build; now, at a boundary, you harvest them — decide what each one is.

@@ -8,7 +8,7 @@ allowed-tools: Read, Write, Bash(__PLUMBBOB_BIN__ status:*), Bash(__PLUMBBOB_BIN
 
 # Plumbbob — reset for a new goal (the close-out)
 
-Current session state (injected when this skill runs): !`__PLUMBBOB_BIN__ status`
+Current session state (injected when this skill runs): !`__PLUMBBOB_BIN__ status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npx plumbbob setup"`
 
 `/pb-reset` ends the build: it captures what happened, archives it, and clears the
 sidecar for the next goal. **Report by default** (D9) — no refuse-without-report gate,

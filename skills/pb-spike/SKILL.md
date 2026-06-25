@@ -8,7 +8,7 @@ allowed-tools: Bash(__PLUMBBOB_BIN__ status:*), Bash(__PLUMBBOB_BIN__ spike:*)
 
 # Plumbbob — spike an experiment (driver)
 
-Current session state (injected when this skill runs): !`__PLUMBBOB_BIN__ status`
+Current session state (injected when this skill runs): !`__PLUMBBOB_BIN__ status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npx plumbbob setup"`
 
 This is a **driver skill** — a chat-side trigger for the mechanical `plumbbob spike` verb, so the whole workflow runs from the agent window instead of a terminal. It is `disable-model-invocation: true`: only the human fires it. It carries **no Edit and no Write tool** — its only action is to shell the verb and report the verb's output verbatim, including any refusal. The CLI is the source of truth: never retry a refused transition, and never edit a file to work around one.
 

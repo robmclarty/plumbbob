@@ -8,7 +8,7 @@ allowed-tools: Bash(__PLUMBBOB_BIN__ status:*), Bash(__PLUMBBOB_BIN__ park:*)
 
 # Plumbbob — park an idea (capture, don't chase)
 
-Current session state (injected when this skill runs): !`__PLUMBBOB_BIN__ status`
+Current session state (injected when this skill runs): !`__PLUMBBOB_BIN__ status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npx plumbbob setup"`
 
 `/pb-park` is the **capture** half of the loop; `/pb-harvest` is where parked items
 get triaged later (D7). Capturing the instant an idea arrives — instead of acting on

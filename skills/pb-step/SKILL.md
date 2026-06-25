@@ -8,7 +8,7 @@ allowed-tools: Read, Edit, Bash(__PLUMBBOB_BIN__ status:*)
 
 # Plumbbob — plan the next step (the single-increment move)
 
-Current session state (injected when this skill runs): !`__PLUMBBOB_BIN__ status`
+Current session state (injected when this skill runs): !`__PLUMBBOB_BIN__ status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npx plumbbob setup"`
 
 `/pb-step` plans the **next increment** just-in-time (D6) — the smallest verifiable
 piece of the framed goal, planned only when you reach it. (Framing the whole goal is

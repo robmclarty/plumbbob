@@ -3,9 +3,14 @@
 //   self-contained (default when plumbbob is a project-local dep; --local /
 //     --project to force) — NOTHING is written under ~/.claude. The hooks are
 //     referenced in place at $CLAUDE_PROJECT_DIR/node_modules/plumbbob/hooks/,
-//     and the skills are copied into <repo>/.claude/skills/ with their bin
-//     invocation pointed at $CLAUDE_PROJECT_DIR/node_modules/.bin/plumbbob. The
-//     registration lands in:
+//     and the skills are copied into <repo>/.claude/skills/. A skill's bin
+//     invocation can NOT use $CLAUDE_PROJECT_DIR — that variable is defined only
+//     in Claude Code's hook context and expands EMPTY in a skill's bash — so
+//     setup resolves the bin at install time (see selfBin): --local bakes the
+//     absolute path to <repo>/node_modules/.bin/plumbbob (personal + untracked,
+//     so a machine path is fine); --project uses a bare `plumbbob` (committed +
+//     shared, so it stays portable — Claude Code resolves it from the project's
+//     node_modules/.bin, which it prepends to PATH). The registration lands in:
 //       --local   (default) <repo>/.claude/settings.local.json  — personal, untracked
 //       --project           <repo>/.claude/settings.json         — committable, enrolls the team
 //     This is the "run it from the project root, no global install" shape.
@@ -32,10 +37,11 @@ const HOOK_FILES: ReadonlyArray<string> = ['post-edit.sh']
 // setup substitutes it with the form the chosen install shape resolves.
 const BIN_PLACEHOLDER = '__PLUMBBOB_BIN__'
 
-// Self-contained installs address everything through Claude Code's project-root
-// variable so committed/portable files carry no machine-absolute path.
+// The hook is registered in settings.json, whose `command` runs in Claude Code's
+// hook context — the one place $CLAUDE_PROJECT_DIR is defined — so the portable
+// project-root variable resolves correctly here. (A skill's bash does NOT get
+// that variable; the skill bin is resolved separately, by selfBin.)
 const SELF_HOOKS_DIR = '$CLAUDE_PROJECT_DIR/node_modules/plumbbob/hooks'
-const SELF_BIN = '$CLAUDE_PROJECT_DIR/node_modules/.bin/plumbbob'
 
 type Mode =
   | { readonly kind: 'global'; readonly settingsFile: string }
@@ -93,8 +99,9 @@ function installGlobal(home: string, settingsFile: string): number {
 // their bin invocation rewritten to the project-local binary.
 function installSelfContained(mode: Extract<Mode, { kind: 'self' }>): number {
   const skillsDir = join(mode.repoRoot, '.claude', 'skills')
+  const bin = selfBin(mode)
   cpSync(packageDir('skills'), skillsDir, { recursive: true })
-  substituteSkillBins(skillsDir, SELF_BIN)
+  substituteSkillBins(skillsDir, bin)
 
   writeSettings(mode.settingsFile, mergeRegistration(readSettings(mode.settingsFile), SELF_HOOKS_DIR, true))
 
@@ -105,13 +112,29 @@ function installSelfContained(mode: Extract<Mode, { kind: 'self' }>): number {
   const scope = mode.settingsFile.endsWith('settings.local.json') ? 'local' : 'project'
 
   process.stdout.write(
-    `plumbbob: copied skills → ${skillsDir} (bin → ${SELF_BIN}). Nothing was written under ~/.claude.\n` +
+    `plumbbob: copied skills → ${skillsDir} (bin → ${bin}). Nothing was written under ~/.claude.\n` +
       `plumbbob: referenced the hooks at ${SELF_HOOKS_DIR} and registered them in ${mode.settingsFile} (${scope} scope).\n` +
       note +
       'plumbbob: restart Claude Code (or reload settings) for the hooks to take effect.\n' +
       'plumbbob: drive the workflow from the chat with the `pb-*` driver skills. Keep the transition verbs OUT of your settings allowlist — each driver skill self-authorizes its own verb, so a stray model-initiated transition still surfaces a permission prompt.\n',
   )
   return 0
+}
+
+// Resolve the bin string baked into the copied skills. A skill's `!`...``
+// injection and its allowed-tools prefix can NOT rely on $CLAUDE_PROJECT_DIR (a
+// hooks-only variable that expands empty in a skill's bash context), so we
+// resolve at install time. --local is personal and untracked, so bake the
+// absolute path to the project-local binary — fully resolved, no runtime
+// lookup. --project is committed and shared, so a machine-absolute path can't
+// travel; fall back to a bare `plumbbob`, which Claude Code resolves from the
+// project's node_modules/.bin (it prepends that to PATH). A repo path with
+// whitespace can't sit unquoted in the injection or an allowed-tools prefix
+// either, so use the PATH-resolved bare form there too.
+function selfBin(mode: Extract<Mode, { kind: 'self' }>): string {
+  const committed = !mode.settingsFile.endsWith('settings.local.json')
+  const abs = join(mode.repoRoot, 'node_modules', '.bin', 'plumbbob')
+  return committed || /\s/.test(abs) ? 'plumbbob' : abs
 }
 
 // Resolve which install shape and settings file to use. Explicit flags win;

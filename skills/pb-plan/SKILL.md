@@ -8,7 +8,7 @@ allowed-tools: Read, Edit, Write, Bash(__PLUMBBOB_BIN__ status:*), Bash(__PLUMBB
 
 # Plumbbob — frame a goal (the whole-goal move)
 
-Current session state (injected when this skill runs): !`__PLUMBBOB_BIN__ status`
+Current session state (injected when this skill runs): !`__PLUMBBOB_BIN__ status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npx plumbbob setup"`
 
 `/pb-plan` is the **whole-goal** move — it opens a session and gets the deciding out
 of your head and onto `intent.md` *before* any code. (Planning a single increment is

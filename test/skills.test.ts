@@ -60,7 +60,7 @@ describe('every skill (the three reinforcing layers)', () => {
       })
 
       it('opens its body with the status pre-injection (bin placeholder, resolved at setup)', () => {
-        expect(body).toContain('!`__PLUMBBOB_BIN__ status`')
+        expect(body).toContain('!`__PLUMBBOB_BIN__ status 2>/dev/null')
       })
 
       it('grants Bash(__PLUMBBOB_BIN__ status) so the pre-injection can run', () => {
@@ -112,7 +112,7 @@ describe('driver skills (pb-*) — the human fires the transition from the chat'
       })
 
       it('opens with the status pre-injection and shells the verb in its body', () => {
-        expect(body).toContain('!`__PLUMBBOB_BIN__ status`')
+        expect(body).toContain('!`__PLUMBBOB_BIN__ status 2>/dev/null')
         expect(body).toContain(`__PLUMBBOB_BIN__ ${verb}`)
       })
 
@@ -134,7 +134,7 @@ describe('pb-reset — the close-out: report by default, archive, clear (D9)', (
   })
 
   it('opens with the status pre-injection', () => {
-    expect(body).toContain('!`__PLUMBBOB_BIN__ status`')
+    expect(body).toContain('!`__PLUMBBOB_BIN__ status 2>/dev/null')
   })
 
   it('writes the report (Write) and shells reset', () => {
@@ -169,7 +169,7 @@ describe('pb-plan — the whole-goal move: scaffold + frame, no code', () => {
   })
 
   it('opens with the status pre-injection', () => {
-    expect(body).toContain('!`__PLUMBBOB_BIN__ status`')
+    expect(body).toContain('!`__PLUMBBOB_BIN__ status 2>/dev/null')
   })
 
   it('scaffolds via start and authors intent (Edit/Write)', () => {
@@ -200,7 +200,7 @@ describe('pb-step — the single-increment move: one verifiable step', () => {
   })
 
   it('opens with the status pre-injection', () => {
-    expect(body).toContain('!`__PLUMBBOB_BIN__ status`')
+    expect(body).toContain('!`__PLUMBBOB_BIN__ status 2>/dev/null')
   })
 
   it('proposes a step with a done-when and a seam', () => {
@@ -232,7 +232,7 @@ describe('pb-build — the v2 optional engine: implement the planned step, then 
   })
 
   it('opens with the status pre-injection', () => {
-    expect(body).toContain('!`__PLUMBBOB_BIN__ status`')
+    expect(body).toContain('!`__PLUMBBOB_BIN__ status 2>/dev/null')
   })
 
   it('can implement (Edit/Write) and drive build + the verify tick', () => {
@@ -271,7 +271,7 @@ describe('pb-verify — the v2 tick: check, self-review, validate, PAUSE, checkp
   })
 
   it('opens with the status pre-injection', () => {
-    expect(body).toContain('!`__PLUMBBOB_BIN__ status`')
+    expect(body).toContain('!`__PLUMBBOB_BIN__ status 2>/dev/null')
   })
 
   it('grants the check + checkpoint verbs and a way to read the diff', () => {

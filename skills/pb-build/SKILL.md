@@ -8,7 +8,7 @@ allowed-tools: Read, Edit, Write, Bash(__PLUMBBOB_BIN__ status:*), Bash(__PLUMBB
 
 # Plumbbob — build a step (the optional engine)
 
-Current session state (injected when this skill runs): !`__PLUMBBOB_BIN__ status`
+Current session state (injected when this skill runs): !`__PLUMBBOB_BIN__ status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npx plumbbob setup"`
 
 This is the **bundled executor** — one way to turn a planned step into code. It is
 **optional** (D3): you can implement any step by hand, in a vibe session, or with

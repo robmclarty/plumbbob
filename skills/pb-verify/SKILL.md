@@ -8,7 +8,7 @@ allowed-tools: Read, Bash(__PLUMBBOB_BIN__ status:*), Bash(__PLUMBBOB_BIN__ chec
 
 # Plumbbob — verify a step (the tick)
 
-Current session state (injected when this skill runs): !`__PLUMBBOB_BIN__ status`
+Current session state (injected when this skill runs): !`__PLUMBBOB_BIN__ status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npx plumbbob setup"`
 
 This is the **tick** — the one beat where the human is the clock. Whatever produced
 the current diff — `/pb-build`, your own hands, a vibe session, another harness —
