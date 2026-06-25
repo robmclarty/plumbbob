@@ -5,6 +5,23 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-06-24
+
+- **Fixed:** the self-contained install no longer breaks on a fresh npm install.
+  `setup` had pointed every skill's bin at `$CLAUDE_PROJECT_DIR/node_modules/.bin/plumbbob`,
+  but that variable is defined only in Claude Code's hook context and expands
+  empty in a skill's bash, so the `/pb-*` status line collapsed to a bad path and
+  failed silently. `setup` now resolves the bin when it runs: a `--local` install
+  bakes the absolute path to the project-local binary, while `--project` keeps a
+  portable bare `plumbbob` (resolved from the `node_modules/.bin` Claude Code
+  prepends to `PATH`). The status injection also gained a fallback so a future
+  misinstall fails loudly with a fix hint instead of an empty dashboard.
+- **Added:** a `plumbbob doctor` verb that diagnoses an install end to end. It
+  checks the four things that must be true — the skills are present, their bin
+  resolves, the CLI is installed, and the post-edit hook is registered — and
+  prints the exact fix for anything broken, including the unresolved placeholder
+  and the legacy `$CLAUDE_PROJECT_DIR` bin a pre-0.3.1 install left behind.
+
 ## [0.3.0] - 2026-06-23
 
 - **Changed:** Plumbbob shifts from enforcement to guidance — the lock becomes a
