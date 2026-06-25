@@ -77,6 +77,14 @@ plumbbob setup --global
 
 This copies the hook and skills under `~/.claude/` and registers them in `~/.claude/settings.json`. Restart Claude Code (or reload settings) after install.
 
+### Verify the install
+
+```sh
+pnpm exec plumbbob doctor    # or `plumbbob doctor` for a global install
+```
+
+`doctor` checks the four things that must be true — the skills are present, their bin resolves, the CLI is installed, and the post-edit hook is registered — and prints the exact fix for anything broken. Run it first if a `/pb-*` skill ever opens with an empty dashboard.
+
 ## STATE is orientation, not a gate
 
 The one-word `.plumbbob/STATE` (`DESIGN` / `BUILD` / `SPIKE`) is read by `/pb-status` to tell you where you are and what to do next. It no longer gates edits — a wrong state is a mislabeled position on a map, not a locked door. The post-edit hook is session-gated: a repo with no `.plumbbob/STATE` behaves exactly like plain Claude Code.
