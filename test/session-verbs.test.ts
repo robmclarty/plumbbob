@@ -27,7 +27,7 @@ describe('plumbbob status', () => {
 })
 
 describe('plumbbob park', () => {
-  it('appends raw lines under the Park list, in order, before Triage', () => {
+  it('appends raw lines under the Park list, in order, before Harvest', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Parky'])
     expect(runCli(dir, ['park', 'first idea']).status).toBe(0)
@@ -35,14 +35,14 @@ describe('plumbbob park', () => {
 
     const log = readSidecar(dir, 'build-log.md')
     const parkIdx = log.indexOf('## Park list')
-    const triageIdx = log.indexOf('## Triage')
+    const harvestIdx = log.indexOf('## Harvest')
     const firstIdx = log.indexOf('- [ ] first idea')
     const secondIdx = log.indexOf('- [ ] second idea')
 
     expect(firstIdx).toBeGreaterThan(parkIdx)
     expect(secondIdx).toBeGreaterThan(parkIdx)
-    expect(firstIdx).toBeLessThan(triageIdx)
-    expect(secondIdx).toBeLessThan(triageIdx)
+    expect(firstIdx).toBeLessThan(harvestIdx)
+    expect(secondIdx).toBeLessThan(harvestIdx)
     expect(firstIdx).toBeLessThan(secondIdx)
   })
 

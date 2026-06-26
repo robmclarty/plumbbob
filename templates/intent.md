@@ -33,25 +33,29 @@ open. If the implementor (you-later, or the LLM) has to guess, the doc failed.
 ## Decisions
 
 *(One line each. Settled, not re-litigated in the chat. Grows as you resolve the
-holes the interrogation surfaces, and as blockers fold in during BUILD.)*
+holes `/pb-refine` surfaces, and as blockers fold in during BUILD.)*
 
 - D1: <decision> — *because* <the one reason that mattered>
 
 ## Constraints
 
-*(Hard rules the build must honor. Triage and review read against these.)*
+*(Hard rules the build must honor. `/pb-verify` and `/pb-refine` read against these.)*
 
 - C1: <e.g. functional/procedural only; no new dependencies>
 
 ## Steps
 
-*(The build plan. Each step carries its own seam — the paths it will touch, which
-`/pb-build` records in `.plumbbob/SEAM` for orientation (awareness, not a lock in
-v2). Keep each step small enough to verify in one review pass. A blocker may rewrite
-a step's seam: fold the new decision, revise the seam here, then build it again.)*
+*(The build plan. `/pb-plan` authors the **whole list up front** — each step a small,
+verifiable increment with its own **done-when** and **seam** (the paths it will touch,
+which `/pb-build` records in `.plumbbob/SEAM` for orientation — awareness, not a lock
+in v2). Then drive `/pb-build` until done. Later steps may be fuzzier than the first;
+sharpen the next one just-in-time with `/pb-step` (empty input auto-syncs it), and use
+`/pb-refine` to repair the whole plan when a blocker rewrites it.)*
 
 1. [ ] <step> — **done when:** <criterion, ideally a test or check result>
    - seam: `<file>`, `<file>`
+2. [ ] <step> — **done when:** <criterion>
+   - seam: `<file>`
 
 ## Open questions
 
