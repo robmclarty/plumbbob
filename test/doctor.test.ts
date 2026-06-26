@@ -74,7 +74,7 @@ describe('plumbbob doctor', () => {
     setupLocal(repo, home)
     stubInstall(repo)
     // Regress one skill to the broken pre-0.3 injection form.
-    const f = skillFile(repo, 'pb-status')
+    const f = skillFile(repo, 'status')
     const body = readFileSync(f, 'utf8').replace(/!`[^`]*`/, '!`$CLAUDE_PROJECT_DIR/node_modules/.bin/plumbbob status`')
     writeFileSync(f, body)
     const { stdout, status } = doctorIn(repo, home)
@@ -89,7 +89,7 @@ describe('plumbbob doctor', () => {
     const repo = makeFixtureRepo()
     setupLocal(repo, home)
     stubInstall(repo)
-    const f = skillFile(repo, 'pb-status')
+    const f = skillFile(repo, 'status')
     const body = readFileSync(f, 'utf8').replace(/!`[^`]*`/, '!`__PLUMBBOB_BIN__ status`')
     writeFileSync(f, body)
     const { stdout, status } = doctorIn(repo, home)

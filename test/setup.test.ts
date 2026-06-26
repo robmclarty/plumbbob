@@ -7,7 +7,7 @@
 // is pinned to a throwaway dir per test so the real ~/.claude is never touched;
 // the repo scopes use a fixture git repo. Subprocess-driven (D14).
 
-import { existsSync, mkdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { cleanupFixtures, makeFixtureRepo, makeNonGitDir, runCli } from './helpers/fixture-repo.ts'
@@ -18,8 +18,8 @@ type Cmd = { readonly command: string }
 type Entry = { readonly matcher?: string; readonly hooks?: ReadonlyArray<Cmd> }
 type Parsed = { hooks?: { PreToolUse?: Entry[]; PostToolUse?: Entry[] }; model?: unknown }
 
-const JUDGMENT_SKILLS = ['pb-refine', 'pb-park', 'pb-harvest', 'pb-plan', 'pb-step', 'pb-verify', 'pb-wrap']
-const DRIVER_SKILLS = ['pb-build', 'pb-status', 'pb-revert', 'pb-spike']
+const JUDGMENT_SKILLS = ['refine', 'park', 'harvest', 'plan', 'step', 'verify', 'wrap']
+const DRIVER_SKILLS = ['build', 'status', 'revert', 'spike']
 const SKILLS = [...JUDGMENT_SKILLS, ...DRIVER_SKILLS]
 const HOOKS = ['post-edit.sh']
 
@@ -78,7 +78,7 @@ describe('plumbbob setup — global shape', () => {
   it('resolves the skill bin placeholder to a bare `plumbbob`', () => {
     const home = makeNonGitDir()
     setupIn(makeFixtureRepo(), home, '--global')
-    const park = readFileSync(join(home, '.claude', 'skills', 'pb-park', 'SKILL.md'), 'utf8')
+    const park = readFileSync(join(home, '.claude', 'skills', 'park', 'SKILL.md'), 'utf8')
     expect(park).toContain('!`plumbbob status 2>/dev/null')
     expect(park).not.toContain('__PLUMBBOB_BIN__')
   })
@@ -167,7 +167,7 @@ describe('plumbbob setup — self-contained shape (--local / --project)', () => 
     expect(cmds.every((c) => c.startsWith(SELF_CMD_PREFIX))).toBe(true) // portable, sh-invoked, in node_modules
   })
 
-  it('--local bakes the absolute project-local bin into the skills (no $CLAUDE_PROJECT_DIR)', () => {
+  it('--local copies skills calling a bare `plumbbob` (no bin baked, no placeholder)', () => {
     const home = makeNonGitDir()
     const repo = makeFixtureRepo()
     setupIn(repo, home, '--local')
@@ -175,22 +175,17 @@ describe('plumbbob setup — self-contained shape (--local / --project)', () => 
     for (const sk of SKILLS) {
       expect(existsSync(join(repo, '.claude', 'skills', sk, 'SKILL.md'))).toBe(true)
     }
-    // --local is personal + untracked, so setup resolves the bin at install time
-    // to the absolute project-local path — $CLAUDE_PROJECT_DIR is a hooks-only
-    // var and expands empty in a skill's bash. A whitespace repo path that can't
-    // sit unquoted in the injection falls back to the PATH-resolved bare form.
-    // setup roots on `git rev-parse --show-toplevel` (canonical), so resolve the
-    // fixture's tmp symlink the same way (/var → /private/var on macOS).
-    const root = realpathSync(repo)
-    const expectedBin = /\s/.test(root) ? 'plumbbob' : join(root, 'node_modules', '.bin', 'plumbbob')
-
-    const park = skillBody(repo, 'pb-park')
-    expect(park).toContain(`!\`${expectedBin} status 2>/dev/null`)
+    // Skills ship calling a bare `plumbbob`; the CLI resolves from node_modules/.bin
+    // on PATH (project) or the global PATH. No placeholder, no machine-absolute path,
+    // no $CLAUDE_PROJECT_DIR (a hooks-only var that expands empty in a skill's bash).
+    const park = skillBody(repo, 'park')
+    expect(park).toContain('!`plumbbob status 2>/dev/null')
     expect(park).not.toContain('__PLUMBBOB_BIN__')
-    expect(park).not.toContain('$CLAUDE_PROJECT_DIR') // the hooks-only var never reaches a skill
+    expect(park).not.toContain('$CLAUDE_PROJECT_DIR')
+    expect(park).not.toContain(repo) // no machine-absolute path baked in
 
-    const build = skillBody(repo, 'pb-build')
-    expect(build).toContain(`${expectedBin} build`)
+    const build = skillBody(repo, 'build')
+    expect(build).toContain('plumbbob build')
   })
 
   it('--project writes a committable <repo>/.claude/settings.json, nothing under ~/.claude', () => {
@@ -208,7 +203,7 @@ describe('plumbbob setup — self-contained shape (--local / --project)', () => 
 
     // --project is committed, so the skill bin stays portable too: a bare
     // `plumbbob`, resolved per-machine from node_modules/.bin on PATH.
-    const park = skillBody(repo, 'pb-park')
+    const park = skillBody(repo, 'park')
     expect(park).toContain('!`plumbbob status 2>/dev/null')
     expect(park).not.toContain('__PLUMBBOB_BIN__')
     expect(park).not.toContain(repo) // no machine-absolute path baked in

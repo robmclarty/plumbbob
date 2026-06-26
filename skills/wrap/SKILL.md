@@ -1,16 +1,16 @@
 ---
-name: pb-wrap
+name: wrap
 description: Wrap up the build — write the report (what shipped, decisions, parked/harvested items, deferred tangents), then safely archive intent + build-log + report before clearing for a fresh goal. Archive-then-clear, never destroy. Report by default, no gate.
 disable-model-invocation: true
 model: opus
-allowed-tools: Read, Write, Bash(__PLUMBBOB_BIN__ status:*), Bash(__PLUMBBOB_BIN__ wrap:*)
+allowed-tools: Read, Write, Bash(plumbbob status:*), Bash(plumbbob wrap:*)
 ---
 
 # Plumbbob — wrap the build (the close-out)
 
-Current session state (injected when this skill runs): !`__PLUMBBOB_BIN__ status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npx plumbbob setup"`
+Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npm i -g plumbbob && plumbbob init"`
 
-`/pb-wrap` ends the build: it captures what happened, archives it, and clears the
+`/plumbbob:wrap` ends the build: it captures what happened, archives it, and clears the
 sidecar for the next goal. **Report by default** (D9) — no refuse-without-report gate,
 and no separate docs phase.
 
@@ -23,11 +23,11 @@ and no separate docs phase.
    - **Final status** — done or partial, and what is left.
    - **Deferred tangents** — the harvested items that become future work.
    This is the "yeah, I did that" artifact. Write it by default; the human may edit it.
-2. **Archive & clear.** Run `__PLUMBBOB_BIN__ wrap`, which appends the checkpoint SHAs
+2. **Archive & clear.** Run `plumbbob wrap`, which appends the checkpoint SHAs
    to the report, archives intent + build-log + report to
    `.plumbbob/archive/<date>-<slug>/`, and clears the sidecar (STATE last). Git is not
    touched.
-3. **Point at the next goal** — `/pb-plan` to frame the next one.
+3. **Point at the next goal** — `/plumbbob:plan` to frame the next one.
 
 ## The hard contracts
 
