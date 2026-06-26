@@ -11,7 +11,7 @@ import { check } from './verbs/check.ts'
 import { checkpoint } from './verbs/checkpoint.ts'
 import { revert } from './verbs/revert.ts'
 import { spike } from './verbs/spike.ts'
-import { reset } from './verbs/reset.ts'
+import { wrap } from './verbs/wrap.ts'
 import { setup } from './verbs/setup.ts'
 import { doctor } from './verbs/doctor.ts'
 
@@ -29,7 +29,7 @@ const VERBS: ReadonlyArray<Verb> = [
   { name: 'revert', summary: 'revert [--to n]: git reset --hard to a checkpoint SHA; STATE=DESIGN' },
   { name: 'park', summary: 'park "<text>": append a raw line to the park list' },
   { name: 'spike', summary: 'spike "<slug>" | spike done: throwaway worktree experiment' },
-  { name: 'reset', summary: 'v2 close-out: archive intent+log+report (no gate), clear the sidecar, STATE off' },
+  { name: 'wrap', summary: 'v2 close-out: archive intent+log+report (no gate), clear the sidecar, STATE off' },
   { name: 'setup', summary: 'install hooks + skills; register them (self-contained per-project by default; --global for ~/.claude)' },
   { name: 'doctor', summary: 'diagnose the install (skills, bin, hook) and print the fix for anything broken' },
 ]
@@ -66,8 +66,8 @@ function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): numbe
       return revert(cwd, rest)
     case 'spike':
       return spike(cwd, rest)
-    case 'reset':
-      return reset(cwd)
+    case 'wrap':
+      return wrap(cwd)
     case 'setup':
       return setup(cwd, rest)
     case 'doctor':

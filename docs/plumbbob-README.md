@@ -76,7 +76,7 @@ every move; the dumb `plumbbob` CLI is the mechanism they shell out to.
 | `/pb-park` | capture an idea without chasing it |
 | `/pb-status` | orient — where you are, what's parked, and the next move |
 | `/pb-harvest` | triage parked ideas at a boundary (blocker / tangent / pivot) |
-| `/pb-reset` | close out — write the report, archive, clear for a fresh goal |
+| `/pb-wrap` | wrap up — write the report, archive safely, clear for a fresh goal |
 
 Three optional power moves survive for when you need them: `/pb-revert` (recover
 to a checkpoint), `/pb-spike` (throwaway worktree experiment), and
@@ -123,14 +123,14 @@ throwaway in a `git worktree` per option: compare, pick one, delete the rest,
 record the verdict in `intent.md`. Accidental drift becomes a bounded experiment
 with a forced end.
 
-### Close out — `/pb-reset`
+### Wrap up — `/pb-wrap`
 
-When the goal is done, `/pb-reset` writes the report by default (what shipped, the
+When the goal is done, `/pb-wrap` writes the report by default (what shipped, the
 decisions and why, what was parked and how it was harvested, final status, and the
 deferred tangents that become future work), archives `intent.md`, `build-log.md`,
 and `report.md` under `.plumbbob/archive/<date>-<slug>/`, and clears the sidecar
 for the next goal. There is **no refuse-without-report gate** — guidance offers the
-artifact instead of walling the exit. "Reset for the next task" means
+artifact instead of walling the exit. "Wrapping up for the next task" means
 archive-then-clear, never destroy.
 
 ## The one hook — light feedback
@@ -158,7 +158,7 @@ Plumbbob commits cheap checkpoint markers (`plumbbob: step n done`) on your
 feature branch and reverts to its own recorded SHAs. It **never rewrites pushed
 history**; your normal squash-merge collapses the checkpoints at PR time. `start`
 records the baseline HEAD; `revert [--to n]` does `git reset --hard` to a recorded
-SHA; `reset` archives plain markdown and never touches git.
+SHA; `wrap` archives plain markdown and never touches git.
 
 ## The `.plumbbob/` folder
 

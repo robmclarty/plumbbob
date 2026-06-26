@@ -98,7 +98,7 @@ describe('orient next-move inference (D15)', () => {
     const buildLog = '## Park list\n- (none yet)\n## Harvest\n'
     const next = orient({ ...base, intent, buildLog, state: 'DESIGN' }).next
     expect(next).toContain('/pb-step') // just-in-time: plan the next step
-    expect(next).toContain('/pb-reset') // ...or wrap up if truly done
+    expect(next).toContain('/pb-wrap') // ...or wrap up if truly done
   })
 
   it('all planned steps done with parked items → leads with /pb-harvest', () => {
@@ -108,7 +108,7 @@ describe('orient next-move inference (D15)', () => {
 
   it('SPIKE and FINISH point at their close-out', () => {
     expect(orient({ ...base, state: 'SPIKE' }).next).toContain('spike done')
-    expect(orient({ ...base, state: 'FINISH' }).next).toContain('/pb-reset')
+    expect(orient({ ...base, state: 'FINISH' }).next).toContain('/pb-wrap')
   })
 })
 

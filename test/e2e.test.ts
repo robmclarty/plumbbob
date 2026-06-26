@@ -1,6 +1,6 @@
 // End-to-end dogfood drive: a full Plumbbob v2 session in a fixture repo,
-// start → build → checkpoint → park → reset → archive populated. The report is
-// written here as the /pb-reset skill would; the CLI path under test is everything
+// start → build → checkpoint → park → wrap → archive populated. The report is
+// written here as the /pb-wrap skill would; the CLI path under test is everything
 // around it. Stub check per D14.
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
@@ -20,7 +20,7 @@ function writeRepo(dir: string, rel: string, content: string): void {
 }
 
 describe('e2e: a full Plumbbob v2 session end to end', () => {
-  it('drives start → build → checkpoint → park → reset → archive', () => {
+  it('drives start → build → checkpoint → park → wrap → archive', () => {
     const dir = makeFixtureRepo({ withCheckScript: true })
 
     // start → DESIGN; stub the check and write a one-step intent.
@@ -49,9 +49,9 @@ describe('e2e: a full Plumbbob v2 session end to end', () => {
     expect(runCli(dir, ['park', 'a deferred idea for later']).status).toBe(0)
     expect(readSidecar(dir, 'build-log.md')).toContain('a deferred idea for later')
 
-    // close out: write the report (as /pb-reset would), then reset → archive + clear.
+    // close out: write the report (as /pb-wrap would), then wrap → archive + clear.
     writeSidecar(dir, 'report.md', '# Report — E2E demo\n\n## What shipped\n\nThe widget.\n')
-    expect(runCli(dir, ['reset']).status).toBe(0)
+    expect(runCli(dir, ['wrap']).status).toBe(0)
 
     // archive populated; the parked line and the SHA list survived into it.
     const names = readdirSync(join(dir, '.plumbbob', 'archive'))

@@ -6,22 +6,22 @@ import { cleanupFixtures, makeFixtureRepo, runCli, sidecarExists } from './helpe
 afterAll(cleanupFixtures)
 
 function writeReport(dir: string): void {
-  writeFileSync(join(dir, '.plumbbob', 'report.md'), '# Report — Reset demo\n\n## What shipped\n\nThe thing.\n')
+  writeFileSync(join(dir, '.plumbbob', 'report.md'), '# Report — Wrap demo\n\n## What shipped\n\nThe thing.\n')
 }
 function archiveDirs(dir: string): string[] {
   return readdirSync(join(dir, '.plumbbob', 'archive'))
 }
 
-describe('plumbbob reset (the v2 close-out, D9)', () => {
+describe('plumbbob wrap (the v2 close-out, D9)', () => {
   it('refuses with no session', () => {
-    expect(runCli(makeFixtureRepo(), ['reset']).status).toBe(1)
+    expect(runCli(makeFixtureRepo(), ['wrap']).status).toBe(1)
   })
 
   it('archives intent + build-log + report and clears the sidecar', () => {
     const dir = makeFixtureRepo()
-    runCli(dir, ['start', 'Reset demo'])
+    runCli(dir, ['start', 'Wrap demo'])
     writeReport(dir)
-    expect(runCli(dir, ['reset']).status).toBe(0)
+    expect(runCli(dir, ['wrap']).status).toBe(0)
 
     const archives = archiveDirs(dir)
     expect(archives).toHaveLength(1)
@@ -39,7 +39,7 @@ describe('plumbbob reset (the v2 close-out, D9)', () => {
   it('does NOT gate on a missing report — archives intent + build-log anyway (D9)', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'No report here'])
-    const res = runCli(dir, ['reset'])
+    const res = runCli(dir, ['wrap'])
     expect(res.status).toBe(0) // the key difference from v1 finish: no gate
     const adir = join(dir, '.plumbbob', 'archive', archiveDirs(dir)[0] ?? '')
     expect(existsSync(join(adir, 'intent.md'))).toBe(true)
@@ -51,7 +51,7 @@ describe('plumbbob reset (the v2 close-out, D9)', () => {
     runCli(dir, ['start', 'Shas'])
     writeReport(dir)
     writeFileSync(join(dir, '.plumbbob', 'checkpoints'), 'baseline abc1234\nstep 1 def5678\n')
-    runCli(dir, ['reset'])
+    runCli(dir, ['wrap'])
     const report = readFileSync(join(dir, '.plumbbob', 'archive', archiveDirs(dir)[0] ?? '', 'report.md'), 'utf8')
     expect(report).toContain('## Checkpoints')
     expect(report).toMatch(/- step 1 def5678/)

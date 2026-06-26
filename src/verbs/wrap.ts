@@ -1,6 +1,6 @@
-// `plumbbob reset` (D9) — the v2 close-out, replacing the v1
-// wrap → report → docs → finish ceremony. It archives intent + build-log + report
-// (the `/pb-reset` skill writes the report by default) under .plumbbob/archive/,
+// `plumbbob wrap` (D9) — the v2 close-out, replacing the v1 four-verb
+// finish ceremony. It archives intent + build-log + report
+// (the `/pb-wrap` skill writes the report by default) under .plumbbob/archive/,
 // clears the active files, and deletes the control state (STATE last). Unlike v1
 // `finish` there is NO refuse-without-report gate — guidance offers the artifact, it
 // does not wall the exit. Archive-then-clear, never destroy (C4); git untouched (C5).
@@ -11,7 +11,7 @@ import { findRepoRoot } from '../lib/git.ts'
 import { buildLogPath, checkpointsPath, hasSession, intentPath, seamPath, sidecarDir, stepPath } from '../lib/sidecar.ts'
 import { archiveSession, reportPath } from '../lib/archive.ts'
 
-export function reset(cwd: string): number {
+export function wrap(cwd: string): number {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
     process.stderr.write('plumbbob: no active session. Run `plumbbob start "<title>"` first.\n')
@@ -23,7 +23,7 @@ export function reset(cwd: string): number {
   } else {
     process.stderr.write(
       'plumbbob: note — no report.md found; archiving intent + build-log without one ' +
-        '(/pb-reset normally writes the report first). No gate (D9).\n',
+        '(/pb-wrap normally writes the report first). No gate (D9).\n',
     )
   }
 
@@ -39,7 +39,7 @@ export function reset(cwd: string): number {
   rmSync(join(sidecarDir(root), 'STATE'), { force: true })
 
   process.stdout.write(
-    `plumbbob: reset — archived to ${relative(root, archived)}. Sidecar cleared. ` +
+    `plumbbob: wrap — archived to ${relative(root, archived)}. Sidecar cleared. ` +
       'Run `/pb-plan` (or `plumbbob start "<title>"`) to frame the next goal.\n',
   )
   return 0

@@ -131,7 +131,7 @@ function nextMove(state: string, steps: ReadonlyArray<Step>, inFlight: number | 
     case 'SPIKE':
       return 'close the spike — `plumbbob spike done`'
     case 'FINISH':
-      return 'wrap up — `/pb-reset`'
+      return 'wrap up — `/pb-wrap`'
     case 'REVIEW':
       return 'read the diff cold against intent, then `/pb-verify`'
     case 'BUILD': {
@@ -150,7 +150,7 @@ function nextMove(state: string, steps: ReadonlyArray<Step>, inFlight: number | 
         // Just-in-time (D6): finishing the *planned* steps usually means "plan the
         // next," not "done" — only the human knows which, so offer both.
         const harvest = parked > 0 ? `harvest ${parked} parked idea${parked === 1 ? '' : 's'} — \`/pb-harvest\`; then ` : ''
-        return `${harvest}plan the next step — \`/pb-step\` (or \`/pb-reset\` to wrap up if you're done)`
+        return `${harvest}plan the next step — \`/pb-step\` (or \`/pb-wrap\` to wrap up if you're done)`
       }
       return nextUndone.planned
         ? `build step ${nextUndone.n} — \`/pb-build\``

@@ -28,7 +28,7 @@ You drive the whole loop from your IDE with eight `pb-*` skills — no step numb
 | `/pb-park` | capture an idea without chasing it |
 | `/pb-status` | orient — where you are, what's parked, and the next move |
 | `/pb-harvest` | triage parked ideas at a boundary (blocker / tangent / pivot) |
-| `/pb-reset` | close out — write the report, archive, clear for a fresh goal |
+| `/pb-wrap` | wrap up — write the report, archive safely, clear for a fresh goal |
 
 Three optional power moves survive for when you need them: `/pb-revert` (recover to a checkpoint), `/pb-spike` (throwaway worktree experiment), and `/plumbbob-interrogate` (attack the frame for holes).
 
@@ -43,7 +43,7 @@ Three optional power moves survive for when you need them: `/pb-revert` (recover
        /pb-verify             check → review → PAUSE → checkpoint
        /pb-park               capture strays mid-build
        /pb-harvest            triage them at a boundary
-  /pb-reset                   report + archive + clear     (once)
+  /pb-wrap                    report + archive + clear     (once)
 ```
 
 **The pluggable executor.** `/pb-build` is one way to turn a planned step into code — it is *optional*. Implement by hand, in a vibe session, or with another harness, and run `/pb-verify` instead: it reads the *diff, not the author*. Plumbbob is the harness-agnostic spine; how the diff appears is a slot you fill however you like.
@@ -91,7 +91,7 @@ The one-word `.plumbbob/STATE` (`DESIGN` / `BUILD` / `SPIKE`) is read by `/pb-st
 
 ## Git footprint — additive only
 
-Plumbbob commits cheap checkpoint markers (`plumbbob: step n done`) on your feature branch and reverts to its own recorded SHAs. It never rewrites pushed history; your normal squash-merge collapses the checkpoints at PR time. `reset` archives plain markdown under `.plumbbob/archive/` and never touches git.
+Plumbbob commits cheap checkpoint markers (`plumbbob: step n done`) on your feature branch and reverts to its own recorded SHAs. It never rewrites pushed history; your normal squash-merge collapses the checkpoints at PR time. `wrap` archives plain markdown under `.plumbbob/archive/` and never touches git.
 
 ## Development
 

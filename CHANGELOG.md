@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+- **Changed:** the close-out is renamed from `/pb-reset` to `/pb-wrap`, and the
+  backing CLI verb from `reset` to `wrap`. "Reset" named the mechanism and read as
+  destructive — like you were about to wipe your plans; "wrap" names the moment:
+  finish up, archive safely, then clear for the next goal. Behaviour is unchanged —
+  archive-then-clear, never destroy (C4); report by default, no gate (D9). (A
+  separate `wrap` verb existed in v1's finish ceremony and was removed in 0.3.0;
+  this reuses the name for the single close-out.)
+
 ## [0.3.1] - 2026-06-24
 
 - **Fixed:** the self-contained install no longer breaks on a fresh npm install.

@@ -124,11 +124,11 @@ describe('driver skills (pb-*) — the human fires the transition from the chat'
   }
 })
 
-describe('pb-reset — the close-out: report by default, archive, clear (D9)', () => {
-  const { data, body } = parseSkill('pb-reset')
+describe('pb-wrap — the close-out: report by default, archive, clear (D9)', () => {
+  const { data, body } = parseSkill('pb-wrap')
 
   it('names itself, disables model invocation, is opus', () => {
-    expect(data.name).toBe('pb-reset')
+    expect(data.name).toBe('pb-wrap')
     expect(data['disable-model-invocation']).toBe('true')
     expect(data.model).toBe('opus')
   })
@@ -137,9 +137,9 @@ describe('pb-reset — the close-out: report by default, archive, clear (D9)', (
     expect(body).toContain('!`__PLUMBBOB_BIN__ status 2>/dev/null')
   })
 
-  it('writes the report (Write) and shells reset', () => {
+  it('writes the report (Write) and shells wrap', () => {
     expect(data['allowed-tools']).toMatch(/\bWrite\b/)
-    expect(data['allowed-tools']).toContain('__PLUMBBOB_BIN__ reset')
+    expect(data['allowed-tools']).toContain('__PLUMBBOB_BIN__ wrap')
   })
 
   it('writes the report by default, never a gate (D9)', () => {
@@ -365,5 +365,5 @@ describe('pb-harvest — propose, the human confirms', () => {
   })
 })
 
-// plumbbob-report and plumbbob-docs were folded into /pb-reset (D9) and removed.
+// plumbbob-report and plumbbob-docs were folded into /pb-wrap (D9) and removed.
 // interrogate survives as an optional power move; report/docs do not.
