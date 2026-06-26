@@ -66,36 +66,47 @@ every move, and `/pb-status` always names your next one.
 
 | Skill | Does |
 |-------|------|
-| `/pb-plan` | frame a goal — scaffold the session + author intent's Frame, Decisions, Constraints |
-| `/pb-step` | plan the next increment — a title, a done-when, a seam |
-| `/pb-build` | *(optional)* implement the planned step, then verify it to the pause |
+| `/pb-plan` | plan the whole goal — scaffold the session + author intent's Frame, Decisions, Constraints, **and all Steps** |
+| `/pb-step` | revise/sharpen the next step (empty input auto-syncs it to reality) |
+| `/pb-build` | *(optional)* implement the next planned step, then verify it to the pause — `--auto` self-approves and chains to done |
 | `/pb-verify` | the tick — check → self-review → validate → **PAUSE** → checkpoint |
 | `/pb-park` | capture an idea without chasing it |
-| `/pb-status` | orient — where you are, what's parked, and the next move |
+| `/pb-status` | orient — where you are, the next step's done-when + seam, and the next move |
 | `/pb-harvest` | triage parked ideas at a boundary (blocker / tangent / pivot) |
 | `/pb-wrap` | wrap up — write the report, archive safely, clear for a fresh goal |
 
 Three optional power moves survive for when you need them: `/pb-revert` (recover to
-a checkpoint), `/pb-spike` (throwaway worktree experiment), and
-`/plumbbob-interrogate` (attack the frame for holes).
+a checkpoint), `/pb-spike` (throwaway worktree experiment), and `/pb-refine` (attack
+the frame for holes, or repair the plan when it drifts — usable at any point).
 
 ## The loop
 
+The happy path is **plan the whole thing up front, then drive `/pb-build` until
+done** — approving each step at its verify pause:
+
 ```text
-/pb-plan                      frame the goal              (once)
+/pb-plan                      author the whole plan (incl. all steps)   (once)
   └ per step:
-       /pb-status             "what's next?"
-       /pb-step               plan the next increment
-       /pb-build  (or DIY)    implement it
-       /pb-verify             check → review → PAUSE → checkpoint
+       /pb-status             review the next step (done-when + seam)
+       /pb-step   (optional)  sharpen/revise it first if needed
+       /pb-build  (or DIY)    implement it → verify → PAUSE → checkpoint
        /pb-park               capture strays mid-build
        /pb-harvest            triage them at a boundary
-  /pb-wrap                    report + archive + clear     (once)
+  /pb-wrap                    report + archive + clear                  (once)
 ```
 
-For a worked example that walks one goal end to end — from framing, through letting
-`/pb-build` pick and ship each step, to wrapping up, archiving, and starting the
-next task — see [`docs/happy-path.md`](docs/happy-path.md).
+Each `/pb-build` builds the next undone step and stops at the pause for your
+approval — re-firing it is itself the clock tick. (`/pb-build --auto` is the opt-in
+that lets the agent self-approve and chain to done, halting on a red check or any
+mismatch.) For a worked example that walks one goal end to end — planning, building
+each step, wrapping up, archiving, and starting the next task — see
+[`docs/happy-path.md`](docs/happy-path.md).
+
+**Three ways to plan.** `/pb-plan` produces the same artifact — a complete, standalone
+`intent.md` — from whichever seed you give it: **no argument** runs a short interview;
+**a file path** absorbs an out-of-band spec (retaining its detail so the plan stands on
+its own); **any other text** expands your inline intent. No quotes required — it
+disambiguates the mode itself.
 
 **The pluggable executor.** `/pb-build` is one way to turn a planned step into code
 — it is *optional*. Implement by hand, in a vibe session, or with another harness,

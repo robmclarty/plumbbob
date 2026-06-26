@@ -5,6 +5,32 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+- **Changed:** batch planning is now the default. `/pb-plan` authors the **whole**
+  `intent.md` — Frame, Decisions, Constraints, **and all the Steps** (each with a
+  done-when and a seam) — so the happy path is to plan once and drive `/pb-build` per
+  step until done. Just-in-time stepping survives, but `/pb-step` is now a *revision*
+  tool: it sharpens the next step against reality (an empty `/pb-step` auto-syncs it)
+  rather than being the way steps are born. (Supersedes the just-in-time-first default.)
+- **Added:** `/pb-plan` takes an optional argument and disambiguates the mode itself —
+  no argument runs an interactive interview, a path to an existing file absorbs that
+  spec into `intent.md` (retaining its detail so the plan stands on its own), and any
+  other text expands an inline intent. No quotes required.
+- **Added:** `/pb-build --auto` — an opt-in that lets the agent self-review and approve
+  in your place, then chain to the next step until done, halting on a red check or any
+  self-review mismatch. The default (no flag) still ends at the human pause.
+- **Added:** `plumbbob status` now surfaces the next undone step's **done-when** and
+  **seam** in the dashboard, and its next-move hints that `/pb-step` can revise the step
+  before you build it.
+- **Changed:** `/plumbbob-interrogate` is renamed `/pb-refine` (easier to type) and
+  broadened — beyond attacking the frame for holes (appended as Open questions), it can
+  now repair the plan to re-sync `intent.md` with reality, human-approved, at any point.
+- **Fixed:** the `build-log.md` template's boundary section is now `## Harvest` (matching
+  `/pb-harvest`, which writes there) instead of the stale `## Triage`, and a step's
+  "done" wording drops the v1 `plumbbob done` for a checkpoint via `/pb-verify` or
+  `/pb-build`. The `intent.md` template's Steps guidance now describes batch planning.
+
 ## [0.3.3] - 2026-06-25
 
 - **Added:** a `docs/happy-path.md` worked walkthrough that follows one goal end to
