@@ -1,5 +1,9 @@
 # Plumbbob
 
+<p align="center">
+  <img src="hero.jpg" alt="A row of plumb bobs of varying shapes hanging from strings" width="600">
+</p>
+
 A guidance-first build process for working *with* an LLM instead of being dragged
 behind one. It's the layer below Ridgeline: where Ridgeline runs autonomously
 without you, Plumbbob keeps you in the driver's seat for the small-to-medium work
