@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2026-06-25
+
+- **Added:** a `docs/happy-path.md` worked walkthrough that follows one goal end to
+  end — framing it, letting `/pb-build` pick and ship each step, then wrapping up,
+  archiving, and starting the next task — linked from the README's loop section.
+- **Changed:** the root `README.md` is now the single canonical overview, having
+  absorbed the standalone `plumbbob-README` (the one law, why it works, calibration,
+  the two gate tiers, STATE-as-orientation, git footprint, and the `.plumbbob/`
+  layout). The live `templates/` were refreshed to the v2 surface: the step seam in
+  `intent.md` now reads as orientation — awareness, not a lock — and `build-log.md`
+  uses `/pb-wrap` and `plumbbob wrap` in place of the stale `/plumbbob-report` and
+  `plumbbob finish` names.
+- **Removed:** the now-duplicate `docs/plumbbob-README.md`, and the unreferenced,
+  unshipped `docs/build-log.template.md` and `docs/intent.template.md` — stale copies
+  of the live `templates/` pair that `plumbbob start` actually uses.
+
 ## [0.3.2] - 2026-06-25
 
 - **Changed:** the close-out is renamed from `/pb-reset` to `/pb-wrap`, and the
