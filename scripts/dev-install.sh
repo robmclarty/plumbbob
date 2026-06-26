@@ -1,69 +1,37 @@
 #!/bin/sh
-# dev-install.sh — the DEVELOPMENT installer: register Plumbbob's hooks in the
-# global Claude Code settings pointing at THIS working tree's hooks/ (so edits to
-# the hooks take effect with no re-copy). Use this while hacking on the hooks
-# themselves. `plumbbob setup` is the production installer — it COPIES the hooks
-# and skills into ~/.claude/ and supports the D27 registration scopes; use it to
-# install Plumbbob for real. This one is idempotent (run twice => byte-identical
-# settings.json), writes a backup, and supports --uninstall.
+# dev-install.sh — link THIS working tree into Claude Code as the plumbbob plugin,
+# for hacking on plumbbob itself. It puts the `plumbbob` bin on PATH (a global pnpm
+# link) and runs `plumbbob init` to symlink the checkout into
+# ~/.claude/skills/plumbbob, where Claude Code loads it as `plumbbob@skills-dir`.
+# Edits to skills/ and hooks/ are then LIVE — reload Claude Code (or /reload-plugins);
+# rebuild (`pnpm build`) after changing the CLI. `--uninstall` reverses both.
+#
+# This replaces the old settings.json hook registration: a linked plugin
+# auto-registers the post-edit hook from hooks/hooks.json, so dev-install no longer
+# touches settings.json. (`plumbbob init` is the PRODUCTION installer; this is the
+# dev convenience that also builds and puts the bin on PATH.) Idempotent — re-run to
+# re-sync; `plumbbob init` reports "already linked".
 #
 # Usage:
-#   scripts/dev-install.sh              install / re-sync
-#   scripts/dev-install.sh --uninstall  remove Plumbbob's hook entries
-#
-# Requires jq. The hooks are session-gated, so registering them globally is safe:
-# a repo with no .plumbbob/ session sees zero behavior change (C7).
+#   scripts/dev-install.sh              build, link the bin, link the plugin
+#   scripts/dev-install.sh --uninstall  drop the plugin link + the global bin link
 
 set -eu
 
-SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd -P)
-HOOKS_DIR=$(cd "$SCRIPT_DIR/../hooks" && pwd -P)
-SETTINGS_DIR="$HOME/.claude"
-SETTINGS="$SETTINGS_DIR/settings.json"
-
-if ! command -v jq >/dev/null 2>&1; then
-  echo "dev-install: jq is required but not found on PATH." >&2
-  exit 1
-fi
-for h in post-edit.sh; do
-  if [ ! -f "$HOOKS_DIR/$h" ]; then
-    echo "dev-install: missing hook $HOOKS_DIR/$h" >&2
-    exit 1
-  fi
-done
-chmod +x "$HOOKS_DIR"/post-edit.sh
-
-mkdir -p "$SETTINGS_DIR"
-[ -f "$SETTINGS" ] || printf '%s\n' '{}' >"$SETTINGS"
-cp "$SETTINGS" "$SETTINGS.plumbbob-bak"
-
-# An entry is "ours" iff one of its hook commands lives under our hooks dir.
-# Stripping ours before re-adding is what makes a re-run byte-identical.
-# $dir below is a jq variable (--arg dir), not shell — single quotes are correct.
-# shellcheck disable=SC2016
-STRIP='
-  def ours: [.hooks[]?.command // empty | contains($dir)] | any;
-  .hooks //= {}
-  | .hooks.PreToolUse = ((.hooks.PreToolUse // []) | map(select(ours | not)))
-  | .hooks.PostToolUse = ((.hooks.PostToolUse // []) | map(select(ours | not)))
-'
-
-# shellcheck disable=SC2016
-ADD='
-  | .hooks.PostToolUse += [
-      { matcher: "Edit|Write|MultiEdit|NotebookEdit",
-        hooks: [ { type: "command", command: ($dir + "/post-edit.sh") } ] }
-    ]
-'
+ROOT=$(cd "$(dirname "$0")/.." && pwd -P)
+cd "$ROOT"
 
 if [ "${1:-}" = "--uninstall" ]; then
-  jq --arg dir "$HOOKS_DIR" "$STRIP" "$SETTINGS" >"$SETTINGS.tmp"
-  mv "$SETTINGS.tmp" "$SETTINGS"
-  echo "dev-install: removed Plumbbob hooks from $SETTINGS (backup: $SETTINGS.plumbbob-bak)"
-else
-  jq --arg dir "$HOOKS_DIR" "$STRIP $ADD" "$SETTINGS" >"$SETTINGS.tmp"
-  mv "$SETTINGS.tmp" "$SETTINGS"
-  echo "dev-install: registered Plumbbob hooks (from $HOOKS_DIR) in $SETTINGS"
-  echo "dev-install: backup written to $SETTINGS.plumbbob-bak"
-  echo "dev-install: restart Claude Code (or reload settings) for the hooks to take effect."
+  node src/cli.ts init --uninstall || true
+  pnpm uninstall --global plumbbob >/dev/null 2>&1 || true
+  echo "dev-install: unlinked this checkout (plugin link + global bin). Restart Claude Code."
+  exit 0
 fi
+
+pnpm build           # so the linked `plumbbob` bin (dist/cli.js) is current
+pnpm link --global   # `plumbbob` (+ `pb`) on PATH, pointing at this checkout
+node src/cli.ts init # symlink ~/.claude/skills/plumbbob -> this checkout
+
+echo "dev-install: linked this checkout as the plumbbob plugin (bin on PATH + ~/.claude/skills/plumbbob)."
+echo "dev-install: restart Claude Code (or /reload-plugins). Skill + hook edits are live; run 'pnpm build' after CLI changes."
+echo "dev-install: undo with 'scripts/dev-install.sh --uninstall'."

@@ -1,0 +1,11 @@
+{
+  "name": "plumbbob",
+  "displayName": "Plumbbob",
+  "version": "0.4.0",
+  "description": "Attention-first build process — driver skills + a CLI that keep you the decider; guidance, not enforcement.",
+  "author": { "name": "Rob McLarty", "email": "hello@robmclarty.com", "url": "https://robmclarty.com" },
+  "homepage": "https://github.com/robmclarty/plumbbob#readme",
+  "repository": "https://github.com/robmclarty/plumbbob",
+  "license": "Apache-2.0",
+  "keywords": ["claude-code", "claude", "hooks", "cli", "agent", "attention-first"]
+}

@@ -34,12 +34,12 @@ function parseSkill(dir: string): { data: Record<string, string>; body: string }
   return { data, body: lines.slice(end + 1).join('\n') }
 }
 
-const ALL = ['pb-refine', 'pb-park', 'pb-harvest'] as const
+const ALL = ['refine', 'park', 'harvest'] as const
 
 const MODEL_PINS: Record<string, string> = {
-  'pb-refine': 'opus',
-  'pb-park': 'haiku',
-  'pb-harvest': 'opus',
+  'refine': 'opus',
+  'park': 'haiku',
+  'harvest': 'opus',
 }
 
 describe('every skill (the three reinforcing layers)', () => {
@@ -60,11 +60,11 @@ describe('every skill (the three reinforcing layers)', () => {
       })
 
       it('opens its body with the status pre-injection (bin placeholder, resolved at setup)', () => {
-        expect(body).toContain('!`__PLUMBBOB_BIN__ status 2>/dev/null')
+        expect(body).toContain('!`plumbbob status 2>/dev/null')
       })
 
-      it('grants Bash(__PLUMBBOB_BIN__ status) so the pre-injection can run', () => {
-        expect(data['allowed-tools']).toMatch(/Bash\(__PLUMBBOB_BIN__ status/)
+      it('grants Bash(plumbbob status) so the pre-injection can run', () => {
+        expect(data['allowed-tools']).toMatch(/Bash\(plumbbob status/)
       })
 
       it('carries a wrong-state refusal', () => {
@@ -81,9 +81,9 @@ describe('every skill (the three reinforcing layers)', () => {
 // pb-revert and pb-spike. pb-build is the v2 engine (own contract); the superseded
 // pb-start/review/done/wrap/finish drivers were removed in step 8.
 const DRIVER_VERB: Record<string, string> = {
-  'pb-status': 'status',
-  'pb-revert': 'revert',
-  'pb-spike': 'spike',
+  'status': 'status',
+  'revert': 'revert',
+  'spike': 'spike',
 }
 
 describe('driver skills (pb-*) — the human fires the transition from the chat', () => {
@@ -105,15 +105,15 @@ describe('driver skills (pb-*) — the human fires the transition from the chat'
       })
 
       it('grants exactly its verb + status, and no Edit/Write', () => {
-        expect(data['allowed-tools']).toContain(`Bash(__PLUMBBOB_BIN__ ${verb}`)
-        expect(data['allowed-tools']).toContain('Bash(__PLUMBBOB_BIN__ status')
+        expect(data['allowed-tools']).toContain(`Bash(plumbbob ${verb}`)
+        expect(data['allowed-tools']).toContain('Bash(plumbbob status')
         expect(data['allowed-tools']).not.toMatch(/\bEdit\b/)
         expect(data['allowed-tools']).not.toMatch(/\bWrite\b/)
       })
 
       it('opens with the status pre-injection and shells the verb in its body', () => {
-        expect(body).toContain('!`__PLUMBBOB_BIN__ status 2>/dev/null')
-        expect(body).toContain(`__PLUMBBOB_BIN__ ${verb}`)
+        expect(body).toContain('!`plumbbob status 2>/dev/null')
+        expect(body).toContain(`plumbbob ${verb}`)
       })
 
       it('defers to the CLI: reports verbatim, never retries or works around a refusal', () => {
@@ -124,22 +124,22 @@ describe('driver skills (pb-*) — the human fires the transition from the chat'
   }
 })
 
-describe('pb-wrap — the close-out: report by default, archive, clear (D9)', () => {
-  const { data, body } = parseSkill('pb-wrap')
+describe('wrap — the close-out: report by default, archive, clear (D9)', () => {
+  const { data, body } = parseSkill('wrap')
 
   it('names itself, disables model invocation, is opus', () => {
-    expect(data.name).toBe('pb-wrap')
+    expect(data.name).toBe('wrap')
     expect(data['disable-model-invocation']).toBe('true')
     expect(data.model).toBe('opus')
   })
 
   it('opens with the status pre-injection', () => {
-    expect(body).toContain('!`__PLUMBBOB_BIN__ status 2>/dev/null')
+    expect(body).toContain('!`plumbbob status 2>/dev/null')
   })
 
   it('writes the report (Write) and shells wrap', () => {
     expect(data['allowed-tools']).toMatch(/\bWrite\b/)
-    expect(data['allowed-tools']).toContain('__PLUMBBOB_BIN__ wrap')
+    expect(data['allowed-tools']).toContain('plumbbob wrap')
   })
 
   it('writes the report by default, never a gate (D9)', () => {
@@ -159,21 +159,21 @@ describe('pb-wrap — the close-out: report by default, archive, clear (D9)', ()
   })
 })
 
-describe('pb-plan — the whole-goal move: scaffold + frame, no code', () => {
-  const { data, body } = parseSkill('pb-plan')
+describe('plan — the whole-goal move: scaffold + frame, no code', () => {
+  const { data, body } = parseSkill('plan')
 
   it('names itself, disables model invocation, is opus', () => {
-    expect(data.name).toBe('pb-plan')
+    expect(data.name).toBe('plan')
     expect(data['disable-model-invocation']).toBe('true')
     expect(data.model).toBe('opus')
   })
 
   it('opens with the status pre-injection', () => {
-    expect(body).toContain('!`__PLUMBBOB_BIN__ status 2>/dev/null')
+    expect(body).toContain('!`plumbbob status 2>/dev/null')
   })
 
   it('scaffolds via start and authors intent (Edit/Write)', () => {
-    expect(data['allowed-tools']).toContain('__PLUMBBOB_BIN__ start')
+    expect(data['allowed-tools']).toContain('plumbbob start')
     expect(data['allowed-tools']).toMatch(/\bEdit\b/)
   })
 
@@ -192,8 +192,8 @@ describe('pb-plan — the whole-goal move: scaffold + frame, no code', () => {
     expect(body).toMatch(/inline|free-form|expand/i)
   })
 
-  it('offers /pb-refine to stress-test the frame', () => {
-    expect(body).toMatch(/\/pb-refine/)
+  it('offers /plumbbob:refine to stress-test the frame', () => {
+    expect(body).toMatch(/\/plumbbob:refine/)
   })
 
   it('keeps the human the converger — holes are Open questions, not guesses', () => {
@@ -202,17 +202,17 @@ describe('pb-plan — the whole-goal move: scaffold + frame, no code', () => {
   })
 })
 
-describe('pb-step — the single-increment move: one verifiable step', () => {
-  const { data, body } = parseSkill('pb-step')
+describe('step — the single-increment move: one verifiable step', () => {
+  const { data, body } = parseSkill('step')
 
   it('names itself, disables model invocation, is opus', () => {
-    expect(data.name).toBe('pb-step')
+    expect(data.name).toBe('step')
     expect(data['disable-model-invocation']).toBe('true')
     expect(data.model).toBe('opus')
   })
 
   it('opens with the status pre-injection', () => {
-    expect(body).toContain('!`__PLUMBBOB_BIN__ status 2>/dev/null')
+    expect(body).toContain('!`plumbbob status 2>/dev/null')
   })
 
   it('proposes a step with a done-when and a seam', () => {
@@ -237,11 +237,11 @@ describe('pb-step — the single-increment move: one verifiable step', () => {
   })
 })
 
-describe('pb-build — the v2 optional engine: implement the planned step, then verify', () => {
-  const { data, body } = parseSkill('pb-build')
+describe('build — the v2 optional engine: implement the planned step, then verify', () => {
+  const { data, body } = parseSkill('build')
 
   it('names itself after its directory and disables model invocation', () => {
-    expect(data.name).toBe('pb-build')
+    expect(data.name).toBe('build')
     expect(data['disable-model-invocation']).toBe('true')
   })
 
@@ -250,14 +250,14 @@ describe('pb-build — the v2 optional engine: implement the planned step, then 
   })
 
   it('opens with the status pre-injection', () => {
-    expect(body).toContain('!`__PLUMBBOB_BIN__ status 2>/dev/null')
+    expect(body).toContain('!`plumbbob status 2>/dev/null')
   })
 
   it('can implement (Edit/Write) and drive build + the verify tick', () => {
     expect(data['allowed-tools']).toMatch(/\bEdit\b/)
     expect(data['allowed-tools']).toMatch(/\bWrite\b/)
-    expect(data['allowed-tools']).toContain('__PLUMBBOB_BIN__ build')
-    expect(data['allowed-tools']).toContain('__PLUMBBOB_BIN__ checkpoint')
+    expect(data['allowed-tools']).toContain('plumbbob build')
+    expect(data['allowed-tools']).toContain('plumbbob checkpoint')
   })
 
   it('declares itself optional — the executor is pluggable (D3)', () => {
@@ -267,7 +267,7 @@ describe('pb-build — the v2 optional engine: implement the planned step, then 
 
   it('builds the decided step and parks new ideas instead of sprawling', () => {
     expect(body).toMatch(/done.?when/i)
-    expect(body).toMatch(/\/pb-park/)
+    expect(body).toMatch(/\/plumbbob:park/)
   })
 
   it('defaults to ending at the verify pause for the human to approve', () => {
@@ -281,11 +281,11 @@ describe('pb-build — the v2 optional engine: implement the planned step, then 
   })
 })
 
-describe('pb-verify — the v2 tick: check, self-review, validate, PAUSE, checkpoint', () => {
-  const { data, body } = parseSkill('pb-verify')
+describe('verify — the v2 tick: check, self-review, validate, PAUSE, checkpoint', () => {
+  const { data, body } = parseSkill('verify')
 
   it('names itself after its directory and disables model invocation', () => {
-    expect(data.name).toBe('pb-verify')
+    expect(data.name).toBe('verify')
     expect(data['disable-model-invocation']).toBe('true')
   })
 
@@ -294,12 +294,12 @@ describe('pb-verify — the v2 tick: check, self-review, validate, PAUSE, checkp
   })
 
   it('opens with the status pre-injection', () => {
-    expect(body).toContain('!`__PLUMBBOB_BIN__ status 2>/dev/null')
+    expect(body).toContain('!`plumbbob status 2>/dev/null')
   })
 
   it('grants the check + checkpoint verbs and a way to read the diff', () => {
-    expect(data['allowed-tools']).toContain('__PLUMBBOB_BIN__ check')
-    expect(data['allowed-tools']).toContain('__PLUMBBOB_BIN__ checkpoint')
+    expect(data['allowed-tools']).toContain('plumbbob check')
+    expect(data['allowed-tools']).toContain('plumbbob checkpoint')
     expect(data['allowed-tools']).toMatch(/git diff/)
   })
 
@@ -319,8 +319,8 @@ describe('pb-verify — the v2 tick: check, self-review, validate, PAUSE, checkp
   })
 })
 
-describe('pb-refine — keep intent.md true: attack for holes + repair drift', () => {
-  const { data, body } = parseSkill('pb-refine')
+describe('refine — keep intent.md true: attack for holes + repair drift', () => {
+  const { data, body } = parseSkill('refine')
 
   it('is opus with Read + Edit and no Write', () => {
     expect(data.model).toBe('opus')
@@ -346,8 +346,8 @@ describe('pb-refine — keep intent.md true: attack for holes + repair drift', (
   })
 })
 
-describe('pb-park — capture via the dumb CLI, never an edit', () => {
-  const { data, body } = parseSkill('pb-park')
+describe('park — capture via the dumb CLI, never an edit', () => {
+  const { data, body } = parseSkill('park')
 
   it('is pinned to haiku (transcription, not judgment)', () => {
     expect(data.model).toBe('haiku')
@@ -359,8 +359,8 @@ describe('pb-park — capture via the dumb CLI, never an edit', () => {
   })
 
   it('captures by shelling the park verb', () => {
-    expect(data['allowed-tools']).toMatch(/Bash\(__PLUMBBOB_BIN__ park/)
-    expect(body).toContain('__PLUMBBOB_BIN__ park')
+    expect(data['allowed-tools']).toMatch(/Bash\(plumbbob park/)
+    expect(body).toContain('plumbbob park')
   })
 
   it('requires in-turn human approval before the append', () => {
@@ -369,8 +369,8 @@ describe('pb-park — capture via the dumb CLI, never an edit', () => {
   })
 })
 
-describe('pb-harvest — propose, the human confirms', () => {
-  const { data, body } = parseSkill('pb-harvest')
+describe('harvest — propose, the human confirms', () => {
+  const { data, body } = parseSkill('harvest')
 
   it('is opus and DESIGN-only', () => {
     expect(data.model).toBe('opus')
@@ -391,6 +391,6 @@ describe('pb-harvest — propose, the human confirms', () => {
   })
 })
 
-// plumbbob-report and plumbbob-docs were folded into /pb-wrap (D9) and removed.
-// plumbbob-interrogate was renamed /pb-refine and broadened (attack + repair);
+// plumbbob-report and plumbbob-docs were folded into /plumbbob:wrap (D9) and removed.
+// plumbbob-interrogate was renamed /plumbbob:refine and broadened (attack + repair);
 // report/docs do not survive.

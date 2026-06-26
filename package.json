@@ -10,7 +10,7 @@
   "license": "Apache-2.0",
   "author": "Rob McLarty <hello@robmclarty.com>",
   "bin": { "plumbbob": "dist/cli.js", "pb": "dist/cli.js" },
-  "files": ["dist", "hooks", "skills", "templates"],
+  "files": [".claude-plugin", "dist", "hooks", "skills", "templates"],
   "engines": { "node": ">=22.18.0" },
   "scripts": {
     "clean": "rm -rf dist",
@@ -22,7 +22,7 @@
     "check:astgrep": "ast-grep scan",
     "check:test": "vitest run",
     "check:knip": "knip",
-    "check:md": "markdownlint --config .markdownlint.jsonc \"**/*.md\" --ignore node_modules"
+    "check:md": "markdownlint --config .markdownlint.jsonc \"**/*.md\" --ignore node_modules --ignore research"
   },
   "devEngines": {
     "packageManager": {
