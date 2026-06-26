@@ -1,6 +1,6 @@
 {
   "name": "plumbbob",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "description": "Attention-first build process: eight skills + a CLI that keep you the decider — guidance, not enforcement.",
   "keywords": ["claude-code", "claude", "hooks", "cli", "agent", "attention-first"],
   "homepage": "https://github.com/robmclarty/plumbbob#readme",
