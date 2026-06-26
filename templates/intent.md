@@ -45,10 +45,10 @@ holes the interrogation surfaces, and as blockers fold in during BUILD.)*
 
 ## Steps
 
-*(The build plan. Each step carries its own seam — the paths `plumbbob build <n>`
-writes into `.plumbbob/SEAM` and the seam-guard enforces. Keep each step small
-enough to verify in one review pass. A blocker may rewrite a step's seam: fold the
-new decision, revise the seam here, then `build <n>` again.)*
+*(The build plan. Each step carries its own seam — the paths it will touch, which
+`/pb-build` records in `.plumbbob/SEAM` for orientation (awareness, not a lock in
+v2). Keep each step small enough to verify in one review pass. A blocker may rewrite
+a step's seam: fold the new decision, revise the seam here, then build it again.)*
 
 1. [ ] <step> — **done when:** <criterion, ideally a test or check result>
    - seam: `<file>`, `<file>`
