@@ -4,7 +4,7 @@
 // in place as a plugin (skills `/plumbbob:*`, the post-edit hook from hooks.json).
 // doctor verifies the link resolves to a package carrying the manifest, the skills,
 // and the hook — and names the fix for anything missing. The failure class it
-// exists for is SILENT (a `/pb-status` that opens an empty dashboard because the
+// exists for is SILENT (a `/plumbbob:status` that opens an empty dashboard because the
 // plugin never linked). Functional, node builtins only (C1/C2).
 
 import { existsSync, lstatSync, readdirSync, readlinkSync } from 'node:fs'
