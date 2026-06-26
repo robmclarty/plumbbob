@@ -4,11 +4,14 @@
 // to fewer fields rather than throwing. Functional/procedural, no classes, no
 // default export (C1).
 
+import { parseStepSeam } from './intent.ts'
+
 export type Step = {
   readonly n: number
   readonly done: boolean
   readonly title: string
   readonly planned: boolean // carries a `done when:` criterion
+  readonly doneWhen: string | null // the criterion text, for the dashboard
 }
 
 export type Checkpoint = { readonly n: number; readonly sha: string }
@@ -21,6 +24,10 @@ export type Orientation = {
   readonly parked: number
   readonly openQuestions: number
   readonly next: string
+  // The next undone step's detail, so `status` shows what's about to be built and
+  // the human can review (and `/pb-step`-revise) before `/pb-build`.
+  readonly nextDoneWhen: string | null
+  readonly nextSeam: ReadonlyArray<string>
 }
 
 export type OrientInput = {
@@ -75,8 +82,10 @@ export function parseSteps(intent: string): Step[] {
   })
   return starts.map((s, i) => {
     const blockEnd = starts[i + 1]?.idx ?? lines.length
-    const block = lines.slice(s.idx, blockEnd).join('\n').toLowerCase()
-    return { n: s.n, done: s.done, title: s.title, planned: block.includes('done when') }
+    const block = lines.slice(s.idx, blockEnd).join('\n')
+    const dw = /\*\*done when:\*\*\s*(.+)/i.exec(block)
+    const doneWhen = dw ? (dw[1] ?? '').trim() : null
+    return { n: s.n, done: s.done, title: s.title, planned: /done when/i.test(block), doneWhen }
   })
 }
 
@@ -147,13 +156,13 @@ function nextMove(state: string, steps: ReadonlyArray<Step>, inFlight: number | 
         if (steps.length === 0) {
           return 'plan the first step — `/pb-step`'
         }
-        // Just-in-time (D6): finishing the *planned* steps usually means "plan the
-        // next," not "done" — only the human knows which, so offer both.
+        // Batch-default: the steps were planned up front, so finishing them usually
+        // means "wrap up" — but `/pb-step` can still add an increment if reality grew.
         const harvest = parked > 0 ? `harvest ${parked} parked idea${parked === 1 ? '' : 's'} — \`/pb-harvest\`; then ` : ''
-        return `${harvest}plan the next step — \`/pb-step\` (or \`/pb-wrap\` to wrap up if you're done)`
+        return `${harvest}wrap up — \`/pb-wrap\` (or \`/pb-step\` to add another increment)`
       }
       return nextUndone.planned
-        ? `build step ${nextUndone.n} — \`/pb-build\``
+        ? `build step ${nextUndone.n} — \`/pb-build\` (or \`/pb-step\` to revise it first)`
         : `plan step ${nextUndone.n} — \`/pb-step\``
     }
   }
@@ -162,6 +171,8 @@ function nextMove(state: string, steps: ReadonlyArray<Step>, inFlight: number | 
 export function orient(input: OrientInput): Orientation {
   const steps = parseSteps(input.intent)
   const parked = parseParked(input.buildLog)
+  const nextUndone = steps.find((s) => !s.done)
+  const seamParse = nextUndone === undefined ? null : parseStepSeam(input.intent, nextUndone.n)
   return {
     title: parseTitle(input.intent),
     state: input.state,
@@ -170,6 +181,8 @@ export function orient(input: OrientInput): Orientation {
     parked,
     openQuestions: parseOpenQuestions(input.intent),
     next: nextMove(input.state, steps, input.inFlight, parked),
+    nextDoneWhen: nextUndone?.doneWhen ?? null,
+    nextSeam: seamParse !== null && seamParse.ok ? seamParse.seam : [],
   }
 }
 
@@ -179,7 +192,20 @@ export function formatOrientation(o: Orientation): string {
   const stepLines = o.steps.map((s) => {
     const marker = s.done ? '✓' : s === nextUndone ? '▸' : ' '
     const tail = s === nextUndone ? '   ← next' : ''
-    return `  ${marker} ${s.n}  ${s.title}${tail}`
+    const head = `  ${marker} ${s.n}  ${s.title}${tail}`
+    if (s !== nextUndone) {
+      return head
+    }
+    // Surface the next step's detail so the human can review it (and `/pb-step`-
+    // revise) before building. Only what's present — a rough step shows neither.
+    const detail: string[] = []
+    if (o.nextDoneWhen !== null) {
+      detail.push(`        done when: ${o.nextDoneWhen}`)
+    }
+    if (o.nextSeam.length > 0) {
+      detail.push(`        seam: ${o.nextSeam.join(', ')}`)
+    }
+    return detail.length > 0 ? [head, ...detail].join('\n') : head
   })
   const stepsBlock =
     o.steps.length === 0 ? '  (no steps planned yet)' : `  steps  ${doneCount}/${o.steps.length} done\n${stepLines.join('\n')}`

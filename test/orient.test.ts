@@ -78,10 +78,11 @@ describe('orient parsers', () => {
 })
 
 describe('orient next-move inference (D15)', () => {
-  it('DESIGN with the next step planned → /pb-build that step', () => {
+  it('DESIGN with the next step planned → /pb-build that step, with a revise hint', () => {
     const next = orient({ ...base, state: 'DESIGN' }).next
     expect(next).toContain('/pb-build')
     expect(next).toContain('step 2')
+    expect(next).toContain('/pb-step') // ...or revise it first
   })
 
   it('DESIGN with the next step unplanned → /pb-step', () => {
@@ -124,5 +125,11 @@ describe('formatOrientation', () => {
     expect(out).toContain('step 1 · abc1234')
     expect(out).toContain('parked 2 · open questions 2')
     expect(out).toContain('next →')
+  })
+
+  it('surfaces the next undone step\'s done-when and seam so the human can review it', () => {
+    const out = formatOrientation(orient({ ...base, state: 'DESIGN' }))
+    expect(out).toContain('done when: the thing works.')
+    expect(out).toContain('seam: src/b.ts')
   })
 })
