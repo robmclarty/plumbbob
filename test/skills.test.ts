@@ -1,8 +1,8 @@
-// Static content-contract tests for the five skills (step 7). These parse the
+// Static content-contract tests for the skills (step 7). These parse the
 // SKILL.md files directly — no fixture repos, no CLI subprocess — and assert the
 // enforced contracts: D12 (fixed names, disable-model-invocation, model pins,
-// status pre-injection, wrong-state refusal, /park is Bash-only) and D13 (the
-// interrogate Open-questions-only and triage propose-then-confirm handoffs).
+// status pre-injection, wrong-state refusal, /park is Bash-only) and the
+// refine/harvest propose-then-confirm handoffs.
 
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -34,10 +34,10 @@ function parseSkill(dir: string): { data: Record<string, string>; body: string }
   return { data, body: lines.slice(end + 1).join('\n') }
 }
 
-const ALL = ['plumbbob-interrogate', 'pb-park', 'pb-harvest'] as const
+const ALL = ['pb-refine', 'pb-park', 'pb-harvest'] as const
 
 const MODEL_PINS: Record<string, string> = {
-  'plumbbob-interrogate': 'opus',
+  'pb-refine': 'opus',
   'pb-park': 'haiku',
   'pb-harvest': 'opus',
 }
@@ -177,11 +177,23 @@ describe('pb-plan — the whole-goal move: scaffold + frame, no code', () => {
     expect(data['allowed-tools']).toMatch(/\bEdit\b/)
   })
 
-  it('frames before code and leaves Steps to /pb-step (just-in-time, D6)', () => {
+  it('authors the whole plan up front — frame, decisions, constraints, and steps', () => {
     expect(body).toMatch(/frame/i)
     expect(body).toMatch(/decisions/i)
     expect(body).toMatch(/constraints/i)
-    expect(body).toMatch(/\/pb-step/)
+    expect(body).toMatch(/## Steps/)
+    expect(body).toMatch(/done.?when/i)
+    expect(body).toMatch(/seam/i)
+  })
+
+  it('disambiguates the three input modes (interview / file / inline)', () => {
+    expect(body).toMatch(/interview/i)
+    expect(body).toMatch(/\bfile\b/i)
+    expect(body).toMatch(/inline|free-form|expand/i)
+  })
+
+  it('offers /pb-refine to stress-test the frame', () => {
+    expect(body).toMatch(/\/pb-refine/)
   })
 
   it('keeps the human the converger — holes are Open questions, not guesses', () => {
@@ -208,12 +220,18 @@ describe('pb-step — the single-increment move: one verifiable step', () => {
     expect(body).toMatch(/seam/i)
   })
 
-  it('appends to ## Steps in the standard format the parser reads', () => {
+  it('writes ## Steps in the standard format the parser reads', () => {
     expect(body).toMatch(/## Steps/)
     expect(body).toMatch(/done when:/i)
   })
 
-  it('plans one by default and waits for the human to approve', () => {
+  it('revises/sharpens the next step — empty input runs an automatic sharpen', () => {
+    expect(body).toMatch(/sharpen/i)
+    expect(body).toMatch(/revis/i)
+    expect(body).toMatch(/no input|empty/i)
+  })
+
+  it('handles one increment at a time and waits for the human to approve', () => {
     expect(body).toMatch(/\bone\b/i)
     expect(body).toMatch(/approv|decide/i)
   })
@@ -252,9 +270,14 @@ describe('pb-build — the v2 optional engine: implement the planned step, then 
     expect(body).toMatch(/\/pb-park/)
   })
 
-  it('ends at the verify pause, never auto-advancing past approval', () => {
+  it('defaults to ending at the verify pause for the human to approve', () => {
     expect(body).toMatch(/pause/i)
     expect(body).toMatch(/approv/i)
+  })
+
+  it('documents --auto as the explicit self-approve opt-in that chains', () => {
+    expect(body).toMatch(/--auto/)
+    expect(body).toMatch(/chain|continue/i)
   })
 })
 
@@ -296,8 +319,8 @@ describe('pb-verify — the v2 tick: check, self-review, validate, PAUSE, checkp
   })
 })
 
-describe('plumbbob-interrogate — DESIGN-only, Open-questions-only (D13)', () => {
-  const { data, body } = parseSkill('plumbbob-interrogate')
+describe('pb-refine — keep intent.md true: attack for holes + repair drift', () => {
+  const { data, body } = parseSkill('pb-refine')
 
   it('is opus with Read + Edit and no Write', () => {
     expect(data.model).toBe('opus')
@@ -306,17 +329,20 @@ describe('plumbbob-interrogate — DESIGN-only, Open-questions-only (D13)', () =
     expect(data['allowed-tools']).not.toMatch(/\bWrite\b/)
   })
 
-  it('refuses outside DESIGN', () => {
-    expect(body).toMatch(/DESIGN/)
+  it('works at any point, refusing only with no active session', () => {
+    expect(body).toMatch(/any point/i)
+    expect(body).toMatch(/no active session/i)
   })
 
-  it('appends only to Open questions, never to Decisions', () => {
+  it('surfaces holes as Open questions and leaves Decisions to the human', () => {
     expect(body).toMatch(/open questions/i)
-    expect(body).toMatch(/never[^\n]*decision/i)
+    expect(body).toMatch(/decision/i)
+    expect(body).toMatch(/converge|propose/i)
   })
 
-  it('ends its turn rather than resolving the holes', () => {
-    expect(body).toMatch(/end (your|the|its) turn/i)
+  it('can repair the plan to re-sync with reality, human-approved', () => {
+    expect(body).toMatch(/repair/i)
+    expect(body).toMatch(/approv/i)
   })
 })
 
@@ -366,4 +392,5 @@ describe('pb-harvest — propose, the human confirms', () => {
 })
 
 // plumbbob-report and plumbbob-docs were folded into /pb-wrap (D9) and removed.
-// interrogate survives as an optional power move; report/docs do not.
+// plumbbob-interrogate was renamed /pb-refine and broadened (attack + repair);
+// report/docs do not survive.

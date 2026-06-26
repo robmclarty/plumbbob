@@ -18,7 +18,7 @@ type Cmd = { readonly command: string }
 type Entry = { readonly matcher?: string; readonly hooks?: ReadonlyArray<Cmd> }
 type Parsed = { hooks?: { PreToolUse?: Entry[]; PostToolUse?: Entry[] }; model?: unknown }
 
-const JUDGMENT_SKILLS = ['plumbbob-interrogate', 'pb-park', 'pb-harvest', 'pb-plan', 'pb-step', 'pb-verify', 'pb-wrap']
+const JUDGMENT_SKILLS = ['pb-refine', 'pb-park', 'pb-harvest', 'pb-plan', 'pb-step', 'pb-verify', 'pb-wrap']
 const DRIVER_SKILLS = ['pb-build', 'pb-status', 'pb-revert', 'pb-spike']
 const SKILLS = [...JUDGMENT_SKILLS, ...DRIVER_SKILLS]
 const HOOKS = ['post-edit.sh']
