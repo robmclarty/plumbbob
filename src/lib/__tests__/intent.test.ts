@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { matchesSeam, parseStepSeam } from '../src/lib/intent.ts'
+import { matchesSeam, parseStepSeam } from '../intent.ts'
 
 function intentWith(stepsBody: string): string {
   return `# Title\n\n## Frame\n\nstuff\n\n## Steps\n\n${stepsBody}\n\n## Open questions\n\n- none\n`

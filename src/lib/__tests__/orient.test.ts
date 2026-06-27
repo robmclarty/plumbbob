@@ -7,7 +7,7 @@ import {
   parseParked,
   parseSteps,
   parseTitle,
-} from '../src/lib/orient.ts'
+} from '../orient.ts'
 
 const INTENT = `# My Feature
 

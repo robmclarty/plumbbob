@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupFixtures, makeFixtureRepo, readSidecar, runCli, sidecarExists } from './helpers/fixture-repo.ts'
+import { cleanupFixtures, makeFixtureRepo, readSidecar, runCli, sidecarExists } from '../helpers/fixture-repo.ts'
 
 afterAll(cleanupFixtures)
 

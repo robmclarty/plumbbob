@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupFixtures, makeFixtureRepo, runCli, sidecarExists } from './helpers/fixture-repo.ts'
+import { cleanupFixtures, makeFixtureRepo, runCli, sidecarExists } from '../helpers/fixture-repo.ts'
 
 afterAll(cleanupFixtures)
 

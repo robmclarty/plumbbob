@@ -1,0 +1,92 @@
+import { execFileSync } from 'node:child_process'
+import { afterAll, describe, expect, it } from 'vitest'
+import { spike } from '../spike.ts'
+import { start } from '../start.ts'
+import { readState, writeState } from '../../lib/sidecar.ts'
+import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
+import { captureIo } from '../../../test/helpers/capture-io.ts'
+
+afterAll(cleanupTempRepos)
+
+function gitOut(dir: string, args: ReadonlyArray<string>): string {
+  return execFileSync('git', ['-C', dir, ...args], { encoding: 'utf8' }).trim()
+}
+function spikeBranches(dir: string): string[] {
+  const out = gitOut(dir, ['for-each-ref', '--format=%(refname:short)', 'refs/heads/spike/'])
+  return out.length === 0 ? [] : out.split('\n').filter((b) => b.length > 0)
+}
+
+function started(): string {
+  const dir = makeTempRepo()
+  captureIo(() => start(dir, ['Spiking']))
+  return dir
+}
+
+describe('spike', () => {
+  it('creates a worktree + branch per option (default a/b) and enters SPIKE', () => {
+    const dir = started()
+    try {
+      const { code } = captureIo(() => spike(dir, ['auth']))
+      expect(code).toBe(0)
+      expect(readState(dir)).toBe('SPIKE')
+      expect(spikeBranches(dir).sort()).toEqual(['spike/auth-a', 'spike/auth-b'])
+    } finally {
+      captureIo(() => spike(dir, ['done'])) // remove the sibling worktrees
+    }
+  })
+
+  it('honors explicit option names', () => {
+    const dir = started()
+    try {
+      captureIo(() => spike(dir, ['cache', 'map', 'lru']))
+      expect(spikeBranches(dir).sort()).toEqual(['spike/cache-lru', 'spike/cache-map'])
+    } finally {
+      captureIo(() => spike(dir, ['done']))
+    }
+  })
+
+  it('spike done removes every spike worktree + branch and returns to DESIGN', () => {
+    const dir = started()
+    captureIo(() => spike(dir, ['auth']))
+    const { code } = captureIo(() => spike(dir, ['done']))
+    expect(code).toBe(0)
+    expect(readState(dir)).toBe('DESIGN')
+    expect(spikeBranches(dir)).toEqual([])
+  })
+
+  it('refuses a second spike while one is open', () => {
+    const dir = started()
+    captureIo(() => spike(dir, ['auth']))
+    try {
+      const { code, stderr } = captureIo(() => spike(dir, ['other']))
+      expect(code).toBe(1)
+      expect(stderr).toContain('already in a spike')
+    } finally {
+      captureIo(() => spike(dir, ['done']))
+    }
+  })
+
+  it('starts only from DESIGN', () => {
+    const dir = started()
+    writeState(dir, 'BUILD')
+    const { code, stderr } = captureIo(() => spike(dir, ['auth']))
+    expect(code).toBe(1)
+    expect(stderr).toContain('spike starts from DESIGN')
+  })
+
+  it('needs a slug', () => {
+    const { code, stderr } = captureIo(() => spike(started(), []))
+    expect(code).toBe(1)
+    expect(stderr).toContain('needs a slug')
+  })
+
+  it('refuses `spike done` with no active spike', () => {
+    const { code, stderr } = captureIo(() => spike(started(), ['done']))
+    expect(code).toBe(1)
+    expect(stderr).toContain('no active spike')
+  })
+
+  it('refuses with no active session', () => {
+    expect(captureIo(() => spike(makeTempRepo(), ['auth'])).code).toBe(1)
+  })
+})

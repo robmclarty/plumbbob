@@ -1,8 +1,8 @@
 import { chmodSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupFixtures, makeFixtureRepo, runCli } from './helpers/fixture-repo.ts'
-import { postEdit } from './helpers/run-hook.ts'
+import { cleanupFixtures, makeFixtureRepo, runCli } from '../helpers/fixture-repo.ts'
+import { postEdit } from '../helpers/run-hook.ts'
 
 afterAll(cleanupFixtures)
 
@@ -43,6 +43,29 @@ describe('post-edit light feedback (D25 — the only edit-time hook in v2)', () 
     makeExecutable(dir, 'src/a.ts', 'export const a = 1\n')
     makeExecutable(dir, 'node_modules/.bin/oxlint', '#!/bin/sh\nexit 0\n')
     const result = postEdit(dir, { rel: 'src/a.ts' })
+    expect(result.status).toBe(0)
+    expect(result.stdout.trim()).toBe('')
+  })
+
+  it('no-ops when there is no active session (no .plumbbob/STATE)', () => {
+    const dir = makeFixtureRepo() // note: no `start`, so find_root fails
+    const result = postEdit(dir, { rel: 'src/a.ts' })
+    expect(result.status).toBe(0)
+    expect(result.stdout.trim()).toBe('')
+  })
+
+  it('no-ops for a non-source file extension', () => {
+    const dir = makeFixtureRepo()
+    runCli(dir, ['start', 'Lint'])
+    const result = postEdit(dir, { rel: 'notes.md' })
+    expect(result.status).toBe(0)
+    expect(result.stdout.trim()).toBe('')
+  })
+
+  it('no-ops when the edited path no longer exists', () => {
+    const dir = makeFixtureRepo()
+    runCli(dir, ['start', 'Lint'])
+    const result = postEdit(dir, { rel: 'src/ghost.ts' }) // never created
     expect(result.status).toBe(0)
     expect(result.stdout.trim()).toBe('')
   })

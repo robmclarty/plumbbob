@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupFixtures, makeFixtureRepo, readSidecar, runCli, setState } from './helpers/fixture-repo.ts'
+import { cleanupFixtures, makeFixtureRepo, readSidecar, runCli, setState } from '../helpers/fixture-repo.ts'
 
 afterAll(cleanupFixtures)
 

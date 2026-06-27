@@ -8,7 +8,7 @@
 import { mkdirSync, symlinkSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupFixtures, makeNonGitDir, runCli } from './helpers/fixture-repo.ts'
+import { cleanupFixtures, makeNonGitDir, runCli } from '../helpers/fixture-repo.ts'
 
 afterAll(cleanupFixtures)
 

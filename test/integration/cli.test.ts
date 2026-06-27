@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-const CLI = fileURLToPath(new URL('../src/cli.ts', import.meta.url))
+const CLI = fileURLToPath(new URL('../../src/cli.ts', import.meta.url))
 
 type CliResult = {
   readonly stdout: string

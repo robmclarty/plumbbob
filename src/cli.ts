@@ -1,99 +1,10 @@
 #!/usr/bin/env node
-// plumbbob CLI — hand-rolled argv dispatch, zero runtime deps, node: builtins
-// only (D1/C2). Functional/procedural: no classes, no `this`, no default
-// export (C1). Verbs are wired up build step by build step.
+// plumbbob CLI entry — the published bin. All routing and the help table live in
+// cli-core.ts (unit-tested in-process); this file is only the executable shell:
+// it wires argv to the dispatcher and turns the returned code into the exit code.
+// Keeping the single process.exit here is what lets cli-core.ts be imported by a
+// test without tearing down the worker.
 
-import { start } from './verbs/start.ts'
-import { status } from './verbs/status.ts'
-import { park } from './verbs/park.ts'
-import { build } from './verbs/build.ts'
-import { check } from './verbs/check.ts'
-import { checkpoint } from './verbs/checkpoint.ts'
-import { revert } from './verbs/revert.ts'
-import { spike } from './verbs/spike.ts'
-import { wrap } from './verbs/wrap.ts'
-import { init } from './verbs/init.ts'
-import { doctor } from './verbs/doctor.ts'
-
-type Verb = {
-  readonly name: string
-  readonly summary: string
-}
-
-const VERBS: ReadonlyArray<Verb> = [
-  { name: 'start', summary: 'scaffold .plumbbob/; STATE=DESIGN; record the baseline commit' },
-  { name: 'status', summary: 'print the session state, or NO ACTIVE SESSION' },
-  { name: 'build', summary: 'build <n>: write the seam from step n; STATE=BUILD (orientation, not a lock)' },
-  { name: 'check', summary: 'run the heavy check and report; no state change' },
-  { name: 'checkpoint', summary: 'checkpoint [<n>]: gate on green, commit/record SHA, mark step done, STATE=DESIGN (executor-agnostic)' },
-  { name: 'revert', summary: 'revert [--to n]: git reset --hard to a checkpoint SHA; STATE=DESIGN' },
-  { name: 'park', summary: 'park "<text>": append a raw line to the park list' },
-  { name: 'spike', summary: 'spike "<slug>" | spike done: throwaway worktree experiment' },
-  { name: 'wrap', summary: 'v2 close-out: archive intent+log+report (no gate), clear the sidecar, STATE off' },
-  { name: 'init', summary: 'link plumbbob into Claude Code as an in-place plugin (~/.claude/skills/plumbbob); --uninstall to undo' },
-  { name: 'doctor', summary: 'diagnose the plugin link (manifest, skills, hook) and print the fix for anything broken' },
-]
-
-// Plumbbob v2 (D1/D10/D13): the deciding/executing boundary is no longer a lock,
-// so there is nothing to defend — every verb runs the same whether a human or the
-// model triggers it. The old human-only `mode` escape hatch and its CLAUDECODE
-// in-session refusal are gone; what keeps the human the decider is the pause at
-// the step boundary (the skills), not a refusal here.
-
-function formatHelp(): string {
-  const width = Math.max(...VERBS.map((v) => v.name.length))
-  const rows = VERBS.map((v) => `  ${v.name.padEnd(width)}  ${v.summary}`)
-  return ['plumbbob — attention-first build process', '', 'Usage: plumbbob <verb> [args]', '', 'Verbs:', ...rows, ''].join(
-    '\n',
-  )
-}
-
-function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): number {
-  switch (verb) {
-    case 'start':
-      return start(cwd, rest)
-    case 'status':
-      return status(cwd)
-    case 'park':
-      return park(cwd, rest)
-    case 'build':
-      return build(cwd, rest)
-    case 'check':
-      return check(cwd)
-    case 'checkpoint':
-      return checkpoint(cwd, rest)
-    case 'revert':
-      return revert(cwd, rest)
-    case 'spike':
-      return spike(cwd, rest)
-    case 'wrap':
-      return wrap(cwd)
-    case 'init':
-      return init(rest)
-    case 'doctor':
-      return doctor()
-    default:
-      process.stderr.write(`plumbbob: unknown verb '${verb}'. Run 'plumbbob help' for the verb table.\n`)
-      return 1
-  }
-}
-
-function run(argv: ReadonlyArray<string>): number {
-  const verb = argv[0] ?? 'help'
-  const rest = argv.slice(1)
-
-  if (verb === 'help' || verb === '--help' || verb === '-h') {
-    process.stdout.write(`${formatHelp()}\n`)
-    return 0
-  }
-
-  try {
-    return dispatch(verb, process.cwd(), rest)
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    process.stderr.write(`plumbbob: ${verb} failed: ${message}\n`)
-    return 1
-  }
-}
+import { run } from './cli-core.ts'
 
 process.exit(run(process.argv.slice(2)))

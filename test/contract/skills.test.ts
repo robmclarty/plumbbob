@@ -9,7 +9,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-const skillsDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'skills')
+const skillsDir = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'skills')
 
 // A minimal hand-rolled frontmatter split: `---` fence, `key: value` lines, body.
 function parseSkill(dir: string): { data: Record<string, string>; body: string } {
