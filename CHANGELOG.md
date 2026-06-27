@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] - 2026-06-27
+
+- **Added:** four `ast-grep` rules to the check gate that enforce the zero-dependency
+  constraint (imports must be `node:` builtins or relative paths) and three architectural
+  invariants — `process.exit` only in the bin entry, no `console` logging, and subprocess
+  spawning confined to the git, check, and spike modules.
+- **Added:** a fuller documentation set — `docs/techniques.md` (the methods behind the
+  loop), `docs/cli-reference.md`, `docs/troubleshooting.md`, `docs/decisions.md` (the
+  `D#` / `C#` design-decision key), and a root `CONTRIBUTING.md` — all cross-linked from a
+  new Documentation section in the README.
+- **Fixed:** documentation drift — the philosophy doc now describes guidance rather than
+  the retired v1 enforcement model, the happy-path example shows the real `park` output,
+  and the package description reflects the current skill count.
+
+This is a docs-and-tooling release; no runtime behavior changed.
+
 ## [0.4.1] - 2026-06-27
 
 - **Changed:** the test suite is reorganized by intent — unit tests now sit in `__tests__/`
