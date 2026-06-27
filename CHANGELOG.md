@@ -5,6 +5,23 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-06-27
+
+- **Changed:** the test suite is reorganized by intent — unit tests now sit in `__tests__/`
+  next to the module they cover, while multi-module tests live under `test/` in labeled
+  `integration/`, `e2e/`, and `contract/` folders, with shared helpers in `test/helpers/`.
+  This is purely internal; no runtime behavior changes.
+- **Changed:** `cli.ts` is split into a thin executable entry plus `cli-core.ts`, so the
+  argv dispatch and help table can be imported and unit-tested without the bin's lone
+  `process.exit` tearing down the test worker.
+- **Added:** unit coverage for the previously untested library modules (`git`, `archive`,
+  `check`, and the only-indirectly-covered `sidecar`), in-process tests for the session
+  verbs (`start`, `status`, `park`, `build`, `check`, `checkpoint`, `wrap`, `revert`,
+  `spike`), and a `cli-core` dispatch test.
+- **Added:** a `dev-install.sh` smoke test that stubs `pnpm`/`node` on `PATH` to assert the
+  build/link/init orchestration without a real global link, plus extra `post-edit.sh` hook
+  branch cases (no session, a non-source extension, and a missing file).
+
 ## [0.4.0] - 2026-06-25
 
 - **Changed:** batch planning is now the default. `/pb-plan` authors the **whole**
