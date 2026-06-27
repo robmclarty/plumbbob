@@ -125,8 +125,9 @@ built it, and mean it.
 ---
 
 *Plumbbob is one concrete instantiation of this posture for small-to-medium work:
-a small state machine and a handful of tools that put the deciding-and-executing
-boundary under enforcement rather than willpower. The concept does not depend on
-it. Any process that treats attention as the scarce resource, externalizes the
-plan onto a durable surface, and keeps the human on the convergence side is
-attention-first, whatever the tooling underneath.*
+a small state machine and a handful of tools that hold the deciding-and-executing
+boundary with a pause you advance — guidance you fall into rather than a lock you
+fight, and structure rather than willpower. The concept does not depend on it. Any
+process that treats attention as the scarce resource, externalizes the plan onto a
+durable surface, and keeps the human on the convergence side is attention-first,
+whatever the tooling underneath.*

@@ -194,7 +194,7 @@ step. Say while building step 2 you think *"should password reset be throttled t
 ```
 
 ```text
-plumbbob: parked — "tangent: should /password-reset get the same throttle?"
+parked: tangent: should /password-reset get the same throttle?
 ```
 
 It's on the list, out of your head, and the step in flight stays protected. The
