@@ -347,6 +347,7 @@ fill however you like.
 
 The human owns convergence; `/plumbbob:build` does the labor and **stops at the pause**;
 you're the clock that advances it — one keystroke per step. See the root
-[`README`](../README.md) for the philosophy and install, and
+[`README`](../README.md) for the philosophy and install,
+[`techniques.md`](techniques.md) for each method on its own, and
 [`attention-first-development.md`](attention-first-development.md) for why attention is
 the scarce resource.

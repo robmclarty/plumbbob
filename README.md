@@ -221,7 +221,8 @@ plumbbob doctor
 
 `doctor` checks that the link resolves to the plugin manifest, the skills, and the
 hook, and prints the exact fix for anything broken. Run it first if a `/plumbbob:*`
-skill ever opens with an empty dashboard.
+skill ever opens with an empty dashboard; [`docs/troubleshooting.md`](docs/troubleshooting.md)
+covers the rest.
 
 ## Development
 
@@ -231,8 +232,15 @@ pnpm check     # tsc, oxlint, ast-grep, vitest, knip, markdownlint
 pnpm build     # emit dist/ (what the published bin runs)
 ```
 
-The underlying philosophy — attention as the scarce resource — lives in
-[`docs/attention-first-development.md`](docs/attention-first-development.md).
+## Documentation
+
+- [`docs/techniques.md`](docs/techniques.md) — the methods behind the loop, each on its own.
+- [`docs/happy-path.md`](docs/happy-path.md) — one goal walked end to end.
+- [`docs/cli-reference.md`](docs/cli-reference.md) — every verb, flag, and exit code.
+- [`docs/troubleshooting.md`](docs/troubleshooting.md) — fixes for the common snags.
+- [`docs/decisions.md`](docs/decisions.md) — the `D#` / `C#` design-decision key.
+- [`docs/attention-first-development.md`](docs/attention-first-development.md) — the philosophy: attention as the scarce resource.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — setup, conventions, and how to submit changes.
 
 ## The shape, in one line
 
