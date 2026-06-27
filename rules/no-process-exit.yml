@@ -1,0 +1,10 @@
+id: no-process-exit
+language: typescript
+severity: error
+message: 'process.exit belongs only in the bin entry (src/cli.ts); verbs return exit codes so cli-core and the tests can import them without tearing down the worker.'
+files:
+  - 'src/lib/**/*.ts'
+  - 'src/verbs/**/*.ts'
+  - 'src/cli-core.ts'
+rule:
+  pattern: process.exit($$$)

@@ -42,17 +42,23 @@ Run a single step with `pnpm check:test`, `pnpm check:tsc`, and so on. There is 
 
 ## Code conventions
 
-The constraints are real, and two of them are machine-enforced by the `ast-grep` rules in
-`rules/`. Full key in [`docs/decisions.md`](docs/decisions.md); the load-bearing ones:
+The constraints are real, and the `ast-grep` rules in `rules/` enforce several of them
+automatically. Full key in [`docs/decisions.md`](docs/decisions.md); the load-bearing ones:
 
 - **C1 — functional and procedural only.** No classes, no `this`, no default exports. Use
   plain functions and named exports so every symbol has a stable name. `ast-grep` fails the
   build on a class or a default export.
 - **C2 — node builtins only, zero runtime dependencies.** Import nothing outside `node:*`
-  in `src/`. New runtime dependencies are a hard no; dev-only tooling is fine.
+  in `src/`; `ast-grep` flags any non-`node:`, non-relative import. New runtime
+  dependencies are a hard no; dev-only tooling is fine.
 - **C4 / C5 — never destroy, additive git only.** Anything that closes or rewinds a session
   archives before it clears and only resets to its own recorded SHAs; it never rewrites
   pushed history.
+
+`rules/` also enforces three architectural invariants: `no-process-exit` (only the bin
+entry exits, so verbs stay testable), `no-console` (write through `process.stdout` /
+`process.stderr`), and `centralize-subprocess` (spawn only in `lib/git.ts`, `lib/check.ts`,
+`verbs/spike.ts`). If the gate rejects an edit for one of these, that is by design.
 
 When you make a genuinely new design decision, give it the next free `D#`, reference it
 inline where it is implemented, and add a one-line entry to

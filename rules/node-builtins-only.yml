@@ -1,0 +1,14 @@
+id: node-builtins-only
+language: typescript
+severity: error
+message: 'C2: import node: builtins or relative paths only — Plumbbob ships zero runtime dependencies. (Test files may import devDeps like vitest; they are excluded.)'
+files:
+  - 'src/**/*.ts'
+ignores:
+  - 'src/**/__tests__/**'
+rule:
+  pattern: import $$$IMPORTS from '$SRC'
+constraints:
+  SRC:
+    not:
+      regex: '^(node:|\.|/)'

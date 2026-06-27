@@ -1,0 +1,8 @@
+id: no-console
+language: typescript
+severity: error
+message: 'Use process.stdout.write / process.stderr.write — the CLI output is its contract; no stray console logging.'
+files:
+  - 'src/**/*.ts'
+rule:
+  pattern: console.$METHOD($$$)

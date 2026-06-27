@@ -13,15 +13,17 @@ them, and they are marked as such.
 
 ## Constraints (C)
 
-Hard rules the code must honor. The first two are partly machine-enforced — see the
-`rules/` ast-grep rules and `pnpm check`.
+Hard rules the code must honor. **C1** and **C2** are machine-enforced by the ast-grep
+rules in `rules/` (run via `pnpm check`); the rest are upheld by review and the design of
+the code.
 
 - **C1 — Functional and procedural only.** No classes, no `this`, no default exports;
   every symbol has a stable named export. Enforced by `rules/no-class.yml` and
   `rules/no-default-export.yml`. *Tagged across* `src/**` and the test tree.
 - **C2 — Node builtins only, zero runtime dependencies.** The CLI imports nothing outside
-  `node:*`; it runs natively on Node ≥ 22.18 with no install step. *Tagged in* `git.ts`,
-  `sidecar.ts`, `archive.ts`, `init.ts`, `doctor.ts`, `cli-core.ts`.
+  `node:*`; it runs natively on Node ≥ 22.18 with no install step. Enforced by
+  `rules/node-builtins-only.yml`. *Tagged in* `git.ts`, `sidecar.ts`, `archive.ts`,
+  `init.ts`, `doctor.ts`, `cli-core.ts`.
 - **C4 — Archive-then-clear, never destroy.** Closing a session copies the active files
   into the archive *before* clearing them; nothing is deleted until it is safely recorded.
   *Tagged in* `wrap.ts`, `archive.ts`, and (for the sidecar's survival across a reset)
@@ -32,6 +34,12 @@ Hard rules the code must honor. The first two are partly machine-enforced — se
   `wrap.ts`.
 
 *(`C3` is not referenced in the current code.)*
+
+Beyond the numbered constraints, `rules/` guards three architectural invariants:
+`no-process-exit` (only the bin entry exits, so verbs and `cli-core` stay importable by
+tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`), and
+`centralize-subprocess` (subprocess spawning stays in `lib/git.ts`, `lib/check.ts`, and
+`verbs/spike.ts`).
 
 ## Decisions (D)
 
