@@ -1,5 +1,5 @@
 ---
-name: wrap
+name: pb-wrap
 description: Wrap up the build — write the report (what shipped, decisions, parked/harvested items, deferred tangents), then safely archive intent + build-log + report before clearing for a fresh goal. Archive-then-clear, never destroy. Report by default, no gate.
 disable-model-invocation: true
 model: opus
@@ -10,7 +10,7 @@ allowed-tools: Read, Write, Bash(plumbbob status:*), Bash(plumbbob wrap:*)
 
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npm i -g plumbbob && plumbbob init"`
 
-`/plumbbob:wrap` ends the build: it captures what happened, archives it, and clears the
+`/pb-wrap` ends the build: it captures what happened, archives it, and clears the
 sidecar for the next goal. **Report by default** (D9) — no refuse-without-report gate,
 and no separate docs phase.
 
@@ -27,7 +27,7 @@ and no separate docs phase.
    to the report, archives intent + build-log + report to
    `.plumbbob/archive/<date>-<slug>/`, and clears the sidecar (STATE last). Git is not
    touched.
-3. **Point at the next goal** — `/plumbbob:plan` to frame the next one.
+3. **Point at the next goal** — `/pb-plan` to frame the next one.
 
 ## The hard contracts
 

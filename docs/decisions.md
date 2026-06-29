@@ -46,7 +46,7 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
 - **D1 — A deterministic, zero-dependency CLI; guidance, not a lock.** The v2 foundation:
   a hand-rolled `plumbbob` CLI built on node builtins, and a deciding/executing boundary
   held by a pause rather than enforced by a file lock. *Tagged in* `cli-core.ts`.
-- **D3 — The pluggable, author-blind executor.** `/plumbbob:build` is optional; `verify`
+- **D3 — The pluggable, author-blind executor.** `/pb-build` is optional; `verify`
   and `checkpoint` read *the diff, not who wrote it*, so a hand-built, vibed, or
   other-harness diff checkpoints identically. *Tagged in* `checkpoint.ts`, the `build` and
   `verify` skills.

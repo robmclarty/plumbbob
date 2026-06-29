@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+- **Changed:** the eleven driver skills are renamed with a `pb-` prefix — `/pb-plan`,
+  `/pb-step`, `/pb-build`, `/pb-verify`, `/pb-park`, `/pb-status`, `/pb-harvest`,
+  `/pb-wrap`, `/pb-refine`, `/pb-revert`, `/pb-spike`. Claude Code flattens a plugin's
+  skill names into the bare chat command (`/status`, `/park`, …), which collided with
+  built-in and other-plugin slash commands and was ambiguous; the prefix restores the
+  original unambiguous naming. The CLI verbs (`plumbbob status`, `pb park`, …) are
+  unchanged.
+
 ## [0.4.2] - 2026-06-27
 
 - **Added:** four `ast-grep` rules to the check gate that enforce the zero-dependency

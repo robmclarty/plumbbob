@@ -1,5 +1,5 @@
 ---
-name: park
+name: pb-park
 description: Compose one tidy tagged park line, get the human's OK in-turn, then capture it by shelling `plumbbob park` — never by editing a file. The capture half of the park/harvest loop.
 disable-model-invocation: true
 model: haiku
@@ -10,7 +10,7 @@ allowed-tools: Bash(plumbbob status:*), Bash(plumbbob park:*)
 
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npm i -g plumbbob && plumbbob init"`
 
-`/plumbbob:park` is the **capture** half of the loop; `/plumbbob:harvest` is where parked items
+`/pb-park` is the **capture** half of the loop; `/pb-harvest` is where parked items
 get triaged later (D7). Capturing the instant an idea arrives — instead of acting on
 it — is the whole point: it protects the step in flight.
 

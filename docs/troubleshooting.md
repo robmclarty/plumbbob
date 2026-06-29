@@ -9,11 +9,11 @@ plumbbob doctor
 
 `doctor` is read-only. It checks that the plugin link resolves to a package carrying the
 manifest, the skills, and the hook, and prints the exact `→ fix` for anything broken. Run
-it first whenever a `/plumbbob:*` skill misbehaves.
+it first whenever a `/pb-*` skill misbehaves.
 
 ## Install and linking
 
-### A `/plumbbob:*` skill opens with an empty dashboard
+### A `/pb-*` skill opens with an empty dashboard
 
 **Cause.** The plugin never linked, so Claude Code loaded no skills — the most common
 silent failure. **Fix.** Run `plumbbob doctor`; if it reports "not linked," run
@@ -52,7 +52,7 @@ across `npm i -g plumbbob@latest`, but the running editor still caches the plugi
 ### `status` shows `NO ACTIVE SESSION`
 
 **Cause.** There is no `.plumbbob/STATE` in this repo — install scope is not session scope.
-**Fix.** Start a session here: `/plumbbob:plan` (or `plumbbob start "<goal>"`). Sessions are
+**Fix.** Start a session here: `/pb-plan` (or `plumbbob start "<goal>"`). Sessions are
 **per-project** — each repo gets its own `.plumbbob/` sidecar.
 
 ### `start` refuses with "the working tree is dirty"
@@ -69,13 +69,13 @@ baseline — but a later revert-to-baseline will then discard the uncommitted wo
 ### `start` refuses with "a session is already active here"
 
 **Cause.** A `.plumbbob/` session already exists in this repo. **Fix.** Close it with
-`/plumbbob:wrap` before starting another, or continue the existing one (`/plumbbob:status`).
+`/pb-wrap` before starting another, or continue the existing one (`/pb-status`).
 
-### `/plumbbob:park` or `/plumbbob:harvest` refuses
+### `/pb-park` or `/pb-harvest` refuses
 
 **Cause.** Both need an active session, and `harvest` runs only at a **boundary**. **Fix.**
 Park needs any active state — start a session first if there is none. Harvest refuses
-mid-step (`BUILD`): finish the step with `/plumbbob:verify` first, then harvest from
+mid-step (`BUILD`): finish the step with `/pb-verify` first, then harvest from
 `DESIGN`.
 
 ## The build loop and checks
@@ -96,7 +96,7 @@ has no such script. **Fix.** Edit `.plumbbob/config` and set `check=<your comman
 
 **Cause.** `build <n>` could not find step `n`, or the step's seam is unparseable. **Fix.**
 Make sure `## Steps` has the step in the standard format with a `- seam:` line of exact
-paths or `dir/` grants — never a glob (**D23**). Sharpen it with `/plumbbob:step`, then
+paths or `dir/` grants — never a glob (**D23**). Sharpen it with `/pb-step`, then
 build again.
 
 ## The post-edit hook (light feedback)
@@ -127,7 +127,7 @@ If a worktree path "already exists," remove it or run `spike done`.
 
 **Cause.** Nothing was checkpointed for that step. **Fix.** Run `plumbbob revert` with no
 `--to` to go to the last checkpoint, or `--to <n>` for a step that actually has one;
-`/plumbbob:status` lists the last checkpoint. With no step checkpoints at all, revert falls
+`/pb-status` lists the last checkpoint. With no step checkpoints at all, revert falls
 back to the baseline.
 
 ---
