@@ -66,55 +66,55 @@ and it cannot be skipped.
 
 You drive the whole loop from your IDE with eight `/plumbbob:*` skills — no step numbers to
 remember, no raw CLI to type. Each is `disable-model-invocation`, so *you* fire
-every move, and `/plumbbob:pb-status` always names your next one.
+every move, and `/pb-status` always names your next one.
 
 | Skill | Does |
 |-------|------|
-| `/plumbbob:pb-plan` | plan the whole goal — scaffold the session + author intent's Frame, Decisions, Constraints, **and all Steps** |
-| `/plumbbob:pb-step` | revise/sharpen the next step (empty input auto-syncs it to reality) |
-| `/plumbbob:pb-build` | *(optional)* implement the next planned step, then verify it to the pause — `--auto` self-approves and chains to done |
-| `/plumbbob:pb-verify` | the tick — check → self-review → validate → **PAUSE** → checkpoint |
-| `/plumbbob:pb-park` | capture an idea without chasing it |
-| `/plumbbob:pb-status` | orient — where you are, the next step's done-when + seam, and the next move |
-| `/plumbbob:pb-harvest` | triage parked ideas at a boundary (blocker / tangent / pivot) |
-| `/plumbbob:pb-wrap` | wrap up — write the report, archive safely, clear for a fresh goal |
+| `/pb-plan` | plan the whole goal — scaffold the session + author intent's Frame, Decisions, Constraints, **and all Steps** |
+| `/pb-step` | revise/sharpen the next step (empty input auto-syncs it to reality) |
+| `/pb-build` | *(optional)* implement the next planned step, then verify it to the pause — `--auto` self-approves and chains to done |
+| `/pb-verify` | the tick — check → self-review → validate → **PAUSE** → checkpoint |
+| `/pb-park` | capture an idea without chasing it |
+| `/pb-status` | orient — where you are, the next step's done-when + seam, and the next move |
+| `/pb-harvest` | triage parked ideas at a boundary (blocker / tangent / pivot) |
+| `/pb-wrap` | wrap up — write the report, archive safely, clear for a fresh goal |
 
-Three optional power moves survive for when you need them: `/plumbbob:pb-revert` (recover to
-a checkpoint), `/plumbbob:pb-spike` (throwaway worktree experiment), and `/plumbbob:pb-refine` (attack
+Three optional power moves survive for when you need them: `/pb-revert` (recover to
+a checkpoint), `/pb-spike` (throwaway worktree experiment), and `/pb-refine` (attack
 the frame for holes, or repair the plan when it drifts — usable at any point).
 
 ## The loop
 
-The happy path is **plan the whole thing up front, then drive `/plumbbob:pb-build` until
+The happy path is **plan the whole thing up front, then drive `/pb-build` until
 done** — approving each step at its verify pause:
 
 ```text
-/plumbbob:pb-plan                      author the whole plan (incl. all steps)   (once)
+/pb-plan                      author the whole plan (incl. all steps)   (once)
   └ per step:
-       /plumbbob:pb-status             review the next step (done-when + seam)
-       /plumbbob:pb-step   (optional)  sharpen/revise it first if needed
-       /plumbbob:pb-build  (or DIY)    implement it → verify → PAUSE → checkpoint
-       /plumbbob:pb-park               capture strays mid-build
-       /plumbbob:pb-harvest            triage them at a boundary
-  /plumbbob:pb-wrap                    report + archive + clear                  (once)
+       /pb-status             review the next step (done-when + seam)
+       /pb-step   (optional)  sharpen/revise it first if needed
+       /pb-build  (or DIY)    implement it → verify → PAUSE → checkpoint
+       /pb-park               capture strays mid-build
+       /pb-harvest            triage them at a boundary
+  /pb-wrap                    report + archive + clear                  (once)
 ```
 
-Each `/plumbbob:pb-build` builds the next undone step and stops at the pause for your
-approval — re-firing it is itself the clock tick. (`/plumbbob:pb-build --auto` is the opt-in
+Each `/pb-build` builds the next undone step and stops at the pause for your
+approval — re-firing it is itself the clock tick. (`/pb-build --auto` is the opt-in
 that lets the agent self-approve and chain to done, halting on a red check or any
 mismatch.) For a worked example that walks one goal end to end — planning, building
 each step, wrapping up, archiving, and starting the next task — see
 [`docs/happy-path.md`](docs/happy-path.md).
 
-**Three ways to plan.** `/plumbbob:pb-plan` produces the same artifact — a complete, standalone
+**Three ways to plan.** `/pb-plan` produces the same artifact — a complete, standalone
 `intent.md` — from whichever seed you give it: **no argument** runs a short interview;
 **a file path** absorbs an out-of-band spec (retaining its detail so the plan stands on
 its own); **any other text** expands your inline intent. No quotes required — it
 disambiguates the mode itself.
 
-**The pluggable executor.** `/plumbbob:pb-build` is one way to turn a planned step into code
+**The pluggable executor.** `/pb-build` is one way to turn a planned step into code
 — it is *optional*. Implement by hand, in a vibe session, or with another harness,
-and run `/plumbbob:pb-verify` instead: it reads the *diff, not the author*. Plumbbob is the
+and run `/pb-verify` instead: it reads the *diff, not the author*. Plumbbob is the
 harness-agnostic spine; how the diff appears is a slot you fill however you like.
 
 ## Calibration: size everything to the work
@@ -123,7 +123,7 @@ The fastest way to abandon this is ceremony on a one-liner. The discipline is
 *decisions before code*, not *always produce three files*.
 
 - **Tiny** (typo, one-liner): no session. Just fix it.
-- **Small** (a contained bug/change): `/plumbbob:pb-plan` a frame + 2–3 decisions; one or two
+- **Small** (a contained bug/change): `/pb-plan` a frame + 2–3 decisions; one or two
   steps; build → verify → checkpoint.
 - **Medium** (a feature touching a few modules): the full loop above.
 - **Large / architectural**: that's Ridgeline's job, not Plumbbob's.
@@ -151,7 +151,7 @@ Calibration is the skill. When in doubt, smaller.
   blocks an edit. It exists only because Claude can't see your editor's LSP, so the
   light tier *serves the model*.
 - **Heavy** — the full `pnpm check` (tsc, oxlint, ast-grep, vitest, knip,
-  markdownlint). Not a hook: it runs *inside* `/plumbbob:pb-verify`, which refuses to
+  markdownlint). Not a hook: it runs *inside* `/pb-verify`, which refuses to
   checkpoint while red. The hard gate lives on the deliberate boundary, not the
   keystroke.
 
@@ -160,7 +160,7 @@ Calibration is the skill. When in doubt, smaller.
 There is no stored state machine. The dashboard's phase — `DESIGN`, `BUILD`, or `SPIKE` —
 is *derived* from what's on disk: a `STEP` file means a step is in flight (BUILD), the
 `SPIKE` marker means a fork is open (SPIKE), otherwise you're at a boundary (DESIGN). The
-position gates nothing — it's a label on a map, read by `/plumbbob:pb-status` to tell you
+position gates nothing — it's a label on a map, read by `/pb-status` to tell you
 where you are and what to do next, never a locked door. `.plumbbob/STATE` is just the
 session sentinel: its presence means a session is live, and the post-edit hook is gated on
 it, so a repo with no `.plumbbob/STATE` behaves exactly like plain Claude Code.
@@ -217,8 +217,9 @@ CLI on PATH (via its `bin/` shims), so it needs neither `npm i -g` nor `plumbbob
 /plugin install plumbbob@<marketplace>
 ```
 
-Either way, Claude Code namespaces the skills as `/plumbbob:<skill>`, so they appear as
-`/plumbbob:pb-plan`, `/plumbbob:pb-status`, and the rest. Nothing else under `~` is touched
+Either way, Claude Code namespaces the skills under the `plumbbob` plugin, so the real
+commands are `/plumbbob:pb-plan`, `/plumbbob:pb-status`, and the rest. **For readability these
+docs write the short form — `/pb-plan` means `/plumbbob:pb-plan`.** Nothing else under `~` is touched
 and `settings.json` is left alone — restart Claude Code (or `/reload-plugins`) to activate.
 If a marketplace plumbbob is already installed, `plumbbob init` refuses rather than create
 the collision (`--force` overrides), and `plumbbob doctor` flags a double-install.
@@ -241,7 +242,7 @@ plumbbob doctor
 skills-dir link resolves to the plugin manifest, the skills, and the hook — flagging a
 double-install collision — and prints the exact fix for anything broken. The terminal command
 above is for the **global / skills-dir** install; a **marketplace** plugin puts the CLI on
-PATH only *inside a Claude Code session*, so run **`/plumbbob:pb-doctor`** there instead. Run
+PATH only *inside a Claude Code session*, so run **`/pb-doctor`** there instead. Run
 it first if a `/plumbbob:*` skill ever opens with an empty dashboard;
 [`docs/troubleshooting.md`](docs/troubleshooting.md) covers the rest.
 

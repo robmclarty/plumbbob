@@ -6,7 +6,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
   Park list : where ideas go so you do not chase them. CAPTURE, never act inline.
   Harvest   : the boundary ritual that keeps you on one branch.
   Log       : the build's history. `plumbbob checkpoint` appends a line per step as it
-              lands; feeds the /plumbbob:pb-wrap report, then gets archived.
+              lands; feeds the /pb-wrap report, then gets archived.
 -->
 
 # Build log — {{TITLE}}
@@ -17,8 +17,8 @@ step boundaries. The antidote to "my plan got lost in the noise."
 ## Steps
 
 *(Mirror of intent.md's Steps, with live status. Only ONE step is in flight. A step
-is done only after a checkpoint — check green + checkpoint taken, via `/plumbbob:pb-verify` or
-`/plumbbob:pb-build`.)*
+is done only after a checkpoint — check green + checkpoint taken, via `/pb-verify` or
+`/pb-build`.)*
 
 - ☐ 1. <step>
 
@@ -26,16 +26,16 @@ is done only after a checkpoint — check green + checkpoint taken, via `/plumbb
 
 > Mid-step, every new problem / idea / "ooh what if" lands HERE, untouched, and you
 > go straight back to the step. Acting the instant an idea arrives is the disease.
-> Capture is one line (`/plumbbob:pb-park` composes it). Harvest happens only at the boundary.
+> Capture is one line (`/pb-park` composes it). Harvest happens only at the boundary.
 
-## Harvest  *(run `/plumbbob:pb-harvest` at each step boundary, after green)*
+## Harvest  *(run `/pb-harvest` at each step boundary, after green)*
 
 Classify each parked item as exactly ONE. Naming it before acting is what keeps you
 from sprawling across branches.
 
 | Class            | Meaning                                   | Action                          |
 |------------------|-------------------------------------------|---------------------------------|
-| **blocker**      | Plan was wrong/incomplete; can't proceed  | `/plumbbob:pb-revert`, fold into intent  |
+| **blocker**      | Plan was wrong/incomplete; can't proceed  | `/pb-revert`, fold into intent  |
 | **tangent**      | A different path, not clearly better      | Defer or kill. Default here.    |
 | **pivot signal** | Evidence the whole approach is wrong      | Stop. Replan deliberately.      |
 
@@ -49,8 +49,8 @@ Harvest results this boundary:
 ## Log
 
 *(The build's history, oldest first. `plumbbob checkpoint` appends a dated line here
-every time a step lands — via `/plumbbob:pb-build` or `/plumbbob:pb-verify` — so this
+every time a step lands — via `/pb-build` or `/pb-verify` — so this
 fills in as you go, not at the end. Add your own decision/event lines too: this is what
 you point at to say "I did that — the LLM helped, but those were my calls."
-`/plumbbob:pb-wrap` reads this for the report; `plumbbob wrap` archives it under
+`/pb-wrap` reads this for the report; `plumbbob wrap` archives it under
 `.plumbbob/archive/`.)*

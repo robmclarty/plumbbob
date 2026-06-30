@@ -10,7 +10,7 @@ allowed-tools: Read, Edit, Bash(plumbbob status:*)
 
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npm i -g plumbbob && plumbbob init"`
 
-`/plumbbob:pb-harvest` is the complement of `/plumbbob:pb-park` (D7): you parked ideas as seeds during a
+`/pb-harvest` is the complement of `/pb-park` (D7): you parked ideas as seeds during a
 build; now, at a boundary, you harvest them — decide what each one is.
 
 ## When to run it — boundary only
@@ -20,7 +20,7 @@ DESIGN boundary, not mid-step. Read the dashboard injected above:
 
 - `NO ACTIVE SESSION` — **refuse**; tell the human to `plumbbob start "<title>"` first.
 - A step in flight (the dashboard reads `[BUILD]`, and `next →` points at finishing the
-  step) — **refuse** and suggest finishing it with `/plumbbob:pb-verify` before harvesting.
+  step) — **refuse** and suggest finishing it with `/pb-verify` before harvesting.
   Chasing parked items mid-step is the disease parking prevents.
 - At the boundary (the dashboard reads `[DESIGN]`) — go ahead.
 
@@ -41,7 +41,7 @@ one line of reasoning, then **wait for the human to confirm or override**. Write
 **only after** per-item confirmation:
 
 - Record each confirmed class in `build-log.md`'s `## Harvest` section.
-- **Flip the harvested item** from `- [ ]` to `- [x]` in the Park list, so `/plumbbob:pb-status`
+- **Flip the harvested item** from `- [ ]` to `- [x]` in the Park list, so `/pb-status`
   stops counting it as open.
 - A confirmed **blocker** also folds its decision into `intent.md`.
 - Never reclassify or resolve an item the human hasn't confirmed, and default every

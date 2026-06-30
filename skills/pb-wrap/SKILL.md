@@ -10,7 +10,7 @@ allowed-tools: Read, Write, Bash(plumbbob status:*), Bash(plumbbob wrap:*)
 
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npm i -g plumbbob && plumbbob init"`
 
-`/plumbbob:pb-wrap` ends the build: it captures what happened, archives it, and clears the
+`/pb-wrap` ends the build: it captures what happened, archives it, and clears the
 sidecar for the next goal. **Report by default** (D9) — no refuse-without-report gate,
 and no separate docs phase.
 
@@ -30,7 +30,7 @@ and no separate docs phase.
    to the report, archives intent + build-log + report to
    `.plumbbob/archive/<date>-<slug>/`, and clears the sidecar (STATE last). Git is not
    touched.
-3. **Point at the next goal** — `/plumbbob:pb-plan` to frame the next one.
+3. **Point at the next goal** — `/pb-plan` to frame the next one.
 
 ## The hard contracts
 

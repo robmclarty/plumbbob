@@ -114,7 +114,7 @@ plumbbob park "<text>"
 
 Appends `<text>` as a raw line under `## Park list` in `build-log.md` and prints
 `parked: <text>` (**D7**). This is the dumb capture path — composing the tidy tagged line
-is the `/plumbbob:pb-park` skill's job. Refuses (exit 1) with no session, empty text, or no
+is the `/pb-park` skill's job. Refuses (exit 1) with no session, empty text, or no
 `## Park list` section.
 
 ### spike
@@ -175,7 +175,7 @@ resolves to a package carrying the manifest, the skills, and the hook; it also r
 **marketplace-only** install as a valid, passing state, and flags the double-install
 **collision** when both are present. It prints the exact fix for anything missing. Exits 0
 when all checks pass, 1 otherwise. Run it first if a `/plumbbob:*` skill opens an empty
-dashboard. Also available in-session as `/plumbbob:pb-doctor` — the only way to reach it on a
+dashboard. Also available in-session as `/pb-doctor` — the only way to reach it on a
 **marketplace** install, where the CLI is on PATH only inside a Claude Code session.
 
 ## The `.plumbbob/config` file

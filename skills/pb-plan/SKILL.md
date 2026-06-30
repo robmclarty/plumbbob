@@ -11,10 +11,10 @@ allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob start:*
 
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npm i -g plumbbob && plumbbob init"`
 
-`/plumbbob:pb-plan` is the **whole-goal** move — it opens a session and gets the deciding out
+`/pb-plan` is the **whole-goal** move — it opens a session and gets the deciding out
 of your head and onto `intent.md` *before* any code. By default it authors the
 **complete plan, including all the Steps**, so the happy path afterward is just
-`/plumbbob:pb-build` until done. (Revising a single increment later is the separate `/plumbbob:pb-step`
+`/pb-build` until done. (Revising a single increment later is the separate `/pb-step`
 move; do not confuse the two.)
 
 ## Three input modes (disambiguated for you — no quotes needed)
@@ -34,7 +34,7 @@ Look at the argument the human gave and pick the mode yourself:
    genuinely ambiguous.
 
 All three modes converge on the **same artifact**: a complete, standalone `intent.md`
-an agent can follow with `/plumbbob:pb-build`. The argument only seeds how you get there.
+an agent can follow with `/pb-build`. The argument only seeds how you get there.
 
 ## What this skill does
 
@@ -56,11 +56,11 @@ an agent can follow with `/plumbbob:pb-build`. The argument only seeds how you g
       - seam: `<file>`, `<file>`
    ```
 
-   Every step needs a **done-when** `/plumbbob:pb-verify` can check and a **seam** (the exact
+   Every step needs a **done-when** `/pb-verify` can check and a **seam** (the exact
    paths it touches). Later steps may be fuzzier than the first — that's fine; they get
-   sharpened just-in-time when you reach them with `/plumbbob:pb-step`. Keep each small enough to
+   sharpened just-in-time when you reach them with `/pb-step`. Keep each small enough to
    verify in one review pass.
-5. **Offer to stress-test it.** Suggest `/plumbbob:pb-refine` to attack the frame for holes (or
+5. **Offer to stress-test it.** Suggest `/pb-refine` to attack the frame for holes (or
    to repair the plan as it drifts). Optional, the human's call.
 
 ## The interview (mode 1)
@@ -73,11 +73,11 @@ Make it easy and non-intrusive:
   without typing** ("done-when: the 6th request in 60s returns 429 — good?"), while
   taking arbitrary detail when they want to give it, including pointers to other files.
 - **Let them double back.** They will revise as the picture sharpens; that's expected.
-  They can also edit `intent.md` by hand at any time, or call `/plumbbob:pb-refine` to repair it.
+  They can also edit `intent.md` by hand at any time, or call `/pb-refine` to repair it.
 
 ## The hard contracts
 
-- **Deciding before code.** `/plumbbob:pb-plan` writes `intent.md` only — never source.
+- **Deciding before code.** `/pb-plan` writes `intent.md` only — never source.
 - **The human converges.** You surface options and draft wording; the human picks.
   An unresolved hole is an Open question, not a guessed Decision.
 - **Stands on its own.** Whatever the input mode, the finished `intent.md` carries

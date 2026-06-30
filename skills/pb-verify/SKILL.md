@@ -11,7 +11,7 @@ allowed-tools: Read, Bash(plumbbob status:*), Bash(plumbbob check:*), Bash(plumb
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npm i -g plumbbob && plumbbob init"`
 
 This is the **tick** — the one beat where the human is the clock. Whatever produced
-the current diff — `/plumbbob:pb-build`, your own hands, a vibe session, another harness —
+the current diff — `/pb-build`, your own hands, a vibe session, another harness —
 this skill verifies it the same way: **it reads the diff, not the author** (D3).
 
 ## What this skill does, in order
@@ -40,7 +40,7 @@ this skill verifies it the same way: **it reads the diff, not the author** (D3).
 - **Never skip the pause.** Check → self-review → validate, then wait. Approval is
   the only thing that triggers the checkpoint.
 - **Read the diff, not the author** (D3). Verify identically whether the code was
-  built by `/plumbbob:pb-build`, by hand, vibed, or by another harness.
+  built by `/pb-build`, by hand, vibed, or by another harness.
 - **Red means stop, not pause.** A failing check is not an approval decision; report
   it and end your turn.
 - **You review; you do not build.** If the self-review finds a problem, surface it
