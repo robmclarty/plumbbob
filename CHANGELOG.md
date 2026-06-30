@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.13] - 2026-06-30
+
+- **Changed:** the README is rewritten as a short table-of-contents and get-started doc — five sections
+  (intro, install, features, getting started, license) — with the conceptual material (the one law,
+  clock-not-lock, calibration, the two-tier gates, derived position, git footprint) left to live in
+  `docs/techniques.md` rather than duplicated. The detailed install guide moves to a new
+  `docs/install.md`, and the `.plumbbob/` sidecar layout moves into `docs/cli-reference.md`.
+- **Changed:** the docs now thread concrete metaphors through the prose. The README explains what a
+  plumb bob actually is — a weight on a string gravity pulls into a true vertical — and maps it to
+  keeping the build aligned with your intent, with the epigraph reworded to "Establish plumb before
+  you build". `docs/attention-first-development.md` threads a water-in-flood metaphor: the model's
+  output as enormous but uncoordinated power, and the externalized plan as the banks and levee that
+  channel it where you decided.
+- **Changed:** skill commands are written in the readable short form (`/pb-plan` rather than
+  `/plumbbob:pb-plan`) across the README, docs, and skills, with the install section documenting the
+  shorthand. Brand references in prose are standardized to "PlumbBob" (the lowercase `plumbbob`
+  CLI/namespace identifiers are unchanged), `/pb-park`'s inline and bare forms are spelled out, and
+  the skill-count and CLI-usage claims are corrected.
+- **Fixed:** the `pb-status` banner and the not-a-git-repo error now print "PlumbBob" instead of
+  "Plumbbob". Two skill-contract assertions that still matched the namespaced `/plumbbob:pb-*` form
+  were updated to the current flat `/pb-*` convention.
+
 ## [0.4.12] - 2026-06-30
 
 - **Added:** an `argument-hint` to every skill that accepts input, so Claude Code shows the accepted
