@@ -11,7 +11,7 @@ three docs:
 - [`happy-path.md`](happy-path.md) — the **worked example**: every technique in one
   end-to-end cycle.
 
-You drive everything from your editor with `/pb-*` skills; each shells out to a small
+You drive everything from your editor with `/plumbbob:*` skills; each shells out to a small
 `plumbbob` CLI you never type by hand. New here? Install from the
 [README](../README.md), read [`happy-path.md`](happy-path.md) for the narrative, and keep
 this page open to look up any piece by name.
@@ -77,9 +77,9 @@ Under `## Steps`, the plan is a numbered list where **every step carries two thi
   a test or check result (`done when: the 6th request in 60s returns 429`).
 - The **seam** is the exact set of paths the step will touch.
 
-`/pb-plan` authors the **whole** list up front, so the happy path is to plan once and
+`/plumbbob:plan` authors the **whole** list up front, so the happy path is to plan once and
 build per step. Only **one step is in flight at a time.** Later steps may be fuzzier than
-the first — that is fine; you sharpen the next one just-in-time with `/pb-step` (empty
+the first — that is fine; you sharpen the next one just-in-time with `/plumbbob:step` (empty
 input auto-syncs it to what the build has already taught you) right before you build it.
 
 ### The seam is awareness, not a lock
@@ -94,7 +94,7 @@ sprawl.
 ## The build loop and the verify tick
 
 Plan once, then repeat one tick per step until the list is done. The tick — whether
-`/pb-build` runs it or you run `/pb-verify` over your own edits — is always the
+`/plumbbob:build` runs it or you run `/plumbbob:verify` over your own edits — is always the
 same five beats:
 
 ```text
@@ -120,16 +120,16 @@ pause — and idles there until you approve. **Pull, not block.** You stay the d
 because a wall refuses you, but because the system stops and waits for you to be the clock.
 Re-firing the next build *is* the clock tick.
 
-> **Unattended option — `--auto`.** `/pb-build --auto` lets the agent self-review and
+> **Unattended option — `--auto`.** `/plumbbob:build --auto` lets the agent self-review and
 > approve in your place, then chain to the next step until done. It halts the moment the
 > check goes red or the self-review finds a mismatch. It is the one path that checkpoints
 > without a human pause, and only because you asked for it by name.
 
 ### The pluggable executor reads the diff, not the author
 
-`/pb-build` is *one* way to turn a planned step into code, and it is **optional**.
+`/plumbbob:build` is *one* way to turn a planned step into code, and it is **optional**.
 Implement a step by hand, in a vibe session, or with another harness, and run
-`/pb-verify` instead — it runs the identical tick and **reads the diff, not who wrote
+`/plumbbob:verify` instead — it runs the identical tick and **reads the diff, not who wrote
 it.** Plumbbob is the harness-agnostic spine; how the diff appears is a slot you fill
 however you like.
 
@@ -141,7 +141,7 @@ footprint is **additive only**: cheap markers (`plumbbob: step n done`) on your 
 branch that your normal squash-merge collapses at PR time. Plumbbob never rewrites pushed
 history.
 
-**Revert** is the undo. `/pb-revert` does a `git reset --hard` to the last checkpoint
+**Revert** is the undo. `/plumbbob:revert` does a `git reset --hard` to the last checkpoint
 (or `--to <n>` for a specific step, with the baseline as the fallback), discarding the
 half-done step. It is careful about two things:
 
@@ -155,10 +155,10 @@ half-done step. It is careful about two things:
 Attention has momentum, and breaking focus to chase a new idea costs far more than the idea
 is worth in the moment. So mid-step ideas are **captured, not acted on.**
 
-- **Park** (`/pb-park`) composes one tidy, tagged line and appends it to the Park
+- **Park** (`/plumbbob:park`) composes one tidy, tagged line and appends it to the Park
   list in `build-log.md` — then you go straight back to the step. Capture is the only thing
   that happens; the idea is out of your head and the step in flight stays protected.
-- **Harvest** (`/pb-harvest`) runs at a **step boundary** — back in DESIGN, never
+- **Harvest** (`/plumbbob:harvest`) runs at a **step boundary** — back in DESIGN, never
   mid-step — and triages the list. Each item gets exactly one class:
 
 | Class | Meaning | Action |
@@ -173,16 +173,16 @@ a tangent — require a failed assumption, not a shinier idea, before you pivot.
 ## Spikes — when the design will not settle
 
 Some forks cannot be decided on paper. A **spike** is a throwaway experiment for exactly
-that. `/pb-spike <slug>` creates a sibling git worktree and branch per option
+that. `/plumbbob:spike <slug>` creates a sibling git worktree and branch per option
 (`spike/<slug>-a`, `spike/<slug>-b` by default) *outside* the repo, where you try each fork
-in isolation while the main tree stays put; `/pb-spike done` removes every spike
+in isolation while the main tree stays put; `/plumbbob:spike done` removes every spike
 worktree and branch and returns you to DESIGN. The point is not the code you write in there
 — it is the **verdict**: which option won and why, recorded back in `intent.md` before you
 build for real.
 
 ## Refine — keep intent true
 
-`intent.md` is only useful while it is honest. `/pb-refine` keeps it that way, in two
+`intent.md` is only useful while it is honest. `/plumbbob:refine` keeps it that way, in two
 modes:
 
 - **Attack** — give the Frame and Decisions a cold, adversarial read and surface holes:
@@ -192,7 +192,7 @@ modes:
 - **Repair** — when the plan has drifted from what the code actually does, propose the edits
   that bring it back in line, shown before/after and written only on your approval.
 
-Where `/pb-step` sharpens the *next step*, `refine` works the *whole plan*. Reach for
+Where `/plumbbob:step` sharpens the *next step*, `refine` works the *whole plan*. Reach for
 it right after planning to stress-test a fresh frame, or mid-build when a blocker rewrites
 the design.
 
@@ -204,7 +204,7 @@ The current position lives in one word in `.plumbbob/STATE`:
 - **BUILD** — a step is in flight.
 - **SPIKE** — experimenting in throwaway worktrees; the main tree is parked.
 
-In v2 STATE **gates nothing.** It is read by `/pb-status` to tell you where you are
+In v2 STATE **gates nothing.** It is read by `/plumbbob:status` to tell you where you are
 and what to do next; a wrong state is a mislabeled position on a map, not a locked door.
 `status` is the move you fire any time you are unsure — it prints the dashboard (the
 intent, the step list, the parked and open-question counts) and names the single next move.
@@ -237,7 +237,7 @@ much a task deserves is itself the skill; when in doubt, smaller.
 
 ## Wrap — close out without ceremony
 
-When the goal is done, `/pb-wrap` ends the build. It writes a `report.md` **by
+When the goal is done, `/plumbbob:wrap` ends the build. It writes a `report.md` **by
 default** — what shipped, the decisions and why, what was parked and how it was classified,
 the final status, and the deferred tangents that become future work — but there is **no
 refuse-without-report gate**; guidance offers the artifact, it does not wall the exit. Then
@@ -249,21 +249,21 @@ never destroy** — and git is never touched.
 
 Every method maps to a skill you fire, the mechanical verb it shells (if any), and the
 artifact it reads or writes. The skills are all `disable-model-invocation`, so *you* fire
-every move and `/pb-status` always names the next one.
+every move and `/plumbbob:status` always names the next one.
 
 | Technique | Skill | CLI verb | Artifact / state |
 |-----------|-------|----------|------------------|
-| Frame and plan the goal | `/pb-plan` | `plumbbob start` | `intent.md`, `STATE=DESIGN` |
-| Sharpen the next step | `/pb-step` | — (edits markdown) | `intent.md` `## Steps` |
-| Stress-test or repair the plan | `/pb-refine` | — (edits markdown) | `intent.md` |
-| Build a step | `/pb-build` | `plumbbob build` | `SEAM`, `STEP`, `STATE=BUILD` |
-| Verify and checkpoint | `/pb-verify` | `plumbbob check`, `plumbbob checkpoint` | `checkpoints` |
-| Orient | `/pb-status` | `plumbbob status` | reads everything |
-| Capture an idea | `/pb-park` | `plumbbob park` | `build-log.md` Park list |
-| Triage parked ideas | `/pb-harvest` | — (edits markdown) | `build-log.md` Harvest |
-| Experiment on a fork | `/pb-spike` | `plumbbob spike` | worktrees, `STATE=SPIKE` |
-| Undo a step | `/pb-revert` | `plumbbob revert` | `git reset`, `checkpoints` |
-| Close out the goal | `/pb-wrap` | `plumbbob wrap` | `.plumbbob/archive/` |
+| Frame and plan the goal | `/plumbbob:plan` | `plumbbob start` | `intent.md`, `STATE=DESIGN` |
+| Sharpen the next step | `/plumbbob:step` | — (edits markdown) | `intent.md` `## Steps` |
+| Stress-test or repair the plan | `/plumbbob:refine` | — (edits markdown) | `intent.md` |
+| Build a step | `/plumbbob:build` | `plumbbob build` | `SEAM`, `STEP`, `STATE=BUILD` |
+| Verify and checkpoint | `/plumbbob:verify` | `plumbbob check`, `plumbbob checkpoint` | `checkpoints` |
+| Orient | `/plumbbob:status` | `plumbbob status` | reads everything |
+| Capture an idea | `/plumbbob:park` | `plumbbob park` | `build-log.md` Park list |
+| Triage parked ideas | `/plumbbob:harvest` | — (edits markdown) | `build-log.md` Harvest |
+| Experiment on a fork | `/plumbbob:spike` | `plumbbob spike` | worktrees, `STATE=SPIKE` |
+| Undo a step | `/plumbbob:revert` | `plumbbob revert` | `git reset`, `checkpoints` |
+| Close out the goal | `/plumbbob:wrap` | `plumbbob wrap` | `.plumbbob/archive/` |
 
 ---
 

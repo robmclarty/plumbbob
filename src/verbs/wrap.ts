@@ -1,6 +1,6 @@
 // `plumbbob wrap` (D9) — the v2 close-out, replacing the v1 four-verb
 // finish ceremony. It archives intent + build-log + report
-// (the `/pb-wrap` skill writes the report by default) under .plumbbob/archive/,
+// (the `/plumbbob:wrap` skill writes the report by default) under .plumbbob/archive/,
 // clears the active files, and deletes the control state (STATE last). Unlike v1
 // `finish` there is NO refuse-without-report gate — guidance offers the artifact, it
 // does not wall the exit. Archive-then-clear, never destroy (C4); git untouched (C5).
@@ -23,7 +23,7 @@ export function wrap(cwd: string): number {
   } else {
     process.stderr.write(
       'plumbbob: note — no report.md found; archiving intent + build-log without one ' +
-        '(/pb-wrap normally writes the report first). No gate (D9).\n',
+        '(/plumbbob:wrap normally writes the report first). No gate (D9).\n',
     )
   }
 
@@ -40,7 +40,7 @@ export function wrap(cwd: string): number {
 
   process.stdout.write(
     `plumbbob: wrap — archived to ${relative(root, archived)}. Sidecar cleared. ` +
-      'Run `/pb-plan` (or `plumbbob start "<title>"`) to frame the next goal.\n',
+      'Run `/plumbbob:plan` (or `plumbbob start "<title>"`) to frame the next goal.\n',
   )
   return 0
 }

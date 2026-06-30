@@ -1,10 +1,10 @@
 // `plumbbob doctor` — diagnose the global plugin link end to end. Read-only: it
 // inspects, it never writes. After `plumbbob init`, plumbbob lives as a symlink at
 // ~/.claude/skills/plumbbob pointing at the installed package; Claude Code loads it
-// in place as a plugin (skills `/pb-*`, the post-edit hook from hooks.json).
+// in place as a plugin (skills `/plumbbob:*`, the post-edit hook from hooks.json).
 // doctor verifies the link resolves to a package carrying the manifest, the skills,
 // and the hook — and names the fix for anything missing. The failure class it
-// exists for is SILENT (a `/pb-status` that opens an empty dashboard because the
+// exists for is SILENT (a `/plumbbob:status` that opens an empty dashboard because the
 // plugin never linked). Functional, node builtins only (C1/C2).
 
 import { existsSync, lstatSync, readdirSync, readlinkSync } from 'node:fs'
@@ -51,7 +51,7 @@ function buildChecks(link: string, pkg: string, shipped: ReadonlyArray<string>):
       ? { ok: true, label: 'plugin manifest present (.claude-plugin/plugin.json)' }
       : { ok: false, label: 'plugin manifest missing — the link does not point at a plumbbob package', fix: 're-link: plumbbob init' },
     installed.length >= shipped.length && shipped.length > 0
-      ? { ok: true, label: `skills present (${installed.length}) — load as /pb-*` }
+      ? { ok: true, label: `skills present (${installed.length}) — load as /plumbbob:*` }
       : { ok: false, label: `skills incomplete (${installed.length}/${shipped.length})`, fix: 're-link: plumbbob init' },
     existsSync(join(pkg, 'hooks', 'hooks.json'))
       ? { ok: true, label: 'post-edit hook present (hooks/hooks.json, auto-registers)' }

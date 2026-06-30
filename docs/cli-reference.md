@@ -1,6 +1,6 @@
 # CLI reference
 
-The `plumbbob` CLI is the mechanical layer the `/pb-*` skills shell out to — in
+The `plumbbob` CLI is the mechanical layer the `/plumbbob:*` skills shell out to — in
 normal use you **never type it by hand**. This page documents the full surface anyway, for
 power users, for driving Plumbbob from another harness, and for understanding what each
 skill actually runs.
@@ -111,7 +111,7 @@ plumbbob park "<text>"
 
 Appends `<text>` as a raw line under `## Park list` in `build-log.md` and prints
 `parked: <text>` (**D7**). This is the dumb capture path — composing the tidy tagged line
-is the `/pb-park` skill's job. Refuses (exit 1) with no session, empty text, or no
+is the `/plumbbob:park` skill's job. Refuses (exit 1) with no session, empty text, or no
 `## Park list` section.
 
 ### spike
@@ -148,7 +148,7 @@ plumbbob init [--uninstall]
 ```
 
 The whole install: symlinks the package into `~/.claude/skills/plumbbob`, where Claude Code
-loads it as an in-place plugin (skills as `/pb-*`, the post-edit hook auto-registered
+loads it as an in-place plugin (skills as `/plumbbob:*`, the post-edit hook auto-registered
 from `hooks/hooks.json`). Idempotent, global-only, and it **never writes `settings.json`**.
 `--uninstall` drops the link. Refuses (exit 1) if the path exists and is not a plumbbob
 link. Restart Claude Code (or `/reload-plugins`) to activate.
@@ -161,7 +161,7 @@ plumbbob doctor
 
 Read-only diagnostic: verifies the link resolves to a package carrying the manifest, the
 skills, and the hook, and prints the exact fix for anything missing. Exits 0 when all
-checks pass, 1 otherwise. Run it first if a `/pb-*` skill opens an empty dashboard.
+checks pass, 1 otherwise. Run it first if a `/plumbbob:*` skill opens an empty dashboard.
 
 ## The `.plumbbob/config` file
 

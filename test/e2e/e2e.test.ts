@@ -1,6 +1,6 @@
 // End-to-end dogfood drive: a full Plumbbob v2 session in a fixture repo,
 // start → build → checkpoint → park → wrap → archive populated. The report is
-// written here as the /pb-wrap skill would; the CLI path under test is everything
+// written here as the /plumbbob:wrap skill would; the CLI path under test is everything
 // around it. Stub check per D14.
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
@@ -49,7 +49,7 @@ describe('e2e: a full Plumbbob v2 session end to end', () => {
     expect(runCli(dir, ['park', 'a deferred idea for later']).status).toBe(0)
     expect(readSidecar(dir, 'build-log.md')).toContain('a deferred idea for later')
 
-    // close out: write the report (as /pb-wrap would), then wrap → archive + clear.
+    // close out: write the report (as /plumbbob:wrap would), then wrap → archive + clear.
     writeSidecar(dir, 'report.md', '# Report — E2E demo\n\n## What shipped\n\nThe widget.\n')
     expect(runCli(dir, ['wrap']).status).toBe(0)
 

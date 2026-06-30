@@ -1,10 +1,8 @@
 // `plumbbob init [--uninstall]` — link plumbbob into Claude Code as an in-place
 // skills-directory plugin. This is the whole install: it symlinks the installed
 // package into ~/.claude/skills/plumbbob, where Claude Code discovers it as
-// `plumbbob@skills-dir`. Each skill surfaces as a bare `/<skill>` command (not
-// `/plumbbob:<skill>`), so the names ship `pb-`-prefixed (`/pb-*`) to avoid
-// colliding with built-in and other-plugin commands; the post-edit hook
-// auto-registers from hooks/hooks.json. Global-only by design:
+// `plumbbob@skills-dir` — the skills load namespaced (`/plumbbob:*`) and the
+// post-edit hook auto-registers from hooks/hooks.json. Global-only by design:
 // plumbbob is a personal tool (like firecrawl/gh), and install scope is NOT
 // session scope — sessions stay per-project via `plumbbob start`. Idempotent +
 // reversible (`--uninstall` drops the link); it NEVER writes settings.json.
@@ -75,7 +73,7 @@ export function init(args: ReadonlyArray<string>): number {
   symlinkSync(target, link)
   process.stdout.write(
     `plumbbob: linked ${link} → ${target}.\n` +
-      'plumbbob: Claude Code loads it as a plugin — skills as `/pb-*`, the post-edit hook auto-registered from hooks.json. Restart Claude Code (or /reload-plugins) to activate.\n' +
+      'plumbbob: Claude Code loads it as a plugin — skills as `/plumbbob:*`, the post-edit hook auto-registered from hooks.json. Restart Claude Code (or /reload-plugins) to activate.\n' +
       'plumbbob: nothing else under ~ is touched and settings.json is left alone. Sessions are per-project — run `plumbbob start "<goal>"` in any repo, then `plumbbob doctor` to verify.\n',
   )
   return 0

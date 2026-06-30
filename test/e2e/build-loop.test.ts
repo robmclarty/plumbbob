@@ -101,7 +101,7 @@ describe('plumbbob revert', () => {
   it("preserves plumbbob's own installed skills across the reset, but reverts other files", () => {
     const dir = makeFixtureRepo()
     write(dir, 'src/thing.ts', 'export const thing = 0\n')
-    write(dir, '.claude/skills/pb-revert/SKILL.md', 'name: pb-revert\noriginal\n') // a plumbbob driver
+    write(dir, '.claude/skills/revert/SKILL.md', 'name: revert\noriginal\n') // a plumbbob driver
     write(dir, '.claude/skills/mine/SKILL.md', 'name: mine\noriginal\n') // a user-authored skill
     git(dir, ['add', '-A'])
     git(dir, ['commit', '-q', '-m', 'add thing + installed skills'])
@@ -111,12 +111,12 @@ describe('plumbbob revert', () => {
     runCli(dir, ['build', '1'])
 
     write(dir, 'src/thing.ts', 'export const thing = 999\n') // in-seam work
-    write(dir, '.claude/skills/pb-revert/SKILL.md', 'name: pb-revert\nupgraded\n') // e.g. a `pnpm up plumbbob` re-setup
+    write(dir, '.claude/skills/revert/SKILL.md', 'name: revert\nupgraded\n') // e.g. a `pnpm up plumbbob` re-setup
     write(dir, '.claude/skills/mine/SKILL.md', 'name: mine\nedited\n') // out-of-seam, NOT plumbbob's
 
     expect(runCli(dir, ['revert']).status).toBe(0)
     expect(read(dir, 'src/thing.ts')).toBe('export const thing = 0\n') // step work discarded
-    expect(read(dir, '.claude/skills/pb-revert/SKILL.md')).toBe('name: pb-revert\nupgraded\n') // plumbbob's own file kept
+    expect(read(dir, '.claude/skills/revert/SKILL.md')).toBe('name: revert\nupgraded\n') // plumbbob's own file kept
     expect(read(dir, '.claude/skills/mine/SKILL.md')).toBe('name: mine\noriginal\n') // user's file follows the reset
   })
 

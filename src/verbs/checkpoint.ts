@@ -4,7 +4,7 @@
 // It gates on a green check, then commits any pending work (or records the existing
 // HEAD when the tree is already clean — the human's commit skill may have committed
 // first), records the SHA, flips the intent checkbox to `[x]`, clears any STEP/SEAM,
-// and returns to DESIGN. The diff's author is irrelevant: `/pb-build`, your hands,
+// and returns to DESIGN. The diff's author is irrelevant: `/plumbbob:build`, your hands,
 // a vibe session, or another harness all checkpoint the same way.
 
 import { appendFileSync, readFileSync, rmSync, writeFileSync } from 'node:fs'

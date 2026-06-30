@@ -1,5 +1,5 @@
 ---
-name: pb-status
+name: status
 description: Show the orientation dashboard — where you are, what's done, what's parked, and the next move. A thin trigger for `plumbbob status`.
 disable-model-invocation: true
 model: haiku
@@ -19,4 +19,4 @@ skill carries **no Edit and no Write tool**: the CLI is the source of truth, so
 ## What it does
 
 1. Surface the injected `status` output — the dashboard and its suggested next move.
-2. If it reads `NO ACTIVE SESSION`, tell the human to `/pb-plan` to frame a goal.
+2. If it reads `NO ACTIVE SESSION`, tell the human to `/plumbbob:plan` to frame a goal.

@@ -41,7 +41,7 @@ describe('plumbbob checkpoint — executor-agnostic (D3)', () => {
   it('checkpoints the inferred next-undone step with no BUILD state or STEP file', () => {
     const dir = makeFixtureRepo()
     startWithSteps(dir, '1. [ ] first — **done when:** ok\n2. [ ] second — **done when:** ok')
-    writeFileSync(join(dir, 'hand.txt'), 'a change made by hand, no /pb-build\n')
+    writeFileSync(join(dir, 'hand.txt'), 'a change made by hand, no /plumbbob:build\n')
     const res = runCli(dir, ['checkpoint'])
     expect(res.status).toBe(0)
     expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
