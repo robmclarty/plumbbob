@@ -25,7 +25,7 @@ export type Orientation = {
   readonly openQuestions: number
   readonly next: string
   // The next undone step's detail, so `status` shows what's about to be built and
-  // the human can review (and `/plumbbob:step`-revise) before `/plumbbob:build`.
+  // the human can review (and `/plumbbob:pb-step`-revise) before `/plumbbob:pb-build`.
   readonly nextDoneWhen: string | null
   readonly nextSeam: ReadonlyArray<string>
 }
@@ -116,7 +116,7 @@ export function parseOpenQuestions(intent: string): number {
 }
 
 // Open parked items: `- [ ]` lines under `## Park list` (the `park` verb's format).
-// A harvested item is flipped to `- [x]` by `/plumbbob:harvest` and no longer counts; the
+// A harvested item is flipped to `- [x]` by `/plumbbob:pb-harvest` and no longer counts; the
 // `(none yet)` placeholder and the blockquote instructions never match.
 export function parseParked(buildLog: string): number {
   return sectionLines(buildLog, '## Park list').filter((l) => /^-\s+\[ \]\s+\S/.test(l.trim())).length
@@ -140,30 +140,30 @@ function nextMove(state: string, steps: ReadonlyArray<Step>, inFlight: number | 
     case 'SPIKE':
       return 'close the spike — `plumbbob spike done`'
     case 'FINISH':
-      return 'wrap up — `/plumbbob:wrap`'
+      return 'wrap up — `/plumbbob:pb-wrap`'
     case 'REVIEW':
-      return 'read the diff cold against intent, then `/plumbbob:verify`'
+      return 'read the diff cold against intent, then `/plumbbob:pb-verify`'
     case 'BUILD': {
       const n = inFlight ?? steps.find((s) => !s.done)?.n
       return n === undefined
-        ? 'finish the step in flight — `/plumbbob:verify`'
-        : `finish step ${n} — \`/plumbbob:verify\` (or keep editing, then \`/plumbbob:verify\`)`
+        ? 'finish the step in flight — `/plumbbob:pb-verify`'
+        : `finish step ${n} — \`/plumbbob:pb-verify\` (or keep editing, then \`/plumbbob:pb-verify\`)`
     }
     default: {
       // DESIGN (and any unknown state): you are at the boundary.
       const nextUndone = steps.find((s) => !s.done)
       if (nextUndone === undefined) {
         if (steps.length === 0) {
-          return 'plan the first step — `/plumbbob:step`'
+          return 'plan the first step — `/plumbbob:pb-step`'
         }
         // Batch-default: the steps were planned up front, so finishing them usually
-        // means "wrap up" — but `/plumbbob:step` can still add an increment if reality grew.
-        const harvest = parked > 0 ? `harvest ${parked} parked idea${parked === 1 ? '' : 's'} — \`/plumbbob:harvest\`; then ` : ''
-        return `${harvest}wrap up — \`/plumbbob:wrap\` (or \`/plumbbob:step\` to add another increment)`
+        // means "wrap up" — but `/plumbbob:pb-step` can still add an increment if reality grew.
+        const harvest = parked > 0 ? `harvest ${parked} parked idea${parked === 1 ? '' : 's'} — \`/plumbbob:pb-harvest\`; then ` : ''
+        return `${harvest}wrap up — \`/plumbbob:pb-wrap\` (or \`/plumbbob:pb-step\` to add another increment)`
       }
       return nextUndone.planned
-        ? `build step ${nextUndone.n} — \`/plumbbob:build\` (or \`/plumbbob:step\` to revise it first)`
-        : `plan step ${nextUndone.n} — \`/plumbbob:step\``
+        ? `build step ${nextUndone.n} — \`/plumbbob:pb-build\` (or \`/plumbbob:pb-step\` to revise it first)`
+        : `plan step ${nextUndone.n} — \`/plumbbob:pb-step\``
     }
   }
 }
@@ -196,7 +196,7 @@ export function formatOrientation(o: Orientation): string {
     if (s !== nextUndone) {
       return head
     }
-    // Surface the next step's detail so the human can review it (and `/plumbbob:step`-
+    // Surface the next step's detail so the human can review it (and `/plumbbob:pb-step`-
     // revise) before building. Only what's present — a rough step shows neither.
     const detail: string[] = []
     if (o.nextDoneWhen !== null) {

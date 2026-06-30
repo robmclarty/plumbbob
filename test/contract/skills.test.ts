@@ -34,12 +34,12 @@ function parseSkill(dir: string): { data: Record<string, string>; body: string }
   return { data, body: lines.slice(end + 1).join('\n') }
 }
 
-const ALL = ['refine', 'park', 'harvest'] as const
+const ALL = ['pb-refine', 'pb-park', 'pb-harvest'] as const
 
 const MODEL_PINS: Record<string, string> = {
-  'refine': 'opus',
-  'park': 'haiku',
-  'harvest': 'opus',
+  'pb-refine': 'opus',
+  'pb-park': 'haiku',
+  'pb-harvest': 'opus',
 }
 
 describe('every skill (the three reinforcing layers)', () => {
@@ -81,9 +81,9 @@ describe('every skill (the three reinforcing layers)', () => {
 // revert and spike. build is the v2 engine (own contract); the superseded
 // start/review/done/wrap/finish drivers were removed in step 8.
 const DRIVER_VERB: Record<string, string> = {
-  'status': 'status',
-  'revert': 'revert',
-  'spike': 'spike',
+  'pb-status': 'status',
+  'pb-revert': 'revert',
+  'pb-spike': 'spike',
 }
 
 describe('driver skills — the human fires the transition from the chat', () => {
@@ -125,10 +125,10 @@ describe('driver skills — the human fires the transition from the chat', () =>
 })
 
 describe('wrap — the close-out: report by default, archive, clear (D9)', () => {
-  const { data, body } = parseSkill('wrap')
+  const { data, body } = parseSkill('pb-wrap')
 
   it('names itself, disables model invocation, is opus', () => {
-    expect(data.name).toBe('wrap')
+    expect(data.name).toBe('pb-wrap')
     expect(data['disable-model-invocation']).toBe('true')
     expect(data.model).toBe('opus')
   })
@@ -160,10 +160,10 @@ describe('wrap — the close-out: report by default, archive, clear (D9)', () =>
 })
 
 describe('plan — the whole-goal move: scaffold + frame, no code', () => {
-  const { data, body } = parseSkill('plan')
+  const { data, body } = parseSkill('pb-plan')
 
   it('names itself, disables model invocation, is opus', () => {
-    expect(data.name).toBe('plan')
+    expect(data.name).toBe('pb-plan')
     expect(data['disable-model-invocation']).toBe('true')
     expect(data.model).toBe('opus')
   })
@@ -192,8 +192,8 @@ describe('plan — the whole-goal move: scaffold + frame, no code', () => {
     expect(body).toMatch(/inline|free-form|expand/i)
   })
 
-  it('offers /plumbbob:refine to stress-test the frame', () => {
-    expect(body).toMatch(/\/plumbbob:refine/)
+  it('offers /plumbbob:pb-refine to stress-test the frame', () => {
+    expect(body).toMatch(/\/plumbbob:pb-refine/)
   })
 
   it('keeps the human the converger — holes are Open questions, not guesses', () => {
@@ -203,10 +203,10 @@ describe('plan — the whole-goal move: scaffold + frame, no code', () => {
 })
 
 describe('step — the single-increment move: one verifiable step', () => {
-  const { data, body } = parseSkill('step')
+  const { data, body } = parseSkill('pb-step')
 
   it('names itself, disables model invocation, is opus', () => {
-    expect(data.name).toBe('step')
+    expect(data.name).toBe('pb-step')
     expect(data['disable-model-invocation']).toBe('true')
     expect(data.model).toBe('opus')
   })
@@ -238,10 +238,10 @@ describe('step — the single-increment move: one verifiable step', () => {
 })
 
 describe('build — the v2 optional engine: implement the planned step, then verify', () => {
-  const { data, body } = parseSkill('build')
+  const { data, body } = parseSkill('pb-build')
 
   it('names itself after its directory and disables model invocation', () => {
-    expect(data.name).toBe('build')
+    expect(data.name).toBe('pb-build')
     expect(data['disable-model-invocation']).toBe('true')
   })
 
@@ -267,7 +267,7 @@ describe('build — the v2 optional engine: implement the planned step, then ver
 
   it('builds the decided step and parks new ideas instead of sprawling', () => {
     expect(body).toMatch(/done.?when/i)
-    expect(body).toMatch(/\/plumbbob:park/)
+    expect(body).toMatch(/\/plumbbob:pb-park/)
   })
 
   it('defaults to ending at the verify pause for the human to approve', () => {
@@ -282,10 +282,10 @@ describe('build — the v2 optional engine: implement the planned step, then ver
 })
 
 describe('verify — the v2 tick: check, self-review, validate, PAUSE, checkpoint', () => {
-  const { data, body } = parseSkill('verify')
+  const { data, body } = parseSkill('pb-verify')
 
   it('names itself after its directory and disables model invocation', () => {
-    expect(data.name).toBe('verify')
+    expect(data.name).toBe('pb-verify')
     expect(data['disable-model-invocation']).toBe('true')
   })
 
@@ -320,7 +320,7 @@ describe('verify — the v2 tick: check, self-review, validate, PAUSE, checkpoin
 })
 
 describe('refine — keep intent.md true: attack for holes + repair drift', () => {
-  const { data, body } = parseSkill('refine')
+  const { data, body } = parseSkill('pb-refine')
 
   it('is opus with Read + Edit and no Write', () => {
     expect(data.model).toBe('opus')
@@ -347,7 +347,7 @@ describe('refine — keep intent.md true: attack for holes + repair drift', () =
 })
 
 describe('park — capture via the dumb CLI, never an edit', () => {
-  const { data, body } = parseSkill('park')
+  const { data, body } = parseSkill('pb-park')
 
   it('is pinned to haiku (transcription, not judgment)', () => {
     expect(data.model).toBe('haiku')
@@ -370,7 +370,7 @@ describe('park — capture via the dumb CLI, never an edit', () => {
 })
 
 describe('harvest — propose, the human confirms', () => {
-  const { data, body } = parseSkill('harvest')
+  const { data, body } = parseSkill('pb-harvest')
 
   it('is opus and DESIGN-only', () => {
     expect(data.model).toBe('opus')
@@ -391,6 +391,6 @@ describe('harvest — propose, the human confirms', () => {
   })
 })
 
-// plumbbob-report and plumbbob-docs were folded into /plumbbob:wrap (D9) and removed.
-// plumbbob-interrogate was renamed /plumbbob:refine and broadened (attack + repair);
+// plumbbob-report and plumbbob-docs were folded into /plumbbob:pb-wrap (D9) and removed.
+// plumbbob-interrogate was renamed /plumbbob:pb-refine and broadened (attack + repair);
 // report/docs do not survive.

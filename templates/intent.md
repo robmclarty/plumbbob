@@ -33,24 +33,24 @@ open. If the implementor (you-later, or the LLM) has to guess, the doc failed.
 ## Decisions
 
 *(One line each. Settled, not re-litigated in the chat. Grows as you resolve the
-holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
+holes `/plumbbob:pb-refine` surfaces, and as blockers fold in during BUILD.)*
 
 - D1: <decision> — *because* <the one reason that mattered>
 
 ## Constraints
 
-*(Hard rules the build must honor. `/plumbbob:verify` and `/plumbbob:refine` read against these.)*
+*(Hard rules the build must honor. `/plumbbob:pb-verify` and `/plumbbob:pb-refine` read against these.)*
 
 - C1: <e.g. functional/procedural only; no new dependencies>
 
 ## Steps
 
-*(The build plan. `/plumbbob:plan` authors the **whole list up front** — each step a small,
+*(The build plan. `/plumbbob:pb-plan` authors the **whole list up front** — each step a small,
 verifiable increment with its own **done-when** and **seam** (the paths it will touch,
-which `/plumbbob:build` records in `.plumbbob/SEAM` for orientation — awareness, not a lock
-in v2). Then drive `/plumbbob:build` until done. Later steps may be fuzzier than the first;
-sharpen the next one just-in-time with `/plumbbob:step` (empty input auto-syncs it), and use
-`/plumbbob:refine` to repair the whole plan when a blocker rewrites it.)*
+which `/plumbbob:pb-build` records in `.plumbbob/SEAM` for orientation — awareness, not a lock
+in v2). Then drive `/plumbbob:pb-build` until done. Later steps may be fuzzier than the first;
+sharpen the next one just-in-time with `/plumbbob:pb-step` (empty input auto-syncs it), and use
+`/plumbbob:pb-refine` to repair the whole plan when a blocker rewrites it.)*
 
 1. [ ] <step> — **done when:** <criterion, ideally a test or check result>
    - seam: `<file>`, `<file>`

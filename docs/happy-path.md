@@ -1,35 +1,35 @@
 # The happy path — one complete cycle
 
 This is the workflow end to end: from planning a fresh goal **all at once**, through
-driving the automated `/plumbbob:build` step after step until done, to wrapping up,
+driving the automated `/plumbbob:pb-build` step after step until done, to wrapping up,
 archiving, and starting the next task. It's a worked example, not reference docs —
 every command, dashboard, and CLI line below is what you actually see.
 
-The loop in one breath: **`/plumbbob:plan` once to author the whole plan, then fire
-`/plumbbob:build` per step — each builds the next step and stops at the verify pause for
-your approval — parking strays and harvesting them at the boundary, then `/plumbbob:wrap`
+The loop in one breath: **`/plumbbob:pb-plan` once to author the whole plan, then fire
+`/plumbbob:pb-build` per step — each builds the next step and stops at the verify pause for
+your approval — parking strays and harvesting them at the boundary, then `/plumbbob:pb-wrap`
 once.** You never type the `plumbbob` CLI by hand; the skills shell out to it and
-`/plumbbob:status` always names your next move.
+`/plumbbob:pb-status` always names your next move.
 
 > The example goal: **rate-limit the login endpoint** — a small feature touching a
 > couple of modules, big enough to show the full cycle.
 
 ---
 
-## 0. Plan the whole goal — `/plumbbob:plan`
+## 0. Plan the whole goal — `/plumbbob:pb-plan`
 
-The deciding happens *before* any code, on a surface outside the chat. `/plumbbob:plan`
+The deciding happens *before* any code, on a surface outside the chat. `/plumbbob:pb-plan`
 scaffolds the session and authors the **complete** `intent.md` — Frame, Decisions,
-Constraints, **and all the Steps** — so the build afterward is just `/plumbbob:build` until
+Constraints, **and all the Steps** — so the build afterward is just `/plumbbob:pb-build` until
 done. It writes intent only, never source.
 
 It takes whatever seed you give it and disambiguates the mode itself (no quotes
 required):
 
 ```text
-/plumbbob:plan                                  # interview: Q&A draws the plan out of your head
-/plumbbob:plan docs/rate-limit-spec.md          # absorb an out-of-band spec into intent.md
-/plumbbob:plan rate-limit POST /login, in-memory bucket, 5/min/IP, 429   # expand inline intent
+/plumbbob:pb-plan                                  # interview: Q&A draws the plan out of your head
+/plumbbob:pb-plan docs/rate-limit-spec.md          # absorb an out-of-band spec into intent.md
+/plumbbob:pb-plan rate-limit POST /login, in-memory bucket, 5/min/IP, 429   # expand inline intent
 ```
 
 Under the hood it runs `plumbbob start`, which records a baseline and drops you in
@@ -72,14 +72,14 @@ seam**:
 
 > **Plan as far as you can see clearly.** Later steps may be fuzzier than the first —
 > that's fine; they get sharpened just-in-time when you reach them. Before building,
-> you can hand the frame to `/plumbbob:refine` to attack it for holes (or repair the plan
+> you can hand the frame to `/plumbbob:pb-refine` to attack it for holes (or repair the plan
 > later if a build contradicts it).
 
 ---
 
-## 1. Review the plan — `/plumbbob:status`
+## 1. Review the plan — `/plumbbob:pb-status`
 
-Before building, glance at what's next. `/plumbbob:status` is read-only; it prints the
+Before building, glance at what's next. `/plumbbob:pb-status` is read-only; it prints the
 dashboard, surfaces the **next step's done-when and seam** so you can sanity-check it,
 and names the single next move:
 
@@ -96,37 +96,37 @@ Plumbbob — Rate-limit the login endpoint   [DESIGN]
 last checkpoint  none yet
 parked 0 · open questions 0
 
-next → build step 1 — `/plumbbob:build` (or `/plumbbob:step` to revise it first)
+next → build step 1 — `/plumbbob:pb-build` (or `/plumbbob:pb-step` to revise it first)
 ```
 
 ---
 
-## 2. Sharpen the next step (optional) — `/plumbbob:step`
+## 2. Sharpen the next step (optional) — `/plumbbob:pb-step`
 
-The steps were planned up front, so `/plumbbob:step` is now a *revision* tool, not the way
+The steps were planned up front, so `/plumbbob:pb-step` is now a *revision* tool, not the way
 steps are born. If the next step still looks right, skip it. If something changed,
 fire it:
 
-- **`/plumbbob:step` (no input)** auto-sharpens the next step — it re-reads what you've
+- **`/plumbbob:pb-step` (no input)** auto-sharpens the next step — it re-reads what you've
   already built, the Decisions, and the Constraints, and syncs the step's done-when and
   seam to reality. The zero-effort "keep my next step honest" move.
-- **`/plumbbob:step <what changed>`** makes a directed revision — tighten the done-when,
+- **`/plumbbob:pb-step <what changed>`** makes a directed revision — tighten the done-when,
   adjust the seam, or split the step.
 
 You approve the change; it's written back into `## Steps`. Most steps need nothing —
-straight to `/plumbbob:build`.
+straight to `/plumbbob:pb-build`.
 
 ---
 
-## 3. Build each step — `/plumbbob:build`, fired until done
+## 3. Build each step — `/plumbbob:pb-build`, fired until done
 
-`/plumbbob:build` is the bundled executor. Called bare, **it picks the next undone step
-automatically** (pass a number only to jump, e.g. `/plumbbob:build 3`). It reads the step's
+`/plumbbob:pb-build` is the bundled executor. Called bare, **it picks the next undone step
+automatically** (pass a number only to jump, e.g. `/plumbbob:pb-build 3`). It reads the step's
 done-when, seam, Decisions, and Constraints, implements *only that step*, then carries
 straight through the verify tick to the pause.
 
 ```text
-/plumbbob:build
+/plumbbob:pb-build
 ```
 
 It enters `BUILD`, recording the seam for orientation (not a lock in v2):
@@ -163,8 +163,8 @@ flipping the step to `[x]`, and returning to `DESIGN`, where it **stops**:
 plumbbob: step 1 checkpointed — a1b2c3d4e. STATE=DESIGN.
 ```
 
-Now **fire `/plumbbob:build` again** for step 2, and again for step 3. Each run builds the
-next step and pulls up to its own pause — *re-firing `/plumbbob:build` is itself the clock
+Now **fire `/plumbbob:pb-build` again** for step 2, and again for step 3. Each run builds the
+next step and pulls up to its own pause — *re-firing `/plumbbob:pb-build` is itself the clock
 tick*. The dashboard tracks the march:
 
 ```text
@@ -175,22 +175,22 @@ tick*. The dashboard tracks the march:
     3  Make the limit configurable via env
 ```
 
-> **Unattended option — `/plumbbob:build --auto`.** When you'd rather not approve each step
-> by hand, `/plumbbob:build --auto` lets the agent self-review and approve in your place,
+> **Unattended option — `/plumbbob:pb-build --auto`.** When you'd rather not approve each step
+> by hand, `/plumbbob:pb-build --auto` lets the agent self-review and approve in your place,
 > then chain straight to the next step until the plan is done. It **halts** the moment
 > the check goes red or the self-review finds a mismatch, and hands back to you. The
 > default — no flag — always waits at the pause.
 
 ---
 
-## 4. Park strays mid-build — `/plumbbob:park`
+## 4. Park strays mid-build — `/plumbbob:pb-park`
 
 The moment an "ooh, what if" arrives mid-step, you **capture it, you don't chase it**.
-`/plumbbob:park` composes one tidy tagged line and shelves it — then you go right back to the
+`/plumbbob:pb-park` composes one tidy tagged line and shelves it — then you go right back to the
 step. Say while building step 2 you think *"should password reset be throttled too?"*:
 
 ```text
-/plumbbob:park
+/plumbbob:pb-park
 ```
 
 ```text
@@ -206,23 +206,23 @@ parked 1 · open questions 0
 
 ---
 
-## 5. Harvest at the boundary — `/plumbbob:harvest`
+## 5. Harvest at the boundary — `/plumbbob:pb-harvest`
 
 Once the last step is checkpointed, the dashboard surfaces the parked item — triage
 happens **at a boundary**, back in `DESIGN`, never mid-step:
 
 ```text
-next → harvest 1 parked idea — `/plumbbob:harvest`; then wrap up — `/plumbbob:wrap`
-       (or `/plumbbob:step` to add another increment)
+next → harvest 1 parked idea — `/plumbbob:pb-harvest`; then wrap up — `/plumbbob:pb-wrap`
+       (or `/plumbbob:pb-step` to add another increment)
 ```
 
-`/plumbbob:harvest` walks the list and proposes one class per item — **blocker** (plan was
+`/plumbbob:pb-harvest` walks the list and proposes one class per item — **blocker** (plan was
 wrong; fold into intent and handle now), **tangent** (different, not clearly better —
 the default; defer or kill), or **pivot signal** (the whole approach is wrong; stop and
 replan). You call each one:
 
 ```text
-/plumbbob:harvest
+/plumbbob:pb-harvest
 ```
 
 ```text
@@ -240,14 +240,14 @@ and stops counting — it'll resurface in the wrap report as deferred work.
 
 ---
 
-## 6. Wrap up — `/plumbbob:wrap` (report + archive + clear)
+## 6. Wrap up — `/plumbbob:pb-wrap` (report + archive + clear)
 
-When the goal is done — every step checkpointed, the park list harvested — `/plumbbob:wrap`
+When the goal is done — every step checkpointed, the park list harvested — `/plumbbob:pb-wrap`
 closes the build. It writes the report **by default** (there's no refuse-without-report
 gate), then archives and clears.
 
 ```text
-/plumbbob:wrap
+/plumbbob:pb-wrap
 ```
 
 First it writes `.plumbbob/report.md` — what shipped, the decisions and why, what was
@@ -279,7 +279,7 @@ never destroy**. Git is untouched:
 
 ```text
 plumbbob: wrap — archived to .plumbbob/archive/2026-06-25-rate-limit-the-login-endpoint.
-Sidecar cleared. Run `/plumbbob:plan` (or plumbbob start "<title>") to frame the next goal.
+Sidecar cleared. Run `/plumbbob:pb-plan` (or plumbbob start "<title>") to frame the next goal.
 ```
 
 The record now lives at:
@@ -296,13 +296,13 @@ them at PR time.
 
 ---
 
-## 7. Start the next task — `/plumbbob:plan`
+## 7. Start the next task — `/plumbbob:pb-plan`
 
-The sidecar is clear and there's no active session. `/plumbbob:status` now reads
+The sidecar is clear and there's no active session. `/plumbbob:pb-status` now reads
 `NO ACTIVE SESSION`, and the cycle begins again with a fresh plan:
 
 ```text
-/plumbbob:plan
+/plumbbob:pb-plan
 ```
 
 ```text
@@ -313,20 +313,20 @@ And you're back at step 0 with a clean head and the previous goal safely on the 
 
 ---
 
-## The pluggable executor — `/plumbbob:build` is optional
+## The pluggable executor — `/plumbbob:pb-build` is optional
 
-The happy path above used `/plumbbob:build` to write every step, but it's just *one* way to
+The happy path above used `/plumbbob:pb-build` to write every step, but it's just *one* way to
 turn a planned step into code. Implement the step by hand, in a vibe session, or with
-another harness, and run `/plumbbob:verify` instead — it runs the same tick
+another harness, and run `/plumbbob:pb-verify` instead — it runs the same tick
 (`check → self-review → validate → PAUSE → checkpoint`) and **reads the diff, not the
 author**. Plumbbob is the harness-agnostic spine; how the diff appears is a slot you
 fill however you like.
 
 ```text
-/plumbbob:build      # automated: pick the next step, implement, verify to the pause
+/plumbbob:pb-build      # automated: pick the next step, implement, verify to the pause
    — or —
 (your edits)   # hand-built / vibed / another harness
-/plumbbob:verify     # same pause, same checkpoint — author-blind
+/plumbbob:pb-verify     # same pause, same checkpoint — author-blind
 ```
 
 ---
@@ -334,18 +334,18 @@ fill however you like.
 ## The cycle, at a glance
 
 ```text
-/plumbbob:plan                      author the whole plan (incl. all steps)   (once)
+/plumbbob:pb-plan                      author the whole plan (incl. all steps)   (once)
   └ per step:
-       /plumbbob:status             review the next step (done-when + seam)
-       /plumbbob:step   (optional)  sharpen/revise it first if needed
-       /plumbbob:build  (or DIY)    implement it → verify → PAUSE → checkpoint
-       /plumbbob:park               capture strays mid-build
-       /plumbbob:harvest            triage them at the boundary
-  /plumbbob:wrap                    report + archive + clear                  (once)
-  /plumbbob:plan                    plan the next goal                        (cycle repeats)
+       /plumbbob:pb-status             review the next step (done-when + seam)
+       /plumbbob:pb-step   (optional)  sharpen/revise it first if needed
+       /plumbbob:pb-build  (or DIY)    implement it → verify → PAUSE → checkpoint
+       /plumbbob:pb-park               capture strays mid-build
+       /plumbbob:pb-harvest            triage them at the boundary
+  /plumbbob:pb-wrap                    report + archive + clear                  (once)
+  /plumbbob:pb-plan                    plan the next goal                        (cycle repeats)
 ```
 
-The human owns convergence; `/plumbbob:build` does the labor and **stops at the pause**;
+The human owns convergence; `/plumbbob:pb-build` does the labor and **stops at the pause**;
 you're the clock that advances it — one keystroke per step. See the root
 [`README`](../README.md) for the philosophy and install,
 [`techniques.md`](techniques.md) for each method on its own, and

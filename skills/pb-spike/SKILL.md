@@ -1,5 +1,5 @@
 ---
-name: spike
+name: pb-spike
 description: Human-triggered driver for `plumbbob spike` — open a throwaway worktree experiment for a genuine fork, or tear it down with `spike done`.
 disable-model-invocation: true
 model: haiku
@@ -14,6 +14,6 @@ This is a **driver skill** — a chat-side trigger for the mechanical `plumbbob 
 
 ## What it does
 
-1. Read the spike target from the way you were invoked: a slug to open one (e.g. `/plumbbob:spike redis-cache`), or the literal `done` to tear the current spike down (`/plumbbob:spike done`). If neither is present, ask which and run nothing.
+1. Read the spike target from the way you were invoked: a slug to open one (e.g. `/plumbbob:pb-spike redis-cache`), or the literal `done` to tear the current spike down (`/plumbbob:pb-spike done`). If neither is present, ask which and run nothing.
 2. Run `plumbbob spike "<slug>"` or `plumbbob spike done` via Bash.
 3. Report the verb's output verbatim — the worktree it created or removed, or any refusal.

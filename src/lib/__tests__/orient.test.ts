@@ -78,38 +78,38 @@ describe('orient parsers', () => {
 })
 
 describe('orient next-move inference (D15)', () => {
-  it('DESIGN with the next step planned → /plumbbob:build that step, with a revise hint', () => {
+  it('DESIGN with the next step planned → /plumbbob:pb-build that step, with a revise hint', () => {
     const next = orient({ ...base, state: 'DESIGN' }).next
-    expect(next).toContain('/plumbbob:build')
+    expect(next).toContain('/plumbbob:pb-build')
     expect(next).toContain('step 2')
-    expect(next).toContain('/plumbbob:step') // ...or revise it first
+    expect(next).toContain('/plumbbob:pb-step') // ...or revise it first
   })
 
-  it('DESIGN with the next step unplanned → /plumbbob:step', () => {
+  it('DESIGN with the next step unplanned → /plumbbob:pb-step', () => {
     const intent = '# T\n\n## Steps\n\n1. [x] done one — **done**\n2. [ ] just a rough idea\n'
-    expect(orient({ ...base, intent, state: 'DESIGN' }).next).toContain('/plumbbob:step')
+    expect(orient({ ...base, intent, state: 'DESIGN' }).next).toContain('/plumbbob:pb-step')
   })
 
-  it('BUILD → finish the in-flight step with /plumbbob:verify', () => {
-    expect(orient({ ...base, state: 'BUILD', inFlight: 2 }).next).toContain('/plumbbob:verify')
+  it('BUILD → finish the in-flight step with /plumbbob:pb-verify', () => {
+    expect(orient({ ...base, state: 'BUILD', inFlight: 2 }).next).toContain('/plumbbob:pb-verify')
   })
 
   it('all planned steps done, nothing parked → offers plan-next AND wrap-up', () => {
     const intent = '# T\n\n## Steps\n\n1. [x] a — **done**\n'
     const buildLog = '## Park list\n- (none yet)\n## Harvest\n'
     const next = orient({ ...base, intent, buildLog, state: 'DESIGN' }).next
-    expect(next).toContain('/plumbbob:step') // just-in-time: plan the next step
-    expect(next).toContain('/plumbbob:wrap') // ...or wrap up if truly done
+    expect(next).toContain('/plumbbob:pb-step') // just-in-time: plan the next step
+    expect(next).toContain('/plumbbob:pb-wrap') // ...or wrap up if truly done
   })
 
-  it('all planned steps done with parked items → leads with /plumbbob:harvest', () => {
+  it('all planned steps done with parked items → leads with /plumbbob:pb-harvest', () => {
     const intent = '# T\n\n## Steps\n\n1. [x] a — **done**\n2. [x] b — **done**\n'
-    expect(orient({ ...base, intent, state: 'DESIGN' }).next).toContain('/plumbbob:harvest')
+    expect(orient({ ...base, intent, state: 'DESIGN' }).next).toContain('/plumbbob:pb-harvest')
   })
 
   it('SPIKE and FINISH point at their close-out', () => {
     expect(orient({ ...base, state: 'SPIKE' }).next).toContain('spike done')
-    expect(orient({ ...base, state: 'FINISH' }).next).toContain('/plumbbob:wrap')
+    expect(orient({ ...base, state: 'FINISH' }).next).toContain('/plumbbob:pb-wrap')
   })
 })
 

@@ -32,7 +32,7 @@ describe('plumbbob init — global, in-place plugin link', () => {
     const l = link(home)
     expect(lstatSync(l).isSymbolicLink()).toBe(true)
     expect(existsSync(join(l, '.claude-plugin', 'plugin.json'))).toBe(true) // resolves to a real plumbbob package
-    expect(existsSync(join(l, 'skills', 'plan', 'SKILL.md'))).toBe(true) // bare-verb skills reachable through the link
+    expect(existsSync(join(l, 'skills', 'pb-plan', 'SKILL.md'))).toBe(true) // pb- skills reachable through the link
     expect(existsSync(join(l, 'hooks', 'hooks.json'))).toBe(true) // the auto-registering hook
   })
 

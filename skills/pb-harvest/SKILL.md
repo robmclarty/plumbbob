@@ -1,5 +1,5 @@
 ---
-name: harvest
+name: pb-harvest
 description: Triage the park list at a step boundary — propose one class (blocker/tangent/pivot) per parked item, write only after the human confirms each, record under ## Harvest, and fold a confirmed blocker into intent.
 disable-model-invocation: true
 model: opus
@@ -10,7 +10,7 @@ allowed-tools: Read, Edit, Bash(plumbbob status:*)
 
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npm i -g plumbbob && plumbbob init"`
 
-`/plumbbob:harvest` is the complement of `/plumbbob:park` (D7): you parked ideas as seeds during a
+`/plumbbob:pb-harvest` is the complement of `/plumbbob:pb-park` (D7): you parked ideas as seeds during a
 build; now, at a boundary, you harvest them — decide what each one is.
 
 ## When to run it — wrong-state refusal
@@ -19,7 +19,7 @@ Harvest at a **step boundary**: after a step is checkpointed and you are back in
 DESIGN, not mid-step. Read the state injected above:
 
 - `NO ACTIVE SESSION` — **refuse**; tell the human to `plumbbob start "<title>"` first.
-- `BUILD` — a step is in flight; **refuse** and suggest finishing it with `/plumbbob:verify`
+- `BUILD` — a step is in flight; **refuse** and suggest finishing it with `/plumbbob:pb-verify`
   before harvesting. Chasing parked items mid-step is the disease parking prevents.
 - `DESIGN` (and other settled states) — go ahead.
 
@@ -40,7 +40,7 @@ one line of reasoning, then **wait for the human to confirm or override**. Write
 **only after** per-item confirmation:
 
 - Record each confirmed class in `build-log.md`'s `## Harvest` section.
-- **Flip the harvested item** from `- [ ]` to `- [x]` in the Park list, so `/plumbbob:status`
+- **Flip the harvested item** from `- [ ]` to `- [x]` in the Park list, so `/plumbbob:pb-status`
   stops counting it as open.
 - A confirmed **blocker** also folds its decision into `intent.md`.
 - Never reclassify or resolve an item the human hasn't confirmed, and default every

@@ -1,5 +1,5 @@
 ---
-name: revert
+name: pb-revert
 description: Human-triggered driver for `plumbbob revert` — git reset --hard to a checkpoint SHA (discarding the half-done step) and return to DESIGN.
 disable-model-invocation: true
 model: haiku
@@ -14,6 +14,6 @@ This is a **driver skill** — a chat-side trigger for the mechanical `plumbbob 
 
 ## What it does
 
-1. Read an optional target step from the way you were invoked (e.g. `/plumbbob:revert --to 2` → step `2`). With no target, revert goes to the last done-checkpoint.
+1. Read an optional target step from the way you were invoked (e.g. `/plumbbob:pb-revert --to 2` → step `2`). With no target, revert goes to the last done-checkpoint.
 2. Run `plumbbob revert` (or `plumbbob revert --to <n>`) via Bash. This is a `git reset --hard` — it discards the current in-progress step. Run it exactly as the human asked; do not add or drop the `--to` on your own.
 3. Report the verb's output verbatim — which checkpoint it reset to, or any refusal.

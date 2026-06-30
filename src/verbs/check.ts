@@ -1,5 +1,5 @@
 // `plumbbob check` — run the heavy gate (D16/D24) and report, with NO state
-// change. The read-only half of the verify tick: `/plumbbob:verify` runs this before the
+// change. The read-only half of the verify tick: `/plumbbob:pb-verify` runs this before the
 // pause so the human approves on a known-green check. Exits with the check's own
 // code (0 = green).
 
