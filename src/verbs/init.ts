@@ -1,8 +1,10 @@
 // `plumbbob init [--uninstall]` — link plumbbob into Claude Code as an in-place
 // skills-directory plugin. This is the whole install: it symlinks the installed
 // package into ~/.claude/skills/plumbbob, where Claude Code discovers it as
-// `plumbbob@skills-dir` — the skills load namespaced (`/pb-*`) and the
-// post-edit hook auto-registers from hooks/hooks.json. Global-only by design:
+// `plumbbob@skills-dir`. Each skill surfaces as a bare `/<skill>` command (not
+// `/plumbbob:<skill>`), so the names ship `pb-`-prefixed (`/pb-*`) to avoid
+// colliding with built-in and other-plugin commands; the post-edit hook
+// auto-registers from hooks/hooks.json. Global-only by design:
 // plumbbob is a personal tool (like firecrawl/gh), and install scope is NOT
 // session scope — sessions stay per-project via `plumbbob start`. Idempotent +
 // reversible (`--uninstall` drops the link); it NEVER writes settings.json.

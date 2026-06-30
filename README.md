@@ -199,8 +199,11 @@ plumbbob init          # link it into Claude Code; --uninstall to undo
 ```
 
 `init` symlinks the package into `~/.claude/skills/plumbbob`, where Claude Code
-loads it as a plugin: the skills appear namespaced as `/pb-*` and the
-post-edit hook auto-registers from `hooks.json`. Nothing else under `~` is touched
+loads it as a plugin. Claude Code surfaces each skill as a bare `/<skill>` chat
+command — *not* `/plumbbob:<skill>` — so the skills ship pre-prefixed and appear as
+`/pb-plan`, `/pb-status`, and the rest, keeping them clear of built-in and
+other-plugin commands. The post-edit hook auto-registers from `hooks.json`.
+Nothing else under `~` is touched
 and `settings.json` is left alone — restart Claude Code (or `/reload-plugins`) to
 activate. Because it's a symlink, a later `npm i -g plumbbob@latest` stays live with
 no re-link.
