@@ -279,7 +279,7 @@ never destroy**. Git is untouched:
 
 ```text
 plumbbob: wrap — archived to .plumbbob/archive/2026-06-25-rate-limit-the-login-endpoint.
-Sidecar cleared. Run `/plumbbob:pb-plan` (or plumbbob start "<title>") to frame the next goal.
+Sidecar cleared. Run `/plumbbob:pb-plan` (or `plumbbob start "<title>"`) to frame the next goal.
 ```
 
 The record now lives at:

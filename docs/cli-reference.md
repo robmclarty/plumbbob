@@ -26,7 +26,7 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 | `park` | `park <text>` | append a line to the park list |
 | `spike` | `spike <slug> [opt…]` \| `spike done` | throwaway worktree experiment |
 | `wrap` | `wrap` | archive intent + log + report, clear the sidecar |
-| `init` | `init [--uninstall]` | link plumbbob into Claude Code as a plugin |
+| `init` | `init [--uninstall] [--force]` | link plumbbob into Claude Code as the skills-dir plugin |
 | `doctor` | `doctor` | diagnose the plugin link |
 | `help` | `help` \| `--help` \| `-h` | print the verb table |
 
@@ -141,17 +141,25 @@ session.
 
 ## Install verbs
 
+Plumbbob has **two co-equal install paths**: the self-contained marketplace plugin (which
+ships the skills *and* this CLI on PATH via `bin/`, so it needs no `init`) and the skills-dir
+link these verbs manage. See [Install](../README.md#install) for the choice; the two are
+mutually exclusive.
+
 ### init
 
 ```text
-plumbbob init [--uninstall]
+plumbbob init [--uninstall] [--force]
 ```
 
-The whole install: symlinks the package into `~/.claude/skills/plumbbob`, where Claude Code
-loads it as an in-place plugin (skills as `/plumbbob:*`, the post-edit hook auto-registered
-from `hooks/hooks.json`). Idempotent, global-only, and it **never writes `settings.json`**.
-`--uninstall` drops the link. Refuses (exit 1) if the path exists and is not a plumbbob
-link. Restart Claude Code (or `/reload-plugins`) to activate.
+Links plumbbob into Claude Code as the **skills-dir plugin**: it symlinks the package into
+`~/.claude/skills/plumbbob`, where Claude Code loads it in place (skills as `/plumbbob:*`,
+the post-edit hook auto-registered from `hooks/hooks.json`). Idempotent, global-only, and it
+**never writes `settings.json`**. `--uninstall` drops the link. Refuses (exit 1) if the path
+exists and is not a plumbbob link, **or** if a marketplace plumbbob plugin is already
+installed — the two register the same plugin name and collide over the `/plumbbob:*`
+namespace (skills can drop to flat names like `/pb-status`); `--force` overrides that guard
+(the dev-install path uses it). Restart Claude Code (or `/reload-plugins`) to activate.
 
 ### doctor
 
@@ -159,9 +167,12 @@ link. Restart Claude Code (or `/reload-plugins`) to activate.
 plumbbob doctor
 ```
 
-Read-only diagnostic: verifies the link resolves to a package carrying the manifest, the
-skills, and the hook, and prints the exact fix for anything missing. Exits 0 when all
-checks pass, 1 otherwise. Run it first if a `/plumbbob:*` skill opens an empty dashboard.
+Read-only diagnostic across both install paths. For the skills-dir link it verifies the link
+resolves to a package carrying the manifest, the skills, and the hook; it also recognizes a
+**marketplace-only** install as a valid, passing state, and flags the double-install
+**collision** when both are present. It prints the exact fix for anything missing. Exits 0
+when all checks pass, 1 otherwise. Run it first if a `/plumbbob:*` skill opens an empty
+dashboard.
 
 ## The `.plumbbob/config` file
 

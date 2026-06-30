@@ -134,7 +134,8 @@ Calibration is the skill. When in doubt, smaller.
 
 - A `plumbbob` CLI (TypeScript, run natively by Node ≥ 22.18, zero runtime
   dependencies) — the dumb mechanical verbs the skills shell out to. You never type
-  it by hand.
+  it by hand. The marketplace plugin carries it on PATH via `bin/` shims; `npm i -g`
+  installs it globally.
 - The eight `/plumbbob:*` skills plus the optional power moves, each
   `disable-model-invocation` so *you* fire every move.
 - One session-gated Claude Code hook — `post-edit.sh`, a non-blocking light-feedback
@@ -177,7 +178,8 @@ archives plain markdown under `.plumbbob/archive/` and never touches git.
   STATE          # one word: DESIGN | BUILD | SPIKE — orientation, not a gate
   SEAM           # the in-flight step's declared paths (awareness, not a lock)
   STEP           # the in-flight step number
-  checkpoints    # "step N <git-sha>", one per verified step
+  config         # key=value; check=<heavy-check command> (defaults to pnpm run check)
+  checkpoints    # "baseline <sha>" then "step N <sha>", one per verified step
   intent.md      # canonical intent
   build-log.md   # live ledger
   archive/
@@ -189,24 +191,34 @@ archives plain markdown under `.plumbbob/archive/` and never touches git.
 
 ## Install
 
-Plumbbob is a personal tool — install it once, globally, like `gh` or your
-dotfiles. The npm package ships the CLI plus the skills and hook; `plumbbob init`
-links them into Claude Code as an in-place plugin.
+Plumbbob installs **once, globally** — like `gh` or your dotfiles. There are two co-equal,
+mutually-exclusive ways to do it (both register a Claude Code plugin named `plumbbob`;
+running both collides over the `/plumbbob:*` namespace).
+
+**npm global + `init`** — the npm package ships the CLI, the skills, and the hook; `plumbbob
+init` links them into Claude Code as an in-place plugin:
 
 ```sh
 npm i -g plumbbob      # the CLI (also a `pb` shorthand)
 plumbbob init          # link it into Claude Code; --uninstall to undo
 ```
 
-`init` symlinks the package into `~/.claude/skills/plumbbob`, where Claude Code
-loads it as a plugin. Claude Code namespaces a plugin's skills as
-`/plumbbob:<skill>`, so they appear as `/plumbbob:pb-plan`, `/plumbbob:pb-status`, and the
-rest — already clear of built-in and other-plugin commands, no prefix needed. The
-post-edit hook auto-registers from `hooks.json`.
-Nothing else under `~` is touched
-and `settings.json` is left alone — restart Claude Code (or `/reload-plugins`) to
-activate. Because it's a symlink, a later `npm i -g plumbbob@latest` stays live with
-no re-link.
+`init` symlinks the package into `~/.claude/skills/plumbbob`, where Claude Code loads it as a
+plugin; the post-edit hook auto-registers from `hooks.json`. Because it's a symlink, a later
+`npm i -g plumbbob@latest` stays live with no re-link.
+
+**The marketplace plugin** — self-contained: it ships the skills *and* the `plumbbob`/`pb`
+CLI on PATH (via its `bin/` shims), so it needs neither `npm i -g` nor `plumbbob init`:
+
+```text
+/plugin install plumbbob@<marketplace>
+```
+
+Either way, Claude Code namespaces the skills as `/plumbbob:<skill>`, so they appear as
+`/plumbbob:pb-plan`, `/plumbbob:pb-status`, and the rest. Nothing else under `~` is touched
+and `settings.json` is left alone — restart Claude Code (or `/reload-plugins`) to activate.
+If a marketplace plumbbob is already installed, `plumbbob init` refuses rather than create
+the collision (`--force` overrides), and `plumbbob doctor` flags a double-install.
 
 **Sessions are per-project.** Install scope is not session scope: you install the
 tool once, but each goal lives in its own repo — `plumbbob start "<goal>"` writes a
@@ -222,10 +234,11 @@ look. Claude Code is the first, first-class target.
 plumbbob doctor
 ```
 
-`doctor` checks that the link resolves to the plugin manifest, the skills, and the
-hook, and prints the exact fix for anything broken. Run it first if a `/plumbbob:*`
-skill ever opens with an empty dashboard; [`docs/troubleshooting.md`](docs/troubleshooting.md)
-covers the rest.
+`doctor` works for either install path: it confirms a marketplace plugin, or checks that the
+skills-dir link resolves to the plugin manifest, the skills, and the hook — flagging a
+double-install collision — and prints the exact fix for anything broken. Run it first if a
+`/plumbbob:*` skill ever opens with an empty dashboard;
+[`docs/troubleshooting.md`](docs/troubleshooting.md) covers the rest.
 
 ## Development
 

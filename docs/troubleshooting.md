@@ -7,17 +7,20 @@ you the fix itself. **Start here:**
 plumbbob doctor
 ```
 
-`doctor` is read-only. It checks that the plugin link resolves to a package carrying the
-manifest, the skills, and the hook, and prints the exact `→ fix` for anything broken. Run
-it first whenever a `/plumbbob:*` skill misbehaves.
+`doctor` is read-only and understands **both install paths**. It checks that the skills-dir
+link resolves to a package carrying the manifest, the skills, and the hook; it also accepts a
+**marketplace-only** install as a passing state, flags a double-install **collision** when
+both are present, and prints the exact `→ fix` for anything broken. Run it first whenever a
+`/plumbbob:*` skill misbehaves.
 
 ## Install and linking
 
 ### A `/plumbbob:*` skill opens with an empty dashboard
 
-**Cause.** The plugin never linked, so Claude Code loaded no skills — the most common
-silent failure. **Fix.** Run `plumbbob doctor`; if it reports "not linked," run
-`plumbbob init`, then restart Claude Code (or `/reload-plugins`).
+**Cause.** No plugin linked, so Claude Code loaded no skills — the most common silent
+failure. **Fix.** Run `plumbbob doctor`; if it reports "not linked," either install the
+marketplace plugin (`/plugin install plumbbob@<marketplace>`) or run `plumbbob init`, then
+restart Claude Code (or `/reload-plugins`).
 
 ### The skills do not appear at all after installing
 
@@ -28,8 +31,20 @@ but the plugin list is cached until a reload.
 ### A skill prints "plumbbob CLI not found"
 
 **Cause.** The skills shell a bare `plumbbob`, so the CLI must be on your `PATH`. **Fix.**
-`npm i -g plumbbob` (it also installs a `pb` shorthand), then `plumbbob init`. Confirm with
-`which plumbbob`.
+The **marketplace plugin** puts `plumbbob` (and `pb`) on PATH via its `bin/` shims whenever
+the plugin is enabled — confirm it is installed and enabled. For the **skills-dir/global**
+install, `npm i -g plumbbob` (it also installs a `pb` shorthand), then `plumbbob init`.
+Confirm with `which plumbbob`.
+
+### `plumbbob init` refuses: "a marketplace plumbbob plugin is already installed"
+
+**Cause.** A marketplace plumbbob plugin already provides the skills and the CLI, so linking
+the skills-dir plugin too would register a *second* plugin named `plumbbob`; the two fight
+over the `/plumbbob:*` namespace and skills can drop to flat names like `/pb-status`. **Fix.**
+Keep one. Stay on the marketplace plugin (it needs no `init`), or remove it
+(`/plugin uninstall plumbbob@<marketplace>`) and re-run `plumbbob init`. `--force` overrides
+the guard if you truly want both. `plumbbob doctor` reports the same collision when both are
+already present — apply its `→ fix`.
 
 ### `plumbbob init` says the path "already exists and is not a plumbbob link"
 

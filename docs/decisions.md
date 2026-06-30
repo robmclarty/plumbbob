@@ -23,7 +23,7 @@ the code.
 - **C2 — Node builtins only, zero runtime dependencies.** The CLI imports nothing outside
   `node:*`; it runs natively on Node ≥ 22.18 with no install step. Enforced by
   `rules/node-builtins-only.yml`. *Tagged in* `git.ts`, `sidecar.ts`, `archive.ts`,
-  `init.ts`, `doctor.ts`, `cli-core.ts`.
+  `plugins.ts`, `doctor.ts`, `cli-core.ts`.
 - **C4 — Archive-then-clear, never destroy.** Closing a session copies the active files
   into the archive *before* clearing them; nothing is deleted until it is safely recorded.
   *Tagged in* `wrap.ts`, `archive.ts`, and (for the sidecar's survival across a reset)
