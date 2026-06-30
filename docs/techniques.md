@@ -155,9 +155,10 @@ half-done step. It is careful about two things:
 Attention has momentum, and breaking focus to chase a new idea costs far more than the idea
 is worth in the moment. So mid-step ideas are **captured, not acted on.**
 
-- **Park** (`/pb-park`) composes one tidy, tagged line and appends it to the Park
-  list in `build-log.md` — then you go straight back to the step. Capture is the only thing
-  that happens; the idea is out of your head and the step in flight stays protected.
+- **Park** (`/pb-park <idea>`, or bare to use the idea you just raised) composes one tidy,
+  tagged line, shows it to you for a quick OK, then appends it to the Park list in
+  `build-log.md` — then you go straight back to the step. Capture is the only thing that
+  happens; the idea is out of your head and the step in flight stays protected.
 - **Harvest** (`/pb-harvest`) runs at a **step boundary** — back in DESIGN, never
   mid-step — and triages the list. Each item gets exactly one class:
 

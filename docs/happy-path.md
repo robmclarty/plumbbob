@@ -8,7 +8,8 @@ every command, dashboard, and CLI line below is what you actually see.
 The loop in one breath: **`/pb-plan` once to author the whole plan, then fire
 `/pb-build` per step — each builds the next step and stops at the verify pause for
 your approval — parking strays and harvesting them at the boundary, then `/pb-wrap`
-once.** You never type the `plumbbob` CLI by hand; the skills shell out to it and
+once.** In the loop you never type the `plumbbob` CLI by hand; the skills shell out to
+it (only install and setup — `plumbbob init`, `doctor`, `start` — are manual), and
 `/pb-status` always names your next move.
 
 > The example goal: **rate-limit the login endpoint** — a small feature touching a
@@ -186,12 +187,17 @@ tick*. The dashboard tracks the march:
 ## 4. Park strays mid-build — `/pb-park`
 
 The moment an "ooh, what if" arrives mid-step, you **capture it, you don't chase it**.
-`/pb-park` composes one tidy tagged line and shelves it — then you go right back to the
-step. Say while building step 2 you think *"should password reset be throttled too?"*:
+Say while building step 2 you think *"should password reset be throttled too?"* — hand it
+to `/pb-park`, inline or bare:
 
 ```text
-/pb-park
+/pb-park should /password-reset get the same throttle?   # pass the idea inline
+/pb-park                                                  # or fire it bare — it uses the idea you just raised
 ```
+
+`/pb-park` never writes the line blind: it **composes one tidy, tagged line and shows it to
+you for a quick OK** — confirm it as-is or tweak the wording — then captures it by shelling
+`plumbbob park` under the hood:
 
 ```text
 parked: tangent: should /password-reset get the same throttle?
