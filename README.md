@@ -81,7 +81,9 @@ every move, and `/pb-status` always names your next one.
 
 Three optional power moves survive for when you need them: `/pb-revert` (recover to
 a checkpoint), `/pb-spike` (throwaway worktree experiment), and `/pb-refine` (attack
-the frame for holes, or repair the plan when it drifts — usable at any point).
+the frame for holes, or repair the plan when it drifts — usable at any point). A
+twelfth skill, `/pb-doctor`, checks that your install is wired correctly (see
+[Install](#install)).
 
 ## The loop
 
@@ -133,10 +135,12 @@ Calibration is the skill. When in doubt, smaller.
 ## What ships
 
 - A `plumbbob` CLI (TypeScript, run natively by Node ≥ 22.18, zero runtime
-  dependencies) — the dumb mechanical verbs the skills shell out to. You never type
-  it by hand (beyond `plumbbob --help` and `plumbbob --version`). The marketplace
-  plugin carries it on PATH via `bin/` shims; `npm i -g` installs it globally.
-- The eight `/plumbbob:*` skills plus the optional power moves, each
+  dependencies) — the dumb mechanical verbs the skills shell out to. In the loop you
+  never type it by hand; only install and setup are manual (`plumbbob init`,
+  `plumbbob doctor`, `plumbbob start`), plus `plumbbob --help` / `--version`. The
+  marketplace plugin carries it on PATH via `bin/` shims; `npm i -g` installs it globally.
+- Twelve `/plumbbob:*` skills — the eight workflow moves, three power moves
+  (`/pb-revert`, `/pb-spike`, `/pb-refine`), and `/pb-doctor` — each
   `disable-model-invocation` so *you* fire every move.
 - One session-gated Claude Code hook — `post-edit.sh`, a non-blocking light-feedback
   pass that injects file-scoped lint into the model's context so it self-corrects in
