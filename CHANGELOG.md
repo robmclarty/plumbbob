@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.10] - 2026-06-30
+
+- **Added:** `plumbbob checkpoint` now records the build's history as it happens — it appends a
+  dated line to the build-log's `## Log` for every step it lands, naming the step (its title
+  lifted from `intent.md`) with the short SHA. Because both `/plumbbob:pb-build` and
+  `/plumbbob:pb-verify` end in a checkpoint, the ledger fills in step by step instead of being
+  reconstructed at wrap. The append is best-effort, so a missing or hand-edited build-log never
+  blocks a checkpoint; the recorded checkpoint SHA stays the source of truth.
+- **Changed:** `/plumbbob:pb-wrap` now reads the `## Log` as the spine of "what shipped" and adds
+  only the unique synthesis — the why behind the decisions, deferred tangents, and final status —
+  rather than re-narrating the timeline the checkpoints already wrote. The build-log template and
+  the `pb-build` / `pb-verify` skills were updated to match, and the section-append mechanic was
+  extracted into a shared helper that `park` now uses too.
+
 ## [0.4.9] - 2026-06-30
 
 - **Added:** a `pb-doctor` driver skill that runs `plumbbob doctor` from inside a Claude Code
