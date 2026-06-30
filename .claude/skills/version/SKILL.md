@@ -16,8 +16,9 @@ Given a version `MAJOR.MINOR.PATCH`:
 
 ## Files to update
 
-1. `package.json` — top-level `"version"` field
-2. `CHANGELOG.md` — new dated version section inserted above the latest entry
+1. `package.json` — top-level `"version"` field (the source of truth for the current version)
+2. `.claude-plugin/plugin.json` — top-level `"version"` field, force-written to the new version (its prior value may be stale; overwrite it regardless)
+3. `CHANGELOG.md` — new dated version section inserted above the latest entry
 
 ## Changelog format
 
@@ -44,9 +45,10 @@ fragments), wrapped to roughly the same width as the surrounding entries.
 3. Compute the new version according to the semver rules above.
 4. Tell the user: "Bumping version from X.Y.Z to A.B.C"
 5. Update `package.json` using the Edit tool.
-6. Get today's date with `date +%Y-%m-%d` for the new entry's heading.
-7. Find the last release commit with `git log --oneline --grep='chore: release' -1`, then run `git log --format='%s%n%n%b' <last-release-hash>..HEAD` to gather the changes since it. If no release commit exists, use all commits from the beginning of history. Use the commit subjects and bodies as context to write the categorized bullet list for the new entry.
-8. Read `CHANGELOG.md` and insert the new version section immediately before the first existing `## [` entry (i.e. after the Keep a Changelog / Semantic Versioning preamble) using the Edit tool:
+6. Update `.claude-plugin/plugin.json`'s `"version"` field to the new version A.B.C using the Edit tool. Do not read its current value to compute the bump — `package.json` is the sole source of truth; force-write A.B.C here. (This also self-heals any pre-existing skew, e.g. `plugin.json` lagging behind `package.json`.)
+7. Get today's date with `date +%Y-%m-%d` for the new entry's heading.
+8. Find the last release commit with `git log --oneline --grep='chore: release' -1`, then run `git log --format='%s%n%n%b' <last-release-hash>..HEAD` to gather the changes since it. If no release commit exists, use all commits from the beginning of history. Use the commit subjects and bodies as context to write the categorized bullet list for the new entry.
+9. Read `CHANGELOG.md` and insert the new version section immediately before the first existing `## [` entry (i.e. after the Keep a Changelog / Semantic Versioning preamble) using the Edit tool:
 
    ```markdown
    ## [A.B.C] - YYYY-MM-DD
@@ -56,5 +58,5 @@ fragments), wrapped to roughly the same width as the surrounding entries.
    - **Fixed:** ...
    ```
 
-9. Report the updated version.
-10. Stage the changed files and commit with the message: `chore: release A.B.C`
+10. Report the updated version.
+11. Stage the changed files (`package.json`, `.claude-plugin/plugin.json`, `CHANGELOG.md`) and commit with the message: `chore: release A.B.C`
