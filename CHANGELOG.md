@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.5] - 2026-06-29
+
+- **Added:** a self-contained marketplace plugin install. The plugin now ships `bin/plumbbob`
+  and `bin/pb` PATH shims (resolved relative to the plugin's install dir) alongside the skills,
+  so a marketplace install puts the `plumbbob`/`pb` CLI on PATH without `npm i -g` and needs no
+  `plumbbob init`. The `bin/` directory is included in the published package files.
+- **Added:** a collision guard between the skills-dir link (`plumbbob init`) and a marketplace
+  install. A new `marketplacePlumbbob()` helper reads Claude Code's `installed_plugins.json`;
+  `init` now refuses when a marketplace plumbbob is already installed (since both register a
+  plugin named `plumbbob` and would fight over the `/plumbbob:*` namespace, dropping skills to
+  flat names like `/status`), and `--force` overrides the guard.
+- **Changed:** `plumbbob doctor` recognizes a marketplace-only install as a valid, passing state
+  and flags the double-install collision when both a skills-dir link and a marketplace install
+  are present. `dev-install.sh` now runs `init --force` to link the live checkout past the guard.
+
 ## [0.4.4] - 2026-06-29
 
 - **Changed:** the eleven driver skills drop the `pb-` prefix introduced in 0.4.3 and go
