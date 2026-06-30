@@ -146,7 +146,7 @@ session.
 
 PlumbBob has **two co-equal install paths**: the self-contained marketplace plugin (which
 ships the skills *and* this CLI on PATH via `bin/`, so it needs no `init`) and the skills-dir
-link these verbs manage. See [Install](../README.md#install) for the choice; the two are
+link these verbs manage. See [`install.md`](install.md) for the choice; the two are
 mutually exclusive.
 
 ### init
@@ -177,6 +177,28 @@ resolves to a package carrying the manifest, the skills, and the hook; it also r
 when all checks pass, 1 otherwise. Run it first if a `/plumbbob:*` skill opens an empty
 dashboard. Also available in-session as `/pb-doctor` — the only way to reach it on a
 **marketplace** install, where the CLI is on PATH only inside a Claude Code session.
+
+## The `.plumbbob/` sidecar
+
+Every session lives in a sidecar of flat files the verbs read and write. It is
+git-excluded; its presence (specifically `STATE`) means a session is live.
+
+```text
+.plumbbob/
+  STATE          # session sentinel — its presence means a session is live
+  SEAM           # the in-flight step's declared paths (awareness, not a lock)
+  STEP           # the in-flight step number (its presence is the BUILD phase)
+  SPIKE          # marker — present while a spike fork is open
+  config         # key=value; check=<heavy-check command> (defaults to pnpm run check)
+  checkpoints    # "baseline <sha>" then "step N <sha>", one per verified step
+  intent.md      # canonical intent
+  build-log.md   # live ledger
+  archive/
+    <date>-<slug>/
+      intent.md
+      build-log.md
+      report.md
+```
 
 ## The `.plumbbob/config` file
 
