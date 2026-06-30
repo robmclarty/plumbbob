@@ -1,7 +1,7 @@
 {
   "name": "plumbbob",
   "displayName": "PlumbBob",
-  "version": "0.4.11",
+  "version": "0.4.12",
   "description": "Attention-first build process — driver skills + a CLI that keep you the decider; guidance, not enforcement.",
   "author": { "name": "Rob McLarty", "email": "hello@robmclarty.com", "url": "https://robmclarty.com" },
   "homepage": "https://github.com/robmclarty/plumbbob#readme",
