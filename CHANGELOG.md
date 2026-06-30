@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.14] - 2026-06-30
+
+- **Changed:** the marketplace install instructions now point at the real
+  [`agent-tools`](https://github.com/robmclarty/agent-tools) marketplace with the two-step
+  command (`/plugin marketplace add robmclarty/agent-tools` then `/plugin install
+  plumbbob@robmclarty`) and a link, replacing the vague `plumbbob@<marketplace>` placeholder
+  across the README, `install.md`, and `troubleshooting.md`. The `@robmclarty` suffix is the
+  marketplace's declared name rather than the repo name, which `install.md` now calls out.
+- **Changed:** the two install paths are described by who runs the install rather than as
+  different artifacts — the marketplace entry resolves to the published `plumbbob` npm
+  package that Claude Code installs for you, so the misleading "self-contained" framing is
+  gone from the README, `install.md`, and `cli-reference.md`.
+- **Changed:** the "v1 vs v2" framing is removed across the docs, code comments, and tests;
+  every reference now describes the current design directly instead of positioning it
+  against an earlier version no reader can see. The two user-facing CLI strings moved with
+  the docs that mirror them — the `build` banner now reads "not a lock" and the `wrap` help
+  summary reads "close-out" — with no behaviour change.
+
 ## [0.4.13] - 2026-06-30
 
 - **Changed:** the README is rewritten as a short table-of-contents and get-started doc — five sections
