@@ -192,8 +192,8 @@ describe('plan — the whole-goal move: scaffold + frame, no code', () => {
     expect(body).toMatch(/inline|free-form|expand/i)
   })
 
-  it('offers /plumbbob:pb-refine to stress-test the frame', () => {
-    expect(body).toMatch(/\/plumbbob:pb-refine/)
+  it('offers /pb-refine to stress-test the frame', () => {
+    expect(body).toMatch(/\/pb-refine/)
   })
 
   it('keeps the human the converger — holes are Open questions, not guesses', () => {
@@ -267,7 +267,7 @@ describe('build — the v2 optional engine: implement the planned step, then ver
 
   it('builds the decided step and parks new ideas instead of sprawling', () => {
     expect(body).toMatch(/done.?when/i)
-    expect(body).toMatch(/\/plumbbob:pb-park/)
+    expect(body).toMatch(/\/pb-park/)
   })
 
   it('defaults to ending at the verify pause for the human to approve', () => {
