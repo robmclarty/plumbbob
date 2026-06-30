@@ -1,6 +1,7 @@
 ---
 name: pb-spike
 description: Human-triggered driver for `plumbbob spike` — open a throwaway worktree experiment for a genuine fork, or tear it down with `spike done`.
+argument-hint: "<slug> | done"
 disable-model-invocation: true
 model: haiku
 allowed-tools: Bash(plumbbob status:*), Bash(plumbbob spike:*)

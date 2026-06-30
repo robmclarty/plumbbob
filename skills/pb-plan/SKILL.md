@@ -1,6 +1,7 @@
 ---
 name: pb-plan
 description: "Frame a fresh goal and author the whole plan — Frame, Decisions, Constraints, and all Steps — before any code. Three input modes: no arg interviews you; a file path absorbs a spec; any other text expands your inline intent."
+argument-hint: "[spec-path | intent]"
 disable-model-invocation: true
 model: opus
 allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob start:*)

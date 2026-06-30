@@ -1,6 +1,7 @@
 ---
 name: version
 description: Bump the project version (major, minor, or patch) and add a changelog entry. Use when preparing a release, bumping versions, or the user says "/version".
+argument-hint: "[major | minor | patch]"
 allowed-tools: Read Edit Bash(git:*), Bash(date:*)
 ---
 

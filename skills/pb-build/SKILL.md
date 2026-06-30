@@ -1,6 +1,7 @@
 ---
 name: pb-build
 description: The optional engine — read the next planned step from intent, implement it (its done-when, seam, Decisions, Constraints), then verify it through to the approval pause. Skip it to build by hand/vibed/another harness. `--auto` self-approves and chains to done.
+argument-hint: "[step-number] [--auto]"
 disable-model-invocation: true
 model: opus
 allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(git diff:*)

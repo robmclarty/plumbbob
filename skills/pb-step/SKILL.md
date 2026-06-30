@@ -1,6 +1,7 @@
 ---
 name: pb-step
 description: Revise the next increment just-in-time — sharpen the next undone step against what's now true, or (with input) re-cut, split, or add a step. Empty input runs an automatic sharpen. One at a time; the human approves.
+argument-hint: "[what-changed]"
 disable-model-invocation: true
 model: opus
 allowed-tools: Read, Edit, Bash(plumbbob status:*)

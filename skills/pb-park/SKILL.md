@@ -1,6 +1,7 @@
 ---
 name: pb-park
 description: Compose one tidy tagged park line, get the human's OK in-turn, then capture it by shelling `plumbbob park` — never by editing a file. The capture half of the park/harvest loop.
+argument-hint: "[idea]"
 disable-model-invocation: true
 model: haiku
 allowed-tools: Bash(plumbbob status:*), Bash(plumbbob park:*)
