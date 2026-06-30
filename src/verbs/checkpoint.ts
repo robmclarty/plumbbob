@@ -9,9 +9,10 @@
 
 import { appendFileSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { commit, findRepoRoot, headSha, isDirty, stageAll } from '../lib/git.ts'
-import { checkpointsPath, hasSession, intentPath, seamPath, stepPath, writeState } from '../lib/sidecar.ts'
+import { buildLogPath, checkpointsPath, hasSession, intentPath, seamPath, stepPath, writeState } from '../lib/sidecar.ts'
 import { runCheck } from '../lib/check.ts'
 import { markStepDone, parseSteps } from '../lib/orient.ts'
+import { appendToSection, checkpointLogLine } from '../lib/buildlog.ts'
 
 export function checkpoint(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
@@ -41,6 +42,7 @@ export function checkpoint(cwd: string, args: ReadonlyArray<string>): number {
 
   appendFileSync(checkpointsPath(root), `step ${step} ${sha}\n`)
   flipIntent(root, step)
+  logCheckpoint(root, step, sha)
   rmSync(seamPath(root), { force: true })
   rmSync(stepPath(root), { force: true })
   writeState(root, 'DESIGN')
@@ -72,6 +74,32 @@ function flipIntent(root: string, step: number): void {
     writeFileSync(intentPath(root), markStepDone(readFileSync(intentPath(root), 'utf8'), step))
   } catch {
     // best-effort bookkeeping; the checkpoint SHA is the source of truth.
+  }
+}
+
+// Append a dated line to the build-log's `## Log` so the build's history accrues at
+// each checkpoint instead of being reconstructed at wrap. The step's title is lifted
+// from intent.md when still present. Best-effort: a missing/odd build-log never blocks
+// a checkpoint — the `checkpoints` SHA is the source of truth.
+function logCheckpoint(root: string, step: number, sha: string): void {
+  try {
+    const path = buildLogPath(root)
+    const date = new Date().toISOString().slice(0, 10)
+    const line = checkpointLogLine(date, step, sha, titleForStep(root, step))
+    const updated = appendToSection(readFileSync(path, 'utf8'), 'Log', line)
+    if (updated !== null) {
+      writeFileSync(path, updated)
+    }
+  } catch {
+    // best-effort ledger; never fail a checkpoint over the build-log.
+  }
+}
+
+function titleForStep(root: string, step: number): string | null {
+  try {
+    return parseSteps(readFileSync(intentPath(root), 'utf8')).find((s) => s.n === step)?.title ?? null
+  } catch {
+    return null
   }
 }
 

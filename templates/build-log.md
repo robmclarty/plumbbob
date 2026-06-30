@@ -5,7 +5,8 @@ step boundaries. The antidote to "my plan got lost in the noise."
   Steps     : where you are. One step in flight at a time.
   Park list : where ideas go so you do not chase them. CAPTURE, never act inline.
   Harvest   : the boundary ritual that keeps you on one branch.
-  Log       : the audit trail. Feeds the /plumbbob:pb-wrap report, then gets archived.
+  Log       : the build's history. `plumbbob checkpoint` appends a line per step as it
+              lands; feeds the /plumbbob:pb-wrap report, then gets archived.
 -->
 
 # Build log — {{TITLE}}
@@ -47,8 +48,9 @@ Harvest results this boundary:
 
 ## Log
 
-*(Append-only. One decision or event per line, dated. What you point at to say "I
-did that — the LLM helped, but those were my calls." `/plumbbob:pb-wrap` reads this for the
-report; `plumbbob wrap` archives it under `.plumbbob/archive/`.)*
-
-- <date> — <decision / event / what shipped this step>
+*(The build's history, oldest first. `plumbbob checkpoint` appends a dated line here
+every time a step lands — via `/plumbbob:pb-build` or `/plumbbob:pb-verify` — so this
+fills in as you go, not at the end. Add your own decision/event lines too: this is what
+you point at to say "I did that — the LLM helped, but those were my calls."
+`/plumbbob:pb-wrap` reads this for the report; `plumbbob wrap` archives it under
+`.plumbbob/archive/`.)*

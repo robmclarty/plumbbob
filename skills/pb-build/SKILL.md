@@ -40,8 +40,9 @@ at the pause for your approval. **Re-firing `/plumbbob:pb-build` is itself the c
    does: `plumbbob check` → self-review the diff against the done-when, the
    Decisions, and the Constraints (a single structured read, D16) → validate → **PAUSE
    for the human's approval** → only on approval, checkpoint with
-   `plumbbob checkpoint`. Do **not** bump the version or changelog — that is
-   the human's `/version` call.
+   `plumbbob checkpoint` (which also appends this step to the build-log's `## Log` — the
+   history writes itself at each checkpoint, so you don't hand-log it). Do **not** bump
+   the version or changelog — that is the human's `/version` call.
 
 ## `--auto` — let the agent be the clock (opt-in)
 

@@ -5,6 +5,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { hasSession, buildLogPath } from '../lib/sidecar.ts'
+import { appendToSection } from '../lib/buildlog.ts'
 
 export function park(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
@@ -23,7 +24,7 @@ export function park(cwd: string, args: ReadonlyArray<string>): number {
     return 1
   }
   const path = buildLogPath(root)
-  const updated = insertParkItem(readFileSync(path, 'utf8'), text)
+  const updated = appendToSection(readFileSync(path, 'utf8'), 'Park list', `- [ ] ${text}`)
   if (updated === null) {
     process.stderr.write('plumbbob: could not find a "## Park list" section in build-log.md.\n')
     return 1
@@ -31,26 +32,4 @@ export function park(cwd: string, args: ReadonlyArray<string>): number {
   writeFileSync(path, updated)
   process.stdout.write(`parked: ${text}\n`)
   return 0
-}
-
-// Append after the last non-blank line of the Park list section (i.e. just before
-// the next `## ` heading). Returns null if there is no Park list to append to.
-function insertParkItem(content: string, text: string): string | null {
-  const lines = content.split('\n')
-  const headingIdx = lines.findIndex((line) => line.trim() === '## Park list')
-  if (headingIdx === -1) {
-    return null
-  }
-  let nextSection = lines.findIndex((line, i) => i > headingIdx && line.startsWith('## '))
-  if (nextSection === -1) {
-    nextSection = lines.length
-  }
-  let insertAt = headingIdx + 1
-  for (let i = headingIdx + 1; i < nextSection; i++) {
-    if ((lines[i] ?? '').trim() !== '') {
-      insertAt = i + 1
-    }
-  }
-  lines.splice(insertAt, 0, `- [ ] ${text}`)
-  return lines.join('\n')
 }

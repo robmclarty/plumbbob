@@ -31,9 +31,9 @@ this skill verifies it the same way: **it reads the diff, not the author** (D3).
    the human is the clock. Never checkpoint without it.
 5. **Checkpoint** *(only after approval)*. Commit the work — the human's
    commit-with-TIL skill for a rich message, or let `checkpoint` make the WIP commit
-   — then run `plumbbob checkpoint` to record the SHA, flip the step to done,
-   and return to DESIGN. Do **not** bump the version or touch the changelog — that is
-   the human's `/version` call.
+   — then run `plumbbob checkpoint` to record the SHA, flip the step to done, append the
+   step to the build-log's `## Log`, and return to DESIGN. Do **not** bump the version or
+   touch the changelog — that is the human's `/version` call.
 
 ## The hard contracts
 

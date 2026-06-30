@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { checkpoint } from '../checkpoint.ts'
 import { start } from '../start.ts'
-import { checkpointsPath, configPath, intentPath, readState } from '../../lib/sidecar.ts'
+import { buildLogPath, checkpointsPath, configPath, intentPath, readState } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo } from '../../../test/helpers/capture-io.ts'
 
@@ -37,6 +37,13 @@ describe('checkpoint', () => {
     expect(readFileSync(checkpointsPath(dir), 'utf8')).toMatch(/step 1 [0-9a-f]{40}/)
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x]')
     expect(stdout).toContain('step 1 checkpointed')
+  })
+
+  it("appends a dated history line to the build-log's Log, naming the step", () => {
+    const dir = startedGreen()
+    captureIo(() => checkpoint(dir, ['1']))
+    const log = readFileSync(buildLogPath(dir), 'utf8')
+    expect(log).toMatch(/- \d{4}-\d{2}-\d{2} — step 1 checkpointed · [0-9a-f]{9} — First/)
   })
 
   it('refuses on a red check', () => {
