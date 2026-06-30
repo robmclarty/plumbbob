@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.11] - 2026-06-30
+
+- **Changed:** `.plumbbob/STATE` is now a pure session sentinel — its presence means a session is
+  live, and its content no longer carries meaning. The dashboard phase is derived from what is on
+  disk rather than stored: an in-flight `STEP` file reads as `BUILD`, the new `SPIKE` marker reads
+  as `SPIKE`, and otherwise you are at the `DESIGN` boundary. The displayed `[DESIGN|BUILD|SPIKE]`
+  labels are unchanged; they are simply computed now instead of being written and read back.
+- **Changed:** the CLI's transition messages dropped the `STATE=…` annotations in favour of plainer
+  wording — `start` reports the baseline, `build` says "building step N", and `checkpoint` / `revert`
+  say "back at the boundary". `spike` now refuses while a step is in flight (rather than refusing on
+  a non-`DESIGN` state) and gates its open/close on the `SPIKE` marker.
+- **Removed:** the stored five-value state machine, along with the `readState` / `writeState`
+  helpers, the six `writeState` transition calls across the verbs, and the dead `REVIEW` / `FINISH`
+  branches in the next-move inference. `orient` now takes the in-flight step and a spiking flag
+  instead of a state string.
+
 ## [0.4.10] - 2026-06-30
 
 - **Added:** `plumbbob checkpoint` now records the build's history as it happens — it appends a
