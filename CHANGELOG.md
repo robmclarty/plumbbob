@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.8] - 2026-06-30
+
+- **Added:** a `version` verb (`plumbbob version`, `--version`, `-v`) that prints the CLI
+  version read from the shipped `package.json`, degrading to `unknown` rather than erroring
+  when that manifest is absent or malformed. It joins the existing `help` / `--help` / `-h`
+  surface in the CLI reference's verb table.
+- **Changed:** the README's "What ships" note now records that `plumbbob --help` and
+  `plumbbob --version` are the two things a human types by hand, and the troubleshooting guide
+  gains a "Building and publishing" entry covering `npm pack` / `npm publish` / `npm install`
+  aborting with `EBADDEVENGINES` inside the repo because `devEngines` pins pnpm — use pnpm for
+  repo-local work, while consumers' `npm i -g plumbbob` is unaffected.
+
 ## [0.4.7] - 2026-06-30
 
 - **Changed:** the install documentation now presents the two install paths as co-equal and
