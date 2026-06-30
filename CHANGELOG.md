@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.7] - 2026-06-30
+
+- **Changed:** the install documentation now presents the two install paths as co-equal and
+  mutually exclusive — the self-contained marketplace plugin (which ships the `plumbbob`/`pb`
+  CLI on PATH via its `bin/` shims, needing neither `npm i -g` nor `plumbbob init`) and the
+  npm-global plus `plumbbob init` skills-dir link. The README, CLI reference, happy-path, and
+  troubleshooting docs cover the collision guard (`init` refuses when a marketplace plumbbob
+  is present, `--force` overrides) and `doctor`'s awareness of both paths plus its
+  double-install detection.
+- **Fixed:** the `bin/plumbbob` and `bin/pb` PATH shims use `CDPATH=''` rather than the bare
+  `CDPATH=` empty-prefix form, clearing a ShellCheck SC1007 warning. The semantics are
+  identical — an empty `CDPATH` scoped to the `cd` so it cannot resolve the script directory
+  against a `CDPATH` entry — but the explicit `''` is what the warning itself recommends.
+
 ## [0.4.6] - 2026-06-29
 
 - **Changed:** the eleven driver skills are re-prefixed with `pb-` (`plan` → `pb-plan`, and so
