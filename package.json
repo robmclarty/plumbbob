@@ -9,7 +9,7 @@
   "type": "module",
   "license": "Apache-2.0",
   "author": "Rob McLarty <hello@robmclarty.com>",
-  "bin": { "plumbbob": "dist/cli.js", "pb": "dist/cli.js" },
+  "bin": { "plumbbob": "bin/plumbbob", "pb": "bin/pb" },
   "files": [".claude-plugin", "bin", "dist", "hooks", "skills", "templates"],
   "engines": { "node": ">=22.18.0" },
   "scripts": {

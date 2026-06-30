@@ -1,6 +1,15 @@
 #!/bin/sh
-# pb — short alias for `plumbbob` (see bin/plumbbob for the full note). Same PATH
-# shim: resolves the bundled CLI relative to this file so the plugin works on PATH
-# without a global install.
-here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+# pb — short alias for `plumbbob` (see bin/plumbbob for the full note). Same dual
+# role: the npm `bin` entry for `pb` (so npm ships it 0755) and the plugin PATH shim.
+# Resolves any symlink chain so it works on PATH, globally linked, or as a dep.
+src=$0
+while [ -h "$src" ]; do
+  dir=$(CDPATH='' cd -- "$(dirname -- "$src")" && pwd)
+  link=$(readlink -- "$src")
+  case $link in
+    /*) src=$link ;;
+    *)  src=$dir/$link ;;
+  esac
+done
+here=$(CDPATH='' cd -- "$(dirname -- "$src")" && pwd)
 exec node "$here/../dist/cli.js" "$@"

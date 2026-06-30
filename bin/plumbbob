@@ -1,9 +1,26 @@
 #!/bin/sh
-# plumbbob — PATH shim for the marketplace / plugin install. Claude Code adds this
-# bin/ dir to the Bash tool's PATH while the plugin is enabled (the plugins `bin/`
-# convention), so the driver skills can shell a bare `plumbbob` without a global
-# `npm i -g`. The CLI is resolved relative to this file, so it works from the
-# plugin's install/cache dir wherever that lands. Requires node >=22 on PATH (the
-# same requirement as the published `bin`/`dist/cli.js` shebang).
-here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+# plumbbob — the package's `bin` entry AND the marketplace/plugin PATH shim.
+#
+# Pointing the npm `bin` at THIS file (not dist/cli.js) is deliberate: npm/pacote
+# rewrites every packed file to 0644 except the ones named in `bin`, which it stamps
+# 0755 — regardless of the mode in git. Claude Code adds this bin/ dir to the Bash
+# tool's PATH while the plugin is enabled, so the shim must arrive executable; naming
+# it in `bin` is what carries the +x bit through an npm-sourced plugin install.
+# (dist/cli.js no longer needs its own bit — it is always run as `node` below.)
+#
+# As the npm bin, this file is also symlinked into a bin dir by `npm i -g` and by a
+# local node_modules/.bin dep, so $0 can reach us through one or more symlinks.
+# Resolve the chain to the real file, then run the bundled CLI relative to it — so it
+# works on PATH (plugin), globally linked, and as a dep. Requires node >=22 on PATH
+# (same as dist/cli.js's shebang).
+src=$0
+while [ -h "$src" ]; do
+  dir=$(CDPATH='' cd -- "$(dirname -- "$src")" && pwd)
+  link=$(readlink -- "$src")
+  case $link in
+    /*) src=$link ;;
+    *)  src=$dir/$link ;;
+  esac
+done
+here=$(CDPATH='' cd -- "$(dirname -- "$src")" && pwd)
 exec node "$here/../dist/cli.js" "$@"
