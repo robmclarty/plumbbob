@@ -1,4 +1,4 @@
-# Plumbbob — the reasoning seam + slotting fascicle in as the primary engine
+# PlumbBob — the reasoning seam + slotting fascicle in as the primary engine
 
 > Builds on [Analysis 2](./02-model-agnostic-standalone.md). Goal: do the hard,
 > flexible thing — plumbbob is **model-agnostic by construction**, Claude Code is a

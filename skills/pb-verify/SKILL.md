@@ -6,7 +6,7 @@ model: opus
 allowed-tools: Read, Bash(plumbbob status:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(git diff:*), Bash(git status:*)
 ---
 
-# Plumbbob — verify a step (the tick)
+# PlumbBob — verify a step (the tick)
 
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npm i -g plumbbob && plumbbob init"`
 

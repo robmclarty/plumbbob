@@ -7,7 +7,7 @@ model: opus
 allowed-tools: Read, Edit, Bash(plumbbob status:*)
 ---
 
-# Plumbbob — refine the plan
+# PlumbBob — refine the plan
 
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npm i -g plumbbob && plumbbob init"`
 

@@ -248,7 +248,7 @@ This is a docs-and-tooling release; no runtime behavior changed.
 
 ## [0.3.0] - 2026-06-23
 
-- **Changed:** Plumbbob shifts from enforcement to guidance — the lock becomes a
+- **Changed:** PlumbBob shifts from enforcement to guidance — the lock becomes a
   clock. The deciding/executing boundary is no longer held by a hard file lock
   that refused edits; it is held by a pause you advance. `STATE` is demoted from a
   gate to pure orientation, and the verify pause — where you approve a step's diff
@@ -307,7 +307,7 @@ This is a docs-and-tooling release; no runtime behavior changed.
 
 ## [0.2.0] - 2026-06-22
 
-- **Added:** a self-contained, project-level install shape so Plumbbob can run
+- **Added:** a self-contained, project-level install shape so PlumbBob can run
   entirely from a project (`pnpm exec plumbbob setup --local`) with nothing
   written under `~/.claude`. The hooks are referenced in place at
   `$CLAUDE_PROJECT_DIR/node_modules/plumbbob/hooks/` (invoked via `sh`, so no
@@ -330,7 +330,7 @@ This is a docs-and-tooling release; no runtime behavior changed.
   settings allowlist. `mode` is the lone hold-out — it stays human-only, refused
   in-session and blocked from the model's shell by the Bash guard.
 - **Changed:** `plumbbob setup` defaults to the self-contained shape when
-  Plumbbob is a project-local dependency; `--global` restores the original
+  PlumbBob is a project-local dependency; `--global` restores the original
   `~/.claude` install (copied hooks + skills, absolute command paths, bare
   `plumbbob` on `PATH`).
 

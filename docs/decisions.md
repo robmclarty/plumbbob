@@ -1,6 +1,6 @@
 # Decisions and constraints — the D and C key
 
-The Plumbbob source is annotated with shorthand tags — `D3`, `C1`, `D17`, and so on —
+The PlumbBob source is annotated with shorthand tags — `D3`, `C1`, `D17`, and so on —
 that point back to settled design decisions (`D`) and hard constraints (`C`). They keep
 the code comments terse without losing the *why*. This page is the key: it reconstructs
 each tag from where it is referenced in the code, so a reader who hits "`D17`" in a comment
@@ -28,7 +28,7 @@ the code.
   into the archive *before* clearing them; nothing is deleted until it is safely recorded.
   *Tagged in* `wrap.ts`, `archive.ts`, and (for the sidecar's survival across a reset)
   `revert.ts`.
-- **C5 — Additive git footprint.** Plumbbob only reads, locates, stages, commits forward,
+- **C5 — Additive git footprint.** PlumbBob only reads, locates, stages, commits forward,
   and resets `--hard` to its own recorded SHAs. It never rewrites pushed history; your
   squash-merge collapses the checkpoint markers at PR time. *Tagged in* `git.ts`,
   `wrap.ts`.

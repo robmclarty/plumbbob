@@ -7,7 +7,7 @@ model: opus
 allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob start:*)
 ---
 
-# Plumbbob — plan a goal (the whole-goal move)
+# PlumbBob — plan a goal (the whole-goal move)
 
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npm i -g plumbbob && plumbbob init"`
 

@@ -5,17 +5,17 @@
 </p>
 
 A guidance-first build process for working *with* an LLM instead of being dragged
-behind one. It's the layer below Ridgeline: where Ridgeline runs autonomously
-without you, Plumbbob keeps you in the driver's seat for the small-to-medium work
+behind one. It's the layer below [Ridgeline](https://github.com/robmclarty/ridgeline): where Ridgeline runs autonomously
+without you, PlumbBob keeps you in the driver's seat for the small-to-medium work
 that doesn't justify a full autonomous build — a feature, a bug, a refactor — while
 staying deliberate rather than vibing. You decide on a surface outside the chat;
-Plumbbob orients you, runs each step's labor, and then **stops and waits for you to
+PlumbBob orients you, runs each step's labor, and then **stops and waits for you to
 advance** — the human is the clock, not a lock.
 
-> Ridgeline is the line. Plumbbob establishes *true* before you build.
+> PlumbBob establishes *true* before you build.
 > The LLM is a hand, not a head.
 
-This repository was built using Plumbbob v2, dogfooded on its own build under its
+This repository was built using PlumbBob, dogfooded on its own build under its
 own loop.
 
 ## The one law
@@ -24,7 +24,7 @@ own loop.
 
 Vibing is fine — *once every decision being carried out was already made on a
 surface outside the chat.* It becomes a slot machine only when the deciding happens
-inside the stream while code is flowing. The whole job of Plumbbob is to keep
+inside the stream while code is flowing. The whole job of PlumbBob is to keep
 decisions and execution from fusing:
 
 - The **human** owns convergence. You decide, choose, pick the branch.
@@ -39,7 +39,7 @@ If you feel tired and lost, those two activities have fused again. The fix is ne
 ## Why it works: get the plan out of your head
 
 The exhaustion is a working-memory problem. You can't *produce* intent and
-*consume* the model's output at once — consuming overwrites producing. So Plumbbob
+*consume* the model's output at once — consuming overwrites producing. So PlumbBob
 externalizes your plan onto durable surfaces that survive the flood:
 
 - `intent.md` — what you decided, before any code. Your canonical intent.
@@ -50,7 +50,7 @@ ephemeral; the docs persist. **The chat is a hand; the docs are the head.**
 
 ## The shift: a clock, not a lock
 
-Plumbbob v1 enforced the deciding/executing boundary with a hard file lock — a
+PlumbBob v1 enforced the deciding/executing boundary with a hard file lock — a
 pre-edit muzzle that *refused* code edits unless you were in the right state. It
 provided no real security (a determined model routed around it), so its only product
 was forced ritual.
@@ -114,7 +114,7 @@ disambiguates the mode itself.
 
 **The pluggable executor.** `/pb-build` is one way to turn a planned step into code
 — it is *optional*. Implement by hand, in a vibe session, or with another harness,
-and run `/pb-verify` instead: it reads the *diff, not the author*. Plumbbob is the
+and run `/pb-verify` instead: it reads the *diff, not the author*. PlumbBob is the
 harness-agnostic spine; how the diff appears is a slot you fill however you like.
 
 ## Calibration: size everything to the work
@@ -126,7 +126,7 @@ The fastest way to abandon this is ceremony on a one-liner. The discipline is
 - **Small** (a contained bug/change): `/pb-plan` a frame + 2–3 decisions; one or two
   steps; build → verify → checkpoint.
 - **Medium** (a feature touching a few modules): the full loop above.
-- **Large / architectural**: that's Ridgeline's job, not Plumbbob's.
+- **Large / architectural**: that's Ridgeline's job, not PlumbBob's.
 
 Calibration is the skill. When in doubt, smaller.
 
@@ -167,7 +167,7 @@ it, so a repo with no `.plumbbob/STATE` behaves exactly like plain Claude Code.
 
 ## Git footprint — additive only
 
-Plumbbob commits cheap checkpoint markers (`plumbbob: step n done`) on your feature
+PlumbBob commits cheap checkpoint markers (`plumbbob: step n done`) on your feature
 branch and reverts to its own recorded SHAs. It **never rewrites pushed history**;
 your normal squash-merge collapses the checkpoints at PR time. `start` records the
 baseline HEAD; `revert [--to n]` does `git reset --hard` to a recorded SHA; `wrap`
@@ -194,7 +194,7 @@ archives plain markdown under `.plumbbob/archive/` and never touches git.
 
 ## Install
 
-Plumbbob installs **once, globally** — like `gh` or your dotfiles. There are two co-equal,
+PlumbBob installs **once, globally** — like `gh` or your dotfiles. There are two co-equal,
 mutually-exclusive ways to do it (both register a Claude Code plugin named `plumbbob`;
 running both collides over the `/plumbbob:*` namespace).
 

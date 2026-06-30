@@ -319,7 +319,7 @@ The happy path above used `/pb-build` to write every step, but it's just *one* w
 turn a planned step into code. Implement the step by hand, in a vibe session, or with
 another harness, and run `/pb-verify` instead — it runs the same tick
 (`check → self-review → validate → PAUSE → checkpoint`) and **reads the diff, not the
-author**. Plumbbob is the harness-agnostic spine; how the diff appears is a slot you
+author**. PlumbBob is the harness-agnostic spine; how the diff appears is a slot you
 fill however you like.
 
 ```text

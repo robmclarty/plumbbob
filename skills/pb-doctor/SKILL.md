@@ -6,7 +6,7 @@ model: haiku
 allowed-tools: Bash(plumbbob doctor:*)
 ---
 
-# Plumbbob — doctor (the is-it-installed-right move)
+# PlumbBob — doctor (the is-it-installed-right move)
 
 Install diagnostic (injected when this skill runs): !`if command -v plumbbob >/dev/null 2>&1; then plumbbob doctor 2>&1; else echo "plumbbob CLI not on PATH in this session. Marketplace install: confirm the plugin is enabled in /plugin, then /reload-plugins. Skills-dir/global install: npm i -g plumbbob && plumbbob init."; fi`
 

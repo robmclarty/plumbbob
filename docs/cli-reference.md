@@ -2,7 +2,7 @@
 
 The `plumbbob` CLI is the mechanical layer the `/plumbbob:*` skills shell out to — in
 normal use you **never type it by hand**. This page documents the full surface anyway, for
-power users, for driving Plumbbob from another harness, and for understanding what each
+power users, for driving PlumbBob from another harness, and for understanding what each
 skill actually runs.
 
 ```text
@@ -144,7 +144,7 @@ session.
 
 ## Install verbs
 
-Plumbbob has **two co-equal install paths**: the self-contained marketplace plugin (which
+PlumbBob has **two co-equal install paths**: the self-contained marketplace plugin (which
 ships the skills *and* this CLI on PATH via `bin/`, so it needs no `init`) and the skills-dir
 link these verbs manage. See [Install](../README.md#install) for the choice; the two are
 mutually exclusive.

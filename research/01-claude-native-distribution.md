@@ -1,4 +1,4 @@
-# Plumbbob distribution — Analysis 1: the Claude-native path
+# PlumbBob distribution — Analysis 1: the Claude-native path
 
 > Question: installing plumbbob today effectively dumps its payload into the user's
 > home `~/.claude/`. What's a more user-friendly install, benchmarked against how
@@ -28,7 +28,7 @@ Three facts about plumbbob (verified in source) make the fix easy:
 
 ## The reframe
 
-**Plumbbob is not a CLI. It's a Claude Code *extension* — 11 skills + 1 hook +
+**PlumbBob is not a CLI. It's a Claude Code *extension* — 11 skills + 1 hook +
 templates — with a CLI as an implementation detail the skills shell out to.** So
 "how do TS CLIs install" is the wrong benchmark for the payload. The right benchmark
 is "how do you ship skills + hooks to Claude Code," and as of late 2025 there's a

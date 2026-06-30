@@ -1,4 +1,4 @@
-# Plumbbob distribution — Analysis 2: the model-agnostic standalone path
+# PlumbBob distribution — Analysis 2: the model-agnostic standalone path
 
 > Question: the flip-side of [Analysis 1](./01-claude-native-distribution.md). Keep
 > plumbbob **model-agnostic** — Claude conveniences allowed, but not *required* to
@@ -31,7 +31,7 @@ Fascicle (Rob's own package, v0.8.x) is a TypeScript agent-composition toolkit:
 `claude_cli` subprocess adapter). Its primitives map to plumbbob's design
 *startlingly* well:
 
-| Plumbbob concept | Fascicle primitive |
+| PlumbBob concept | Fascicle primitive |
 |---|---|
 | `/pb-verify` **pause you advance** (the human tick) | **`suspend`** — "pause for external input; resume later with `resume_data`" |
 | `/pb-refine` **attack the frame for holes** | **`adversarial`** — build, critique, repeat until accept or `max_rounds` |

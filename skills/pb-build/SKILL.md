@@ -7,7 +7,7 @@ model: opus
 allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(git diff:*)
 ---
 
-# Plumbbob — build a step (the optional engine)
+# PlumbBob — build a step (the optional engine)
 
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npm i -g plumbbob && plumbbob init"`
 

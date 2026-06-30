@@ -1,6 +1,6 @@
 # Techniques — the methods behind the loop
 
-Plumbbob is a small set of methods for building *with* an LLM while staying the one who
+PlumbBob is a small set of methods for building *with* an LLM while staying the one who
 decides. This page is the **reference for those methods** — what each one is, the problem
 it solves, and the file, command, or state that carries it. It is the middle layer of
 three docs:
@@ -130,7 +130,7 @@ Re-firing the next build *is* the clock tick.
 `/pb-build` is *one* way to turn a planned step into code, and it is **optional**.
 Implement a step by hand, in a vibe session, or with another harness, and run
 `/pb-verify` instead — it runs the identical tick and **reads the diff, not who wrote
-it.** Plumbbob is the harness-agnostic spine; how the diff appears is a slot you fill
+it.** PlumbBob is the harness-agnostic spine; how the diff appears is a slot you fill
 however you like.
 
 ## Checkpoints and reverts as the safety net
@@ -138,7 +138,7 @@ however you like.
 A **checkpoint** is one commit per verified step. `plumbbob start` records the baseline
 HEAD, and each checkpoint appends `step N <git-sha>` to `.plumbbob/checkpoints`. The git
 footprint is **additive only**: cheap markers (`plumbbob: step n done`) on your feature
-branch that your normal squash-merge collapses at PR time. Plumbbob never rewrites pushed
+branch that your normal squash-merge collapses at PR time. PlumbBob never rewrites pushed
 history.
 
 **Revert** is the undo. `/pb-revert` does a `git reset --hard` to the last checkpoint
@@ -234,7 +234,7 @@ much a task deserves is itself the skill; when in doubt, smaller.
 - **Small** (a contained bug or change) — a short Frame, two or three decisions, one or two
   steps; build, verify, checkpoint.
 - **Medium** (a feature touching a few modules) — the full loop above.
-- **Large or architectural** — out of scope for Plumbbob; that is a job for a fully
+- **Large or architectural** — out of scope for PlumbBob; that is a job for a fully
   autonomous build.
 
 ## Wrap — close out without ceremony
@@ -269,7 +269,7 @@ every move and `/pb-status` always names the next one.
 
 ---
 
-*New to Plumbbob? Install from the [README](../README.md), read
+*New to PlumbBob? Install from the [README](../README.md), read
 [`happy-path.md`](happy-path.md) to see one full cycle, and keep this page as the reference
 for any piece you want to understand. The philosophy underneath — attention as the scarce
 resource — is in [`attention-first-development.md`](attention-first-development.md).*

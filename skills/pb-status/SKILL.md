@@ -6,7 +6,7 @@ model: haiku
 allowed-tools: Bash(plumbbob status:*)
 ---
 
-# Plumbbob — orient (the where-am-I move)
+# PlumbBob — orient (the where-am-I move)
 
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npm i -g plumbbob && plumbbob init"`
 

@@ -1,6 +1,6 @@
-# Contributing to Plumbbob
+# Contributing to PlumbBob
 
-Thanks for your interest. Plumbbob is a small, deliberately constrained tool — a
+Thanks for your interest. PlumbBob is a small, deliberately constrained tool — a
 zero-dependency TypeScript CLI plus a set of Claude Code skills. This guide covers the
 setup, the conventions the code holds itself to, and how to get a change merged.
 
@@ -10,7 +10,7 @@ If you are changing anything non-trivial, it helps to know the design vocabulary
 
 ## Getting set up
 
-Plumbbob uses **pnpm** and runs on **Node ≥ 22.18** (it relies on native TypeScript
+PlumbBob uses **pnpm** and runs on **Node ≥ 22.18** (it relies on native TypeScript
 type-stripping, so the source runs without a build step).
 
 ```sh

@@ -7,7 +7,7 @@ model: haiku
 allowed-tools: Bash(plumbbob status:*), Bash(plumbbob spike:*)
 ---
 
-# Plumbbob — spike an experiment (driver)
+# PlumbBob — spike an experiment (driver)
 
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npm i -g plumbbob && plumbbob init"`
 
