@@ -2,17 +2,20 @@ import { mkdirSync, readFileSync, realpathSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import {
+  beginSession,
   buildLogPath,
   checkpointsPath,
+  clearSpike,
   configPath,
   excludeSidecar,
   hasSession,
+  inSpike,
   intentPath,
-  readState,
+  markSpike,
   seamPath,
   sidecarDir,
+  spikePath,
   stepPath,
-  writeState,
 } from '../sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 
@@ -24,6 +27,7 @@ describe('path helpers', () => {
     expect(sidecarDir(root)).toBe('/tmp/x/.plumbbob')
     expect(seamPath(root)).toBe('/tmp/x/.plumbbob/SEAM')
     expect(stepPath(root)).toBe('/tmp/x/.plumbbob/STEP')
+    expect(spikePath(root)).toBe('/tmp/x/.plumbbob/SPIKE')
     expect(checkpointsPath(root)).toBe('/tmp/x/.plumbbob/checkpoints')
     expect(configPath(root)).toBe('/tmp/x/.plumbbob/config')
     expect(intentPath(root)).toBe('/tmp/x/.plumbbob/intent.md')
@@ -31,15 +35,25 @@ describe('path helpers', () => {
   })
 })
 
-describe('session state', () => {
-  it('round-trips STATE and reports session presence', () => {
+describe('session sentinel', () => {
+  it('beginSession opens the session; presence is the whole signal', () => {
     const dir = makeTempRepo()
     mkdirSync(sidecarDir(dir), { recursive: true })
     expect(hasSession(dir)).toBe(false)
-    expect(readState(dir)).toBeNull()
-    writeState(dir, 'BUILD')
+    beginSession(dir)
     expect(hasSession(dir)).toBe(true)
-    expect(readState(dir)).toBe('BUILD')
+  })
+})
+
+describe('spike marker', () => {
+  it('mark/clear flips inSpike, presence is the whole signal', () => {
+    const dir = makeTempRepo()
+    mkdirSync(sidecarDir(dir), { recursive: true })
+    expect(inSpike(dir)).toBe(false)
+    markSpike(dir)
+    expect(inSpike(dir)).toBe(true)
+    clearSpike(dir)
+    expect(inSpike(dir)).toBe(false)
   })
 })
 

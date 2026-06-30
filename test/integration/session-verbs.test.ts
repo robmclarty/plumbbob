@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupFixtures, makeFixtureRepo, makeNonGitDir, readSidecar, runCli } from '../helpers/fixture-repo.ts'
+import { cleanupFixtures, makeFixtureRepo, makeNonGitDir, phase, readSidecar, runCli } from '../helpers/fixture-repo.ts'
 
 afterAll(cleanupFixtures)
 
@@ -20,7 +20,7 @@ describe('plumbbob status', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Statey'])
     const out = runCli(dir, ['status']).stdout
-    expect(out).toContain('[DESIGN]') // the state, dashboard-style
+    expect(out).toContain('[DESIGN]') // the derived phase, dashboard-style
     expect(out).toContain('Statey') // the intent title
     expect(out).toContain('next →') // the inferred next move
   })
@@ -54,7 +54,7 @@ describe('Plumbbob v2: no verb is gated by CLAUDECODE (the lock is gone)', () =>
   it('runs every verb the same in-session — start, then park, under CLAUDECODE', () => {
     const dir = makeFixtureRepo()
     expect(runCli(dir, ['start', 'In session'], { CLAUDECODE: '1' }).status).toBe(0)
-    expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
+    expect(phase(dir)).toBe('DESIGN')
     const parked = runCli(dir, ['park', 'a captured idea'], { CLAUDECODE: '1' })
     expect(parked.status).toBe(0)
     expect(readSidecar(dir, 'build-log.md')).toContain('- [ ] a captured idea')

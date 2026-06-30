@@ -8,7 +8,7 @@
 import { appendFileSync, existsSync, readFileSync, rmSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { findRepoRoot } from '../lib/git.ts'
-import { buildLogPath, checkpointsPath, hasSession, intentPath, seamPath, sidecarDir, stepPath } from '../lib/sidecar.ts'
+import { buildLogPath, checkpointsPath, hasSession, intentPath, seamPath, sidecarDir, spikePath, stepPath } from '../lib/sidecar.ts'
 import { archiveSession, reportPath } from '../lib/archive.ts'
 
 export function wrap(cwd: string): number {
@@ -36,6 +36,7 @@ export function wrap(cwd: string): number {
   rmSync(reportPath(root), { force: true })
   rmSync(seamPath(root), { force: true })
   rmSync(stepPath(root), { force: true })
+  rmSync(spikePath(root), { force: true })
   rmSync(join(sidecarDir(root), 'STATE'), { force: true })
 
   process.stdout.write(

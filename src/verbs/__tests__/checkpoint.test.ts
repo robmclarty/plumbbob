@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { checkpoint } from '../checkpoint.ts'
 import { start } from '../start.ts'
-import { buildLogPath, checkpointsPath, configPath, intentPath, readState } from '../../lib/sidecar.ts'
+import { buildLogPath, checkpointsPath, configPath, hasSession, intentPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo } from '../../../test/helpers/capture-io.ts'
 
@@ -28,12 +28,12 @@ function startedGreen(): string {
 }
 
 describe('checkpoint', () => {
-  it('commits pending work, records the SHA, flips the step, returns to DESIGN', () => {
+  it('commits pending work, records the SHA, flips the step, stays at the boundary', () => {
     const dir = startedGreen()
     writeFileSync(join(dir, 'work.txt'), 'pending\n') // dirty the tracked tree
     const { code, stdout } = captureIo(() => checkpoint(dir, ['1']))
     expect(code).toBe(0)
-    expect(readState(dir)).toBe('DESIGN')
+    expect(hasSession(dir)).toBe(true)
     expect(readFileSync(checkpointsPath(dir), 'utf8')).toMatch(/step 1 [0-9a-f]{40}/)
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x]')
     expect(stdout).toContain('step 1 checkpointed')

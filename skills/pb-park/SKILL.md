@@ -16,10 +16,10 @@ it — is the whole point: it protects the step in flight.
 
 ## Wrong-state refusal
 
-Parking needs an **active session** to capture into. Read the state injected above: if
+Parking needs an **active session** to capture into. Read the dashboard injected above: if
 it is `NO ACTIVE SESSION`, **refuse** and tell the human to run `plumbbob start
-"<title>"` first. Every active state (`DESIGN`, `BUILD`, `SPIKE`, `FINISH`) is fine —
-capture is always available, which is the whole point of parking.
+"<title>"` first. Any time the session is live — at the boundary, mid-step, or in a spike —
+is fine; capture is always available, which is the whole point of parking.
 
 ## What this skill does
 

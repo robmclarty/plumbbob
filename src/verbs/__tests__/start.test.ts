@@ -2,18 +2,18 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { start } from '../start.ts'
-import { readState } from '../../lib/sidecar.ts'
+import { hasSession } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo } from '../../../test/helpers/capture-io.ts'
 
 afterAll(cleanupTempRepos)
 
 describe('start', () => {
-  it('scaffolds the sidecar and enters DESIGN on a clean repo', () => {
+  it('scaffolds the sidecar and opens the session on a clean repo', () => {
     const dir = makeTempRepo()
     const { code, stdout } = captureIo(() => start(dir, ['My Feature']))
     expect(code).toBe(0)
-    expect(readState(dir)).toBe('DESIGN')
+    expect(hasSession(dir)).toBe(true)
     expect(existsSync(join(dir, '.plumbbob', 'intent.md'))).toBe(true)
     expect(readFileSync(join(dir, '.plumbbob', 'checkpoints'), 'utf8')).toMatch(/^baseline [0-9a-f]{40}\n$/)
     expect(stdout).toContain('started "My Feature"')
@@ -24,7 +24,7 @@ describe('start', () => {
     const { code, stderr } = captureIo(() => start(dir, []))
     expect(code).toBe(1)
     expect(stderr).toContain('needs a title')
-    expect(readState(dir)).toBeNull()
+    expect(hasSession(dir)).toBe(false)
   })
 
   it('rejects a non-git directory', () => {
@@ -46,7 +46,7 @@ describe('start', () => {
     const { code, stderr } = captureIo(() => start(dir, ['--allow-dirty', 'x']))
     expect(code).toBe(0)
     expect(stderr).toContain('--allow-dirty')
-    expect(readState(dir)).toBe('DESIGN')
+    expect(hasSession(dir)).toBe(true)
   })
 
   it('refuses a second session', () => {

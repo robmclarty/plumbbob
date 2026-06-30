@@ -1,8 +1,9 @@
 import { execFileSync } from 'node:child_process'
+import { writeFileSync } from 'node:fs'
 import { afterAll, describe, expect, it } from 'vitest'
 import { spike } from '../spike.ts'
 import { start } from '../start.ts'
-import { readState, writeState } from '../../lib/sidecar.ts'
+import { inSpike, stepPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo } from '../../../test/helpers/capture-io.ts'
 
@@ -23,12 +24,12 @@ function started(): string {
 }
 
 describe('spike', () => {
-  it('creates a worktree + branch per option (default a/b) and enters SPIKE', () => {
+  it('creates a worktree + branch per option (default a/b) and marks the spike', () => {
     const dir = started()
     try {
       const { code } = captureIo(() => spike(dir, ['auth']))
       expect(code).toBe(0)
-      expect(readState(dir)).toBe('SPIKE')
+      expect(inSpike(dir)).toBe(true)
       expect(spikeBranches(dir).sort()).toEqual(['spike/auth-a', 'spike/auth-b'])
     } finally {
       captureIo(() => spike(dir, ['done'])) // remove the sibling worktrees
@@ -45,12 +46,12 @@ describe('spike', () => {
     }
   })
 
-  it('spike done removes every spike worktree + branch and returns to DESIGN', () => {
+  it('spike done removes every spike worktree + branch and clears the marker', () => {
     const dir = started()
     captureIo(() => spike(dir, ['auth']))
     const { code } = captureIo(() => spike(dir, ['done']))
     expect(code).toBe(0)
-    expect(readState(dir)).toBe('DESIGN')
+    expect(inSpike(dir)).toBe(false)
     expect(spikeBranches(dir)).toEqual([])
   })
 
@@ -66,12 +67,12 @@ describe('spike', () => {
     }
   })
 
-  it('starts only from DESIGN', () => {
+  it('refuses to start while a step is in flight', () => {
     const dir = started()
-    writeState(dir, 'BUILD')
+    writeFileSync(stepPath(dir), '1\n')
     const { code, stderr } = captureIo(() => spike(dir, ['auth']))
     expect(code).toBe(1)
-    expect(stderr).toContain('spike starts from DESIGN')
+    expect(stderr).toContain('a step is in flight')
   })
 
   it('needs a slug', () => {

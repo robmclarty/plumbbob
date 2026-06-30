@@ -38,7 +38,7 @@ an agent can follow with `/plumbbob:pb-build`. The argument only seeds how you g
 ## What this skill does
 
 1. **Scaffold.** If there is no active session, run `plumbbob start "<title>"`
-   to create `.plumbbob/` (STATE=DESIGN, baseline recorded). If a session already
+   to create `.plumbbob/` (baseline recorded, session opened). If a session already
    exists, say so and edit the existing `intent.md` rather than starting over.
 2. **Frame** (`.plumbbob/intent.md`), with the human: the **Problem** in plain words,
    the **smallest thing** that solves it, what **done looks like**, and what you are

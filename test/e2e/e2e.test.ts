@@ -6,7 +6,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupFixtures, makeFixtureRepo, readSidecar, runCli, sidecarExists } from '../helpers/fixture-repo.ts'
+import { cleanupFixtures, makeFixtureRepo, phase, readSidecar, runCli, sidecarExists } from '../helpers/fixture-repo.ts'
 
 afterAll(cleanupFixtures)
 
@@ -25,7 +25,7 @@ describe('e2e: a full Plumbbob v2 session end to end', () => {
 
     // start → DESIGN; stub the check and write a one-step intent.
     expect(runCli(dir, ['start', 'E2E demo']).status).toBe(0)
-    expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
+    expect(phase(dir)).toBe('DESIGN')
     writeSidecar(dir, 'config', 'check=true\n')
     writeSidecar(
       dir,
@@ -35,13 +35,13 @@ describe('e2e: a full Plumbbob v2 session end to end', () => {
 
     // build 1 → BUILD with the in-flight STEP + SEAM (orientation, not a lock).
     expect(runCli(dir, ['build', '1']).status).toBe(0)
-    expect(readSidecar(dir, 'STATE').trim()).toBe('BUILD')
+    expect(phase(dir)).toBe('BUILD')
     expect(readSidecar(dir, 'SEAM').trim()).toBe('src/widget.ts')
 
     // implement the step (nothing gates the edit in v2), then checkpoint the tick.
     writeRepo(dir, 'src/widget.ts', 'export const widget = 1\n')
     expect(runCli(dir, ['checkpoint']).status).toBe(0) // no arg → resolves STEP=1
-    expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
+    expect(phase(dir)).toBe('DESIGN')
     expect(readSidecar(dir, 'checkpoints')).toMatch(/step 1 [0-9a-f]{7,}/)
     expect(readSidecar(dir, 'intent.md')).toContain('1. [x] Build the widget') // box flipped
 

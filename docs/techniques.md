@@ -196,18 +196,20 @@ Where `/plumbbob:pb-step` sharpens the *next step*, `refine` works the *whole pl
 it right after planning to stress-test a fresh frame, or mid-build when a blocker rewrites
 the design.
 
-## STATE is orientation, not a gate
+## Position is derived, not stored
 
-The current position lives in one word in `.plumbbob/STATE`:
+There is no stored state machine. The phase the dashboard shows is *derived* from what is
+on disk:
 
-- **DESIGN** — at a boundary: planning, reviewing, or between steps.
-- **BUILD** — a step is in flight.
-- **SPIKE** — experimenting in throwaway worktrees; the main tree is parked.
+- **DESIGN** — at a boundary: planning, reviewing, or between steps (no step in flight).
+- **BUILD** — a `STEP` file is present, so a step is in flight.
+- **SPIKE** — the `SPIKE` marker is present: experimenting in throwaway worktrees.
 
-In v2 STATE **gates nothing.** It is read by `/plumbbob:pb-status` to tell you where you are
-and what to do next; a wrong state is a mislabeled position on a map, not a locked door.
-`status` is the move you fire any time you are unsure — it prints the dashboard (the
-intent, the step list, the parked and open-question counts) and names the single next move.
+The phase **gates nothing.** It is computed by `/plumbbob:pb-status` to tell you where you
+are and what to do next; it is a position on a map, not a locked door. `.plumbbob/STATE`
+itself is just the session sentinel — its presence means a session is live. `status` is the
+move you fire any time you are unsure — it prints the dashboard (the intent, the step list,
+the parked and open-question counts) and names the single next move.
 
 ## Two tiers of checks
 
@@ -253,15 +255,15 @@ every move and `/plumbbob:pb-status` always names the next one.
 
 | Technique | Skill | CLI verb | Artifact / state |
 |-----------|-------|----------|------------------|
-| Frame and plan the goal | `/plumbbob:pb-plan` | `plumbbob start` | `intent.md`, `STATE=DESIGN` |
+| Frame and plan the goal | `/plumbbob:pb-plan` | `plumbbob start` | `intent.md`, session opened |
 | Sharpen the next step | `/plumbbob:pb-step` | — (edits markdown) | `intent.md` `## Steps` |
 | Stress-test or repair the plan | `/plumbbob:pb-refine` | — (edits markdown) | `intent.md` |
-| Build a step | `/plumbbob:pb-build` | `plumbbob build` | `SEAM`, `STEP`, `STATE=BUILD` |
+| Build a step | `/plumbbob:pb-build` | `plumbbob build` | `SEAM`, `STEP` (in-flight) |
 | Verify and checkpoint | `/plumbbob:pb-verify` | `plumbbob check`, `plumbbob checkpoint` | `checkpoints` |
 | Orient | `/plumbbob:pb-status` | `plumbbob status` | reads everything |
 | Capture an idea | `/plumbbob:pb-park` | `plumbbob park` | `build-log.md` Park list |
 | Triage parked ideas | `/plumbbob:pb-harvest` | — (edits markdown) | `build-log.md` Harvest |
-| Experiment on a fork | `/plumbbob:pb-spike` | `plumbbob spike` | worktrees, `STATE=SPIKE` |
+| Experiment on a fork | `/plumbbob:pb-spike` | `plumbbob spike` | worktrees, `SPIKE` marker |
 | Undo a step | `/plumbbob:pb-revert` | `plumbbob revert` | `git reset`, `checkpoints` |
 | Close out the goal | `/plumbbob:pb-wrap` | `plumbbob wrap` | `.plumbbob/archive/` |
 

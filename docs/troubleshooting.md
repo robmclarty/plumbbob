@@ -96,9 +96,9 @@ baseline — but a later revert-to-baseline will then discard the uncommitted wo
 ### `/plumbbob:pb-park` or `/plumbbob:pb-harvest` refuses
 
 **Cause.** Both need an active session, and `harvest` runs only at a **boundary**. **Fix.**
-Park needs any active state — start a session first if there is none. Harvest refuses
-mid-step (`BUILD`): finish the step with `/plumbbob:pb-verify` first, then harvest from
-`DESIGN`.
+Park works any time the session is live — start a session first if there is none. Harvest
+refuses mid-step (a step in flight): finish the step with `/plumbbob:pb-verify` first, then
+harvest from the boundary.
 
 ## The build loop and checks
 
@@ -150,8 +150,9 @@ unaffected — `npm i -g plumbbob` ignores `devEngines` (it is dev-scoped to thi
 
 ### `spike` refuses to start
 
-**Cause.** Spikes start from `DESIGN` (**D18**). **Fix.** If a step is in flight, finish or
-revert it first. "Already in a spike" → run `plumbbob spike done` to close the current one.
+**Cause.** Spikes start from a settled boundary (**D18**) — not while a step is in flight.
+**Fix.** If a step is in flight, finish or revert it first. "Already in a spike" → run
+`plumbbob spike done` to close the current one.
 If a worktree path "already exists," remove it or run `spike done`.
 
 ### `revert` says "no checkpoint recorded for step n"

@@ -80,8 +80,9 @@ export function sidecarExists(dir: string, name: string): boolean {
   return existsSync(join(dir, '.plumbbob', name))
 }
 
-// Force the orientation STATE directly. v2 removed the `mode` escape hatch, so
-// tests that need a non-DESIGN fixture state write the control file themselves.
-export function setState(dir: string, state: string): void {
-  writeFileSync(join(dir, '.plumbbob', 'STATE'), `${state}\n`)
+// The derived phase shown in the dashboard, parsed from the `[XXX]` label in
+// `plumbbob status`. v2 stopped storing the phase — it is computed from the STEP
+// file (BUILD) and the SPIKE marker (SPIKE), else DESIGN.
+export function phase(dir: string): string {
+  return /\[([A-Z]+)\]/.exec(runCli(dir, ['status']).stdout)?.[1] ?? 'NONE'
 }

@@ -17,9 +17,9 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 
 | Verb | Synopsis | Effect |
 |------|----------|--------|
-| `start` | `start <title> [--allow-dirty]` | scaffold `.plumbbob/`, record baseline, `STATE=DESIGN` |
+| `start` | `start <title> [--allow-dirty]` | scaffold `.plumbbob/`, record baseline, open the session |
 | `status` | `status` | print the orientation dashboard (or `NO ACTIVE SESSION`) |
-| `build` | `build <n>` | write step `n`'s seam, `STATE=BUILD` |
+| `build` | `build <n>` | write step `n`'s seam + `STEP` (goes in-flight) |
 | `check` | `check` | run the heavy gate; no state change |
 | `checkpoint` | `checkpoint [<n>] [-m <msg>]` | gate on green, commit, record SHA, mark step done |
 | `revert` | `revert [--to <n>]` | `git reset --hard` to a checkpoint SHA |
@@ -39,9 +39,10 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 plumbbob start "<title>" [--allow-dirty]
 ```
 
-Scaffolds the `.plumbbob/` sidecar, records the baseline `HEAD`, and enters `DESIGN`. It
-writes `STATE`, `checkpoints` (`baseline <sha>`), `config` (`check=…`), `intent.md`, and
-`build-log.md`, and appends `.plumbbob/` to the repo's `info/exclude` (**D17**). Refuses
+Scaffolds the `.plumbbob/` sidecar, records the baseline `HEAD`, and opens the session. It
+writes `STATE` (the session sentinel), `checkpoints` (`baseline <sha>`), `config`
+(`check=…`), `intent.md`, and `build-log.md`, and appends `.plumbbob/` to the repo's
+`info/exclude` (**D17**). Refuses
 (exit 1) on an empty title, a non-git directory, a repo with no commits, an already-active
 session, or a dirty tree — `--allow-dirty` overrides the dirty-tree refusal and records the
 current `HEAD` as the baseline (**D22**).
@@ -52,8 +53,8 @@ current `HEAD` as the baseline (**D22**).
 plumbbob status
 ```
 
-Prints the orientation dashboard — title, state, the step list with the next step's
-done-when and seam, the last checkpoint, and the parked / open-question counts — then a
+Prints the orientation dashboard — title, the derived phase, the step list with the next
+step's done-when and seam, the last checkpoint, and the parked / open-question counts — then a
 single suggested next move (**D8** / **D15**). Read-only; prints `NO ACTIVE SESSION` and
 exits 0 when there is no session.
 
@@ -63,8 +64,9 @@ exits 0 when there is no session.
 plumbbob build <n>
 ```
 
-Reads step `n`'s seam from `intent.md`, writes `SEAM` (the path list) and `STEP` (the
-number), and enters `BUILD`. The seam is orientation, not a lock (v2). Refuses (exit 1)
+Reads step `n`'s seam from `intent.md` and writes `SEAM` (the path list) and `STEP` (the
+number) — the `STEP` file is what makes the dashboard read `BUILD`. The seam is
+orientation, not a lock (v2). Refuses (exit 1)
 with no session, a non-numeric or `< 1` step, or a seam it cannot parse (seams are exact
 paths or `dir/` grants, never globs — **D23**).
 
@@ -87,9 +89,9 @@ plumbbob checkpoint [<n>] [-m "<message>"]
 The executor-agnostic commit tick (**D3**). Resolves the step — explicit `<n>`, else the
 in-flight `STEP`, else the first undone step in `intent.md` — then gates on a green check,
 commits any pending work (or records the existing `HEAD` if the tree is already clean),
-appends `step <n> <sha>` to `checkpoints`, flips the step to `[x]`, clears `SEAM`/`STEP`,
-and returns to `DESIGN`. `-m` sets the commit message. Refuses (exit 1) with no session, no
-resolvable step, or a red check.
+appends `step <n> <sha>` to `checkpoints`, flips the step to `[x]`, and clears `SEAM`/`STEP`
+— which drops the dashboard back to the `DESIGN` boundary. `-m` sets the commit message.
+Refuses (exit 1) with no session, no resolvable step, or a red check.
 
 ### revert
 
@@ -100,9 +102,9 @@ plumbbob revert [--to <n>]
 `git reset --hard` to a recorded checkpoint SHA: the last step by default, `--to <n>` for a
 specific step, or the baseline as the fallback. The git-excluded sidecar is preserved
 across the reset, so park lines and intent edits survive (**D17** / **C4**); untracked
-files **inside the seam** are removed, files outside it are left alone. Returns to
-`DESIGN`. Refuses (exit 1) with no session, an invalid `--to`, or a step with no recorded
-checkpoint.
+files **inside the seam** are removed, files outside it are left alone. Clears `SEAM`/`STEP`,
+dropping back to the `DESIGN` boundary. Refuses (exit 1) with no session, an invalid `--to`,
+or a step with no recorded checkpoint.
 
 ### park
 
@@ -124,9 +126,9 @@ plumbbob spike done                 # close
 
 Opens a throwaway experiment for a genuine fork (**D18**): a sibling git worktree and
 `spike/<slug>-<opt>` branch per option (default options `a` and `b`), created **outside**
-the repo root, and sets `STATE=SPIKE`. `spike done` removes every spike worktree and branch
-and returns to `DESIGN`. Refuses (exit 1) with no session, a state other than `DESIGN`, an
-empty slug, or a worktree path that already exists; `done` refuses when not in `SPIKE`.
+the repo root, and drops the `SPIKE` marker. `spike done` removes every spike worktree and
+branch and clears the marker. Refuses (exit 1) with no session, a step already in flight, an
+empty slug, or a worktree path that already exists; `done` refuses when no spike is open.
 
 ### wrap
 
@@ -191,8 +193,9 @@ and its exit code is the check result.
 
 - **0** — success. For `check` (and `checkpoint`'s gate), 0 means the heavy check was
   green.
-- **1** — a refusal or failure: a guard tripped (no session, wrong state, bad argument), a
-  red check, or an unknown verb. `check` propagates the underlying command's non-zero code.
+- **1** — a refusal or failure: a guard tripped (no session, a step in flight, bad
+  argument), a red check, or an unknown verb. `check` propagates the underlying command's
+  non-zero code.
 
 ## See also
 

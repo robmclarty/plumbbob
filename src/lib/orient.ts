@@ -18,7 +18,9 @@ export type Checkpoint = { readonly n: number; readonly sha: string }
 
 export type Orientation = {
   readonly title: string | null
-  readonly state: string
+  // The phase word shown in the dashboard — derived, not stored: SPIKE when a
+  // spike is open, BUILD when a step is in flight, else DESIGN.
+  readonly phase: string
   readonly steps: ReadonlyArray<Step>
   readonly lastCheckpoint: Checkpoint | null
   readonly parked: number
@@ -31,11 +33,13 @@ export type Orientation = {
 }
 
 export type OrientInput = {
-  readonly state: string
   readonly intent: string
   readonly buildLog: string
   readonly checkpoints: string
+  // The in-flight step number from the STEP file (null when none) — this is what
+  // makes the phase "BUILD". `spiking` is the SPIKE marker's presence.
   readonly inFlight: number | null
+  readonly spiking: boolean
 }
 
 // The lines of a named `## Section`, from its heading to the next `## ` (or EOF).
@@ -134,38 +138,30 @@ export function parseLastCheckpoint(checkpoints: string): Checkpoint | null {
 }
 
 // The single primary next move (D15). It suggests; the dashboard prints the full
-// list + counts so the human can always override.
-function nextMove(state: string, steps: ReadonlyArray<Step>, inFlight: number | null, parked: number): string {
-  switch (state) {
-    case 'SPIKE':
-      return 'close the spike — `plumbbob spike done`'
-    case 'FINISH':
-      return 'wrap up — `/plumbbob:pb-wrap`'
-    case 'REVIEW':
-      return 'read the diff cold against intent, then `/plumbbob:pb-verify`'
-    case 'BUILD': {
-      const n = inFlight ?? steps.find((s) => !s.done)?.n
-      return n === undefined
-        ? 'finish the step in flight — `/plumbbob:pb-verify`'
-        : `finish step ${n} — \`/plumbbob:pb-verify\` (or keep editing, then \`/plumbbob:pb-verify\`)`
-    }
-    default: {
-      // DESIGN (and any unknown state): you are at the boundary.
-      const nextUndone = steps.find((s) => !s.done)
-      if (nextUndone === undefined) {
-        if (steps.length === 0) {
-          return 'plan the first step — `/plumbbob:pb-step`'
-        }
-        // Batch-default: the steps were planned up front, so finishing them usually
-        // means "wrap up" — but `/plumbbob:pb-step` can still add an increment if reality grew.
-        const harvest = parked > 0 ? `harvest ${parked} parked idea${parked === 1 ? '' : 's'} — \`/plumbbob:pb-harvest\`; then ` : ''
-        return `${harvest}wrap up — \`/plumbbob:pb-wrap\` (or \`/plumbbob:pb-step\` to add another increment)`
-      }
-      return nextUndone.planned
-        ? `build step ${nextUndone.n} — \`/plumbbob:pb-build\` (or \`/plumbbob:pb-step\` to revise it first)`
-        : `plan step ${nextUndone.n} — \`/plumbbob:pb-step\``
-    }
+// list + counts so the human can always override. The phase is derived: a spike
+// in progress and an in-flight step each have one obvious next move; otherwise you
+// are at the boundary and the move follows from the steps.
+function nextMove(spiking: boolean, steps: ReadonlyArray<Step>, inFlight: number | null, parked: number): string {
+  if (spiking) {
+    return 'close the spike — `plumbbob spike done`'
   }
+  if (inFlight !== null) {
+    return `finish step ${inFlight} — \`/plumbbob:pb-verify\` (or keep editing, then \`/plumbbob:pb-verify\`)`
+  }
+  // At the boundary (DESIGN): the move follows from the steps.
+  const nextUndone = steps.find((s) => !s.done)
+  if (nextUndone === undefined) {
+    if (steps.length === 0) {
+      return 'plan the first step — `/plumbbob:pb-step`'
+    }
+    // Batch-default: the steps were planned up front, so finishing them usually
+    // means "wrap up" — but `/plumbbob:pb-step` can still add an increment if reality grew.
+    const harvest = parked > 0 ? `harvest ${parked} parked idea${parked === 1 ? '' : 's'} — \`/plumbbob:pb-harvest\`; then ` : ''
+    return `${harvest}wrap up — \`/plumbbob:pb-wrap\` (or \`/plumbbob:pb-step\` to add another increment)`
+  }
+  return nextUndone.planned
+    ? `build step ${nextUndone.n} — \`/plumbbob:pb-build\` (or \`/plumbbob:pb-step\` to revise it first)`
+    : `plan step ${nextUndone.n} — \`/plumbbob:pb-step\``
 }
 
 export function orient(input: OrientInput): Orientation {
@@ -173,14 +169,15 @@ export function orient(input: OrientInput): Orientation {
   const parked = parseParked(input.buildLog)
   const nextUndone = steps.find((s) => !s.done)
   const seamParse = nextUndone === undefined ? null : parseStepSeam(input.intent, nextUndone.n)
+  const phase = input.spiking ? 'SPIKE' : input.inFlight !== null ? 'BUILD' : 'DESIGN'
   return {
     title: parseTitle(input.intent),
-    state: input.state,
+    phase,
     steps,
     lastCheckpoint: parseLastCheckpoint(input.checkpoints),
     parked,
     openQuestions: parseOpenQuestions(input.intent),
-    next: nextMove(input.state, steps, input.inFlight, parked),
+    next: nextMove(input.spiking, steps, input.inFlight, parked),
     nextDoneWhen: nextUndone?.doneWhen ?? null,
     nextSeam: seamParse !== null && seamParse.ok ? seamParse.seam : [],
   }
@@ -214,7 +211,7 @@ export function formatOrientation(o: Orientation): string {
   const cpLine = cp === null ? 'last checkpoint  none yet' : `last checkpoint  step ${cp.n} · ${cp.sha.slice(0, 7)}`
 
   return [
-    `Plumbbob — ${o.title ?? '(untitled)'}   [${o.state}]`,
+    `Plumbbob — ${o.title ?? '(untitled)'}   [${o.phase}]`,
     '',
     stepsBlock,
     '',

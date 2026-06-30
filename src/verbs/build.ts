@@ -1,10 +1,10 @@
 // `plumbbob build <n>` — read step n's seam from intent.md, write the normalized
-// SEAM + STEP, and enter BUILD. Re-entering from REVIEW just re-derives the same
-// seam and flips back to BUILD; it never checkpoints (only `done` commits).
+// SEAM + STEP. The STEP file is the in-flight signal (the dashboard derives the
+// BUILD phase from it); it never checkpoints (only `checkpoint` commits).
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
-import { hasSession, intentPath, seamPath, stepPath, writeState } from '../lib/sidecar.ts'
+import { hasSession, intentPath, seamPath, stepPath } from '../lib/sidecar.ts'
 import { parseStepSeam } from '../lib/intent.ts'
 
 export function build(cwd: string, args: ReadonlyArray<string>): number {
@@ -29,10 +29,9 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
 
   writeFileSync(seamPath(root), `${parsed.seam.join('\n')}\n`)
   writeFileSync(stepPath(root), `${step}\n`)
-  writeState(root, 'BUILD')
 
   process.stdout.write(
-    `plumbbob: building step ${step} — STATE=BUILD. Seam (for orientation; not a lock in v2):\n${parsed.seam.map((p) => `  ${p}`).join('\n')}\n`,
+    `plumbbob: building step ${step}. Seam (for orientation; not a lock in v2):\n${parsed.seam.map((p) => `  ${p}`).join('\n')}\n`,
   )
   return 0
 }

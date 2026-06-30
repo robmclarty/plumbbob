@@ -142,8 +142,8 @@ Calibration is the skill. When in doubt, smaller.
   pass that injects file-scoped lint into the model's context so it self-corrects in
   flow. (v1's pre-edit muzzle, seam-guard, and bash-guard are gone — guidance, not
   enforcement.)
-- A `.plumbbob/` sidecar of flat files: `STATE` (orientation only), `intent.md`,
-  `build-log.md`, `checkpoints`, and `archive/`.
+- A `.plumbbob/` sidecar of flat files: `STATE` (the session sentinel — its presence
+  means a session is live), `intent.md`, `build-log.md`, `checkpoints`, and `archive/`.
 
 ## Gates — two tiers, different jobs
 
@@ -155,13 +155,15 @@ Calibration is the skill. When in doubt, smaller.
   checkpoint while red. The hard gate lives on the deliberate boundary, not the
   keystroke.
 
-## STATE is orientation, not a gate
+## Position is derived, not stored
 
-The current position lives in one word in `.plumbbob/STATE` — `DESIGN`, `BUILD`, or
-`SPIKE`. It no longer gates anything. It is read by `/plumbbob:pb-status` to tell you where
-you are and what to do next; a wrong state is a mislabeled position on a map, not a
-locked door. The post-edit hook is session-gated: a repo with no `.plumbbob/STATE`
-behaves exactly like plain Claude Code.
+There is no stored state machine. The dashboard's phase — `DESIGN`, `BUILD`, or `SPIKE` —
+is *derived* from what's on disk: a `STEP` file means a step is in flight (BUILD), the
+`SPIKE` marker means a fork is open (SPIKE), otherwise you're at a boundary (DESIGN). The
+position gates nothing — it's a label on a map, read by `/plumbbob:pb-status` to tell you
+where you are and what to do next, never a locked door. `.plumbbob/STATE` is just the
+session sentinel: its presence means a session is live, and the post-edit hook is gated on
+it, so a repo with no `.plumbbob/STATE` behaves exactly like plain Claude Code.
 
 ## Git footprint — additive only
 
@@ -175,9 +177,10 @@ archives plain markdown under `.plumbbob/archive/` and never touches git.
 
 ```text
 .plumbbob/
-  STATE          # one word: DESIGN | BUILD | SPIKE — orientation, not a gate
+  STATE          # session sentinel — its presence means a session is live
   SEAM           # the in-flight step's declared paths (awareness, not a lock)
-  STEP           # the in-flight step number
+  STEP           # the in-flight step number (its presence is the BUILD phase)
+  SPIKE          # marker — present while a spike fork is open
   config         # key=value; check=<heavy-check command> (defaults to pnpm run check)
   checkpoints    # "baseline <sha>" then "step N <sha>", one per verified step
   intent.md      # canonical intent

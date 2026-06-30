@@ -14,7 +14,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { findRepoRoot, resetHard, untrackedPaths } from '../lib/git.ts'
-import { checkpointsPath, hasSession, seamPath, sidecarDir, stepPath, writeState } from '../lib/sidecar.ts'
+import { checkpointsPath, hasSession, seamPath, sidecarDir, stepPath } from '../lib/sidecar.ts'
 import { matchesSeam } from '../lib/intent.ts'
 
 export function revert(cwd: string, args: ReadonlyArray<string>): number {
@@ -58,10 +58,9 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
   }
   rmSync(seamPath(root), { force: true })
   rmSync(stepPath(root), { force: true })
-  writeState(root, 'DESIGN')
 
   process.stdout.write(
-    `plumbbob: reverted to ${sha.slice(0, 9)} — STATE=DESIGN. Park lines and intent edits were preserved.\n`,
+    `plumbbob: reverted to ${sha.slice(0, 9)} — back at the boundary. Park lines and intent edits were preserved.\n`,
   )
   return 0
 }

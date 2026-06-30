@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupFixtures, makeFixtureRepo, readSidecar, runCli, setState } from '../helpers/fixture-repo.ts'
+import { cleanupFixtures, makeFixtureRepo, phase, readSidecar, runCli } from '../helpers/fixture-repo.ts'
 
 afterAll(cleanupFixtures)
 
@@ -23,11 +23,11 @@ describe('plumbbob check', () => {
     expect(runCli(makeFixtureRepo(), ['check']).status).toBe(1)
   })
 
-  it('returns green (0) when the configured check passes, no state change', () => {
+  it('returns green (0) when the configured check passes, no phase change', () => {
     const dir = makeFixtureRepo()
     startWithSteps(dir, '1. [ ] a — **done when:** ok', 'true')
     expect(runCli(dir, ['check']).status).toBe(0)
-    expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
+    expect(phase(dir)).toBe('DESIGN')
   })
 
   it('returns red (non-zero) when the check fails', () => {
@@ -38,13 +38,13 @@ describe('plumbbob check', () => {
 })
 
 describe('plumbbob checkpoint — executor-agnostic (D3)', () => {
-  it('checkpoints the inferred next-undone step with no BUILD state or STEP file', () => {
+  it('checkpoints the inferred next-undone step with no in-flight STEP file', () => {
     const dir = makeFixtureRepo()
     startWithSteps(dir, '1. [ ] first — **done when:** ok\n2. [ ] second — **done when:** ok')
     writeFileSync(join(dir, 'hand.txt'), 'a change made by hand, no /plumbbob:pb-build\n')
     const res = runCli(dir, ['checkpoint'])
     expect(res.status).toBe(0)
-    expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
+    expect(phase(dir)).toBe('DESIGN')
     expect(readSidecar(dir, 'checkpoints')).toMatch(/step 1 [0-9a-f]{7,}/)
     expect(readSidecar(dir, 'intent.md')).toContain('1. [x] first')
     expect(readSidecar(dir, 'intent.md')).toContain('2. [ ] second') // untouched
@@ -63,12 +63,11 @@ describe('plumbbob checkpoint — executor-agnostic (D3)', () => {
     const dir = makeFixtureRepo()
     startWithSteps(dir, '1. [ ] a — **done when:** ok\n2. [ ] b — **done when:** ok')
     writeFileSync(join(dir, '.plumbbob', 'STEP'), '2\n')
-    setState(dir, 'BUILD')
     writeFileSync(join(dir, 'x.txt'), 'x\n')
     runCli(dir, ['checkpoint'])
     expect(readSidecar(dir, 'checkpoints')).toMatch(/step 2 /)
     expect(existsSync(join(dir, '.plumbbob', 'STEP'))).toBe(false)
-    expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
+    expect(phase(dir)).toBe('DESIGN')
   })
 
   it('records HEAD without a new commit when the tree is already clean', () => {

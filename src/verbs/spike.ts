@@ -1,10 +1,10 @@
 // `plumbbob spike` (D18) — the spike lifecycle for a genuine fork the design
 // phase couldn't settle. `spike "<slug>" [opt…]` creates a sibling git worktree +
 // `spike/<slug>-<opt>` branch per option OUTSIDE the repo root (default opts a/b)
-// and sets STATE=SPIKE; the main tree stays DESIGN-locked while you experiment in
-// the worktrees, which are hook-dormant by construction — the untracked sidecar
-// (D17) doesn't exist in a fresh checkout, so the hooks find no STATE there.
-// `spike done` removes every spike worktree + branch and returns to DESIGN.
+// and drops the SPIKE marker; the main tree stays put while you experiment in the
+// worktrees, which are hook-dormant by construction — the untracked sidecar (D17)
+// doesn't exist in a fresh checkout, so the hooks find no STATE there.
+// `spike done` removes every spike worktree + branch and clears the marker.
 //
 // Worktree git calls run directly here rather than via lib/git.ts (which holds the
 // shared additive read/commit helpers): worktree management is spike-local, and
@@ -14,7 +14,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { findRepoRoot } from '../lib/git.ts'
-import { hasSession, readState, writeState } from '../lib/sidecar.ts'
+import { hasSession, inSpike, markSpike, clearSpike, stepPath } from '../lib/sidecar.ts'
 
 const DEFAULT_OPTIONS: ReadonlyArray<string> = ['a', 'b']
 
@@ -32,15 +32,14 @@ export function spike(cwd: string, args: ReadonlyArray<string>): number {
 }
 
 function spikeStart(root: string, positionals: ReadonlyArray<string>): number {
-  const state = readState(root)
-  if (state === 'SPIKE') {
+  if (inSpike(root)) {
     process.stderr.write('plumbbob: already in a spike. Run `plumbbob spike done` to close it first.\n')
     return 1
   }
-  if (state !== 'DESIGN') {
+  if (existsSync(stepPath(root))) {
     process.stderr.write(
-      `plumbbob: spike starts from DESIGN (current state is ${state ?? 'UNKNOWN'}). ` +
-        'A spike is a deliberate fork — close the current step first with `done`.\n',
+      'plumbbob: spike starts from a settled boundary, but a step is in flight. ' +
+        'A spike is a deliberate fork — checkpoint or revert the current step first.\n',
     )
     return 1
   }
@@ -63,9 +62,9 @@ function spikeStart(root: string, positionals: ReadonlyArray<string>): number {
     created.push(path)
   }
 
-  writeState(root, 'SPIKE')
+  markSpike(root)
   process.stdout.write(
-    `plumbbob: STATE=SPIKE — the main tree stays DESIGN-locked. Experiment in the throwaway worktrees:\n${created
+    `plumbbob: spiking — the main tree stays put. Experiment in the throwaway worktrees:\n${created
       .map((p) => `  ${p}`)
       .join('\n')}\nWhen you've decided, record the verdict in intent.md and run \`plumbbob spike done\`.\n`,
   )
@@ -73,9 +72,8 @@ function spikeStart(root: string, positionals: ReadonlyArray<string>): number {
 }
 
 function spikeDone(root: string): number {
-  const state = readState(root)
-  if (state !== 'SPIKE') {
-    process.stderr.write(`plumbbob: no active spike (state is ${state ?? 'UNKNOWN'}).\n`)
+  if (!inSpike(root)) {
+    process.stderr.write('plumbbob: no active spike to close.\n')
     return 1
   }
   for (const path of spikeWorktrees(root)) {
@@ -85,9 +83,9 @@ function spikeDone(root: string): number {
   for (const branch of spikeBranches(root)) {
     git(root, ['branch', '-D', branch])
   }
-  writeState(root, 'DESIGN')
+  clearSpike(root)
   process.stdout.write(
-    'plumbbob: spike closed — STATE=DESIGN, worktrees and branches removed. ' +
+    'plumbbob: spike closed — worktrees and branches removed, back at the boundary. ' +
       'Record the verdict (which option won, and why) in intent.md before you `build`.\n',
   )
   return 0

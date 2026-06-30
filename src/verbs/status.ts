@@ -4,7 +4,7 @@
 
 import { readFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
-import { buildLogPath, checkpointsPath, hasSession, intentPath, readState, stepPath } from '../lib/sidecar.ts'
+import { buildLogPath, checkpointsPath, hasSession, inSpike, intentPath, stepPath } from '../lib/sidecar.ts'
 import { formatOrientation, orient } from '../lib/orient.ts'
 
 function readOr(path: string): string {
@@ -23,11 +23,11 @@ export function status(cwd: string): number {
   }
   const inFlightRaw = readOr(stepPath(root)).trim()
   const orientation = orient({
-    state: readState(root) ?? 'UNKNOWN',
     intent: readOr(intentPath(root)),
     buildLog: readOr(buildLogPath(root)),
     checkpoints: readOr(checkpointsPath(root)),
     inFlight: /^\d+$/.test(inFlightRaw) ? Number(inFlightRaw) : null,
+    spiking: inSpike(root),
   })
   process.stdout.write(`${formatOrientation(orientation)}\n`)
   return 0

@@ -9,8 +9,7 @@ open. If the implementor (you-later, or the LLM) has to guess, the doc failed.
 
 # {{TITLE}}
 
-**STATE:** DESIGN
-**Phase** (bookkeeping while in DESIGN): frame
+**Phase** (your own bookkeeping while framing): frame
 **Size:** tiny | small | medium
 
 ## Frame

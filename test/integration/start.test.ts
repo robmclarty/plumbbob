@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupFixtures, makeFixtureRepo, makeNonGitDir, readSidecar, runCli, sidecarExists } from '../helpers/fixture-repo.ts'
+import { cleanupFixtures, makeFixtureRepo, makeNonGitDir, phase, readSidecar, runCli, sidecarExists } from '../helpers/fixture-repo.ts'
 
 afterAll(cleanupFixtures)
 
@@ -16,7 +16,7 @@ describe('plumbbob start', () => {
     const result = runCli(dir, ['start', 'My change'])
 
     expect(result.status).toBe(0)
-    expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
+    expect(phase(dir)).toBe('DESIGN')
     expect(readSidecar(dir, 'checkpoints').split('\n')[0]).toBe(`baseline ${headSha(dir)}`)
     expect(readSidecar(dir, 'config')).toContain('check=pnpm run check')
 
@@ -48,7 +48,7 @@ describe('plumbbob start', () => {
     const allowed = runCli(dir, ['start', '--allow-dirty', 'Yes'])
     expect(allowed.status).toBe(0)
     expect(allowed.stderr).toContain('--allow-dirty')
-    expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
+    expect(phase(dir)).toBe('DESIGN')
   })
 
   it('refuses when a session is already active', () => {
@@ -96,7 +96,7 @@ describe('plumbbob start', () => {
 
     const second = runCli(dir, ['start', 'Round two'])
     expect(second.status).toBe(0)
-    expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
+    expect(phase(dir)).toBe('DESIGN')
     expect(readSidecar(dir, 'intent.md')).toContain('# Round two')
     expect(existsSync(join(archived, 'report.md'))).toBe(true)
     expect(readFileSync(join(archived, 'report.md'), 'utf8')).toBe('preserved\n')

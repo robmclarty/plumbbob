@@ -1,6 +1,8 @@
 import { execFileSync } from 'node:child_process'
+import { writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupFixtures, makeFixtureRepo, readSidecar, runCli, setState } from '../helpers/fixture-repo.ts'
+import { cleanupFixtures, makeFixtureRepo, phase, runCli } from '../helpers/fixture-repo.ts'
 
 afterAll(cleanupFixtures)
 
@@ -20,13 +22,13 @@ function spikeBranches(dir: string): string[] {
 }
 
 describe('plumbbob spike', () => {
-  it('creates a sibling worktree + branch per option and enters SPIKE', () => {
+  it('creates a sibling worktree + branch per option and marks the spike', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Spiking a fork'])
     const result = runCli(dir, ['spike', 'auth'])
     try {
       expect(result.status).toBe(0)
-      expect(readSidecar(dir, 'STATE').trim()).toBe('SPIKE')
+      expect(phase(dir)).toBe('SPIKE')
       expect(spikeBranches(dir).sort()).toEqual(['spike/auth-a', 'spike/auth-b'])
       expect(spikeWorktreeCount(dir)).toBe(2)
     } finally {
@@ -34,7 +36,7 @@ describe('plumbbob spike', () => {
     }
   })
 
-  it('spike done removes all spike worktrees + branches and returns to DESIGN', () => {
+  it('spike done removes all spike worktrees + branches and clears the marker', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Spiking a fork'])
     runCli(dir, ['spike', 'cache'])
@@ -42,7 +44,7 @@ describe('plumbbob spike', () => {
     const result = runCli(dir, ['spike', 'done'])
     expect(result.status).toBe(0)
     expect(result.stdout).toContain('verdict')
-    expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
+    expect(phase(dir)).toBe('DESIGN')
     expect(spikeBranches(dir)).toEqual([])
     expect(spikeWorktreeCount(dir)).toBe(0)
   })
@@ -59,13 +61,13 @@ describe('plumbbob spike', () => {
     }
   })
 
-  it('refuses to start a spike outside DESIGN', () => {
+  it('refuses to start a spike while a step is in flight', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Spiking a fork'])
-    setState(dir, 'BUILD')
+    writeFileSync(join(dir, '.plumbbob', 'STEP'), '1\n') // in-flight
     const result = runCli(dir, ['spike', 'nope'])
     expect(result.status).toBe(1)
-    expect(readSidecar(dir, 'STATE').trim()).toBe('BUILD')
+    expect(phase(dir)).toBe('BUILD') // still in-flight, no spike opened
     expect(spikeBranches(dir)).toEqual([])
   })
 })

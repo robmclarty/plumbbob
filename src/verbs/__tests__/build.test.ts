@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { afterAll, describe, expect, it } from 'vitest'
 import { build } from '../build.ts'
 import { start } from '../start.ts'
-import { intentPath, readState, seamPath, stepPath } from '../../lib/sidecar.ts'
+import { intentPath, seamPath, stepPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo } from '../../../test/helpers/capture-io.ts'
 
@@ -26,11 +26,10 @@ function startedWithSteps(): string {
 }
 
 describe('build', () => {
-  it('writes the seam + step and enters BUILD', () => {
+  it('writes the seam + step and goes in-flight (the BUILD phase signal)', () => {
     const dir = startedWithSteps()
     const { code, stdout } = captureIo(() => build(dir, ['2']))
     expect(code).toBe(0)
-    expect(readState(dir)).toBe('BUILD')
     expect(readFileSync(seamPath(dir), 'utf8')).toBe('src/b.ts\nsrc/c.ts\n')
     expect(readFileSync(stepPath(dir), 'utf8').trim()).toBe('2')
     expect(stdout).toContain('building step 2')

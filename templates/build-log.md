@@ -11,7 +11,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — {{TITLE}}
 
-**Current step:** none (DESIGN) · **STATE:** DESIGN
+**Current step:** none (at the boundary)
 **Heavy check:** {{CHECK}}
 
 ## Steps

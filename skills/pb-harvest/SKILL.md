@@ -13,15 +13,16 @@ Current session state (injected when this skill runs): !`plumbbob status 2>/dev/
 `/plumbbob:pb-harvest` is the complement of `/plumbbob:pb-park` (D7): you parked ideas as seeds during a
 build; now, at a boundary, you harvest them — decide what each one is.
 
-## When to run it — wrong-state refusal
+## When to run it — boundary only
 
-Harvest at a **step boundary**: after a step is checkpointed and you are back in
-DESIGN, not mid-step. Read the state injected above:
+Harvest at a **step boundary**: after a step is checkpointed and you are back at the
+DESIGN boundary, not mid-step. Read the dashboard injected above:
 
 - `NO ACTIVE SESSION` — **refuse**; tell the human to `plumbbob start "<title>"` first.
-- `BUILD` — a step is in flight; **refuse** and suggest finishing it with `/plumbbob:pb-verify`
-  before harvesting. Chasing parked items mid-step is the disease parking prevents.
-- `DESIGN` (and other settled states) — go ahead.
+- A step in flight (the dashboard reads `[BUILD]`, and `next →` points at finishing the
+  step) — **refuse** and suggest finishing it with `/plumbbob:pb-verify` before harvesting.
+  Chasing parked items mid-step is the disease parking prevents.
+- At the boundary (the dashboard reads `[DESIGN]`) — go ahead.
 
 ## What this skill does
 

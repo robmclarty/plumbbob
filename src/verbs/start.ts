@@ -1,5 +1,5 @@
-// `plumbbob start "<title>"` — scaffold the sidecar, record the baseline, enter
-// DESIGN. Refuses on a dirty tree (D22), an existing session, or a non-git dir.
+// `plumbbob start "<title>"` — scaffold the sidecar, record the baseline, open
+// the session. Refuses on a dirty tree (D22), an existing session, or a non-git dir.
 
 import { fileURLToPath } from 'node:url'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
@@ -11,7 +11,7 @@ import {
   configPath,
   intentPath,
   buildLogPath,
-  writeState,
+  beginSession,
   hasSession,
   excludeSidecar,
 } from '../lib/sidecar.ts'
@@ -63,7 +63,7 @@ export function start(cwd: string, args: ReadonlyArray<string>): number {
   const check = detectCheck(root)
 
   mkdirSync(sidecarDir(root), { recursive: true })
-  writeState(root, 'DESIGN')
+  beginSession(root)
   writeFileSync(checkpointsPath(root), `baseline ${sha}\n`)
   writeFileSync(configPath(root), `check=${check.command}\n`)
   writeFileSync(intentPath(root), stamp(readTemplate('intent.md'), title, check.command))
@@ -76,7 +76,7 @@ export function start(cwd: string, args: ReadonlyArray<string>): number {
     )
   }
   process.stdout.write(
-    `plumbbob: started "${title}" — STATE=DESIGN, baseline ${sha.slice(0, 9)}. Frame and decide in .plumbbob/intent.md; flip to BUILD only once the decisions are made.\n`,
+    `plumbbob: started "${title}" — baseline ${sha.slice(0, 9)}. Frame and decide in .plumbbob/intent.md; \`build\` a step once the decisions are made.\n`,
   )
   return 0
 }

@@ -6,7 +6,7 @@ import { revert } from '../revert.ts'
 import { start } from '../start.ts'
 import { build } from '../build.ts'
 import { checkpoint } from '../checkpoint.ts'
-import { configPath, intentPath, readState } from '../../lib/sidecar.ts'
+import { configPath, intentPath, stepPath } from '../../lib/sidecar.ts'
 import { headSha } from '../../lib/git.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo } from '../../../test/helpers/capture-io.ts'
@@ -35,14 +35,15 @@ function startedGreen(): string {
 }
 
 describe('revert', () => {
-  it('rewinds tracked work to the last step checkpoint and returns to DESIGN', () => {
+  it('rewinds tracked work to the last step checkpoint and clears the in-flight step', () => {
     const dir = startedGreen()
     writeFileSync(join(dir, 'feature.txt'), 'v1\n')
     captureIo(() => checkpoint(dir, ['1'])) // commits feature.txt=v1, records step 1
+    captureIo(() => build(dir, ['1'])) // go in-flight: writes SEAM + STEP
     writeFileSync(join(dir, 'feature.txt'), 'v2\n') // uncommitted drift
     const { code, stdout } = captureIo(() => revert(dir, []))
     expect(code).toBe(0)
-    expect(readState(dir)).toBe('DESIGN')
+    expect(existsSync(stepPath(dir))).toBe(false) // back at the boundary
     expect(readFileSync(join(dir, 'feature.txt'), 'utf8')).toBe('v1\n')
     expect(stdout).toContain('reverted to')
   })
@@ -60,7 +61,7 @@ describe('revert', () => {
 
   it('removes untracked files in the seam but leaves out-of-seam files', () => {
     const dir = startedGreen()
-    captureIo(() => build(dir, ['1'])) // writes SEAM=feature.txt, STATE=BUILD
+    captureIo(() => build(dir, ['1'])) // writes SEAM=feature.txt, STEP=1 (in-flight)
     writeFileSync(join(dir, 'feature.txt'), 'scratch\n') // untracked, in seam
     writeFileSync(join(dir, 'other.txt'), 'keep\n') // untracked, out of seam
     expect(captureIo(() => revert(dir, [])).code).toBe(0)

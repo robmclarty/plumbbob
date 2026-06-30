@@ -1,8 +1,13 @@
 // The .plumbbob/ sidecar: control state lives in flat files so the hooks can
 // read it with a grep and no markdown parsing (D7). Functional/procedural,
 // node builtins only (C1/C2).
+//
+// STATE is a pure session sentinel: its EXISTENCE means "a session is active",
+// and nothing reads its content. The phase the dashboard shows (DESIGN/BUILD/
+// SPIKE) is derived, not stored — BUILD ⇔ a STEP is in flight, SPIKE ⇔ the SPIKE
+// marker is present, otherwise DESIGN.
 
-import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync, appendFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { gitDir } from './git.ts'
 
@@ -14,6 +19,13 @@ export function sidecarDir(root: string): string {
 
 function statePath(root: string): string {
   return join(root, DIRNAME, 'STATE')
+}
+
+// The SPIKE marker (a single-purpose presence flag, like SEAM/STEP): written by
+// `spike` on open, removed on `spike done`. Its existence is the one signal that
+// the dashboard and the spike gates read to know "a spike is active".
+export function spikePath(root: string): string {
+  return join(root, DIRNAME, 'SPIKE')
 }
 
 // SEAM and STEP carry the in-flight step (D4/D7): a plain path list and a bare
@@ -42,22 +54,28 @@ export function buildLogPath(root: string): string {
   return join(root, DIRNAME, 'build-log.md')
 }
 
-// A session exists iff STATE exists. Deleting STATE (at finish) is what switches
-// the muzzle off — so it is the single source of truth for "is there a session".
+// A session exists iff STATE exists. Deleting STATE (at wrap) is what flips the
+// repo back to "no session" — so it is the single source of truth for "is there
+// a session". `start` calls beginSession; `wrap` removes the file.
 export function hasSession(root: string): boolean {
   return existsSync(statePath(root))
 }
 
-export function readState(root: string): string | null {
-  try {
-    return readFileSync(statePath(root), 'utf8').trim()
-  } catch {
-    return null
-  }
+export function beginSession(root: string): void {
+  writeFileSync(statePath(root), 'active\n')
 }
 
-export function writeState(root: string, state: string): void {
-  writeFileSync(statePath(root), `${state}\n`)
+// SPIKE marker helpers — existence is the whole signal (content is irrelevant).
+export function inSpike(root: string): boolean {
+  return existsSync(spikePath(root))
+}
+
+export function markSpike(root: string): void {
+  writeFileSync(spikePath(root), 'active\n')
+}
+
+export function clearSpike(root: string): void {
+  rmSync(spikePath(root), { force: true })
 }
 
 // D17: keep the sidecar untracked by appending `.plumbbob/` to the repo's

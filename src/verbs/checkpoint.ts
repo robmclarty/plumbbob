@@ -1,15 +1,16 @@
 // `plumbbob checkpoint [<n>] [-m <msg>]` — the executor-agnostic commit tick (D3).
-// Unlike v1 `done`, it does NOT require BUILD state or a STEP file: the step is
-// whatever you pass, else the in-flight STEP, else the next undone step in intent.
-// It gates on a green check, then commits any pending work (or records the existing
-// HEAD when the tree is already clean — the human's commit skill may have committed
-// first), records the SHA, flips the intent checkbox to `[x]`, clears any STEP/SEAM,
-// and returns to DESIGN. The diff's author is irrelevant: `/plumbbob:pb-build`, your hands,
-// a vibe session, or another harness all checkpoint the same way.
+// Unlike v1 `done`, it does NOT require a STEP file: the step is whatever you pass,
+// else the in-flight STEP, else the next undone step in intent. It gates on a green
+// check, then commits any pending work (or records the existing HEAD when the tree
+// is already clean — the human's commit skill may have committed first), records the
+// SHA, flips the intent checkbox to `[x]`, and clears any STEP/SEAM (which returns
+// the dashboard to the DESIGN boundary). The diff's author is irrelevant:
+// `/plumbbob:pb-build`, your hands, a vibe session, or another harness all checkpoint
+// the same way.
 
 import { appendFileSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { commit, findRepoRoot, headSha, isDirty, stageAll } from '../lib/git.ts'
-import { buildLogPath, checkpointsPath, hasSession, intentPath, seamPath, stepPath, writeState } from '../lib/sidecar.ts'
+import { buildLogPath, checkpointsPath, hasSession, intentPath, seamPath, stepPath } from '../lib/sidecar.ts'
 import { runCheck } from '../lib/check.ts'
 import { markStepDone, parseSteps } from '../lib/orient.ts'
 import { appendToSection, checkpointLogLine } from '../lib/buildlog.ts'
@@ -45,9 +46,8 @@ export function checkpoint(cwd: string, args: ReadonlyArray<string>): number {
   logCheckpoint(root, step, sha)
   rmSync(seamPath(root), { force: true })
   rmSync(stepPath(root), { force: true })
-  writeState(root, 'DESIGN')
 
-  process.stdout.write(`plumbbob: step ${step} checkpointed — ${sha.slice(0, 9)}. STATE=DESIGN.\n`)
+  process.stdout.write(`plumbbob: step ${step} checkpointed — ${sha.slice(0, 9)}. Back at the boundary.\n`)
   return 0
 }
 

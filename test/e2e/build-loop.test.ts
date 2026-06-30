@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupFixtures, makeFixtureRepo, readSidecar, runCli, sidecarExists } from '../helpers/fixture-repo.ts'
+import { cleanupFixtures, makeFixtureRepo, phase, readSidecar, runCli, sidecarExists } from '../helpers/fixture-repo.ts'
 
 afterAll(cleanupFixtures)
 
@@ -42,7 +42,7 @@ describe('plumbbob build', () => {
     expect(result.status).toBe(0)
     expect(readSidecar(dir, 'SEAM')).toBe('src/a.ts\nnotes/\n')
     expect(readSidecar(dir, 'STEP').trim()).toBe('1')
-    expect(readSidecar(dir, 'STATE').trim()).toBe('BUILD')
+    expect(phase(dir)).toBe('BUILD')
   })
 
   it('refuses a step whose seam is a glob, leaving DESIGN intact', () => {
@@ -51,7 +51,7 @@ describe('plumbbob build', () => {
     expect(result.status).toBe(1)
     expect(result.stderr).toContain('glob')
     expect(sidecarExists(dir, 'SEAM')).toBe(false)
-    expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
+    expect(phase(dir)).toBe('DESIGN')
   })
 })
 
@@ -75,7 +75,7 @@ describe('plumbbob revert', () => {
     expect(read(dir, 'src/thing.ts')).toBe('export const thing = 0\n') // tracked change discarded
     expect(fileExists(dir, 'src/extra.ts')).toBe(false) // untracked-in-seam removed
     expect(fileExists(dir, 'outside.txt')).toBe(true) // untracked-out-of-seam kept
-    expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
+    expect(phase(dir)).toBe('DESIGN')
     expect(sidecarExists(dir, 'SEAM')).toBe(false)
   })
 
@@ -95,7 +95,7 @@ describe('plumbbob revert', () => {
     expect(runCli(dir, ['revert']).status).toBe(0)
     expect(readSidecar(dir, 'build-log.md')).toContain('- [ ] survive me')
     expect(fileExists(dir, 'src/half.ts')).toBe(false)
-    expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
+    expect(phase(dir)).toBe('DESIGN')
   })
 
   it("preserves plumbbob's own installed skills across the reset, but reverts other files", () => {
@@ -132,6 +132,6 @@ describe('plumbbob revert', () => {
     const result = runCli(dir, ['revert', '--to', '1'])
     expect(result.status).toBe(0)
     expect(read(dir, 'src/a.ts')).toBe('export const a = 1\n')
-    expect(readSidecar(dir, 'STATE').trim()).toBe('DESIGN')
+    expect(phase(dir)).toBe('DESIGN')
   })
 })

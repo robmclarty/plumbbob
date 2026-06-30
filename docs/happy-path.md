@@ -36,8 +36,8 @@ Under the hood it runs `plumbbob start`, which records a baseline and drops you 
 `DESIGN`:
 
 ```text
-plumbbob: started "Rate-limit the login endpoint" — STATE=DESIGN, baseline 3a1f2b0c1.
-Frame and decide in .plumbbob/intent.md; flip to BUILD only once the decisions are made.
+plumbbob: started "Rate-limit the login endpoint" — baseline 3a1f2b0c1.
+Frame and decide in .plumbbob/intent.md; `build` a step once the decisions are made.
 ```
 
 In interview mode it proposes wording you can accept without typing ("done-when: the
@@ -129,10 +129,10 @@ straight through the verify tick to the pause.
 /plumbbob:pb-build
 ```
 
-It enters `BUILD`, recording the seam for orientation (not a lock in v2):
+It goes in-flight, recording the seam for orientation (not a lock in v2):
 
 ```text
-plumbbob: building step 1 — STATE=BUILD. Seam (for orientation; not a lock in v2):
+plumbbob: building step 1. Seam (for orientation; not a lock in v2):
   src/limiter.ts
   test/limiter.test.ts
 ```
@@ -157,10 +157,10 @@ PAUSE — read the diff as an editor. Approve to checkpoint, or send fixes.
 > another session verifies exactly the same way (see *The pluggable executor* below).
 
 You approve. Only then does it checkpoint — committing the work, recording the SHA,
-flipping the step to `[x]`, and returning to `DESIGN`, where it **stops**:
+flipping the step to `[x]`, and returning to the `DESIGN` boundary, where it **stops**:
 
 ```text
-plumbbob: step 1 checkpointed — a1b2c3d4e. STATE=DESIGN.
+plumbbob: step 1 checkpointed — a1b2c3d4e. Back at the boundary.
 ```
 
 Now **fire `/plumbbob:pb-build` again** for step 2, and again for step 3. Each run builds the
@@ -306,7 +306,7 @@ The sidecar is clear and there's no active session. `/plumbbob:pb-status` now re
 ```
 
 ```text
-plumbbob: started "Add structured request logging" — STATE=DESIGN, baseline a1b2c3d4e. …
+plumbbob: started "Add structured request logging" — baseline a1b2c3d4e. …
 ```
 
 And you're back at step 0 with a clean head and the previous goal safely on the shelf.
