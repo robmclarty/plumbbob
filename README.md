@@ -12,7 +12,13 @@ a bug, a refactor — while staying deliberate rather than vibing. You decide on
 outside the chat; PlumbBob orients you, runs each step's labor, and then **stops and
 waits for you to advance** — the human is the clock, not a lock.
 
-> PlumbBob establishes *true* before you build. The LLM is a hand, not a head.
+> Establish *plumb* before you build. The LLM is a hand, not a head.
+
+The name is the method. A plumb bob is a weight on a string — gravity pulls it into
+a perfectly straight vertical line, the builder's oldest reference for *true*: the
+fixed mark you hold the work against so it never drifts out of square. PlumbBob hangs
+your **intent** as that line and keeps every step aligned to it, so the build stays
+plumb with what you decided instead of wandering off behind the model.
 
 Its one law is **vibe to execute, never vibe to decide**: the human owns every
 decision, the LLM owns the labor, and the boundary between them is a **pause you

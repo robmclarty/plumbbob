@@ -18,8 +18,10 @@ generating and reacting in a continuous stream. It feels immediate and creative.
 But deciding and executing fuse into a single activity. The model converges on an
 implementation before you have made the design choices, so you spend your time
 anchored to something you never chose, cleaning up after it, following it around.
-New code arrives faster than you can absorb it, your plan dissolves into the
-noise, and you end the day tired and unsure what you built.
+The model's output is water in flood — enormous power, but moving wherever it
+wants, almost impossible to coordinate from inside the current. New code arrives
+faster than you can absorb it, your plan washes downstream, and you end the day
+tired and unsure what you built.
 
 The two failures look opposite but share a root. In autonomy you are *absent* from
 the thinking. In vibing you are *present but overwhelmed*, trying to form intent
@@ -65,8 +67,11 @@ execution stream cannot overrun it.
 
 **Externalize the plan onto a durable surface.** The plan does not live in your
 head, where the flood erases it, and it does not live in the chat, which is
-ephemeral. It lives on a surface you can return to. That surface is what lets you
-stop being a firefighter and become a reviewer, because the plan is still there
+ephemeral. It lives on a surface you can return to — the banks you raise against
+the water. You do not dam the river to a trickle; you give the flood banks and a
+levee, and the same force that scattered your plan now runs where you decided it
+would. You set the water's course instead of letting it set yours. That surface is
+what lets you stop bailing and become a reviewer, because the plan is still there
 after the model has spoken.
 
 **Make the unit of work a decision, not a diff.** Progress is measured in choices
@@ -127,7 +132,8 @@ built it, and mean it.
 *PlumbBob is one concrete instantiation of this posture for small-to-medium work:
 a small state machine and a handful of tools that hold the deciding-and-executing
 boundary with a pause you advance — guidance you fall into rather than a lock you
-fight, and structure rather than willpower. The concept does not depend on it. Any
+fight, and structure — banks against the flood — rather than willpower. The concept
+does not depend on it. Any
 process that treats attention as the scarce resource, externalizes the plan onto a
 durable surface, and keeps the human on the convergence side is attention-first,
 whatever the tooling underneath.*
