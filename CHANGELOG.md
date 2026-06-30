@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.6] - 2026-06-29
+
+- **Changed:** the eleven driver skills are re-prefixed with `pb-` (`plan` → `pb-plan`, and so
+  on), so they surface as `/plumbbob:pb-plan` and the like. This reverses the 0.4.4 de-prefix:
+  that change assumed marketplace-only distribution, where skills are always namespaced and
+  `pb-` is redundant — but plumbbob keeps the non-marketplace skills-dir/CLI install first-class,
+  and on that path a two-plugin collision can drop skills to flat names, where the `pb-` prefix
+  keeps `/pb-status` from clashing with the built-in `/status`. Command references were updated
+  in lockstep across the skills, docs, README, templates, and CLI output strings.
+- **Changed:** `plumbbob init`'s in-code framing now describes the skills-dir link as the
+  deliberate, first-class non-marketplace install path (npm-global, local dev, pre-plugin
+  clients, and eventually other agents) rather than a legacy fallback.
+- **Changed:** the plugin's display name is restyled `PlumbBob` to match the README heading.
+
 ## [0.4.5] - 2026-06-29
 
 - **Added:** a self-contained marketplace plugin install. The plugin now ships `bin/plumbbob`
