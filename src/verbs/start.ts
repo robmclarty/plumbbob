@@ -31,7 +31,7 @@ export function start(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
   if (root === null) {
     process.stderr.write(
-      'plumbbob: not a git repository. Plumbbob records a baseline commit — run `git init` and make an initial commit first.\n',
+      'plumbbob: not a git repository. PlumbBob records a baseline commit — run `git init` and make an initial commit first.\n',
     )
     return 1
   }

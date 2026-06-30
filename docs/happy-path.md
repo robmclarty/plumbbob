@@ -84,7 +84,7 @@ dashboard, surfaces the **next step's done-when and seam** so you can sanity-che
 and names the single next move:
 
 ```text
-Plumbbob — Rate-limit the login endpoint   [DESIGN]
+PlumbBob — Rate-limit the login endpoint   [DESIGN]
 
   steps  0/3 done
   ▸ 1  Add a token-bucket limiter   ← next

@@ -211,7 +211,7 @@ export function formatOrientation(o: Orientation): string {
   const cpLine = cp === null ? 'last checkpoint  none yet' : `last checkpoint  step ${cp.n} · ${cp.sha.slice(0, 7)}`
 
   return [
-    `Plumbbob — ${o.title ?? '(untitled)'}   [${o.phase}]`,
+    `PlumbBob — ${o.title ?? '(untitled)'}   [${o.phase}]`,
     '',
     stepsBlock,
     '',
