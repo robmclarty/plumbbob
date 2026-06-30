@@ -5,6 +5,23 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.9] - 2026-06-30
+
+- **Added:** a `pb-doctor` driver skill that runs `plumbbob doctor` from inside a Claude Code
+  session — the only place the diagnostic can run on a marketplace install, where the CLI is
+  on PATH only while the plugin is enabled. It is read-only (no Edit/Write), and its injected
+  line gates on `command -v` so it surfaces doctor's full report even when checks fail, falling
+  back to install-path guidance only when the CLI is genuinely off PATH.
+- **Changed:** the README, CLI reference, troubleshooting guide, and `doctor`'s own trailing
+  output line no longer imply `plumbbob doctor` is always a terminal command — they now record
+  that a marketplace plugin puts the CLI on PATH only inside a session, so
+  `/plumbbob:pb-doctor` is the in-session way to reach it.
+- **Fixed:** `bin/plumbbob` and `bin/pb` now ship executable through an npm-sourced plugin
+  install. The package `bin` field points at the shims themselves so npm/pacote stamps them
+  0755 — it normalizes other packed files to 0644, dropping the working-tree `+x` bit — and the
+  shims were hardened to resolve any symlink chain so `npm i -g` and `node_modules/.bin` deps
+  keep working alongside the plugin-on-PATH path.
+
 ## [0.4.8] - 2026-06-30
 
 - **Added:** a `version` verb (`plumbbob version`, `--version`, `-v`) that prints the CLI
