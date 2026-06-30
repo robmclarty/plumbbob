@@ -11,6 +11,7 @@ import { existsSync, lstatSync, readdirSync, readlinkSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { marketplacePlumbbob } from '../lib/plugins.ts'
 
 type Check = { readonly ok: boolean; readonly label: string; readonly fix?: string }
 
@@ -64,11 +65,26 @@ export function doctor(): number {
   const link = join(home, '.claude', 'skills', 'plumbbob')
   const shipped = listSkills(packageDir('skills'))
   const pkg = linkedPackage(link)
+  const market = marketplacePlumbbob(home)
 
-  const checks: Check[] =
-    pkg === null ? [{ ok: false, label: `not linked — no plugin at ${link}`, fix: 'run: plumbbob init' }] : buildChecks(link, pkg, shipped)
+  let checks: Check[]
+  if (pkg === null) {
+    checks =
+      market.length > 0
+        ? [{ ok: true, label: `installed via marketplace (${market.join(', ')}) — skills load as /plumbbob:*, the CLI is on PATH from the plugin bin/. No init needed.` }]
+        : [{ ok: false, label: `not linked — no plugin at ${link}`, fix: 'install the marketplace plugin (/plugin install plumbbob@<marketplace>) or run: plumbbob init' }]
+  } else {
+    checks = buildChecks(link, pkg, shipped)
+    if (market.length > 0) {
+      checks.unshift({
+        ok: false,
+        label: `collision — also installed via marketplace (${market.join(', ')}); two plugins named plumbbob fight over /plumbbob:* and skills can drop to flat names`,
+        fix: 'keep one — `plumbbob init --uninstall` to use the marketplace plugin, or `/plugin uninstall` the marketplace one to keep this link',
+      })
+    }
+  }
 
-  const out: string[] = ['plumbbob doctor — global plugin install']
+  const out: string[] = ['plumbbob doctor — plugin install']
   for (const c of checks) {
     out.push(c.ok ? `  ✓ ${c.label}` : `  ✗ ${c.label}\n      → ${c.fix}`)
   }
@@ -80,7 +96,9 @@ export function doctor(): number {
       ? 'plumbbob: all checks passed. If a skill still misbehaves, restart Claude Code (or /reload-plugins).'
       : `plumbbob: ${failed} problem(s) — apply the → fixes, then restart Claude Code.`,
   )
-  out.push('plumbbob: skills shell a bare `plumbbob` — ensure it is on PATH (`npm i -g plumbbob`). Sessions are per-project via `plumbbob start`.')
+  out.push(
+    'plumbbob: skills shell a bare `plumbbob`. The marketplace plugin puts it on PATH via bin/; for the skills-dir/global install run `npm i -g plumbbob`. Sessions are per-project via `plumbbob start`.',
+  )
   process.stdout.write(`${out.join('\n')}\n`)
   return failed === 0 ? 0 : 1
 }

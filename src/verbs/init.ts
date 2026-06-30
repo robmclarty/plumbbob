@@ -1,17 +1,22 @@
-// `plumbbob init [--uninstall]` — link plumbbob into Claude Code as an in-place
-// skills-directory plugin. This is the whole install: it symlinks the installed
-// package into ~/.claude/skills/plumbbob, where Claude Code discovers it as
-// `plumbbob@skills-dir` — the skills load namespaced (`/plumbbob:*`) and the
-// post-edit hook auto-registers from hooks/hooks.json. Global-only by design:
-// plumbbob is a personal tool (like firecrawl/gh), and install scope is NOT
-// session scope — sessions stay per-project via `plumbbob start`. Idempotent +
-// reversible (`--uninstall` drops the link); it NEVER writes settings.json.
-// Functional, node builtins only (C1/C2).
+// `plumbbob init [--uninstall] [--force]` — link plumbbob into Claude Code as an
+// in-place skills-directory plugin. It symlinks the installed package into
+// ~/.claude/skills/plumbbob, where Claude Code discovers it as `plumbbob@skills-dir`
+// — the skills load namespaced (`/plumbbob:*`) and the post-edit hook auto-registers
+// from hooks/hooks.json. This is the legacy/global install path; the marketplace
+// plugin is the self-contained alternative (it ships skills AND the `plumbbob` CLI
+// on PATH via bin/, so it needs neither `npm i -g` nor `init`). The two are mutually
+// exclusive: both register a plugin named `plumbbob`, and a double-install collides
+// over the /plumbbob:* namespace (skills can drop to flat `/status` names). So init
+// REFUSES when a marketplace plumbbob is already installed — `--force` overrides
+// (the dev-install path uses it). Global-only by design: install scope is NOT session
+// scope — sessions stay per-project via `plumbbob start`. Idempotent + reversible
+// (`--uninstall` drops the link); it NEVER writes settings.json. Node builtins only.
 
 import { lstatSync, mkdirSync, readlinkSync, rmSync, symlinkSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { marketplacePlumbbob } from '../lib/plugins.ts'
 
 // The installed package root (parent of .claude-plugin/, skills/, hooks/, dist/),
 // off this module's URL — the global install when run as the published bin, the
@@ -51,6 +56,17 @@ export function init(args: ReadonlyArray<string>): number {
 
   if (args.includes('--uninstall')) {
     return uninstall(link)
+  }
+
+  const market = marketplacePlumbbob(home)
+  if (market.length > 0 && !args.includes('--force')) {
+    process.stderr.write(
+      `plumbbob: a marketplace plumbbob plugin is already installed (${market.join(', ')}).\n` +
+        'plumbbob: it already provides the skills (`/plumbbob:*`) and the `plumbbob` CLI on PATH (the plugin bin/) — no `plumbbob init` needed.\n' +
+        `plumbbob: linking ${link} would register a SECOND plugin named \`plumbbob\`; the two collide over the /plumbbob:* namespace and skills can drop to flat names (\`/status\`).\n` +
+        'plumbbob: to use the skills-dir link instead, first remove the marketplace one (`/plugin uninstall plumbbob@<marketplace>`), or re-run with `--force` if you know what you are doing.\n',
+    )
+    return 1
   }
 
   mkdirSync(join(home, '.claude', 'skills'), { recursive: true })

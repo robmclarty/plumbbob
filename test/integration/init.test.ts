@@ -4,7 +4,7 @@
 // throwaway dir per test so the real ~/.claude is never touched. Subprocess-driven
 // (D14); init ignores cwd, so a non-git dir is fine.
 
-import { existsSync, lstatSync, mkdirSync } from 'node:fs'
+import { existsSync, lstatSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { cleanupFixtures, makeNonGitDir, runCli } from '../helpers/fixture-repo.ts'
@@ -16,6 +16,12 @@ function initIn(home: string, ...flags: string[]): ReturnType<typeof runCli> {
 }
 function link(home: string): string {
   return join(home, '.claude', 'skills', 'plumbbob')
+}
+// Seed Claude Code's installed_plugins.json so the home looks like it already has
+// a marketplace plumbbob plugin — what the collision guard keys off.
+function seedMarketplace(home: string, id = 'plumbbob@robmclarty'): void {
+  mkdirSync(join(home, '.claude', 'plugins'), { recursive: true })
+  writeFileSync(join(home, '.claude', 'plugins', 'installed_plugins.json'), JSON.stringify({ version: 2, plugins: { [id]: [{ scope: 'user' }] } }))
 }
 
 describe('plumbbob init — global, in-place plugin link', () => {
@@ -66,5 +72,22 @@ describe('plumbbob init — global, in-place plugin link', () => {
     const r = initIn(home)
     expect(r.status).toBe(1)
     expect(r.stderr).toMatch(/not a plumbbob link/i)
+  })
+
+  it('refuses when a marketplace plumbbob plugin is already installed (collision guard)', () => {
+    const home = makeNonGitDir()
+    seedMarketplace(home)
+    const r = initIn(home)
+    expect(r.status).toBe(1)
+    expect(r.stderr).toMatch(/marketplace plumbbob plugin is already installed/i)
+    expect(existsSync(link(home))).toBe(false) // no second, colliding plugin linked
+  })
+
+  it('--force overrides the marketplace-collision guard and links anyway', () => {
+    const home = makeNonGitDir()
+    seedMarketplace(home)
+    const r = initIn(home, '--force')
+    expect(r.status).toBe(0)
+    expect(lstatSync(link(home)).isSymbolicLink()).toBe(true)
   })
 })

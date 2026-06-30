@@ -36,7 +36,7 @@ describe('dev-install.sh (orchestration, commands stubbed)', () => {
     expect(status).toBe(0)
     expect(log).toContain('pnpm build')
     expect(log).toContain('pnpm link --global')
-    expect(log).toMatch(/node .*cli\.ts init$/m)
+    expect(log).toMatch(/node .*cli\.ts init --force$/m)
   })
 
   it('--uninstall reverses the plugin link and the global bin', () => {

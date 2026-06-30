@@ -5,7 +5,7 @@
 // these tests pin not-linked detection and a link that points at a non-package.
 // HOME is pinned per test; subprocess-driven (D14).
 
-import { mkdirSync, symlinkSync } from 'node:fs'
+import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { cleanupFixtures, makeNonGitDir, runCli } from '../helpers/fixture-repo.ts'
@@ -15,8 +15,12 @@ afterAll(cleanupFixtures)
 function doctorIn(home: string): ReturnType<typeof runCli> {
   return runCli(makeNonGitDir(), ['doctor'], { HOME: home })
 }
-function initIn(home: string): void {
-  runCli(makeNonGitDir(), ['init'], { HOME: home })
+function initIn(home: string, ...flags: string[]): void {
+  runCli(makeNonGitDir(), ['init', ...flags], { HOME: home })
+}
+function seedMarketplace(home: string, id = 'plumbbob@robmclarty'): void {
+  mkdirSync(join(home, '.claude', 'plugins'), { recursive: true })
+  writeFileSync(join(home, '.claude', 'plugins', 'installed_plugins.json'), JSON.stringify({ version: 2, plugins: { [id]: [{ scope: 'user' }] } }))
 }
 
 describe('plumbbob doctor — global plugin link', () => {
@@ -49,5 +53,25 @@ describe('plumbbob doctor — global plugin link', () => {
 
     expect(status).toBe(1)
     expect(stdout).toMatch(/manifest missing|skills incomplete/i)
+  })
+
+  it('recognizes a marketplace install (no link) as a valid, passing install', () => {
+    const home = makeNonGitDir()
+    seedMarketplace(home)
+    const { stdout, status } = doctorIn(home)
+
+    expect(status).toBe(0)
+    expect(stdout).toMatch(/installed via marketplace/i)
+    expect(stdout).not.toContain('✗')
+  })
+
+  it('flags the collision when both a skills-dir link and a marketplace install exist', () => {
+    const home = makeNonGitDir()
+    initIn(home, '--force') // link the checkout past the guard
+    seedMarketplace(home)
+    const { stdout, status } = doctorIn(home)
+
+    expect(status).toBe(1)
+    expect(stdout).toMatch(/collision/i)
   })
 })

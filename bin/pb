@@ -1,0 +1,6 @@
+#!/bin/sh
+# pb — short alias for `plumbbob` (see bin/plumbbob for the full note). Same PATH
+# shim: resolves the bundled CLI relative to this file so the plugin works on PATH
+# without a global install.
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+exec node "$here/../dist/cli.js" "$@"

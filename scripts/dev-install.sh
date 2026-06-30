@@ -28,9 +28,9 @@ if [ "${1:-}" = "--uninstall" ]; then
   exit 0
 fi
 
-pnpm build           # so the linked `plumbbob` bin (dist/cli.js) is current
-pnpm link --global   # `plumbbob` (+ `pb`) on PATH, pointing at this checkout
-node src/cli.ts init # symlink ~/.claude/skills/plumbbob -> this checkout
+pnpm build                   # so the linked `plumbbob` bin (dist/cli.js) is current
+pnpm link --global           # `plumbbob` (+ `pb`) on PATH, pointing at this checkout
+node src/cli.ts init --force # symlink ~/.claude/skills/plumbbob -> this checkout; --force past the marketplace-collision guard (dev wants the live checkout)
 
 echo "dev-install: linked this checkout as the plumbbob plugin (bin on PATH + ~/.claude/skills/plumbbob)."
 echo "dev-install: restart Claude Code (or /reload-plugins). Skill + hook edits are live; run 'pnpm build' after CLI changes."
