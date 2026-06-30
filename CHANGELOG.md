@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] - 2026-06-29
+
+- **Changed:** the eleven driver skills drop the `pb-` prefix introduced in 0.4.3 and go
+  back to bare verbs — they now invoke as `/plumbbob:plan`, `/plumbbob:step`,
+  `/plumbbob:build`, `/plumbbob:verify`, `/plumbbob:park`, `/plumbbob:status`,
+  `/plumbbob:harvest`, `/plumbbob:wrap`, `/plumbbob:refine`, `/plumbbob:revert`, and
+  `/plumbbob:spike`. Claude Code namespaces a plugin's skills as `/<plugin>:<skill>`
+  rather than flattening them to bare commands, so the 0.4.3 prefix was redundant and
+  produced a doubled `/plumbbob:pb-plan`. If you installed 0.4.3, re-run `plumbbob init`
+  and use the `/plumbbob:<verb>` form. The CLI verbs (`plumbbob status`, `pb park`, …)
+  are unchanged.
+- **Fixed:** the install docs and the `init.ts` rationale — which claimed Claude Code
+  surfaces each skill as a bare `/<skill>` command and that the names must ship
+  pre-prefixed — now correctly state that a plugin's skills load namespaced as
+  `/plumbbob:*`.
+- **Changed:** the `/version` release skill now force-writes `.claude-plugin/plugin.json`
+  in lockstep with `package.json`; this release brings the plugin manifest back into sync
+  after it had drifted to 0.4.0.
+
 ## [0.4.3] - 2026-06-29
 
 - **Changed:** the eleven driver skills are renamed with a `pb-` prefix — `/pb-plan`,
