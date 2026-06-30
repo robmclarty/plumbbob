@@ -27,7 +27,7 @@ at the pause for your approval. **Re-firing `/pb-build` is itself the clock tick
    the next undone, planned step in `.plumbbob/intent.md`. If there is no planned step
    to build, stop and tell the human to `/pb-step` first.
 2. **Enter the step.** Run `plumbbob build <n>` (records the in-flight STEP +
-   SEAM so `/pb-status` shows the step in flight; in v2 the seam is awareness, not a
+   SEAM so `/pb-status` shows the step in flight; the seam is awareness, not a
    lock).
 3. **Read the plan.** Read the step's **done-when**, its **seam**, and the
    **Decisions** and **Constraints** in `intent.md`. Build to *that* — the deciding

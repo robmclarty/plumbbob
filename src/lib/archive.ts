@@ -1,4 +1,4 @@
-// The finish-phase archive helper (D20: archive is local-only markdown in v1).
+// The finish-phase archive helper (D20: archive is local-only markdown).
 // `finish` copies the three active files into .plumbbob/archive/<date>-<slug>/
 // before clearing the actives — "archive-then-clear, never destroy" (C4).
 // Functional/procedural, node builtins only (C1/C2).
@@ -65,7 +65,7 @@ function uniqueArchiveDir(root: string, base: string): string {
 
 // Copy intent + build-log + report into archive/<date>-<slug>/ and return the
 // directory created. Intent and build-log always exist in an active session; the
-// report is copied only when present — v2 `wrap` does not gate on it (D9), so a
+// report is copied only when present — `wrap` does not gate on it (D9), so a
 // close-out without a report still archives the rest.
 export function archiveSession(root: string): string {
   const dir = uniqueArchiveDir(root, `${today()}-${slugify(sessionTitle(root))}`)

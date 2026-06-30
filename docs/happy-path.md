@@ -130,10 +130,10 @@ straight through the verify tick to the pause.
 /pb-build
 ```
 
-It goes in-flight, recording the seam for orientation (not a lock in v2):
+It goes in-flight, recording the seam for orientation (not a lock):
 
 ```text
-plumbbob: building step 1. Seam (for orientation; not a lock in v2):
+plumbbob: building step 1. Seam (for orientation; not a lock):
   src/limiter.ts
   test/limiter.test.ts
 ```

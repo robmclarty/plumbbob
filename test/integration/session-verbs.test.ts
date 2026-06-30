@@ -50,7 +50,7 @@ describe('plumbbob park', () => {
     expect(runCli(makeFixtureRepo(), ['park', 'orphan idea']).status).toBe(1)
   })
 })
-describe('Plumbbob v2: no verb is gated by CLAUDECODE (the lock is gone)', () => {
+describe('no verb is gated by CLAUDECODE (there is no lock)', () => {
   it('runs every verb the same in-session — start, then park, under CLAUDECODE', () => {
     const dir = makeFixtureRepo()
     expect(runCli(dir, ['start', 'In session'], { CLAUDECODE: '1' }).status).toBe(0)

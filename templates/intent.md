@@ -46,8 +46,8 @@ holes `/pb-refine` surfaces, and as blockers fold in during BUILD.)*
 
 *(The build plan. `/pb-plan` authors the **whole list up front** — each step a small,
 verifiable increment with its own **done-when** and **seam** (the paths it will touch,
-which `/pb-build` records in `.plumbbob/SEAM` for orientation — awareness, not a lock
-in v2). Then drive `/pb-build` until done. Later steps may be fuzzier than the first;
+which `/pb-build` records in `.plumbbob/SEAM` for orientation — awareness, not a lock).
+Then drive `/pb-build` until done. Later steps may be fuzzier than the first;
 sharpen the next one just-in-time with `/pb-step` (empty input auto-syncs it), and use
 `/pb-refine` to repair the whole plan when a blocker rewrites it.)*
 

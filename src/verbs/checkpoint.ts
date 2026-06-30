@@ -1,5 +1,5 @@
 // `plumbbob checkpoint [<n>] [-m <msg>]` — the executor-agnostic commit tick (D3).
-// Unlike v1 `done`, it does NOT require a STEP file: the step is whatever you pass,
+// It does NOT require a STEP file: the step is whatever you pass,
 // else the in-flight STEP, else the next undone step in intent. It gates on a green
 // check, then commits any pending work (or records the existing HEAD when the tree
 // is already clean — the human's commit skill may have committed first), records the

@@ -59,7 +59,7 @@ type CliResult = {
 
 // Spawns the CLI with CLAUDECODE stripped by default so tests are deterministic
 // regardless of the host environment. Pass `{ CLAUDECODE: '1' }` to simulate an
-// in-session run; Plumbbob v2 no longer gates any verb on it.
+// in-session run; PlumbBob does not gate any verb on it.
 export function runCli(dir: string, args: ReadonlyArray<string>, extraEnv: Record<string, string> = {}): CliResult {
   const env: Record<string, string | undefined> = { ...process.env }
   delete env.CLAUDECODE
@@ -81,7 +81,7 @@ export function sidecarExists(dir: string, name: string): boolean {
 }
 
 // The derived phase shown in the dashboard, parsed from the `[XXX]` label in
-// `plumbbob status`. v2 stopped storing the phase — it is computed from the STEP
+// `plumbbob status`. The phase is not stored — it is computed from the STEP
 // file (BUILD) and the SPIKE marker (SPIKE), else DESIGN.
 export function phase(dir: string): string {
   return /\[([A-Z]+)\]/.exec(runCli(dir, ['status']).stdout)?.[1] ?? 'NONE'

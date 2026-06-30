@@ -31,15 +31,15 @@ const VERBS: ReadonlyArray<Verb> = [
   { name: 'revert', summary: 'revert [--to n]: git reset --hard to a checkpoint SHA' },
   { name: 'park', summary: 'park "<text>": append a raw line to the park list' },
   { name: 'spike', summary: 'spike "<slug>" | spike done: throwaway worktree experiment' },
-  { name: 'wrap', summary: 'v2 close-out: archive intent+log+report (no gate), clear the sidecar, close the session' },
+  { name: 'wrap', summary: 'close-out: archive intent+log+report (no gate), clear the sidecar, close the session' },
   { name: 'init', summary: 'link plumbbob into Claude Code as an in-place plugin (~/.claude/skills/plumbbob); --uninstall to undo' },
   { name: 'doctor', summary: 'diagnose the plugin link (manifest, skills, hook) and print the fix for anything broken' },
 ]
 
-// Plumbbob v2 (D1/D10/D13): the deciding/executing boundary is no longer a lock,
+// PlumbBob (D1/D10/D13): the deciding/executing boundary is a pause, not a lock,
 // so there is nothing to defend — every verb runs the same whether a human or the
-// model triggers it. The old human-only `mode` escape hatch and its CLAUDECODE
-// in-session refusal are gone; what keeps the human the decider is the pause at
+// model triggers it. There is no human-only `mode` escape hatch and no CLAUDECODE
+// in-session refusal; what keeps the human the decider is the pause at
 // the step boundary (the skills), not a refusal here.
 
 export function formatHelp(): string {

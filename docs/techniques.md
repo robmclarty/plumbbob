@@ -86,8 +86,8 @@ input auto-syncs it to what the build has already taught you) right before you b
 
 The seam is the step's declared blast radius. When you enter a step, the CLI records it in
 `.plumbbob/SEAM` (and the step number in `STEP`) so the dashboard can show what is in
-flight. In v1 the seam was *enforced* — edits outside it were refused. In **v2 it is
-orientation only**: a label on the map, not a fence. It tells you and the model where the
+flight. The seam is **orientation only** — a label on the map, not a fence. It tells you
+and the model where the
 step is supposed to live, so straying out of it is a visible signal rather than a silent
 sprawl.
 
@@ -112,9 +112,9 @@ check  →  self-review  →  validate  →  PAUSE  →  checkpoint
 
 ### The pause is a clock, not a lock
 
-The pause is the whole product. v1 enforced the deciding/executing boundary with a hard
-file lock that *refused* edits in the wrong state; a determined model routed around it, so
-its only product was forced ritual. v2 replaces that lock with a **clock**: nothing blocks
+The pause is the whole product. A hard file lock — one that *refuses* edits in the wrong
+state — buys nothing: a determined model routes around it, so its only product is forced
+ritual. PlumbBob uses a **clock** instead: nothing blocks
 your edits, but the loop does a step's labor and then *pulls up to a line* — the verify
 pause — and idles there until you approve. **Pull, not block.** You stay the decider not
 because a wall refuses you, but because the system stops and waits for you to be the clock.

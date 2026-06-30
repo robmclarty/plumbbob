@@ -66,7 +66,7 @@ plumbbob build <n>
 
 Reads step `n`'s seam from `intent.md` and writes `SEAM` (the path list) and `STEP` (the
 number) — the `STEP` file is what makes the dashboard read `BUILD`. The seam is
-orientation, not a lock (v2). Refuses (exit 1)
+orientation, not a lock. Refuses (exit 1)
 with no session, a non-numeric or `< 1` step, or a seam it cannot parse (seams are exact
 paths or `dir/` grants, never globs — **D23**).
 
@@ -136,7 +136,7 @@ empty slug, or a worktree path that already exists; `done` refuses when no spike
 plumbbob wrap
 ```
 
-The v2 close-out (**D9**). Appends the checkpoint SHAs to `report.md` (if present), copies
+The close-out (**D9**). Appends the checkpoint SHAs to `report.md` (if present), copies
 `intent.md`, `build-log.md`, and `report.md` into `.plumbbob/archive/<date>-<slug>/`, then
 clears the active sidecar files (`STATE` last). Archive-then-clear, never destroy (**C4**);
 git is untouched. There is **no** refuse-without-report gate. Refuses (exit 1) only with no

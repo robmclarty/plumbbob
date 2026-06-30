@@ -1,4 +1,4 @@
-// End-to-end dogfood drive: a full Plumbbob v2 session in a fixture repo,
+// End-to-end dogfood drive: a full PlumbBob session in a fixture repo,
 // start → build → checkpoint → park → wrap → archive populated. The report is
 // written here as the /plumbbob:pb-wrap skill would; the CLI path under test is everything
 // around it. Stub check per D14.
@@ -19,7 +19,7 @@ function writeRepo(dir: string, rel: string, content: string): void {
   writeFileSync(path, content)
 }
 
-describe('e2e: a full Plumbbob v2 session end to end', () => {
+describe('e2e: a full PlumbBob session end to end', () => {
   it('drives start → build → checkpoint → park → wrap → archive', () => {
     const dir = makeFixtureRepo({ withCheckScript: true })
 
@@ -38,7 +38,7 @@ describe('e2e: a full Plumbbob v2 session end to end', () => {
     expect(phase(dir)).toBe('BUILD')
     expect(readSidecar(dir, 'SEAM').trim()).toBe('src/widget.ts')
 
-    // implement the step (nothing gates the edit in v2), then checkpoint the tick.
+    // implement the step (nothing gates the edit), then checkpoint the tick.
     writeRepo(dir, 'src/widget.ts', 'export const widget = 1\n')
     expect(runCli(dir, ['checkpoint']).status).toBe(0) // no arg → resolves STEP=1
     expect(phase(dir)).toBe('DESIGN')

@@ -124,7 +124,7 @@ describe('plumbbob revert', () => {
     const dir = startedSession({ seam: '`src/`', check: 'true' })
     runCli(dir, ['build', '1'])
     write(dir, 'src/a.ts', 'export const a = 1\n')
-    runCli(dir, ['checkpoint']) // checkpoint step 1 (v2 tick)
+    runCli(dir, ['checkpoint']) // checkpoint step 1 (the tick)
     // a second round of uncommitted work
     runCli(dir, ['build', '1'])
     write(dir, 'src/a.ts', 'export const a = 2\n')

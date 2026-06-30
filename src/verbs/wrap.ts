@@ -1,8 +1,8 @@
-// `plumbbob wrap` (D9) — the v2 close-out, replacing the v1 four-verb
-// finish ceremony. It archives intent + build-log + report
+// `plumbbob wrap` (D9) — the close-out: one verb does the whole thing.
+// It archives intent + build-log + report
 // (the `/plumbbob:pb-wrap` skill writes the report by default) under .plumbbob/archive/,
-// clears the active files, and deletes the control state (STATE last). Unlike v1
-// `finish` there is NO refuse-without-report gate — guidance offers the artifact, it
+// clears the active files, and deletes the control state (STATE last). There is
+// NO refuse-without-report gate — guidance offers the artifact, it
 // does not wall the exit. Archive-then-clear, never destroy (C4); git untouched (C5).
 
 import { appendFileSync, existsSync, readFileSync, rmSync } from 'node:fs'

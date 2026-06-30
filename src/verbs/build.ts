@@ -31,7 +31,7 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
   writeFileSync(stepPath(root), `${step}\n`)
 
   process.stdout.write(
-    `plumbbob: building step ${step}. Seam (for orientation; not a lock in v2):\n${parsed.seam.map((p) => `  ${p}`).join('\n')}\n`,
+    `plumbbob: building step ${step}. Seam (for orientation; not a lock):\n${parsed.seam.map((p) => `  ${p}`).join('\n')}\n`,
   )
   return 0
 }

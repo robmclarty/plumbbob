@@ -13,10 +13,10 @@ function makeExecutable(dir: string, rel: string, script: string): void {
   chmodSync(path, 0o755)
 }
 
-// Plumbbob v2 retired the muzzle, the seam-guard, and bash-guard (D1/D13). The
-// only edit-time hook left is the PostToolUse light feedback: it never blocks and
+// PlumbBob has no muzzle, no seam-guard, and no bash-guard (D1/D13). The
+// only edit-time hook is the PostToolUse light feedback: it never blocks and
 // exists solely to give the model the diagnostics it cannot otherwise see (D25).
-describe('post-edit light feedback (D25 — the only edit-time hook in v2)', () => {
+describe('post-edit light feedback (D25 — the only edit-time hook)', () => {
   it('no-ops (exit 0, no context) when the tools are absent', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Lint'])

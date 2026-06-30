@@ -6,10 +6,10 @@ the code comments terse without losing the *why*. This page is the key: it recon
 each tag from where it is referenced in the code, so a reader who hits "`D17`" in a comment
 can look up what it means.
 
-The list covers the tags **present in the v2 code**. Some numbers (e.g. `D2`, `D5`,
-`D11`, `D12`, `D21`) belonged to earlier or superseded decisions and are no longer
-referenced; a few entries below are v1 decisions kept only because a comment still cites
-them, and they are marked as such.
+The list covers the tags **present in the code**. Some numbers (e.g. `D2`, `D5`,
+`D11`, `D12`, `D21`) belonged to superseded decisions and are no longer referenced; a few
+entries below are earlier decisions kept only because a comment still cites them, and they
+are marked as such.
 
 ## Constraints (C)
 
@@ -43,7 +43,7 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
 
 ## Decisions (D)
 
-- **D1 — A deterministic, zero-dependency CLI; guidance, not a lock.** The v2 foundation:
+- **D1 — A deterministic, zero-dependency CLI; guidance, not a lock.** The foundation:
   a hand-rolled `plumbbob` CLI built on node builtins, and a deciding/executing boundary
   held by a pause rather than enforced by a file lock. *Tagged in* `cli-core.ts`.
 - **D3 — The pluggable, author-blind executor.** `/pb-build` is optional; `verify`
@@ -61,14 +61,14 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   boundary. *Tagged in* `sidecar.ts`, the `park` and `harvest` skills.
 - **D8 — `status` is an orientation dashboard.** It parses the live session into the
   where-am-I view. *Tagged in* `status.ts`, `orient.ts`.
-- **D9 — `wrap` is the v2 close-out: report by default, no gate.** One verb replaces v1's
-  four-verb finish; it writes the report by default but never refuses the exit without one.
+- **D9 — `wrap` is the close-out: report by default, no gate.** A single verb does the
+  whole close-out; it writes the report by default but never refuses the exit without one.
   *Tagged in* `wrap.ts`, `archive.ts`, the `wrap` skill. (Supersedes **D19**.)
 - **D10 — The boundary is a pause, not a lock.** Nothing blocks edits; the loop pulls up
   to the verify pause and waits. *Tagged in* `cli-core.ts`.
-- **D13 — Retire the v1 guards.** The pre-edit muzzle, seam-guard, and bash-guard, plus the
-  human-only `mode` escape hatch and the `CLAUDECODE` in-session refusal, are all gone —
-  guidance, not enforcement. *Tagged in* `cli-core.ts`.
+- **D13 — No edit-blocking guards.** There is no pre-edit muzzle, seam-guard, or bash-guard,
+  no human-only `mode` escape hatch, and no `CLAUDECODE` in-session refusal — guidance, not
+  enforcement. *Tagged in* `cli-core.ts`.
 - **D14 — Subprocess testing in throwaway repos.** Tests run the real CLI against tmp git
   repos; because a real `pnpm check` would recurse into vitest, fixtures point the check at
   a stub. *Tagged in* `test/helpers/fixture-repo.ts`, `check.ts`, and the `check` tests.
@@ -84,7 +84,6 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   option, kept outside the repo, torn down by `spike done`. *Tagged in* `spike.ts`.
 - **D20 — The archive is local-only markdown.** Wrapping writes a plain-markdown archive
   under `.plumbbob/archive/`; nothing is pushed anywhere. *Tagged in* `archive.ts`.
-  *(Originated in v1; still the v2 behavior.)*
 - **D22 — `start` refuses a dirty tree.** A clean baseline is required; `--allow-dirty`
   overrides it and records the current HEAD as the baseline. *Tagged in* `start.ts`.
 - **D23 — Seams are exact paths or `dir/` grants, never globs.** A seam token is matched as
@@ -99,9 +98,9 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
 
 ### Superseded
 
-- **D19 — (v1) `finish` refused without a report.** v1 gated the close-out on a written
-  report. **D9** removed the gate: v2 `wrap` writes the report by default but never walls
-  the exit. *Still cited in* `archive.ts`.
+- **D19 — `finish` refused without a report.** An earlier close-out gated the exit on a
+  written report. **D9** removed the gate: `wrap` writes the report by default but never
+  walls the exit. *Still cited in* `archive.ts`.
 
 ---
 
