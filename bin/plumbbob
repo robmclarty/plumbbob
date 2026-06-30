@@ -5,5 +5,5 @@
 # `npm i -g`. The CLI is resolved relative to this file, so it works from the
 # plugin's install/cache dir wherever that lands. Requires node >=22 on PATH (the
 # same requirement as the published `bin`/`dist/cli.js` shebang).
-here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 exec node "$here/../dist/cli.js" "$@"
