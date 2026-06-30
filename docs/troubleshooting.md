@@ -130,6 +130,15 @@ by design (**D25**):
 - **Clean file.** If the file-scoped check passes, there is nothing to report. It never
   blocks an edit and always exits 0.
 
+## Building and publishing
+
+### `npm pack` or `npm publish` aborts with `EBADDEVENGINES`
+
+**Cause.** `devEngines` pins the repo's package manager to pnpm, so `npm pack`, `npm
+publish`, or `npm install` run *inside this repo* with plain npm abort. **Fix.** Use pnpm
+for repo-local work (`pnpm install`, `pnpm pack`, publish via pnpm). Consumers are
+unaffected — `npm i -g plumbbob` ignores `devEngines` (it is dev-scoped to this package).
+
 ## Spikes and revert
 
 ### `spike` refuses to start

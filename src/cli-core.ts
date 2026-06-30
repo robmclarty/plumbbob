@@ -3,6 +3,8 @@
 // the top-level process.exit. Zero runtime deps, node: builtins only (D1/C2).
 // Functional/procedural: no classes, no `this`, no default export (C1).
 
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { start } from './verbs/start.ts'
 import { status } from './verbs/status.ts'
 import { park } from './verbs/park.ts'
@@ -48,6 +50,19 @@ export function formatHelp(): string {
   )
 }
 
+// The package version, read from the package.json that ships one level above the
+// compiled CLI (dist/cli-core.js → ../package.json; in tests src/cli-core.ts →
+// ../package.json, the repo root). Builtins only (C2); an absent or malformed
+// manifest degrades to 'unknown' rather than throwing, so `--version` never errors.
+export function readVersion(): string {
+  try {
+    const raw = readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8')
+    return (JSON.parse(raw) as { version?: string }).version ?? 'unknown'
+  } catch {
+    return 'unknown'
+  }
+}
+
 function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): number {
   switch (verb) {
     case 'start':
@@ -84,6 +99,11 @@ export function run(argv: ReadonlyArray<string>): number {
 
   if (verb === 'help' || verb === '--help' || verb === '-h') {
     process.stdout.write(`${formatHelp()}\n`)
+    return 0
+  }
+
+  if (verb === 'version' || verb === '--version' || verb === '-v') {
+    process.stdout.write(`plumbbob ${readVersion()}\n`)
     return 0
   }
 

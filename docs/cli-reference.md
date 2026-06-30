@@ -29,6 +29,7 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 | `init` | `init [--uninstall] [--force]` | link plumbbob into Claude Code as the skills-dir plugin |
 | `doctor` | `doctor` | diagnose the plugin link |
 | `help` | `help` \| `--help` \| `-h` | print the verb table |
+| `version` | `version` \| `--version` \| `-v` | print the CLI version |
 
 ## Session verbs
 

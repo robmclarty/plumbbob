@@ -134,8 +134,8 @@ Calibration is the skill. When in doubt, smaller.
 
 - A `plumbbob` CLI (TypeScript, run natively by Node ≥ 22.18, zero runtime
   dependencies) — the dumb mechanical verbs the skills shell out to. You never type
-  it by hand. The marketplace plugin carries it on PATH via `bin/` shims; `npm i -g`
-  installs it globally.
+  it by hand (beyond `plumbbob --help` and `plumbbob --version`). The marketplace
+  plugin carries it on PATH via `bin/` shims; `npm i -g` installs it globally.
 - The eight `/plumbbob:*` skills plus the optional power moves, each
   `disable-model-invocation` so *you* fire every move.
 - One session-gated Claude Code hook — `post-edit.sh`, a non-blocking light-feedback

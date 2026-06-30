@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatHelp, run } from '../cli-core.ts'
+import { formatHelp, readVersion, run } from '../cli-core.ts'
 import { captureIo } from '../../test/helpers/capture-io.ts'
 
 describe('formatHelp', () => {
@@ -25,5 +25,19 @@ describe('run', () => {
     const { code, stderr } = captureIo(() => run(['frobnicate']))
     expect(code).toBe(1)
     expect(stderr).toContain("unknown verb 'frobnicate'")
+  })
+
+  it('prints the version and exits 0 for version / --version / -v', () => {
+    for (const argv of [['version'], ['--version'], ['-v']]) {
+      const { code, stdout } = captureIo(() => run(argv))
+      expect(code).toBe(0)
+      expect(stdout).toContain(`plumbbob ${readVersion()}`)
+    }
+  })
+})
+
+describe('readVersion', () => {
+  it('reads a semver string from the shipped package.json', () => {
+    expect(readVersion()).toMatch(/^\d+\.\d+\.\d+/)
   })
 })
