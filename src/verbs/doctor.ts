@@ -97,7 +97,7 @@ export function doctor(): number {
       : `plumbbob: ${failed} problem(s) — apply the → fixes, then restart Claude Code.`,
   )
   out.push(
-    'plumbbob: skills shell a bare `plumbbob`. The marketplace plugin puts it on PATH via bin/; for the skills-dir/global install run `npm i -g plumbbob`. Sessions are per-project via `plumbbob start`.',
+    'plumbbob: skills shell a bare `plumbbob`. The marketplace plugin puts it on PATH only inside a Claude Code session (via bin/) — there is no terminal `plumbbob`; for one (or the skills-dir install) run `npm i -g plumbbob`. In-session you can also run this as `/plumbbob:pb-doctor`. Sessions are per-project via `plumbbob start`.',
   )
   process.stdout.write(`${out.join('\n')}\n`)
   return failed === 0 ? 0 : 1

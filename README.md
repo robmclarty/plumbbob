@@ -236,8 +236,10 @@ plumbbob doctor
 
 `doctor` works for either install path: it confirms a marketplace plugin, or checks that the
 skills-dir link resolves to the plugin manifest, the skills, and the hook — flagging a
-double-install collision — and prints the exact fix for anything broken. Run it first if a
-`/plumbbob:*` skill ever opens with an empty dashboard;
+double-install collision — and prints the exact fix for anything broken. The terminal command
+above is for the **global / skills-dir** install; a **marketplace** plugin puts the CLI on
+PATH only *inside a Claude Code session*, so run **`/plumbbob:pb-doctor`** there instead. Run
+it first if a `/plumbbob:*` skill ever opens with an empty dashboard;
 [`docs/troubleshooting.md`](docs/troubleshooting.md) covers the rest.
 
 ## Development

@@ -13,6 +13,13 @@ link resolves to a package carrying the manifest, the skills, and the hook; it a
 both are present, and prints the exact `→ fix` for anything broken. Run it first whenever a
 `/plumbbob:*` skill misbehaves.
 
+**Where to run it.** A terminal `plumbbob doctor` works only for the **global / skills-dir**
+install (`npm i -g plumbbob`). A **marketplace** plugin puts the CLI on PATH *only inside a
+Claude Code session* (via its `bin/` shims), so there is no terminal `plumbbob` — run
+**`/plumbbob:pb-doctor`** in-session instead (or just ask Claude to run `plumbbob doctor`). If
+no `/plumbbob:*` skill loads at all, that is a plugin-not-loaded problem `doctor` cannot
+reach: check the `/plugin` UI and `/reload-plugins`.
+
 ## Install and linking
 
 ### A `/plumbbob:*` skill opens with an empty dashboard
