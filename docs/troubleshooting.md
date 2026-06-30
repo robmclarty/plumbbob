@@ -26,8 +26,9 @@ reach: check the `/plugin` UI and `/reload-plugins`.
 
 **Cause.** No plugin linked, so Claude Code loaded no skills — the most common silent
 failure. **Fix.** Run `plumbbob doctor`; if it reports "not linked," either install the
-marketplace plugin (`/plugin install plumbbob@<marketplace>`) or run `plumbbob init`, then
-restart Claude Code (or `/reload-plugins`).
+[`agent-tools`](https://github.com/robmclarty/agent-tools) marketplace plugin
+(`/plugin install plumbbob@robmclarty`) or run `plumbbob init`, then restart Claude Code
+(or `/reload-plugins`).
 
 ### The skills do not appear at all after installing
 
@@ -49,7 +50,7 @@ Confirm with `which plumbbob`.
 the skills-dir plugin too would register a *second* plugin named `plumbbob`; the two fight
 over the `/plumbbob:*` namespace and skills can drop to flat names like `/pb-status`. **Fix.**
 Keep one. Stay on the marketplace plugin (it needs no `init`), or remove it
-(`/plugin uninstall plumbbob@<marketplace>`) and re-run `plumbbob init`. `--force` overrides
+(`/plugin uninstall plumbbob@robmclarty`) and re-run `plumbbob init`. `--force` overrides
 the guard if you truly want both. `plumbbob doctor` reports the same collision when both are
 already present — apply its `→ fix`.
 

@@ -144,10 +144,10 @@ session.
 
 ## Install verbs
 
-PlumbBob has **two co-equal install paths**: the self-contained marketplace plugin (which
-ships the skills *and* this CLI on PATH via `bin/`, so it needs no `init`) and the skills-dir
-link these verbs manage. See [`install.md`](install.md) for the choice; the two are
-mutually exclusive.
+PlumbBob has **two co-equal install paths**: the marketplace plugin (Claude Code installs
+the published npm package for you — skills and this CLI on PATH via `bin/` — so it needs no
+`init`) and the skills-dir link these verbs manage. See [`install.md`](install.md) for the
+choice; the two are mutually exclusive.
 
 ### init
 

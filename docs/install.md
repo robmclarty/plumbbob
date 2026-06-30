@@ -8,12 +8,20 @@ reference.
 
 ## The marketplace plugin
 
-Self-contained: it ships the skills *and* the `plumbbob`/`pb` CLI on PATH (via its
-`bin/` shims), so it needs neither `npm i -g` nor `plumbbob init`:
+The marketplace entry resolves to the published `plumbbob` npm package, so Claude
+Code installs it for you — the skills, the hook, and the `plumbbob`/`pb` CLI (its
+`bin/` shims land on PATH inside the session) — with no `npm i -g` and no `plumbbob
+init` of your own. PlumbBob is published in the
+[`agent-tools`](https://github.com/robmclarty/agent-tools) marketplace — add it once,
+then install the plugin:
 
 ```text
-/plugin install plumbbob@<marketplace>
+/plugin marketplace add robmclarty/agent-tools
+/plugin install plumbbob@robmclarty
 ```
+
+(The `@robmclarty` suffix is the marketplace's name, not the repo's — `agent-tools`
+is the repo you add, `robmclarty` is the marketplace it declares.)
 
 ## npm global + `init`
 

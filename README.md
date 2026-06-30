@@ -33,11 +33,14 @@ PlumbBob installs **once, globally** — like `gh` or your dotfiles — in one o
 co-equal, mutually-exclusive ways (both register a Claude Code plugin named
 `plumbbob`).
 
-**Marketplace plugin** — self-contained; ships the skills *and* the CLI on PATH, so
-it needs neither `npm` nor `init`:
+**Marketplace plugin** — Claude Code installs the published `plumbbob` package for
+you (skills, hook, and the CLI on PATH), so you run no `npm i -g` and no `init`. It's
+published in the [`agent-tools`](https://github.com/robmclarty/agent-tools)
+marketplace — add that once, then install:
 
 ```text
-/plugin install plumbbob@<marketplace>
+/plugin marketplace add robmclarty/agent-tools
+/plugin install plumbbob@robmclarty
 ```
 
 **npm global + `init`** — installs the CLI, then links the skills and hook into
