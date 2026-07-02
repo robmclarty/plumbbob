@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 412" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="14">
+  <title>One step of the PlumbBob loop: plan, build, pause, approve, checkpoint</title>
+  <style>
+    /* Each line reveals at its delay; renderers without CSS animation show the
+       finished transcript, which is the correct static fallback. */
+    .r { animation: r 0.01s steps(1, end) backwards; }
+    @keyframes r { from { opacity: 0; } to { opacity: 1; } }
+    .t1 { animation-delay: 0.5s; }
+    .t2 { animation-delay: 1.6s; }
+    .t3 { animation-delay: 3s; }
+    .t4 { animation-delay: 4s; }
+    .t5 { animation-delay: 4.35s; }
+    .t6 { animation-delay: 4.7s; }
+    .t7 { animation-delay: 5.05s; }
+    .t8 { animation-delay: 6s; }
+    .t9 { animation-delay: 7.6s; }
+    .t10 { animation-delay: 8.4s; }
+    .t11 { animation-delay: 9.2s; }
+    .cursor { animation: r 0.01s steps(1, end) 9.2s backwards, blink 1.2s step-end 9.4s infinite; }
+    @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+  </style>
+  <rect width="760" height="412" rx="12" fill="#0d1117"/>
+  <rect x="0.5" y="0.5" width="759" height="411" rx="12" fill="none" stroke="#30363d"/>
+  <circle cx="24" cy="24" r="6" fill="#ff5f56"/>
+  <circle cx="44" cy="24" r="6" fill="#ffbd2e"/>
+  <circle cx="64" cy="24" r="6" fill="#27c93f"/>
+  <text x="380" y="29" text-anchor="middle" fill="#8b949e" font-size="12">plumbbob — one step of the loop</text>
+
+  <g class="r t1">
+    <text x="28" y="70"><tspan fill="#7ee787">❯</tspan><tspan x="46" fill="#e6edf3">/pb-plan rate-limit POST /login, 5/min/IP, 429</tspan></text>
+  </g>
+
+  <g class="r t2">
+    <text x="28" y="96" fill="#8b949e">plumbbob: started "Rate-limit the login endpoint" — baseline 3a1f2b0.</text>
+    <text x="28" y="118" fill="#8b949e"><tspan fill="#e6edf3">intent.md</tspan> written — Frame · 2 Decisions · 1 Constraint · 3 Steps.</text>
+  </g>
+
+  <g class="r t3">
+    <text x="28" y="152"><tspan fill="#7ee787">❯</tspan><tspan x="46" fill="#e6edf3">/pb-build</tspan></text>
+  </g>
+
+  <g class="r t4">
+    <text x="28" y="178" fill="#8b949e">building step 1 — Add a token-bucket limiter</text>
+  </g>
+  <g class="r t5">
+    <text x="28" y="200" fill="#8b949e">check<tspan x="150" fill="#7ee787">green</tspan><tspan x="230">tsc, oxlint, vitest</tspan></text>
+  </g>
+  <g class="r t6">
+    <text x="28" y="222" fill="#8b949e">done-when<tspan x="150" fill="#7ee787">met</tspan><tspan x="230">test/limiter.test.ts: 4 passing</tspan></text>
+  </g>
+  <g class="r t7">
+    <text x="28" y="244" fill="#8b949e">decisions<tspan x="150" fill="#7ee787">honored</tspan><tspan x="230">D1 in-memory · D2 5/60s/IP</tspan></text>
+  </g>
+
+  <g class="r t8">
+    <text x="28" y="278" fill="#e3b341">PAUSE — read the diff as an editor. Approve to checkpoint, or send fixes.</text>
+  </g>
+
+  <g class="r t9">
+    <text x="28" y="312"><tspan fill="#7ee787">❯</tspan><tspan x="46" fill="#e6edf3">approve</tspan></text>
+  </g>
+
+  <g class="r t10">
+    <text x="28" y="338" fill="#8b949e">step 1 checkpointed — <tspan fill="#79c0ff">a1b2c3d</tspan>. Back at the boundary. 2 steps remain.</text>
+  </g>
+
+  <g class="r t11">
+    <text x="28" y="372"><tspan fill="#7ee787">❯</tspan><tspan x="70" fill="#8b949e" font-style="italic">fire /pb-build again — you are the clock</tspan></text>
+  </g>
+  <rect class="cursor" x="46" y="360" width="8" height="15" fill="#e6edf3"/>
+</svg>
