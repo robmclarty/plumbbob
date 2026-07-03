@@ -1,10 +1,10 @@
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { finish } from '../finish.ts'
 import { start } from '../start.ts'
-import { hasSession, intentPath, reportPath, sidecarDir } from '../../lib/sidecar.ts'
+import { checkpointsPath, hasSession, intentPath, reportPath, sidecarDir } from '../../lib/sidecar.ts'
 import { localSettingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo } from '../../../test/helpers/capture-io.ts'
@@ -26,7 +26,9 @@ describe('finish', () => {
     expect(existsSync(intentPath(dir))).toBe(true)
     expect(existsSync(join(sidecarDir(dir), 'archive'))).toBe(false)
     expect(subject(dir)).toBe('plumbbob: finish — Finishing up')
-    expect(stdout).toContain('finished')
+    // Short SHA (exactly 9 hex), the archive pointer, and the next-goal nudge.
+    expect(stdout).toMatch(/finished — [0-9a-f]{9}\. \.plumbbob\/builds\/finishing-up\/ rides your branch/)
+    expect(stdout).toContain('pb-plan')
   })
 
   it('drops the activeBuild cursor and leaves a clean tree', () => {
@@ -44,8 +46,20 @@ describe('finish', () => {
     writeFileSync(reportPath(dir), '# Report\n')
     captureIo(() => finish(dir))
     const report = readFileSync(reportPath(dir), 'utf8')
-    expect(report).toContain('## Checkpoints')
+    // The exact section shape: blank line, heading, blank line, bullets.
+    expect(report).toContain('\n## Checkpoints\n\n- baseline')
     expect(report).toMatch(/- baseline [0-9a-f]{40}/)
+  })
+
+  it('writes an empty Checkpoints section when the checkpoints file is unreadable', () => {
+    const dir = makeTempRepo()
+    captureIo(() => start(dir, ['No checkpoints']))
+    writeFileSync(reportPath(dir), '# Report\n')
+    rmSync(checkpointsPath(dir), { force: true })
+    captureIo(() => finish(dir))
+    const report = readFileSync(reportPath(dir), 'utf8')
+    expect(report).toContain('## Checkpoints')
+    expect(report).not.toMatch(/^- /m) // best-effort: no bullets, no crash, no junk
   })
 
   it('notes a missing report but finishes anyway (D9)', () => {

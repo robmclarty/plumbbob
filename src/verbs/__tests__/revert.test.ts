@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { revert } from '../revert.ts'
@@ -7,7 +7,7 @@ import { start } from '../start.ts'
 import { build } from '../build.ts'
 import { checkpoint } from '../checkpoint.ts'
 import { park } from '../park.ts'
-import { buildDir, buildLogPath, intentPath, stepPath } from '../../lib/sidecar.ts'
+import { buildDir, buildLogPath, checkpointsPath, intentPath, seamPath, stepPath } from '../../lib/sidecar.ts'
 import { settingsPath } from '../../lib/settings.ts'
 import { headSha } from '../../lib/git.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -47,7 +47,21 @@ describe('revert', () => {
     expect(code).toBe(0)
     expect(existsSync(stepPath(dir))).toBe(false) // back at the boundary
     expect(readFileSync(join(dir, 'feature.txt'), 'utf8')).toBe('v1\n')
-    expect(stdout).toContain('reverted to')
+    expect(stdout).toMatch(/reverted to [0-9a-f]{9} — back at the boundary/) // short SHA, not the full 40
+  })
+
+  it('reverts --to a multi-digit step by its recorded SHA', () => {
+    const dir = startedGreen()
+    const first = headSha(dir)
+    writeFileSync(join(dir, 'feature.txt'), 'later\n')
+    git(dir, ['add', '-A'])
+    git(dir, ['commit', '-q', '-m', 'past step 10'])
+    // Hand-written ledger: step 10 points at the first commit. Multi-digit on
+    // purpose — the parser must read the whole number, not one digit.
+    writeFileSync(checkpointsPath(dir), `baseline ${first}\nstep 10 ${first}\n`)
+    const { code } = captureIo(() => revert(dir, ['--to', '10']))
+    expect(code).toBe(0)
+    expect(headSha(dir)).toBe(first)
   })
 
   it('falls back to the baseline when no step checkpoint exists', () => {
@@ -69,6 +83,37 @@ describe('revert', () => {
     expect(captureIo(() => revert(dir, [])).code).toBe(0)
     expect(existsSync(join(dir, 'feature.txt'))).toBe(false)
     expect(existsSync(join(dir, 'other.txt'))).toBe(true)
+  })
+
+  it('a directory seam token sweeps untracked files under it by prefix', () => {
+    const dir = startedGreen()
+    writeFileSync(seamPath(dir), 'stuff/\n') // a directory seam token
+    mkdirSync(join(dir, 'stuff'))
+    writeFileSync(join(dir, 'stuff', 'scratch.txt'), 'wip\n')
+    expect(captureIo(() => revert(dir, [])).code).toBe(0)
+    // ls-files reports files, not dirs — the file goes; an empty dir may linger.
+    expect(existsSync(join(dir, 'stuff', 'scratch.txt'))).toBe(false)
+  })
+
+  it('carries an installed driver skill across a baseline reset', () => {
+    // The skill was committed after the baseline, so a bare reset --hard would
+    // delete it with the work; revert protects plumbbob's own machinery.
+    const dir = startedGreen()
+    const skill = join(dir, '.claude', 'skills', 'pb-verify')
+    mkdirSync(skill, { recursive: true })
+    writeFileSync(join(skill, 'SKILL.md'), '# pb-verify\n')
+    git(dir, ['add', '-A'])
+    git(dir, ['commit', '-q', '-m', 'work + installed skill, past baseline'])
+    expect(captureIo(() => revert(dir, [])).code).toBe(0)
+    expect(readFileSync(join(skill, 'SKILL.md'), 'utf8')).toBe('# pb-verify\n')
+  })
+
+  it('refuses when the ledger records no baseline at all', () => {
+    const dir = startedGreen()
+    rmSync(checkpointsPath(dir), { force: true })
+    const { code, stderr } = captureIo(() => revert(dir, []))
+    expect(code).toBe(1)
+    expect(stderr).toContain('no baseline recorded')
   })
 
   it('preserves sidecar edits (intent/park) across the reset (C4)', async () => {
@@ -114,19 +159,23 @@ describe('revert', () => {
     expect(readFileSync(buildLogPath(dir), 'utf8')).toContain('survive the baseline revert')
   })
 
-  it('rejects --to without a numeric step', () => {
-    const { code, stderr } = captureIo(() => revert(startedGreen(), ['--to', 'abc']))
-    expect(code).toBe(1)
-    expect(stderr).toContain('--to needs a step number')
+  it('rejects --to without a numeric step — including mixed digit shapes', () => {
+    for (const bad of ['abc', 'x2', '2x']) {
+      const { code, stderr } = captureIo(() => revert(startedGreen(), ['--to', bad]))
+      expect(code).toBe(1)
+      expect(stderr).toContain('--to needs a step number')
+    }
   })
 
-  it('rejects --to for a step with no recorded checkpoint', () => {
-    const { code, stderr } = captureIo(() => revert(startedGreen(), ['--to', '5']))
+  it('rejects --to for a step with no recorded checkpoint — echoing the full number', () => {
+    const { code, stderr } = captureIo(() => revert(startedGreen(), ['--to', '15']))
     expect(code).toBe(1)
-    expect(stderr).toContain('no checkpoint recorded for step 5')
+    expect(stderr).toContain('no checkpoint recorded for step 15')
   })
 
-  it('refuses with no active session', () => {
-    expect(captureIo(() => revert(makeTempRepo(), [])).code).toBe(1)
+  it('refuses with no active session — and says so', () => {
+    const { code, stderr } = captureIo(() => revert(makeTempRepo(), []))
+    expect(code).toBe(1)
+    expect(stderr).toContain('no active session')
   })
 })

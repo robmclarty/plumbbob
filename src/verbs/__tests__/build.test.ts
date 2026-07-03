@@ -34,18 +34,46 @@ describe('build', () => {
     expect(readFileSync(seamPath(dir), 'utf8')).toBe('src/b.ts\nsrc/c.ts\n')
     expect(readFileSync(stepPath(dir), 'utf8').trim()).toBe('2')
     expect(stdout).toContain('building step 2')
+    // The seam is printed indented, one path per line, under the not-a-lock banner.
+    expect(stdout).toContain('not a lock):\n  src/b.ts\n  src/c.ts')
   })
 
-  it('rejects a non-numeric step', () => {
-    expect(captureIo(() => build(startedWithSteps(), ['nope'])).code).toBe(1)
+  it('rejects a non-numeric, mixed, or sub-1 step with the usage message', () => {
+    // Each shape trips a different validation clause: no digits, digits at the
+    // wrong end (both ends), and a number below 1.
+    for (const bad of ['nope', 'x2', '2x', '0']) {
+      const { code, stderr } = captureIo(() => build(startedWithSteps(), [bad]))
+      expect(code).toBe(1)
+      expect(stderr).toContain('build needs a step number')
+    }
   })
 
-  it('reports a step with no parseable seam', () => {
-    expect(captureIo(() => build(startedWithSteps(), ['9'])).code).toBe(1)
+  it('accepts a multi-digit step number as a number, not a stray token', () => {
+    // Step 12 does not exist in the intent — but it must reach seam parsing,
+    // not bounce off the step-number validation.
+    const { code, stderr } = captureIo(() => build(startedWithSteps(), ['12']))
+    expect(code).toBe(1)
+    expect(stderr).not.toContain('build needs a step number')
+    expect(stderr).toContain('`build 12` again')
   })
 
-  it('refuses with no active session', () => {
-    expect(captureIo(() => build(makeTempRepo(), ['1'])).code).toBe(1)
+  it('skips flag args when finding the step number', () => {
+    const dir = startedWithSteps()
+    const { code } = captureIo(() => build(dir, ['--quiet', '2']))
+    expect(code).toBe(0)
+    expect(readFileSync(stepPath(dir), 'utf8').trim()).toBe('2')
+  })
+
+  it('reports a step with no parseable seam, pointing at intent.md', () => {
+    const { code, stderr } = captureIo(() => build(startedWithSteps(), ['9']))
+    expect(code).toBe(1)
+    expect(stderr).toContain("Fix the step's seam in intent.md, then `build 9` again.")
+  })
+
+  it('refuses with no active session — and says so', () => {
+    const { code, stderr } = captureIo(() => build(makeTempRepo(), ['1']))
+    expect(code).toBe(1)
+    expect(stderr).toContain('no active session')
   })
 
   it('targets a non-cursor build with --build, landing SEAM/STEP in that folder', () => {

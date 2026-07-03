@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { checkpoint } from '../checkpoint.ts'
 import { start } from '../start.ts'
-import { buildLogPath, checkpointsPath, hasSession, intentPath } from '../../lib/sidecar.ts'
+import { buildLogPath, checkpointsPath, hasSession, intentPath, stepPath } from '../../lib/sidecar.ts'
 import { settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
@@ -39,7 +39,9 @@ describe('checkpoint', () => {
     expect(hasSession(dir)).toBe(true)
     expect(readFileSync(checkpointsPath(dir), 'utf8')).toMatch(/step 1 [0-9a-f]{40}/)
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x]')
-    expect(stdout).toContain('step 1 checkpointed')
+    // The SHA is shortened to exactly 9 hex chars — a full 40-char SHA here
+    // would mean the slice was dropped.
+    expect(stdout).toMatch(/step 1 checkpointed — [0-9a-f]{9}\. Back at the boundary/)
   })
 
   it('titles the commit subject `plumbbob: step N — <title>` from intent.md', async () => {
@@ -123,8 +125,77 @@ describe('checkpoint', () => {
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x]')
   })
 
-  it('refuses with no active session', async () => {
-    expect((await captureIoAsync(() => checkpoint(makeTempRepo(), ['1']))).code).toBe(1)
+  it('refuses with no active session — and says so, not some later error', async () => {
+    const { code, stderr } = await captureIoAsync(() => checkpoint(makeTempRepo(), ['1']))
+    expect(code).toBe(1)
+    expect(stderr).toContain('no active session')
+  })
+
+  it('refuses when no step can be resolved — all steps already done', async () => {
+    const dir = startedGreen()
+    writeFileSync(intentPath(dir), '# Done\n\n## Steps\n\n1. [x] First — **done when:** a works.\n')
+    const { code, stderr } = await captureIoAsync(() => checkpoint(dir, []))
+    expect(code).toBe(1)
+    expect(stderr).toContain('no step to checkpoint')
+  })
+
+  it('prefers the explicit arg — multi-digit — over the first undone step', async () => {
+    const dir = startedGreen()
+    writeFileSync(
+      intentPath(dir),
+      '# Two\n\n## Steps\n\n1. [ ] First — **done when:** a.\n10. [ ] Tenth — **done when:** j.\n',
+    )
+    await captureIoAsync(() => checkpoint(dir, ['10']))
+    const intent = readFileSync(intentPath(dir), 'utf8')
+    expect(intent).toContain('10. [x]')
+    expect(intent).toContain('1. [ ]')
+  })
+
+  it('does not mistake digits inside a -m message for the step number', async () => {
+    const dir = startedGreen()
+    writeFileSync(join(dir, 'work.txt'), 'pending\n')
+    const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['-m', 'fix part 2']))
+    expect(code).toBe(0)
+    expect(stdout).toContain('step 1 checkpointed')
+    expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x]')
+    const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
+    expect(subject).toBe('fix part 2')
+  })
+
+  it('reads the in-flight STEP file (trailing newline and all) when no arg is given', async () => {
+    const dir = startedGreen()
+    writeFileSync(
+      intentPath(dir),
+      '# Two\n\n## Steps\n\n1. [ ] First — **done when:** a.\n2. [ ] Second — **done when:** b.\n',
+    )
+    writeFileSync(stepPath(dir), '2\n') // as `build` writes it — must survive the trim
+    await captureIoAsync(() => checkpoint(dir, []))
+    const intent = readFileSync(intentPath(dir), 'utf8')
+    expect(intent).toContain('2. [x]')
+    expect(intent).toContain('1. [ ]')
+  })
+
+  it('records the existing HEAD without a new commit when the tree is truly clean', async () => {
+    const dir = startedGreen()
+    execFileSync('git', ['-C', dir, 'add', '-A'], { stdio: 'ignore' })
+    execFileSync('git', ['-C', dir, 'commit', '-q', '-m', 'work already committed'], { stdio: 'ignore' })
+    const head = execFileSync('git', ['-C', dir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+    const { code } = await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(code).toBe(0)
+    const after = execFileSync('git', ['-C', dir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+    expect(after).toBe(head) // no synthetic commit on a clean tree
+    expect(readFileSync(checkpointsPath(dir), 'utf8')).toContain(`step 1 ${head}`)
+  })
+
+  it('omits done-when and seam from the fallback body when the step declares neither', async () => {
+    const dir = startedGreen()
+    writeFileSync(intentPath(dir), '# Bare\n\n## Steps\n\n1. [ ] Bare step\n')
+    writeFileSync(join(dir, 'work.txt'), 'pending\n')
+    await captureIoAsync(() => checkpoint(dir, ['1']))
+    const body = execFileSync('git', ['log', '-1', '--format=%b'], { cwd: dir, encoding: 'utf8' })
+    expect(body).not.toContain('done when:')
+    expect(body).not.toContain('seam:')
+    expect(body).toContain('work.txt') // the diffstat still lands
   })
 
   // Step 8 — the plan-approval commit (D11): its own commit, before any step,
@@ -134,7 +205,7 @@ describe('checkpoint', () => {
       const dir = startedGreen()
       const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
       expect(code).toBe(0)
-      expect(stdout).toContain('plan committed')
+      expect(stdout).toMatch(/plan committed — [0-9a-f]{9}\./) // short SHA, not the full 40
       const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
       expect(subject).toBe('plumbbob: plan — Checkpoint test')
       expect(readFileSync(checkpointsPath(dir), 'utf8')).toMatch(/plan [0-9a-f]{40}/)

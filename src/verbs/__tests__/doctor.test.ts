@@ -1,19 +1,21 @@
-// `plumbbob doctor` — the sidecar-migration half (the plugin-link half is covered by
-// the subprocess suite in test/integration/doctor.test.ts, which pins HOME). These
-// tests build a pre-restructure LEGACY flat sidecar in a throwaway repo (D14/C6) and
-// assert the move into the tracked builds/ layout: archive + active session become
-// build folders, config becomes settings.json, and the result is STAGED but never
-// committed (Q8), losing nothing on the way (C4).
+// `plumbbob doctor` — all three sections, in-process. The sidecar tests build a
+// pre-restructure LEGACY flat sidecar in a throwaway repo (D14/C6) and assert the
+// move into the tracked builds/ layout: archive + active session become build
+// folders, config becomes settings.json, and the result is STAGED but never
+// committed (Q8), losing nothing on the way (C4). The plugin-link tests pin
+// process.env.HOME to a fixture home (the subprocess suite in
+// test/integration/doctor.test.ts drives the same checks through the real CLI).
 
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
 import { doctor, inspectLegacy, migrateSidecar } from '../doctor.ts'
 import { buildDir, intentPath } from '../../lib/sidecar.ts'
 import { localSetting, settingsPath } from '../../lib/settings.ts'
-import { headSha } from '../../lib/git.ts'
-import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
+import { gitPath, headSha } from '../../lib/git.ts'
+import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
 afterAll(cleanupTempRepos)
@@ -47,6 +49,64 @@ function legacyRepo(): string {
   return dir
 }
 
+// A legacy sidecar carrying only some of the pre-restructure markers — detection
+// must treat each marker (config, archive/, flat session) as sufficient on its own.
+function partialLegacyRepo(build: (sc: string) => void): string {
+  const dir = makeTempRepo()
+  const sc = join(dir, '.plumbbob')
+  mkdirSync(sc, { recursive: true })
+  build(sc)
+  return dir
+}
+
+function settingsJson(dir: string): unknown {
+  return JSON.parse(readFileSync(settingsPath(dir), 'utf8')) as unknown
+}
+
+// pluginChecks reads process.env.HOME, so pinning it to a throwaway home makes the
+// plugin section deterministic no matter what the developer's real ~/.claude holds.
+async function doctorWithHome(
+  home: string,
+  cwd: string,
+  args: ReadonlyArray<string> = [],
+): Promise<{ readonly code: number; readonly stdout: string }> {
+  const saved = process.env.HOME
+  process.env.HOME = home
+  try {
+    return await captureIoAsync(() => doctor(cwd, args))
+  } finally {
+    if (saved === undefined) delete process.env.HOME
+    else process.env.HOME = saved
+  }
+}
+
+function linkPath(home: string): string {
+  return join(home, '.claude', 'skills', 'plumbbob')
+}
+
+// The installed_plugins.json shape Claude Code writes for marketplace installs.
+function seedMarketplace(home: string, ids: ReadonlyArray<string>): void {
+  mkdirSync(join(home, '.claude', 'plugins'), { recursive: true })
+  writeFileSync(
+    join(home, '.claude', 'plugins', 'installed_plugins.json'),
+    JSON.stringify({ version: 2, plugins: Object.fromEntries(ids.map((id) => [id, [{ scope: 'user' }]])) }),
+  )
+}
+
+// A clean, already-migrated repo whose `check` setting overrides checkride: the
+// gate section becomes one deterministic line and never probes for tools, so a
+// test's failure count comes from the section under test alone.
+function overrideRepo(): string {
+  const dir = makeTempRepo()
+  mkdirSync(join(dir, '.plumbbob'), { recursive: true })
+  writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true' }))
+  return dir
+}
+
+// This checkout is itself a valid plumbbob package (manifest, skills/, hooks/),
+// so a link pointing at it is the healthy-install fixture.
+const CHECKOUT = fileURLToPath(new URL('../../../', import.meta.url))
+
 describe('doctor — legacy detection', () => {
   it('detects a legacy flat sidecar and reports its parts', () => {
     const legacy = inspectLegacy(legacyRepo())
@@ -73,6 +133,33 @@ describe('doctor — legacy detection', () => {
 
   it('returns null when there is no sidecar at all', () => {
     expect(inspectLegacy(makeTempRepo())).toBeNull()
+  })
+
+  // Each pre-restructure marker must trip detection on its own — a repo that only
+  // kept its config, or only its archive, is still legacy and must not slip through.
+  it('detects a config-only sidecar (no session, no archive)', () => {
+    const legacy = inspectLegacy(partialLegacyRepo((sc) => writeFileSync(join(sc, 'config'), 'check=x\n')))
+    expect(legacy?.config).toBe(true)
+    expect(legacy?.session).toBe(false) // no intent.md → no session, even unmigrated
+    expect(legacy?.archive).toEqual([])
+  })
+
+  it('detects an archive-only sidecar, listing only real directories', () => {
+    const dir = partialLegacyRepo((sc) => {
+      mkdirSync(join(sc, 'archive', 'zz-later'), { recursive: true })
+      mkdirSync(join(sc, 'archive', '@@'), { recursive: true })
+      mkdirSync(join(sc, 'archive', 'aa-early'), { recursive: true })
+      writeFileSync(join(sc, 'archive', 'notes.txt'), 'not a build\n') // must not be listed
+    })
+    const legacy = inspectLegacy(dir)
+    expect(legacy?.archive).toEqual(['@@', 'aa-early', 'zz-later'])
+    expect(legacy?.config).toBe(false)
+  })
+
+  it('detects a session-only sidecar (flat intent.md, unmigrated)', () => {
+    const legacy = inspectLegacy(partialLegacyRepo((sc) => writeFileSync(join(sc, 'intent.md'), '# Solo\n')))
+    expect(legacy?.session).toBe(true)
+    expect(legacy?.config).toBe(false)
   })
 })
 
@@ -121,6 +208,118 @@ describe('doctor — migration', () => {
     migrateSidecar(dir)
     expect(readFileSync(join(buildDir(dir, 'my-legacy-build'), 'build-log.md'), 'utf8')).toContain('keep me')
   })
+
+  // The action list IS the migration report doctor prints — pin it whole so the
+  // order (config, then the session, then the archive, then the stage) and every
+  // human-facing rename line hold.
+  it('returns the exact action list, in order', () => {
+    expect(migrateSidecar(legacyRepo())).toEqual([
+      'config → settings.json (check: pnpm run check)',
+      'active session → builds/my-legacy-build (the cursor)',
+      'archive/old-one → builds/old-one',
+      'archive/old-two → builds/old-two',
+      'staged the move (builds/ + settings.json) — commit it yourself',
+    ])
+  })
+
+  // The legacy config was hand-edited ini-style: the check line may be indented and
+  // spaced around `=`, and near-miss keys (`xcheck=`) must not match.
+  it('parses a whitespace-y check line and ignores near-miss keys', () => {
+    const dir = partialLegacyRepo((sc) => writeFileSync(join(sc, 'config'), 'xcheck=bogus\n  check = pnpm run check\n'))
+    const actions = migrateSidecar(dir)
+    expect(actions).toEqual([
+      'config → settings.json (check: pnpm run check)',
+      'staged the move (builds/ + settings.json) — commit it yourself',
+    ])
+    expect(settingsJson(dir)).toEqual({ check: 'pnpm run check', auto: false })
+  })
+
+  it('writes {auto:false} with no check key when config carries no check line', () => {
+    const dir = partialLegacyRepo((sc) => writeFileSync(join(sc, 'config'), 'other=1\n'))
+    const actions = migrateSidecar(dir)
+    expect(actions[0]).toBe('config → settings.json')
+    expect(settingsJson(dir)).toEqual({ auto: false }) // no "check": null leaking in
+  })
+
+  it('never overwrites an existing settings.json', () => {
+    const dir = partialLegacyRepo((sc) => {
+      writeFileSync(join(sc, 'config'), 'check=clobber\n')
+      writeFileSync(join(sc, 'settings.json'), '{"check":"keep"}\n')
+    })
+    const actions = migrateSidecar(dir)
+    expect(settingsJson(dir)).toEqual({ check: 'keep' })
+    expect(existsSync(join(dir, '.plumbbob', 'config'))).toBe(false) // still consumed
+    expect(actions).toEqual(['staged the move (builds/ + settings.json) — commit it yourself'])
+  })
+
+  it('creates no settings.json when the legacy sidecar has no config', () => {
+    const dir = partialLegacyRepo((sc) => writeFileSync(join(sc, 'intent.md'), '# Solo Session\n'))
+    const actions = migrateSidecar(dir)
+    expect(existsSync(settingsPath(dir))).toBe(false)
+    expect(actions).toEqual([
+      'active session → builds/solo-session (the cursor)',
+      'staged the move (builds/ + settings.json) — commit it yourself',
+    ])
+  })
+
+  // `start` refuses collisions (D17); migration instead suffixes -2, -3, … because
+  // the folders it is moving already exist and aborting mid-move would destroy state.
+  it('disambiguates colliding slugs with -2, -3 … suffixes', () => {
+    const dir = partialLegacyRepo((sc) => {
+      writeFileSync(join(sc, 'intent.md'), '# Old One\n') // migrates first → claims old-one
+      mkdirSync(join(sc, 'archive', 'old one!!'), { recursive: true })
+      writeFileSync(join(sc, 'archive', 'old one!!', 'a.md'), 'a\n')
+      mkdirSync(join(sc, 'archive', 'old-one'), { recursive: true })
+      writeFileSync(join(sc, 'archive', 'old-one', 'b.md'), 'b\n')
+    })
+    const actions = migrateSidecar(dir)
+    expect(localSetting(dir, 'activeBuild')).toBe('old-one')
+    expect(actions).toContain('archive/old one!! → builds/old-one-2') // slugified, then suffixed
+    expect(actions).toContain('archive/old-one → builds/old-one-3')
+    expect(existsSync(join(buildDir(dir, 'old-one-2'), 'a.md'))).toBe(true)
+    expect(existsSync(join(buildDir(dir, 'old-one-3'), 'b.md'))).toBe(true)
+  })
+
+  it('slugs the session from the first heading LINE, not a mid-line #', () => {
+    const dir = partialLegacyRepo((sc) =>
+      writeFileSync(join(sc, 'intent.md'), 'preamble mentioning a # Not This\n\n# Real Title\nbody\n'),
+    )
+    migrateSidecar(dir)
+    expect(localSetting(dir, 'activeBuild')).toBe('real-title')
+  })
+
+  it('falls back to migrated-build when the intent has no heading', () => {
+    const dir = partialLegacyRepo((sc) => writeFileSync(join(sc, 'intent.md'), 'no heading at all\n'))
+    migrateSidecar(dir)
+    expect(localSetting(dir, 'activeBuild')).toBe('migrated-build')
+    expect(existsSync(intentPath(dir, 'migrated-build'))).toBe(true)
+  })
+
+  it('keeps an archive name whose slug would be empty', () => {
+    const dir = partialLegacyRepo((sc) => {
+      mkdirSync(join(sc, 'archive', '@@'), { recursive: true })
+      writeFileSync(join(sc, 'archive', '@@', 'note.md'), 'kept\n')
+    })
+    const actions = migrateSidecar(dir)
+    expect(actions).toContain('archive/@@ → builds/@@')
+    expect(existsSync(join(buildDir(dir, '@@'), 'note.md'))).toBe(true)
+  })
+
+  // narrowExcludes must surgically remove the blanket exclude (any spelling, even
+  // whitespace-padded) while leaving the human's own exclude lines alone.
+  it('drops every blanket .plumbbob exclude line but keeps foreign lines', () => {
+    const dir = partialLegacyRepo((sc) => writeFileSync(join(sc, 'config'), 'check=x\n'))
+    writeFileSync(join(dir, '.git', 'info', 'exclude'), 'node_modules/\ndist/\n.plumbbob/\n.plumbbob\n.plumbbob/ \n')
+    migrateSidecar(dir)
+    const lines = readFileSync(gitPath(dir, 'info/exclude'), 'utf8')
+      .split('\n')
+      .map((l) => l.trim())
+    expect(lines).toContain('node_modules/')
+    expect(lines).toContain('dist/')
+    expect(lines).not.toContain('.plumbbob/')
+    expect(lines).not.toContain('.plumbbob')
+    expect(lines).toContain('.plumbbob/STATE') // the narrowed control plane took its place
+  })
 })
 
 describe('doctor — the verb', () => {
@@ -159,5 +358,140 @@ describe('doctor — the verb', () => {
     const { stdout } = await captureIoAsync(() => doctor(makeTempRepo(), []))
     expect(stdout).toContain('check gate')
     expect(stdout).toContain('types') // an empty slot row from checkride's doctor
+  })
+
+  it('names each legacy part and the exact migrate remedy', async () => {
+    const { stdout } = await captureIoAsync(() => doctor(legacyRepo(), []))
+    // the parts list tells the human what is at stake before they run --migrate
+    expect(stdout).toContain(
+      '\n\nplumbbob doctor — sidecar layout' +
+        '\n  ✗ legacy flat sidecar detected at .plumbbob/ (an active session, 2 archived build(s), a config file) — the pre-builds/ layout',
+    )
+    expect(stdout).toContain('(archive/ + the active session → builds/, config → settings.json; staged, never committed)')
+  })
+
+  it('--migrate prints each ✓ action and the migrated check becomes the gate', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty']) // plugin section passes → the exit code is the sidecar/gate's
+    const dir = legacyRepo()
+    const { code, stdout } = await doctorWithHome(home, dir, ['--migrate'])
+    expect(code).toBe(0)
+    expect(stdout).toContain('  ✓ config → settings.json (check: pnpm run check)')
+    expect(stdout).toContain('  ✓ active session → builds/my-legacy-build (the cursor)')
+    expect(stdout).toContain('  ✓ staged the move (builds/ + settings.json) — commit it yourself')
+    // the gate section runs after the move, so it already sees the migrated check
+    expect(stdout).toContain("✓ gate: 'pnpm run check'")
+    expect(stdout).toContain('\n\nplumbbob: all checks passed')
+  })
+
+  it("renders checkride's table for a bare repo: ○ empty slots, ✓ built-ins, ✗ counted failures", async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const { code, stdout } = await doctorWithHome(home, makeTempRepo())
+    expect(code).toBe(1)
+    expect(stdout).toContain('\n\nplumbbob doctor — check gate (D32)\n')
+    expect(stdout).toContain('  ✗ install\n      → ') // a required failure carries its hint on the arrow line
+    expect(stdout).not.toContain('✗ node') // passing env checks stay silent
+    expect(stdout).toContain('  ✓ links ← links (built-in)') // an ok adapter row carries what was found
+    expect(stdout).toContain('  ○ types — Enable by adding') // an empty slot surfaces checkride's enable hint
+    expect(stdout).toContain('\n\nplumbbob: 1 problem(s)') // install is the only required failure
+  })
+
+  it('flags a detected-but-missing tool with its hint (the D32 footgun)', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = makeTempRepo()
+    writeFileSync(join(dir, 'tsconfig.json'), '{}\n') // tsc detected, but no node_modules to run it
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(1)
+    expect(stdout).toContain('  ✗ types ← tsc\n      → ') // no version suffix when nothing was found
+    expect(stdout).toContain('\n\nplumbbob: 2 problem(s)') // install + types
+  })
+})
+
+// The plugin-link section, in-process with HOME pinned (Stryker cannot see the
+// subprocess integration suite, and these checks are pure fs reads anyway).
+describe('doctor — plugin link (HOME pinned)', () => {
+  it('reports not-linked with the exact link path and both remedies', async () => {
+    const home = makeTempDir()
+    const { code, stdout } = await doctorWithHome(home, overrideRepo())
+    expect(code).toBe(1)
+    expect(stdout).toContain('plumbbob doctor — plugin install')
+    // the path names WHERE init would link; the fix names both install routes
+    expect(stdout).toContain(`✗ not linked — no plugin at ${linkPath(home)}`)
+    expect(stdout).toContain('→ install the marketplace plugin (/plugin install plumbbob@<marketplace>) or run: plumbbob init')
+    expect(stdout).toContain('\n\nplumbbob: 1 problem(s) — apply the → fixes')
+    expect(stdout).toContain('npm i -g plumbbob') // the no-terminal-plumbbob pointer
+  })
+
+  it('treats a marketplace install as passing and names every plugin id', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@one', 'plumbbob@two'])
+    const { code, stdout } = await doctorWithHome(home, overrideRepo())
+    expect(code).toBe(0)
+    expect(stdout).toContain('✓ installed via marketplace (plumbbob@one, plumbbob@two)')
+    expect(stdout).toContain('\n\nplumbbob: all checks passed')
+  })
+
+  it('passes every check when the link points at a real plumbbob package', async () => {
+    const home = makeTempDir()
+    mkdirSync(join(home, '.claude', 'skills'), { recursive: true })
+    symlinkSync(CHECKOUT, linkPath(home))
+    const { code, stdout } = await doctorWithHome(home, overrideRepo())
+    expect(code).toBe(0)
+    expect(stdout).toContain(`✓ linked (${linkPath(home)} → ${CHECKOUT})`)
+    expect(stdout).toContain('✓ plugin manifest present (.claude-plugin/plugin.json)')
+    expect(stdout).toMatch(/✓ skills present \(\d+\) — load as \/plumbbob:\*/)
+    expect(stdout).toContain('✓ post-edit hook present')
+  })
+
+  it('flags a copied dir missing manifest and hook, counting only real skills', async () => {
+    const home = makeTempDir()
+    const pkg = linkPath(home) // a real directory, not a symlink — the copied-install shape
+    mkdirSync(join(pkg, 'skills', 'alpha'), { recursive: true })
+    writeFileSync(join(pkg, 'skills', 'alpha', 'SKILL.md'), '# a\n')
+    mkdirSync(join(pkg, 'skills', 'beta'), { recursive: true })
+    writeFileSync(join(pkg, 'skills', 'beta', 'SKILL.md'), '# b\n')
+    mkdirSync(join(pkg, 'skills', 'empty-dir'), { recursive: true }) // no SKILL.md → not a skill
+    writeFileSync(join(pkg, 'skills', 'junk.txt'), 'not a skill\n')
+    const { code, stdout } = await doctorWithHome(home, overrideRepo())
+    expect(code).toBe(1)
+    expect(stdout).toContain('✗ plugin manifest missing — the link does not point at a plumbbob package')
+    expect(stdout).toContain('→ re-link: plumbbob init')
+    expect(stdout).toMatch(/✗ skills incomplete \(2\/\d+\)/) // junk.txt and empty-dir must not count
+    expect(stdout).toContain('✗ hook missing (hooks/hooks.json)')
+    expect(stdout).toContain('\n\nplumbbob: 3 problem(s)')
+  })
+
+  it('counts zero skills when the linked package has no skills dir', async () => {
+    const home = makeTempDir()
+    mkdirSync(join(home, '.claude', 'skills'), { recursive: true })
+    symlinkSync(makeTempDir(), linkPath(home))
+    const { code, stdout } = await doctorWithHome(home, overrideRepo())
+    expect(code).toBe(1)
+    expect(stdout).toMatch(/✗ skills incomplete \(0\/\d+\)/)
+  })
+
+  it('flags the collision when a link and a marketplace install coexist', async () => {
+    const home = makeTempDir()
+    mkdirSync(join(home, '.claude', 'skills'), { recursive: true })
+    symlinkSync(CHECKOUT, linkPath(home))
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const { code, stdout } = await doctorWithHome(home, overrideRepo())
+    expect(code).toBe(1)
+    expect(stdout).toContain('✗ collision — also installed via marketplace (plumbbob@robmclarty)')
+    expect(stdout).toContain('plumbbob init --uninstall')
+    expect(stdout).toContain('\n\nplumbbob: 1 problem(s)') // the collision, not the (healthy) link checks
+  })
+
+  it('prints only the plugin section outside a git repo', async () => {
+    const home = makeTempDir()
+    const { code, stdout } = await doctorWithHome(home, makeTempDir())
+    expect(code).toBe(1) // not linked
+    expect(stdout).not.toContain('sidecar layout')
+    expect(stdout).not.toContain('check gate')
+    // header + the two-line ✗ + blank + summary + PATH note: outside a repo the
+    // sidecar and gate sections must contribute zero lines, not empty headers.
+    expect(stdout.trimEnd().split('\n')).toHaveLength(6)
   })
 })
