@@ -261,7 +261,7 @@ distilled here so the build stands alone, pointer retained under ## Source.*
    warns on ones that don't resolve; tests cover a broken fixture agent in each
    failure mode
    - seam: `src/verbs/doctor.ts`, `src/verbs/status.ts`, `src/lib/agents.ts`, `src/verbs/__tests__/doctor.test.ts`, `src/verbs/__tests__/status.test.ts`
-7. [ ] Skills learn the slots — **done when:** pb-plan offers harness.json
+7. [x] Skills learn the slots — **done when:** pb-plan offers harness.json
    authoring at plan time (bindings reviewed at the plan pause, alongside the
    steps); pb-step revises a step's bindings just-in-time; pb-build runs
    before-agents into `context[]`, delegates to a build-slot agent when bound, and
