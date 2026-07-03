@@ -81,13 +81,24 @@ paths or `dir/` grants, never globs — **D23**).
 ### check
 
 ```text
-plumbbob check
+plumbbob check [--bail] [--changed] [--all] [--only a,b] [--skip a,b] [--include a,b]
 ```
 
-Runs the heavy gate — the `check` command resolved through the settings ladder
-(`settings.local.json` → `settings.json` → `pnpm run check`, **D27**) — streaming its output,
-with **no** state change (**D16** / **D24**). Exits with the check's own code (0 = green).
-Refuses (exit 1) with no session.
+Runs the heavy gate with **no** state change (**D16** / **D24** / **D32**). The gate is
+[checkride](https://www.npmjs.com/package/checkride), run in-process: each slot (types,
+lint, struct, dead, test, docs, links, spell) resolves to the tool the repo already
+configures, raw output lands in `.check/`, and a red run names the failing slots with
+their `.check/<slot>` pointers. A `check` key in the settings ladder
+(`settings.local.json` → `settings.json`, **D27**) overrides checkride with a shell
+command, spawned exactly as before — that is how non-checkride repos gate.
+
+The flags narrow a checkride run for the iteration loop (`--bail --only types,lint`);
+they map straight onto checkride's own flags and are warned-and-ignored on the override
+path. `checkpoint`'s gate takes no flags — the commit gate is always the full run.
+
+Exits with the check's code: **0** green, **1** red — including a run where every slot
+skipped, which refuses rather than passing vacuously — and **2** when the gate itself
+broke (e.g. a malformed `checkride.config.json`). Refuses (exit 1) with no session.
 
 ### checkpoint
 
@@ -258,16 +269,18 @@ default. The known keys:
 
 ```jsonc
 // settings.json  (tracked — shared project defaults)
-{ "check": "pnpm run check", "auto": false }
+{ "auto": false }                        // no "check" key: checkride is the gate (D32)
+{ "check": "npm test", "auto": false }   // or override the gate with any shell command
 
 // settings.local.json  (untracked — personal, per-worktree)
 { "auto": true, "activeBuild": "<slug>" }
 ```
 
-`check` is the heavy gate (a shell command run in the repo root; its exit code is the result).
-`auto` is whether the agent approves in your place. `activeBuild` is the per-worktree cursor.
-Both files are optional JSON — a missing or malformed one contributes nothing rather than
-wedging the tool.
+`check` overrides the heavy gate (a shell command run in the repo root; its exit code is
+the result); **absent, the gate is checkride** (**D24**/**D32**). `auto` is whether the
+agent approves in your place. `activeBuild` is the per-worktree cursor. Both files are
+optional JSON — a missing or malformed one contributes nothing rather than wedging the
+tool.
 
 ## Exit codes
 
@@ -276,6 +289,8 @@ wedging the tool.
 - **1** — a refusal or failure: a guard tripped (no session, a step in flight, bad
   argument), a red check, or an unknown verb. `check` propagates the underlying command's
   non-zero code.
+- **2** — the gate itself broke (**D32**): checkride couldn't run at all (e.g. a
+  malformed `checkride.config.json`). Fix the harness before trusting green or red.
 
 ## See also
 

@@ -82,15 +82,17 @@ In Claude Code, inside any git repo with a clean tree:
    you), a rough line (`/pb-plan rate-limit POST /login, 5/min/IP, return 429`), or a
    path to a spec file. Together you fill `.plumbbob/intent.md`. No code is written
    yet.
-2. **Build.** Fire `/pb-build`. It implements the next undone step, runs your
-   project's check command, reviews its own diff against the plan, and stops:
+2. **Build.** Fire `/pb-build`. It implements the next undone step, runs the
+   heavy check gate, reviews its own diff against the plan, and stops:
 
    ```text
    PAUSE — read the diff as an editor. Approve to checkpoint, or send fixes.
    ```
 
-   (The check gate defaults to `pnpm run check` — point it at your project's own
-   command by editing the `"check"` key in `.plumbbob/settings.json`.)
+   (The check gate is [checkride](https://www.npmjs.com/package/checkride) — one
+   run across the tools your repo already configures: types, lint, tests, dead
+   code, docs. To gate through your own command instead, set the `"check"` key in
+   `.plumbbob/settings.json`, e.g. `"check": "npm test"`.)
 3. **Approve** — or send fixes. On your OK it commits the step as a checkpoint, marks
    it done, and returns to the boundary. Fire `/pb-build` again for the next step —
    re-firing it *is* the clock tick. Whenever you lose the thread, `/pb-status` shows

@@ -127,7 +127,7 @@ dogfood (this repo): settings.json drops "check" → gate is checkride
    flags on the spawn-override path warn-and-ignore (D6); verb tests assert a
    narrowed run and the warning
    - seam: `src/verbs/check.ts`, `src/lib/check.ts`, `src/verbs/__tests__/check.test.ts`
-4. [ ] `start` seeding + `doctor` gate report — **done when:** `start` seeds
+4. [x] `start` seeding + `doctor` gate report — **done when:** `start` seeds
    `{ "auto": false }` only and the no-check-script warning is gone (D7);
    `doctor` prints checkride's slot/adapter report and flags missing tools (D8);
    both verbs' tests updated

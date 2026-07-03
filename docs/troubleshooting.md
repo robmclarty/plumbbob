@@ -115,15 +115,33 @@ harvest from the boundary.
 ### `checkpoint` (or `verify`) refuses because the check is red
 
 **Cause.** The heavy gate failed; the tick refuses to checkpoint on red (**D16**). **Fix.**
-Read the check output, fix the failure, and re-run. Red means stop, not pause — there is
-nothing to approve until it is green.
+Read the failing slots the gate printed — each names its raw output under `.check/`
+(canonical index: `.check/summary.json`) — fix the failure, and re-run. Red means stop,
+not pause — there is nothing to approve until it is green. Narrow the loop while
+iterating: `plumbbob check --bail --only types,lint`.
+
+### The check gate refuses with "found nothing to check"
+
+**Cause.** No `check` setting is configured, so the gate is checkride (**D24**/**D32**),
+and checkride detected no tool configs in this repo — an all-slots-skipped run refuses
+rather than passing vacuously. **Fix.** Either give checkride something to check (a
+`tsconfig.json`, a `vitest.config.ts`, a `checkride.config.json` custom check, …) or set
+the `"check"` key in `.plumbbob/settings.json` to your own command (e.g.
+`"check": "npm test"`). `plumbbob doctor` prints the slot/adapter table.
+
+### The check exits 2 — "the gate itself broke"
+
+**Cause.** Checkride couldn't run at all — usually a malformed
+`checkride.config.json` (**D32**). This is a harness failure, not a code failure; both
+block. **Fix.** Repair the config (or set a `"check"` override) and re-run.
 
 ### The heavy check runs the wrong command (or fails in a non-pnpm repo)
 
-**Cause.** `start` defaults the gate to `pnpm run check` (**D24**) and warns when the repo
-has no such script. **Fix.** Set the `"check"` key in `.plumbbob/settings.json` to your
-command (e.g. `"check": "npm test"`), or override it per-worktree in `settings.local.json`
-(**D27**). The command is run in the repo root via a shell.
+**Cause.** A `"check"` key in the settings ladder overrides checkride and is spawned
+verbatim (**D24**). **Fix.** Set the `"check"` key in `.plumbbob/settings.json` to your
+command (e.g. `"check": "npm test"`), remove it to gate through checkride, or override it
+per-worktree in `settings.local.json` (**D27**). The command is run in the repo root via
+a shell.
 
 ### `build` refuses with "build needs a step number" or a seam error
 

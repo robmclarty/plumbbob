@@ -16,9 +16,14 @@ this skill verifies it the same way: **it reads the diff, not the author** (D3).
 
 ## What this skill does, in order
 
-1. **Check.** Run `plumbbob check` (the heavy gate). If it comes back
-   **red**, stop here: report what failed and do **not** pause for approval — there
-   is nothing to approve yet. The human fixes it and re-invokes.
+1. **Check.** Run `plumbbob check` (the heavy gate — checkride unless the repo
+   configures a `check` override, D32). If it comes back **red**, stop here: the gate
+   names the failing slots and where each tool's raw output landed — read
+   `.check/summary.json`, then the failing slot's own file (`.check/<slot>.json` or
+   `.check/<slot>.stdout.txt`) for the actual diagnostics instead of scraping
+   scrollback. Report what failed and do **not** pause for approval — there is
+   nothing to approve yet. The human fixes it and re-invokes. (Exit 2 means the gate
+   itself broke — a harness problem to surface, not a code failure.)
 2. **Self-review** *(a single structured read, D16)*. Read `git diff` and
    `.plumbbob/intent.md`, then in one pass check the diff against:
    - the current step's **done-when** criterion — is it actually met?

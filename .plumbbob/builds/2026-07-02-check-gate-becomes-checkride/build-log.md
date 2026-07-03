@@ -57,3 +57,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-07-03 — step 1 checkpointed · c0ce809f4 — Dependency doctrine + the checkride dependency
 - 2026-07-03 — step 2 checkpointed · 8a93c6e9c — The programmatic gate + async ripple
 - 2026-07-03 — step 3 checkpointed · 716b18e49 — Flag passthrough on `plumbbob check`
+- 2026-07-03 — step 4 checkpointed · f3e73ab08 — `start` seeding + `doctor` gate report

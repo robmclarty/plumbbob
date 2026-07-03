@@ -100,10 +100,13 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   overrides it and records the current HEAD as the baseline. *Tagged in* `start.ts`.
 - **D23 — Seams are exact paths or `dir/` grants, never globs.** A seam token is matched as
   an exact path or a directory prefix; a glob is rejected. *Tagged in* `intent.ts`.
-- **D24 — The heavy check is configurable, defaulting to `pnpm run check`.** The `check`
-  command resolves through the settings ladder (**D27**), defaulting to `pnpm run check`;
-  `start` seeds it into `settings.json` and warns when the target repo has no such script.
-  *Tagged in* `start.ts`, `check.ts`.
+- **D24 — The heavy check is configurable, defaulting to checkride.** *Amended* — the
+  `check` command still resolves through the settings ladder (**D27**), but it is now the
+  *override*: a resolved command is spawned exactly as before, and **no setting at all
+  means checkride is the gate** (**D32**). `start` seeds `settings.json` with no `check`
+  key (absence is the default) and no longer probes for a `check` script — the runtime
+  refusal of a nothing-to-check run replaced the warning. *Tagged in* `start.ts`,
+  `check.ts`.
 - **D25 — Light feedback at the keystroke, heavy checks at the boundary.** The `post-edit`
   hook runs a non-blocking, file-scoped lint pass and injects findings into the model's
   context; `tsc` and the rest of the gate are deferred to the heavy tier inside `verify`.

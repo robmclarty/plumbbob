@@ -38,7 +38,10 @@ at the pause for your approval. **Re-firing `/pb-build` is itself the clock tick
    touching more than the seam, that is scope drift: surface it to the human rather
    than sprawling.
 5. **Verify, through to the pause.** Run the verify tick exactly as `/pb-verify`
-   does: `plumbbob check` → self-review the diff against the done-when, the
+   does: `plumbbob check` (on red, read `.check/summary.json` and the failing slot's
+   raw output under `.check/` for the actual diagnostics; while iterating on a fix,
+   narrow the loop with `plumbbob check --bail --only <slots>` — the checkpoint gate
+   still runs everything) → self-review the diff against the done-when, the
    Decisions, and the Constraints (a single structured read, D16) → validate → **PAUSE
    for the human's approval** → only on approval, checkpoint with
    `plumbbob checkpoint <n> --body <<'BODY' … BODY` — a commit body **proportional to the
