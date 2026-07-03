@@ -145,6 +145,52 @@ export function reportPath(root: string, slug?: string | null): string {
   return join(artifactDir(root, slug), 'report.md')
 }
 
+// handoff.json is the agent-run ledger (D20): each `agent run` appends its
+// validated envelope here so a later invocation can thread earlier results into
+// the next call's `context[]` — the CLI itself is memoryless between runs, and
+// the file survives context-window compaction where inline stdout does not. It is
+// in-flight control state like STEP/SEAM: untracked (excludeControl), scoped to
+// the current step, cleared when the step checkpoints (`clearHandoff`).
+export function handoffPath(root: string, slug?: string | null): string {
+  return join(artifactDir(root, slug), 'handoff.json')
+}
+
+// One handoff entry: the agent's name, the slot it ran in, the step number, and
+// its validated envelope — enough for a reading skill to know which earlier run
+// produced which result. `envelope` is the same object `agent run` re-emits on
+// stdout; the shape is intentionally loose here (the sidecar is a single writer
+// and never re-validates its own ledger).
+export type HandoffEntry = {
+  readonly agent: string
+  readonly mode: string
+  readonly step: number
+  readonly envelope: unknown
+}
+
+// Append one entry to the build's handoff.json, creating the file (as a JSON
+// array) when absent and tolerating a malformed existing file by starting fresh —
+// a corrupt ledger must never wedge a run. Pretty-printed so it stays readable.
+export function appendHandoff(root: string, slug: string | null | undefined, entry: HandoffEntry): void {
+  const path = handoffPath(root, slug)
+  let entries: unknown[] = []
+  try {
+    const parsed = JSON.parse(readFileSync(path, 'utf8')) as unknown
+    if (Array.isArray(parsed)) entries = parsed
+  } catch {
+    entries = []
+  }
+  entries.push(entry)
+  mkdirSync(dirname(path), { recursive: true })
+  writeFileSync(path, `${JSON.stringify(entries, null, 2)}\n`)
+}
+
+// Remove the build's handoff.json — the step-scoped ledger is cleared when the
+// step checkpoints (D20), the same beat that clears STEP/SEAM. Absent file is a
+// no-op (`force`).
+export function clearHandoff(root: string, slug?: string | null): void {
+  rmSync(handoffPath(root, slug), { force: true })
+}
+
 // A session exists iff STATE exists. Deleting STATE (at finish) is what flips the
 // repo back to "no session" — so it is the single source of truth for "is there
 // a session". `start` calls beginSession; `finish` removes the file.
@@ -201,6 +247,9 @@ export function excludeControl(root: string): void {
     `${DIRNAME}/builds/*/STEP`,
     `${DIRNAME}/builds/*/SEAM`,
     `${DIRNAME}/builds/*/SPIKE`,
+    // The agent-run handoff ledger (D20) is step-scoped in-flight state, not a
+    // tracked artifact — it must never ride a step commit into the PR.
+    `${DIRNAME}/builds/*/handoff.json`,
     // The checkride gate (D32) writes raw tool output to `.check/`; checkpoint's
     // stageAll must never sweep it into a step commit.
     '.check/',

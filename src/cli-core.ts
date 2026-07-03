@@ -38,7 +38,7 @@ const VERBS: ReadonlyArray<Verb> = [
   { name: 'finish', summary: 'close-out: report + final commit (no gate), clear the control state, close the session' },
   { name: 'init', summary: 'link plumbbob into Claude Code as an in-place plugin (~/.claude/skills/plumbbob); --uninstall to undo' },
   { name: 'doctor', summary: 'diagnose the plugin link + detect a legacy flat sidecar; doctor --migrate moves it into builds/ (staged, not committed)' },
-  { name: 'agent', summary: 'agent list: the user-authored agents resolvable from .plumbbob/agents/ and ~/.plumbbob/agents/' },
+  { name: 'agent', summary: 'agent list | run <name> [--step N] [--mode before|build|after]: list or spawn a user-authored agent' },
 ]
 
 // PlumbBob (D1/D10/D13): the deciding/executing boundary is a pause, not a lock,

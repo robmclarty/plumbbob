@@ -10,7 +10,16 @@
 
 import { appendFileSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { commit, findRepoRoot, headSha, isDirty, stageAll, stagePath, stagedPaths, stagedStat } from '../lib/git.ts'
-import { buildFolder, buildLogPath, checkpointsPath, hasSession, intentPath, seamPath, stepPath } from '../lib/sidecar.ts'
+import {
+  buildFolder,
+  buildLogPath,
+  checkpointsPath,
+  clearHandoff,
+  hasSession,
+  intentPath,
+  seamPath,
+  stepPath,
+} from '../lib/sidecar.ts'
 import { runCheck } from '../lib/check.ts'
 import { markStepDone, parseSteps, parseTitle } from '../lib/orient.ts'
 import { parseStepSeam, scopeDrift } from '../lib/intent.ts'
@@ -58,6 +67,7 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   logCheckpoint(root, step, sha)
   rmSync(seamPath(root), { force: true })
   rmSync(stepPath(root), { force: true })
+  clearHandoff(root) // the agent-run ledger is step-scoped (D20) — clear it with the markers.
 
   process.stdout.write(`plumbbob: step ${step} checkpointed — ${sha.slice(0, 9)}. Back at the boundary.\n`)
   return 0

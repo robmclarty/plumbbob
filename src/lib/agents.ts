@@ -9,6 +9,7 @@
 // resolver reads `agent.json` files off disk (node builtins only, C1). Invocation
 // (step 4) spawns on top of these.
 
+import { spawn } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -455,4 +456,118 @@ function skipWarnings(heading: string, skipped: ReadonlyArray<string>): string[]
   return skipped.map(
     (line) => `intent.md: skipped a non-bullet line under ${heading} — ${JSON.stringify(line.trim())}`,
   )
+}
+
+// --- invocation (D8/D14/D17/D18/D22) ---
+
+// The outcome of one spawned agent run — a discriminated union the verb maps to
+// terminal reporting and side effects (D8's exit-code semantics). Exactly one is
+// authoritative: `ok` only when the child exited 0 AND its stdout parsed to a
+// valid envelope. A non-zero exit is a failed run reported verbatim (we do NOT
+// trust the envelope of a child that failed); `contract` is exit-0-but-garbage
+// (unparseable stdout or a version mismatch, carrying parseEnvelope's hint);
+// `timeout` and `interrupted` are the kill paths (D17/D14); `spawn` is a shell
+// that never started. `stdout` rides along on the outcomes that have it so the
+// verb can surface the raw bytes when a run went sideways.
+export type AgentRunResult =
+  | { readonly ok: true; readonly envelope: AgentEnvelope; readonly stdout: string }
+  | { readonly ok: false; readonly reason: 'exit'; readonly code: number; readonly stdout: string }
+  | { readonly ok: false; readonly reason: 'contract'; readonly error: string; readonly stdout: string }
+  | { readonly ok: false; readonly reason: 'timeout'; readonly seconds: number }
+  | { readonly ok: false; readonly reason: 'interrupted' }
+  | { readonly ok: false; readonly reason: 'spawn'; readonly error: string }
+
+// Spawn an agent's `command` via the shell (D18: `sh -c` on POSIX) at the repo
+// root, with the composed StepContext delivered as JSON on stdin. Stdout is piped
+// and captured (the envelope); stderr is inherited so the child's prose streams
+// live to the terminal (D8 — production narrates, consumption stays structured);
+// the agent's own directory rides in `PLUMBBOB_AGENT_DIR` (D18) so a root-cwd
+// agent can still reach its files. A SIGINT while the child runs kills it and
+// reports `interrupted` rather than orphaning it (D14); a positive `timeoutSeconds`
+// arms a kill timer (D17, 0 = off). Async `spawn`, not `spawnSync` (D22), so the
+// parent stays live to interrupt gracefully. Never rejects — every failure mode is
+// a resolved `AgentRunResult`.
+export function runAgent(params: {
+  readonly root: string
+  readonly command: string
+  readonly agentDir: string
+  readonly input: StepContext
+  readonly timeoutSeconds: number
+}): Promise<AgentRunResult> {
+  return new Promise((resolve) => {
+    const child = spawn(params.command, {
+      cwd: params.root,
+      shell: true,
+      env: { ...process.env, PLUMBBOB_AGENT_DIR: params.agentDir },
+      stdio: ['pipe', 'pipe', 'inherit'],
+    })
+
+    let stdout = ''
+    let settled = false
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const finish = (result: AgentRunResult): void => {
+      if (settled) return
+      settled = true
+      if (timer !== null) clearTimeout(timer)
+      process.off('SIGINT', onSigint)
+      resolve(result)
+    }
+
+    // Kill the child and report, rather than let a Ctrl-C orphan it (D14). The
+    // SIGKILL escalation covers a child that ignores the interrupt.
+    function onSigint(): void {
+      child.kill('SIGKILL')
+      finish({ ok: false, reason: 'interrupted' })
+    }
+    process.on('SIGINT', onSigint)
+
+    if (params.timeoutSeconds > 0) {
+      timer = setTimeout(() => {
+        child.kill('SIGKILL')
+        finish({ ok: false, reason: 'timeout', seconds: params.timeoutSeconds })
+      }, params.timeoutSeconds * 1000)
+    }
+
+    child.stdout.on('data', (chunk: Buffer) => {
+      stdout += chunk.toString()
+    })
+
+    // A shell that never launched (e.g. `sh` itself missing) — distinct from a
+    // command that ran and exited non-zero, which arrives on `close`.
+    child.on('error', (err: Error) => {
+      finish({ ok: false, reason: 'spawn', error: err.message })
+    })
+
+    child.on('close', (code: number | null) => {
+      if (code !== 0) {
+        finish({ ok: false, reason: 'exit', code: code ?? 1, stdout })
+        return
+      }
+      const parsed = parseChildEnvelope(stdout)
+      finish(
+        parsed.ok
+          ? { ok: true, envelope: parsed.envelope, stdout }
+          : { ok: false, reason: 'contract', error: parsed.error, stdout },
+      )
+    })
+
+    // Deliver the StepContext and close stdin so a child reading to EOF proceeds.
+    child.stdin.write(JSON.stringify(params.input))
+    child.stdin.end()
+  })
+}
+
+// Parse the child's captured stdout into a validated envelope: JSON first (a
+// non-JSON stdout is out of contract, D8), then the envelope validator (which
+// carries the contract-mismatch hint). Kept private — `runAgent` is the only
+// caller and the verb reads the union, not this.
+function parseChildEnvelope(stdout: string): EnvelopeParse {
+  let raw: unknown
+  try {
+    raw = JSON.parse(stdout)
+  } catch {
+    return { ok: false, error: 'the agent wrote non-JSON to stdout — the envelope must be a single JSON object.' }
+  }
+  return parseEnvelope(raw)
 }

@@ -61,6 +61,15 @@ export function resolveBoolean(root: string, key: string, fallback: boolean, fla
   return typeof value === 'boolean' ? value : fallback
 }
 
+// Resolve a non-negative integer setting (e.g. `agentTimeout`, D17). A missing
+// rung, or one holding a non-finite / negative / non-integer number, yields the
+// caller's fallback rather than a garbage timeout — 0 means "no timeout", so a
+// broken value must never silently become one.
+export function resolveNumber(root: string, key: string, fallback: number, flag?: number): number {
+  const value = resolveSetting(root, key, flag)
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : fallback
+}
+
 // Read one key from the untracked local overlay ONLY — no project or built-in
 // fallback. The `activeBuild` cursor lives here and must never resolve from the
 // tracked settings.json (it is per-worktree state, not a shared default).
