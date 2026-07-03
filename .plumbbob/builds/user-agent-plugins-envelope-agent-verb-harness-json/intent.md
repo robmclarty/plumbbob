@@ -133,6 +133,26 @@ distilled here so the build stands alone, pointer retained under ## Source.*
 - D15: before-slot outputs travel inline as `context[]` in the input JSON —
   *because* inline is the simplest thing until size proves otherwise (research Q2;
   revisit only on evidence).
+- D16: nested invocation is allowed — an agent may shell `plumbbob agent run` to
+  compose other agents (e.g. a build/review loop with a cutoff), no env guard —
+  *because* loops belong as code inside agents, cutoffs are the author's job, and
+  the identity invariant (the envelope has no verb to advance plumbbob's loop)
+  holds at every nesting depth; documented warning, not enforcement.
+- D17: timeouts exist but are off by default — an `agentTimeout` (seconds) key in
+  the settings ladder; absent/0 = no timeout, set = kill the child and report a
+  failed run — *because* the human is present by default (Ctrl-C works), and
+  enforcement should be the user's explicit opt-in, not plumbbob's guess.
+- D18: POSIX only (*nix/macOS) — the manifest `command` is a string run through
+  `sh -c` with the agent's directory as cwd — *because* Rob doesn't care about
+  Windows support, and a shell string keeps `agent.json` one line, not an argv
+  array.
+- D19: `agent list` stays a dedicated subcommand, but `doctor` validates every
+  defined agent (manifest well-formed, command exists and is executable, contract
+  version supported) and `status` reports the active build's bound agents —
+  *because* the user won't run the dedicated command regularly, so the surfaces
+  they already check must carry the report; doctor-as-validator also answers
+  where authors check compliance (with `docs/agents.md` holding the schema), so
+  no separate `agent check` verb.
 
 ## Constraints
 
@@ -173,13 +193,16 @@ distilled here so the build stands alone, pointer retained under ## Source.*
    have today; unit tests assert the composed JSON for a fixture build
    - seam: `src/lib/agents.ts`, `src/lib/intent.ts`, `src/lib/__tests__/agents.test.ts`, `src/lib/__tests__/intent.test.ts`
 4. [ ] `plumbbob agent run <name> [--step N] [--mode before|build|after]` —
-   **done when:** the verb composes the input, spawns the manifest command with
-   JSON on stdin, inherits stderr, forwards SIGINT, parses stdout as the envelope,
-   applies `parked[]` via the park verb, and honors exit-code semantics — with no
-   code path to checkpoint or step state; subprocess tests with bash fixture
-   agents cover done/blocked/drift, non-zero exit (report and stop), garbage
-   stdout (out of contract), and park lines landing in the build folder
-   - seam: `src/verbs/agent.ts`, `src/lib/agents.ts`, `src/verbs/__tests__/agent.test.ts`
+   **done when:** the verb composes the input, spawns the manifest command via
+   `sh -c` with the agent dir as cwd (D18) and JSON on stdin, inherits stderr,
+   forwards SIGINT, honors an opt-in `agentTimeout` settings key (absent/0 = no
+   timeout; on expiry kill the child and report a failed run, D17), parses stdout
+   as the envelope, applies `parked[]` via the park verb, and honors exit-code
+   semantics — with no code path to checkpoint or step state; subprocess tests
+   with bash fixture agents cover done/blocked/drift, non-zero exit (report and
+   stop), garbage stdout (out of contract), timeout kill, and park lines landing
+   in the build folder
+   - seam: `src/verbs/agent.ts`, `src/lib/agents.ts`, `src/lib/settings.ts`, `src/verbs/__tests__/agent.test.ts`
 5. [ ] `harness.json` bindings — **done when:** the CLI reads
    `builds/<slug>/harness.json` (contract, `defaults`, per-step slots + `note`),
    merges settings-level defaults under it and the `--agent` flag over it, and
@@ -187,7 +210,14 @@ distilled here so the build stands alone, pointer retained under ## Source.*
    name resolves the bound agent for the mode; tests cover per-step override of
    defaults, absent harness file (clean no-op), and the missing-agent warning
    - seam: `src/lib/agents.ts`, `src/verbs/agent.ts`, `src/verbs/__tests__/agent.test.ts`
-6. [ ] Skills learn the slots — **done when:** pb-plan offers harness.json
+6. [ ] Doctor validates agents; status reports bindings — **done when:** `doctor`
+   walks every resolvable agent (project + personal) and flags a malformed
+   `agent.json`, a missing/non-executable command, or an unsupported contract
+   version (D19); `status` on an active build lists its harness bindings and
+   warns on ones that don't resolve; tests cover a broken fixture agent in each
+   failure mode
+   - seam: `src/verbs/doctor.ts`, `src/verbs/status.ts`, `src/lib/agents.ts`, `src/verbs/__tests__/doctor.test.ts`, `src/verbs/__tests__/status.test.ts`
+7. [ ] Skills learn the slots — **done when:** pb-plan offers harness.json
    authoring at plan time (bindings reviewed at the plan pause, alongside the
    steps); pb-step revises a step's bindings just-in-time; pb-build runs
    before-agents into `context[]`, delegates to a build-slot agent when bound, and
@@ -195,29 +225,19 @@ distilled here so the build stands alone, pointer retained under ## Source.*
    advisory input at the pause; manifest `when` prose is documented as the host
    model's cue to fire `agent run` mid-build; `docs/skills-reference.md` updated
    - seam: `skills/pb-plan/SKILL.md`, `skills/pb-step/SKILL.md`, `skills/pb-build/SKILL.md`, `skills/pb-verify/SKILL.md`, `docs/skills-reference.md`
-7. [ ] Docs, example, decision log — **done when:** `docs/agents.md` defines the
+8. [ ] Docs, example, decision log — **done when:** `docs/agents.md` defines the
    full contract for agent authors (envelope schema, manifest, harness.json, the
-   three invariants, the fascicle trajectory-to-stderr trap); `docs/cli-reference.md`
-   gains `agent run|list`; `docs/decisions.md` records the new decisions; README
-   points at the doorway; a minimal working example agent ships under `examples/`;
+   three invariants, the fascicle trajectory-to-stderr trap, and the
+   nested-invocation warning: composing agents from an agent is allowed, cutoffs
+   are yours, D16); `docs/cli-reference.md` gains `agent run|list` +
+   `agentTimeout`; `docs/decisions.md` records the new decisions; README points
+   at the doorway; a minimal working example agent ships under `examples/`;
    `pnpm run check` green
    - seam: `docs/agents.md`, `docs/cli-reference.md`, `docs/decisions.md`, `README.md`, `examples/`
 
 ## Open questions
 
-- Q1: recursion — an agent shelling `plumbbob agent run`: forbid via env guard, or
-  shrug (it's the user's process tree)? *Leaning shrug + documented warning.* —
-  *resolve by:* decide
-- Q2: timeouts — none (human present, Ctrl-C works) vs a settings key? *Leaning
-  none for v1.* — *resolve by:* decide
-- Q3: Windows — manifest `command` through a shell vs an argv array? — *resolve
-  by:* decide (affects step 1's manifest shape)
-- Q4: contract evolution — where does the schema live so authors can validate:
-  `docs/agents.md` prose only, or also a `plumbbob agent check <name>`
-  doctor-style verb (would extend step 2 or become a step 8)? — *resolve by:*
-  decide
-- Q5: does `agent list` belong in `status`/`doctor` output too, or stay its own
-  subcommand only? *Leaning subcommand-only for v1.* — *resolve by:* decide
+*(none — Q1–Q5 resolved 2026-07-03, see Verdicts.)*
 
 ## Verdicts
 
@@ -225,6 +245,21 @@ distilled here so the build stands alone, pointer retained under ## Source.*
   section of a plan artifact) → chose **`harness.json`** because it reads as hook
   registrations against the beat's lifecycle points ("effectively `hooks.json`
   with lifecycle labels") → D4.
+- 2026-07-03 — Q1 (recursion) → clarified: recursion = an agent shelling
+  `plumbbob agent run` (composing other agents), NOT loops inside an agent (those
+  are just code and were never in question). Chose **allow, no env guard** —
+  build/review loops with cutoffs are a legitimate composition; the
+  no-loop-advance invariant holds at every depth → D16.
+- 2026-07-03 — Q2 (timeouts) → chose **build it, off by default**: `agentTimeout`
+  settings key, absent/0 = none, user opts into enforcement → D17.
+- 2026-07-03 — Q3 (Windows) → chose **POSIX only**; `command` is a shell string
+  via `sh -c`, no argv array → D18.
+- 2026-07-03 — Q4 (author validation) → chose **doctor validates defined agents**
+  (manifest, executable, contract) on top of `docs/agents.md` prose; no separate
+  `agent check` verb → D19, new step 6.
+- 2026-07-03 — Q5 (list placement) → chose **dedicated subcommand + tie into
+  status/doctor** so the surfaces the user already checks carry the report → D19,
+  step 6.
 
 ## Source
 
