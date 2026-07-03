@@ -9,10 +9,11 @@
 // the same way.
 
 import { appendFileSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { commit, findRepoRoot, headSha, isDirty, stageAll } from '../lib/git.ts'
+import { commit, findRepoRoot, headSha, isDirty, stageAll, stagedStat } from '../lib/git.ts'
 import { buildLogPath, checkpointsPath, hasSession, intentPath, seamPath, stepPath } from '../lib/sidecar.ts'
 import { runCheck } from '../lib/check.ts'
 import { markStepDone, parseSteps } from '../lib/orient.ts'
+import { parseStepSeam } from '../lib/intent.ts'
 import { appendToSection, checkpointLogLine } from '../lib/buildlog.ts'
 
 export function checkpoint(cwd: string, args: ReadonlyArray<string>): number {
@@ -36,7 +37,8 @@ export function checkpoint(cwd: string, args: ReadonlyArray<string>): number {
   let sha: string
   if (isDirty(root)) {
     stageAll(root)
-    sha = commit(root, messageArg(args) ?? subjectForStep(root, step))
+    const body = bodyArg(args) ?? fallbackBody(root, step)
+    sha = commit(root, messageArg(args) ?? subjectForStep(root, step), body)
   } else {
     sha = headSha(root)
   }
@@ -114,6 +116,69 @@ function titleForStep(root: string, step: number): string | null {
 function messageArg(args: ReadonlyArray<string>): string | null {
   const i = args.indexOf('-m')
   return i !== -1 && i + 1 < args.length ? (args[i + 1] ?? null) : null
+}
+
+// `--body` reads the commit body from stdin (the single-quoted heredoc of D5),
+// so the skill can compose proportional prose the CLI never could. Returns null
+// when the flag is absent or stdin is empty — either way the deterministic
+// fallback body takes over. Reading fd 0 blocks until EOF, which the heredoc
+// supplies; a read error (no stdin attached) degrades to the fallback.
+function bodyArg(args: ReadonlyArray<string>): string | null {
+  if (!args.includes('--body')) {
+    return null
+  }
+  try {
+    const raw = readFileSync(0, 'utf8').trimEnd()
+    return raw.length > 0 ? raw : null
+  } catch {
+    return null
+  }
+}
+
+// The deterministic checkpoint body (D6): the step's done-when, its seam, and the
+// staged diffstat — so a hand-built or vibed checkpoint still gets informative
+// history without a model turn. Each part is best-effort; a missing piece is
+// simply omitted, and an empty result leaves the commit body blank.
+function fallbackBody(root: string, step: number): string | undefined {
+  const parts: string[] = []
+  const doneWhen = doneWhenForStep(root, step)
+  if (doneWhen !== null) {
+    parts.push(`done when: ${doneWhen}`)
+  }
+  const seam = seamForStep(root, step)
+  if (seam.length > 0) {
+    parts.push(`seam: ${seam.join(', ')}`)
+  }
+  const stat = safeStagedStat(root)
+  if (stat.length > 0) {
+    parts.push(stat)
+  }
+  return parts.length > 0 ? parts.join('\n\n') : undefined
+}
+
+function doneWhenForStep(root: string, step: number): string | null {
+  try {
+    return parseSteps(readFileSync(intentPath(root), 'utf8')).find((s) => s.n === step)?.doneWhen ?? null
+  } catch {
+    return null
+  }
+}
+
+function seamForStep(root: string, step: number): ReadonlyArray<string> {
+  try {
+    const parsed = parseStepSeam(readFileSync(intentPath(root), 'utf8'), step)
+    return parsed.ok ? parsed.seam : []
+  } catch {
+    return []
+  }
+}
+
+function safeStagedStat(root: string): string {
+  try {
+    return stagedStat(root)
+  } catch {
+    return ''
+  }
 }
 
 function readStep(root: string): number | null {

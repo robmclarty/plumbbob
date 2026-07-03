@@ -48,6 +48,16 @@ describe('checkpoint', () => {
     expect(subject).toBe('plumbbob: step 1 — First')
   })
 
+  it('composes a deterministic body — done-when, seam, diffstat — when no --body is given', () => {
+    const dir = startedGreen()
+    writeFileSync(join(dir, 'work.txt'), 'pending\n')
+    captureIo(() => checkpoint(dir, ['1']))
+    const body = execFileSync('git', ['log', '-1', '--format=%b'], { cwd: dir, encoding: 'utf8' })
+    expect(body).toContain('done when: a works.')
+    expect(body).toContain('seam: src/a.ts')
+    expect(body).toContain('work.txt') // the staged diffstat names the changed file
+  })
+
   it('falls back to `plumbbob: step N done` when intent carries no title', () => {
     const dir = startedGreen()
     writeFileSync(intentPath(dir), '# Untitled steps\n\n## Steps\n\n1. [ ] — **done when:** a works.\n')

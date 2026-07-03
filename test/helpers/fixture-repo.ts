@@ -60,15 +60,21 @@ type CliResult = {
 // Spawns the CLI with CLAUDECODE stripped by default so tests are deterministic
 // regardless of the host environment. Pass `{ CLAUDECODE: '1' }` to simulate an
 // in-session run; PlumbBob does not gate any verb on it.
-export function runCli(dir: string, args: ReadonlyArray<string>, extraEnv: Record<string, string> = {}): CliResult {
+export function runCli(
+  dir: string,
+  args: ReadonlyArray<string>,
+  extraEnv: Record<string, string> = {},
+  input?: string,
+): CliResult {
   const env: Record<string, string | undefined> = { ...process.env }
   delete env.CLAUDECODE
   for (const [key, value] of Object.entries(extraEnv)) {
     env[key] = value
   }
   // spawnSync (not execFileSync) so stderr is captured on success too — verbs
-  // emit warnings to stderr while still exiting 0.
-  const result = spawnSync('node', [CLI, ...args], { cwd: dir, encoding: 'utf8', env })
+  // emit warnings to stderr while still exiting 0. `input` becomes the child's
+  // stdin, standing in for a `--body <<'BODY'` heredoc.
+  const result = spawnSync('node', [CLI, ...args], { cwd: dir, encoding: 'utf8', env, input })
   return { stdout: result.stdout ?? '', stderr: result.stderr ?? '', status: result.status ?? 1 }
 }
 

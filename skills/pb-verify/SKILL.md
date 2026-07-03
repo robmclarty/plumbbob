@@ -29,10 +29,22 @@ this skill verifies it the same way: **it reads the diff, not the author** (D3).
 4. **PAUSE.** Present the check result, the self-review, and the validation, then
    **stop and wait for the human's explicit approval.** This is the convergence beat;
    the human is the clock. Never checkpoint without it.
-5. **Checkpoint** *(only after approval)*. Commit the work — the human's
-   commit-with-TIL skill for a rich message, or let `checkpoint` make the WIP commit
-   — then run `plumbbob checkpoint` to record the SHA, flip the step to done, append the
-   step to the build-log's `## Log`, and return to DESIGN. Do **not** bump the version or
+5. **Checkpoint** *(only after approval)*. Run `plumbbob checkpoint`: it makes the WIP
+   commit, records the SHA, flips the step to done, appends the step to the build-log's
+   `## Log`, and returns to DESIGN. The CLI owns the commit **subject**
+   (`plumbbob: step N — <title>`); you own the **body**. Compose a body *proportional to
+   the step* — a one-liner for a trivial change, a short paragraph on the what/why for a
+   meatier one — and pass it on stdin:
+
+   ```bash
+   plumbbob checkpoint <n> --body <<'BODY'
+   <your proportional body — what changed and why, no ceremony>
+   BODY
+   ```
+
+   Do **not** run a TIL scan or reach for a separate commit skill — the body is yours to
+   write in one breath. Omit `--body` entirely and the CLI writes a deterministic body
+   (done-when + seam + diffstat) on its own. Either way, do **not** bump the version or
    touch the changelog — that is the human's `/version` call.
 
 ## The hard contracts

@@ -70,6 +70,30 @@ describe('plumbbob checkpoint — executor-agnostic (D3)', () => {
     expect(phase(dir)).toBe('DESIGN')
   })
 
+  it('reads a --body message body from stdin, keeping the CLI-owned subject (D5)', () => {
+    const dir = makeFixtureRepo()
+    startWithSteps(dir, '1. [ ] first — **done when:** ok')
+    writeFileSync(join(dir, 'x.txt'), 'x\n')
+    const res = runCli(dir, ['checkpoint', '--body'], {}, 'Proportional prose.\n\nA second paragraph.\n')
+    expect(res.status).toBe(0)
+    const subject = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%s'], { encoding: 'utf8' }).trim()
+    const body = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%b'], { encoding: 'utf8' })
+    expect(subject).toBe('plumbbob: step 1 — first')
+    expect(body).toContain('Proportional prose.')
+    expect(body).toContain('A second paragraph.')
+  })
+
+  it('carries a deterministic body — done-when, seam, diffstat — without --body (D6)', () => {
+    const dir = makeFixtureRepo()
+    startWithSteps(dir, '1. [ ] first — **done when:** it works\n   - seam: `x.txt`')
+    writeFileSync(join(dir, 'x.txt'), 'x\n')
+    expect(runCli(dir, ['checkpoint']).status).toBe(0)
+    const body = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%b'], { encoding: 'utf8' })
+    expect(body).toContain('done when: it works')
+    expect(body).toContain('seam: x.txt')
+    expect(body).toContain('x.txt') // diffstat
+  })
+
   it('records HEAD without a new commit when the tree is already clean', () => {
     const dir = makeFixtureRepo()
     startWithSteps(dir, '1. [ ] a — **done when:** ok')

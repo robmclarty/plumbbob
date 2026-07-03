@@ -41,8 +41,11 @@ at the pause for your approval. **Re-firing `/pb-build` is itself the clock tick
    does: `plumbbob check` → self-review the diff against the done-when, the
    Decisions, and the Constraints (a single structured read, D16) → validate → **PAUSE
    for the human's approval** → only on approval, checkpoint with
-   `plumbbob checkpoint` (which also appends this step to the build-log's `## Log` — the
-   history writes itself at each checkpoint, so you don't hand-log it). Do **not** bump
+   `plumbbob checkpoint <n> --body <<'BODY' … BODY` — a commit body **proportional to the
+   step** (a line for a trivial change, a short paragraph for a meatier one; no TIL scan,
+   no separate commit skill). The CLI owns the subject and appends this step to the
+   build-log's `## Log`, so the history writes itself — you only supply the body (or omit
+   `--body` for the deterministic done-when + seam + diffstat fallback). Do **not** bump
    the version or changelog — that is the human's `/version` call.
 
 ## `--auto` — let the agent be the clock (opt-in)

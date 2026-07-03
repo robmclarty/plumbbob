@@ -63,9 +63,18 @@ export function untrackedPaths(root: string): ReadonlyArray<string> {
 
 // Commit whatever is staged as a checkpoint and return its SHA. --allow-empty so
 // a step that touched only ignored files still gets a checkpoint to revert to.
-export function commit(root: string, message: string): string {
-  runGit(root, ['commit', '--allow-empty', '-m', message])
+// An optional `body` becomes the commit message body: git joins the two `-m`
+// paragraphs with a blank line, so the subject stays the first line (D5).
+export function commit(root: string, subject: string, body?: string): string {
+  const message = body ? ['-m', subject, '-m', body] : ['-m', subject]
+  runGit(root, ['commit', '--allow-empty', ...message])
   return headSha(root)
+}
+
+// The `--stat` summary of what is currently staged (vs HEAD) — the diffstat the
+// deterministic checkpoint body carries (D6). Empty when nothing is staged.
+export function stagedStat(root: string): string {
+  return runGit(root, ['diff', '--cached', '--stat'])
 }
 
 export function resetHard(root: string, sha: string): void {
