@@ -458,6 +458,116 @@ function skipWarnings(heading: string, skipped: ReadonlyArray<string>): string[]
   )
 }
 
+// --- harness bindings (D4/D13) ---
+
+// A slot→agents map: the agents bound to each of the three lifecycle points. Only
+// bound slots are present as keys (an absent slot falls through the merge ladder,
+// so the map must distinguish "not bound here" from "bound to nothing"). Shared by
+// a harness `defaults` block, a per-step entry, and the settings-level defaults.
+export type SlotBindings = Partial<Record<Slot, ReadonlyArray<string>>>
+
+// One step's entry in the harness: its slot bindings plus `note`, prose the host
+// model reads (like a manifest `when`) — never the CLI's mechanics (C3: bindings +
+// prose only, no control flow).
+export type StepBinding = {
+  readonly bindings: SlotBindings
+  readonly note: string
+}
+
+// harness.json — the planned per-step agent bindings authored at /pb-plan time, a
+// sibling of intent.md in builds/<slug>/ (D4). Contract-gated like the manifest and
+// envelope (D8). `defaults` bind agents to every step; a per-step entry under
+// `steps.<n>` overrides the defaults for the slots it names (replace, not append).
+export type HarnessBindings = {
+  readonly contract: number
+  readonly defaults: SlotBindings
+  readonly steps: ReadonlyMap<number, StepBinding>
+}
+
+export type HarnessParse =
+  | { readonly ok: true; readonly harness: HarnessBindings }
+  | { readonly ok: false; readonly error: string }
+
+// Validate a parsed harness.json. Contract first (a major mismatch gets the same
+// upgrade hint as the manifest/envelope, D8). Structure is strict — a `steps` that
+// is not an object, a non-numeric step key, or a step entry that is not an object
+// is the author's error and is refused loud. Slot *contents* stay lenient (D23): a
+// slot value may be one name or a list, and blanks/non-strings drop rather than
+// refuse, because bindings feed a spawn, not a git-gating parse.
+export function parseHarness(raw: unknown): HarnessParse {
+  if (!isObject(raw)) {
+    return { ok: false, error: 'harness.json must be a JSON object.' }
+  }
+  const versionError = checkContract(raw.contract, 'harness.json')
+  if (versionError !== null) {
+    return { ok: false, error: versionError }
+  }
+
+  const defaults = parseSlotBindings(raw.defaults)
+
+  const steps = new Map<number, StepBinding>()
+  if (raw.steps !== undefined) {
+    if (!isObject(raw.steps)) {
+      return { ok: false, error: 'harness.json "steps" must be an object keyed by step number.' }
+    }
+    for (const [key, value] of Object.entries(raw.steps)) {
+      if (!/^\d+$/.test(key)) {
+        return { ok: false, error: `harness.json "steps" key ${JSON.stringify(key)} must be a step number.` }
+      }
+      if (!isObject(value)) {
+        return { ok: false, error: `harness.json step ${key} must be an object of slot bindings.` }
+      }
+      steps.set(Number(key), { bindings: parseSlotBindings(value), note: asString(value.note) })
+    }
+  }
+
+  return { ok: true, harness: { contract: CONTRACT_VERSION, defaults, steps } }
+}
+
+// Narrow a raw slot→agents object (a harness `defaults`, a per-step entry, or the
+// settings-level defaults, D13) to the slots it actually binds. A slot value may be
+// a single agent name or a list; blanks and non-strings drop. Only the three real
+// slots are read — `note` and any stranger key are ignored here. A slot present but
+// naming no valid agent still counts as bound-to-nothing (an explicit override to
+// none), so callers get clean replace semantics up the ladder.
+export function parseSlotBindings(raw: unknown): SlotBindings {
+  if (!isObject(raw)) return {}
+  const out: { -readonly [K in Slot]?: ReadonlyArray<string> } = {}
+  for (const slot of SLOTS) {
+    if (slot in raw) out[slot] = asNameList(raw[slot])
+  }
+  return out
+}
+
+// The agents bound to one slot for one step, merging the ladder (D13): a per-step
+// slot entry overrides the harness `defaults`, which override the settings-level
+// defaults — the first level that names the slot wins (replace, not append). The
+// `--agent` flag and an explicit name sit above all of this, but the verb takes the
+// single-agent path for those and never reaches here. Returns [] when no level
+// binds the slot: nothing to run, a clean no-op.
+export function resolveSlotAgents(params: {
+  readonly harness: HarnessBindings | null
+  readonly settingsDefaults: SlotBindings
+  readonly step: number
+  readonly slot: Slot
+}): ReadonlyArray<string> {
+  const perStep = params.harness?.steps.get(params.step)?.bindings
+  if (perStep && params.slot in perStep) return perStep[params.slot] ?? []
+  const defaults = params.harness?.defaults
+  if (defaults && params.slot in defaults) return defaults[params.slot] ?? []
+  if (params.slot in params.settingsDefaults) return params.settingsDefaults[params.slot] ?? []
+  return []
+}
+
+function asNameList(value: unknown): ReadonlyArray<string> {
+  const items = Array.isArray(value) ? value : [value]
+  return items.filter((v): v is string => typeof v === 'string' && v.trim().length > 0).map((v) => v.trim())
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
 // --- invocation (D8/D14/D17/D18/D22) ---
 
 // The outcome of one spawned agent run — a discriminated union the verb maps to

@@ -10,23 +10,28 @@
 // composition, and spawn mechanics live in lib/agents.ts.
 
 import { readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { findRepoRoot } from '../lib/git.ts'
 import {
   SLOTS,
   type AgentEnvelope,
   type AgentManifest,
   type AgentRunResult,
+  type HarnessParse,
   type Slot,
   composeStepContext,
   formatAgentList,
   isSlot,
   listAgents,
+  parseHarness,
+  parseSlotBindings,
   resolveAgent,
+  resolveSlotAgents,
   runAgent,
 } from '../lib/agents.ts'
 import { appendToSection } from '../lib/buildlog.ts'
-import { resolveBoolean, resolveNumber } from '../lib/settings.ts'
-import { appendHandoff, buildLogPath, hasSession, intentPath, resolveBuild, stepPath } from '../lib/sidecar.ts'
+import { resolveBoolean, resolveNumber, resolveRecord } from '../lib/settings.ts'
+import { appendHandoff, buildFolder, buildLogPath, hasSession, intentPath, resolveBuild, stepPath } from '../lib/sidecar.ts'
 
 export async function agent(cwd: string, args: ReadonlyArray<string> = []): Promise<number> {
   const [sub, ...rest] = args
@@ -49,8 +54,10 @@ function list(cwd: string, _args: ReadonlyArray<string>): number {
   return 0
 }
 
-// `agent run <name>`: resolve the named agent (explicit miss = error, D21),
-// compose the StepContext for the step and mode, spawn, then apply side effects.
+// `agent run`: with a name (or `--agent` flag) run exactly that agent, failing
+// loud on a miss (D21); with no name run the step's harness-bound agents for the
+// requested slot (D4). Either way this composes the StepContext, spawns, and
+// applies side effects — never advancing the loop.
 async function run(cwd: string, args: ReadonlyArray<string>): Promise<number> {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
@@ -64,10 +71,6 @@ async function run(cwd: string, args: ReadonlyArray<string>): Promise<number> {
     process.stderr.write(`${parsed}\n`)
     return 1
   }
-  if (parsed.name === undefined) {
-    process.stderr.write('plumbbob: agent run needs an agent name. Try: plumbbob agent run reviewer --step 3.\n')
-    return 1
-  }
 
   const step = parsed.step ?? readStep(root, slug)
   if (step === null) {
@@ -75,17 +78,57 @@ async function run(cwd: string, args: ReadonlyArray<string>): Promise<number> {
     return 1
   }
 
-  const resolution = resolveAgent(root, parsed.name, parsed.flagPath !== undefined ? { flagPath: parsed.flagPath } : {})
-  if (!resolution.ok) {
-    process.stderr.write(`plumbbob: ${resolution.error}\n`)
+  // A `--agent <path>` flag still needs a name — it labels an explicit run (the
+  // handoff ledger and the human summary key on the name), it does not name one.
+  if (parsed.name === undefined && parsed.flagPath !== undefined) {
+    process.stderr.write('plumbbob: --agent needs an agent name too, for the run label. Try: plumbbob agent run reviewer --agent ./path --step 3.\n')
     return 1
+  }
+
+  // Explicit ask (a name, above the bindings — D13): run exactly it, fail loud on
+  // a miss. No name: resolve the harness bindings for the slot and run them.
+  if (parsed.name !== undefined) {
+    return runOne(root, slug, step, {
+      name: parsed.name,
+      flagPath: parsed.flagPath,
+      mode: parsed.mode,
+      ambient: false,
+    })
+  }
+  return runBound(root, slug, step, parsed.mode)
+}
+
+// One agent's full run: resolve it, pick its slot, compose the StepContext, spawn,
+// and report. `ambient` marks a harness-bound run (D4) whose resolution or slot
+// mismatch degrades to a warning (D10/D21) so a batch keeps going; an explicit
+// ask (`ambient: false`) fails loud on the same miss. A run that actually starts
+// and fails (non-zero exit, timeout, …) is a hard failure either way — D10 softens
+// a *missing* agent, not a broken one.
+type RunSpec = {
+  readonly name: string
+  readonly flagPath: string | undefined
+  readonly mode: string | undefined
+  readonly ambient: boolean
+}
+
+async function runOne(root: string, slug: string | null, step: number, spec: RunSpec): Promise<number> {
+  const resolution = resolveAgent(root, spec.name, spec.flagPath !== undefined ? { flagPath: spec.flagPath } : {})
+  if (!resolution.ok) {
+    return degrade(
+      spec.ambient,
+      `plumbbob: ${resolution.error}`,
+      `plumbbob: bound agent "${spec.name}" did not resolve — ${resolution.error} Skipping (D10 — the loop works without it).`,
+    )
   }
   const { manifest, dir } = resolution.agent
 
-  const resolved = resolveMode(parsed.mode, manifest)
+  const resolved = resolveMode(spec.mode, manifest)
   if (!resolved.ok) {
-    process.stderr.write(`${resolved.error}\n`)
-    return 1
+    return degrade(
+      spec.ambient,
+      resolved.error,
+      `plumbbob: bound agent "${spec.name}" — ${resolved.error.replace(/^plumbbob:\s*/, '')} Skipping (D10).`,
+    )
   }
   const mode = resolved.mode
 
@@ -123,7 +166,76 @@ async function run(cwd: string, args: ReadonlyArray<string>): Promise<number> {
     timeoutSeconds: resolveNumber(root, 'agentTimeout', 0),
   })
 
-  return report(root, slug, parsed.name, mode, step, result)
+  return report(root, slug, spec.name, mode, step, result)
+}
+
+// No name given: run the harness-bound agents for the requested slot (D4). The
+// bindings merge the ladder — per-step over harness defaults over settings-level
+// defaults (D13). A missing bound agent degrades to a warning (D10); an absent
+// harness, or one that binds nothing to this slot, is a clean no-op. Each bound
+// agent runs in turn; the batch exits 1 if any agent that actually ran failed.
+async function runBound(root: string, slug: string | null, step: number, modeFlag: string | undefined): Promise<number> {
+  if (modeFlag === undefined) {
+    process.stderr.write('plumbbob: agent run needs an agent name, or --mode <slot> to run the step\'s bound agents.\n')
+    return 1
+  }
+  if (!isSlot(modeFlag)) {
+    process.stderr.write(`plumbbob: unknown --mode '${modeFlag}' — slots are ${SLOTS.join(', ')}.\n`)
+    return 1
+  }
+
+  const harness = readHarness(root, slug)
+  if (harness !== null && !harness.ok) {
+    process.stderr.write(`plumbbob: ${harness.error}\n`)
+    return 1
+  }
+  const settingsDefaults = parseSlotBindings(resolveRecord(root, 'agents'))
+  const names = resolveSlotAgents({
+    harness: harness?.harness ?? null,
+    settingsDefaults,
+    step,
+    slot: modeFlag,
+  })
+  if (names.length === 0) {
+    process.stderr.write(`plumbbob: no agents bound to the '${modeFlag}' slot for step ${step} — nothing to run.\n`)
+    return 0
+  }
+
+  let worst = 0
+  for (const name of names) {
+    const code = await runOne(root, slug, step, { name, flagPath: undefined, mode: modeFlag, ambient: true })
+    if (code !== 0) worst = code
+  }
+  return worst
+}
+
+// Emit the loud error or the soft warning by whether this run was an explicit ask
+// (name/flag) or an ambient harness binding (D10/D21), and return the matching
+// code — a hard miss stops with 1, a degraded one warns and returns 0 so a batch
+// of bound agents carries on.
+function degrade(ambient: boolean, hard: string, soft: string): number {
+  process.stderr.write(`${ambient ? soft : hard}\n`)
+  return ambient ? 0 : 1
+}
+
+// Read builds/<slug>/harness.json: null when absent (a clean no-op — a build with
+// no bound agents), an errored parse when present-but-broken (invalid JSON or a
+// malformed structure the author must fix), else the validated bindings.
+function readHarness(root: string, slug: string | null): HarnessParse | null {
+  const path = join(buildFolder(root, slug), 'harness.json')
+  let raw: string
+  try {
+    raw = readFileSync(path, 'utf8')
+  } catch {
+    return null
+  }
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return { ok: false, error: `${path} is not valid JSON.` }
+  }
+  return parseHarness(parsed)
 }
 
 type RunArgs = {

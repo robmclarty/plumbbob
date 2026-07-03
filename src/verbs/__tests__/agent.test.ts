@@ -4,7 +4,7 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { agent } from '../agent.ts'
 import { checkpoint } from '../checkpoint.ts'
 import { start } from '../start.ts'
-import { buildLogPath, handoffPath, intentPath } from '../../lib/sidecar.ts'
+import { buildFolder, buildLogPath, handoffPath, intentPath } from '../../lib/sidecar.ts'
 import { settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
@@ -239,6 +239,129 @@ describe('agent run — side effects (D6/D20)', () => {
     // the ledger is step-scoped: checkpointing the step clears it (D20).
     await captureIoAsync(() => checkpoint(dir, ['1']))
     expect(existsSync(handoffPath(dir))).toBe(false)
+  })
+})
+
+// The harness.json path for the started build — a sibling of intent.md.
+function harnessPath(root: string): string {
+  return join(buildFolder(root, SLUG), 'harness.json')
+}
+
+function writeHarness(root: string, harness: Record<string, unknown>): void {
+  writeFileSync(harnessPath(root), `${JSON.stringify(harness, null, 2)}\n`)
+}
+
+describe('agent run — harness bindings (D4/D13)', () => {
+  it('runs a step-bound agent when no name is given, overriding the harness defaults', async () => {
+    const dir = startedBuild()
+    makeAgent(dir, 'stepper', { slots: ['build'], script: DONE_SCRIPT })
+    makeAgent(dir, 'defaulter', { slots: ['build'], script: DONE_SCRIPT })
+    writeHarness(dir, {
+      contract: 1,
+      defaults: { build: ['defaulter'] },
+      steps: { 1: { build: ['stepper'], note: 'use the sharper one here' } },
+    })
+
+    const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', '--step', '1', '--mode', 'build']))
+    expect(code).toBe(0)
+    expect(stderr).toContain('agent "stepper" (build)')
+    expect(stderr).not.toContain('defaulter')
+
+    const ledger = JSON.parse(readFileSync(handoffPath(dir), 'utf8'))
+    expect(ledger.map((entry: { agent: string }) => entry.agent)).toEqual(['stepper'])
+  })
+
+  it('falls back to the harness defaults for a step that does not override the slot', async () => {
+    const dir = startedBuild()
+    makeAgent(dir, 'defaulter', { slots: ['after'], script: DONE_SCRIPT })
+    writeHarness(dir, { contract: 1, defaults: { after: ['defaulter'] }, steps: {} })
+
+    const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', '--step', '1', '--mode', 'after']))
+    expect(code).toBe(0)
+    expect(stderr).toContain('agent "defaulter" (after)')
+  })
+
+  it('merges settings-level defaults under the harness — a settings default binds with no harness file (D13)', async () => {
+    const dir = startedBuild()
+    makeAgent(dir, 'settingsrev', { slots: ['after'], script: DONE_SCRIPT })
+    writeFileSync(settingsPath(dir), JSON.stringify({ agents: { after: ['settingsrev'] } }))
+
+    const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', '--step', '1', '--mode', 'after']))
+    expect(code).toBe(0)
+    expect(stderr).toContain('agent "settingsrev" (after)')
+  })
+
+  it('runs every agent bound to the slot, in order', async () => {
+    const dir = startedBuild()
+    makeAgent(dir, 'first', { slots: ['before'], script: DONE_SCRIPT })
+    makeAgent(dir, 'second', { slots: ['before'], script: DONE_SCRIPT })
+    writeHarness(dir, { contract: 1, defaults: {}, steps: { 1: { before: ['first', 'second'] } } })
+
+    const { code } = await captureIoAsync(() => agent(dir, ['run', '--step', '1', '--mode', 'before']))
+    expect(code).toBe(0)
+    const ledger = JSON.parse(readFileSync(handoffPath(dir), 'utf8'))
+    expect(ledger.map((entry: { agent: string }) => entry.agent)).toEqual(['first', 'second'])
+  })
+
+  it('is a clean no-op when no harness file and no default binds the slot', async () => {
+    const dir = startedBuild()
+    const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', '--step', '1', '--mode', 'build']))
+    expect(code).toBe(0)
+    expect(stderr).toContain("no agents bound to the 'build' slot")
+    expect(existsSync(handoffPath(dir))).toBe(false)
+  })
+
+  it('downgrades a missing bound agent to a warning and carries on (D10)', async () => {
+    const dir = startedBuild()
+    writeHarness(dir, { contract: 1, defaults: {}, steps: { 1: { after: ['ghostreviewer'] } } })
+
+    const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', '--step', '1', '--mode', 'after']))
+    expect(code).toBe(0)
+    expect(stderr).toContain('bound agent "ghostreviewer" did not resolve')
+    expect(stderr).toContain('Skipping')
+    expect(existsSync(handoffPath(dir))).toBe(false)
+  })
+
+  it('warns and skips a bound agent that does not declare the slot it is bound to', async () => {
+    const dir = startedBuild()
+    makeAgent(dir, 'afteronly', { slots: ['after'], script: DONE_SCRIPT })
+    writeHarness(dir, { contract: 1, defaults: {}, steps: { 1: { build: ['afteronly'] } } })
+
+    const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', '--step', '1', '--mode', 'build']))
+    expect(code).toBe(0)
+    expect(stderr).toContain('does not declare')
+    expect(stderr).toContain('Skipping')
+  })
+
+  it('lets an explicit name override the bindings (D13: a name sits above the harness)', async () => {
+    const dir = startedBuild()
+    makeAgent(dir, 'named', { slots: ['build'], script: DONE_SCRIPT })
+    makeAgent(dir, 'bound', { slots: ['build'], script: DONE_SCRIPT })
+    writeHarness(dir, { contract: 1, defaults: {}, steps: { 1: { build: ['bound'] } } })
+
+    const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', 'named', '--step', '1', '--mode', 'build']))
+    expect(code).toBe(0)
+    expect(stderr).toContain('agent "named" (build)')
+    expect(stderr).not.toContain('"bound"')
+  })
+
+  it('refuses a present-but-broken harness (bad structure) loud', async () => {
+    const dir = startedBuild()
+    writeFileSync(harnessPath(dir), JSON.stringify({ contract: 1, steps: [] }))
+
+    const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', '--step', '1', '--mode', 'build']))
+    expect(code).toBe(1)
+    expect(stderr).toContain('"steps" must be an object')
+  })
+
+  it('refuses a harness contract major-version mismatch with an upgrade hint (D8)', async () => {
+    const dir = startedBuild()
+    writeFileSync(harnessPath(dir), JSON.stringify({ contract: 2, steps: {} }))
+
+    const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', '--step', '1', '--mode', 'after']))
+    expect(code).toBe(1)
+    expect(stderr).toContain('speaks contract 2')
+    expect(stderr).toContain('Upgrade')
   })
 })
 

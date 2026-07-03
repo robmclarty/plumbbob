@@ -70,6 +70,16 @@ export function resolveNumber(root: string, key: string, fallback: number, flag?
   return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : fallback
 }
 
+// Resolve an object-valued setting (e.g. the `agents` slot-binding defaults, D13)
+// across the same ladder. The first defined, object-typed rung wins; a missing
+// rung, or one holding a non-object / array / scalar, yields {} rather than
+// garbage — mirrors the string/boolean/number resolvers above. No flag rung: the
+// caller (`agent run`) merges these under the per-build harness, not over a flag.
+export function resolveRecord(root: string, key: string): Record<string, unknown> {
+  const value = resolveSetting(root, key, undefined)
+  return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
+}
+
 // Read one key from the untracked local overlay ONLY — no project or built-in
 // fallback. The `activeBuild` cursor lives here and must never resolve from the
 // tracked settings.json (it is per-worktree state, not a shared default).
