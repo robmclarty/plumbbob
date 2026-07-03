@@ -5,6 +5,26 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] - 2026-07-03
+
+- **Added:** a `mutation` slot to the checkride gate, wired to Stryker as an opt-in
+  adapter (`checkride --include mutation`) so the default fast gate is unaffected;
+  incremental mode keeps re-runs quick. The Stryker config declares its vitest-runner
+  plugin explicitly, since pnpm's isolated `node_modules` hides the default plugin glob
+  from Stryker's worker processes.
+- **Added:** a from-scratch unit test suite for `lib/plugins.ts`, which previously had
+  no in-process coverage at all.
+- **Changed:** `checkride.config.json` now pins every detected slot explicitly rather
+  than leaning on zero-config detection order, documents the pipeline, adds a `fixArgs`
+  override so `checkride fix` doesn't reintroduce the uninstalled type-aware lint pass,
+  and disables the `spell` slot since cspell is not a dependency.
+- **Changed:** hardened the test suite against the first mutation audit — the mutation
+  score rose from 61.7% to 80.3% (86.3% of covered mutants), with survivors cut from
+  639 to 306. Tests across the check gate, the intent and checkpoint parsers, and the
+  `build`, `checkpoint`, `doctor`, `finish`, `revert`, and `use` verbs now pin observed
+  behaviour — notably a guard's stderr text, not merely its exit code — rather than
+  merely executing the code.
+
 ## [0.5.1] - 2026-07-03
 
 - **Added:** the heavy check gate is now [checkride](https://www.npmjs.com/package/checkride),
