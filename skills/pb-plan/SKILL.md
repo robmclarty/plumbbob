@@ -4,7 +4,7 @@ description: "Frame a fresh goal and author the whole plan — Frame, Decisions,
 argument-hint: "[spec-path | intent]"
 disable-model-invocation: true
 model: opus
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob start:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob start:*), Bash(plumbbob checkpoint:*)
 ---
 
 # PlumbBob — plan a goal (the whole-goal move)
@@ -60,7 +60,14 @@ an agent can follow with `/pb-build`. The argument only seeds how you get there.
    paths it touches). Later steps may be fuzzier than the first — that's fine; they get
    sharpened just-in-time when you reach them with `/pb-step`. Keep each small enough to
    verify in one review pass.
-5. **Offer to stress-test it.** Suggest `/pb-refine` to attack the frame for holes (or
+5. **Commit the plan.** Once the human approves the frame and steps, run
+   `plumbbob checkpoint --plan` to commit the scaffold on its own — subject
+   `plumbbob: plan — <title>`, only `.plumbbob/builds/<slug>/`, a `plan <sha>` line in
+   `checkpoints` (D11). This keeps the first step's diff clean, so history reads
+   baseline → plan → steps. Pass a proportional `--body` (the single-quoted stdin
+   heredoc) when the rationale is worth carrying; skip it for a small plan. Do this
+   only on the human's approval — the plan is their convergence.
+6. **Offer to stress-test it.** Suggest `/pb-refine` to attack the frame for holes (or
    to repair the plan as it drifts). Optional, the human's call.
 
 ## The interview (mode 1)

@@ -55,6 +55,14 @@ export function stageAll(root: string): void {
   runGit(root, ['add', '-A'])
 }
 
+// Stage a single path (vs `stageAll`'s `-A`): the plan-approval commit stages only
+// the build's artifact folder so the first step's diff can't absorb the plan
+// scaffold (D11). `path` may be absolute or repo-relative — git resolves it against
+// `root`. The `--` guards a path that could look like a flag.
+export function stagePath(root: string, path: string): void {
+  runGit(root, ['add', '--', path])
+}
+
 export function untrackedPaths(root: string): ReadonlyArray<string> {
   const out = runGit(root, ['ls-files', '--others', '--exclude-standard'])
   return out.length === 0 ? [] : out.split('\n')

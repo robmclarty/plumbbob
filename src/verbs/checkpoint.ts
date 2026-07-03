@@ -9,10 +9,10 @@
 // the same way.
 
 import { appendFileSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { commit, findRepoRoot, headSha, isDirty, stageAll, stagedPaths, stagedStat } from '../lib/git.ts'
-import { buildLogPath, checkpointsPath, hasSession, intentPath, seamPath, stepPath } from '../lib/sidecar.ts'
+import { commit, findRepoRoot, headSha, isDirty, stageAll, stagePath, stagedPaths, stagedStat } from '../lib/git.ts'
+import { buildFolder, buildLogPath, checkpointsPath, hasSession, intentPath, seamPath, stepPath } from '../lib/sidecar.ts'
 import { runCheck } from '../lib/check.ts'
-import { markStepDone, parseSteps } from '../lib/orient.ts'
+import { markStepDone, parseSteps, parseTitle } from '../lib/orient.ts'
 import { parseStepSeam, scopeDrift } from '../lib/intent.ts'
 import { appendToSection, checkpointLogLine } from '../lib/buildlog.ts'
 
@@ -21,6 +21,10 @@ export function checkpoint(cwd: string, args: ReadonlyArray<string>): number {
   if (root === null || !hasSession(root)) {
     process.stderr.write('plumbbob: no active session. Run `plumbbob start "<title>"` first.\n')
     return 1
+  }
+
+  if (args.includes('--plan')) {
+    return checkpointPlan(root, args)
   }
 
   const step = resolveStep(root, args)
@@ -52,6 +56,33 @@ export function checkpoint(cwd: string, args: ReadonlyArray<string>): number {
 
   process.stdout.write(`plumbbob: step ${step} checkpointed — ${sha.slice(0, 9)}. Back at the boundary.\n`)
   return 0
+}
+
+// The plan-approval commit (D11): stage only the active build's artifact folder and
+// commit it as `plumbbob: plan — <title>`, then record a `plan <sha>` line. Giving
+// the plan its own commit keeps the first step's diff from absorbing the scaffold, so
+// `git log` reads baseline → plan → steps. No check gate (there is no code work to
+// verify yet), no intent flip, no step markers — the plan lives entirely in DESIGN.
+// An optional `--body` (stdin heredoc, D5) rides along; the folder is whitelisted
+// artifact plane, so there is no scope-drift to warn about.
+function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
+  stagePath(root, buildFolder(root))
+  const sha = commit(root, planSubject(root), bodyArg(args) ?? undefined)
+  appendFileSync(checkpointsPath(root), `plan ${sha}\n`)
+  process.stdout.write(`plumbbob: plan committed — ${sha.slice(0, 9)}. Baseline → plan → steps.\n`)
+  return 0
+}
+
+// The plan commit's CLI-owned subject: the intent's `# <title>`, else a bare
+// `plumbbob: plan` when the title can't be read (mirrors `subjectForStep`'s fallback).
+function planSubject(root: string): string {
+  let title: string | null = null
+  try {
+    title = parseTitle(readFileSync(intentPath(root), 'utf8'))
+  } catch {
+    title = null
+  }
+  return title ? `plumbbob: plan — ${title}` : 'plumbbob: plan'
 }
 
 // Step resolution (D3): explicit arg > in-flight STEP file > first undone step in

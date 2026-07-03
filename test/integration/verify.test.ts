@@ -129,3 +129,36 @@ describe('plumbbob checkpoint — executor-agnostic (D3)', () => {
     expect(runCli(makeFixtureRepo(), ['checkpoint']).status).toBe(1)
   })
 })
+
+describe('plumbbob checkpoint --plan — the plan-approval commit (D11)', () => {
+  it('commits only the build folder as `plumbbob: plan — <title>` and records `plan <sha>`', () => {
+    const dir = makeFixtureRepo()
+    startWithSteps(dir, '1. [ ] first — **done when:** ok')
+    writeFileSync(join(dir, 'code.txt'), 'not part of the plan\n') // stray dirt outside the scaffold
+    const res = runCli(dir, ['checkpoint', '--plan'])
+    expect(res.status).toBe(0)
+    const subject = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%s'], { encoding: 'utf8' }).trim()
+    expect(subject).toBe('plumbbob: plan — Verify test')
+    expect(readSidecar(dir, 'checkpoints')).toMatch(/plan [0-9a-f]{7,}/)
+    const names = execFileSync('git', ['-C', dir, 'show', '--pretty=format:', '--name-only', 'HEAD'], {
+      encoding: 'utf8',
+    })
+      .split('\n')
+      .filter((l) => l.length > 0)
+    expect(names.every((n) => n.startsWith('.plumbbob/builds/verify-test/'))).toBe(true)
+    expect(names).not.toContain('code.txt')
+    expect(readSidecar(dir, 'intent.md')).toContain('1. [ ] first') // no step flipped
+  })
+
+  it('reads a --body from stdin, keeping the CLI-owned plan subject', () => {
+    const dir = makeFixtureRepo()
+    startWithSteps(dir, '1. [ ] first — **done when:** ok')
+    const res = runCli(dir, ['checkpoint', '--plan', '--body'], {}, 'Why this plan.\n\nSecond paragraph.\n')
+    expect(res.status).toBe(0)
+    const subject = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%s'], { encoding: 'utf8' }).trim()
+    const body = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%b'], { encoding: 'utf8' })
+    expect(subject).toBe('plumbbob: plan — Verify test')
+    expect(body).toContain('Why this plan.')
+    expect(body).toContain('Second paragraph.')
+  })
+})

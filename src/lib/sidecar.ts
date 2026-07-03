@@ -99,6 +99,14 @@ function artifactDir(root: string, slug?: string | null): string {
   return resolved === null ? sidecarDir(root) : buildDir(root, resolved)
 }
 
+// The resolved build's artifact folder — the `builds/<slug>/` dir for the active
+// build (or the flat sidecar root under `--local`/no-cursor). Public so the
+// plan-approval commit can stage exactly this build's scaffold and nothing else
+// (D11); `slug` follows the same resolution as the path helpers above.
+export function buildFolder(root: string, slug?: string | null): string {
+  return artifactDir(root, slug)
+}
+
 // The SPIKE marker (a single-purpose presence flag, like SEAM/STEP): written by
 // `spike` on open, removed on `spike done`. Its existence is the one signal that
 // the dashboard and the spike gates read to know "a spike is active".

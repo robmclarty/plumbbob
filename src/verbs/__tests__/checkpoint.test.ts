@@ -117,4 +117,36 @@ describe('checkpoint', () => {
   it('refuses with no active session', () => {
     expect(captureIo(() => checkpoint(makeTempRepo(), ['1'])).code).toBe(1)
   })
+
+  // Step 8 — the plan-approval commit (D11): its own commit, before any step,
+  // carrying only the build's scaffold so the first step's diff stays clean.
+  describe('--plan', () => {
+    it('commits as `plumbbob: plan — <title>` and records a `plan <sha>` line', () => {
+      const dir = startedGreen()
+      const { code, stdout } = captureIo(() => checkpoint(dir, ['--plan']))
+      expect(code).toBe(0)
+      expect(stdout).toContain('plan committed')
+      const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
+      expect(subject).toBe('plumbbob: plan — Checkpoint test')
+      expect(readFileSync(checkpointsPath(dir), 'utf8')).toMatch(/plan [0-9a-f]{40}/)
+    })
+
+    it('commits only the build folder — not settings.json or code, and no step flip', () => {
+      const dir = startedGreen()
+      writeFileSync(join(dir, 'work.txt'), 'code, not plan\n') // stray dirt outside the build folder
+      captureIo(() => checkpoint(dir, ['--plan']))
+      const names = execFileSync('git', ['show', '--pretty=format:', '--name-only', 'HEAD'], {
+        cwd: dir,
+        encoding: 'utf8',
+      })
+        .split('\n')
+        .filter((l) => l.length > 0)
+      expect(names.every((n) => n.startsWith('.plumbbob/builds/checkpoint-test/'))).toBe(true)
+      expect(names).not.toContain('work.txt')
+      expect(names).not.toContain('.plumbbob/settings.json')
+      expect(readFileSync(intentPath(dir), 'utf8')).not.toContain('1. [x]') // no step marked done
+    })
+    // `--body` reads fd 0, which an in-process unit test can't feed — the subprocess
+    // integration test (verify.test.ts) covers the plan commit's `--body` path (C6).
+  })
 })
