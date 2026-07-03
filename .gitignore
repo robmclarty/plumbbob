@@ -4,6 +4,7 @@ node_modules/
 .fallow/
 .stryker-tmp/
 stryker.incremental.json
+reports/
 coverage/
 *.log
 .DS_Store
