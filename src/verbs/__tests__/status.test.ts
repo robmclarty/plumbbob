@@ -10,6 +10,38 @@ import { captureIo } from '../../../test/helpers/capture-io.ts'
 
 afterAll(cleanupTempRepos)
 
+// A started build carrying a harness.json (D19). `harness` is written verbatim so
+// tests can exercise valid bindings and a broken file alike.
+const HARNESS_SLUG = 'harness-status'
+
+function startedWithHarness(harness: string): string {
+  const dir = makeTempRepo()
+  captureIo(() => start(dir, ['Harness Status', '--slug', HARNESS_SLUG]))
+  writeFileSync(join(buildDir(dir, HARNESS_SLUG), 'harness.json'), harness)
+  return dir
+}
+
+// A resolvable project-tier agent, so a binding to it does NOT warn.
+function putAgent(root: string, name: string): void {
+  const dir = join(root, '.plumbbob', 'agents', name)
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(join(dir, 'agent.json'), JSON.stringify({ contract: 1, name, command: 'sh run.sh', slots: ['build', 'before', 'after'] }))
+}
+
+// status resolves bindings against the personal tier via process.env.HOME; pin it
+// to an empty throwaway home so an unresolvable name stays unresolvable regardless
+// of the developer's real ~/.plumbbob/agents.
+function statusWithHome(home: string, cwd: string): { readonly code: number; readonly stdout: string } {
+  const saved = process.env.HOME
+  process.env.HOME = home
+  try {
+    return captureIo(() => status(cwd))
+  } finally {
+    if (saved === undefined) delete process.env.HOME
+    else process.env.HOME = saved
+  }
+}
+
 describe('status', () => {
   it('prints the NO ACTIVE SESSION sentinel with no session (exit 0)', () => {
     const { code, stdout } = captureIo(() => status(makeTempRepo()))
@@ -58,5 +90,54 @@ describe('status', () => {
     const { code, stdout } = captureIo(() => status(dir, ['--build', 'second-build']))
     expect(code).toBe(0)
     expect(stdout).toContain('Second Feature')
+  })
+})
+
+describe('status — harness bindings (D19)', () => {
+  it('lists the active build\'s defaults and per-step bindings', () => {
+    const home = makeTempDir()
+    const dir = startedWithHarness(
+      JSON.stringify({
+        contract: 1,
+        defaults: { after: ['reviewer'] },
+        steps: { '2': { before: ['gather'], build: 'coder', note: 'watch the seam' } },
+      }),
+    )
+    for (const name of ['reviewer', 'gather', 'coder']) putAgent(dir, name)
+
+    const { code, stdout } = statusWithHome(home, dir)
+    expect(code).toBe(0)
+    expect(stdout).toContain('harness bindings:')
+    expect(stdout).toContain('defaults · after: reviewer')
+    expect(stdout).toContain('step 2 · before: gather')
+    expect(stdout).toContain('step 2 · build: coder')
+    expect(stdout).toContain('step 2 · note: watch the seam')
+    expect(stdout).not.toContain('⚠') // every bound agent resolves
+  })
+
+  it('warns on a bound agent that does not resolve', () => {
+    const home = makeTempDir()
+    const dir = startedWithHarness(JSON.stringify({ contract: 1, defaults: { after: ['ghost'] } }))
+    const { code, stdout } = statusWithHome(home, dir)
+    expect(code).toBe(0)
+    expect(stdout).toContain('defaults · after: ghost')
+    expect(stdout).toContain('⚠ bound agent "ghost" does not resolve')
+  })
+
+  it('shows no binding section when the build has no harness.json', () => {
+    const home = makeTempDir()
+    const dir = makeTempRepo()
+    captureIo(() => start(dir, ['No Harness']))
+    const { stdout } = statusWithHome(home, dir)
+    expect(stdout).not.toContain('harness bindings')
+  })
+
+  it('surfaces a broken harness.json rather than hiding it', () => {
+    const home = makeTempDir()
+    const dir = startedWithHarness('{ not json')
+    const { code, stdout } = statusWithHome(home, dir)
+    expect(code).toBe(0) // status never fails; it reports
+    expect(stdout).toContain('harness bindings: ✗')
+    expect(stdout).toContain('not valid JSON')
   })
 })

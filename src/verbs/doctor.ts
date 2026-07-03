@@ -23,12 +23,13 @@
 //
 // Functional, node builtins plus checkride (C1/C2).
 
-import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { accessSync, constants, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, isAbsolute, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runDoctor } from 'checkride'
 import type { DoctorCheck } from 'checkride'
+import { type AgentListing, listAgents } from '../lib/agents.ts'
 import { marketplacePlumbbob } from '../lib/plugins.ts'
 import { findRepoRoot, gitPath, stagePath } from '../lib/git.ts'
 import { buildDir, excludeControl, listBuilds, sidecarDir, slugify } from '../lib/sidecar.ts'
@@ -281,6 +282,98 @@ function sidecarReport(cwd: string, migrate: boolean): { readonly lines: string[
   return { lines, failed: 1 }
 }
 
+// --- agent validation (D19) ---
+
+// Interpreters recognized as the program of a manifest `command`: when the command
+// is `sh <script>` / `node <script>` / …, the checkable artifact is the script
+// argument (the interpreter reads it — the file need not carry +x), not the
+// interpreter, which we trust to be on PATH.
+const INTERPRETERS = new Set(['sh', 'bash', 'zsh', 'dash', 'node', 'deno', 'bun', 'python', 'python3', 'ruby', 'perl'])
+
+// Expand PLUMBBOB_AGENT_DIR (D18) in a command and split it into bare tokens
+// (surrounding quotes stripped). A deliberately shallow split — enough for the
+// static command check below, not a shell parser (which is neither possible nor
+// wanted for a best-effort diagnostic).
+function commandTokens(command: string, agentDir: string): string[] {
+  const expanded = command.replaceAll('${PLUMBBOB_AGENT_DIR}', agentDir).replaceAll('$PLUMBBOB_AGENT_DIR', agentDir)
+  return expanded
+    .split(/\s+/)
+    .filter((t) => t.length > 0)
+    .map((t) => t.replace(/^['"]/, '').replace(/['"]$/, ''))
+}
+
+// Statically check a manifest `command` for the footgun D19 names: a script file
+// that does not exist, or a directly-invoked one missing its +x bit. The command
+// is a shell string spawned via `sh -c` at the repo root (D18), so a relative path
+// resolves against `root` and PLUMBBOB_AGENT_DIR points at the agent's own dir.
+// Best-effort by design — a path-shaped program or an interpreter's script
+// argument is checked; a bare command (a PATH binary, an inline `node -e` program)
+// is trusted, because we cannot prove a shell line broken without running it.
+// Returns the problem string, or null when nothing checkable is wrong.
+function checkCommand(command: string, agentDir: string, root: string): string | null {
+  const tokens = commandTokens(command, agentDir)
+  if (tokens.length === 0) return null
+  const resolve = (p: string): string => (isAbsolute(p) ? p : join(root, p))
+  const program = tokens[0] as string
+
+  // A path-shaped program is invoked directly, so it must exist AND be executable.
+  if (program.includes('/')) {
+    const path = resolve(program)
+    if (!existsSync(path)) return `command program ${program} does not exist`
+    try {
+      accessSync(path, constants.X_OK)
+    } catch {
+      return `command program ${program} is not executable — chmod +x it`
+    }
+    return null
+  }
+
+  // An interpreter reads its script argument, so the script need only exist.
+  if (INTERPRETERS.has(program)) {
+    const script = tokens.slice(1).find((t) => t.includes('/'))
+    if (script !== undefined && !existsSync(resolve(script))) {
+      return `command script ${script} does not exist`
+    }
+  }
+  return null
+}
+
+// One agent's problem (D19), or null when it validates: a malformed or
+// unsupported-contract manifest surfaces as its resolution error; an
+// otherwise-valid agent is checked for a missing/non-executable command.
+function agentProblem(listing: AgentListing, root: string): string | null {
+  if (!listing.resolution.ok) return listing.resolution.error
+  const { manifest, dir } = listing.resolution.agent
+  return checkCommand(manifest.command, dir, root)
+}
+
+// The agent-validation section (D19): walk every resolvable agent across both
+// tiers (project + personal) and flag a malformed agent.json, an unsupported
+// contract version (both arrive as the listing's parse error), or a
+// missing/non-executable command. A repo with no agents shows no section (like the
+// sidecar one), keeping doctor quiet for the common case; outside a repo there is
+// no project tier to anchor to, so the section is skipped entirely.
+function agentReport(cwd: string): { readonly lines: string[]; readonly failed: number } {
+  const root = findRepoRoot(cwd)
+  if (root === null) return { lines: [], failed: 0 }
+  const listings = listAgents(root)
+  if (listings.length === 0) return { lines: [], failed: 0 }
+
+  const lines = ['', 'plumbbob doctor — agents (D19)']
+  let failed = 0
+  for (const listing of listings) {
+    const problem = agentProblem(listing, root)
+    if (problem === null) {
+      const slots = listing.resolution.ok ? ` [${listing.resolution.agent.manifest.slots.join(', ')}]` : ''
+      lines.push(`  ✓ ${listing.name} (${listing.origin})${slots}`)
+    } else {
+      lines.push(`  ✗ ${listing.name} (${listing.origin}) — ${problem}`)
+      failed += 1
+    }
+  }
+  return { lines, failed }
+}
+
 // The check-gate section (D32): a configured `check` setting names the spawn
 // override and asks nothing more; otherwise checkride's own doctor reports the
 // slot/adapter table. Only rows checkride marks `required` count as problems —
@@ -338,10 +431,13 @@ export async function doctor(cwd: string, args: ReadonlyArray<string> = []): Pro
   const sidecar = sidecarReport(cwd, args.includes('--migrate'))
   out.push(...sidecar.lines)
 
+  const agents = agentReport(cwd)
+  out.push(...agents.lines)
+
   const gate = await gateReport(cwd)
   out.push(...gate.lines)
 
-  const failed = checks.filter((c) => !c.ok).length + sidecar.failed + gate.failed
+  const failed = checks.filter((c) => !c.ok).length + sidecar.failed + agents.failed + gate.failed
   out.push('')
   out.push(
     failed === 0

@@ -17,14 +17,13 @@ import {
   type AgentEnvelope,
   type AgentManifest,
   type AgentRunResult,
-  type HarnessParse,
   type Slot,
   composeStepContext,
   formatAgentList,
   isSlot,
   listAgents,
-  parseHarness,
   parseSlotBindings,
+  readHarnessFile,
   resolveAgent,
   resolveSlotAgents,
   runAgent,
@@ -184,7 +183,7 @@ async function runBound(root: string, slug: string | null, step: number, modeFla
     return 1
   }
 
-  const harness = readHarness(root, slug)
+  const harness = readHarnessFile(join(buildFolder(root, slug), 'harness.json'))
   if (harness !== null && !harness.ok) {
     process.stderr.write(`plumbbob: ${harness.error}\n`)
     return 1
@@ -216,26 +215,6 @@ async function runBound(root: string, slug: string | null, step: number, modeFla
 function degrade(ambient: boolean, hard: string, soft: string): number {
   process.stderr.write(`${ambient ? soft : hard}\n`)
   return ambient ? 0 : 1
-}
-
-// Read builds/<slug>/harness.json: null when absent (a clean no-op — a build with
-// no bound agents), an errored parse when present-but-broken (invalid JSON or a
-// malformed structure the author must fix), else the validated bindings.
-function readHarness(root: string, slug: string | null): HarnessParse | null {
-  const path = join(buildFolder(root, slug), 'harness.json')
-  let raw: string
-  try {
-    raw = readFileSync(path, 'utf8')
-  } catch {
-    return null
-  }
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(raw)
-  } catch {
-    return { ok: false, error: `${path} is not valid JSON.` }
-  }
-  return parseHarness(parsed)
 }
 
 type RunArgs = {

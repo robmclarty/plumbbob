@@ -524,6 +524,28 @@ export function parseHarness(raw: unknown): HarnessParse {
   return { ok: true, harness: { contract: CONTRACT_VERSION, defaults, steps } }
 }
 
+// Read and validate a harness.json at `path`. The caller builds the path from the
+// build folder — this module stays ignorant of the sidecar layout, taking the full
+// path. null when the file is absent (a build with no bound agents — a clean
+// no-op); an errored parse when present-but-broken (invalid JSON or a malformed
+// structure the author must fix); else the validated bindings. Shared so every
+// reader (`agent run`, `status`) parses the harness the same way.
+export function readHarnessFile(path: string): HarnessParse | null {
+  let raw: string
+  try {
+    raw = readFileSync(path, 'utf8')
+  } catch {
+    return null
+  }
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return { ok: false, error: `${path} is not valid JSON.` }
+  }
+  return parseHarness(parsed)
+}
+
 // Narrow a raw slot→agents object (a harness `defaults`, a per-step entry, or the
 // settings-level defaults, D13) to the slots it actually binds. A slot value may be
 // a single agent name or a list; blanks and non-strings drop. Only the three real

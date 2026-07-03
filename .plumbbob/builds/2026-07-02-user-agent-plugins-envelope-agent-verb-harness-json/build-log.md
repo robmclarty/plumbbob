@@ -27,6 +27,7 @@ is done only after a checkpoint — check green + checkpoint taken, via `/pb-ver
 > Mid-step, every new problem / idea / "ooh what if" lands HERE, untouched, and you
 > go straight back to the step. Acting the instant an idea arrives is the disease.
 > Capture is one line (`/pb-park` composes it). Harvest happens only at the boundary.
+- [x] Dedupe agent.ts's private readHarness into lib/agents.readHarnessFile (added in step 6); out of step 6's seam — resolved in step 6 at Rob's direction
 
 ## Harvest  *(run `/pb-harvest` at each step boundary, after green)*
 

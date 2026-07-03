@@ -7,7 +7,7 @@
 // test/integration/doctor.test.ts drives the same checks through the real CLI).
 
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
@@ -406,6 +406,130 @@ describe('doctor — the verb', () => {
     expect(code).toBe(1)
     expect(stdout).toContain('  ✗ types ← tsc\n      → ') // no version suffix when nothing was found
     expect(stdout).toContain('\n\nplumbbob: 2 problem(s)') // install + types
+  })
+})
+
+// The agent-validation section (D19). overrideRepo + a seeded marketplace make the
+// plugin and gate sections pass, so a test's problem count comes from the agents
+// alone; HOME is pinned so the personal tier is the throwaway home, not the dev's.
+type AgentOpts = {
+  readonly contract?: number
+  readonly slots?: ReadonlyArray<string>
+  readonly command: string
+  readonly script?: string
+  readonly executable?: boolean
+}
+
+// Drop an agent under `<agentsRoot>/.plumbbob/agents/<name>/`. `agentsRoot` is the
+// repo (project tier) or a home (personal tier). A `script` writes run.sh with the
+// requested mode so the command check can see a missing / non-executable file.
+function putAgent(agentsRoot: string, name: string, opts: AgentOpts): void {
+  const dir = join(agentsRoot, '.plumbbob', 'agents', name)
+  mkdirSync(dir, { recursive: true })
+  if (opts.script !== undefined) {
+    const script = join(dir, 'run.sh')
+    writeFileSync(script, opts.script)
+    chmodSync(script, opts.executable ? 0o755 : 0o644)
+  }
+  writeFileSync(
+    join(dir, 'agent.json'),
+    JSON.stringify({ contract: opts.contract ?? 1, name, command: opts.command, slots: opts.slots ?? ['build'] }, null, 2),
+  )
+}
+
+describe('doctor — agent validation (D19)', () => {
+  it('validates a healthy agent with a ✓ and its declared slots', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    putAgent(dir, 'good', {
+      command: 'sh "$PLUMBBOB_AGENT_DIR/run.sh"',
+      script: '#!/bin/sh\necho hi\n',
+      executable: true,
+      slots: ['build', 'after'],
+    })
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(0)
+    expect(stdout).toContain('plumbbob doctor — agents (D19)')
+    expect(stdout).toContain('✓ good (project) [build, after]')
+    expect(stdout).toContain('all checks passed')
+  })
+
+  it('flags a malformed agent.json (an unknown slot)', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    putAgent(dir, 'badslots', { command: 'sh "$PLUMBBOB_AGENT_DIR/run.sh"', slots: ['nope'] })
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(1)
+    expect(stdout).toContain('✗ badslots (project) —')
+    expect(stdout).toContain('slots') // names the offending "slots" field
+    expect(stdout).toContain('plumbbob: 1 problem(s)')
+  })
+
+  it('flags an unsupported contract version', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    putAgent(dir, 'future', { contract: 2, command: 'sh "$PLUMBBOB_AGENT_DIR/run.sh"' })
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(1)
+    expect(stdout).toContain('✗ future (project) —')
+    expect(stdout).toContain('contract 2')
+  })
+
+  it('flags a command whose script does not exist', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    putAgent(dir, 'ghost', { command: 'sh "$PLUMBBOB_AGENT_DIR/gone.sh"' }) // no run.sh written
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(1)
+    expect(stdout).toContain('✗ ghost (project) —')
+    expect(stdout).toContain('does not exist')
+  })
+
+  it('flags a directly-invoked command that is not executable', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    putAgent(dir, 'noexec', {
+      command: '"$PLUMBBOB_AGENT_DIR/run.sh"', // invoked directly, so +x matters
+      script: '#!/bin/sh\necho hi\n',
+      executable: false,
+    })
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(1)
+    expect(stdout).toContain('✗ noexec (project) —')
+    expect(stdout).toContain('not executable')
+  })
+
+  it('aggregates every broken agent into the problem count', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    putAgent(dir, 'a-bad', { contract: 2, command: 'sh "$PLUMBBOB_AGENT_DIR/run.sh"' })
+    putAgent(dir, 'z-ghost', { command: 'sh "$PLUMBBOB_AGENT_DIR/none.sh"' })
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(1)
+    expect(stdout).toContain('plumbbob: 2 problem(s)')
+  })
+
+  it('validates the personal tier too, labeled (personal)', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    putAgent(home, 'mine', { contract: 2, command: 'sh "$PLUMBBOB_AGENT_DIR/run.sh"' }) // home = personal tier
+    const { code, stdout } = await doctorWithHome(home, overrideRepo())
+    expect(code).toBe(1)
+    expect(stdout).toContain('✗ mine (personal) —')
+    expect(stdout).toContain('contract 2')
+  })
+
+  it('shows no agents section when none are defined', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const { stdout } = await doctorWithHome(home, overrideRepo())
+    expect(stdout).not.toContain('plumbbob doctor — agents')
   })
 })
 
