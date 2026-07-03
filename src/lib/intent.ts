@@ -98,7 +98,7 @@ export function matchesSeam(relPath: string, tokens: ReadonlyArray<string>): boo
   return tokens.some((token) => (token.endsWith('/') ? relPath.startsWith(token) : relPath === token))
 }
 
-// Plumbbob's own artifact plane (D2): everything under `.plumbbob/` is plumbbob's
+// Plumbbob's own artifact plane (D17): everything under `.plumbbob/` is plumbbob's
 // bookkeeping — the tracked intent/build-log/checkpoints that ride the branch, and
 // the excluded control markers. It is never the user's code, so it never counts as
 // scope drift, and `revert`'s untracked cleanup must never delete it. checkpoint

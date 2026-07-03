@@ -118,9 +118,9 @@ flips the step to `[x]`, and clears `SEAM`/`STEP` — dropping the dashboard bac
 `DESIGN` boundary. `-m <msg>` overrides the subject. The commit **body** comes from a
 `--body` heredoc on stdin (skill-composed,
 proportional); without it a deterministic fallback carries done-when + seam + diffstat
-(**D5**/**D6**). `--plan` instead commits *only* the build's artifact folder as
+(**D34**/**D35**). `--plan` instead commits *only* the build's artifact folder as
 `plumbbob: plan — <title>` and records a `plan <sha>` line, giving the plan its own commit so
-the first step's diff doesn't absorb the scaffold (**D11**). Refuses (exit 1) with no session,
+the first step's diff doesn't absorb the scaffold (**D36**). Refuses (exit 1) with no session,
 no resolvable step, or a red check.
 
 ### revert

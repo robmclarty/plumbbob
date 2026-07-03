@@ -12,7 +12,7 @@ Current session state (injected when this skill runs): !`plumbbob status 2>/dev/
 
 `/pb-finish` ends the build: it captures what happened, then makes the final commit
 that closes the session. **Report by default** (D9) — no refuse-without-report gate,
-and no separate docs phase. The build folder is tracked (D2/D8): it merges with the
+and no separate docs phase. The build folder is tracked (D26/D29): it merges with the
 branch and shows up in the PR, so there is nothing to archive — the folder *is* the
 record.
 
@@ -30,8 +30,8 @@ record.
    - **Deferred tangents** — the harvested items that become future work.
    This is the "yeah, I did that" artifact. Write it by default; the human may edit it.
 2. **Finish.** Run `plumbbob finish`, which appends the checkpoint SHAs to the
-   report and makes the final commit — subject `plumbbob: finish — <title>` (D15),
-   with an optional proportional body via `--body` (the D5 stdin heredoc) — then
+   report and makes the final commit — subject `plumbbob: finish — <title>` (D34),
+   with an optional proportional body via `--body` (the D34 stdin heredoc) — then
    clears the control state (markers, the `activeBuild` cursor, STATE last). The
    build folder stays in place, committed, and rides the branch into the PR.
 3. **Point at the next goal** — `/pb-plan` to frame the next one.
@@ -43,7 +43,7 @@ record.
 - **The log is the history; the report is the synthesis.** `checkpoint` already recorded
   what shipped, step by step — finish applies the *unique additions* (the why, the deferred
   tangents, the final status), it does not rewrite the timeline.
-- **The folder is the archive, never destroy** (C4/D8). `finish` keeps intent +
+- **The folder is the archive, never destroy** (C4/D29). `finish` keeps intent +
   build-log + report in `builds/<slug>/` and commits them; nothing is copied out and
   nothing is deleted but the untracked control markers.
 - **No version bump, no docs phase.** Updating real docs is a separate, explicit ask;

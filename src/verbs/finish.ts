@@ -1,9 +1,9 @@
-// `plumbbob finish` (D9/D15) — the close-out: append the checkpoint SHAs to the
+// `plumbbob finish` (D9/D34) — the close-out: append the checkpoint SHAs to the
 // report, make the final commit, and clear the control state. The build folder is
-// NOT deleted — it IS the archive now (D8): tracked, it merges with the branch and
+// NOT deleted — it IS the archive now (D29): tracked, it merges with the branch and
 // shows up in the PR, so nothing is copied into a local-only `archive/` (that
 // helper retired with this step). No refuse-without-report gate — guidance offers
-// the artifact, it does not wall the exit (D9). Git footprint stays additive (C2):
+// the artifact, it does not wall the exit (D9). Git footprint stays additive (C5):
 // one forward commit under the greppable `plumbbob: finish — <title>` subject.
 
 import { appendFileSync, existsSync, readFileSync, rmSync } from 'node:fs'
@@ -41,8 +41,8 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
     )
   }
 
-  // The final commit (D15): stage the report just written plus the build folder's
-  // tail (the last step's checkpoint line lands one commit late, D12) and commit it
+  // The final commit (D34): stage the report just written plus the build folder's
+  // tail (the last step's checkpoint line lands one commit late, D37) and commit it
   // under the greppable `finish` subject. `--allow-empty` (via `commit`) still marks
   // the narrative endpoint when the tree is already clean, or under `--local`, where
   // the whole sidecar is excluded and there is nothing tracked to stage.
@@ -51,7 +51,7 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   }
   const sha = commit(root, subject(root, slug), bodyArg(args) ?? undefined)
 
-  // Clear the control state: the in-flight markers, the per-worktree cursor (D3),
+  // Clear the control state: the in-flight markers, the per-worktree cursor (D28),
   // and the session sentinel (STATE last, so "no session" flips exactly at the end).
   // The tracked artifacts stay in place — only the ephemera go.
   rmSync(seamPath(root, slug), { force: true })
@@ -73,7 +73,7 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   return 0
 }
 
-// The CLI-owned final-commit subject (D15): `plumbbob: finish — <title>`, mirroring
+// The CLI-owned final-commit subject (D34): `plumbbob: finish — <title>`, mirroring
 // the step-checkpoint format exactly so one greppable shape spans the whole history.
 // Falls back to a bare `plumbbob: finish` when intent.md carries no title.
 function subject(root: string, slug: string | null): string {
@@ -87,7 +87,7 @@ function subject(root: string, slug: string | null): string {
 }
 
 // `--body` reads the final-commit body from stdin (the single-quoted heredoc of
-// D5), so the pb-finish skill can compose a proportional close-out message. Returns
+// D34), so the pb-finish skill can compose a proportional close-out message. Returns
 // null when the flag is absent or stdin is empty — the commit then carries subject
 // only. A read error (no stdin attached) degrades to null rather than throwing.
 function bodyArg(args: ReadonlyArray<string>): string | null {

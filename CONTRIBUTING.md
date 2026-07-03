@@ -6,6 +6,7 @@ plus a set of Claude Code skills. This guide covers the setup, the conventions t
 holds itself to, and how to get a change merged.
 
 If you are changing anything non-trivial, it helps to know the design vocabulary first:
+[`docs/architecture.md`](docs/architecture.md) for how the layers hang together,
 [`docs/techniques.md`](docs/techniques.md) for the methods, and
 [`docs/decisions.md`](docs/decisions.md) for the `D#` / `C#` tags the code references.
 

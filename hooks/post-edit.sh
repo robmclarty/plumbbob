@@ -1,13 +1,13 @@
 #!/bin/sh
 # post-edit.sh — light feedback (D25). PostToolUse, non-blocking, ALWAYS exits 0.
 # Runs file-scoped oxlint + ast-grep on the changed file and injects any failures
-# into the model's context via additionalContext (verified API, D3). No-ops when
+# into the model's context via additionalContext (verified API, D25). No-ops when
 # the tools are absent or there is no session. tsc is deferred to the heavy tier
 # (D25): it has no true single-file mode and would tax every keystroke.
 
 # The repo root is the nearest ancestor whose .plumbbob/settings.local.json carries
 # an `activeBuild` cursor — the per-worktree signal that a tracked build is live
-# here (D3/D16). Grep the same way the file_path read below does: a plain pattern
+# here (D28). Grep the same way the file_path read below does: a plain pattern
 # match, no JSON parse. The cursor replaces the old .plumbbob/STATE probe as the
 # "a build is active here" root marker.
 find_root() {

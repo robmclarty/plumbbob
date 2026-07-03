@@ -11,7 +11,7 @@
 // 2. The repo sidecar layout. A repo scaffolded by a pre-restructure plumbbob carries a
 //    legacy FLAT sidecar (`.plumbbob/intent.md`, `config`, `archive/`) fully git-excluded.
 //    doctor detects it and, with `--migrate`, moves it into the tracked `builds/<slug>/`
-//    layout (D2): archive entries and the active session become build folders, `config`
+//    layout (D31): archive entries and the active session become build folders, `config`
 //    becomes `settings.json`, and the whole move is STAGED but never committed — the human
 //    owns that commit (Q8). The move is the one that turns a build's record from local-only
 //    (dies with `git worktree remove`) into a tracked folder that rides the branch into
@@ -169,7 +169,7 @@ function configCheck(path: string): string | null {
 }
 
 // A slug not already claimed by `taken`, suffixing `-2`, `-3`, … only on collision.
-// `start` refuses on collision (D17), but migration is mechanically moving folders that
+// `start` refuses on collision (D38), but migration is mechanically moving folders that
 // already exist, so it disambiguates rather than aborting mid-move.
 function uniqueSlug(base: string, taken: Set<string>): string {
   const slug = base.length > 0 ? base : 'migrated-build'
@@ -189,7 +189,7 @@ function moveInto(from: string, to: string, names: ReadonlyArray<string>): void 
 }
 
 // Drop the blanket `.plumbbob/` line the legacy layout wrote to info/exclude, then add
-// the narrowed control-plane patterns (D2) — so the moved `builds/` and `settings.json`
+// the narrowed control-plane patterns (D17) — so the moved `builds/` and `settings.json`
 // become trackable while the per-worktree control files stay excluded.
 function narrowExcludes(root: string): void {
   const exclude = gitPath(root, 'info/exclude')
@@ -228,7 +228,7 @@ export function migrateSidecar(root: string): string[] {
   }
 
   // The flat active session → its own build folder, and the cursor points at it: it is
-  // the one in-flight build (D3). Migrate it first so it keeps the slug from its title.
+  // the one in-flight build (D28). Migrate it first so it keeps the slug from its title.
   const flatIntent = join(dir, 'intent.md')
   if (existsSync(flatIntent)) {
     const slug = uniqueSlug(slugify(titleFromIntent(flatIntent)), taken)

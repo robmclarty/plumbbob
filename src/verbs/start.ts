@@ -87,11 +87,11 @@ export function start(cwd: string, args: ReadonlyArray<string>): number {
   beginSession(root)
   writeFileSync(settingsPath(root), `${JSON.stringify({ auto: false }, null, 2)}\n`)
 
-  // D13: `--local` keeps today's fully-untracked flat layout (whole `.plumbbob/`
+  // D26: `--local` keeps today's fully-untracked flat layout (whole `.plumbbob/`
   // excluded); the default plants a tracked, PR-riding `builds/<slug>/` folder
-  // (D2) and points the per-worktree cursor at it (D3), excluding only control
-  // files (D2). The slug is validated unique above — the CLI refuses, never
-  // suffixes (D17).
+  // (D26) and points the per-worktree cursor at it (D28), excluding only control
+  // files (D17). The slug is validated unique above — the CLI refuses, never
+  // suffixes (D38).
   let intentLocation: string
   if (local) {
     writeFileSync(checkpointsPath(root), `baseline ${sha}\n`)

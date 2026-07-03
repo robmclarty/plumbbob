@@ -63,7 +63,7 @@ an agent can follow with `/pb-build`. The argument only seeds how you get there.
 5. **Commit the plan.** Once the human approves the frame and steps, run
    `plumbbob checkpoint --plan` to commit the scaffold on its own — subject
    `plumbbob: plan — <title>`, only `.plumbbob/builds/<slug>/`, a `plan <sha>` line in
-   `checkpoints` (D11). This keeps the first step's diff clean, so history reads
+   `checkpoints` (D36). This keeps the first step's diff clean, so history reads
    baseline → plan → steps. Pass a proportional `--body` (the single-quoted stdin
    heredoc) when the rationale is worth carrying; skip it for a small plan. Do this
    only on the human's approval — the plan is their convergence.

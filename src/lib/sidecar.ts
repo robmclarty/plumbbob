@@ -18,7 +18,7 @@ export function sidecarDir(root: string): string {
   return join(root, DIRNAME)
 }
 
-// The tracked artifact plane (D2): each build owns a self-contained folder under
+// The tracked artifact plane (D26): each build owns a self-contained folder under
 // `.plumbbob/builds/<slug>/` that rides its branch into the PR. `buildDir` is the
 // per-build root; intent.md, build-log.md, checkpoints, and report.md live inside
 // it (the in-flight STEP/SEAM/SPIKE markers do too, but stay git-excluded).
@@ -32,7 +32,7 @@ export function buildDir(root: string, slug: string): string {
 
 // Derive a filesystem-safe slug from a build title: lowercased, every run of
 // non-alphanumerics collapsed to a single hyphen, trimmed of leading/trailing
-// hyphens. The CLI stays dumb and explicit (D17) — collision handling belongs to
+// hyphens. The CLI stays dumb and explicit (D38) — collision handling belongs to
 // the caller (`start` refuses rather than silently suffixing `-2`). A title with
 // no alphanumerics yields `''`, which the caller must reject or override.
 export function slugify(title: string): string {
@@ -55,11 +55,11 @@ export function listBuilds(root: string): ReadonlyArray<string> {
   }
 }
 
-// Resolve which build a verb acts on (D3): an explicit `--build <slug>` flag →
+// Resolve which build a verb acts on (D28): an explicit `--build <slug>` flag →
 // the `activeBuild` cursor in settings.local.json → the sole build in `builds/`
 // → null (the caller then refuses with a hint). One-active-per-worktree holds by
 // construction: the cursor is a single scalar key in an untracked file, so it can
-// never point at two builds (D16).
+// never point at two builds (D28).
 export function activeBuild(root: string, flag?: string): string | null {
   if (flag !== undefined && flag.length > 0) return flag
   const cursor = localSetting(root, 'activeBuild')
@@ -69,7 +69,7 @@ export function activeBuild(root: string, flag?: string): string | null {
 }
 
 // The build a verb should act on, plus its argv with the `--build <slug>` pair
-// stripped (D3/D16). Every verb resolves through this: an explicit `--build <slug>`
+// stripped (D28). Every verb resolves through this: an explicit `--build <slug>`
 // wins, else the cursor / sole-build fallback of `activeBuild`. `rest` matters
 // because the slug is a bare token — scanning positionals on the raw argv would let
 // it masquerade as a step number or a spike slug, so callers scan `rest` instead.
@@ -86,12 +86,12 @@ function statePath(root: string): string {
   return join(root, DIRNAME, 'STATE')
 }
 
-// Where a build's artifacts and in-flight markers live (D4): the `builds/<slug>/`
+// Where a build's artifacts and in-flight markers live (D26): the `builds/<slug>/`
 // folder for the resolved build, else the flat sidecar root. `slug` is the value
 // the verb already resolved via `resolveBuild`/`activeBuild`; omit it and the dir
 // resolves from the cursor (the default the executor-agnostic path reads lean on).
 // Either way a `null` slug falls back to the flat sidecar root, which covers the
-// `--local` layout (D13) and any no-cursor/no-build repo, so the path reads stay
+// `--local` layout (D26) and any no-cursor/no-build repo, so the path reads stay
 // stable even before a tracked build exists or when a "no active session" guard is
 // about to fire.
 function artifactDir(root: string, slug?: string | null): string {
@@ -102,7 +102,7 @@ function artifactDir(root: string, slug?: string | null): string {
 // The resolved build's artifact folder — the `builds/<slug>/` dir for the active
 // build (or the flat sidecar root under `--local`/no-cursor). Public so the
 // plan-approval commit can stage exactly this build's scaffold and nothing else
-// (D11); `slug` follows the same resolution as the path helpers above.
+// (D36); `slug` follows the same resolution as the path helpers above.
 export function buildFolder(root: string, slug?: string | null): string {
   return artifactDir(root, slug)
 }
@@ -138,7 +138,7 @@ export function buildLogPath(root: string, slug?: string | null): string {
 
 // report.md sits beside intent.md / build-log.md inside the build folder. The
 // pb-finish skill writes it and `finish` commits it with the folder — the folder
-// IS the archive now (D8), so the report rides the branch into the PR instead of
+// IS the archive now (D29), so the report rides the branch into the PR instead of
 // being copied into a local-only `archive/` (which retired with `archive.ts`).
 export function reportPath(root: string, slug?: string | null): string {
   return join(artifactDir(root, slug), 'report.md')
@@ -171,7 +171,7 @@ export function clearSpike(root: string, slug?: string | null): void {
 // Append `patterns` to the repo's info/exclude, each at most once (idempotent —
 // a re-`start` after finish must not double-add). `gitPath` resolves to the
 // *common* gitdir's exclude — the only one git reads — so this works from a
-// linked worktree, whose per-worktree gitdir has no `info/` (D1).
+// linked worktree, whose per-worktree gitdir has no `info/` (D33).
 function addExcludes(root: string, patterns: ReadonlyArray<string>): void {
   const exclude = gitPath(root, 'info/exclude')
   mkdirSync(dirname(exclude), { recursive: true })
@@ -188,7 +188,7 @@ function addExcludes(root: string, patterns: ReadonlyArray<string>): void {
   appendFileSync(exclude, `${prefix}${missing.join('\n')}\n`)
 }
 
-// The narrowed control plane (D2): with `builds/<slug>/` now tracked, only the
+// The narrowed control plane (D17): with `builds/<slug>/` now tracked, only the
 // per-worktree control files stay git-excluded — the local settings overlay (its
 // `activeBuild` cursor), the session sentinel, and the in-flight step markers
 // inside every build. Everything else under `.plumbbob/` (settings.json, and each
@@ -206,7 +206,7 @@ export function excludeControl(root: string): void {
   ])
 }
 
-// D13: `start --local` opts out of the tracked layout into a fully-untracked
+// D26: `start --local` opts out of the tracked layout into a fully-untracked
 // sidecar (today's behavior) — some team repos won't accept tool folders in-tree.
 // Excludes the whole `.plumbbob/` directory.
 export function excludeSidecar(root: string): void {

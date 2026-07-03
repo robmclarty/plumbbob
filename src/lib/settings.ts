@@ -1,4 +1,4 @@
-// The settings ladder (D7): a resolved setting comes from, in priority order,
+// The settings ladder (D27): a resolved setting comes from, in priority order,
 //   1. a CLI flag           — passed in by the verb (undefined when absent)
 //   2. settings.local.json  — untracked personal overlay + per-worktree cursor
 //   3. settings.json        — tracked project defaults

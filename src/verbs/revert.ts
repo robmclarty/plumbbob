@@ -1,10 +1,10 @@
 // `plumbbob revert [--to n]` — git reset --hard to a checkpoint SHA (the most
 // recent step, or `--to n`, with the baseline as fallback), then remove untracked
 // files under the SEAM only. The artifact plane (`.plumbbob/builds/<slug>/`) is now
-// TRACKED (D2), so a bare reset WOULD discard park lines and intent edits — or, when
+// TRACKED (D26), so a bare reset WOULD discard park lines and intent edits — or, when
 // reverting to a baseline that predates the build folder, delete the folder wholesale.
 // So revert snapshots the sidecar to temp and restores it as uncommitted changes
-// after the reset (D10), keeping C4/never-destroy intact across both cases. The
+// after the reset (D26), keeping C4/never-destroy intact across both cases. The
 // untracked cleanup additionally whitelists the artifact plane, so no seam pattern
 // can ever sweep away a build's own files.
 //

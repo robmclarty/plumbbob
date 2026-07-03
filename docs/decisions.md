@@ -6,16 +6,12 @@ the code comments terse without losing the *why*. This page is the key: it recon
 each tag from where it is referenced in the code, so a reader who hits "`D17`" in a comment
 can look up what it means.
 
-The list covers the tags **present in the code**. Some numbers (e.g. `D21`) belonged to
-superseded decisions and are no longer referenced; a few entries below are earlier
-decisions kept only because a comment still cites them, and they are marked as such.
-
-> **One caveat before you trust a number.** The files touched by the July 2026 worktree
-> restructure (`sidecar.ts`, `start.ts`, `checkpoint.ts`, `finish.ts`, `revert.ts`,
-> `doctor.ts`, `git.ts`, `intent.ts`, and the `pb-plan`/`pb-finish` skills) cite the
-> D-numbers of *that build's own intent*, not this key — see
-> [the collision table](#build-local-tags-the-2026-07-restructure) below for what each
-> contested tag means where.
+The list covers the tags **present in the code**. Some numbers (e.g. `D2`, `D5`, `D11`,
+`D12`, `D21`) belonged to superseded decisions and are no longer referenced; a few
+entries below are earlier decisions kept only because a comment still cites them, and
+they are marked as such. (A build's *own* `intent.md` numbers its decisions from `D1`
+locally — comments citing a build-local number are renumbered to this key when the work
+lands; **D33**–**D38** below came in that way from the July 2026 worktree restructure.)
 
 ## Constraints (C)
 
@@ -161,32 +157,41 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   unconfigured repo must not vacuously pass the gate. Checkride's exit 2 (harness error)
   reports distinctly from red; both block. *Tagged in* `check.ts`.
 
-### Build-local tags (the 2026-07 restructure)
-
-The worktree-restructure build
-(`.plumbbob/builds/2026-07-03-worktree-proof-sidecar-restructure/intent.md`) numbered its
-decisions from `D1`, and the comments written during that build cite *those* numbers.
-Several collide with this key. Until the comments are renumbered to global tags, resolve a
-contested tag by which file you are in — restructure-touched files use the build-local
-meaning:
-
-| Tag | Build-local meaning (restructure files) | Global entry that covers it |
-|-----|------------------------------------------|------------------------------|
-| `D2` | track `builds/<slug>/` artifacts; keep control state untracked | **D17** (amended) / **D26** |
-| `D3` | the `activeBuild` cursor in `settings.local.json` (in `start.ts`) | **D28** — but in `checkpoint.ts`, `D3` is the *global* author-blind executor |
-| `D5` | the CLI owns the commit subject; the body arrives via a `--body` heredoc | *(no global entry yet)* |
-| `D6` | deterministic fallback body = done-when + seam + diffstat (in `git.ts`, `checkpoint.ts`) | *(none — global `D6` in `orient.ts` is "steps are the parseable plan")* |
-| `D11` | plan approval gets its own commit (`checkpoint --plan`) | *(no global entry yet)* |
-| `D12` | checkpoint's `stageAll` sweeps the intent `[x]` flip along, so the last step's checkpoint line lands one commit late (absorbed by `finish`) | *(no global entry yet)* |
-| `D15` | finish's commit subject is `plumbbob: finish — <title>` (in `finish.ts`) | *(none — global `D15` in `orient.ts` is "status infers one move")* |
-| `D17` | `slugify` + collision-refuse live in the CLI (in `sidecar.ts`, `start.ts`, `doctor.ts`) | *(none — global `D17` in `spike.ts`/`revert.ts` is the plane split)* |
+- **D33 — Excludes live in the shared gitdir's `info/exclude`.** The control-plane
+  excludes are written to the *common* gitdir's `info/exclude` — reached via
+  `git rev-parse --git-path info/exclude`, which resolves correctly from a linked worktree
+  (a per-worktree gitdir has no `info/`) — never to `.gitignore`, so the exclusion is
+  personal machinery, not something imposed on the repo. *Tagged in* `git.ts`,
+  `sidecar.ts`.
+- **D34 — The CLI owns every commit subject; bodies arrive via `--body`.** One greppable
+  shape across history — `plumbbob: plan — <title>`, `plumbbob: step N — <title>` (bare
+  `step N done` as the titleless fallback), `plumbbob: finish — <title>` — composed by the
+  CLI, never the skill. A skill-composed, proportional commit *body* rides along through a
+  `--body` stdin heredoc. *Tagged in* `git.ts`, `checkpoint.ts`, `finish.ts`, the
+  `pb-finish` skill.
+- **D35 — The deterministic fallback body.** Without `--body`, a checkpoint's commit body
+  is derived, not generated: the step's done-when, its seam, and the staged diffstat.
+  *Tagged in* `git.ts`, `checkpoint.ts`.
+- **D36 — Plan approval gets its own commit.** `checkpoint --plan` commits only the
+  build's artifact folder as `plumbbob: plan — <title>` and records a `plan <sha>` line,
+  so the scaffold never pollutes the first step's diff and history reads baseline → plan →
+  steps → finish. *Tagged in* `checkpoint.ts`, `git.ts`, `sidecar.ts`, the `pb-plan`
+  skill.
+- **D37 — Checkpoint sweeps its own bookkeeping; `finish` absorbs the tail.** A step's
+  commit carries the intent `[x]` flip and the build-log line along with the work
+  (`stageAll`), which means the step's own `checkpoints` line lands one commit late — the
+  final `finish` commit picks up the last of it. *Tagged in* `finish.ts`.
+- **D38 — Slugs are the CLI's job; collisions refuse.** `slugify` and its collision
+  handling live in `sidecar.ts`; `start` refuses a slug that already exists rather than
+  auto-suffixing — the human picks a new title or passes `--slug`. *Tagged in*
+  `sidecar.ts`, `start.ts`, `doctor.ts`.
 
 ### Superseded
 
 - **D20 — The archive was local-only markdown.** Wrapping wrote a plain-markdown archive
   under `.plumbbob/archive/`, local-only, that died with a `git worktree remove`. **D29**
   retired it: a finished build folder is tracked and rides the branch into the PR, so there
-  is nothing separate to archive. *No longer referenced in code.*
+  is nothing separate to archive. *Cited only as superseded, in* `doctor.ts`.
 
 - **D19 — `finish` refused without a report.** An earlier close-out gated the exit on a
   written report. **D9** removed the gate: the close-out writes the report by default but

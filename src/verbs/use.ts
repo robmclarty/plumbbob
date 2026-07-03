@@ -1,10 +1,10 @@
-// `plumbbob use <slug>` (D16) — re-point the per-worktree cursor at an existing
+// `plumbbob use <slug>` (D30) — re-point the per-worktree cursor at an existing
 // build and resume it. Both switching and resuming are the same one word (Q10,
 // `nvm use`-shaped): the cursor is a single scalar key in settings.local.json, so
 // pointing it elsewhere IS the switch and one-active-per-worktree holds by
-// construction (D16). It validates the target folder exists, and warns — but
+// construction (D28). It validates the target folder exists, and warns — but
 // allows — leaving a build with a step in flight: that surviving in-flight state
-// is D4's whole payoff, resumed the next time you `use` that build.
+// is D26's whole payoff, resumed the next time you `use` that build.
 
 import { existsSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'

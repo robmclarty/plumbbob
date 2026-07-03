@@ -63,12 +63,12 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   return 0
 }
 
-// The plan-approval commit (D11): stage only the active build's artifact folder and
+// The plan-approval commit (D36): stage only the active build's artifact folder and
 // commit it as `plumbbob: plan — <title>`, then record a `plan <sha>` line. Giving
 // the plan its own commit keeps the first step's diff from absorbing the scaffold, so
 // `git log` reads baseline → plan → steps. No check gate (there is no code work to
 // verify yet), no intent flip, no step markers — the plan lives entirely in DESIGN.
-// An optional `--body` (stdin heredoc, D5) rides along; the folder is whitelisted
+// An optional `--body` (stdin heredoc, D34) rides along; the folder is whitelisted
 // artifact plane, so there is no scope-drift to warn about.
 function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
   stagePath(root, buildFolder(root))
@@ -170,7 +170,7 @@ function logCheckpoint(root: string, step: number, sha: string): void {
 }
 
 // The CLI-owned, deterministic commit subject: the step's title when intent.md still
-// carries one, else the bare `plumbbob: step N done` fallback (D5 — the CLI owns the
+// carries one, else the bare `plumbbob: step N done` fallback (D34 — the CLI owns the
 // subject; a `-m` override or `--body` prose is a separate concern).
 function subjectForStep(root: string, step: number): string {
   const title = titleForStep(root, step)
@@ -190,7 +190,7 @@ function messageArg(args: ReadonlyArray<string>): string | null {
   return i !== -1 && i + 1 < args.length ? (args[i + 1] ?? null) : null
 }
 
-// `--body` reads the commit body from stdin (the single-quoted heredoc of D5),
+// `--body` reads the commit body from stdin (the single-quoted heredoc of D34),
 // so the skill can compose proportional prose the CLI never could. Returns null
 // when the flag is absent or stdin is empty — either way the deterministic
 // fallback body takes over. Reading fd 0 blocks until EOF, which the heredoc
@@ -207,7 +207,7 @@ function bodyArg(args: ReadonlyArray<string>): string | null {
   }
 }
 
-// The deterministic checkpoint body (D6): the step's done-when, its seam, and the
+// The deterministic checkpoint body (D35): the step's done-when, its seam, and the
 // staged diffstat — so a hand-built or vibed checkpoint still gets informative
 // history without a model turn. Each part is best-effort; a missing piece is
 // simply omitted, and an empty result leaves the commit body blank.
