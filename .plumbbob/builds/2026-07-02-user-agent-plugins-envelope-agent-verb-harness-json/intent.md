@@ -230,7 +230,7 @@ distilled here so the build stands alone, pointer retained under ## Source.*
    lines, never refuses — D23; seam parsing stays strict); unit tests assert the
    composed JSON for a fixture build including a malformed-bullet case
    - seam: `src/lib/agents.ts`, `src/lib/intent.ts`, `src/lib/__tests__/agents.test.ts`, `src/lib/__tests__/intent.test.ts`
-4. [ ] `plumbbob agent run <name> [--step N] [--mode before|build|after]` —
+4. [x] `plumbbob agent run <name> [--step N] [--mode before|build|after]` —
    **done when:** the verb composes the input, async-spawns (D22) the manifest
    command via `sh -c` at repo root with `PLUMBBOB_AGENT_DIR` in the env (D18)
    and JSON on stdin, streams the child's stderr live, kills the child and

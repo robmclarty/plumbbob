@@ -57,3 +57,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-07-03 — step 1 checkpointed · af4962628 — Envelope + manifest module
 - 2026-07-03 — step 2 checkpointed · 1d0439c8a — Resolver + `plumbbob agent list`
 - 2026-07-03 — step 3 checkpointed · e06c2cf1d — StepContext composition
+- 2026-07-03 — step 4 checkpointed · c6bb5ce3d — `plumbbob agent run <name> [--step N] [--mode before|build|after]`
