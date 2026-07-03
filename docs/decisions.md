@@ -20,10 +20,15 @@ the code.
 - **C1 — Functional and procedural only.** No classes, no `this`, no default exports;
   every symbol has a stable named export. Enforced by `rules/no-class.yml` and
   `rules/no-default-export.yml`. *Tagged across* `src/**` and the test tree.
-- **C2 — Node builtins only, zero runtime dependencies.** The CLI imports nothing outside
-  `node:*`; it runs natively on Node ≥ 22.18 with no install step. Enforced by
-  `rules/node-builtins-only.yml`. *Tagged in* `git.ts`, `sidecar.ts`,
-  `plugins.ts`, `doctor.ts`, `cli-core.ts`.
+- **C2 — Node builtins plus a few deliberate dependencies.** *Amended* — the CLI imports
+  `node:*`, relative paths, and an explicit allowlist of dependencies (currently one:
+  `checkride`, our own sibling package, pinned exact — **D32**). The old "zero runtime
+  dependencies" wording had hardened into dogma; the rule was always a means
+  (determinism, no supply-chain sprawl), not an end. Use a few packages as necessary —
+  our own tools first — never a casual `npm install`; hand-crafting what a sibling tool
+  already provides is the anti-pattern, not the dependency. Enforced by
+  `rules/node-builtins-only.yml` (the allowlist lives in its regex). *Tagged in*
+  `git.ts`, `sidecar.ts`, `plugins.ts`, `doctor.ts`, `cli-core.ts`.
 - **C4 — Never destroy.** No step, revert, or migration path may lose park lines, intent
   edits, or a recorded build folder. `revert` snapshots the tracked build folder and
   restores it after a `reset --hard` (**D26**); `doctor --migrate` moves the legacy sidecar
@@ -45,9 +50,10 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
 
 ## Decisions (D)
 
-- **D1 — A deterministic, zero-dependency CLI; guidance, not a lock.** The foundation:
-  a hand-rolled `plumbbob` CLI built on node builtins, and a deciding/executing boundary
-  held by a pause rather than enforced by a file lock. *Tagged in* `cli-core.ts`.
+- **D1 — A deterministic, lean CLI; guidance, not a lock.** The foundation:
+  a hand-rolled `plumbbob` CLI built on node builtins (plus the deliberate few of **C2**),
+  and a deciding/executing boundary held by a pause rather than enforced by a file lock.
+  *Tagged in* `cli-core.ts`.
 - **D3 — The pluggable, author-blind executor.** `/pb-build` is optional; `verify`
   and `checkpoint` read *the diff, not who wrote it*, so a hand-built, vibed, or
   other-harness diff checkpoints identically. *Tagged in* `checkpoint.ts`, the `build` and
@@ -136,6 +142,15 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   (the active one becomes the cursor; the rest are "done" simply by not being it) and turns
   `config` into `settings.json`. It **stages** the move but never commits — the human owns
   that commit (Q8). *Tagged in* `doctor.ts`.
+- **D32 — Checkride is the check gate, imported programmatically.** The heavy check is
+  our sibling package `checkride` — the first entry in `dependencies`, pinned exact,
+  called through its API (`runChecks`) rather than spawned, so the typed summary (failing
+  slots, `.check/<slot>` raw-output pointers) comes back in-process. The `check` setting
+  (**D24**, amended) becomes the spawn-command *override* for repos that gate through
+  something else: present ⇒ spawn it exactly as before; absent ⇒ checkride. An
+  all-slots-skipped checkride run is a refusal, not a green — zero-config detection in an
+  unconfigured repo must not vacuously pass the gate. Checkride's exit 2 (harness error)
+  reports distinctly from red; both block. *Tagged in* `check.ts`.
 
 ### Superseded
 

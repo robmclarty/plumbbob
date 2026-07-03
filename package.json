@@ -2,16 +2,38 @@
   "name": "plumbbob",
   "version": "0.5.0",
   "description": "Attention-first build process: 12 skills + a CLI that keep you the decider — guidance, not enforcement.",
-  "keywords": ["claude-code", "claude", "hooks", "cli", "agent", "attention-first"],
+  "keywords": [
+    "claude-code",
+    "claude",
+    "hooks",
+    "cli",
+    "agent",
+    "attention-first"
+  ],
   "homepage": "https://github.com/robmclarty/plumbbob#readme",
   "bugs": "https://github.com/robmclarty/plumbbob/issues",
-  "repository": { "type": "git", "url": "git+https://github.com/robmclarty/plumbbob.git" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/robmclarty/plumbbob.git"
+  },
   "type": "module",
   "license": "Apache-2.0",
   "author": "Rob McLarty <hello@robmclarty.com>",
-  "bin": { "plumbbob": "bin/plumbbob", "pb": "bin/pb" },
-  "files": [".claude-plugin", "bin", "dist", "hooks", "skills", "templates"],
-  "engines": { "node": ">=22.18.0" },
+  "bin": {
+    "plumbbob": "bin/plumbbob",
+    "pb": "bin/pb"
+  },
+  "files": [
+    ".claude-plugin",
+    "bin",
+    "dist",
+    "hooks",
+    "skills",
+    "templates"
+  ],
+  "engines": {
+    "node": ">=22.18.0"
+  },
   "scripts": {
     "clean": "rm -rf dist",
     "build": "tsc -p tsconfig.build.json",
@@ -39,5 +61,8 @@
     "oxlint": "^1.69.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
+  },
+  "dependencies": {
+    "checkride": "0.1.6"
   }
 }

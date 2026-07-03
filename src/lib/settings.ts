@@ -5,7 +5,7 @@
 //   4. a built-in default   — supplied by the caller
 // The first defined rung wins. Both files are optional JSON; a missing or
 // malformed file contributes nothing rather than throwing, so a broken personal
-// overlay can never wedge the tool. Functional/procedural, node builtins only (C1).
+// overlay can never wedge the tool. Functional/procedural, node builtins (C1/C2).
 //
 // Known keys: `check` (string — the heavy gate, tracked in settings.json) and
 // `auto` (boolean — whether the agent approves in the human's place; a personal

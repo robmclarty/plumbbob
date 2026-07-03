@@ -1,7 +1,8 @@
 // plumbbob CLI core — argv dispatch and the help table, separated from the bin
 // entry (cli.ts) so the routing/help logic is unit-testable in-process without
-// the top-level process.exit. Zero runtime deps, node: builtins only (D1/C2).
-// Functional/procedural: no classes, no `this`, no default export (C1).
+// the top-level process.exit. Node builtins plus the deliberate few (D1/C2 —
+// currently checkride alone, via check.ts). Functional/procedural: no classes,
+// no `this`, no default export (C1).
 
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'

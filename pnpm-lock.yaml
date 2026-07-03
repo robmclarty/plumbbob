@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      checkride:
+        specifier: 0.1.6
+        version: 0.1.6
     devDependencies:
       '@ast-grep/cli':
         specifier: ^0.43.0
@@ -642,6 +646,11 @@ packages:
 
   character-reference-invalid@2.0.1:
     resolution: {integrity: sha512-iBZ4F4wRbyORVsu0jPV7gXkOsGYjGHPmAyv+HiHG8gi5PtC9KI2j1+v8/tlibRvjoWX027ypmG/n0HtO5t7unw==}
+
+  checkride@0.1.6:
+    resolution: {integrity: sha512-z9plHoiEXPCFyl+E8n6yis2fMjgKyljwmAnDjzlBU2p4m+IJCSFIKfijrBCh+43p6Pr8MyS9Po59fxIhtqUJrw==}
+    engines: {node: '>=22.18.0', pnpm: '>=9.0.0'}
+    hasBin: true
 
   commander@14.0.3:
     resolution: {integrity: sha512-H+y0Jo/T1RZ9qPP4Eh1pkcQcLRglraJaSLoyOtHxu6AapkjWVCy2Sit1QQ4x3Dng8qDlSsZEet7g5Pq06MvTgw==}
@@ -1563,6 +1572,8 @@ snapshots:
   character-entities@2.0.2: {}
 
   character-reference-invalid@2.0.1: {}
+
+  checkride@0.1.6: {}
 
   commander@14.0.3: {}
 
