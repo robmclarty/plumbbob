@@ -155,9 +155,9 @@ function nextMove(spiking: boolean, steps: ReadonlyArray<Step>, inFlight: number
       return 'plan the first step — `/plumbbob:pb-step`'
     }
     // Batch-default: the steps were planned up front, so finishing them usually
-    // means "wrap up" — but `/plumbbob:pb-step` can still add an increment if reality grew.
+    // means "finish up" — but `/plumbbob:pb-step` can still add an increment if reality grew.
     const harvest = parked > 0 ? `harvest ${parked} parked idea${parked === 1 ? '' : 's'} — \`/plumbbob:pb-harvest\`; then ` : ''
-    return `${harvest}wrap up — \`/plumbbob:pb-wrap\` (or \`/plumbbob:pb-step\` to add another increment)`
+    return `${harvest}finish up — \`/plumbbob:pb-finish\` (or \`/plumbbob:pb-step\` to add another increment)`
   }
   return nextUndone.planned
     ? `build step ${nextUndone.n} — \`/plumbbob:pb-build\` (or \`/plumbbob:pb-step\` to revise it first)`

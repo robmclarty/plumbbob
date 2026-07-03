@@ -83,9 +83,10 @@ export function runCli(
 // helpers mirror that split so a test can name a file without knowing which
 // plane it is on: build-plane names resolve under the active build folder (the
 // `activeBuild` cursor in settings.local.json), everything else stays flat.
-// report.md is intentionally NOT here yet: `wrap`/`archive` still read it from
-// the flat sidecar root, so it moves into the build folder later (wrap → finish).
-const BUILD_PLANE = new Set(['intent.md', 'build-log.md', 'checkpoints', 'SEAM', 'STEP', 'SPIKE'])
+// report.md rides with the build folder now: `finish` writes/commits it there so
+// it merges into the branch and shows up in the PR (the local-only `archive/`
+// retired), so it resolves under `builds/<slug>/` like the other artifacts.
+const BUILD_PLANE = new Set(['intent.md', 'build-log.md', 'report.md', 'checkpoints', 'SEAM', 'STEP', 'SPIKE'])
 
 function activeBuildSlug(dir: string): string | null {
   try {

@@ -1,6 +1,6 @@
 // Mutations to the active build-log.md — the human-facing ledger. `park` appends to
 // its Park list; `checkpoint` appends to its Log so the build's history accrues
-// line-by-line *as it happens* rather than being reconstructed at wrap (D-history).
+// line-by-line *as it happens* rather than being reconstructed at finish (D-history).
 // Pure string transforms (no fs, no classes — C1/C2); callers own the IO so these
 // stay trivially testable.
 
@@ -29,7 +29,7 @@ export function appendToSection(content: string, heading: string, line: string):
 
 // The Log line `checkpoint` writes for a landed step: dated, names the step (its
 // title when intent.md still carries it), and carries the short SHA. One line of the
-// build's history — `/plumbbob:pb-wrap` reads these instead of re-narrating the build.
+// build's history — `/plumbbob:pb-finish` reads these instead of re-narrating the build.
 export function checkpointLogLine(date: string, step: number, sha: string, title: string | null): string {
   const head = `- ${date} — step ${step} checkpointed · ${sha.slice(0, 9)}`
   return title !== null && title.length > 0 ? `${head} — ${title}` : head

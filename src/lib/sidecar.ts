@@ -136,9 +136,17 @@ export function buildLogPath(root: string, slug?: string | null): string {
   return join(artifactDir(root, slug), 'build-log.md')
 }
 
-// A session exists iff STATE exists. Deleting STATE (at wrap) is what flips the
+// report.md sits beside intent.md / build-log.md inside the build folder. The
+// pb-finish skill writes it and `finish` commits it with the folder — the folder
+// IS the archive now (D8), so the report rides the branch into the PR instead of
+// being copied into a local-only `archive/` (which retired with `archive.ts`).
+export function reportPath(root: string, slug?: string | null): string {
+  return join(artifactDir(root, slug), 'report.md')
+}
+
+// A session exists iff STATE exists. Deleting STATE (at finish) is what flips the
 // repo back to "no session" — so it is the single source of truth for "is there
-// a session". `start` calls beginSession; `wrap` removes the file.
+// a session". `start` calls beginSession; `finish` removes the file.
 export function hasSession(root: string): boolean {
   return existsSync(statePath(root))
 }

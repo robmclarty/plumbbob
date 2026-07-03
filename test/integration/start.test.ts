@@ -1,8 +1,8 @@
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupFixtures, makeFixtureRepo, makeNonGitDir, phase, readSidecar, runCli, sidecarExists } from '../helpers/fixture-repo.ts'
+import { cleanupFixtures, makeFixtureRepo, makeNonGitDir, phase, readSidecar, runCli, sidecarExists, writeSidecar } from '../helpers/fixture-repo.ts'
 
 afterAll(cleanupFixtures)
 
@@ -126,17 +126,16 @@ describe('plumbbob start', () => {
     expect(JSON.parse(readSidecar(dir, 'settings.json')).check).toBe('pnpm run check')
   })
 
-  it('re-scaffolds a new build after finish without touching the archive', () => {
+  it('re-scaffolds a new build after finish without touching the prior build folder', () => {
     const dir = makeFixtureRepo()
     expect(runCli(dir, ['start', 'Round one']).status).toBe(0)
 
-    // Simulate a finish: the plan scaffold + a prior archive are committed (as the
-    // plan-approval commit would leave them, clearing D18's dirty window), then
-    // the session sentinel is cleared.
-    const archived = join(dir, '.plumbbob', 'archive', '2026-01-01-round-one')
-    mkdirSync(archived, { recursive: true })
-    writeFileSync(join(archived, 'report.md'), 'preserved\n')
-    commitAll(dir, 'commit round one scaffold + archive')
+    // Simulate a finish: the build folder IS the archive now (D8), so round-one's
+    // report lands in its own folder and is committed there (as `finish` would leave
+    // it, clearing D18's dirty window); then the session sentinel is cleared.
+    writeSidecar(dir, 'report.md', 'preserved\n')
+    const roundOneReport = join(dir, '.plumbbob', 'builds', 'round-one', 'report.md')
+    commitAll(dir, 'commit round one scaffold + report')
     rmSync(join(dir, '.plumbbob', 'STATE')) // ignored control file; removal leaves a clean tree
 
     const second = runCli(dir, ['start', 'Round two'])
@@ -145,6 +144,6 @@ describe('plumbbob start', () => {
     // The cursor now points at round-two's folder; round-one's is left intact.
     expect(readSidecar(dir, 'intent.md')).toContain('# Round two')
     expect(existsSync(join(dir, '.plumbbob', 'builds', 'round-one', 'intent.md'))).toBe(true)
-    expect(readFileSync(join(archived, 'report.md'), 'utf8')).toBe('preserved\n')
+    expect(readFileSync(roundOneReport, 'utf8')).toBe('preserved\n')
   })
 })

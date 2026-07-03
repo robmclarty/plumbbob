@@ -147,7 +147,7 @@ function flipIntent(root: string, step: number): void {
 }
 
 // Append a dated line to the build-log's `## Log` so the build's history accrues at
-// each checkpoint instead of being reconstructed at wrap. The step's title is lifted
+// each checkpoint instead of being reconstructed at finish. The step's title is lifted
 // from intent.md when still present. Best-effort: a missing/odd build-log never blocks
 // a checkpoint — the `checkpoints` SHA is the source of truth.
 function logCheckpoint(root: string, step: number, sha: string): void {

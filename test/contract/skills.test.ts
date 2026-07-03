@@ -79,7 +79,7 @@ describe('every skill (the three reinforcing layers)', () => {
 // pinned to haiku, disable model invocation, and carry no Edit/Write.
 // The surviving thin drivers: status (orient) plus the optional power moves
 // revert and spike. build is the optional engine (own contract); the superseded
-// start/review/done/wrap/finish drivers were removed in step 8.
+// start/review/done drivers were removed in step 8.
 const DRIVER_VERB: Record<string, string> = {
   'pb-status': 'status',
   'pb-revert': 'revert',
@@ -124,11 +124,11 @@ describe('driver skills — the human fires the transition from the chat', () =>
   }
 })
 
-describe('wrap — the close-out: report by default, archive, clear (D9)', () => {
-  const { data, body } = parseSkill('pb-wrap')
+describe('finish — the close-out: report by default, final commit, clear (D9/D15)', () => {
+  const { data, body } = parseSkill('pb-finish')
 
   it('names itself, disables model invocation, is opus', () => {
-    expect(data.name).toBe('pb-wrap')
+    expect(data.name).toBe('pb-finish')
     expect(data['disable-model-invocation']).toBe('true')
     expect(data.model).toBe('opus')
   })
@@ -137,9 +137,9 @@ describe('wrap — the close-out: report by default, archive, clear (D9)', () =>
     expect(body).toContain('!`plumbbob status 2>/dev/null')
   })
 
-  it('writes the report (Write) and shells wrap', () => {
+  it('writes the report (Write) and shells finish', () => {
     expect(data['allowed-tools']).toMatch(/\bWrite\b/)
-    expect(data['allowed-tools']).toContain('plumbbob wrap')
+    expect(data['allowed-tools']).toContain('plumbbob finish')
   })
 
   it('writes the report by default, never a gate (D9)', () => {
@@ -147,8 +147,8 @@ describe('wrap — the close-out: report by default, archive, clear (D9)', () =>
     expect(body).toMatch(/gate/i)
   })
 
-  it('archives then clears, never destroys (C4)', () => {
-    expect(body).toMatch(/archive/i)
+  it('keeps the folder as the record, never destroys (C4/D8)', () => {
+    expect(body).toMatch(/archive/i) // "the folder IS the archive" — the record survives
     expect(body).toMatch(/clear/i)
   })
 
@@ -391,6 +391,6 @@ describe('harvest — propose, the human confirms', () => {
   })
 })
 
-// plumbbob-report and plumbbob-docs were folded into /plumbbob:pb-wrap (D9) and removed.
+// plumbbob-report and plumbbob-docs were folded into /plumbbob:pb-finish (D9) and removed.
 // plumbbob-interrogate was renamed /plumbbob:pb-refine and broadened (attack + repair);
 // report/docs do not survive.

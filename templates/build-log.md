@@ -6,7 +6,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
   Park list : where ideas go so you do not chase them. CAPTURE, never act inline.
   Harvest   : the boundary ritual that keeps you on one branch.
   Log       : the build's history. `plumbbob checkpoint` appends a line per step as it
-              lands; feeds the /pb-wrap report, then gets archived.
+              lands; feeds the /pb-finish report, which rides the branch into the PR.
 -->
 
 # Build log — {{TITLE}}
@@ -52,5 +52,5 @@ Harvest results this boundary:
 every time a step lands — via `/pb-build` or `/pb-verify` — so this
 fills in as you go, not at the end. Add your own decision/event lines too: this is what
 you point at to say "I did that — the LLM helped, but those were my calls."
-`/pb-wrap` reads this for the report; `plumbbob wrap` archives it under
-`.plumbbob/archive/`.)*
+`/pb-finish` reads this for the report; `plumbbob finish` commits it with the build
+folder, so it rides the branch into the PR.)*

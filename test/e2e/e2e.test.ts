@@ -1,9 +1,11 @@
 // End-to-end dogfood drive: a full PlumbBob session in a fixture repo,
-// start → build → checkpoint → park → wrap → archive populated. The report is
-// written here as the /plumbbob:pb-wrap skill would; the CLI path under test is everything
-// around it. Stub check per D14.
+// start → build → checkpoint → park → finish. The report is written here as the
+// /plumbbob:pb-finish skill would; the CLI path under test is everything around it.
+// The build folder IS the archive now (D8): finish commits it in place so it rides
+// the branch into the PR — no `archive/` copy. Stub check per D14.
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import {
@@ -24,8 +26,16 @@ function writeRepo(dir: string, rel: string, content: string): void {
   writeFileSync(path, content)
 }
 
+function gitTracked(dir: string, rel: string): boolean {
+  return execFileSync('git', ['-C', dir, 'ls-files', rel], { encoding: 'utf8' }).trim().length > 0
+}
+
+function headSubject(dir: string): string {
+  return execFileSync('git', ['-C', dir, 'log', '-1', '--format=%s'], { encoding: 'utf8' }).trim()
+}
+
 describe('e2e: a full PlumbBob session end to end', () => {
-  it('drives start → build → checkpoint → park → wrap → archive', () => {
+  it('drives start → build → checkpoint → park → finish', () => {
     const dir = makeFixtureRepo({ withCheckScript: true })
 
     // start → DESIGN; stub the check and write a one-step intent.
@@ -54,23 +64,26 @@ describe('e2e: a full PlumbBob session end to end', () => {
     expect(runCli(dir, ['park', 'a deferred idea for later']).status).toBe(0)
     expect(readSidecar(dir, 'build-log.md')).toContain('a deferred idea for later')
 
-    // close out: write the report (as /plumbbob:pb-wrap would), then wrap → archive + clear.
+    // close out: write the report (as /plumbbob:pb-finish would), then finish →
+    // final commit, no archive copy.
     writeSidecar(dir, 'report.md', '# Report — E2E demo\n\n## What shipped\n\nThe widget.\n')
-    expect(runCli(dir, ['wrap']).status).toBe(0)
+    expect(runCli(dir, ['finish']).status).toBe(0)
 
-    // archive populated; the parked line and the SHA list survived into it.
-    const names = readdirSync(join(dir, '.plumbbob', 'archive'))
-    expect(names).toHaveLength(1)
-    const name = names[0] ?? ''
-    expect(name).toMatch(/^\d{4}-\d{2}-\d{2}-e2e-demo$/)
-    const archived = join(dir, '.plumbbob', 'archive', name)
-    expect(existsSync(join(archived, 'intent.md'))).toBe(true)
-    expect(readFileSync(join(archived, 'build-log.md'), 'utf8')).toContain('a deferred idea for later')
-    expect(readFileSync(join(archived, 'report.md'), 'utf8')).toMatch(/- step 1 [0-9a-f]{7,}/)
+    // the final commit lands under the greppable `finish` subject (D15).
+    expect(headSubject(dir)).toBe('plumbbob: finish — E2E demo')
+
+    // the build folder IS the archive (D8): its artifacts stay in place, committed,
+    // so they ride the branch into the PR. No `archive/` copy exists.
+    const built = join(dir, '.plumbbob', 'builds', 'e2e-demo')
+    expect(existsSync(join(dir, '.plumbbob', 'archive'))).toBe(false)
+    expect(gitTracked(dir, '.plumbbob/builds/e2e-demo/intent.md')).toBe(true)
+    expect(gitTracked(dir, '.plumbbob/builds/e2e-demo/report.md')).toBe(true)
+    // the parked line and the appended SHA list survived into the committed folder.
+    expect(readFileSync(join(built, 'build-log.md'), 'utf8')).toContain('a deferred idea for later')
+    expect(readFileSync(join(built, 'report.md'), 'utf8')).toMatch(/- step 1 [0-9a-f]{7,}/)
 
     // the session is cleared — no STATE, so no active session.
     expect(sidecarExists(dir, 'STATE')).toBe(false)
-    expect(sidecarExists(dir, 'intent.md')).toBe(false)
     expect(runCli(dir, ['status']).stdout).toContain('NO ACTIVE SESSION')
   })
 })

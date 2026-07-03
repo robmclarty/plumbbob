@@ -94,12 +94,12 @@ describe('orient next-move inference (D15)', () => {
     expect(orient({ ...base, inFlight: 2 }).next).toContain('/plumbbob:pb-verify')
   })
 
-  it('all planned steps done, nothing parked → offers plan-next AND wrap-up', () => {
+  it('all planned steps done, nothing parked → offers plan-next AND finish-up', () => {
     const intent = '# T\n\n## Steps\n\n1. [x] a — **done**\n'
     const buildLog = '## Park list\n- (none yet)\n## Harvest\n'
     const next = orient({ ...base, intent, buildLog }).next
     expect(next).toContain('/plumbbob:pb-step') // just-in-time: plan the next step
-    expect(next).toContain('/plumbbob:pb-wrap') // ...or wrap up if truly done
+    expect(next).toContain('/plumbbob:pb-finish') // ...or finish up if truly done
   })
 
   it('all planned steps done with parked items → leads with /plumbbob:pb-harvest', () => {
