@@ -55,3 +55,4 @@ you point at to say "I did that — the LLM helped, but those were my calls."
 `/pb-finish` reads this for the report; `plumbbob finish` commits it with the build
 folder, so it rides the branch into the PR.)*
 - 2026-07-03 — step 1 checkpointed · af4962628 — Envelope + manifest module
+- 2026-07-03 — step 2 checkpointed · 1d0439c8a — Resolver + `plumbbob agent list`

@@ -216,7 +216,7 @@ distilled here so the build stands alone, pointer retained under ## Source.*
    mismatch with a hint; unit tests cover valid/invalid manifests, valid/invalid
    envelopes, and the mismatch refusal
    - seam: `src/lib/agents.ts`, `src/lib/__tests__/agents.test.ts`
-2. [ ] Resolver + `plumbbob agent list` — **done when:** resolution walks
+2. [x] Resolver + `plumbbob agent list` — **done when:** resolution walks
    `--agent <path>` → `.plumbbob/agents/<name>/` → `~/.plumbbob/agents/<name>/`
    (first hit wins); `agent list` prints name, origin tier, slots, and description
    for every resolvable agent; tests cover project-shadows-personal and an
