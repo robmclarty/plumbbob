@@ -11,6 +11,10 @@ coverage/
 .pnpm-store/
 tsconfig.tsbuildinfo
 
-# Plumbbob sidecar: never tracked (D17 — a tracked sidecar lets `revert`
-# destroy park-list lines; checkpoint commits must stay clean of sidecar churn)
-.plumbbob/
+# Plumbbob control plane: per-worktree ephemera stay untracked (D2/D3);
+# builds/<slug>/ artifacts are tracked and ride the branch into the PR.
+.plumbbob/STATE
+.plumbbob/settings.local.json
+.plumbbob/builds/*/STEP
+.plumbbob/builds/*/SEAM
+.plumbbob/builds/*/SPIKE
