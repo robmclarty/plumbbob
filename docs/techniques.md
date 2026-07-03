@@ -31,7 +31,8 @@ apart.
 The exhaustion of working with an LLM is a working-memory problem: you cannot *produce*
 your own intent and *consume* the model's output in the same moment — consuming overwrites
 producing. So the plan does not live in your head (the flood erases it) or in the chat
-(it is ephemeral). It lives in two flat files under `.plumbbob/` that survive the flood.
+(it is ephemeral). It lives in two plain files in the build's tracked folder —
+`.plumbbob/builds/<slug>/` — that survive the flood and ride the branch into the PR.
 **The chat is the hand; the docs are the head.**
 
 - **`intent.md` — what you decided, before any code.** Your canonical intent: the Frame,
@@ -85,8 +86,8 @@ input auto-syncs it to what the build has already taught you) right before you b
 ### The seam is awareness, not a lock
 
 The seam is the step's declared blast radius. When you enter a step, the CLI records it in
-`.plumbbob/SEAM` (and the step number in `STEP`) so the dashboard can show what is in
-flight. The seam is **orientation only** — a label on the map, not a fence. It tells you
+the build folder's `SEAM` marker (and the step number in `STEP`) so the dashboard can show
+what is in flight. The seam is **orientation only** — a label on the map, not a fence. It tells you
 and the model where the
 step is supposed to live, so straying out of it is a visible signal rather than a silent
 sprawl.
@@ -136,17 +137,19 @@ however you like.
 ## Checkpoints and reverts as the safety net
 
 A **checkpoint** is one commit per verified step. `plumbbob start` records the baseline
-HEAD, and each checkpoint appends `step N <git-sha>` to `.plumbbob/checkpoints`. The git
-footprint is **additive only**: cheap markers (`plumbbob: step n done`) on your feature
-branch that your normal squash-merge collapses at PR time. PlumbBob never rewrites pushed
-history.
+HEAD, and each checkpoint appends `step N <git-sha>` to the build's `checkpoints` file. The
+git footprint is **additive only**: cheap markers (`plumbbob: step N — <title>`) on your
+feature branch that your normal squash-merge collapses at PR time. PlumbBob never rewrites
+pushed history.
 
 **Revert** is the undo. `/pb-revert` does a `git reset --hard` to the last checkpoint
 (or `--to <n>` for a specific step, with the baseline as the fallback), discarding the
 half-done step. It is careful about two things:
 
-- **Your plan survives.** The `.plumbbob/` sidecar is git-excluded and explicitly preserved
-  across the reset, so park lines and intent edits made during the step are not lost.
+- **Your plan survives.** The build folder is tracked now, so a bare `reset --hard` *would*
+  discard it — `revert` snapshots `builds/<slug>/` to a temp dir before the reset and
+  restores it after (**C4**), so park lines and intent edits made during the step are not
+  lost, even reverting to a baseline that predates the folder.
 - **Only the step's work is removed.** Untracked files *inside the seam* are cleaned up;
   files outside it are left alone.
 
@@ -219,8 +222,8 @@ The checks come in two tiers with different jobs:
 - **Light** — the `post-edit` hook: a non-blocking, file-scoped lint pass that runs after
   each edit and injects any findings into the model's context so it self-corrects in flow.
   It never blocks an edit, and it exists because the model cannot see your editor's LSP — so
-  the light tier *serves the model*. It is session-gated: a repo with no `.plumbbob/STATE`
-  behaves like plain Claude Code.
+  the light tier *serves the model*. It is gated on an active build: a repo with no
+  `activeBuild` cursor in `.plumbbob/settings.local.json` behaves like plain Claude Code.
 - **Heavy** — the full project check: checkride (D32 — in this repo: tsc, oxlint,
   ast-grep, fallow, vitest, markdownlint-cli2, links), overridable per repo via the
   `"check"` key in `.plumbbob/settings.json`. It is **not** a hook; it runs *inside* the verify tick, which

@@ -6,10 +6,16 @@ the code comments terse without losing the *why*. This page is the key: it recon
 each tag from where it is referenced in the code, so a reader who hits "`D17`" in a comment
 can look up what it means.
 
-The list covers the tags **present in the code**. Some numbers (e.g. `D2`, `D5`,
-`D11`, `D12`, `D21`) belonged to superseded decisions and are no longer referenced; a few
-entries below are earlier decisions kept only because a comment still cites them, and they
-are marked as such.
+The list covers the tags **present in the code**. Some numbers (e.g. `D21`) belonged to
+superseded decisions and are no longer referenced; a few entries below are earlier
+decisions kept only because a comment still cites them, and they are marked as such.
+
+> **One caveat before you trust a number.** The files touched by the July 2026 worktree
+> restructure (`sidecar.ts`, `start.ts`, `checkpoint.ts`, `finish.ts`, `revert.ts`,
+> `doctor.ts`, `git.ts`, `intent.ts`, and the `pb-plan`/`pb-finish` skills) cite the
+> D-numbers of *that build's own intent*, not this key — see
+> [the collision table](#build-local-tags-the-2026-07-restructure) below for what each
+> contested tag means where.
 
 ## Constraints (C)
 
@@ -155,6 +161,26 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   unconfigured repo must not vacuously pass the gate. Checkride's exit 2 (harness error)
   reports distinctly from red; both block. *Tagged in* `check.ts`.
 
+### Build-local tags (the 2026-07 restructure)
+
+The worktree-restructure build
+(`.plumbbob/builds/2026-07-03-worktree-proof-sidecar-restructure/intent.md`) numbered its
+decisions from `D1`, and the comments written during that build cite *those* numbers.
+Several collide with this key. Until the comments are renumbered to global tags, resolve a
+contested tag by which file you are in — restructure-touched files use the build-local
+meaning:
+
+| Tag | Build-local meaning (restructure files) | Global entry that covers it |
+|-----|------------------------------------------|------------------------------|
+| `D2` | track `builds/<slug>/` artifacts; keep control state untracked | **D17** (amended) / **D26** |
+| `D3` | the `activeBuild` cursor in `settings.local.json` (in `start.ts`) | **D28** — but in `checkpoint.ts`, `D3` is the *global* author-blind executor |
+| `D5` | the CLI owns the commit subject; the body arrives via a `--body` heredoc | *(no global entry yet)* |
+| `D6` | deterministic fallback body = done-when + seam + diffstat (in `git.ts`, `checkpoint.ts`) | *(none — global `D6` in `orient.ts` is "steps are the parseable plan")* |
+| `D11` | plan approval gets its own commit (`checkpoint --plan`) | *(no global entry yet)* |
+| `D12` | checkpoint's `stageAll` sweeps the intent `[x]` flip along, so the last step's checkpoint line lands one commit late (absorbed by `finish`) | *(no global entry yet)* |
+| `D15` | finish's commit subject is `plumbbob: finish — <title>` (in `finish.ts`) | *(none — global `D15` in `orient.ts` is "status infers one move")* |
+| `D17` | `slugify` + collision-refuse live in the CLI (in `sidecar.ts`, `start.ts`, `doctor.ts`) | *(none — global `D17` in `spike.ts`/`revert.ts` is the plane split)* |
+
 ### Superseded
 
 - **D20 — The archive was local-only markdown.** Wrapping wrote a plain-markdown archive
@@ -163,8 +189,8 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   is nothing separate to archive. *No longer referenced in code.*
 
 - **D19 — `finish` refused without a report.** An earlier close-out gated the exit on a
-  written report. **D9** removed the gate: `wrap` writes the report by default but never
-  walls the exit. *Still cited in* `archive.ts`.
+  written report. **D9** removed the gate: the close-out writes the report by default but
+  never walls the exit. *No longer referenced in code* (`archive.ts` retired with **D29**).
 
 ---
 

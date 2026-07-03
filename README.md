@@ -29,8 +29,8 @@ PlumbBob, dogfooded on its own loop.
   <img src="demo.svg" alt="An animated terminal session: /pb-plan writes the plan, /pb-build implements step 1 and stops at the PAUSE, the human approves, the step is checkpointed" width="760">
 </p>
 
-Everything the model must stay true to lives in one file, `.plumbbob/intent.md`,
-written before any code: the **Frame** (the problem, what done looks like, what you're
+Everything the model must stay true to lives in one file, the build's `intent.md`
+(under `.plumbbob/builds/<slug>/`), written before any code: the **Frame** (the problem, what done looks like, what you're
 explicitly *not* doing), the **Decisions** and **Constraints** (the settled calls, each
 with its *because*), and the **Steps** — a numbered list where every step carries a
 **done-when** (a checkable finish line, ideally a test) and a **seam** (the files it's
@@ -129,9 +129,10 @@ write the short form `/pb-plan`.)
 Three power moves round it out — `/pb-revert` (recover to a checkpoint), `/pb-spike`
 (throwaway worktree experiment for a fork the plan can't settle), and `/pb-refine`
 (attack the frame for holes or repair a drifted plan) — plus `/pb-doctor` to check
-your install.
+your install. All twelve, with inputs and effects, are in
+[`docs/skills-reference.md`](docs/skills-reference.md).
 
-Under the skills ships a zero-dependency `plumbbob` CLI (the mechanical verbs the
+Under the skills ships a lean `plumbbob` CLI (the mechanical verbs the
 skills shell out to), one session-gated post-edit hook (non-blocking lint feedback in
 flow), and a `.plumbbob/` sidecar you can open and edit by hand at any time — a tracked
 `builds/<slug>/` folder per build (`intent.md`, `build-log.md`, `checkpoints`, `report.md`)
@@ -177,9 +178,10 @@ without you re-explaining the state.
 **…wait for a vendor to ship this natively?** They're converging on it — plan
 modes, spec kits, native checkpoints — and that convergence is evidence *for* the
 premise. PlumbBob is deliberately thin against that future: the artifacts are
-plain markdown and ordinary git commits in your own repo, the CLI is
-zero-dependency, and nothing locks you in. The investment is small — twelve
-skills over a three-file sidecar, learnable in an afternoon — and what you're
+plain markdown and ordinary git commits in your own repo, the CLI is lean
+(node builtins plus one deliberate dependency), and nothing locks you in. The
+investment is small — twelve
+skills over a plain-markdown sidecar, learnable in an afternoon — and what you're
 actually learning is the method: decisions before code, one verified step at a
 time, capture instead of chase. That transfers to whatever tool wins. If
 something better ships, you walk away with your archives and your habits intact.
@@ -194,16 +196,19 @@ command. Cheap recovery, not prevention, is the control that actually matters.
 
 ## Documentation
 
-In rough reading order for a new user:
+Each doc answers one question — in rough reading order for a new user:
 
-- [`docs/happy-path.md`](docs/happy-path.md) — one goal walked end to end; read this first.
-- [`docs/techniques.md`](docs/techniques.md) — the reference for each method: steps, seams, the pause, park/harvest, spikes.
-- [`docs/install.md`](docs/install.md) — the full install guide and the agent-neutral roadmap.
-- [`docs/cli-reference.md`](docs/cli-reference.md) — every verb, flag, exit code, and the `.plumbbob/` sidecar.
-- [`docs/troubleshooting.md`](docs/troubleshooting.md) — fixes for the common snags.
-- [`docs/decisions.md`](docs/decisions.md) — the `D#` / `C#` design-decision key the source cites.
-- [`docs/attention-first-development.md`](docs/attention-first-development.md) — the philosophy: attention as the scarce resource.
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) — setup, conventions, and how to submit changes.
+- *What does a session actually look like?* → [`docs/happy-path.md`](docs/happy-path.md) — one goal walked end to end; read this first.
+- *Should I / can I / what about…?* → [`docs/faq.md`](docs/faq.md) — the adoption questions, answered straight.
+- *What is each method for?* → [`docs/techniques.md`](docs/techniques.md) — steps, seams, the pause, park/harvest, spikes.
+- *What does each skill do?* → [`docs/skills-reference.md`](docs/skills-reference.md) — all twelve `/pb-*` skills: inputs, effects, when to reach for each.
+- *How do I install it, exactly?* → [`docs/install.md`](docs/install.md) — the full guide and the agent-neutral roadmap.
+- *What does the CLI underneath do?* → [`docs/cli-reference.md`](docs/cli-reference.md) — every verb, flag, exit code, and the `.plumbbob/` sidecar.
+- *Something's broken.* → [`docs/troubleshooting.md`](docs/troubleshooting.md) — fixes for the common snags.
+- *Why is it built this way?* → [`docs/decisions.md`](docs/decisions.md) — the `D#` / `C#` design-decision key the source cites.
+- *Why does this exist at all?* → [`docs/attention-first-development.md`](docs/attention-first-development.md) — the philosophy: attention as the scarce resource.
+- *What does it run on my machine?* → [`SECURITY.md`](SECURITY.md) — execution surface and how to report a vulnerability.
+- *How do I contribute?* → [`CONTRIBUTING.md`](CONTRIBUTING.md) — setup, conventions, and how to submit changes.
 
 ## License
 

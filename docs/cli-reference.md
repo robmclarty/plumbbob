@@ -9,7 +9,9 @@ skill actually runs.
 plumbbob <verb> [args]      # also available as `pb`
 ```
 
-It is a zero-dependency CLI that runs natively on Node ≥ 22.18 (**C2**). Every verb is a
+It is a lean CLI — node builtins plus one deliberate dependency,
+[checkride](https://www.npmjs.com/package/checkride) (**C2**, amended; **D32**) — that runs
+natively on Node ≥ 22.18. Every verb is a
 pure function that writes to stdout/stderr and returns an exit code; the only
 `process.exit` is the bin entry.
 
@@ -20,13 +22,13 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 | `start` | `start <title> [--slug <name>] [--local] [--allow-dirty]` | scaffold `builds/<slug>/`, record baseline, open the session |
 | `status` | `status` | print the orientation dashboard (or `NO ACTIVE SESSION`) |
 | `build` | `build <n>` | write step `n`'s seam + `STEP` (goes in-flight) |
-| `check` | `check` | run the heavy gate; no state change |
-| `checkpoint` | `checkpoint [<n>] [--plan] [--body <<'BODY'…]` | gate on green, commit, record SHA, mark step done |
+| `check` | `check [--bail] [--changed] [--all] [--only a,b] [--skip a,b] [--include a,b]` | run the heavy gate; no state change |
+| `checkpoint` | `checkpoint [<n>] [--plan] [-m <msg>] [--body <<'BODY'…]` | gate on green, commit, record SHA, mark step done |
 | `revert` | `revert [--to <n>]` | `git reset --hard` to a checkpoint SHA |
 | `park` | `park <text>` | append a line to the park list |
 | `spike` | `spike <slug> [opt…]` \| `spike done` | throwaway worktree experiment |
 | `use` | `use <slug>` | re-point the active-build cursor and resume that build |
-| `finish` | `finish` | write the report, make the final commit, close the session |
+| `finish` | `finish [--body <<'BODY'…]` | append checkpoints to the report, make the final commit, close the session |
 | `init` | `init [--uninstall] [--force]` | link plumbbob into Claude Code as the skills-dir plugin |
 | `doctor` | `doctor [--migrate]` | diagnose the plugin link; migrate a legacy flat sidecar |
 | `help` | `help` \| `--help` \| `-h` | print the verb table |
@@ -46,7 +48,8 @@ plumbbob start "<title>" [--slug <name>] [--local] [--allow-dirty]
 Scaffolds the sidecar, records the baseline `HEAD`, and opens the session. By default it
 plants a tracked build folder at `.plumbbob/builds/<slug>/` — the slug derived from the title
 (override with `--slug`) — holding `intent.md`, `build-log.md`, and `checkpoints`
-(`baseline <sha>`); it writes the tracked `settings.json` (`check`, `auto`) and the untracked
+(`baseline <sha>`); it writes the tracked `settings.json` (`{"auto": false}` — no `check`
+key, because absence means checkride is the gate, **D24**/**D32**) and the untracked
 `STATE` sentinel, points the `activeBuild` cursor at the new build (**D28**), and narrows the
 repo's `info/exclude` to the control-plane patterns (**D17**/**D26**). `--local` opts out into
 the old fully-untracked flat layout — everything under `.plumbbob/` excluded (**D26**).
@@ -103,7 +106,7 @@ broke (e.g. a malformed `checkride.config.json`). Refuses (exit 1) with no sessi
 ### checkpoint
 
 ```text
-plumbbob checkpoint [<n>] [--body <<'BODY' … BODY]
+plumbbob checkpoint [<n>] [-m <msg>] [--body <<'BODY' … BODY]
 plumbbob checkpoint --plan  [--body …]
 ```
 
@@ -112,7 +115,8 @@ in-flight `STEP`, else the first undone step in `intent.md` — then gates on a 
 commits any pending work (or records the existing `HEAD` if the tree is already clean) with a
 CLI-owned subject `plumbbob: step N — <title>`, appends `step <n> <sha>` to `checkpoints`,
 flips the step to `[x]`, and clears `SEAM`/`STEP` — dropping the dashboard back to the
-`DESIGN` boundary. The commit **body** comes from a `--body` heredoc on stdin (skill-composed,
+`DESIGN` boundary. `-m <msg>` overrides the subject. The commit **body** comes from a
+`--body` heredoc on stdin (skill-composed,
 proportional); without it a deterministic fallback carries done-when + seam + diffstat
 (**D5**/**D6**). `--plan` instead commits *only* the build's artifact folder as
 `plumbbob: plan — <title>` and records a `plan <sha>` line, giving the plan its own commit so
@@ -173,11 +177,14 @@ folder; `status` with no cursor lists the available builds instead of refusing.
 ### finish
 
 ```text
-plumbbob finish
+plumbbob finish [--body <<'BODY' … BODY]
 ```
 
-The close-out (**D9**/**D29**). Writes `report.md` into the build folder, makes the final
-commit (subject `plumbbob: finish — <title>`, mirroring the step-checkpoint shape), and clears
+The close-out (**D9**/**D29**). Appends the checkpoint SHAs to the build's `report.md`
+(the report itself is written by the `/pb-finish` skill; a missing one is noted, never a
+refusal), makes the final
+commit (subject `plumbbob: finish — <title>`, mirroring the step-checkpoint shape; body
+from an optional `--body` heredoc), and clears
 the control state (`STATE`, the cursor, the in-flight markers). No separate archive copy — the
 tracked build folder already *is* the record and merges into `main` with the branch, so it
 rides into the PR (**D26**). There is **no** refuse-without-report gate. Refuses (exit 1) only
@@ -211,7 +218,7 @@ namespace (skills can drop to flat names like `/pb-status`); `--force` overrides
 plumbbob doctor [--migrate]
 ```
 
-Two diagnostics under one verb.
+Three diagnostics under one verb.
 
 **Plugin link** (read-only). Across both install paths it verifies the skills-dir link
 resolves to a package carrying the manifest, the skills, and the hook; it also recognizes a
@@ -227,7 +234,14 @@ pre-restructure layout with a `config` file, an `archive/` folder, or a flat act
 entries and the active session into tracked `builds/<slug>/` folders (the active one becomes
 the cursor; the rest are "done" simply by not being it), turns `config` into `settings.json`,
 narrows the excludes, and **stages** the whole move without committing — the commit is yours
-(**D31**). Exits 0 when everything passes, 1 when a check fails or an un-migrated legacy
+(**D31**).
+
+**Check gate** (**D32**). Reports how the heavy gate will resolve in this repo: a configured
+`check` override is named as-is; otherwise checkride's own doctor prints the slot/adapter
+table (`✓ types ← tsc`, `○ spell — no tool detected`, …) so you can see what a green gate
+actually covers before trusting it.
+
+Exits 0 when everything passes, 1 when a check fails or an un-migrated legacy
 sidecar is present.
 
 ## The `.plumbbob/` sidecar

@@ -157,8 +157,10 @@ build again.
 The `post-edit` hook is intentionally quiet, and several conditions make it a no-op — all
 by design (**D25**):
 
-- **No session.** The hook is session-gated: with no `.plumbbob/STATE`, the repo behaves
-  like plain Claude Code. Start a session to enable it.
+- **No active build.** The hook is gated on the `activeBuild` cursor in
+  `.plumbbob/settings.local.json`: with no cursor — no session, or a `--local` session,
+  which has none — the repo behaves like plain Claude Code. Start a (tracked) session to
+  enable it.
 - **Tools absent.** It runs `oxlint` and `ast-grep` from the repo's `node_modules/.bin`; if
   they are not installed there, it silently skips them.
 - **Non-source file.** It only inspects `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, and `.cjs`

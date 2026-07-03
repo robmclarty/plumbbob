@@ -36,12 +36,14 @@ plumbbob's one runtime dependency), which runs the tools this repo configures, i
 | `lint` | `oxlint` | correctness lint |
 | `struct` | `ast-grep scan` | the structural constraints (see below) |
 | `dead` | `fallow` | dead code, unused exports/deps, cycles, complexity |
-| `test` | `vitest run --coverage` | the test suite |
+| `test` | `vitest` | the test suite |
 | `docs` | `markdownlint-cli2` | the docs |
 | `links` | built-in | relative markdown links resolve |
 
 Raw tool output lands in `.check/` (`summary.json` is the index). Narrow the loop while
-iterating: `pnpm check --bail`, `pnpm check --only types,lint`. There is no CI yet —
+iterating: `pnpm check --bail`, `pnpm check --only types,lint`. An opt-in `mutation` slot
+(Stryker) audits test quality — `pnpm check --include mutation` — and is kept out of the
+default gate so the ~19s loop stays fast. There is no CI yet —
 **run `pnpm check` locally** before opening a pull request.
 
 ## Code conventions
@@ -56,9 +58,10 @@ automatically. Full key in [`docs/decisions.md`](docs/decisions.md); the load-be
   `node:*` and the explicit allowlist (currently `checkride` alone) in `src/`; `ast-grep`
   flags any other import. A new runtime dependency is a design decision to argue for —
   our own tools first, never a casual install; dev-only tooling is fine.
-- **C4 / C5 — never destroy, additive git only.** Anything that closes or rewinds a session
-  archives before it clears and only resets to its own recorded SHAs; it never rewrites
-  pushed history.
+- **C4 / C5 — never destroy, additive git only.** Nothing may lose park lines, intent
+  edits, or a build's record: `revert` snapshots the tracked build folder across its
+  `reset --hard`, `finish` leaves the folder in place as the archive, and every reset
+  targets only plumbbob's own recorded SHAs; it never rewrites pushed history.
 
 `rules/` also enforces three architectural invariants: `no-process-exit` (only the bin
 entry exits, so verbs stay testable), `no-console` (write through `process.stdout` /

@@ -9,7 +9,8 @@ The loop in one breath: **`/pb-plan` once to author the whole plan, then fire
 `/pb-build` per step — each builds the next step and stops at the verify pause for
 your approval — parking strays and harvesting them at the boundary, then `/pb-finish`
 once.** In the loop you never type the `plumbbob` CLI by hand; the skills shell out to
-it (only install and setup — `plumbbob init`, `doctor`, `start` — are manual), and
+it (only install — `plumbbob init` and `doctor` — is manual; even `plumbbob start` is
+run for you by `/pb-plan`), and
 `/pb-status` always names your next move.
 
 > The example goal: **rate-limit the login endpoint** — a small feature touching a
@@ -37,8 +38,9 @@ Under the hood it runs `plumbbob start`, which records a baseline and drops you 
 `DESIGN`:
 
 ```text
-plumbbob: started "Rate-limit the login endpoint" — baseline 3a1f2b0c1.
-Frame and decide in .plumbbob/intent.md; `build` a step once the decisions are made.
+plumbbob: started "Rate-limit the login endpoint" — baseline 3a1f2b0c1. Frame and decide
+in .plumbbob/builds/rate-limit-the-login-endpoint/intent.md; `build` a step once the
+decisions are made.
 ```
 
 In interview mode it proposes wording you can accept without typing ("done-when: the
@@ -97,7 +99,7 @@ PlumbBob — Rate-limit the login endpoint   [DESIGN]
 last checkpoint  none yet
 parked 0 · open questions 0
 
-next → build step 1 — `/pb-build` (or `/pb-step` to revise it first)
+next → build step 1 — `/plumbbob:pb-build` (or `/plumbbob:pb-step` to revise it first)
 ```
 
 ---
@@ -218,8 +220,8 @@ Once the last step is checkpointed, the dashboard surfaces the parked item — t
 happens **at a boundary**, back in `DESIGN`, never mid-step:
 
 ```text
-next → harvest 1 parked idea — `/pb-harvest`; then finish up — `/pb-finish`
-       (or `/pb-step` to add another increment)
+next → harvest 1 parked idea — `/plumbbob:pb-harvest`; then finish up —
+       `/plumbbob:pb-finish` (or `/plumbbob:pb-step` to add another increment)
 ```
 
 `/pb-harvest` walks the list and proposes one class per item — **blocker** (plan was
@@ -286,8 +288,9 @@ the in-flight markers). There's no separate archive copy — the tracked build f
 the record now, so it merges into `main` with the branch:
 
 ```text
-plumbbob: finish — Rate-limit the login endpoint. Report + final commit f3e9a1b2c.
-Control state cleared. Run `/pb-plan` (or `plumbbob start "<title>"`) to frame the next goal.
+plumbbob: finished — f3e9a1b2c. .plumbbob/builds/rate-limit-the-login-endpoint/ rides your
+branch into the PR. Run `/plumbbob:pb-plan` (or `plumbbob start "<title>"`) to frame the
+next goal.
 ```
 
 The record now lives — tracked, on the branch — at:
