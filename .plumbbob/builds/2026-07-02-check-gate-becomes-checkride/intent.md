@@ -138,7 +138,7 @@ dogfood (this repo): settings.json drops "check" → gate is checkride
    updated; `pb-build`/`pb-verify`/`pb-plan`/`pb-finish` skills point the agent
    at `.check/summary.json` → failing slot's raw JSON on red
    - seam: `docs/`, `README.md`, `skills/pb-build/SKILL.md`, `skills/pb-verify/SKILL.md`, `skills/pb-plan/SKILL.md`, `skills/pb-finish/SKILL.md`
-6. [ ] Dogfood: plumbbob's own gate through checkride, knip → fallow — **done
+6. [x] Dogfood: plumbbob's own gate through checkride, knip → fallow — **done
    when:** `.plumbbob/settings.json` drops `"check"`; knip (devDep, `knip.json`,
    `check:knip` script) is gone and fallow (devDep + `fallow.toml`) fills the
    `dead` slot (D9); the `check` script becomes the `checkride` alias with the
