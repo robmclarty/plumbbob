@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
@@ -37,6 +38,23 @@ describe('checkpoint', () => {
     expect(readFileSync(checkpointsPath(dir), 'utf8')).toMatch(/step 1 [0-9a-f]{40}/)
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x]')
     expect(stdout).toContain('step 1 checkpointed')
+  })
+
+  it('titles the commit subject `plumbbob: step N — <title>` from intent.md', () => {
+    const dir = startedGreen()
+    writeFileSync(join(dir, 'work.txt'), 'pending\n') // ensure a fresh commit is made
+    captureIo(() => checkpoint(dir, ['1']))
+    const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
+    expect(subject).toBe('plumbbob: step 1 — First')
+  })
+
+  it('falls back to `plumbbob: step N done` when intent carries no title', () => {
+    const dir = startedGreen()
+    writeFileSync(intentPath(dir), '# Untitled steps\n\n## Steps\n\n1. [ ] — **done when:** a works.\n')
+    writeFileSync(join(dir, 'work.txt'), 'pending\n')
+    captureIo(() => checkpoint(dir, ['1']))
+    const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
+    expect(subject).toBe('plumbbob: step 1 done')
   })
 
   it("appends a dated history line to the build-log's Log, naming the step", () => {

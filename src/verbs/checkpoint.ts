@@ -36,7 +36,7 @@ export function checkpoint(cwd: string, args: ReadonlyArray<string>): number {
   let sha: string
   if (isDirty(root)) {
     stageAll(root)
-    sha = commit(root, messageArg(args) ?? `plumbbob: step ${step} done`)
+    sha = commit(root, messageArg(args) ?? subjectForStep(root, step))
   } else {
     sha = headSha(root)
   }
@@ -93,6 +93,14 @@ function logCheckpoint(root: string, step: number, sha: string): void {
   } catch {
     // best-effort ledger; never fail a checkpoint over the build-log.
   }
+}
+
+// The CLI-owned, deterministic commit subject: the step's title when intent.md still
+// carries one, else the bare `plumbbob: step N done` fallback (D5 — the CLI owns the
+// subject; a `-m` override or `--body` prose is a separate concern).
+function subjectForStep(root: string, step: number): string {
+  const title = titleForStep(root, step)
+  return title ? `plumbbob: step ${step} — ${title}` : `plumbbob: step ${step} done`
 }
 
 function titleForStep(root: string, step: number): string | null {
