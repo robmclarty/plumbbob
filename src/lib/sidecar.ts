@@ -42,10 +42,6 @@ export function checkpointsPath(root: string): string {
   return join(root, DIRNAME, 'checkpoints')
 }
 
-export function configPath(root: string): string {
-  return join(root, DIRNAME, 'config')
-}
-
 export function intentPath(root: string): string {
   return join(root, DIRNAME, 'intent.md')
 }

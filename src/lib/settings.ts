@@ -1,0 +1,62 @@
+// The settings ladder (D7): a resolved setting comes from, in priority order,
+//   1. a CLI flag           — passed in by the verb (undefined when absent)
+//   2. settings.local.json  — untracked personal overlay + per-worktree cursor
+//   3. settings.json        — tracked project defaults
+//   4. a built-in default   — supplied by the caller
+// The first defined rung wins. Both files are optional JSON; a missing or
+// malformed file contributes nothing rather than throwing, so a broken personal
+// overlay can never wedge the tool. Functional/procedural, node builtins only (C1).
+//
+// Known keys: `check` (string — the heavy gate, tracked in settings.json) and
+// `auto` (boolean — whether the agent approves in the human's place; a personal
+// preference, so it belongs in settings.local.json). `activeBuild` (the
+// per-worktree cursor) also lives in settings.local.json but is resolved by
+// sidecar.ts, not here.
+
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
+const DIRNAME = '.plumbbob'
+
+export function settingsPath(root: string): string {
+  return join(root, DIRNAME, 'settings.json')
+}
+
+export function localSettingsPath(root: string): string {
+  return join(root, DIRNAME, 'settings.local.json')
+}
+
+type Settings = Record<string, unknown>
+
+function readSettings(path: string): Settings {
+  try {
+    const parsed = JSON.parse(readFileSync(path, 'utf8')) as unknown
+    return typeof parsed === 'object' && parsed !== null ? (parsed as Settings) : {}
+  } catch {
+    return {}
+  }
+}
+
+// The raw ladder: flag → local overlay → project defaults → undefined. The typed
+// helpers below apply the built-in default and reject wrong-typed rungs.
+function resolveSetting(root: string, key: string, flag: unknown): unknown {
+  if (flag !== undefined) return flag
+  const local = readSettings(localSettingsPath(root))[key]
+  if (local !== undefined) return local
+  return readSettings(settingsPath(root))[key]
+}
+
+// Resolve a string setting (e.g. `check`). A missing rung, or one holding a
+// non-string / blank value, yields the caller's fallback rather than gating on
+// garbage.
+export function resolveString(root: string, key: string, fallback: string, flag?: string): string {
+  const value = resolveSetting(root, key, flag)
+  return typeof value === 'string' && value.trim().length > 0 ? value : fallback
+}
+
+// Resolve a boolean setting (e.g. `auto`). A missing or non-boolean rung yields
+// the caller's fallback.
+export function resolveBoolean(root: string, key: string, fallback: boolean, flag?: boolean): boolean {
+  const value = resolveSetting(root, key, flag)
+  return typeof value === 'boolean' ? value : fallback
+}

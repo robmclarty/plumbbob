@@ -11,14 +11,14 @@ function headSha(dir: string): string {
 }
 
 describe('plumbbob start', () => {
-  it('scaffolds .plumbbob/ at the git root: DESIGN, baseline, config, stamped templates', () => {
+  it('scaffolds .plumbbob/ at the git root: DESIGN, baseline, settings, stamped templates', () => {
     const dir = makeFixtureRepo({ withCheckScript: true })
     const result = runCli(dir, ['start', 'My change'])
 
     expect(result.status).toBe(0)
     expect(phase(dir)).toBe('DESIGN')
     expect(readSidecar(dir, 'checkpoints').split('\n')[0]).toBe(`baseline ${headSha(dir)}`)
-    expect(readSidecar(dir, 'config')).toContain('check=pnpm run check')
+    expect(JSON.parse(readSidecar(dir, 'settings.json'))).toEqual({ check: 'pnpm run check', auto: false })
 
     const intent = readSidecar(dir, 'intent.md')
     expect(intent).toContain('# My change')
@@ -93,12 +93,12 @@ describe('plumbbob start', () => {
     expect(result.stderr).toContain('title')
   })
 
-  it('warns when the repo has no check script but still records the config line (D24)', () => {
+  it('warns when the repo has no check script but still records the check setting (D24)', () => {
     const dir = makeFixtureRepo() // no package.json
     const result = runCli(dir, ['start', 'No check'])
     expect(result.status).toBe(0)
     expect(result.stderr).toContain('check')
-    expect(readSidecar(dir, 'config')).toContain('check=pnpm run check')
+    expect(JSON.parse(readSidecar(dir, 'settings.json')).check).toBe('pnpm run check')
   })
 
   it('re-scaffolds after finish without touching the archive', () => {

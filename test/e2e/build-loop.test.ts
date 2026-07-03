@@ -24,7 +24,7 @@ function writeIntent(dir: string, stepsBody: string): void {
   writeFileSync(join(dir, '.plumbbob', 'intent.md'), `# Fix\n\n## Steps\n\n${stepsBody}\n`)
 }
 function setCheck(dir: string, command: string): void {
-  writeFileSync(join(dir, '.plumbbob', 'config'), `check=${command}\n`)
+  writeFileSync(join(dir, '.plumbbob', 'settings.json'), JSON.stringify({ check: command }))
 }
 // A started session with a real one-step intent and a stub check command.
 function startedSession(options: { seam: string; check?: string } = { seam: '`src/`' }): string {

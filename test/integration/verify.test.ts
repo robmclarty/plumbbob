@@ -6,11 +6,11 @@ import { cleanupFixtures, makeFixtureRepo, phase, readSidecar, runCli } from '..
 
 afterAll(cleanupFixtures)
 
-// Scaffold a session, then overwrite the config (stub check) and intent so the
+// Scaffold a session, then overwrite settings (stub check) and intent so the
 // verbs run against a known step list and a controllable green/red gate (D14).
 function startWithSteps(dir: string, stepsBody: string, check = 'true'): void {
   runCli(dir, ['start', 'Verify test'])
-  writeFileSync(join(dir, '.plumbbob', 'config'), `check=${check}\n`)
+  writeFileSync(join(dir, '.plumbbob', 'settings.json'), JSON.stringify({ check }))
   writeFileSync(join(dir, '.plumbbob', 'intent.md'), `# Verify test\n\n## Steps\n\n${stepsBody}\n`)
 }
 

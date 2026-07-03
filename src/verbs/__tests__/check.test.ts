@@ -2,7 +2,7 @@ import { writeFileSync } from 'node:fs'
 import { afterAll, describe, expect, it } from 'vitest'
 import { check } from '../check.ts'
 import { start } from '../start.ts'
-import { configPath } from '../../lib/sidecar.ts'
+import { settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo } from '../../../test/helpers/capture-io.ts'
 
@@ -12,7 +12,7 @@ afterAll(cleanupTempRepos)
 function startedWithCheck(command: string): string {
   const dir = makeTempRepo()
   captureIo(() => start(dir, ['Checking']))
-  writeFileSync(configPath(dir), `check=${command}\n`)
+  writeFileSync(settingsPath(dir), JSON.stringify({ check: command }))
   return dir
 }
 

@@ -8,13 +8,13 @@ import { findRepoRoot, hasCommit, headSha, isDirty } from '../lib/git.ts'
 import {
   sidecarDir,
   checkpointsPath,
-  configPath,
   intentPath,
   buildLogPath,
   beginSession,
   hasSession,
   excludeSidecar,
 } from '../lib/sidecar.ts'
+import { settingsPath } from '../lib/settings.ts'
 
 const DEFAULT_CHECK = 'pnpm run check'
 
@@ -65,14 +65,14 @@ export function start(cwd: string, args: ReadonlyArray<string>): number {
   mkdirSync(sidecarDir(root), { recursive: true })
   beginSession(root)
   writeFileSync(checkpointsPath(root), `baseline ${sha}\n`)
-  writeFileSync(configPath(root), `check=${check.command}\n`)
+  writeFileSync(settingsPath(root), `${JSON.stringify({ check: check.command, auto: false }, null, 2)}\n`)
   writeFileSync(intentPath(root), stamp(readTemplate('intent.md'), title, check.command))
   writeFileSync(buildLogPath(root), stamp(readTemplate('build-log.md'), title, check.command))
   excludeSidecar(root)
 
   if (check.warn) {
     process.stderr.write(
-      `plumbbob: WARNING the heavy check '${check.command}' is not defined in this repo's package.json. Edit .plumbbob/config (check=...) to set the real gate before \`review\`/\`done\`.\n`,
+      `plumbbob: WARNING the heavy check '${check.command}' is not defined in this repo's package.json. Set the "check" key in .plumbbob/settings.json to the real gate before \`review\`/\`done\`.\n`,
     )
   }
   process.stdout.write(

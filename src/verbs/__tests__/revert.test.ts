@@ -6,7 +6,8 @@ import { revert } from '../revert.ts'
 import { start } from '../start.ts'
 import { build } from '../build.ts'
 import { checkpoint } from '../checkpoint.ts'
-import { configPath, intentPath, stepPath } from '../../lib/sidecar.ts'
+import { intentPath, stepPath } from '../../lib/sidecar.ts'
+import { settingsPath } from '../../lib/settings.ts'
 import { headSha } from '../../lib/git.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo } from '../../../test/helpers/capture-io.ts'
@@ -30,7 +31,7 @@ function startedGreen(): string {
   const dir = makeTempRepo()
   captureIo(() => start(dir, ['Revert test']))
   writeFileSync(intentPath(dir), INTENT)
-  writeFileSync(configPath(dir), 'check=true\n')
+  writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true' }))
   return dir
 }
 

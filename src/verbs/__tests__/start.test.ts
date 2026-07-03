@@ -19,6 +19,18 @@ describe('start', () => {
     expect(stdout).toContain('started "My Feature"')
   })
 
+  it('scaffolds settings.json (not the retired config file) with check and auto keys', () => {
+    const dir = makeTempRepo()
+    captureIo(() => start(dir, ['My Feature']))
+    expect(existsSync(join(dir, '.plumbbob', 'config'))).toBe(false)
+    const settings = JSON.parse(readFileSync(join(dir, '.plumbbob', 'settings.json'), 'utf8')) as {
+      check: string
+      auto: boolean
+    }
+    expect(settings.check).toBe('pnpm run check')
+    expect(settings.auto).toBe(false)
+  })
+
   it('rejects an empty title', () => {
     const dir = makeTempRepo()
     const { code, stderr } = captureIo(() => start(dir, []))

@@ -4,7 +4,8 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { checkpoint } from '../checkpoint.ts'
 import { start } from '../start.ts'
-import { buildLogPath, checkpointsPath, configPath, hasSession, intentPath } from '../../lib/sidecar.ts'
+import { buildLogPath, checkpointsPath, hasSession, intentPath } from '../../lib/sidecar.ts'
+import { settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo } from '../../../test/helpers/capture-io.ts'
 
@@ -19,12 +20,12 @@ const INTENT = `# Checkpoint test
 `
 
 // A started session with one planned step and a green stub gate. The sidecar is
-// git-excluded, so overwriting intent/config does not dirty the tree.
+// git-excluded, so overwriting intent/settings does not dirty the tree.
 function startedGreen(): string {
   const dir = makeTempRepo()
   captureIo(() => start(dir, ['Checkpoint test']))
   writeFileSync(intentPath(dir), INTENT)
-  writeFileSync(configPath(dir), 'check=true\n')
+  writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true' }))
   return dir
 }
 
@@ -76,7 +77,7 @@ describe('checkpoint', () => {
 
   it('refuses on a red check', () => {
     const dir = startedGreen()
-    writeFileSync(configPath(dir), 'check=false\n')
+    writeFileSync(settingsPath(dir), JSON.stringify({ check: 'false' }))
     const { code, stderr } = captureIo(() => checkpoint(dir, ['1']))
     expect(code).toBe(1)
     expect(stderr).toContain('check failed')

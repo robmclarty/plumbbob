@@ -7,7 +7,6 @@ import {
   buildLogPath,
   checkpointsPath,
   clearSpike,
-  configPath,
   excludeSidecar,
   hasSession,
   inSpike,
@@ -30,7 +29,6 @@ describe('path helpers', () => {
     expect(stepPath(root)).toBe('/tmp/x/.plumbbob/STEP')
     expect(spikePath(root)).toBe('/tmp/x/.plumbbob/SPIKE')
     expect(checkpointsPath(root)).toBe('/tmp/x/.plumbbob/checkpoints')
-    expect(configPath(root)).toBe('/tmp/x/.plumbbob/config')
     expect(intentPath(root)).toBe('/tmp/x/.plumbbob/intent.md')
     expect(buildLogPath(root)).toBe('/tmp/x/.plumbbob/build-log.md')
   })
