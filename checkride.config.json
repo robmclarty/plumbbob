@@ -1,9 +1,17 @@
 {
   "checks": {
+    "types": "tsc",
     "lint": {
       "use": "oxlint",
       "args": ["exec", "oxlint", "--format=json"],
+      "fixArgs": ["exec", "oxlint", "--fix"],
       "description": "Oxlint (no type-aware pass — tsc already covers types)"
-    }
+    },
+    "struct": "ast-grep",
+    "dead": "fallow",
+    "test": "vitest",
+    "docs": "markdownlint-cli2",
+    "links": "links",
+    "spell": false
   }
 }
