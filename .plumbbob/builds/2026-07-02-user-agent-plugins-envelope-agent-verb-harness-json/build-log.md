@@ -60,3 +60,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-07-03 — step 3 checkpointed · e06c2cf1d — StepContext composition
 - 2026-07-03 — step 4 checkpointed · c6bb5ce3d — `plumbbob agent run <name> [--step N] [--mode before|build|after]`
 - 2026-07-03 — step 5 checkpointed · a8a7e77c0 — `harness.json` bindings
+- 2026-07-03 — step 6 checkpointed · 944deeb57 — Doctor validates agents; status reports bindings

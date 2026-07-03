@@ -254,7 +254,7 @@ distilled here so the build stands alone, pointer retained under ## Source.*
    name resolves the bound agent for the mode; tests cover per-step override of
    defaults, absent harness file (clean no-op), and the missing-agent warning
    - seam: `src/lib/agents.ts`, `src/verbs/agent.ts`, `src/verbs/__tests__/agent.test.ts`
-6. [ ] Doctor validates agents; status reports bindings — **done when:** `doctor`
+6. [x] Doctor validates agents; status reports bindings — **done when:** `doctor`
    walks every resolvable agent (project + personal) and flags a malformed
    `agent.json`, a missing/non-executable command, or an unsupported contract
    version (D19); `status` on an active build lists its harness bindings and
