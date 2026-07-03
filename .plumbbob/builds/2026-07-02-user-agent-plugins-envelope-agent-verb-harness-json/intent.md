@@ -222,7 +222,7 @@ distilled here so the build stands alone, pointer retained under ## Source.*
    for every resolvable agent; tests cover project-shadows-personal and an
    HOME-overridden personal library
    - seam: `src/lib/agents.ts`, `src/verbs/agent.ts`, `src/cli-core.ts`, `src/lib/__tests__/agents.test.ts`, `src/__tests__/cli-core.test.ts`
-3. [ ] StepContext composition — **done when:** the input JSON (contract, mode,
+3. [x] StepContext composition — **done when:** the input JSON (contract, mode,
    build slug/title, step n/title/doneWhen/seam, decisions[], constraints[],
    context[], settings) is composed deterministically from `intent.md` + settings;
    `intent.ts` gains a best-effort decisions/constraints/title/done-when scrape
