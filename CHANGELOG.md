@@ -5,6 +5,34 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-07-03
+
+- **Added:** the heavy check gate is now [checkride](https://www.npmjs.com/package/checkride),
+  imported programmatically as plumbbob's first (and only) runtime dependency: with no
+  `"check"` setting configured, `check` and `checkpoint` run checkride's slot pipeline
+  in-process, a red run names the failing slots with their `.check/<slot>` raw-output
+  pointers, and a run where every slot skipped refuses rather than passing vacuously.
+- **Added:** `plumbbob check` accepts checkride's narrowing flags — `--bail`,
+  `--changed`, `--all`, and the comma-list trio `--only` / `--skip` / `--include` — for
+  tight iteration loops; the checkpoint gate deliberately stays full-fat.
+- **Added:** `plumbbob doctor` grew a check-gate section: it names a configured
+  `"check"` override, or prints checkride's slot/adapter table (via its own doctor) so
+  a detected-but-missing tool is caught before the gate refuses at checkpoint time.
+- **Added:** a distinct exit code 2 for a broken gate — a malformed
+  `checkride.config.json` reports as a harness failure instead of masquerading as red
+  code, and checkpoint refuses on it with its own message.
+- **Changed:** the `"check"` setting is now the *override*, not the default: a
+  configured command is spawned exactly as before, and `start` seeds `settings.json`
+  as `{ "auto": false }` with no `check` key (absence means checkride), retiring the
+  old no-check-script warning in favour of the sharper runtime refusal.
+- **Changed:** the dependency doctrine (C2) is amended from "zero runtime
+  dependencies" to "node builtins plus a few deliberate dependencies", still
+  machine-enforced by an ast-grep allowlist; recorded as D32 with D24 amended.
+- **Changed:** plumbbob's own repo now gates through checkride end-to-end: knip is
+  retired in favour of fallow for the dead-code slot, markdownlint-cli is replaced by
+  markdownlint-cli2, the test suite runs through the vitest slot with coverage, and
+  the six `check:*` scripts collapse into a single `"check": "checkride"` alias.
+
 ## [0.5.0] - 2026-07-02
 
 - **Added:** a `plumbbob use <slug>` verb switches or resumes the active build,
