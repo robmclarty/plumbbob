@@ -55,3 +55,4 @@ you point at to say "I did that — the LLM helped, but those were my calls."
 `/pb-finish` reads this for the report; `plumbbob finish` commits it with the build
 folder, so it rides the branch into the PR.)*
 - 2026-07-03 — step 1 checkpointed · c0ce809f4 — Dependency doctrine + the checkride dependency
+- 2026-07-03 — step 2 checkpointed · 8a93c6e9c — The programmatic gate + async ripple

@@ -71,4 +71,30 @@ describe('check', () => {
     expect(code).toBe(1)
     expect(stderr).toContain('no active session')
   })
+
+  // D32 — the narrowing flags map onto checkride's RunFlags end-to-end: a red
+  // custom check disappears from the run under `--only <the green one>`.
+  it('narrows the checkride run with --only', async () => {
+    const dir = makeTempRepo()
+    captureIo(() => start(dir, ['Checking']))
+    writeFileSync(settingsPath(dir), JSON.stringify({ auto: false }))
+    const config = {
+      checks: {
+        good: { command: 'node', args: ['-e', 'process.exit(0)'] },
+        bad: { command: 'node', args: ['-e', 'process.exit(1)'] },
+      },
+    }
+    writeFileSync(join(dir, 'checkride.config.json'), JSON.stringify(config))
+    expect((await captureIoAsync(() => check(dir))).code).toBe(1) // full run is red
+    const { code, stdout } = await captureIoAsync(() => check(dir, ['--only', 'good']))
+    expect(code).toBe(0)
+    expect(stdout).toContain('check green')
+  })
+
+  it('warns and ignores narrowing flags on the spawn-override path', async () => {
+    const dir = startedWithCheck('true')
+    const { code, stderr } = await captureIoAsync(() => check(dir, ['--bail', '--only', 'types']))
+    expect(code).toBe(0)
+    expect(stderr).toContain('ignored for the configured command')
+  })
 })

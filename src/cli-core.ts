@@ -28,7 +28,7 @@ const VERBS: ReadonlyArray<Verb> = [
   { name: 'start', summary: 'scaffold .plumbbob/; open the session; record the baseline commit' },
   { name: 'status', summary: 'print the orientation dashboard, or NO ACTIVE SESSION' },
   { name: 'build', summary: 'build <n>: write the seam from step n (in-flight, not a lock)' },
-  { name: 'check', summary: 'run the heavy check and report; no state change' },
+  { name: 'check', summary: 'run the heavy check and report; no state change (--bail --only a,b … narrow the checkride gate)' },
   { name: 'checkpoint', summary: 'checkpoint [<n>]: gate on green, commit/record SHA, mark step done (executor-agnostic)' },
   { name: 'revert', summary: 'revert [--to n]: git reset --hard to a checkpoint SHA' },
   { name: 'park', summary: 'park "<text>": append a raw line to the park list' },
@@ -79,7 +79,7 @@ async function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>):
     case 'build':
       return build(cwd, rest)
     case 'check':
-      return check(cwd)
+      return check(cwd, rest)
     case 'checkpoint':
       return checkpoint(cwd, rest)
     case 'revert':

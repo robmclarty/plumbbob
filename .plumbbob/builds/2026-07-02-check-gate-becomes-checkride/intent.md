@@ -114,7 +114,7 @@ dogfood (this repo): settings.json drops "check" → gate is checkride
    amended per D2; stale "zero runtime deps" comments in `src/cli-core.ts` and
    `src/lib/settings.ts` follow suit; suite green
    - seam: `package.json`, `pnpm-lock.yaml`, `docs/decisions.md`, `src/cli-core.ts`, `src/lib/settings.ts`
-2. [ ] The programmatic gate + async ripple — **done when:** `runCheck` is async
+2. [x] The programmatic gate + async ripple — **done when:** `runCheck` is async
    and routes per D3 (absent → `runChecks`, present → today's spawn); the
    vacuous-green refusal (D4), exit-2 distinction (D5), and failing-slot report
    land; `check`/`checkpoint` verbs, `dispatch`, `run`, and `cli.ts` are async;
