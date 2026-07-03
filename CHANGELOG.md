@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] - 2026-07-03
+
+- **Added:** `examples/rate-limit-the-login-endpoint/` — a complete, curated build
+  folder as it would sit on a branch after `/pb-finish` (intent, build-log with a real
+  park/harvest arc, checkpoints, report), with a README walking the artifacts and the
+  commit log they produce, so new users can pattern-match the loop's output before
+  running it.
+- **Added:** `docs/architecture.md` (an explicit in-progress stub), `docs/faq.md`,
+  `docs/skills-reference.md`, and `SECURITY.md`, plus a question-oriented documentation
+  map in the README that links them.
+- **Changed:** the docs now reflect the tracked `builds/<slug>/` restructure throughout
+  — intent and the control files live under `.plumbbob/builds/<slug>/` rather than a flat
+  `.plumbbob/` sidecar, checkride is documented as the CLI's one deliberate dependency,
+  and `revert` is described as snapshotting the tracked build folder around its reset.
+- **Changed:** renumbered the design-decision tags so the source comments align with
+  `docs/decisions.md` — the worktree-restructure build's build-local `D#` citations were
+  moved onto six new global entries (D33–D38) or onto the existing global entry that
+  already covered the same idea, resolving the collisions the previous key documented.
+- **Fixed:** a stale `.plumbbob/SEAM` path reference in `templates/intent.md` left over
+  from before the restructure.
+
 ## [0.5.2] - 2026-07-03
 
 - **Added:** a `mutation` slot to the checkride gate, wired to Stryker as an opt-in
