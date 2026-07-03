@@ -5,6 +5,7 @@ import {
   CONTRACT_VERSION,
   ENVELOPE_STATUSES,
   SLOTS,
+  composeStepContext,
   formatAgentList,
   isSlot,
   listAgents,
@@ -210,6 +211,89 @@ describe('parseEnvelope', () => {
     if (result.ok) return
     expect(result.error).toMatch(/contract/)
     expect(result.error).toMatch(/envelope is only stable within a major/)
+  })
+})
+
+describe('composeStepContext', () => {
+  const intent = [
+    '# Rate-limit the login endpoint',
+    '',
+    '## Frame',
+    '',
+    'stuff',
+    '',
+    '## Decisions',
+    '',
+    '- D1: use a token bucket — *because* it smooths bursts',
+    '  and is cheap to reason about',
+    '- D2: keep the limit in settings',
+    '',
+    '## Constraints',
+    '',
+    '- C1: node builtins only',
+    '',
+    '## Steps',
+    '',
+    '1. [ ] The limiter — **done when:** requests over the cap get a 429',
+    '   - seam: `src/limiter.ts`, `src/limiter.test.ts`',
+    '2. [ ] Wire it in — **done when:** the route uses it',
+    '   - seam: `src/route.ts`',
+  ].join('\n')
+
+  it('composes the whole input JSON deterministically from intent + settings', () => {
+    const result = composeStepContext({
+      intent,
+      slug: '2026-07-03-rate-limit-the-login-endpoint',
+      step: 1,
+      mode: 'build',
+      context: ['a before-agent said hello'],
+      settings: { agentTimeout: 30 },
+    })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.warnings).toEqual([])
+    expect(result.input).toEqual({
+      contract: CONTRACT_VERSION,
+      mode: 'build',
+      build: { slug: '2026-07-03-rate-limit-the-login-endpoint', title: 'Rate-limit the login endpoint' },
+      step: {
+        n: 1,
+        title: 'The limiter',
+        doneWhen: 'requests over the cap get a 429',
+        seam: ['src/limiter.ts', 'src/limiter.test.ts'],
+      },
+      decisions: ['D1: use a token bucket — *because* it smooths bursts and is cheap to reason about', 'D2: keep the limit in settings'],
+      constraints: ['C1: node builtins only'],
+      context: ['a before-agent said hello'],
+      settings: { agentTimeout: 30 },
+    })
+  })
+
+  it('defaults context and settings to empty', () => {
+    const result = composeStepContext({ intent, slug: 'slug', step: 2, mode: 'after' })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.input.context).toEqual([])
+    expect(result.input.settings).toEqual({})
+    expect(result.input.step.title).toBe('Wire it in')
+  })
+
+  it('surfaces a malformed bullet as a warning without dropping the good decisions', () => {
+    const malformed = intent.replace('- D2: keep the limit in settings', 'D2 lost its dash')
+    const result = composeStepContext({ intent: malformed, slug: 'slug', step: 1, mode: 'build' })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.input.decisions).toEqual(['D1: use a token bucket — *because* it smooths bursts and is cheap to reason about'])
+    expect(result.warnings).toHaveLength(1)
+    expect(result.warnings[0]).toMatch(/## Decisions/)
+    expect(result.warnings[0]).toMatch(/D2 lost its dash/)
+  })
+
+  it('fails loud when the step seam cannot be parsed (strict half)', () => {
+    const result = composeStepContext({ intent, slug: 'slug', step: 9, mode: 'build' })
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error).toMatch(/no step 9/)
   })
 })
 

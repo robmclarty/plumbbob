@@ -12,6 +12,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { parseBuildTitle, parseStepMeta, parseStepSeam, scrapeBullets } from './intent.ts'
 
 // The contract major version this plumbbob speaks. A manifest or envelope
 // declaring a different major is refused (D8): within a major the envelope only
@@ -378,4 +379,80 @@ function agentDirNames(dir: string): string[] {
   } catch {
     return []
   }
+}
+
+// --- step context (D15/D23) ---
+
+// The input JSON a child agent reads on stdin — the whole picture of the step it
+// runs against, composed deterministically from intent.md + settings. `mode` is
+// the slot being run; `context[]` carries before-slot outputs inline (D15);
+// `settings` is plumbbob's own relevant settings (never a provider key — D9). The
+// step's `seam` is parsed strictly (it gates git behavior); the title/done-when/
+// decisions/constraints are best-effort prose (D23).
+export type StepContext = {
+  readonly contract: number
+  readonly mode: Slot
+  readonly build: { readonly slug: string; readonly title: string }
+  readonly step: {
+    readonly n: number
+    readonly title: string
+    readonly doneWhen: string
+    readonly seam: ReadonlyArray<string>
+  }
+  readonly decisions: ReadonlyArray<string>
+  readonly constraints: ReadonlyArray<string>
+  readonly context: ReadonlyArray<string>
+  readonly settings: Record<string, unknown>
+}
+
+export type StepContextResult =
+  | { readonly ok: true; readonly input: StepContext; readonly warnings: ReadonlyArray<string> }
+  | { readonly ok: false; readonly error: string }
+
+// Compose the StepContext for one step. The strict seam parse is the only refusal
+// path — a missing step or unparseable seam gates git behavior, so it fails loud;
+// everything else is best-effort and lands whatever it can, returning `warnings`
+// (skipped-bullet lines) for the caller to print on stderr rather than writing
+// there itself (this module stays pure — the verb does the IO).
+export function composeStepContext(params: {
+  readonly intent: string
+  readonly slug: string
+  readonly step: number
+  readonly mode: Slot
+  readonly context?: ReadonlyArray<string>
+  readonly settings?: Record<string, unknown>
+}): StepContextResult {
+  const seam = parseStepSeam(params.intent, params.step)
+  if (!seam.ok) {
+    return { ok: false, error: seam.error }
+  }
+
+  const meta = parseStepMeta(params.intent, params.step)
+  const decisions = scrapeBullets(params.intent, '## Decisions')
+  const constraints = scrapeBullets(params.intent, '## Constraints')
+  const warnings = [
+    ...skipWarnings('## Decisions', decisions.skipped),
+    ...skipWarnings('## Constraints', constraints.skipped),
+  ]
+
+  return {
+    ok: true,
+    input: {
+      contract: CONTRACT_VERSION,
+      mode: params.mode,
+      build: { slug: params.slug, title: parseBuildTitle(params.intent) },
+      step: { n: params.step, title: meta.title, doneWhen: meta.doneWhen, seam: seam.seam },
+      decisions: decisions.items,
+      constraints: constraints.items,
+      context: params.context ?? [],
+      settings: params.settings ?? {},
+    },
+    warnings,
+  }
+}
+
+function skipWarnings(heading: string, skipped: ReadonlyArray<string>): string[] {
+  return skipped.map(
+    (line) => `intent.md: skipped a non-bullet line under ${heading} — ${JSON.stringify(line.trim())}`,
+  )
 }

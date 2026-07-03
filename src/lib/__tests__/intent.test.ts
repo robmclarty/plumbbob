@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { matchesSeam, parseStepSeam } from '../intent.ts'
+import { matchesSeam, parseBuildTitle, parseStepMeta, parseStepSeam, scrapeBullets } from '../intent.ts'
 
 function intentWith(stepsBody: string): string {
   return `# Title\n\n## Frame\n\nstuff\n\n## Steps\n\n${stepsBody}\n\n## Open questions\n\n- none\n`
@@ -81,6 +81,95 @@ describe('parseStepSeam', () => {
     const r = parseStepSeam('# Title\n\nno steps here\n', 1)
     expect(r.ok).toBe(false)
     expect(!r.ok && r.error).toContain('## Steps')
+  })
+})
+
+describe('parseBuildTitle', () => {
+  it('returns the first `# ` heading', () => {
+    expect(parseBuildTitle('<!-- a comment -->\n\n# My Build — with an em dash\n\n## Frame\n')).toBe(
+      'My Build — with an em dash',
+    )
+  })
+
+  it('is empty when there is no heading', () => {
+    expect(parseBuildTitle('no heading here\n## Frame\n')).toBe('')
+  })
+})
+
+describe('parseStepMeta', () => {
+  it('splits the title and done-when of a step', () => {
+    const intent = intentWith(['1. [ ] First thing — **done when:** it works', '   - seam: `a.ts`'].join('\n'))
+    expect(parseStepMeta(intent, 1)).toEqual({ title: 'First thing', doneWhen: 'it works' })
+  })
+
+  it('joins a wrapped done-when up to the seam sub-bullet', () => {
+    const intent = intentWith(
+      [
+        '1. [ ] Big step — **done when:** the input JSON is composed',
+        '   from intent.md and settings, warnings surfaced',
+        '   - seam: `a.ts`',
+      ].join('\n'),
+    )
+    expect(parseStepMeta(intent, 1)).toEqual({
+      title: 'Big step',
+      doneWhen: 'the input JSON is composed from intent.md and settings, warnings surfaced',
+    })
+  })
+
+  it('handles a checked box and returns empty strings for an unparseable step', () => {
+    const intent = intentWith(['1. [x] Done step — **done when:** shipped', '   - seam: `a.ts`'].join('\n'))
+    expect(parseStepMeta(intent, 1).title).toBe('Done step')
+    expect(parseStepMeta(intent, 9)).toEqual({ title: '', doneWhen: '' })
+  })
+
+  it('reads a title-only step with no done-when marker', () => {
+    const intent = intentWith(['1. [ ] Just a title', '   - seam: `a.ts`'].join('\n'))
+    expect(parseStepMeta(intent, 1)).toEqual({ title: 'Just a title', doneWhen: '' })
+  })
+})
+
+describe('scrapeBullets', () => {
+  const doc = [
+    '# Title',
+    '',
+    '## Decisions',
+    '',
+    '- D1: first decision — *because* reasons',
+    '  that wrap onto a second line',
+    '- D2: second decision',
+    '',
+    '## Constraints',
+    '',
+    '- C1: a lone constraint',
+    '',
+    '## Steps',
+    '',
+    '1. [ ] Step',
+    '   - seam: `a.ts`',
+  ].join('\n')
+
+  it('joins wrapped continuation lines into one verbatim bullet', () => {
+    const { items, skipped } = scrapeBullets(doc, '## Decisions')
+    expect(items).toEqual([
+      'D1: first decision — *because* reasons that wrap onto a second line',
+      'D2: second decision',
+    ])
+    expect(skipped).toEqual([])
+  })
+
+  it('scopes to the named heading', () => {
+    expect(scrapeBullets(doc, '## Constraints').items).toEqual(['C1: a lone constraint'])
+  })
+
+  it('is empty when the heading is absent', () => {
+    expect(scrapeBullets(doc, '## Nope')).toEqual({ items: [], skipped: [] })
+  })
+
+  it('reports a malformed (non-bullet, non-indented) line as skipped without dropping the good bullets', () => {
+    const malformed = ['## Decisions', '', '- D1: fine', 'D2 forgot its dash', '- D3: fine again', ''].join('\n')
+    const { items, skipped } = scrapeBullets(malformed, '## Decisions')
+    expect(items).toEqual(['D1: fine', 'D3: fine again'])
+    expect(skipped).toEqual(['D2 forgot its dash'])
   })
 })
 
