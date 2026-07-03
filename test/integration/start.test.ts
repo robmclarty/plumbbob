@@ -35,8 +35,9 @@ describe('plumbbob start', () => {
     // The derived slug is date-prefixed so builds/ sorts chronologically.
     const builds = readdirSync(join(dir, '.plumbbob', 'builds'))
     expect(builds).toHaveLength(1)
-    expect(builds[0]).toMatch(/^\d{4}-\d{2}-\d{2}-my-change$/)
-    expect(existsSync(join(dir, '.plumbbob', 'builds', builds[0], 'intent.md'))).toBe(true)
+    const slug = builds[0] ?? ''
+    expect(slug).toMatch(/^\d{4}-\d{2}-\d{2}-my-change$/)
+    expect(existsSync(join(dir, '.plumbbob', 'builds', slug, 'intent.md'))).toBe(true)
     expect(readSidecar(dir, 'checkpoints').split('\n')[0]).toBe(`baseline ${headSha(dir)}`)
     expect(JSON.parse(readSidecar(dir, 'settings.json'))).toEqual({ auto: false }) // no check key — absence means checkride (D32)
 
