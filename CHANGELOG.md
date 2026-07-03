@@ -5,6 +5,61 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-07-02
+
+- **Added:** a `plumbbob use <slug>` verb switches or resumes the active build,
+  re-pointing the per-worktree cursor after validating the target folder's `intent.md`
+  and warning (without blocking) if the build being left has a step in flight.
+- **Added:** `plumbbob doctor --migrate` detects a pre-restructure flat sidecar
+  (`config`, `archive/`, or a flat active session) and moves it into the tracked
+  `builds/<slug>/` layout — archived builds and the active session each become their
+  own folder, `config` becomes `settings.json`, and the whole move is staged but never
+  committed, leaving that commit to the human.
+- **Changed:** the sidecar is now split into a tracked artifact plane and an untracked
+  control plane. `plumbbob start` scaffolds `.plumbbob/builds/<slug>/` (intent,
+  build-log, checkpoints) and points a new `activeBuild` cursor in
+  `settings.local.json` at it, so a build's record rides the branch into its pull
+  request instead of dying with `git worktree remove`. `--local` opts back into
+  today's fully untracked layout for repos that cannot track tool folders.
+- **Changed:** every verb resolves its target build through one seam — an explicit
+  `--build <slug>` flag, else the `activeBuild` cursor, else the sole entry in
+  `builds/`, else a refusal with a hint — and the post-edit hook follows suit by
+  reading the cursor out of `settings.local.json` instead of probing a single
+  `STATE` file.
+- **Changed:** `.plumbbob/config` is replaced by a settings ladder (flag →
+  `settings.local.json` → `settings.json` → built-in default), the same resolution
+  order used elsewhere in the project; the `check` command and the `auto` preference
+  are now documented keys instead of a bespoke flat-file format.
+- **Changed:** checkpoint commits are self-describing. The subject is
+  `plumbbob: step N — <title>` instead of `plumbbob: step N done`, and a new
+  `--body` flag accepts a piped-in heredoc for a proportional, skill-composed body;
+  without `--body`, the commit falls back to a deterministic body of done-when, seam,
+  and diffstat.
+- **Added:** plan approval gets its own commit. `plumbbob checkpoint --plan` stages
+  only the active build's folder and commits it as `plumbbob: plan — <title>`, so the
+  first step's diff no longer absorbs the plan scaffold, and history reads baseline →
+  plan → steps → finish.
+- **Changed:** `revert` snapshots and restores the active build's tracked folder
+  around a `git reset --hard`, so park lines and in-flight markers survive a revert to
+  any checkpoint, including one where the build folder did not yet exist. `checkpoint`
+  gained the equivalent scope-drift warning ported from the old `done` verb, adjusted
+  to never flag a build's own tracked artifacts.
+- **Changed:** `wrap` is renamed `finish` and gutted to what the tracked layout
+  needs — append checkpoint SHAs to the report, commit as `plumbbob: finish — <title>`,
+  and clear only the untracked control state. A finished build's folder stays in place
+  and committed, since it now is the archive; the old local-only `archive/` copy and
+  its supporting code are removed, with no compatibility alias for `wrap`.
+- **Fixed:** `start` no longer crashes inside a linked git worktree. Excludes are now
+  written via `git rev-parse --git-path info/exclude` (the common gitdir git actually
+  reads) instead of the per-worktree gitdir, which has no `info/` directory at all.
+- **Fixed:** this repository's own `.plumbbob/` sidecar is migrated to the new tracked
+  layout, and the previously blanket `.plumbbob/` line in `.gitignore` is narrowed to
+  the same control-plane patterns the exclude migration writes, so `builds/<slug>/`
+  artifacts can actually be staged.
+- **Changed:** `decisions.md`, `README.md`, `cli-reference.md`, `happy-path.md`,
+  `techniques.md`, and `troubleshooting.md` are brought current with the new layout,
+  the settings ladder, and the `finish`/`use`/`doctor --migrate` verbs.
+
 ## [0.4.14] - 2026-06-30
 
 - **Changed:** the marketplace install instructions now point at the real
