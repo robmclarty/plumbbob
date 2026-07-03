@@ -3,6 +3,7 @@
 // footprint is additive (C5); these helpers only read and locate.
 
 import { execFileSync } from 'node:child_process'
+import { isAbsolute, join } from 'node:path'
 
 function runGit(root: string, args: ReadonlyArray<string>): string {
   return execFileSync('git', ['-C', root, ...args], {
@@ -20,9 +21,13 @@ export function findRepoRoot(cwd: string): string | null {
   }
 }
 
-// Absolute path to the .git directory (handles worktrees/linked git dirs).
-export function gitDir(root: string): string {
-  return runGit(root, ['rev-parse', '--absolute-git-dir'])
+// Absolute path to a file inside the repo's *common* git dir. `--git-path` maps
+// common-dir entries like `info/exclude` to the shared file even from a linked
+// worktree, whose per-worktree gitdir has no `info/` and which git never reads
+// for excludes (D1). The result is relative to `root` unless already absolute.
+export function gitPath(root: string, relative: string): string {
+  const out = runGit(root, ['rev-parse', '--git-path', relative])
+  return isAbsolute(out) ? out : join(root, out)
 }
 
 export function headSha(root: string): string {

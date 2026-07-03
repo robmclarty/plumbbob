@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { mkdirSync, readFileSync, realpathSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
@@ -17,7 +18,7 @@ import {
   spikePath,
   stepPath,
 } from '../sidecar.ts'
-import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
+import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 
 afterAll(cleanupTempRepos)
 
@@ -65,5 +66,18 @@ describe('excludeSidecar', () => {
     const exclude = readFileSync(join(realpathSync(dir), '.git', 'info', 'exclude'), 'utf8')
     const hits = exclude.split('\n').filter((line) => line.trim() === '.plumbbob/').length
     expect(hits).toBe(1)
+  })
+
+  it('from a linked worktree, writes to the common gitdir exclude git actually reads (D1)', () => {
+    const main = makeTempRepo()
+    const wt = join(makeTempDir(), 'wt')
+    execFileSync('git', ['-C', main, 'worktree', 'add', '-q', wt, '-b', 'wt-sidecar'])
+
+    excludeSidecar(wt)
+
+    // Lands in the common gitdir's exclude — the only file git reads — not the
+    // per-worktree gitdir, whose missing info/ was the ENOENT crash this fixes.
+    const commonExclude = readFileSync(join(realpathSync(main), '.git', 'info', 'exclude'), 'utf8')
+    expect(commonExclude.split('\n')).toContain('.plumbbob/')
   })
 })

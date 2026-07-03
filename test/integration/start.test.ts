@@ -37,6 +37,25 @@ describe('plumbbob start', () => {
     expect(porcelain).not.toContain('.plumbbob')
   })
 
+  it('runs inside a linked worktree: excludes the sidecar via the common gitdir (D1)', () => {
+    const main = makeFixtureRepo()
+    const wt = join(main, 'wt')
+    execFileSync('git', ['-C', main, 'worktree', 'add', '-q', wt, '-b', 'wt-branch'])
+
+    const result = runCli(wt, ['start', 'Worktree change'])
+    expect(result.status).toBe(0)
+    expect(sidecarExists(wt, 'STATE')).toBe(true)
+
+    // The exclude line lands in the common gitdir's info/exclude — the file git
+    // reads — not the per-worktree gitdir, whose absent info/ was the crash.
+    const commonExclude = readFileSync(join(main, '.git', 'info', 'exclude'), 'utf8')
+    expect(commonExclude.split('\n')).toContain('.plumbbob/')
+
+    // And the worktree's own tree stays clean, proving the exclude took effect.
+    const porcelain = execFileSync('git', ['-C', wt, 'status', '--porcelain'], { encoding: 'utf8' })
+    expect(porcelain).not.toContain('.plumbbob')
+  })
+
   it('refuses on a dirty tree, but --allow-dirty records HEAD with a warning', () => {
     const dir = makeFixtureRepo({ dirty: true })
 

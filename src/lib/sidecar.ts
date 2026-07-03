@@ -7,9 +7,9 @@
 // SPIKE) is derived, not stored — BUILD ⇔ a STEP is in flight, SPIKE ⇔ the SPIKE
 // marker is present, otherwise DESIGN.
 
-import { existsSync, readFileSync, writeFileSync, appendFileSync, rmSync } from 'node:fs'
-import { join } from 'node:path'
-import { gitDir } from './git.ts'
+import { existsSync, readFileSync, writeFileSync, appendFileSync, rmSync, mkdirSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { gitPath } from './git.ts'
 
 const DIRNAME = '.plumbbob'
 
@@ -79,9 +79,13 @@ export function clearSpike(root: string): void {
 }
 
 // D17: keep the sidecar untracked by appending `.plumbbob/` to the repo's
-// git/info/exclude. Idempotent — a re-`start` after finish must not double-add.
+// info/exclude. `gitPath` resolves to the *common* gitdir's exclude — the only
+// one git reads — so this works from a linked worktree, whose per-worktree
+// gitdir has no `info/` (D1). Idempotent — a re-`start` after finish must not
+// double-add.
 export function excludeSidecar(root: string): void {
-  const exclude = join(gitDir(root), 'info', 'exclude')
+  const exclude = gitPath(root, 'info/exclude')
+  mkdirSync(dirname(exclude), { recursive: true })
   let current = ''
   try {
     current = readFileSync(exclude, 'utf8')

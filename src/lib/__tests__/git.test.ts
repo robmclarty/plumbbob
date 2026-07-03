@@ -1,10 +1,11 @@
+import { execFileSync } from 'node:child_process'
 import { readFileSync, realpathSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import {
   commit,
   findRepoRoot,
-  gitDir,
+  gitPath,
   hasCommit,
   headSha,
   isDirty,
@@ -27,10 +28,21 @@ describe('findRepoRoot', () => {
   })
 })
 
-describe('gitDir', () => {
-  it('points at the repo .git directory', () => {
+describe('gitPath', () => {
+  it('resolves a common-dir entry to an absolute path under .git', () => {
     const dir = makeTempRepo()
-    expect(gitDir(dir)).toBe(join(realpathSync(dir), '.git'))
+    // `--git-path` returns a path relative to `root`, joined onto the caller's
+    // `root` verbatim (not canonicalized), so compare against `dir` as passed.
+    expect(gitPath(dir, 'info/exclude')).toBe(join(dir, '.git', 'info', 'exclude'))
+  })
+
+  it('resolves common-dir entries to the shared gitdir from a linked worktree (D1)', () => {
+    const main = makeTempRepo()
+    const wt = join(makeTempDir(), 'wt')
+    execFileSync('git', ['-C', main, 'worktree', 'add', '-q', wt, '-b', 'wt-branch'])
+    // From the linked worktree, info/exclude must still point at the common gitdir,
+    // not the per-worktree gitdir (which has no info/).
+    expect(gitPath(wt, 'info/exclude')).toBe(join(realpathSync(main), '.git', 'info', 'exclude'))
   })
 })
 
