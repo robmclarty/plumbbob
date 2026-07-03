@@ -72,6 +72,15 @@ across `npm i -g plumbbob@latest`, but the running editor still caches the plugi
 
 ## Sessions and state
 
+### An older repo has a flat `.plumbbob/` (a `config` file or `archive/` folder)
+
+**Cause.** The repo was scaffolded by a pre-restructure plumbbob, before builds got their own
+tracked `builds/<slug>/` folders. **Fix.** Run `plumbbob doctor` inside the repo — it detects
+the legacy flat sidecar and offers the move. `plumbbob doctor --migrate` relocates the archive
+entries and the active session into `builds/<slug>/`, turns `config` into `settings.json`, and
+**stages** the whole move without committing (**D31**). Review it with `git status` and make
+the commit yourself.
+
 ### `status` shows `NO ACTIVE SESSION`
 
 **Cause.** There is no `.plumbbob/STATE` in this repo — install scope is not session scope.
@@ -92,7 +101,7 @@ baseline — but a later revert-to-baseline will then discard the uncommitted wo
 ### `start` refuses with "a session is already active here"
 
 **Cause.** A `.plumbbob/` session already exists in this repo. **Fix.** Close it with
-`/pb-wrap` before starting another, or continue the existing one (`/pb-status`).
+`/pb-finish` before starting another, or continue the existing one (`/pb-status`).
 
 ### `/pb-park` or `/pb-harvest` refuses
 
@@ -112,8 +121,9 @@ nothing to approve until it is green.
 ### The heavy check runs the wrong command (or fails in a non-pnpm repo)
 
 **Cause.** `start` defaults the gate to `pnpm run check` (**D24**) and warns when the repo
-has no such script. **Fix.** Edit `.plumbbob/config` and set `check=<your command>` (e.g.
-`check=npm test`). The command is run in the repo root via a shell.
+has no such script. **Fix.** Set the `"check"` key in `.plumbbob/settings.json` to your
+command (e.g. `"check": "npm test"`), or override it per-worktree in `settings.local.json`
+(**D27**). The command is run in the repo root via a shell.
 
 ### `build` refuses with "build needs a step number" or a seam error
 

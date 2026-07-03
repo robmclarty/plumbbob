@@ -222,9 +222,10 @@ The checks come in two tiers with different jobs:
   the light tier *serves the model*. It is session-gated: a repo with no `.plumbbob/STATE`
   behaves like plain Claude Code.
 - **Heavy** — the full project check (in this repo, `pnpm check`: tsc, oxlint, ast-grep,
-  vitest, knip, markdownlint), configurable per repo in `.plumbbob/config`. It is **not** a
-  hook; it runs *inside* the verify tick, which refuses to checkpoint while it is red. The
-  hard gate lives on the deliberate boundary, not on every keystroke.
+  vitest, knip, markdownlint), configurable per repo via the `"check"` key in
+  `.plumbbob/settings.json`. It is **not** a hook; it runs *inside* the verify tick, which
+  refuses to checkpoint while it is red. The hard gate lives on the deliberate boundary, not
+  on every keystroke.
 
 ## Calibration — size the process to the work
 
@@ -238,15 +239,16 @@ much a task deserves is itself the skill; when in doubt, smaller.
 - **Large or architectural** — out of scope for PlumbBob; that is a job for a fully
   autonomous build.
 
-## Wrap — close out without ceremony
+## Finish — close out without ceremony
 
-When the goal is done, `/pb-wrap` ends the build. It writes a `report.md` **by
+When the goal is done, `/pb-finish` ends the build. It writes a `report.md` **by
 default** — what shipped, the decisions and why, what was parked and how it was classified,
 the final status, and the deferred tangents that become future work — but there is **no
 refuse-without-report gate**; guidance offers the artifact, it does not wall the exit. Then
-`plumbbob wrap` archives `intent.md`, `build-log.md`, and `report.md` into a dated folder
-under `.plumbbob/archive/` and clears the sidecar for the next goal. **Archive-then-clear,
-never destroy** — and git is never touched.
+`plumbbob finish` appends the checkpoint SHAs to the report, makes the final commit (subject
+`plumbbob: finish — <title>`), and clears the control state. There is **no separate archive
+copy** — the build's `builds/<slug>/` folder is tracked, so it merges into `main` with the
+branch and rides into the PR (the local-only `.plumbbob/archive/` retired).
 
 ## Where each technique lives
 
@@ -266,7 +268,8 @@ every move and `/pb-status` always names the next one.
 | Triage parked ideas | `/pb-harvest` | — (edits markdown) | `build-log.md` Harvest |
 | Experiment on a fork | `/pb-spike` | `plumbbob spike` | worktrees, `SPIKE` marker |
 | Undo a step | `/pb-revert` | `plumbbob revert` | `git reset`, `checkpoints` |
-| Close out the goal | `/pb-wrap` | `plumbbob wrap` | `.plumbbob/archive/` |
+| Switch or resume a build | — (CLI verb) | `plumbbob use` | `activeBuild` cursor |
+| Close out the goal | `/pb-finish` | `plumbbob finish` | `builds/<slug>/report.md` |
 
 ---
 

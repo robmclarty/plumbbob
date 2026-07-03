@@ -17,35 +17,43 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 
 | Verb | Synopsis | Effect |
 |------|----------|--------|
-| `start` | `start <title> [--allow-dirty]` | scaffold `.plumbbob/`, record baseline, open the session |
+| `start` | `start <title> [--slug <name>] [--local] [--allow-dirty]` | scaffold `builds/<slug>/`, record baseline, open the session |
 | `status` | `status` | print the orientation dashboard (or `NO ACTIVE SESSION`) |
 | `build` | `build <n>` | write step `n`'s seam + `STEP` (goes in-flight) |
 | `check` | `check` | run the heavy gate; no state change |
-| `checkpoint` | `checkpoint [<n>] [-m <msg>]` | gate on green, commit, record SHA, mark step done |
+| `checkpoint` | `checkpoint [<n>] [--plan] [--body <<'BODY'…]` | gate on green, commit, record SHA, mark step done |
 | `revert` | `revert [--to <n>]` | `git reset --hard` to a checkpoint SHA |
 | `park` | `park <text>` | append a line to the park list |
 | `spike` | `spike <slug> [opt…]` \| `spike done` | throwaway worktree experiment |
-| `wrap` | `wrap` | archive intent + log + report, clear the sidecar |
+| `use` | `use <slug>` | re-point the active-build cursor and resume that build |
+| `finish` | `finish` | write the report, make the final commit, close the session |
 | `init` | `init [--uninstall] [--force]` | link plumbbob into Claude Code as the skills-dir plugin |
-| `doctor` | `doctor` | diagnose the plugin link |
+| `doctor` | `doctor [--migrate]` | diagnose the plugin link; migrate a legacy flat sidecar |
 | `help` | `help` \| `--help` \| `-h` | print the verb table |
 | `version` | `version` \| `--version` \| `-v` | print the CLI version |
+
+Every session verb accepts `--build <slug>` to target a specific build; without it, the verb
+resolves the active build from the cursor (**D28**, see [the layout](#the-plumbbob-sidecar)).
 
 ## Session verbs
 
 ### start
 
 ```text
-plumbbob start "<title>" [--allow-dirty]
+plumbbob start "<title>" [--slug <name>] [--local] [--allow-dirty]
 ```
 
-Scaffolds the `.plumbbob/` sidecar, records the baseline `HEAD`, and opens the session. It
-writes `STATE` (the session sentinel), `checkpoints` (`baseline <sha>`), `config`
-(`check=…`), `intent.md`, and `build-log.md`, and appends `.plumbbob/` to the repo's
-`info/exclude` (**D17**). Refuses
-(exit 1) on an empty title, a non-git directory, a repo with no commits, an already-active
-session, or a dirty tree — `--allow-dirty` overrides the dirty-tree refusal and records the
-current `HEAD` as the baseline (**D22**).
+Scaffolds the sidecar, records the baseline `HEAD`, and opens the session. By default it
+plants a tracked build folder at `.plumbbob/builds/<slug>/` — the slug derived from the title
+(override with `--slug`) — holding `intent.md`, `build-log.md`, and `checkpoints`
+(`baseline <sha>`); it writes the tracked `settings.json` (`check`, `auto`) and the untracked
+`STATE` sentinel, points the `activeBuild` cursor at the new build (**D28**), and narrows the
+repo's `info/exclude` to the control-plane patterns (**D17**/**D26**). `--local` opts out into
+the old fully-untracked flat layout — everything under `.plumbbob/` excluded (**D26**).
+Refuses (exit 1) on an empty title, a slug that collides with an existing build, a non-git
+directory, a repo with no commits, an already-active session, or a dirty tree —
+`--allow-dirty` overrides the dirty-tree refusal and records the current `HEAD` as the
+baseline (**D22**).
 
 ### status
 
@@ -76,22 +84,29 @@ paths or `dir/` grants, never globs — **D23**).
 plumbbob check
 ```
 
-Runs the heavy gate — the command in `.plumbbob/config` (`check=`, default `pnpm run
-check`) — streaming its output, with **no** state change (**D16** / **D24**). Exits with
-the check's own code (0 = green). Refuses (exit 1) with no session.
+Runs the heavy gate — the `check` command resolved through the settings ladder
+(`settings.local.json` → `settings.json` → `pnpm run check`, **D27**) — streaming its output,
+with **no** state change (**D16** / **D24**). Exits with the check's own code (0 = green).
+Refuses (exit 1) with no session.
 
 ### checkpoint
 
 ```text
-plumbbob checkpoint [<n>] [-m "<message>"]
+plumbbob checkpoint [<n>] [--body <<'BODY' … BODY]
+plumbbob checkpoint --plan  [--body …]
 ```
 
 The executor-agnostic commit tick (**D3**). Resolves the step — explicit `<n>`, else the
 in-flight `STEP`, else the first undone step in `intent.md` — then gates on a green check,
-commits any pending work (or records the existing `HEAD` if the tree is already clean),
-appends `step <n> <sha>` to `checkpoints`, flips the step to `[x]`, and clears `SEAM`/`STEP`
-— which drops the dashboard back to the `DESIGN` boundary. `-m` sets the commit message.
-Refuses (exit 1) with no session, no resolvable step, or a red check.
+commits any pending work (or records the existing `HEAD` if the tree is already clean) with a
+CLI-owned subject `plumbbob: step N — <title>`, appends `step <n> <sha>` to `checkpoints`,
+flips the step to `[x]`, and clears `SEAM`/`STEP` — dropping the dashboard back to the
+`DESIGN` boundary. The commit **body** comes from a `--body` heredoc on stdin (skill-composed,
+proportional); without it a deterministic fallback carries done-when + seam + diffstat
+(**D5**/**D6**). `--plan` instead commits *only* the build's artifact folder as
+`plumbbob: plan — <title>` and records a `plan <sha>` line, giving the plan its own commit so
+the first step's diff doesn't absorb the scaffold (**D11**). Refuses (exit 1) with no session,
+no resolvable step, or a red check.
 
 ### revert
 
@@ -100,11 +115,12 @@ plumbbob revert [--to <n>]
 ```
 
 `git reset --hard` to a recorded checkpoint SHA: the last step by default, `--to <n>` for a
-specific step, or the baseline as the fallback. The git-excluded sidecar is preserved
-across the reset, so park lines and intent edits survive (**D17** / **C4**); untracked
-files **inside the seam** are removed, files outside it are left alone. Clears `SEAM`/`STEP`,
-dropping back to the `DESIGN` boundary. Refuses (exit 1) with no session, an invalid `--to`,
-or a step with no recorded checkpoint.
+specific step, or the baseline as the fallback. The build folder is now *tracked* (**D26**),
+so before the reset `revert` snapshots `builds/<slug>/` to a temp dir and restores it after —
+park lines and intent edits survive even when reverting to a baseline that predates the folder
+(**C4**). Untracked files **inside the seam** are removed, files outside it are left alone.
+Clears `SEAM`/`STEP`, dropping back to the `DESIGN` boundary. Refuses (exit 1) with no session,
+an invalid `--to`, or a step with no recorded checkpoint.
 
 ### park
 
@@ -130,17 +146,31 @@ the repo root, and drops the `SPIKE` marker. `spike done` removes every spike wo
 branch and clears the marker. Refuses (exit 1) with no session, a step already in flight, an
 empty slug, or a worktree path that already exists; `done` refuses when no spike is open.
 
-### wrap
+### use
 
 ```text
-plumbbob wrap
+plumbbob use <slug>
 ```
 
-The close-out (**D9**). Appends the checkpoint SHAs to `report.md` (if present), copies
-`intent.md`, `build-log.md`, and `report.md` into `.plumbbob/archive/<date>-<slug>/`, then
-clears the active sidecar files (`STATE` last). Archive-then-clear, never destroy (**C4**);
-git is untouched. There is **no** refuse-without-report gate. Refuses (exit 1) only with no
-session.
+Re-points the `activeBuild` cursor at the named build and resumes it — the one verb for both
+switching between builds and picking one back up (**D30**). Validates that
+`builds/<slug>/` exists, then rewrites the cursor in `settings.local.json`. It warns (but
+allows) leaving a build that still has a step in flight — that surviving `STEP`/`SEAM` is the
+payoff of per-build markers. Refuses (exit 1) with an empty slug or a slug with no build
+folder; `status` with no cursor lists the available builds instead of refusing.
+
+### finish
+
+```text
+plumbbob finish
+```
+
+The close-out (**D9**/**D29**). Writes `report.md` into the build folder, makes the final
+commit (subject `plumbbob: finish — <title>`, mirroring the step-checkpoint shape), and clears
+the control state (`STATE`, the cursor, the in-flight markers). No separate archive copy — the
+tracked build folder already *is* the record and merges into `main` with the branch, so it
+rides into the PR (**D26**). There is **no** refuse-without-report gate. Refuses (exit 1) only
+with no session.
 
 ## Install verbs
 
@@ -167,49 +197,77 @@ namespace (skills can drop to flat names like `/pb-status`); `--force` overrides
 ### doctor
 
 ```text
-plumbbob doctor
+plumbbob doctor [--migrate]
 ```
 
-Read-only diagnostic across both install paths. For the skills-dir link it verifies the link
+Two diagnostics under one verb.
+
+**Plugin link** (read-only). Across both install paths it verifies the skills-dir link
 resolves to a package carrying the manifest, the skills, and the hook; it also recognizes a
 **marketplace-only** install as a valid, passing state, and flags the double-install
-**collision** when both are present. It prints the exact fix for anything missing. Exits 0
-when all checks pass, 1 otherwise. Run it first if a `/plumbbob:*` skill opens an empty
-dashboard. Also available in-session as `/pb-doctor` — the only way to reach it on a
-**marketplace** install, where the CLI is on PATH only inside a Claude Code session.
+**collision** when both are present, printing the exact fix for anything missing. Run it first
+if a `/plumbbob:*` skill opens an empty dashboard. Also available in-session as `/pb-doctor` —
+the only way to reach it on a **marketplace** install, where the CLI is on PATH only inside a
+Claude Code session.
+
+**Sidecar layout.** When run inside a repo carrying a *legacy flat sidecar* — the
+pre-restructure layout with a `config` file, an `archive/` folder, or a flat active session —
+`doctor` reports it and offers `--migrate`. `plumbbob doctor --migrate` moves the archive
+entries and the active session into tracked `builds/<slug>/` folders (the active one becomes
+the cursor; the rest are "done" simply by not being it), turns `config` into `settings.json`,
+narrows the excludes, and **stages** the whole move without committing — the commit is yours
+(**D31**). Exits 0 when everything passes, 1 when a check fails or an un-migrated legacy
+sidecar is present.
 
 ## The `.plumbbob/` sidecar
 
-Every session lives in a sidecar of flat files the verbs read and write. It is
-git-excluded; its presence (specifically `STATE`) means a session is live.
+The sidecar splits into a **tracked artifact plane** and an **untracked control plane**
+(**D17**/**D26**). The artifact plane — `settings.json` and every `builds/<slug>/` folder —
+is committed, so a build's record (intent, log, checkpoints, report) rides its branch into the
+PR. The control plane — `STATE`, `settings.local.json`, and each build's in-flight markers —
+stays git-excluded; a session is live iff `STATE` is present.
 
 ```text
 .plumbbob/
-  STATE          # session sentinel — its presence means a session is live
-  SEAM           # the in-flight step's declared paths (awareness, not a lock)
-  STEP           # the in-flight step number (its presence is the BUILD phase)
-  SPIKE          # marker — present while a spike fork is open
-  config         # key=value; check=<heavy-check command> (defaults to pnpm run check)
-  checkpoints    # "baseline <sha>" then "step N <sha>", one per verified step
-  intent.md      # canonical intent
-  build-log.md   # live ledger
-  archive/
-    <date>-<slug>/
-      intent.md
-      build-log.md
-      report.md
+  STATE                    # untracked — session sentinel; its presence means a session is live
+  settings.json            # tracked   — project defaults: {"check": "…", "auto": false}
+  settings.local.json      # untracked — personal overlay + the cursor: {"activeBuild": "<slug>", …}
+  builds/
+    <slug>/
+      intent.md            # tracked   — canonical intent (rides the branch into the PR)
+      build-log.md         # tracked   — live ledger + park list
+      checkpoints          # tracked   — "baseline <sha>", "plan <sha>", "step N <sha>"
+      report.md            # tracked   — written at finish
+      STEP                 # untracked — the in-flight step number (its presence is the BUILD phase)
+      SEAM                 # untracked — the in-flight step's declared paths (awareness, not a lock)
+      SPIKE                # untracked — marker, present while a spike fork is open
 ```
 
-## The `.plumbbob/config` file
+Which build a verb acts on resolves `--build <slug>` → the `activeBuild` cursor → the sole
+build in `builds/` → a refusal with a hint (**D28**). `plumbbob start --local` opts back into
+the old fully-untracked flat layout — `intent.md`/`build-log.md`/`checkpoints` at the sidecar
+root, the whole `.plumbbob/` excluded — for repos that will not track tool folders (**D26**).
+A repo scaffolded by a pre-restructure plumbbob keeps that legacy flat layout until
+`plumbbob doctor --migrate` moves it here (**D31**).
 
-`start` writes a flat `key=value` config; the only key today is the heavy-check command:
+## Settings
 
-```text
-check=pnpm run check
+Settings resolve through a four-rung ladder (**D27**): a CLI flag → `settings.local.json`
+(untracked personal overlay) → `settings.json` (tracked project defaults) → a built-in
+default. The known keys:
+
+```jsonc
+// settings.json  (tracked — shared project defaults)
+{ "check": "pnpm run check", "auto": false }
+
+// settings.local.json  (untracked — personal, per-worktree)
+{ "auto": true, "activeBuild": "<slug>" }
 ```
 
-Edit it to point the gate at any command (**D24**) — it runs in the repo root via a shell,
-and its exit code is the check result.
+`check` is the heavy gate (a shell command run in the repo root; its exit code is the result).
+`auto` is whether the agent approves in your place. `activeBuild` is the per-worktree cursor.
+Both files are optional JSON — a missing or malformed one contributes nothing rather than
+wedging the tool.
 
 ## Exit codes
 

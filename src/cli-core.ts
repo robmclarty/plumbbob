@@ -35,7 +35,7 @@ const VERBS: ReadonlyArray<Verb> = [
   { name: 'use', summary: 'use <slug>: re-point the active-build cursor and resume that build' },
   { name: 'finish', summary: 'close-out: report + final commit (no gate), clear the control state, close the session' },
   { name: 'init', summary: 'link plumbbob into Claude Code as an in-place plugin (~/.claude/skills/plumbbob); --uninstall to undo' },
-  { name: 'doctor', summary: 'diagnose the plugin link (manifest, skills, hook) and print the fix for anything broken' },
+  { name: 'doctor', summary: 'diagnose the plugin link + detect a legacy flat sidecar; doctor --migrate moves it into builds/ (staged, not committed)' },
 ]
 
 // PlumbBob (D1/D10/D13): the deciding/executing boundary is a pause, not a lock,
@@ -90,7 +90,7 @@ function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): numbe
     case 'init':
       return init(rest)
     case 'doctor':
-      return doctor()
+      return doctor(cwd, rest)
     default:
       process.stderr.write(`plumbbob: unknown verb '${verb}'. Run 'plumbbob help' for the verb table.\n`)
       return 1

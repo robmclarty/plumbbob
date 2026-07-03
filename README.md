@@ -41,7 +41,7 @@ expected to touch).
   per step:
     /pb-build      implement the next step → run checks → self-review → PAUSE
     (approve)      → the step is committed as a checkpoint; fire /pb-build again
-/pb-wrap       report what shipped and why, archive, clear                 (once)
+/pb-finish     report what shipped and why, final commit, clear            (once)
 ```
 
 Nothing is locked and nothing refuses you — the loop does a step's labor, pulls up to
@@ -90,14 +90,15 @@ In Claude Code, inside any git repo with a clean tree:
    ```
 
    (The check gate defaults to `pnpm run check` — point it at your project's own
-   command by editing `check=` in `.plumbbob/config`.)
+   command by editing the `"check"` key in `.plumbbob/settings.json`.)
 3. **Approve** — or send fixes. On your OK it commits the step as a checkpoint, marks
    it done, and returns to the boundary. Fire `/pb-build` again for the next step —
    re-firing it *is* the clock tick. Whenever you lose the thread, `/pb-status` shows
    where you are and names the next move.
-4. **Wrap.** When the last step is done, `/pb-wrap` writes a report of what shipped
-   and why, archives the session under `.plumbbob/archive/`, and clears the slate for
-   the next goal.
+4. **Finish.** When the last step is done, `/pb-finish` writes a report of what shipped
+   and why into the build's tracked folder, makes the final commit, and clears the slate
+   for the next goal. The folder rides the branch into the PR — the build's record merges
+   into `main` instead of dying with the worktree.
 
 A mid-build "ooh, what if…" never derails the step: `/pb-park` captures it to a list
 in one line, and `/pb-harvest` triages the list between steps. One goal walked end to
@@ -121,7 +122,7 @@ write the short form `/pb-plan`.)
 | `/pb-park` | capture a mid-build idea without chasing it |
 | `/pb-status` | orient — where you are, the next step's done-when and seam, and the next move |
 | `/pb-harvest` | triage parked ideas between steps (blocker / tangent / pivot) |
-| `/pb-wrap` | wrap up — write the report, archive safely, clear for a fresh goal |
+| `/pb-finish` | finish up — write the report, make the final commit, clear for a fresh goal |
 
 Three power moves round it out — `/pb-revert` (recover to a checkpoint), `/pb-spike`
 (throwaway worktree experiment for a fork the plan can't settle), and `/pb-refine`
@@ -130,8 +131,10 @@ your install.
 
 Under the skills ships a zero-dependency `plumbbob` CLI (the mechanical verbs the
 skills shell out to), one session-gated post-edit hook (non-blocking lint feedback in
-flow), and a `.plumbbob/` sidecar of flat markdown files (`intent.md`, `build-log.md`,
-checkpoints, archive) you can open and edit by hand at any time.
+flow), and a `.plumbbob/` sidecar you can open and edit by hand at any time — a tracked
+`builds/<slug>/` folder per build (`intent.md`, `build-log.md`, `checkpoints`, `report.md`)
+that rides the branch into the PR, plus an untracked control plane (`settings.local.json`,
+the session sentinel, the in-flight markers).
 
 **`/pb-build` is optional.** It's one executor, not the loop. Implement a step by
 hand — or vibe it in another session, or in another harness entirely — and run

@@ -1,13 +1,13 @@
 # The happy path — one complete cycle
 
 This is the workflow end to end: from planning a fresh goal **all at once**, through
-driving the automated `/pb-build` step after step until done, to wrapping up,
-archiving, and starting the next task. It's a worked example, not reference docs —
-every command, dashboard, and CLI line below is what you actually see.
+driving the automated `/pb-build` step after step until done, to finishing up and
+starting the next task. It's a worked example, not reference docs — every command,
+dashboard, and CLI line below is what you actually see.
 
 The loop in one breath: **`/pb-plan` once to author the whole plan, then fire
 `/pb-build` per step — each builds the next step and stops at the verify pause for
-your approval — parking strays and harvesting them at the boundary, then `/pb-wrap`
+your approval — parking strays and harvesting them at the boundary, then `/pb-finish`
 once.** In the loop you never type the `plumbbob` CLI by hand; the skills shell out to
 it (only install and setup — `plumbbob init`, `doctor`, `start` — are manual), and
 `/pb-status` always names your next move.
@@ -218,7 +218,7 @@ Once the last step is checkpointed, the dashboard surfaces the parked item — t
 happens **at a boundary**, back in `DESIGN`, never mid-step:
 
 ```text
-next → harvest 1 parked idea — `/pb-harvest`; then wrap up — `/pb-wrap`
+next → harvest 1 parked idea — `/pb-harvest`; then finish up — `/pb-finish`
        (or `/pb-step` to add another increment)
 ```
 
@@ -242,23 +242,24 @@ Park list (1 open):
 ```
 
 You confirm **tangent → defer**. It's recorded under `## Harvest`, flipped to `[x]`,
-and stops counting — it'll resurface in the wrap report as deferred work.
+and stops counting — it'll resurface in the finish report as deferred work.
 
 ---
 
-## 6. Wrap up — `/pb-wrap` (report + archive + clear)
+## 6. Finish up — `/pb-finish` (report + final commit + clear)
 
-When the goal is done — every step checkpointed, the park list harvested — `/pb-wrap`
+When the goal is done — every step checkpointed, the park list harvested — `/pb-finish`
 closes the build. It writes the report **by default** (there's no refuse-without-report
-gate), then archives and clears.
+gate), makes the final commit, and clears the control state.
 
 ```text
-/pb-wrap
+/pb-finish
 ```
 
-First it writes `.plumbbob/report.md` — what shipped, the decisions and why, what was
-parked and how it was classified, final status, and the deferred tangents that become
-future work. This is the "yeah, I did that" artifact:
+First it writes `report.md` **into the build folder** — what shipped, the decisions and
+why, what was parked and how it was classified, final status, and the deferred tangents
+that become future work. This is the "yeah, I did that" artifact, and because it lives in
+the tracked build folder it rides the branch into the PR:
 
 ```markdown
 # Report — Rate-limit the login endpoint
@@ -279,26 +280,28 @@ Done. All three steps checkpointed and green.
 - Throttle /password-reset with the same limiter (harvested → tangent).
 ```
 
-Then `plumbbob wrap` appends the checkpoint SHAs, copies `intent.md`, `build-log.md`,
-and `report.md` into a dated archive, and clears the sidecar — **archive-then-clear,
-never destroy**. Git is untouched:
+Then `plumbbob finish` appends the checkpoint SHAs to the report, makes the final commit
+(subject `plumbbob: finish — <title>`), and clears the control state (`STATE`, the cursor,
+the in-flight markers). There's no separate archive copy — the tracked build folder *is*
+the record now, so it merges into `main` with the branch:
 
 ```text
-plumbbob: wrap — archived to .plumbbob/archive/2026-06-25-rate-limit-the-login-endpoint.
-Sidecar cleared. Run `/pb-plan` (or `plumbbob start "<title>"`) to frame the next goal.
+plumbbob: finish — Rate-limit the login endpoint. Report + final commit f3e9a1b2c.
+Control state cleared. Run `/pb-plan` (or `plumbbob start "<title>"`) to frame the next goal.
 ```
 
-The record now lives at:
+The record now lives — tracked, on the branch — at:
 
 ```text
-.plumbbob/archive/2026-06-25-rate-limit-the-login-endpoint/
+.plumbbob/builds/rate-limit-the-login-endpoint/
   intent.md
   build-log.md
+  checkpoints
   report.md
 ```
 
-Your checkpoint markers stay on the feature branch; your normal squash-merge collapses
-them at PR time.
+Your checkpoint markers and the build folder stay on the feature branch; your normal
+squash-merge collapses the markers at PR time while the folder lands in `main`.
 
 ---
 
@@ -347,7 +350,7 @@ fill however you like.
        /pb-build  (or DIY)    implement it → verify → PAUSE → checkpoint
        /pb-park               capture strays mid-build
        /pb-harvest            triage them at the boundary
-  /pb-wrap                    report + archive + clear                  (once)
+  /pb-finish                  report + final commit + clear             (once)
   /pb-plan                    plan the next goal                        (cycle repeats)
 ```
 

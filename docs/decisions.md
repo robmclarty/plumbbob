@@ -22,16 +22,18 @@ the code.
   `rules/no-default-export.yml`. *Tagged across* `src/**` and the test tree.
 - **C2 — Node builtins only, zero runtime dependencies.** The CLI imports nothing outside
   `node:*`; it runs natively on Node ≥ 22.18 with no install step. Enforced by
-  `rules/node-builtins-only.yml`. *Tagged in* `git.ts`, `sidecar.ts`, `archive.ts`,
+  `rules/node-builtins-only.yml`. *Tagged in* `git.ts`, `sidecar.ts`,
   `plugins.ts`, `doctor.ts`, `cli-core.ts`.
-- **C4 — Archive-then-clear, never destroy.** Closing a session copies the active files
-  into the archive *before* clearing them; nothing is deleted until it is safely recorded.
-  *Tagged in* `wrap.ts`, `archive.ts`, and (for the sidecar's survival across a reset)
-  `revert.ts`.
+- **C4 — Never destroy.** No step, revert, or migration path may lose park lines, intent
+  edits, or a recorded build folder. `revert` snapshots the tracked build folder and
+  restores it after a `reset --hard` (**D26**); `doctor --migrate` moves the legacy sidecar
+  and stages it without committing. *Tagged in* `revert.ts`. (The old archive-then-clear
+  copy retired with `archive.ts` — a finished build folder is now the record it protected,
+  **D29**.)
 - **C5 — Additive git footprint.** PlumbBob only reads, locates, stages, commits forward,
   and resets `--hard` to its own recorded SHAs. It never rewrites pushed history; your
   squash-merge collapses the checkpoint markers at PR time. *Tagged in* `git.ts`,
-  `wrap.ts`.
+  `finish.ts`.
 
 *(`C3` is not referenced in the current code.)*
 
@@ -61,9 +63,10 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   boundary. *Tagged in* `sidecar.ts`, the `park` and `harvest` skills.
 - **D8 — `status` is an orientation dashboard.** It parses the live session into the
   where-am-I view. *Tagged in* `status.ts`, `orient.ts`.
-- **D9 — `wrap` is the close-out: report by default, no gate.** A single verb does the
-  whole close-out; it writes the report by default but never refuses the exit without one.
-  *Tagged in* `wrap.ts`, `archive.ts`, the `wrap` skill. (Supersedes **D19**.)
+- **D9 — `finish` is the close-out: report by default, no gate.** A single verb does the
+  whole close-out — it writes `report.md` into the build folder, makes the final commit, and
+  clears the control state — but never refuses the exit without a report. Renamed from `wrap`
+  (**D29**). *Tagged in* `finish.ts`, the `pb-finish` skill. (Supersedes **D19**.)
 - **D10 — The boundary is a pause, not a lock.** Nothing blocks edits; the loop pulls up
   to the verify pause and waits. *Tagged in* `cli-core.ts`.
 - **D13 — No edit-blocking guards.** There is no pre-edit muzzle, seam-guard, or bash-guard,
@@ -77,26 +80,69 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
 - **D16 — The heavy check plus a single structured self-review.** The verify tick runs the
   full gate, then reads the diff against done-when, Decisions, and Constraints in one pass.
   *Tagged in* `check.ts`, the `build` and `verify` skills.
-- **D17 — The sidecar is git-excluded.** `.plumbbob/` is appended to the repo's
-  `info/exclude`, so it never shows as dirty and a `git reset --hard` never destroys park
-  lines or intent edits. *Tagged in* `sidecar.ts`, `git.ts`, `revert.ts`, `spike.ts`.
+- **D17 — The sidecar splits into a tracked artifact plane and an excluded control
+  plane.** *Amended* — where the whole `.plumbbob/` used to be git-excluded, now only the
+  per-worktree **control** files are (`STATE`, `settings.local.json`, and each build's
+  `STEP`/`SEAM`/`SPIKE`); the **artifact** plane — `settings.json` and every
+  `builds/<slug>/` folder (intent, build-log, checkpoints, report) — is *tracked* so a
+  build's record rides its branch into the PR instead of dying with the worktree (**D26**,
+  supersedes **D20**). `start --local` keeps the old whole-directory exclude (**D26**).
+  *Tagged in* `sidecar.ts`, `git.ts`, `revert.ts`, `spike.ts`.
 - **D18 — The spike lifecycle.** A genuine fork gets a throwaway worktree and branch per
   option, kept outside the repo, torn down by `spike done`. *Tagged in* `spike.ts`.
-- **D20 — The archive is local-only markdown.** Wrapping writes a plain-markdown archive
-  under `.plumbbob/archive/`; nothing is pushed anywhere. *Tagged in* `archive.ts`.
 - **D22 — `start` refuses a dirty tree.** A clean baseline is required; `--allow-dirty`
   overrides it and records the current HEAD as the baseline. *Tagged in* `start.ts`.
 - **D23 — Seams are exact paths or `dir/` grants, never globs.** A seam token is matched as
   an exact path or a directory prefix; a glob is rejected. *Tagged in* `intent.ts`.
-- **D24 — The heavy check is configurable, defaulting to `pnpm run check`.** `start`
-  records `check=` in `.plumbbob/config` and warns when the target repo has no such script.
+- **D24 — The heavy check is configurable, defaulting to `pnpm run check`.** The `check`
+  command resolves through the settings ladder (**D27**), defaulting to `pnpm run check`;
+  `start` seeds it into `settings.json` and warns when the target repo has no such script.
   *Tagged in* `start.ts`, `check.ts`.
 - **D25 — Light feedback at the keystroke, heavy checks at the boundary.** The `post-edit`
   hook runs a non-blocking, file-scoped lint pass and injects findings into the model's
   context; `tsc` and the rest of the gate are deferred to the heavy tier inside `verify`.
   *Tagged in* `hooks/post-edit.sh`.
+- **D26 — One folder per build under `builds/<slug>/`.** Each build owns a self-contained,
+  tracked `.plumbbob/builds/<slug>/` folder (intent, build-log, checkpoints, report) that
+  rides its branch into the PR; the in-flight `STEP`/`SEAM`/`SPIKE` markers live inside it
+  but stay excluded. `revert` snapshots the folder to a temp dir and restores it after the
+  `reset --hard`, so a rewind never destroys tracked park lines even when reverting to a
+  baseline that predates the folder (**C4**). `start --local` opts back into the old
+  fully-untracked flat layout for repos that will not track tool folders. *Tagged in*
+  `sidecar.ts`, `start.ts`, `revert.ts`.
+- **D27 — The settings ladder replaces `config`.** A setting resolves flag →
+  `settings.local.json` (untracked personal overlay) → `settings.json` (tracked project
+  defaults) → built-in default. `check` is a project default; `auto` (agent-approves-in-
+  your-place) is a personal preference. Both files are optional JSON; a malformed one
+  contributes nothing rather than wedging the tool. Supersedes the flat `.plumbbob/config`.
+  *Tagged in* `settings.ts`, `check.ts`, `start.ts`.
+- **D28 — The active-build cursor.** Which build a verb acts on resolves `--build <slug>`
+  → the `activeBuild` cursor in `settings.local.json` → the sole build in `builds/` → a
+  refusal with a hint. Because the cursor is a single scalar key in an untracked per-worktree
+  file, one-active-per-worktree holds *by construction* — it cannot point at two builds.
+  *Tagged in* `sidecar.ts`.
+- **D29 — `finish` replaces `wrap`; the build folder is the archive.** The close-out verb
+  was renamed `wrap` → `finish` (a clean break, no alias) and gutted: it writes `report.md`
+  into the build folder, makes the final commit, and clears the control state — no separate
+  archive copy, because the tracked folder already *is* the record and merges into main with
+  the branch. Retired `archive.ts`. Supersedes **D20**. *Tagged in* `finish.ts`.
+- **D30 — `use <slug>` switches and resumes.** One `nvm use`-shaped verb re-points the
+  `activeBuild` cursor at a build, validating the folder and warning (but allowing) a leave
+  with a step in flight — that surviving in-flight state is the point of per-build markers
+  (**D26**). *Tagged in* `use.ts`.
+- **D31 — `doctor --migrate` moves a legacy flat sidecar into `builds/`.** `doctor` detects a
+  pre-restructure flat sidecar (`config`, `archive/`, a flat active session) and, under
+  `--migrate`, moves the archive entries and the active session into `builds/<slug>/` folders
+  (the active one becomes the cursor; the rest are "done" simply by not being it) and turns
+  `config` into `settings.json`. It **stages** the move but never commits — the human owns
+  that commit (Q8). *Tagged in* `doctor.ts`.
 
 ### Superseded
+
+- **D20 — The archive was local-only markdown.** Wrapping wrote a plain-markdown archive
+  under `.plumbbob/archive/`, local-only, that died with a `git worktree remove`. **D29**
+  retired it: a finished build folder is tracked and rides the branch into the PR, so there
+  is nothing separate to archive. *No longer referenced in code.*
 
 - **D19 — `finish` refused without a report.** An earlier close-out gated the exit on a
   written report. **D9** removed the gate: `wrap` writes the report by default but never
