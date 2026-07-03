@@ -18,7 +18,7 @@ afterAll(cleanupFixtures)
 // verbs run against a known step list and a controllable green/red gate (D14).
 // settings.json stays flat (project plane); intent/STEP ride the build folder.
 function startWithSteps(dir: string, stepsBody: string, check = 'true'): void {
-  runCli(dir, ['start', 'Verify test'])
+  runCli(dir, ['start', 'Verify test', '--slug', 'verify-test'])
   writeFileSync(join(dir, '.plumbbob', 'settings.json'), JSON.stringify({ check }))
   writeSidecar(dir, 'intent.md', `# Verify test\n\n## Steps\n\n${stepsBody}\n`)
 }

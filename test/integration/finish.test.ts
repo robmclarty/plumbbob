@@ -23,7 +23,7 @@ describe('plumbbob finish (the close-out, D9/D15)', () => {
 
   it('makes the final commit, keeps the folder, clears the control state — no archive', () => {
     const dir = makeFixtureRepo()
-    runCli(dir, ['start', 'Finish demo'])
+    runCli(dir, ['start', 'Finish demo', '--slug', 'finish-demo'])
     writeReport(dir)
     expect(runCli(dir, ['finish']).status).toBe(0)
 
@@ -48,7 +48,7 @@ describe('plumbbob finish (the close-out, D9/D15)', () => {
 
   it('does NOT gate on a missing report — finishes anyway with a note (D9)', () => {
     const dir = makeFixtureRepo()
-    runCli(dir, ['start', 'No report here'])
+    runCli(dir, ['start', 'No report here', '--slug', 'no-report-here'])
     const res = runCli(dir, ['finish'])
     expect(res.status).toBe(0) // the defining choice: no refuse-without-report gate
     expect(res.stderr).toContain('no report.md found')
@@ -58,7 +58,7 @@ describe('plumbbob finish (the close-out, D9/D15)', () => {
 
   it('appends the checkpoint SHAs to the committed report', () => {
     const dir = makeFixtureRepo()
-    runCli(dir, ['start', 'Shas'])
+    runCli(dir, ['start', 'Shas', '--slug', 'shas'])
     writeReport(dir)
     writeSidecar(dir, 'checkpoints', 'baseline abc1234\nstep 1 def5678\n')
     runCli(dir, ['finish'])

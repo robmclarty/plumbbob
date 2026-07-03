@@ -9,24 +9,29 @@ import { captureIo } from '../../../test/helpers/capture-io.ts'
 
 afterAll(cleanupTempRepos)
 
+// Derived slugs are date-prefixed (local time, matching datedSlug in start.ts).
+const now = new Date()
+const pad = (n: number) => String(n).padStart(2, '0')
+const TODAY = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+
 describe('start', () => {
   it('scaffolds a tracked builds/<slug>/ folder and opens the session on a clean repo', () => {
     const dir = makeTempRepo()
     const { code, stdout } = captureIo(() => start(dir, ['My Feature']))
     expect(code).toBe(0)
     expect(hasSession(dir)).toBe(true)
-    const build = join(dir, '.plumbbob', 'builds', 'my-feature')
+    const build = join(dir, '.plumbbob', 'builds', `${TODAY}-my-feature`)
     expect(existsSync(join(build, 'intent.md'))).toBe(true)
     expect(existsSync(join(build, 'build-log.md'))).toBe(true)
     expect(readFileSync(join(build, 'checkpoints'), 'utf8')).toMatch(/^baseline [0-9a-f]{40}\n$/)
     expect(stdout).toContain('started "My Feature"')
-    expect(stdout).toContain('.plumbbob/builds/my-feature/intent.md')
+    expect(stdout).toContain(`.plumbbob/builds/${TODAY}-my-feature/intent.md`)
   })
 
   it('points the settings.local.json activeBuild cursor at the new build (D3)', () => {
     const dir = makeTempRepo()
     captureIo(() => start(dir, ['My Feature']))
-    expect(localSetting(dir, 'activeBuild')).toBe('my-feature')
+    expect(localSetting(dir, 'activeBuild')).toBe(`${TODAY}-my-feature`)
   })
 
   it('narrows info/exclude to the control patterns, tracking the artifact plane', () => {
@@ -40,7 +45,7 @@ describe('start', () => {
 
   it('refuses when the derived slug collides with an existing build (D17)', () => {
     const dir = makeTempRepo()
-    mkdirSync(buildDir(dir, 'my-feature'), { recursive: true }) // a prior build already owns the slug
+    mkdirSync(buildDir(dir, `${TODAY}-my-feature`), { recursive: true }) // a prior build already owns the slug
     const { code, stderr } = captureIo(() => start(dir, ['My Feature']))
     expect(code).toBe(1)
     expect(stderr).toContain('already exists')
@@ -90,7 +95,7 @@ describe('start', () => {
   it('echoes the checkride gate into the scaffolded build-log (documentation only)', () => {
     const dir = makeTempRepo()
     captureIo(() => start(dir, ['My Feature']))
-    const log = readFileSync(join(dir, '.plumbbob', 'builds', 'my-feature', 'build-log.md'), 'utf8')
+    const log = readFileSync(join(dir, '.plumbbob', 'builds', `${TODAY}-my-feature`, 'build-log.md'), 'utf8')
     expect(log).toContain('checkride')
   })
 

@@ -30,7 +30,7 @@ function git(dir: string, args: ReadonlyArray<string>): void {
 // A started session with one planned step and a green stub gate.
 function startedGreen(): string {
   const dir = makeTempRepo()
-  captureIo(() => start(dir, ['Revert test']))
+  captureIo(() => start(dir, ['Revert test', '--slug', 'revert-test']))
   writeFileSync(intentPath(dir), INTENT)
   writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true' }))
   return dir

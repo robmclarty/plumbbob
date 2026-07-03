@@ -39,7 +39,7 @@ Under the hood it runs `plumbbob start`, which records a baseline and drops you 
 
 ```text
 plumbbob: started "Rate-limit the login endpoint" — baseline 3a1f2b0c1. Frame and decide
-in .plumbbob/builds/rate-limit-the-login-endpoint/intent.md; `build` a step once the
+in .plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md; `build` a step once the
 decisions are made.
 ```
 
@@ -288,7 +288,7 @@ the in-flight markers). There's no separate archive copy — the tracked build f
 the record now, so it merges into `main` with the branch:
 
 ```text
-plumbbob: finished — f3e9a1b2c. .plumbbob/builds/rate-limit-the-login-endpoint/ rides your
+plumbbob: finished — f3e9a1b2c. .plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/ rides your
 branch into the PR. Run `/plumbbob:pb-plan` (or `plumbbob start "<title>"`) to frame the
 next goal.
 ```
@@ -296,7 +296,7 @@ next goal.
 The record now lives — tracked, on the branch — at:
 
 ```text
-.plumbbob/builds/rate-limit-the-login-endpoint/
+.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/
   intent.md
   build-log.md
   checkpoints

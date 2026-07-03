@@ -183,8 +183,10 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   final `finish` commit picks up the last of it. *Tagged in* `finish.ts`.
 - **D38 — Slugs are the CLI's job; collisions refuse.** `slugify` and its collision
   handling live in `sidecar.ts`; `start` refuses a slug that already exists rather than
-  auto-suffixing — the human picks a new title or passes `--slug`. *Tagged in*
-  `sidecar.ts`, `start.ts`, `doctor.ts`.
+  auto-suffixing — the human picks a new title or passes `--slug`. Derived slugs carry a
+  `YYYY-MM-DD-` prefix so `builds/` sorts chronologically under a plain lexical listing —
+  ordering by construction, not by titling convention; an explicit `--slug` stays
+  verbatim. *Tagged in* `sidecar.ts`, `start.ts`, `doctor.ts`.
 
 ### Superseded
 

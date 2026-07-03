@@ -22,7 +22,7 @@ function seedBuild(dir: string, slug: string): void {
 describe('use', () => {
   it('re-points the activeBuild cursor at an existing build', () => {
     const dir = makeTempRepo()
-    captureIo(() => start(dir, ['My Feature']))
+    captureIo(() => start(dir, ['My Feature', '--slug', 'my-feature']))
     seedBuild(dir, 'other-build')
     const { code, stdout, stderr } = captureIo(() => use(dir, ['other-build']))
     expect(code).toBe(0)
@@ -35,7 +35,7 @@ describe('use', () => {
 
   it('skips flag args when finding the slug', () => {
     const dir = makeTempRepo()
-    captureIo(() => start(dir, ['My Feature']))
+    captureIo(() => start(dir, ['My Feature', '--slug', 'my-feature']))
     seedBuild(dir, 'other-build')
     const { code } = captureIo(() => use(dir, ['--quiet', 'other-build']))
     expect(code).toBe(0)
@@ -44,7 +44,7 @@ describe('use', () => {
 
   it('treats an empty slug as missing, not as a build lookup', () => {
     const dir = makeTempRepo()
-    captureIo(() => start(dir, ['My Feature']))
+    captureIo(() => start(dir, ['My Feature', '--slug', 'my-feature']))
     const { code, stderr } = captureIo(() => use(dir, ['']))
     expect(code).toBe(1)
     expect(stderr).toContain('use needs a build slug')
@@ -52,7 +52,7 @@ describe('use', () => {
 
   it('refuses a slug with no matching build folder, listing the real ones', () => {
     const dir = makeTempRepo()
-    captureIo(() => start(dir, ['My Feature']))
+    captureIo(() => start(dir, ['My Feature', '--slug', 'my-feature']))
     const { code, stderr } = captureIo(() => use(dir, ['ghost']))
     expect(code).toBe(1)
     expect(stderr).toContain('no build named "ghost"')
@@ -62,7 +62,7 @@ describe('use', () => {
 
   it('needs a slug', () => {
     const dir = makeTempRepo()
-    captureIo(() => start(dir, ['My Feature']))
+    captureIo(() => start(dir, ['My Feature', '--slug', 'my-feature']))
     const { code, stderr } = captureIo(() => use(dir, []))
     expect(code).toBe(1)
     expect(stderr).toContain('use needs a build slug')
@@ -70,7 +70,7 @@ describe('use', () => {
 
   it('warns — but still switches — when the build being left has a step in flight (D4/D16)', () => {
     const dir = makeTempRepo()
-    captureIo(() => start(dir, ['My Feature']))
+    captureIo(() => start(dir, ['My Feature', '--slug', 'my-feature']))
     writeFileSync(stepPath(dir), '2\n') // my-feature has a step in flight
     seedBuild(dir, 'other-build')
     const { code, stderr } = captureIo(() => use(dir, ['other-build']))
@@ -82,7 +82,7 @@ describe('use', () => {
 
   it('does not warn when re-using the current build, even mid-step', () => {
     const dir = makeTempRepo()
-    captureIo(() => start(dir, ['My Feature']))
+    captureIo(() => start(dir, ['My Feature', '--slug', 'my-feature']))
     writeFileSync(stepPath(dir), '2\n')
     const { code, stdout, stderr } = captureIo(() => use(dir, ['my-feature']))
     expect(code).toBe(0)
@@ -92,7 +92,7 @@ describe('use', () => {
 
   it('notes the in-flight step when resuming a build that has one', () => {
     const dir = makeTempRepo()
-    captureIo(() => start(dir, ['My Feature']))
+    captureIo(() => start(dir, ['My Feature', '--slug', 'my-feature']))
     seedBuild(dir, 'other-build')
     writeFileSync(join(buildDir(dir, 'other-build'), 'STEP'), '1\n')
     const { code, stdout } = captureIo(() => use(dir, ['other-build']))

@@ -24,7 +24,7 @@ const INTENT = `# Checkpoint test
 // dirties it — checkpoint stages that alongside the step's work.
 function startedGreen(): string {
   const dir = makeTempRepo()
-  captureIo(() => start(dir, ['Checkpoint test']))
+  captureIo(() => start(dir, ['Checkpoint test', '--slug', 'checkpoint-test']))
   writeFileSync(intentPath(dir), INTENT)
   writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true' }))
   return dir

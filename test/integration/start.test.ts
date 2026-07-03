@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { cleanupFixtures, makeFixtureRepo, makeNonGitDir, phase, readSidecar, runCli, sidecarExists, writeSidecar } from '../helpers/fixture-repo.ts'
@@ -32,7 +32,11 @@ describe('plumbbob start', () => {
 
     expect(result.status).toBe(0)
     expect(phase(dir)).toBe('DESIGN')
-    expect(existsSync(join(dir, '.plumbbob', 'builds', 'my-change', 'intent.md'))).toBe(true)
+    // The derived slug is date-prefixed so builds/ sorts chronologically.
+    const builds = readdirSync(join(dir, '.plumbbob', 'builds'))
+    expect(builds).toHaveLength(1)
+    expect(builds[0]).toMatch(/^\d{4}-\d{2}-\d{2}-my-change$/)
+    expect(existsSync(join(dir, '.plumbbob', 'builds', builds[0], 'intent.md'))).toBe(true)
     expect(readSidecar(dir, 'checkpoints').split('\n')[0]).toBe(`baseline ${headSha(dir)}`)
     expect(JSON.parse(readSidecar(dir, 'settings.json'))).toEqual({ auto: false }) // no check key — absence means checkride (D32)
 
@@ -95,6 +99,13 @@ describe('plumbbob start', () => {
     expect(phase(dir)).toBe('DESIGN')
   })
 
+  it('uses an explicit --slug verbatim — no date prefix (D38)', () => {
+    const dir = makeFixtureRepo()
+    const result = runCli(dir, ['start', 'Some title', '--slug', 'chosen-name'])
+    expect(result.status).toBe(0)
+    expect(readdirSync(join(dir, '.plumbbob', 'builds'))).toEqual(['chosen-name'])
+  })
+
   it('refuses when a session is already active', () => {
     const dir = makeFixtureRepo()
     expect(runCli(dir, ['start', 'First']).status).toBe(0)
@@ -128,7 +139,7 @@ describe('plumbbob start', () => {
 
   it('re-scaffolds a new build after finish without touching the prior build folder', () => {
     const dir = makeFixtureRepo()
-    expect(runCli(dir, ['start', 'Round one']).status).toBe(0)
+    expect(runCli(dir, ['start', 'Round one', '--slug', 'round-one']).status).toBe(0)
 
     // Simulate a finish: the build folder IS the archive now (D8), so round-one's
     // report lands in its own folder and is committed there (as `finish` would leave
@@ -138,7 +149,7 @@ describe('plumbbob start', () => {
     commitAll(dir, 'commit round one scaffold + report')
     rmSync(join(dir, '.plumbbob', 'STATE')) // ignored control file; removal leaves a clean tree
 
-    const second = runCli(dir, ['start', 'Round two'])
+    const second = runCli(dir, ['start', 'Round two', '--slug', 'round-two'])
     expect(second.status).toBe(0)
     expect(phase(dir)).toBe('DESIGN')
     // The cursor now points at round-two's folder; round-one's is left intact.

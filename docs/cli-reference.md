@@ -47,7 +47,8 @@ plumbbob start "<title>" [--slug <name>] [--local] [--allow-dirty]
 
 Scaffolds the sidecar, records the baseline `HEAD`, and opens the session. By default it
 plants a tracked build folder at `.plumbbob/builds/<slug>/` — the slug derived from the title
-(override with `--slug`) — holding `intent.md`, `build-log.md`, and `checkpoints`
+as `YYYY-MM-DD-<title-slug>`, date-prefixed so `builds/` lists chronologically (`--slug`
+overrides it verbatim, no prefix) — holding `intent.md`, `build-log.md`, and `checkpoints`
 (`baseline <sha>`); it writes the tracked `settings.json` (`{"auto": false}` — no `check`
 key, because absence means checkride is the gate, **D24**/**D32**) and the untracked
 `STATE` sentinel, points the `activeBuild` cursor at the new build (**D28**), and narrows the
@@ -258,7 +259,7 @@ stays git-excluded; a session is live iff `STATE` is present.
   settings.json            # tracked   — project defaults: {"check": "…", "auto": false}
   settings.local.json      # untracked — personal overlay + the cursor: {"activeBuild": "<slug>", …}
   builds/
-    <slug>/
+    <slug>/                # derived slugs are YYYY-MM-DD-<title-slug>, so ls sorts chronologically
       intent.md            # tracked   — canonical intent (rides the branch into the PR)
       build-log.md         # tracked   — live ledger + park list
       checkpoints          # tracked   — "baseline <sha>", "plan <sha>", "step N <sha>"

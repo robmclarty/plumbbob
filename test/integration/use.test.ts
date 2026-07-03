@@ -48,7 +48,7 @@ describe('plumbbob use', () => {
 
   it('status lists the builds when the cursor resolves to none', () => {
     const dir = makeFixtureRepo()
-    runCli(dir, ['start', 'First Build'])
+    runCli(dir, ['start', 'First Build', '--slug', 'first-build'])
     seedBuild(dir, 'second-build', 'Second Feature')
     writeFileSync(join(dir, '.plumbbob', 'settings.local.json'), JSON.stringify({ activeBuild: '' }))
 
@@ -62,7 +62,7 @@ describe('plumbbob use', () => {
 describe('post-edit hook in a linked worktree (D1/D16 — the cursor is per-worktree)', () => {
   it('finds the root via the worktree-local settings.local.json activeBuild cursor', () => {
     const main = makeFixtureRepo()
-    runCli(main, ['start', 'Feature'])
+    runCli(main, ['start', 'Feature', '--slug', 'feature'])
 
     const wt = join(dirname(main), `${basename(main)}-linked`)
     git(main, ['worktree', 'add', '-q', wt, 'HEAD'])

@@ -39,7 +39,7 @@ describe('e2e: a full PlumbBob session end to end', () => {
     const dir = makeFixtureRepo({ withCheckScript: true })
 
     // start → DESIGN; stub the check and write a one-step intent.
-    expect(runCli(dir, ['start', 'E2E demo']).status).toBe(0)
+    expect(runCli(dir, ['start', 'E2E demo', '--slug', 'e2e-demo']).status).toBe(0)
     expect(phase(dir)).toBe('DESIGN')
     writeSidecar(dir, 'settings.json', JSON.stringify({ check: 'true' }))
     writeSidecar(

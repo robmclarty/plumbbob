@@ -33,8 +33,9 @@ export function buildDir(root: string, slug: string): string {
 // Derive a filesystem-safe slug from a build title: lowercased, every run of
 // non-alphanumerics collapsed to a single hyphen, trimmed of leading/trailing
 // hyphens. The CLI stays dumb and explicit (D38) — collision handling belongs to
-// the caller (`start` refuses rather than silently suffixing `-2`). A title with
-// no alphanumerics yields `''`, which the caller must reject or override.
+// the caller (`start` refuses rather than silently suffixing `-2`, and prepends
+// the `YYYY-MM-DD-` date that keeps `listBuilds`' lexical sort chronological). A
+// title with no alphanumerics yields `''`, which the caller must reject or override.
 export function slugify(title: string): string {
   return title
     .toLowerCase()

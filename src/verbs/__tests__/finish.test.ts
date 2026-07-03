@@ -18,7 +18,7 @@ function subject(dir: string): string {
 describe('finish', () => {
   it('makes the final commit, keeps the folder in place, and ends the session', () => {
     const dir = makeTempRepo()
-    captureIo(() => start(dir, ['Finishing up']))
+    captureIo(() => start(dir, ['Finishing up', '--slug', 'finishing-up']))
     const { code, stdout } = captureIo(() => finish(dir))
     expect(code).toBe(0)
     expect(hasSession(dir)).toBe(false)

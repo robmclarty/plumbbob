@@ -30,7 +30,7 @@ export function start(cwd: string, args: ReadonlyArray<string>): number {
   const allowDirty = args.includes('--allow-dirty')
   const local = args.includes('--local')
   const title = (positionals[0] ?? '').trim()
-  const slug = (flagValue(args, '--slug') ?? slugify(title)).trim()
+  const slug = (flagValue(args, '--slug') ?? datedSlug(title)).trim()
 
   if (title.length === 0) {
     process.stderr.write('plumbbob: start needs a title. Try: plumbbob start "what you are building".\n')
@@ -90,8 +90,8 @@ export function start(cwd: string, args: ReadonlyArray<string>): number {
   // D26: `--local` keeps today's fully-untracked flat layout (whole `.plumbbob/`
   // excluded); the default plants a tracked, PR-riding `builds/<slug>/` folder
   // (D26) and points the per-worktree cursor at it (D28), excluding only control
-  // files (D17). The slug is validated unique above — the CLI refuses, never
-  // suffixes (D38).
+  // files (D17). The slug is date-prefixed when derived (see datedSlug) and
+  // validated unique above — the CLI refuses, never suffixes (D38).
   let intentLocation: string
   if (local) {
     writeFileSync(checkpointsPath(root), `baseline ${sha}\n`)
@@ -114,6 +114,19 @@ export function start(cwd: string, args: ReadonlyArray<string>): number {
     `plumbbob: started "${title}" — baseline ${sha.slice(0, 9)}. Frame and decide in ${intentLocation}; \`build\` a step once the decisions are made.\n`,
   )
   return 0
+}
+
+// Derived slugs carry a `YYYY-MM-DD-` prefix (local time) so `builds/` sorts
+// chronologically under `listBuilds`' plain lexical sort — ordering by
+// construction, not by titling convention. An explicit `--slug` stays verbatim
+// (D38: the CLI never rewrites what the caller chose). An untitleable title
+// yields `''` so the empty-slug guard fires instead of minting a date-only slug.
+function datedSlug(title: string): string {
+  const base = slugify(title)
+  if (base.length === 0) return ''
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${base}`
 }
 
 // Read the value that follows a `--flag` in argv (e.g. `--slug my-build`), or
