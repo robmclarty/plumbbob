@@ -4,7 +4,7 @@ description: "Frame a fresh goal and author the whole plan — Frame, Decisions,
 argument-hint: "[spec-path | intent]"
 disable-model-invocation: true
 model: opus
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob start:*), Bash(plumbbob checkpoint:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob start:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent list:*)
 ---
 
 # PlumbBob — plan a goal (the whole-goal move)
@@ -60,14 +60,35 @@ an agent can follow with `/pb-build`. The argument only seeds how you get there.
    paths it touches). Later steps may be fuzzier than the first — that's fine; they get
    sharpened just-in-time when you reach them with `/pb-step`. Keep each small enough to
    verify in one review pass.
-5. **Commit the plan.** Once the human approves the frame and steps, run
+5. **Offer harness bindings** *(optional — D4/D5)*. If the build will lean on
+   user-authored agents, author `harness.json` in the build folder (beside `intent.md`)
+   and review it at the **same plan pause**, alongside the steps — bindings are
+   plan-adjacent configuration, so they converge with the plan. It binds agents to a
+   step's three lifecycle slots — `before` (context in), `build` (the diff), `after`
+   (advisory review) — with an optional prose `note`; a `defaults` block binds every
+   step. Run `plumbbob agent list` to see what's resolvable, per step:
+
+   ```json
+   {
+     "contract": 1,
+     "defaults": { "after": ["reviewer"] },
+     "steps": { "3": { "before": ["context-loader"], "note": "watch the auth seam" } }
+   }
+   ```
+
+   Keep it **bindings + prose only, never a conditional** (C3): the file says *which*
+   agent, not *when* — the host model reads each manifest's `when` prose and a step's
+   `note` and decides when to fire one mid-build. Skip the file entirely when no step
+   uses an agent — the loop runs identically without it (D10). The plan commit picks it
+   up automatically (it lives in the build folder).
+6. **Commit the plan.** Once the human approves the frame and steps, run
    `plumbbob checkpoint --plan` to commit the scaffold on its own — subject
    `plumbbob: plan — <title>`, only `.plumbbob/builds/<slug>/`, a `plan <sha>` line in
    `checkpoints` (D36). This keeps the first step's diff clean, so history reads
    baseline → plan → steps. Pass a proportional `--body` (the single-quoted stdin
    heredoc) when the rationale is worth carrying; skip it for a small plan. Do this
    only on the human's approval — the plan is their convergence.
-6. **Offer to stress-test it.** Suggest `/pb-refine` to attack the frame for holes (or
+7. **Offer to stress-test it.** Suggest `/pb-refine` to attack the frame for holes (or
    to repair the plan as it drifts). Optional, the human's call.
 
 ## The interview (mode 1)

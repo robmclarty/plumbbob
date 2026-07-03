@@ -4,7 +4,7 @@ description: Revise the next increment just-in-time — sharpen the next undone 
 argument-hint: "[what-changed]"
 disable-model-invocation: true
 model: opus
-allowed-tools: Read, Edit, Bash(plumbbob status:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob agent list:*)
 ---
 
 # PlumbBob — revise the next step (the single-increment move)
@@ -40,6 +40,14 @@ grew — but its everyday job is to sharpen, not to invent.
 3. **Get the human's OK**, then write it into `## Steps` in the standard format —
    `N. [ ] <title> — **done when:** <criterion>` with a `- seam:` sub-line. Revise the
    existing step in place; only append when you are genuinely adding an increment.
+4. **Revise the step's harness bindings if they drifted too** *(optional — D4)*. If the
+   build carries a `harness.json` (beside `intent.md`) and the reality that moved the
+   step also changed which agents it wants, sharpen that step's slot bindings
+   (`before`/`build`/`after`) and `note` at the same time — this is the just-in-time
+   counterpart to `/pb-plan`'s plan-time binding. `plumbbob agent list` shows what's
+   resolvable. Same rule as the plan move: bindings + prose only, never a conditional
+   (C3). Leave it untouched when the step's agents are still right, or when the build
+   uses none.
 
 ## The hard contracts
 

@@ -3,7 +3,7 @@ name: pb-verify
 description: "The verify tick — run the check, self-review the diff against intent, validate the step's done-when, pause for your approval, then checkpoint. Executor-agnostic: it reads the diff, not who wrote it."
 disable-model-invocation: true
 model: opus
-allowed-tools: Read, Bash(plumbbob status:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(git diff:*), Bash(git status:*)
+allowed-tools: Read, Bash(plumbbob status:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent:*), Bash(git diff:*), Bash(git status:*)
 ---
 
 # PlumbBob — verify a step (the tick)
@@ -24,17 +24,29 @@ this skill verifies it the same way: **it reads the diff, not the author** (D3).
    scrollback. Report what failed and do **not** pause for approval — there is
    nothing to approve yet. The human fixes it and re-invokes. (Exit 2 means the gate
    itself broke — a harness problem to surface, not a code failure.)
-2. **Self-review** *(a single structured read, D16)*. Read `git diff` and
+2. **Run any bound `after`-agents** *(optional — D7)*. If the build's `harness.json`
+   binds agents to this step's `after` slot, run `plumbbob agent run --step <n> --mode
+   after`. Their envelopes are **advisory input to the self-review, never a gate** —
+   `plumbbob check` already gated in step 1, and an `after`-agent that could fail a step
+   is the lock returning in autonomy's costume (C4). Fold a `done` envelope's
+   `summary`/`body` into the review below; route a non-`done` one by its status (D24): a
+   `blocked` agent couldn't finish — surface its `notes`, let the human unblock, re-run;
+   a `drift` agent found the plan no longer matches reality — stop and send the human to
+   `/pb-refine` to repair the plan before checkpointing. No binding, or no harness, is a
+   clean no-op.
+3. **Self-review** *(a single structured read, D16)*. Read `git diff` and
    `.plumbbob/intent.md`, then in one pass check the diff against:
    - the current step's **done-when** criterion — is it actually met?
    - the **Decisions** — does anything contradict a settled call?
    - the **Constraints** — are any violated?
+   - any **`after`-agent findings** from step 2 — advisory, weigh them, don't defer to them.
    Surface every mismatch plainly. You are reviewing, not building — do not fix anything.
-3. **Validate.** State, yes or no, whether the step's done-when is met, with the evidence.
-4. **PAUSE.** Present the check result, the self-review, and the validation, then
+4. **Validate.** State, yes or no, whether the step's done-when is met, with the evidence.
+5. **PAUSE.** Present the check result, the self-review (with any `after`-agent
+   findings), and the validation, then
    **stop and wait for the human's explicit approval.** This is the convergence beat;
    the human is the clock. Never checkpoint without it.
-5. **Checkpoint** *(only after approval)*. Run `plumbbob checkpoint`: it makes the WIP
+6. **Checkpoint** *(only after approval)*. Run `plumbbob checkpoint`: it makes the WIP
    commit, records the SHA, flips the step to done, appends the step to the build-log's
    `## Log`, and returns to DESIGN. The CLI owns the commit **subject**
    (`plumbbob: step N — <title>`); you own the **body**. Compose a body *proportional to
@@ -62,3 +74,6 @@ this skill verifies it the same way: **it reads the diff, not the author** (D3).
   it and end your turn.
 - **You review; you do not build.** If the self-review finds a problem, surface it
   and stop — fixing is a new build beat, not part of verify.
+- **`after`-agents advise; they never gate** (D7/C4). Their output feeds the
+  self-review — checkride gates, the human approves. `blocked` → unblock and re-run;
+  `drift` → `/pb-refine` before checkpointing. No code path makes them blocking.
