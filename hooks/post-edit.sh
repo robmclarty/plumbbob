@@ -5,10 +5,16 @@
 # the tools are absent or there is no session. tsc is deferred to the heavy tier
 # (D25): it has no true single-file mode and would tax every keystroke.
 
+# The repo root is the nearest ancestor whose .plumbbob/settings.local.json carries
+# an `activeBuild` cursor — the per-worktree signal that a tracked build is live
+# here (D3/D16). Grep the same way the file_path read below does: a plain pattern
+# match, no JSON parse. The cursor replaces the old .plumbbob/STATE probe as the
+# "a build is active here" root marker.
 find_root() {
   d=$(pwd -P)
   while [ -n "$d" ]; do
-    if [ -f "$d/.plumbbob/STATE" ]; then
+    if [ -f "$d/.plumbbob/settings.local.json" ] &&
+      grep -q '"activeBuild"' "$d/.plumbbob/settings.local.json" 2>/dev/null; then
       printf '%s' "$d"
       return 0
     fi
@@ -18,7 +24,7 @@ find_root() {
   return 1
 }
 
-root=$(find_root) || exit 0 # no session: no feedback
+root=$(find_root) || exit 0 # no active build here: no feedback
 
 input=$(cat)
 path=$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.notebook_path // empty' 2>/dev/null)

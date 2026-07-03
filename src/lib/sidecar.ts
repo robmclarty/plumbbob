@@ -68,47 +68,64 @@ export function activeBuild(root: string, flag?: string): string | null {
   return builds.length === 1 ? (builds[0] ?? null) : null
 }
 
+// The build a verb should act on, plus its argv with the `--build <slug>` pair
+// stripped (D3/D16). Every verb resolves through this: an explicit `--build <slug>`
+// wins, else the cursor / sole-build fallback of `activeBuild`. `rest` matters
+// because the slug is a bare token — scanning positionals on the raw argv would let
+// it masquerade as a step number or a spike slug, so callers scan `rest` instead.
+export function resolveBuild(
+  root: string,
+  args: ReadonlyArray<string>,
+): { readonly build: string | null; readonly rest: ReadonlyArray<string> } {
+  const i = args.indexOf('--build')
+  if (i === -1) return { build: activeBuild(root), rest: args }
+  return { build: activeBuild(root, args[i + 1]), rest: [...args.slice(0, i), ...args.slice(i + 2)] }
+}
+
 function statePath(root: string): string {
   return join(root, DIRNAME, 'STATE')
 }
 
-// Where the resolved build's artifacts and in-flight markers live (D4): the
-// active `builds/<slug>/` folder when a build is resolvable, else the flat
-// sidecar root. The flat fallback covers the `--local` layout (D13) and any
-// no-cursor/no-build repo, so the verbs' path reads stay stable even before a
-// tracked build exists or when their "no active session" guard is about to fire.
-function artifactDir(root: string): string {
-  const slug = activeBuild(root)
-  return slug === null ? sidecarDir(root) : buildDir(root, slug)
+// Where a build's artifacts and in-flight markers live (D4): the `builds/<slug>/`
+// folder for the resolved build, else the flat sidecar root. `slug` is the value
+// the verb already resolved via `resolveBuild`/`activeBuild`; omit it and the dir
+// resolves from the cursor (the default the executor-agnostic path reads lean on).
+// Either way a `null` slug falls back to the flat sidecar root, which covers the
+// `--local` layout (D13) and any no-cursor/no-build repo, so the path reads stay
+// stable even before a tracked build exists or when a "no active session" guard is
+// about to fire.
+function artifactDir(root: string, slug?: string | null): string {
+  const resolved = slug === undefined ? activeBuild(root) : slug
+  return resolved === null ? sidecarDir(root) : buildDir(root, resolved)
 }
 
 // The SPIKE marker (a single-purpose presence flag, like SEAM/STEP): written by
 // `spike` on open, removed on `spike done`. Its existence is the one signal that
 // the dashboard and the spike gates read to know "a spike is active".
-export function spikePath(root: string): string {
-  return join(artifactDir(root), 'SPIKE')
+export function spikePath(root: string, slug?: string | null): string {
+  return join(artifactDir(root, slug), 'SPIKE')
 }
 
 // SEAM and STEP carry the in-flight step (D4/D7): a plain path list and a bare
 // number, so the hooks read them with a grep and no markdown parsing.
-export function seamPath(root: string): string {
-  return join(artifactDir(root), 'SEAM')
+export function seamPath(root: string, slug?: string | null): string {
+  return join(artifactDir(root, slug), 'SEAM')
 }
 
-export function stepPath(root: string): string {
-  return join(artifactDir(root), 'STEP')
+export function stepPath(root: string, slug?: string | null): string {
+  return join(artifactDir(root, slug), 'STEP')
 }
 
-export function checkpointsPath(root: string): string {
-  return join(artifactDir(root), 'checkpoints')
+export function checkpointsPath(root: string, slug?: string | null): string {
+  return join(artifactDir(root, slug), 'checkpoints')
 }
 
-export function intentPath(root: string): string {
-  return join(artifactDir(root), 'intent.md')
+export function intentPath(root: string, slug?: string | null): string {
+  return join(artifactDir(root, slug), 'intent.md')
 }
 
-export function buildLogPath(root: string): string {
-  return join(artifactDir(root), 'build-log.md')
+export function buildLogPath(root: string, slug?: string | null): string {
+  return join(artifactDir(root, slug), 'build-log.md')
 }
 
 // A session exists iff STATE exists. Deleting STATE (at wrap) is what flips the
@@ -123,16 +140,16 @@ export function beginSession(root: string): void {
 }
 
 // SPIKE marker helpers — existence is the whole signal (content is irrelevant).
-export function inSpike(root: string): boolean {
-  return existsSync(spikePath(root))
+export function inSpike(root: string, slug?: string | null): boolean {
+  return existsSync(spikePath(root, slug))
 }
 
-export function markSpike(root: string): void {
-  writeFileSync(spikePath(root), 'active\n')
+export function markSpike(root: string, slug?: string | null): void {
+  writeFileSync(spikePath(root, slug), 'active\n')
 }
 
-export function clearSpike(root: string): void {
-  rmSync(spikePath(root), { force: true })
+export function clearSpike(root: string, slug?: string | null): void {
+  rmSync(spikePath(root, slug), { force: true })
 }
 
 // Append `patterns` to the repo's info/exclude, each at most once (idempotent —

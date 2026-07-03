@@ -14,7 +14,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { findRepoRoot, resetHard, untrackedPaths } from '../lib/git.ts'
-import { checkpointsPath, hasSession, seamPath, sidecarDir, stepPath } from '../lib/sidecar.ts'
+import { checkpointsPath, hasSession, resolveBuild, seamPath, sidecarDir, stepPath } from '../lib/sidecar.ts'
 import { matchesSeam } from '../lib/intent.ts'
 
 export function revert(cwd: string, args: ReadonlyArray<string>): number {
@@ -24,13 +24,14 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
     return 1
   }
 
-  const to = parseTo(args)
+  const { build: slug, rest } = resolveBuild(root, args)
+  const to = parseTo(rest)
   if (to === 'invalid') {
     process.stderr.write('plumbbob: revert --to needs a step number. Try: plumbbob revert --to 2.\n')
     return 1
   }
 
-  const checkpoints = readCheckpoints(root)
+  const checkpoints = readCheckpoints(root, slug)
   let sha: string | undefined
   if (to === null) {
     sha = checkpoints.steps.at(-1)?.sha ?? checkpoints.baseline
@@ -49,15 +50,15 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
 
   // Compute untracked-in-seam BEFORE the reset (reset --hard leaves untracked and
   // ignored files alone, so they must be removed explicitly afterward).
-  const seam = readSeamTokens(root)
+  const seam = readSeamTokens(root, slug)
   const toRemove = untrackedPaths(root).filter((p) => matchesSeam(p, seam))
 
   resetPreserving(root, sha, plumbbobOwnedPaths(root))
   for (const rel of toRemove) {
     rmSync(join(root, rel), { force: true, recursive: true })
   }
-  rmSync(seamPath(root), { force: true })
-  rmSync(stepPath(root), { force: true })
+  rmSync(seamPath(root, slug), { force: true })
+  rmSync(stepPath(root, slug), { force: true })
 
   process.stdout.write(
     `plumbbob: reverted to ${sha.slice(0, 9)} — back at the boundary. Park lines and intent edits were preserved.\n`,
@@ -114,10 +115,10 @@ type Checkpoints = {
   readonly steps: ReadonlyArray<{ readonly n: number; readonly sha: string }>
 }
 
-function readCheckpoints(root: string): Checkpoints {
+function readCheckpoints(root: string, slug: string | null): Checkpoints {
   let content = ''
   try {
-    content = readFileSync(checkpointsPath(root), 'utf8')
+    content = readFileSync(checkpointsPath(root, slug), 'utf8')
   } catch {
     return { baseline: undefined, steps: [] }
   }
@@ -137,9 +138,9 @@ function readCheckpoints(root: string): Checkpoints {
   return { baseline, steps }
 }
 
-function readSeamTokens(root: string): ReadonlyArray<string> {
+function readSeamTokens(root: string, slug: string | null): ReadonlyArray<string> {
   try {
-    return readFileSync(seamPath(root), 'utf8')
+    return readFileSync(seamPath(root, slug), 'utf8')
       .split('\n')
       .map((l) => l.trim())
       .filter((l) => l.length > 0)

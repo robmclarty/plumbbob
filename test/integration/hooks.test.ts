@@ -47,8 +47,8 @@ describe('post-edit light feedback (D25 — the only edit-time hook)', () => {
     expect(result.stdout.trim()).toBe('')
   })
 
-  it('no-ops when there is no active session (no .plumbbob/STATE)', () => {
-    const dir = makeFixtureRepo() // note: no `start`, so find_root fails
+  it('no-ops when there is no active build (no settings.local.json activeBuild cursor)', () => {
+    const dir = makeFixtureRepo() // note: no `start`, so find_root finds no cursor and fails
     const result = postEdit(dir, { rel: 'src/a.ts' })
     expect(result.status).toBe(0)
     expect(result.stdout.trim()).toBe('')

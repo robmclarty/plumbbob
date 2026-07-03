@@ -14,7 +14,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { findRepoRoot } from '../lib/git.ts'
-import { hasSession, inSpike, markSpike, clearSpike, stepPath } from '../lib/sidecar.ts'
+import { hasSession, inSpike, markSpike, clearSpike, resolveBuild, stepPath } from '../lib/sidecar.ts'
 
 const DEFAULT_OPTIONS: ReadonlyArray<string> = ['a', 'b']
 
@@ -24,19 +24,20 @@ export function spike(cwd: string, args: ReadonlyArray<string>): number {
     process.stderr.write('plumbbob: no active session. Run `plumbbob start "<title>"` first.\n')
     return 1
   }
-  const positionals = args.filter((a) => !a.startsWith('--'))
+  const { build: buildSlug, rest } = resolveBuild(root, args)
+  const positionals = rest.filter((a) => !a.startsWith('--'))
   if (positionals[0] === 'done') {
-    return spikeDone(root)
+    return spikeDone(root, buildSlug)
   }
-  return spikeStart(root, positionals)
+  return spikeStart(root, buildSlug, positionals)
 }
 
-function spikeStart(root: string, positionals: ReadonlyArray<string>): number {
-  if (inSpike(root)) {
+function spikeStart(root: string, buildSlug: string | null, positionals: ReadonlyArray<string>): number {
+  if (inSpike(root, buildSlug)) {
     process.stderr.write('plumbbob: already in a spike. Run `plumbbob spike done` to close it first.\n')
     return 1
   }
-  if (existsSync(stepPath(root))) {
+  if (existsSync(stepPath(root, buildSlug))) {
     process.stderr.write(
       'plumbbob: spike starts from a settled boundary, but a step is in flight. ' +
         'A spike is a deliberate fork — checkpoint or revert the current step first.\n',
@@ -62,7 +63,7 @@ function spikeStart(root: string, positionals: ReadonlyArray<string>): number {
     created.push(path)
   }
 
-  markSpike(root)
+  markSpike(root, buildSlug)
   process.stdout.write(
     `plumbbob: spiking — the main tree stays put. Experiment in the throwaway worktrees:\n${created
       .map((p) => `  ${p}`)
@@ -71,8 +72,8 @@ function spikeStart(root: string, positionals: ReadonlyArray<string>): number {
   return 0
 }
 
-function spikeDone(root: string): number {
-  if (!inSpike(root)) {
+function spikeDone(root: string, buildSlug: string | null): number {
+  if (!inSpike(root, buildSlug)) {
     process.stderr.write('plumbbob: no active spike to close.\n')
     return 1
   }
@@ -83,7 +84,7 @@ function spikeDone(root: string): number {
   for (const branch of spikeBranches(root)) {
     git(root, ['branch', '-D', branch])
   }
-  clearSpike(root)
+  clearSpike(root, buildSlug)
   process.stdout.write(
     'plumbbob: spike closed — worktrees and branches removed, back at the boundary. ' +
       'Record the verdict (which option won, and why) in intent.md before you `build`.\n',

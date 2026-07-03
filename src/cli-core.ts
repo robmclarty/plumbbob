@@ -13,6 +13,7 @@ import { check } from './verbs/check.ts'
 import { checkpoint } from './verbs/checkpoint.ts'
 import { revert } from './verbs/revert.ts'
 import { spike } from './verbs/spike.ts'
+import { use } from './verbs/use.ts'
 import { wrap } from './verbs/wrap.ts'
 import { init } from './verbs/init.ts'
 import { doctor } from './verbs/doctor.ts'
@@ -31,6 +32,7 @@ const VERBS: ReadonlyArray<Verb> = [
   { name: 'revert', summary: 'revert [--to n]: git reset --hard to a checkpoint SHA' },
   { name: 'park', summary: 'park "<text>": append a raw line to the park list' },
   { name: 'spike', summary: 'spike "<slug>" | spike done: throwaway worktree experiment' },
+  { name: 'use', summary: 'use <slug>: re-point the active-build cursor and resume that build' },
   { name: 'wrap', summary: 'close-out: archive intent+log+report (no gate), clear the sidecar, close the session' },
   { name: 'init', summary: 'link plumbbob into Claude Code as an in-place plugin (~/.claude/skills/plumbbob); --uninstall to undo' },
   { name: 'doctor', summary: 'diagnose the plugin link (manifest, skills, hook) and print the fix for anything broken' },
@@ -68,7 +70,7 @@ function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): numbe
     case 'start':
       return start(cwd, rest)
     case 'status':
-      return status(cwd)
+      return status(cwd, rest)
     case 'park':
       return park(cwd, rest)
     case 'build':
@@ -81,8 +83,10 @@ function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): numbe
       return revert(cwd, rest)
     case 'spike':
       return spike(cwd, rest)
+    case 'use':
+      return use(cwd, rest)
     case 'wrap':
-      return wrap(cwd)
+      return wrap(cwd, rest)
     case 'init':
       return init(rest)
     case 'doctor':

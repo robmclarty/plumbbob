@@ -6,7 +6,7 @@ describe('formatHelp', () => {
   it('lists the usage line and every verb', () => {
     const help = formatHelp()
     expect(help).toContain('Usage: plumbbob <verb> [args]')
-    for (const verb of ['start', 'status', 'build', 'check', 'checkpoint', 'revert', 'park', 'spike', 'wrap', 'init', 'doctor']) {
+    for (const verb of ['start', 'status', 'build', 'check', 'checkpoint', 'revert', 'park', 'spike', 'use', 'wrap', 'init', 'doctor']) {
       expect(help).toContain(verb)
     }
   })

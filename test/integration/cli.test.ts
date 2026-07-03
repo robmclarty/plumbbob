@@ -27,7 +27,7 @@ describe('plumbbob help', () => {
   it('prints the full verb table', () => {
     const { stdout, status } = runCli(['help'])
     expect(status).toBe(0)
-    const verbs = ['start', 'status', 'build', 'check', 'checkpoint', 'revert', 'park', 'spike', 'wrap', 'init', 'doctor']
+    const verbs = ['start', 'status', 'build', 'check', 'checkpoint', 'revert', 'park', 'spike', 'use', 'wrap', 'init', 'doctor']
     for (const verb of verbs) {
       expect(stdout).toContain(verb)
     }
