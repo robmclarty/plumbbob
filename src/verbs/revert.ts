@@ -1,7 +1,12 @@
 // `plumbbob revert [--to n]` — git reset --hard to a checkpoint SHA (the most
 // recent step, or `--to n`, with the baseline as fallback), then remove untracked
-// files under the SEAM only. The sidecar is git-excluded (D17), so the reset
-// never touches it — park lines and intent edits survive the revert (C4).
+// files under the SEAM only. The artifact plane (`.plumbbob/builds/<slug>/`) is now
+// TRACKED (D2), so a bare reset WOULD discard park lines and intent edits — or, when
+// reverting to a baseline that predates the build folder, delete the folder wholesale.
+// So revert snapshots the sidecar to temp and restores it as uncommitted changes
+// after the reset (D10), keeping C4/never-destroy intact across both cases. The
+// untracked cleanup additionally whitelists the artifact plane, so no seam pattern
+// can ever sweep away a build's own files.
 //
 // Plumbbob also installs its driver skills INTO the repo (.claude/skills/<driver>/
 // for a self-contained install), so a blunt reset would discard an out-of-seam
@@ -15,7 +20,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { findRepoRoot, resetHard, untrackedPaths } from '../lib/git.ts'
 import { checkpointsPath, hasSession, resolveBuild, seamPath, sidecarDir, stepPath } from '../lib/sidecar.ts'
-import { matchesSeam } from '../lib/intent.ts'
+import { isArtifactPath, matchesSeam } from '../lib/intent.ts'
 
 export function revert(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
@@ -51,7 +56,7 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
   // Compute untracked-in-seam BEFORE the reset (reset --hard leaves untracked and
   // ignored files alone, so they must be removed explicitly afterward).
   const seam = readSeamTokens(root, slug)
-  const toRemove = untrackedPaths(root).filter((p) => matchesSeam(p, seam))
+  const toRemove = untrackedPaths(root).filter((p) => matchesSeam(p, seam) && !isArtifactPath(p))
 
   resetPreserving(root, sha, plumbbobOwnedPaths(root))
   for (const rel of toRemove) {

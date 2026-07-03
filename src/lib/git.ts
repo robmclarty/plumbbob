@@ -76,6 +76,14 @@ export function stagedStat(root: string): string {
   return runGit(root, ['diff', '--cached', '--stat'])
 }
 
+// The repo-relative paths currently staged (vs HEAD) — the set `checkpoint`
+// checks against the step's seam to warn about scope drift. Empty when nothing is
+// staged.
+export function stagedPaths(root: string): ReadonlyArray<string> {
+  const out = runGit(root, ['diff', '--cached', '--name-only'])
+  return out.length === 0 ? [] : out.split('\n')
+}
+
 export function resetHard(root: string, sha: string): void {
   runGit(root, ['reset', '--hard', sha])
 }

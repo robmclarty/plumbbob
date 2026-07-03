@@ -9,11 +9,11 @@
 // the same way.
 
 import { appendFileSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { commit, findRepoRoot, headSha, isDirty, stageAll, stagedStat } from '../lib/git.ts'
+import { commit, findRepoRoot, headSha, isDirty, stageAll, stagedPaths, stagedStat } from '../lib/git.ts'
 import { buildLogPath, checkpointsPath, hasSession, intentPath, seamPath, stepPath } from '../lib/sidecar.ts'
 import { runCheck } from '../lib/check.ts'
 import { markStepDone, parseSteps } from '../lib/orient.ts'
-import { parseStepSeam } from '../lib/intent.ts'
+import { parseStepSeam, scopeDrift } from '../lib/intent.ts'
 import { appendToSection, checkpointLogLine } from '../lib/buildlog.ts'
 
 export function checkpoint(cwd: string, args: ReadonlyArray<string>): number {
@@ -37,6 +37,7 @@ export function checkpoint(cwd: string, args: ReadonlyArray<string>): number {
   let sha: string
   if (isDirty(root)) {
     stageAll(root)
+    warnScopeDrift(root, step)
     const body = bodyArg(args) ?? fallbackBody(root, step)
     sha = commit(root, messageArg(args) ?? subjectForStep(root, step), body)
   } else {
@@ -69,6 +70,41 @@ function resolveStep(root: string, args: ReadonlyArray<string>): number | null {
   } catch {
     return null
   }
+}
+
+// Guidance, not a gate (the enforce→guide pivot): warn when the staged tree reaches
+// beyond the step's seam, then commit anyway. The seam comes from the in-flight SEAM
+// file when a build is live, else the step's declared seam in intent.md. Plumbbob's
+// own artifact plane is whitelisted (`scopeDrift`), so the `[x]` flip and build-log
+// line this very checkpoint stages never read as drift. No seam ⇒ no warning.
+function warnScopeDrift(root: string, step: number): void {
+  const seam = seamTokens(root, step)
+  const outside = scopeDrift(stagedPaths(root), seam)
+  if (outside.length > 0) {
+    process.stderr.write(
+      `plumbbob: heads-up — staged paths outside step ${step}'s seam: ${outside.join(', ')}. ` +
+        `The checkpoint captures them; if that's real scope drift, the plan may need a \`/plumbbob:pb-step\` revision.\n`,
+    )
+  }
+}
+
+// The seam tokens for the in-flight step: the normalized SEAM file `build` wrote
+// (authoritative while a build is live), falling back to the step's declared seam
+// parsed from intent.md. Empty when neither resolves — the caller then skips the
+// warning rather than flagging the whole tree.
+function seamTokens(root: string, step: number): ReadonlyArray<string> {
+  try {
+    const fromFile = readFileSync(seamPath(root), 'utf8')
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0)
+    if (fromFile.length > 0) {
+      return fromFile
+    }
+  } catch {
+    // no SEAM file — fall through to the declared seam.
+  }
+  return seamForStep(root, step)
 }
 
 function flipIntent(root: string, step: number): void {

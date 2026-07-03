@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { checkpoint } from '../checkpoint.ts'
@@ -19,8 +19,9 @@ const INTENT = `# Checkpoint test
    - seam: \`src/a.ts\`
 `
 
-// A started session with one planned step and a green stub gate. The sidecar is
-// git-excluded, so overwriting intent/settings does not dirty the tree.
+// A started session with one planned step and a green stub gate. In the tracked
+// layout the build folder rides the tree (D2), so overwriting intent/settings
+// dirties it — checkpoint stages that alongside the step's work.
 function startedGreen(): string {
   const dir = makeTempRepo()
   captureIo(() => start(dir, ['Checkpoint test']))
@@ -73,6 +74,29 @@ describe('checkpoint', () => {
     captureIo(() => checkpoint(dir, ['1']))
     const log = readFileSync(buildLogPath(dir), 'utf8')
     expect(log).toMatch(/- \d{4}-\d{2}-\d{2} — step 1 checkpointed · [0-9a-f]{9} — First/)
+  })
+
+  it('whitelists its own staged artifact writes — no scope-drift warning (step 7)', () => {
+    const dir = startedGreen()
+    mkdirSync(join(dir, 'src'), { recursive: true })
+    writeFileSync(join(dir, 'src', 'a.ts'), 'in seam\n') // matches the step's `src/a.ts` seam
+    const { code, stderr } = captureIo(() => checkpoint(dir, ['1']))
+    expect(code).toBe(0)
+    // The build folder (intent.md, build-log.md) is staged too, but it lives under
+    // `.plumbbob/` and must never read as drift.
+    expect(stderr).not.toContain('outside step')
+  })
+
+  it('warns (but still commits) when staged work reaches outside the step seam', () => {
+    const dir = startedGreen()
+    mkdirSync(join(dir, 'src'), { recursive: true })
+    writeFileSync(join(dir, 'src', 'a.ts'), 'in seam\n')
+    writeFileSync(join(dir, 'stray.ts'), 'out of seam\n') // not in `src/a.ts`, not artifact
+    const { code, stderr } = captureIo(() => checkpoint(dir, ['1']))
+    expect(code).toBe(0) // guidance, not a gate — the checkpoint still lands
+    expect(stderr).toContain("outside step 1's seam")
+    expect(stderr).toContain('stray.ts')
+    expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x]') // committed despite the drift
   })
 
   it('refuses on a red check', () => {

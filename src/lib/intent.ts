@@ -92,10 +92,31 @@ export function parseStepSeam(content: string, step: number): SeamParse {
 }
 
 // Seam membership (D23): a repo-relative path is in-seam if it equals an exact
-// token, or is prefixed by a `dir/` grant. Shared by `done` (scope-drift warn)
-// and `revert` (untracked cleanup).
+// token, or is prefixed by a `dir/` grant. Shared by `checkpoint` (scope-drift
+// warn) and `revert` (untracked cleanup).
 export function matchesSeam(relPath: string, tokens: ReadonlyArray<string>): boolean {
   return tokens.some((token) => (token.endsWith('/') ? relPath.startsWith(token) : relPath === token))
+}
+
+// Plumbbob's own artifact plane (D2): everything under `.plumbbob/` is plumbbob's
+// bookkeeping — the tracked intent/build-log/checkpoints that ride the branch, and
+// the excluded control markers. It is never the user's code, so it never counts as
+// scope drift, and `revert`'s untracked cleanup must never delete it. checkpoint
+// stages this plane itself on every tick (the `[x]` flip, the build-log line), so
+// without this whitelist every checkpoint would cry wolf about its own writes.
+export function isArtifactPath(relPath: string): boolean {
+  return relPath === '.plumbbob' || relPath.startsWith('.plumbbob/')
+}
+
+// The staged paths that fall outside the step's seam AND outside the artifact
+// plane — the scope-drift set `checkpoint` warns about (guidance, not a gate: the
+// checkpoint still commits them). An empty seam yields no drift, so callers that
+// cannot resolve a seam simply skip the warning rather than flagging everything.
+export function scopeDrift(paths: ReadonlyArray<string>, seam: ReadonlyArray<string>): ReadonlyArray<string> {
+  if (seam.length === 0) {
+    return []
+  }
+  return paths.filter((p) => !matchesSeam(p, seam) && !isArtifactPath(p))
 }
 
 function fail(error: string): SeamParse {

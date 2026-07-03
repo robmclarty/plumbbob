@@ -6,7 +6,8 @@ import { revert } from '../revert.ts'
 import { start } from '../start.ts'
 import { build } from '../build.ts'
 import { checkpoint } from '../checkpoint.ts'
-import { intentPath, stepPath } from '../../lib/sidecar.ts'
+import { park } from '../park.ts'
+import { buildDir, buildLogPath, intentPath, stepPath } from '../../lib/sidecar.ts'
 import { settingsPath } from '../../lib/settings.ts'
 import { headSha } from '../../lib/git.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -77,6 +78,40 @@ describe('revert', () => {
     writeFileSync(intentPath(dir), `${readFileSync(intentPath(dir), 'utf8')}\n<!-- note made after the checkpoint -->\n`)
     captureIo(() => revert(dir, []))
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('note made after the checkpoint')
+  })
+
+  // Q7 / D10: the artifact plane is tracked now, so revert must snapshot + restore
+  // the whole build folder across the reset — both when reverting to a step (the
+  // folder exists at the target SHA but with older content) and to the baseline
+  // (the folder does not exist at the target SHA at all).
+  it('revert-to-step: the whole build folder and park lines survive (Q7)', () => {
+    const dir = startedGreen()
+    writeFileSync(join(dir, 'feature.txt'), 'v1\n')
+    captureIo(() => checkpoint(dir, ['1'])) // commits feature.txt=v1 AND the tracked build folder; records step 1
+    captureIo(() => build(dir, ['1'])) // in-flight
+    captureIo(() => park(dir, ['survive the step revert'])) // uncommitted tracked artifact edit
+    writeFileSync(join(dir, 'feature.txt'), 'v2\n') // uncommitted code drift
+    expect(captureIo(() => revert(dir, [])).code).toBe(0)
+    expect(readFileSync(join(dir, 'feature.txt'), 'utf8')).toBe('v1\n') // code rewound
+    expect(existsSync(buildDir(dir, 'revert-test'))).toBe(true) // folder intact
+    expect(existsSync(intentPath(dir))).toBe(true)
+    expect(readFileSync(buildLogPath(dir), 'utf8')).toContain('survive the step revert') // park line kept (C4)
+  })
+
+  it('revert-to-baseline: the build folder survives even when it does not exist at the baseline SHA (Q7)', () => {
+    const dir = startedGreen()
+    const baseline = headSha(dir) // predates any commit of the build folder
+    writeFileSync(join(dir, 'feature.txt'), 'work\n')
+    captureIo(() => park(dir, ['survive the baseline revert']))
+    git(dir, ['add', '-A'])
+    git(dir, ['commit', '-q', '-m', 'work + tracked build folder, past baseline'])
+    // No step checkpoints recorded → revert falls back to the baseline, where the
+    // build folder is absent; a bare reset --hard would delete it outright.
+    expect(captureIo(() => revert(dir, [])).code).toBe(0)
+    expect(headSha(dir)).toBe(baseline)
+    expect(existsSync(buildDir(dir, 'revert-test'))).toBe(true)
+    expect(existsSync(intentPath(dir))).toBe(true)
+    expect(readFileSync(buildLogPath(dir), 'utf8')).toContain('survive the baseline revert')
   })
 
   it('rejects --to without a numeric step', () => {
