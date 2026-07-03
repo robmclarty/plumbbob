@@ -1,0 +1,29 @@
+# Fallow: dead code, circular deps, duplication, complexity, architecture
+# boundaries — the `dead` slot of the checkride gate (D32/D9: replaces knip).
+# Docs: https://docs.fallow.tools
+
+entry = [
+  "src/cli.ts",
+  "src/**/__tests__/*.test.ts",
+  "src/__tests__/*.test.ts",
+  "test/**/*.test.ts",
+  "vitest.config.ts",
+]
+
+# CLI/config-plane deps never imported from source.
+ignoreDependencies = ["@ast-grep/cli", "markdownlint-cli2", "oxlint", "typescript", "@vitest/coverage-v8", "@types/node"]
+
+[rules]
+unused-exports = "error"
+unused-files = "error"
+unused-dependencies = "error"
+circular-dependencies = "error"
+boundary-violation = "error"
+
+[duplicates]
+mode = "mild"
+minTokens = 50
+
+[health]
+maxCyclomatic = 15
+maxCognitive = 15

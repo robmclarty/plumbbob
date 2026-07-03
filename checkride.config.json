@@ -1,0 +1,9 @@
+{
+  "checks": {
+    "lint": {
+      "use": "oxlint",
+      "args": ["exec", "oxlint", "--format=json"],
+      "description": "Oxlint (no type-aware pass — tsc already covers types)"
+    }
+  }
+}

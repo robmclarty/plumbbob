@@ -221,9 +221,9 @@ The checks come in two tiers with different jobs:
   It never blocks an edit, and it exists because the model cannot see your editor's LSP — so
   the light tier *serves the model*. It is session-gated: a repo with no `.plumbbob/STATE`
   behaves like plain Claude Code.
-- **Heavy** — the full project check (in this repo, `pnpm check`: tsc, oxlint, ast-grep,
-  vitest, knip, markdownlint), configurable per repo via the `"check"` key in
-  `.plumbbob/settings.json`. It is **not** a hook; it runs *inside* the verify tick, which
+- **Heavy** — the full project check: checkride (D32 — in this repo: tsc, oxlint,
+  ast-grep, fallow, vitest, markdownlint-cli2, links), overridable per repo via the
+  `"check"` key in `.plumbbob/settings.json`. It is **not** a hook; it runs *inside* the verify tick, which
   refuses to checkpoint while it is red. The hard gate lives on the deliberate boundary, not
   on every keystroke.
 

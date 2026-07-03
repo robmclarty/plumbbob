@@ -38,13 +38,8 @@
     "clean": "rm -rf dist",
     "build": "tsc -p tsconfig.build.json",
     "prepack": "pnpm run clean && pnpm run build",
-    "check": "pnpm run check:tsc && pnpm run check:oxlint && pnpm run check:astgrep && pnpm run check:test && pnpm run check:knip && pnpm run check:md",
-    "check:tsc": "tsc --noEmit",
-    "check:oxlint": "oxlint",
-    "check:astgrep": "ast-grep scan",
-    "check:test": "vitest run",
-    "check:knip": "knip",
-    "check:md": "markdownlint --config .markdownlint.jsonc \"**/*.md\" --ignore node_modules --ignore research"
+    "check": "checkride",
+    "test": "vitest run"
   },
   "devEngines": {
     "packageManager": {
@@ -56,8 +51,9 @@
   "devDependencies": {
     "@ast-grep/cli": "^0.43.0",
     "@types/node": "^24.0.0",
-    "knip": "^6.16.1",
-    "markdownlint-cli": "^0.48.0",
+    "@vitest/coverage-v8": "^4.1.9",
+    "fallow": "^2.103.0",
+    "markdownlint-cli2": "^0.22.1",
     "oxlint": "^1.69.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"

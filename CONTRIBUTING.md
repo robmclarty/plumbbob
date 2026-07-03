@@ -1,8 +1,9 @@
 # Contributing to PlumbBob
 
-Thanks for your interest. PlumbBob is a small, deliberately constrained tool — a
-zero-dependency TypeScript CLI plus a set of Claude Code skills. This guide covers the
-setup, the conventions the code holds itself to, and how to get a change merged.
+Thanks for your interest. PlumbBob is a small, deliberately constrained tool — a lean
+TypeScript CLI (one deliberate runtime dependency: [checkride](https://www.npmjs.com/package/checkride))
+plus a set of Claude Code skills. This guide covers the setup, the conventions the code
+holds itself to, and how to get a change merged.
 
 If you are changing anything non-trivial, it helps to know the design vocabulary first:
 [`docs/techniques.md`](docs/techniques.md) for the methods, and
@@ -25,19 +26,22 @@ same, so you rarely need `pnpm build` — only when you want to exercise the pub
 
 ## The check gate
 
-`pnpm check` is the one gate, and it must be green before a change lands. It runs six
-tools in order:
+`pnpm check` is the one gate, and it must be green before a change lands. It is
+[checkride](https://www.npmjs.com/package/checkride) (**D32** — our sibling package, and
+plumbbob's one runtime dependency), which runs the tools this repo configures, in order:
 
-| Step | Tool | What it guards |
+| Slot | Tool | What it guards |
 |------|------|----------------|
-| `check:tsc` | `tsc --noEmit` | types |
-| `check:oxlint` | `oxlint` | correctness lint |
-| `check:astgrep` | `ast-grep scan` | the structural constraints (see below) |
-| `check:test` | `vitest run` | the test suite |
-| `check:knip` | `knip` | dead code / unused exports |
-| `check:md` | `markdownlint` | the docs |
+| `types` | `tsc --build` | types |
+| `lint` | `oxlint` | correctness lint |
+| `struct` | `ast-grep scan` | the structural constraints (see below) |
+| `dead` | `fallow` | dead code, unused exports/deps, cycles, complexity |
+| `test` | `vitest run --coverage` | the test suite |
+| `docs` | `markdownlint-cli2` | the docs |
+| `links` | built-in | relative markdown links resolve |
 
-Run a single step with `pnpm check:test`, `pnpm check:tsc`, and so on. There is no CI yet —
+Raw tool output lands in `.check/` (`summary.json` is the index). Narrow the loop while
+iterating: `pnpm check --bail`, `pnpm check --only types,lint`. There is no CI yet —
 **run `pnpm check` locally** before opening a pull request.
 
 ## Code conventions
@@ -48,9 +52,10 @@ automatically. Full key in [`docs/decisions.md`](docs/decisions.md); the load-be
 - **C1 — functional and procedural only.** No classes, no `this`, no default exports. Use
   plain functions and named exports so every symbol has a stable name. `ast-grep` fails the
   build on a class or a default export.
-- **C2 — node builtins only, zero runtime dependencies.** Import nothing outside `node:*`
-  in `src/`; `ast-grep` flags any non-`node:`, non-relative import. New runtime
-  dependencies are a hard no; dev-only tooling is fine.
+- **C2 — node builtins plus a few deliberate dependencies.** Import nothing outside
+  `node:*` and the explicit allowlist (currently `checkride` alone) in `src/`; `ast-grep`
+  flags any other import. A new runtime dependency is a design decision to argue for —
+  our own tools first, never a casual install; dev-only tooling is fine.
 - **C4 / C5 — never destroy, additive git only.** Anything that closes or rewinds a session
   archives before it clears and only resets to its own recorded SHAs; it never rewrites
   pushed history.
@@ -79,13 +84,13 @@ The layout encodes intent — match it when you add tests:
 
 `vitest` discovers both `src/**/*.test.ts` and `test/**/*.test.ts`. The build excludes
 `src/**/__tests__/**`, so colocated tests never ship in `dist/`. Add or update tests with
-any behavior change — `knip` will also flag an export that nothing (including a test)
+any behavior change — `fallow` will also flag an export that nothing (including a test)
 references.
 
 ## Documentation
 
 Docs are hand-written markdown under `docs/` (plus this file and the `README`).
-`markdownlint` enforces structure; line length is intentionally unrestricted, so wrap prose
+`markdownlint-cli2` enforces structure; line length is intentionally unrestricted, so wrap prose
 naturally. If you change a verb's behavior or output, update
 [`docs/cli-reference.md`](docs/cli-reference.md), and check whether
 [`docs/happy-path.md`](docs/happy-path.md) shows the affected output.

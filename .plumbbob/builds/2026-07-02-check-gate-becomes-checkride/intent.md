@@ -132,7 +132,7 @@ dogfood (this repo): settings.json drops "check" → gate is checkride
    `doctor` prints checkride's slot/adapter report and flags missing tools (D8);
    both verbs' tests updated
    - seam: `src/verbs/start.ts`, `src/verbs/doctor.ts`, `src/verbs/__tests__/start.test.ts`, `src/verbs/__tests__/doctor.test.ts`
-5. [ ] Docs + skills — **done when:** repo D24 is amended (checkride is the gate;
+5. [x] Docs + skills — **done when:** repo D24 is amended (checkride is the gate;
    `check` setting = spawn override) and a new decision records D1–D5 of this
    build; `docs/cli-reference.md`, `docs/troubleshooting.md`, `README.md`
    updated; `pb-build`/`pb-verify`/`pb-plan`/`pb-finish` skills point the agent

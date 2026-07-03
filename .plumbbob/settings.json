@@ -1,4 +1,3 @@
 {
-  "check": "pnpm run check",
   "auto": false
 }

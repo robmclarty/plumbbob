@@ -145,7 +145,7 @@ then **stops at the pause** — the one human-convergence beat. Nothing is commi
 plumbbob: check green.
 
 ── verify: step 1 — Add a token-bucket limiter ──
-check        green (tsc, oxlint, ast-grep, vitest, knip, markdownlint)
+check        green (checkride: types, lint, struct, dead, test, docs, links)
 done-when    met — test/limiter.test.ts: 4 passing
 decisions    D1 (in-memory), D2 (5/60s) honored
 constraints  C1 honored — no new deps
