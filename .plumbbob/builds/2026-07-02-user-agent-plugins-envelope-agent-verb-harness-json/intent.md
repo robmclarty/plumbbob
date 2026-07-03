@@ -209,7 +209,7 @@ distilled here so the build stands alone, pointer retained under ## Source.*
 
 ## Steps
 
-1. [ ] Envelope + manifest module — **done when:** `src/lib/agents.ts` defines the
+1. [x] Envelope + manifest module — **done when:** `src/lib/agents.ts` defines the
    contract-1 types, validates `agent.json` (name, slots ⊆ {before,build,after},
    command, contract) and the output envelope (status ∈ {done,blocked,drift},
    summary; unknown fields tolerated), and refuses a contract major-version
