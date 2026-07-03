@@ -5,7 +5,7 @@ head; the chat is the hand. When the model floods you, read this, not your memor
 
 # User agent plugins — envelope, agent verb, harness.json
 
-**Phase** (bookkeeping while in DESIGN): plan authored — awaiting human review
+**Phase** (bookkeeping while in DESIGN): plan refined — Q1–Q12 all resolved, ready to build
 **Size:** medium
 
 *Source: `research/04-user-agent-plugins.md` (2026-07-02) — tracked in this repo;
@@ -142,10 +142,12 @@ distilled here so the build stands alone, pointer retained under ## Source.*
   the settings ladder; absent/0 = no timeout, set = kill the child and report a
   failed run — *because* the human is present by default (Ctrl-C works), and
   enforcement should be the user's explicit opt-in, not plumbbob's guess.
-- D18: POSIX only (*nix/macOS) — the manifest `command` is a string run through
-  `sh -c` with the agent's directory as cwd — *because* Rob doesn't care about
-  Windows support, and a shell string keeps `agent.json` one line, not an argv
-  array.
+- D18 (amended 2026-07-03, Q6): POSIX only (*nix/macOS) — the manifest `command`
+  is a string run through `sh -c` with the **repo root** as cwd; the agent's own
+  directory is exposed as `PLUMBBOB_AGENT_DIR` in the child's env — *because* a
+  build-slot agent edits repo-relative seam paths, and `check.ts` already runs
+  its spawned command at root for the same reason; the env var keeps the agent's
+  own files reachable. (Original "agent dir as cwd" contradicted the build slot.)
 - D19: `agent list` stays a dedicated subcommand, but `doctor` validates every
   defined agent (manifest well-formed, command exists and is executable, contract
   version supported) and `status` reports the active build's bound agents —
@@ -153,7 +155,41 @@ distilled here so the build stands alone, pointer retained under ## Source.*
   they already check must carry the report; doctor-as-validator also answers
   where authors check compliance (with `docs/agents.md` holding the schema), so
   no separate `agent check` verb.
-
+- D20: hybrid handoff (Q7/Q8) — `agent run` obeys the same stream discipline as
+  its children: the child's validated envelope is re-emitted on the **verb's own
+  stdout** (machine, for the calling skill to capture inline) with the human
+  summary on stderr, AND appended to `builds/<slug>/handoff.json`, the
+  conventional location skills read to thread earlier envelopes into the next
+  call's `context[]` — *because* inline keeps the happy path zero-file, while the
+  file survives context-window compaction and sequential `agent run` calls (the
+  CLI itself stays memoryless between invocations). `handoff.json` is in-flight
+  control state like STEP/SEAM: untracked (excluded), scoped to the current step,
+  cleared when the step checkpoints.
+- D21: explicit asks fail loud, ambient bindings degrade soft (Q11/Q12) —
+  `agent run <name>` naming an unresolvable agent **errors**, and `--mode X`
+  against a manifest that doesn't declare slot X **refuses**; only a
+  harness-*bound* agent a teammate lacks downgrades to D10's warning — *because*
+  the user who typed the name asked for that agent specifically, while a binding
+  is ambient configuration the loop must survive without.
+- D22: async `spawn`, not `spawnSync` (Q9) — the verb runs the child with
+  `['pipe','pipe','inherit']`-style stdio, a timer for D17's timeout, and its own
+  SIGINT handler that kills the child and reports before exiting — *because* a
+  live parent can interrupt gracefully (message + cleanup) where a blocked one
+  just dies with the child; `dispatch` is already Promise-typed, so it costs no
+  plumbing.
+- D23: decisions/constraints parsing is best-effort (Q10) — scrape every
+  top-level `- ` bullet under `## Decisions`/`## Constraints` (joining wrapped
+  continuation lines), pass each verbatim as one string, warn on stderr about any
+  line skipped, never refuse — *because* this feeds an agent's context, not a
+  gate (seam parsing stays strict precisely because it gates git behavior), and
+  a formatting quirk in a hand-edited intent must not wedge the loop; verbatim
+  keeps the "*because*" rationale intact for the agent.
+- D24: `blocked` and `drift` route differently at the pause (Q12a) — `blocked` =
+  the agent couldn't finish (missing input, failed precondition): surface
+  `notes`, the human unblocks and re-runs; `drift` = the agent finished but found
+  the plan no longer matches reality: route to `/pb-refine` repair before
+  continuing — *because* the two halts need different medicine (unblock the step
+  vs repair the plan), and naming the route keeps the skills' prose unambiguous.
 ## Constraints
 
 - C1: functional/procedural, node builtins only, zero runtime deps (repo C1/C2) —
@@ -189,20 +225,28 @@ distilled here so the build stands alone, pointer retained under ## Source.*
 3. [ ] StepContext composition — **done when:** the input JSON (contract, mode,
    build slug/title, step n/title/doneWhen/seam, decisions[], constraints[],
    context[], settings) is composed deterministically from `intent.md` + settings;
-   `intent.ts` gains the decisions/constraints/title/done-when parse it doesn't
-   have today; unit tests assert the composed JSON for a fixture build
+   `intent.ts` gains a best-effort decisions/constraints/title/done-when scrape
+   (verbatim bullet strings, wrapped lines joined, stderr warning on skipped
+   lines, never refuses — D23; seam parsing stays strict); unit tests assert the
+   composed JSON for a fixture build including a malformed-bullet case
    - seam: `src/lib/agents.ts`, `src/lib/intent.ts`, `src/lib/__tests__/agents.test.ts`, `src/lib/__tests__/intent.test.ts`
 4. [ ] `plumbbob agent run <name> [--step N] [--mode before|build|after]` —
-   **done when:** the verb composes the input, spawns the manifest command via
-   `sh -c` with the agent dir as cwd (D18) and JSON on stdin, inherits stderr,
-   forwards SIGINT, honors an opt-in `agentTimeout` settings key (absent/0 = no
-   timeout; on expiry kill the child and report a failed run, D17), parses stdout
-   as the envelope, applies `parked[]` via the park verb, and honors exit-code
-   semantics — with no code path to checkpoint or step state; subprocess tests
-   with bash fixture agents cover done/blocked/drift, non-zero exit (report and
-   stop), garbage stdout (out of contract), timeout kill, and park lines landing
-   in the build folder
-   - seam: `src/verbs/agent.ts`, `src/lib/agents.ts`, `src/lib/settings.ts`, `src/verbs/__tests__/agent.test.ts`
+   **done when:** the verb composes the input, async-spawns (D22) the manifest
+   command via `sh -c` at repo root with `PLUMBBOB_AGENT_DIR` in the env (D18)
+   and JSON on stdin, streams the child's stderr live, kills the child and
+   reports on SIGINT, honors an opt-in
+   `agentTimeout` settings key (absent/0 = no timeout; on expiry kill the child
+   and report a failed run, D17), captures and validates the child's stdout
+   envelope, re-emits it on the verb's own stdout with the human summary on
+   stderr, appends it to `builds/<slug>/handoff.json` (untracked/excluded,
+   cleared at checkpoint, D20), applies `parked[]` via the park verb, errors on
+   an unresolvable name and refuses an undeclared `--mode` slot (D21), and honors
+   exit-code semantics — with no code path to checkpoint or step state;
+   subprocess tests with bash fixture agents cover done/blocked/drift, non-zero
+   exit (report and stop), garbage stdout (out of contract), timeout kill,
+   explicit-miss error, undeclared-slot refusal, handoff append + checkpoint
+   clear, and park lines landing in the build folder
+   - seam: `src/verbs/agent.ts`, `src/lib/agents.ts`, `src/lib/settings.ts`, `src/lib/sidecar.ts`, `src/verbs/checkpoint.ts`, `src/verbs/__tests__/agent.test.ts`
 5. [ ] `harness.json` bindings — **done when:** the CLI reads
    `builds/<slug>/harness.json` (contract, `defaults`, per-step slots + `note`),
    merges settings-level defaults under it and the `--agent` flag over it, and
@@ -222,8 +266,10 @@ distilled here so the build stands alone, pointer retained under ## Source.*
    steps); pb-step revises a step's bindings just-in-time; pb-build runs
    before-agents into `context[]`, delegates to a build-slot agent when bound, and
    documents the `--auto` beat (D12); pb-verify presents after-agent output as
-   advisory input at the pause; manifest `when` prose is documented as the host
-   model's cue to fire `agent run` mid-build; `docs/skills-reference.md` updated
+   advisory input at the pause; the skills prose names D24's routing (`blocked` →
+   surface notes, unblock, re-run; `drift` → `/pb-refine` repair); manifest
+   `when` prose is documented as the host model's cue to fire `agent run`
+   mid-build; `docs/skills-reference.md` updated
    - seam: `skills/pb-plan/SKILL.md`, `skills/pb-step/SKILL.md`, `skills/pb-build/SKILL.md`, `skills/pb-verify/SKILL.md`, `docs/skills-reference.md`
 8. [ ] Docs, example, decision log — **done when:** `docs/agents.md` defines the
    full contract for agent authors (envelope schema, manifest, harness.json, the
@@ -237,7 +283,8 @@ distilled here so the build stands alone, pointer retained under ## Source.*
 
 ## Open questions
 
-*(none — Q1–Q5 resolved 2026-07-03, see Verdicts.)*
+*(none — Q1–Q5 resolved 2026-07-03; Q6–Q12 raised by pb-refine's cold read and
+all resolved the same day. See Verdicts.)*
 
 ## Verdicts
 
@@ -260,6 +307,28 @@ distilled here so the build stands alone, pointer retained under ## Source.*
 - 2026-07-03 — Q5 (list placement) → chose **dedicated subcommand + tie into
   status/doctor** so the surfaces the user already checks carry the report → D19,
   step 6.
+- 2026-07-03 — Q6 (child cwd) → chose **repo root as cwd** (the check.ts
+  precedent), agent's own dir via `PLUMBBOB_AGENT_DIR` env — D18 amended; the
+  original agent-dir cwd broke build-slot agents editing repo-relative seams.
+- 2026-07-03 — Q7+Q8 (context transport / verb stdout) → chose **hybrid**: the
+  verb re-emits the validated envelope on its own stdout (inline, for the calling
+  skill) AND appends it to `builds/<slug>/handoff.json` — a conventional,
+  untracked, step-scoped handoff file that survives context-window compaction →
+  D20, step 4.
+- 2026-07-03 — Q11 (explicit miss) → chose **error** — the user named the agent;
+  only harness-bound misses get D10's soft warning → D21.
+- 2026-07-03 — Q12b (undeclared slot) → chose **refuse**, same fail-loud logic as
+  Q11 → D21.
+- 2026-07-03 — Q9 (spawn mechanics) → chose **async `spawn`** for graceful SIGINT
+  (kill child, report, clean up) and the timeout timer; dispatch already
+  Promise-typed → D22, step 4.
+- 2026-07-03 — Q10 (parse strictness) → chose **best-effort, verbatim strings**:
+  scrape top-level bullets with continuation lines joined, warn on skipped lines,
+  never refuse; strictness stays reserved for seams, which gate git behavior →
+  D23, step 3.
+- 2026-07-03 — Q12a (status routing) → confirmed the proposal: `blocked` →
+  surface notes, human unblocks and re-runs; `drift` → `/pb-refine` repair before
+  continuing → D24, step 7.
 
 ## Source
 
