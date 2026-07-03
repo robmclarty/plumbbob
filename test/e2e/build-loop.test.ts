@@ -2,7 +2,15 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupFixtures, makeFixtureRepo, phase, readSidecar, runCli, sidecarExists } from '../helpers/fixture-repo.ts'
+import {
+  cleanupFixtures,
+  makeFixtureRepo,
+  phase,
+  readSidecar,
+  runCli,
+  sidecarExists,
+  writeSidecar,
+} from '../helpers/fixture-repo.ts'
 
 afterAll(cleanupFixtures)
 
@@ -21,7 +29,7 @@ function fileExists(dir: string, rel: string): boolean {
   return existsSync(join(dir, rel))
 }
 function writeIntent(dir: string, stepsBody: string): void {
-  writeFileSync(join(dir, '.plumbbob', 'intent.md'), `# Fix\n\n## Steps\n\n${stepsBody}\n`)
+  writeSidecar(dir, 'intent.md', `# Fix\n\n## Steps\n\n${stepsBody}\n`)
 }
 function setCheck(dir: string, command: string): void {
   writeFileSync(join(dir, '.plumbbob', 'settings.json'), JSON.stringify({ check: command }))

@@ -1,22 +1,78 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { start } from '../start.ts'
-import { hasSession } from '../../lib/sidecar.ts'
+import { buildDir, hasSession } from '../../lib/sidecar.ts'
+import { localSetting } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo } from '../../../test/helpers/capture-io.ts'
 
 afterAll(cleanupTempRepos)
 
 describe('start', () => {
-  it('scaffolds the sidecar and opens the session on a clean repo', () => {
+  it('scaffolds a tracked builds/<slug>/ folder and opens the session on a clean repo', () => {
     const dir = makeTempRepo()
     const { code, stdout } = captureIo(() => start(dir, ['My Feature']))
     expect(code).toBe(0)
     expect(hasSession(dir)).toBe(true)
-    expect(existsSync(join(dir, '.plumbbob', 'intent.md'))).toBe(true)
-    expect(readFileSync(join(dir, '.plumbbob', 'checkpoints'), 'utf8')).toMatch(/^baseline [0-9a-f]{40}\n$/)
+    const build = join(dir, '.plumbbob', 'builds', 'my-feature')
+    expect(existsSync(join(build, 'intent.md'))).toBe(true)
+    expect(existsSync(join(build, 'build-log.md'))).toBe(true)
+    expect(readFileSync(join(build, 'checkpoints'), 'utf8')).toMatch(/^baseline [0-9a-f]{40}\n$/)
     expect(stdout).toContain('started "My Feature"')
+    expect(stdout).toContain('.plumbbob/builds/my-feature/intent.md')
+  })
+
+  it('points the settings.local.json activeBuild cursor at the new build (D3)', () => {
+    const dir = makeTempRepo()
+    captureIo(() => start(dir, ['My Feature']))
+    expect(localSetting(dir, 'activeBuild')).toBe('my-feature')
+  })
+
+  it('narrows info/exclude to the control patterns, tracking the artifact plane', () => {
+    const dir = makeTempRepo()
+    captureIo(() => start(dir, ['My Feature']))
+    const exclude = readFileSync(join(dir, '.git', 'info', 'exclude'), 'utf8').split('\n')
+    expect(exclude).toContain('.plumbbob/settings.local.json')
+    expect(exclude).toContain('.plumbbob/builds/*/SEAM')
+    expect(exclude).not.toContain('.plumbbob/')
+  })
+
+  it('refuses when the derived slug collides with an existing build (D17)', () => {
+    const dir = makeTempRepo()
+    mkdirSync(buildDir(dir, 'my-feature'), { recursive: true }) // a prior build already owns the slug
+    const { code, stderr } = captureIo(() => start(dir, ['My Feature']))
+    expect(code).toBe(1)
+    expect(stderr).toContain('already exists')
+    expect(hasSession(dir)).toBe(false)
+  })
+
+  it('honors an explicit --slug over the title', () => {
+    const dir = makeTempRepo()
+    const { code } = captureIo(() => start(dir, ['My Feature', '--slug', 'custom-name']))
+    expect(code).toBe(0)
+    expect(existsSync(join(dir, '.plumbbob', 'builds', 'custom-name', 'intent.md'))).toBe(true)
+    expect(localSetting(dir, 'activeBuild')).toBe('custom-name')
+  })
+
+  it('refuses when the title yields an empty slug and no --slug is given', () => {
+    const dir = makeTempRepo()
+    const { code, stderr } = captureIo(() => start(dir, ['!!! ???']))
+    expect(code).toBe(1)
+    expect(stderr).toContain('could not derive a build slug')
+    expect(hasSession(dir)).toBe(false)
+  })
+
+  it('--local scaffolds the fully-untracked flat layout with no cursor (D13)', () => {
+    const dir = makeTempRepo()
+    const { code, stdout } = captureIo(() => start(dir, ['My Feature', '--local']))
+    expect(code).toBe(0)
+    expect(existsSync(join(dir, '.plumbbob', 'intent.md'))).toBe(true)
+    expect(existsSync(join(dir, '.plumbbob', 'builds'))).toBe(false)
+    expect(localSetting(dir, 'activeBuild')).toBeUndefined()
+    expect(stdout).toContain('.plumbbob/intent.md')
+    const exclude = readFileSync(join(dir, '.git', 'info', 'exclude'), 'utf8').split('\n')
+    expect(exclude).toContain('.plumbbob/')
   })
 
   it('scaffolds settings.json (not the retired config file) with check and auto keys', () => {

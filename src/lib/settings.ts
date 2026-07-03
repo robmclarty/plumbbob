@@ -13,8 +13,8 @@
 // per-worktree cursor) also lives in settings.local.json but is resolved by
 // sidecar.ts, not here.
 
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 
 const DIRNAME = '.plumbbob'
 
@@ -59,4 +59,22 @@ export function resolveString(root: string, key: string, fallback: string, flag?
 export function resolveBoolean(root: string, key: string, fallback: boolean, flag?: boolean): boolean {
   const value = resolveSetting(root, key, flag)
   return typeof value === 'boolean' ? value : fallback
+}
+
+// Read one key from the untracked local overlay ONLY — no project or built-in
+// fallback. The `activeBuild` cursor lives here and must never resolve from the
+// tracked settings.json (it is per-worktree state, not a shared default).
+export function localSetting(root: string, key: string): unknown {
+  return readSettings(localSettingsPath(root))[key]
+}
+
+// Merge one key into settings.local.json, preserving the other keys and creating
+// the file when absent. Pretty-printed so the overlay stays hand-editable. A
+// malformed existing file contributes nothing (readSettings yields {}) and is
+// overwritten with a clean object rather than throwing.
+export function setLocalSetting(root: string, key: string, value: unknown): void {
+  const path = localSettingsPath(root)
+  mkdirSync(dirname(path), { recursive: true })
+  const merged = { ...readSettings(path), [key]: value }
+  writeFileSync(path, `${JSON.stringify(merged, null, 2)}\n`)
 }

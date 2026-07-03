@@ -1,8 +1,6 @@
 import { execFileSync } from 'node:child_process'
-import { writeFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupFixtures, makeFixtureRepo, phase, runCli } from '../helpers/fixture-repo.ts'
+import { cleanupFixtures, makeFixtureRepo, phase, runCli, writeSidecar } from '../helpers/fixture-repo.ts'
 
 afterAll(cleanupFixtures)
 
@@ -64,7 +62,7 @@ describe('plumbbob spike', () => {
   it('refuses to start a spike while a step is in flight', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Spiking a fork'])
-    writeFileSync(join(dir, '.plumbbob', 'STEP'), '1\n') // in-flight
+    writeSidecar(dir, 'STEP', '1\n') // in-flight
     const result = runCli(dir, ['spike', 'nope'])
     expect(result.status).toBe(1)
     expect(phase(dir)).toBe('BUILD') // still in-flight, no spike opened

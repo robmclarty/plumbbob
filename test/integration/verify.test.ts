@@ -1,17 +1,26 @@
 import { execFileSync } from 'node:child_process'
-import { existsSync, writeFileSync } from 'node:fs'
+import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupFixtures, makeFixtureRepo, phase, readSidecar, runCli } from '../helpers/fixture-repo.ts'
+import {
+  cleanupFixtures,
+  makeFixtureRepo,
+  phase,
+  readSidecar,
+  runCli,
+  sidecarExists,
+  writeSidecar,
+} from '../helpers/fixture-repo.ts'
 
 afterAll(cleanupFixtures)
 
 // Scaffold a session, then overwrite settings (stub check) and intent so the
 // verbs run against a known step list and a controllable green/red gate (D14).
+// settings.json stays flat (project plane); intent/STEP ride the build folder.
 function startWithSteps(dir: string, stepsBody: string, check = 'true'): void {
   runCli(dir, ['start', 'Verify test'])
   writeFileSync(join(dir, '.plumbbob', 'settings.json'), JSON.stringify({ check }))
-  writeFileSync(join(dir, '.plumbbob', 'intent.md'), `# Verify test\n\n## Steps\n\n${stepsBody}\n`)
+  writeSidecar(dir, 'intent.md', `# Verify test\n\n## Steps\n\n${stepsBody}\n`)
 }
 
 function commitCount(dir: string): number {
@@ -62,11 +71,11 @@ describe('plumbbob checkpoint — executor-agnostic (D3)', () => {
   it('prefers the in-flight STEP file and clears it', () => {
     const dir = makeFixtureRepo()
     startWithSteps(dir, '1. [ ] a — **done when:** ok\n2. [ ] b — **done when:** ok')
-    writeFileSync(join(dir, '.plumbbob', 'STEP'), '2\n')
+    writeSidecar(dir, 'STEP', '2\n')
     writeFileSync(join(dir, 'x.txt'), 'x\n')
     runCli(dir, ['checkpoint'])
     expect(readSidecar(dir, 'checkpoints')).toMatch(/step 2 /)
-    expect(existsSync(join(dir, '.plumbbob', 'STEP'))).toBe(false)
+    expect(sidecarExists(dir, 'STEP')).toBe(false)
     expect(phase(dir)).toBe('DESIGN')
   })
 
@@ -97,6 +106,11 @@ describe('plumbbob checkpoint — executor-agnostic (D3)', () => {
   it('records HEAD without a new commit when the tree is already clean', () => {
     const dir = makeFixtureRepo()
     startWithSteps(dir, '1. [ ] a — **done when:** ok')
+    // The tracked artifact plane is uncommitted after start (D18's accepted
+    // window); commit it so the tree is genuinely clean, as the plan-approval
+    // commit or the human's own commit skill would have left it.
+    execFileSync('git', ['-C', dir, 'add', '-A'])
+    execFileSync('git', ['-C', dir, 'commit', '-q', '-m', 'commit the plan scaffold'])
     const before = commitCount(dir)
     expect(runCli(dir, ['checkpoint']).status).toBe(0)
     expect(commitCount(dir)).toBe(before) // skill already committed; just record HEAD

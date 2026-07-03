@@ -6,13 +6,18 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupFixtures, makeFixtureRepo, phase, readSidecar, runCli, sidecarExists } from '../helpers/fixture-repo.ts'
+import {
+  cleanupFixtures,
+  makeFixtureRepo,
+  phase,
+  readSidecar,
+  runCli,
+  sidecarExists,
+  writeSidecar,
+} from '../helpers/fixture-repo.ts'
 
 afterAll(cleanupFixtures)
 
-function writeSidecar(dir: string, name: string, content: string): void {
-  writeFileSync(join(dir, '.plumbbob', name), content)
-}
 function writeRepo(dir: string, rel: string, content: string): void {
   const path = join(dir, rel)
   mkdirSync(dirname(path), { recursive: true })

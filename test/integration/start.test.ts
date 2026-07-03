@@ -10,13 +10,29 @@ function headSha(dir: string): string {
   return execFileSync('git', ['-C', dir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
 }
 
+// True when `rel` is git-ignored in `dir` (check-ignore exits 0 if ignored).
+function isIgnored(dir: string, rel: string): boolean {
+  try {
+    execFileSync('git', ['-C', dir, 'check-ignore', '-q', rel])
+    return true
+  } catch {
+    return false
+  }
+}
+
+function commitAll(dir: string, message: string): void {
+  execFileSync('git', ['-C', dir, 'add', '-A'])
+  execFileSync('git', ['-C', dir, 'commit', '-q', '-m', message])
+}
+
 describe('plumbbob start', () => {
-  it('scaffolds .plumbbob/ at the git root: DESIGN, baseline, settings, stamped templates', () => {
+  it('scaffolds a tracked builds/<slug>/ folder at the git root: DESIGN, baseline, settings, stamped templates', () => {
     const dir = makeFixtureRepo({ withCheckScript: true })
     const result = runCli(dir, ['start', 'My change'])
 
     expect(result.status).toBe(0)
     expect(phase(dir)).toBe('DESIGN')
+    expect(existsSync(join(dir, '.plumbbob', 'builds', 'my-change', 'intent.md'))).toBe(true)
     expect(readSidecar(dir, 'checkpoints').split('\n')[0]).toBe(`baseline ${headSha(dir)}`)
     expect(JSON.parse(readSidecar(dir, 'settings.json'))).toEqual({ check: 'pnpm run check', auto: false })
 
@@ -26,18 +42,26 @@ describe('plumbbob start', () => {
     expect(readSidecar(dir, 'build-log.md')).toContain('Build log — My change')
   })
 
-  it('excludes the sidecar from git (D17) so it never reads as dirty', () => {
+  it('narrows the git exclude to the control plane, leaving the artifact plane tracked (D2/D18)', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Excluded'])
 
-    const exclude = readFileSync(join(dir, '.git', 'info', 'exclude'), 'utf8')
-    expect(exclude.split('\n')).toContain('.plumbbob/')
+    const exclude = readFileSync(join(dir, '.git', 'info', 'exclude'), 'utf8').split('\n')
+    expect(exclude).toContain('.plumbbob/settings.local.json')
+    expect(exclude).toContain('.plumbbob/builds/*/SEAM')
+    expect(exclude).not.toContain('.plumbbob/') // the whole-directory exclude is gone
 
-    const porcelain = execFileSync('git', ['-C', dir, 'status', '--porcelain'], { encoding: 'utf8' })
-    expect(porcelain).not.toContain('.plumbbob')
+    // The per-worktree control files are git-ignored; the tracked artifact plane
+    // is not — it rides the branch into the PR (D2), showing as ordinary
+    // uncommitted work until the plan/step commits land it (D18's dirty window).
+    expect(isIgnored(dir, '.plumbbob/settings.local.json')).toBe(true)
+    expect(isIgnored(dir, '.plumbbob/STATE')).toBe(true)
+    expect(isIgnored(dir, '.plumbbob/builds/excluded/SEAM')).toBe(true)
+    expect(isIgnored(dir, '.plumbbob/builds/excluded/intent.md')).toBe(false)
+    expect(isIgnored(dir, '.plumbbob/settings.json')).toBe(false)
   })
 
-  it('runs inside a linked worktree: excludes the sidecar via the common gitdir (D1)', () => {
+  it('runs inside a linked worktree: writes the exclude to the common gitdir (D1)', () => {
     const main = makeFixtureRepo()
     const wt = join(main, 'wt')
     execFileSync('git', ['-C', main, 'worktree', 'add', '-q', wt, '-b', 'wt-branch'])
@@ -48,12 +72,13 @@ describe('plumbbob start', () => {
 
     // The exclude line lands in the common gitdir's info/exclude — the file git
     // reads — not the per-worktree gitdir, whose absent info/ was the crash.
-    const commonExclude = readFileSync(join(main, '.git', 'info', 'exclude'), 'utf8')
-    expect(commonExclude.split('\n')).toContain('.plumbbob/')
+    const commonExclude = readFileSync(join(main, '.git', 'info', 'exclude'), 'utf8').split('\n')
+    expect(commonExclude).toContain('.plumbbob/settings.local.json')
 
-    // And the worktree's own tree stays clean, proving the exclude took effect.
-    const porcelain = execFileSync('git', ['-C', wt, 'status', '--porcelain'], { encoding: 'utf8' })
-    expect(porcelain).not.toContain('.plumbbob')
+    // The control files stay ignored from inside the worktree, proving the
+    // common-dir exclude took effect there.
+    expect(isIgnored(wt, '.plumbbob/settings.local.json')).toBe(true)
+    expect(isIgnored(wt, '.plumbbob/STATE')).toBe(true)
   })
 
   it('refuses on a dirty tree, but --allow-dirty records HEAD with a warning', () => {
@@ -101,23 +126,25 @@ describe('plumbbob start', () => {
     expect(JSON.parse(readSidecar(dir, 'settings.json')).check).toBe('pnpm run check')
   })
 
-  it('re-scaffolds after finish without touching the archive', () => {
+  it('re-scaffolds a new build after finish without touching the archive', () => {
     const dir = makeFixtureRepo()
     expect(runCli(dir, ['start', 'Round one']).status).toBe(0)
 
-    // Simulate a finish: an archive exists; the active control files are cleared.
+    // Simulate a finish: the plan scaffold + a prior archive are committed (as the
+    // plan-approval commit would leave them, clearing D18's dirty window), then
+    // the session sentinel is cleared.
     const archived = join(dir, '.plumbbob', 'archive', '2026-01-01-round-one')
     mkdirSync(archived, { recursive: true })
     writeFileSync(join(archived, 'report.md'), 'preserved\n')
-    rmSync(join(dir, '.plumbbob', 'STATE'))
-    rmSync(join(dir, '.plumbbob', 'intent.md'))
-    rmSync(join(dir, '.plumbbob', 'build-log.md'))
+    commitAll(dir, 'commit round one scaffold + archive')
+    rmSync(join(dir, '.plumbbob', 'STATE')) // ignored control file; removal leaves a clean tree
 
     const second = runCli(dir, ['start', 'Round two'])
     expect(second.status).toBe(0)
     expect(phase(dir)).toBe('DESIGN')
+    // The cursor now points at round-two's folder; round-one's is left intact.
     expect(readSidecar(dir, 'intent.md')).toContain('# Round two')
-    expect(existsSync(join(archived, 'report.md'))).toBe(true)
+    expect(existsSync(join(dir, '.plumbbob', 'builds', 'round-one', 'intent.md'))).toBe(true)
     expect(readFileSync(join(archived, 'report.md'), 'utf8')).toBe('preserved\n')
   })
 })

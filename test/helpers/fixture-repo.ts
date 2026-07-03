@@ -78,12 +78,44 @@ export function runCli(
   return { stdout: result.stdout ?? '', stderr: result.stderr ?? '', status: result.status ?? 1 }
 }
 
+// The tracked artifact plane (D2) lives under `.plumbbob/builds/<slug>/`; the
+// control plane (session sentinel, settings) stays flat at `.plumbbob/`. These
+// helpers mirror that split so a test can name a file without knowing which
+// plane it is on: build-plane names resolve under the active build folder (the
+// `activeBuild` cursor in settings.local.json), everything else stays flat.
+// report.md is intentionally NOT here yet: `wrap`/`archive` still read it from
+// the flat sidecar root, so it moves into the build folder later (wrap → finish).
+const BUILD_PLANE = new Set(['intent.md', 'build-log.md', 'checkpoints', 'SEAM', 'STEP', 'SPIKE'])
+
+function activeBuildSlug(dir: string): string | null {
+  try {
+    const local = JSON.parse(readFileSync(join(dir, '.plumbbob', 'settings.local.json'), 'utf8')) as {
+      activeBuild?: unknown
+    }
+    return typeof local.activeBuild === 'string' && local.activeBuild.length > 0 ? local.activeBuild : null
+  } catch {
+    return null
+  }
+}
+
+function sidecarPath(dir: string, name: string): string {
+  const slug = activeBuildSlug(dir)
+  if (slug !== null && BUILD_PLANE.has(name)) {
+    return join(dir, '.plumbbob', 'builds', slug, name)
+  }
+  return join(dir, '.plumbbob', name)
+}
+
 export function readSidecar(dir: string, name: string): string {
-  return readFileSync(join(dir, '.plumbbob', name), 'utf8')
+  return readFileSync(sidecarPath(dir, name), 'utf8')
+}
+
+export function writeSidecar(dir: string, name: string, content: string): void {
+  writeFileSync(sidecarPath(dir, name), content)
 }
 
 export function sidecarExists(dir: string, name: string): boolean {
-  return existsSync(join(dir, '.plumbbob', name))
+  return existsSync(sidecarPath(dir, name))
 }
 
 // The derived phase shown in the dashboard, parsed from the `[XXX]` label in

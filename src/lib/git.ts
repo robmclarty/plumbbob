@@ -43,8 +43,7 @@ export function hasCommit(root: string): boolean {
   }
 }
 
-// Dirty = any tracked change or non-ignored untracked file. The sidecar is
-// git-excluded (D17), so an active session never reads as dirty.
+// Dirty = any tracked change or non-ignored untracked file.
 export function isDirty(root: string): boolean {
   return runGit(root, ['status', '--porcelain']).length > 0
 }
