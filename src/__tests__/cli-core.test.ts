@@ -6,7 +6,7 @@ describe('formatHelp', () => {
   it('lists the usage line and every verb', () => {
     const help = formatHelp()
     expect(help).toContain('Usage: plumbbob <verb> [args]')
-    for (const verb of ['start', 'status', 'build', 'check', 'checkpoint', 'revert', 'park', 'spike', 'use', 'finish', 'init', 'doctor']) {
+    for (const verb of ['start', 'status', 'build', 'check', 'checkpoint', 'revert', 'park', 'spike', 'use', 'finish', 'init', 'doctor', 'agent']) {
       expect(help).toContain(verb)
     }
   })
@@ -25,6 +25,13 @@ describe('run', () => {
     const { code, stderr } = await captureIoAsync(() => run(['frobnicate']))
     expect(code).toBe(1)
     expect(stderr).toContain("unknown verb 'frobnicate'")
+  })
+
+  it('dispatches the agent verb — an unknown subcommand is the verb\'s own error, not "unknown verb"', async () => {
+    const { code, stderr } = await captureIoAsync(() => run(['agent', 'bogus']))
+    expect(code).toBe(1)
+    expect(stderr).toContain("unknown 'agent' subcommand 'bogus'")
+    expect(stderr).not.toContain('unknown verb')
   })
 
   it('prints the version and exits 0 for version / --version / -v', async () => {
