@@ -66,7 +66,9 @@ export function readVersion(): string {
   }
 }
 
-function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): number {
+// Async because the checkride gate (D32) is: `check` and `checkpoint` await it;
+// every other verb returns synchronously through the same Promise-typed seam.
+async function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): Promise<number> {
   switch (verb) {
     case 'start':
       return start(cwd, rest)
@@ -98,7 +100,7 @@ function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): numbe
   }
 }
 
-export function run(argv: ReadonlyArray<string>): number {
+export async function run(argv: ReadonlyArray<string>): Promise<number> {
   const verb = argv[0] ?? 'help'
   const rest = argv.slice(1)
 
@@ -113,7 +115,7 @@ export function run(argv: ReadonlyArray<string>): number {
   }
 
   try {
-    return dispatch(verb, process.cwd(), rest)
+    return await dispatch(verb, process.cwd(), rest)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     process.stderr.write(`plumbbob: ${verb} failed: ${message}\n`)

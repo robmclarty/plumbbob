@@ -134,6 +134,7 @@ describe('excludeControl', () => {
       '.plumbbob/builds/*/STEP',
       '.plumbbob/builds/*/SEAM',
       '.plumbbob/builds/*/SPIKE',
+      '.check/', // the checkride gate's raw output (D32) — never swept into a step commit
     ]) {
       expect(lines.filter((line) => line.trim() === pattern).length).toBe(1)
     }

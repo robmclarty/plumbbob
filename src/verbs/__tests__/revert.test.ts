@@ -11,7 +11,7 @@ import { buildDir, buildLogPath, intentPath, stepPath } from '../../lib/sidecar.
 import { settingsPath } from '../../lib/settings.ts'
 import { headSha } from '../../lib/git.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
-import { captureIo } from '../../../test/helpers/capture-io.ts'
+import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
 afterAll(cleanupTempRepos)
 
@@ -37,10 +37,10 @@ function startedGreen(): string {
 }
 
 describe('revert', () => {
-  it('rewinds tracked work to the last step checkpoint and clears the in-flight step', () => {
+  it('rewinds tracked work to the last step checkpoint and clears the in-flight step', async () => {
     const dir = startedGreen()
     writeFileSync(join(dir, 'feature.txt'), 'v1\n')
-    captureIo(() => checkpoint(dir, ['1'])) // commits feature.txt=v1, records step 1
+    await captureIoAsync(() => checkpoint(dir, ['1'])) // commits feature.txt=v1, records step 1
     captureIo(() => build(dir, ['1'])) // go in-flight: writes SEAM + STEP
     writeFileSync(join(dir, 'feature.txt'), 'v2\n') // uncommitted drift
     const { code, stdout } = captureIo(() => revert(dir, []))
@@ -71,10 +71,10 @@ describe('revert', () => {
     expect(existsSync(join(dir, 'other.txt'))).toBe(true)
   })
 
-  it('preserves sidecar edits (intent/park) across the reset (C4)', () => {
+  it('preserves sidecar edits (intent/park) across the reset (C4)', async () => {
     const dir = startedGreen()
     writeFileSync(join(dir, 'feature.txt'), 'v1\n')
-    captureIo(() => checkpoint(dir, ['1']))
+    await captureIoAsync(() => checkpoint(dir, ['1']))
     writeFileSync(intentPath(dir), `${readFileSync(intentPath(dir), 'utf8')}\n<!-- note made after the checkpoint -->\n`)
     captureIo(() => revert(dir, []))
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('note made after the checkpoint')
@@ -84,10 +84,10 @@ describe('revert', () => {
   // the whole build folder across the reset — both when reverting to a step (the
   // folder exists at the target SHA but with older content) and to the baseline
   // (the folder does not exist at the target SHA at all).
-  it('revert-to-step: the whole build folder and park lines survive (Q7)', () => {
+  it('revert-to-step: the whole build folder and park lines survive (Q7)', async () => {
     const dir = startedGreen()
     writeFileSync(join(dir, 'feature.txt'), 'v1\n')
-    captureIo(() => checkpoint(dir, ['1'])) // commits feature.txt=v1 AND the tracked build folder; records step 1
+    await captureIoAsync(() => checkpoint(dir, ['1'])) // commits feature.txt=v1 AND the tracked build folder; records step 1
     captureIo(() => build(dir, ['1'])) // in-flight
     captureIo(() => park(dir, ['survive the step revert'])) // uncommitted tracked artifact edit
     writeFileSync(join(dir, 'feature.txt'), 'v2\n') // uncommitted code drift

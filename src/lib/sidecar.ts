@@ -200,6 +200,9 @@ export function excludeControl(root: string): void {
     `${DIRNAME}/builds/*/STEP`,
     `${DIRNAME}/builds/*/SEAM`,
     `${DIRNAME}/builds/*/SPIKE`,
+    // The checkride gate (D32) writes raw tool output to `.check/`; checkpoint's
+    // stageAll must never sweep it into a step commit.
+    '.check/',
   ])
 }
 
@@ -207,5 +210,5 @@ export function excludeControl(root: string): void {
 // sidecar (today's behavior) — some team repos won't accept tool folders in-tree.
 // Excludes the whole `.plumbbob/` directory.
 export function excludeSidecar(root: string): void {
-  addExcludes(root, [`${DIRNAME}/`])
+  addExcludes(root, [`${DIRNAME}/`, '.check/'])
 }

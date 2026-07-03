@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { formatHelp, readVersion, run } from '../cli-core.ts'
-import { captureIo } from '../../test/helpers/capture-io.ts'
+import { captureIoAsync } from '../../test/helpers/capture-io.ts'
 
 describe('formatHelp', () => {
   it('lists the usage line and every verb', () => {
@@ -13,23 +13,23 @@ describe('formatHelp', () => {
 })
 
 describe('run', () => {
-  it('prints help and exits 0 for help / --help / -h / no args', () => {
+  it('prints help and exits 0 for help / --help / -h / no args', async () => {
     for (const argv of [['help'], ['--help'], ['-h'], []]) {
-      const { code, stdout } = captureIo(() => run(argv))
+      const { code, stdout } = await captureIoAsync(() => run(argv))
       expect(code).toBe(0)
       expect(stdout).toContain('Usage: plumbbob <verb> [args]')
     }
   })
 
-  it('reports an unknown verb on stderr and exits 1', () => {
-    const { code, stderr } = captureIo(() => run(['frobnicate']))
+  it('reports an unknown verb on stderr and exits 1', async () => {
+    const { code, stderr } = await captureIoAsync(() => run(['frobnicate']))
     expect(code).toBe(1)
     expect(stderr).toContain("unknown verb 'frobnicate'")
   })
 
-  it('prints the version and exits 0 for version / --version / -v', () => {
+  it('prints the version and exits 0 for version / --version / -v', async () => {
     for (const argv of [['version'], ['--version'], ['-v']]) {
-      const { code, stdout } = captureIo(() => run(argv))
+      const { code, stdout } = await captureIoAsync(() => run(argv))
       expect(code).toBe(0)
       expect(stdout).toContain(`plumbbob ${readVersion()}`)
     }

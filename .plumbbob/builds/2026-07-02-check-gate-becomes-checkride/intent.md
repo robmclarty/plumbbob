@@ -108,7 +108,7 @@ dogfood (this repo): settings.json drops "check" → gate is checkride
 
 ## Steps
 
-1. [ ] Dependency doctrine + the checkride dependency — **done when:**
+1. [x] Dependency doctrine + the checkride dependency — **done when:**
    `package.json` carries `"checkride"` pinned exact under `dependencies` and the
    lockfile is updated; `docs/decisions.md`'s dependency wording (C2/D1 tags) is
    amended per D2; stale "zero runtime deps" comments in `src/cli-core.ts` and

@@ -10,6 +10,29 @@ type Captured = {
 }
 
 export function captureIo(fn: () => number): Captured {
+  const restore = swapStreams()
+  try {
+    const code = fn()
+    return { code, ...restore.buffers() }
+  } finally {
+    restore.undo()
+  }
+}
+
+// The async twin, for the verbs the checkride gate made async (`check`,
+// `checkpoint`, D32). The stream swap stays in place across the await — these
+// tests run serially within a file, so nothing else writes meanwhile.
+export async function captureIoAsync(fn: () => Promise<number>): Promise<Captured> {
+  const restore = swapStreams()
+  try {
+    const code = await fn()
+    return { code, ...restore.buffers() }
+  } finally {
+    restore.undo()
+  }
+}
+
+function swapStreams(): { buffers: () => { stdout: string; stderr: string }; undo: () => void } {
   const origOut = process.stdout.write
   const origErr = process.stderr.write
   const out: string[] = []
@@ -22,11 +45,11 @@ export function captureIo(fn: () => number): Captured {
     err.push(typeof chunk === 'string' ? chunk : chunk.toString())
     return true
   }) as typeof process.stderr.write
-  try {
-    const code = fn()
-    return { code, stdout: out.join(''), stderr: err.join('') }
-  } finally {
-    process.stdout.write = origOut
-    process.stderr.write = origErr
+  return {
+    buffers: () => ({ stdout: out.join(''), stderr: err.join('') }),
+    undo: () => {
+      process.stdout.write = origOut
+      process.stderr.write = origErr
+    },
   }
 }

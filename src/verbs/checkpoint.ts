@@ -16,7 +16,7 @@ import { markStepDone, parseSteps, parseTitle } from '../lib/orient.ts'
 import { parseStepSeam, scopeDrift } from '../lib/intent.ts'
 import { appendToSection, checkpointLogLine } from '../lib/buildlog.ts'
 
-export function checkpoint(cwd: string, args: ReadonlyArray<string>): number {
+export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Promise<number> {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
     process.stderr.write('plumbbob: no active session. Run `plumbbob start "<title>"` first.\n')
@@ -33,8 +33,13 @@ export function checkpoint(cwd: string, args: ReadonlyArray<string>): number {
     return 1
   }
 
-  if (runCheck(root) !== 0) {
-    process.stderr.write('plumbbob: check failed (red) — checkpoint refuses on red. Fix it and re-run.\n')
+  const gate = await runCheck(root)
+  if (gate !== 0) {
+    process.stderr.write(
+      gate === 2
+        ? 'plumbbob: the check gate itself broke — checkpoint refuses until the harness is fixed.\n'
+        : 'plumbbob: check failed (red) — checkpoint refuses on red. Fix it and re-run.\n',
+    )
     return 1
   }
 
