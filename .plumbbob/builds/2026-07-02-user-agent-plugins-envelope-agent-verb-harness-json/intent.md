@@ -247,7 +247,7 @@ distilled here so the build stands alone, pointer retained under ## Source.*
    explicit-miss error, undeclared-slot refusal, handoff append + checkpoint
    clear, and park lines landing in the build folder
    - seam: `src/verbs/agent.ts`, `src/lib/agents.ts`, `src/lib/settings.ts`, `src/lib/sidecar.ts`, `src/verbs/checkpoint.ts`, `src/verbs/__tests__/agent.test.ts`
-5. [ ] `harness.json` bindings — **done when:** the CLI reads
+5. [x] `harness.json` bindings — **done when:** the CLI reads
    `builds/<slug>/harness.json` (contract, `defaults`, per-step slots + `note`),
    merges settings-level defaults under it and the `--agent` flag over it, and
    downgrades a missing agent to a warning (D10); `agent run --step N` with no
