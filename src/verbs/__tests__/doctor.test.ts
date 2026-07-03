@@ -14,7 +14,7 @@ import { buildDir, intentPath } from '../../lib/sidecar.ts'
 import { localSetting, settingsPath } from '../../lib/settings.ts'
 import { headSha } from '../../lib/git.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
-import { captureIo } from '../../../test/helpers/capture-io.ts'
+import { captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
 afterAll(cleanupTempRepos)
 
@@ -124,23 +124,40 @@ describe('doctor — migration', () => {
 })
 
 describe('doctor — the verb', () => {
-  it('offers the migration and exits 1 when a legacy sidecar is present', () => {
-    const { code, stdout } = captureIo(() => doctor(legacyRepo(), []))
+  it('offers the migration and exits 1 when a legacy sidecar is present', async () => {
+    const { code, stdout } = await captureIoAsync(() => doctor(legacyRepo(), []))
     expect(code).toBe(1)
     expect(stdout).toContain('legacy flat sidecar')
     expect(stdout).toContain('plumbbob doctor --migrate')
   })
 
-  it('performs the move under --migrate and reports what it did', () => {
+  it('performs the move under --migrate and reports what it did', async () => {
     const dir = legacyRepo()
-    const { stdout } = captureIo(() => doctor(dir, ['--migrate']))
+    const { stdout } = await captureIoAsync(() => doctor(dir, ['--migrate']))
     expect(stdout).toContain('migrated')
     expect(existsSync(intentPath(dir, 'my-legacy-build'))).toBe(true)
     expect(existsSync(join(dir, '.plumbbob', 'archive'))).toBe(false)
   })
 
-  it('says nothing about the sidecar when the repo is not legacy', () => {
-    const { stdout } = captureIo(() => doctor(makeTempRepo(), []))
+  it('says nothing about the sidecar when the repo is not legacy', async () => {
+    const { stdout } = await captureIoAsync(() => doctor(makeTempRepo(), []))
     expect(stdout).not.toContain('legacy flat sidecar')
+  })
+
+  // D32 — the check-gate section.
+  it('names a configured `check` setting as the gate and asks nothing more', async () => {
+    const dir = makeTempRepo()
+    mkdirSync(join(dir, '.plumbbob'), { recursive: true })
+    writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true' }))
+    const { stdout } = await captureIoAsync(() => doctor(dir, []))
+    expect(stdout).toContain('check gate')
+    expect(stdout).toContain(`gate: 'true' — the "check" setting overrides checkride`)
+    expect(stdout).not.toContain('○ types') // no slot table on the override path
+  })
+
+  it("prints checkride's slot/adapter table when checkride is the gate", async () => {
+    const { stdout } = await captureIoAsync(() => doctor(makeTempRepo(), []))
+    expect(stdout).toContain('check gate')
+    expect(stdout).toContain('types') // an empty slot row from checkride's doctor
   })
 })

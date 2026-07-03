@@ -17,16 +17,22 @@
 //    (dies with `git worktree remove`) into a tracked folder that rides the branch into
 //    the PR (supersedes D20).
 //
-// Functional, node builtins only (C1/C2).
+// 3. The check gate (D32). When a `check` setting overrides checkride, doctor names the
+//    command; otherwise it runs checkride's own doctor and prints the slot/adapter table —
+//    "detected but tool missing" is the footgun this exists for.
+//
+// Functional, node builtins plus checkride (C1/C2).
 
 import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { runDoctor } from 'checkride'
+import type { DoctorCheck } from 'checkride'
 import { marketplacePlumbbob } from '../lib/plugins.ts'
 import { findRepoRoot, gitPath, stagePath } from '../lib/git.ts'
 import { buildDir, excludeControl, listBuilds, sidecarDir, slugify } from '../lib/sidecar.ts'
-import { settingsPath, setLocalSetting } from '../lib/settings.ts'
+import { resolveString, settingsPath, setLocalSetting } from '../lib/settings.ts'
 
 type Check = { readonly ok: boolean; readonly label: string; readonly fix?: string }
 
@@ -275,7 +281,54 @@ function sidecarReport(cwd: string, migrate: boolean): { readonly lines: string[
   return { lines, failed: 1 }
 }
 
-export function doctor(cwd: string, args: ReadonlyArray<string> = []): number {
+// The check-gate section (D32): a configured `check` setting names the spawn
+// override and asks nothing more; otherwise checkride's own doctor reports the
+// slot/adapter table. Only rows checkride marks `required` count as problems —
+// an empty slot ("no tool detected") is informational, not a failure, because
+// the runtime gate already refuses a vacuous run.
+async function gateReport(cwd: string): Promise<{ readonly lines: string[]; readonly failed: number }> {
+  const root = findRepoRoot(cwd)
+  if (root === null) return { lines: [], failed: 0 }
+
+  const lines = ['', 'plumbbob doctor — check gate (D32)']
+  const command = resolveString(root, 'check', '')
+  if (command.length > 0) {
+    lines.push(`  ✓ gate: '${command}' — the "check" setting overrides checkride`)
+    return { lines, failed: 0 }
+  }
+
+  try {
+    const silent = { write: () => true }
+    const { report } = await runDoctor({ cwd: root, stdout: silent })
+    let failed = 0
+    for (const c of report.checks) {
+      if (c.category === 'tool') {
+        lines.push(toolRow(c))
+      } else if (c.required && c.status !== 'ok') {
+        lines.push(`  ✗ ${c.name}${c.hint === null ? '' : `\n      → ${c.hint}`}`)
+      }
+      if (c.required && c.status !== 'ok') failed += 1
+    }
+    return { lines, failed }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return { lines: [...lines, `  ✗ checkride doctor failed — ${message}`], failed: 1 }
+  }
+}
+
+// One slot line: `✓ types ← tsc (6.0.3)`, `✗ dead ← fallow` with its install
+// hint, or `○ spell — no tool detected` for an empty (skipping) slot.
+function toolRow(c: DoctorCheck): string {
+  if (c.adapter === null || c.adapter === undefined) {
+    return `  ○ ${c.slot ?? c.name} — ${c.hint ?? 'no tool detected (slot skips)'}`
+  }
+  const mark = c.status === 'ok' ? '✓' : '✗'
+  const version = c.found === null ? '' : ` (${c.found})`
+  const hint = c.status !== 'ok' && c.hint !== null ? `\n      → ${c.hint}` : ''
+  return `  ${mark} ${c.slot ?? c.name} ← ${c.adapter}${version}${hint}`
+}
+
+export async function doctor(cwd: string, args: ReadonlyArray<string> = []): Promise<number> {
   const checks = pluginChecks()
   const out: string[] = ['plumbbob doctor — plugin install']
   for (const c of checks) {
@@ -285,7 +338,10 @@ export function doctor(cwd: string, args: ReadonlyArray<string> = []): number {
   const sidecar = sidecarReport(cwd, args.includes('--migrate'))
   out.push(...sidecar.lines)
 
-  const failed = checks.filter((c) => !c.ok).length + sidecar.failed
+  const gate = await gateReport(cwd)
+  out.push(...gate.lines)
+
+  const failed = checks.filter((c) => !c.ok).length + sidecar.failed + gate.failed
   out.push('')
   out.push(
     failed === 0

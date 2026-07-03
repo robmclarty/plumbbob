@@ -122,7 +122,7 @@ dogfood (this repo): settings.json drops "check" → gate is checkride
    `checkride.config.json` custom checks, and existing spawn-override tests pass
    untouched
    - seam: `src/lib/check.ts`, `src/verbs/check.ts`, `src/verbs/checkpoint.ts`, `src/cli-core.ts`, `src/cli.ts`, `src/lib/__tests__/check.test.ts`, `test/helpers/fixture-repo.ts`
-3. [ ] Flag passthrough on `plumbbob check` — **done when:** `--bail`, `--only a,b`,
+3. [x] Flag passthrough on `plumbbob check` — **done when:** `--bail`, `--only a,b`,
    `--skip a,b`, `--include a,b`, `--changed`, `--all` map onto `RunFlags`;
    flags on the spawn-override path warn-and-ignore (D6); verb tests assert a
    narrowed run and the warning

@@ -34,7 +34,7 @@ describe('plumbbob start', () => {
     expect(phase(dir)).toBe('DESIGN')
     expect(existsSync(join(dir, '.plumbbob', 'builds', 'my-change', 'intent.md'))).toBe(true)
     expect(readSidecar(dir, 'checkpoints').split('\n')[0]).toBe(`baseline ${headSha(dir)}`)
-    expect(JSON.parse(readSidecar(dir, 'settings.json'))).toEqual({ check: 'pnpm run check', auto: false })
+    expect(JSON.parse(readSidecar(dir, 'settings.json'))).toEqual({ auto: false }) // no check key — absence means checkride (D32)
 
     const intent = readSidecar(dir, 'intent.md')
     expect(intent).toContain('# My change')
@@ -118,12 +118,12 @@ describe('plumbbob start', () => {
     expect(result.stderr).toContain('title')
   })
 
-  it('warns when the repo has no check script but still records the check setting (D24)', () => {
-    const dir = makeFixtureRepo() // no package.json
+  it('seeds no check setting and no warning — checkride is the default gate (D24/D32)', () => {
+    const dir = makeFixtureRepo() // no package.json — the old D24 warning trigger
     const result = runCli(dir, ['start', 'No check'])
     expect(result.status).toBe(0)
-    expect(result.stderr).toContain('check')
-    expect(JSON.parse(readSidecar(dir, 'settings.json')).check).toBe('pnpm run check')
+    expect(result.stderr).not.toContain('WARNING')
+    expect(JSON.parse(readSidecar(dir, 'settings.json')).check).toBeUndefined()
   })
 
   it('re-scaffolds a new build after finish without touching the prior build folder', () => {

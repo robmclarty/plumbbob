@@ -75,16 +75,23 @@ describe('start', () => {
     expect(exclude).toContain('.plumbbob/')
   })
 
-  it('scaffolds settings.json (not the retired config file) with check and auto keys', () => {
+  it('scaffolds settings.json with auto only — no check key, absence means checkride (D32)', () => {
     const dir = makeTempRepo()
     captureIo(() => start(dir, ['My Feature']))
     expect(existsSync(join(dir, '.plumbbob', 'config'))).toBe(false)
     const settings = JSON.parse(readFileSync(join(dir, '.plumbbob', 'settings.json'), 'utf8')) as {
-      check: string
+      check?: string
       auto: boolean
     }
-    expect(settings.check).toBe('pnpm run check')
+    expect(settings.check).toBeUndefined()
     expect(settings.auto).toBe(false)
+  })
+
+  it('echoes the checkride gate into the scaffolded build-log (documentation only)', () => {
+    const dir = makeTempRepo()
+    captureIo(() => start(dir, ['My Feature']))
+    const log = readFileSync(join(dir, '.plumbbob', 'builds', 'my-feature', 'build-log.md'), 'utf8')
+    expect(log).toContain('checkride')
   })
 
   it('rejects an empty title', () => {

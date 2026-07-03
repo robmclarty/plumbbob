@@ -20,7 +20,10 @@ import {
 } from '../lib/sidecar.ts'
 import { settingsPath, setLocalSetting } from '../lib/settings.ts'
 
-const DEFAULT_CHECK = 'pnpm run check'
+// D24/D32: the gate is checkride unless a `check` setting overrides it, so
+// settings.json seeds with no `check` key at all — absence IS the default. The
+// templates' {{CHECK}} line is a human-readable echo of that.
+const CHECK_ECHO = 'checkride (set a "check" key in .plumbbob/settings.json to override)'
 
 export function start(cwd: string, args: ReadonlyArray<string>): number {
   const positionals = args.filter((a) => !a.startsWith('--'))
@@ -79,11 +82,10 @@ export function start(cwd: string, args: ReadonlyArray<string>): number {
   }
 
   const sha = headSha(root)
-  const check = detectCheck(root)
 
   mkdirSync(sidecarDir(root), { recursive: true })
   beginSession(root)
-  writeFileSync(settingsPath(root), `${JSON.stringify({ check: check.command, auto: false }, null, 2)}\n`)
+  writeFileSync(settingsPath(root), `${JSON.stringify({ auto: false }, null, 2)}\n`)
 
   // D13: `--local` keeps today's fully-untracked flat layout (whole `.plumbbob/`
   // excluded); the default plants a tracked, PR-riding `builds/<slug>/` folder
@@ -93,26 +95,21 @@ export function start(cwd: string, args: ReadonlyArray<string>): number {
   let intentLocation: string
   if (local) {
     writeFileSync(checkpointsPath(root), `baseline ${sha}\n`)
-    writeFileSync(intentPath(root), stamp(readTemplate('intent.md'), title, check.command))
-    writeFileSync(buildLogPath(root), stamp(readTemplate('build-log.md'), title, check.command))
+    writeFileSync(intentPath(root), stamp(readTemplate('intent.md'), title, CHECK_ECHO))
+    writeFileSync(buildLogPath(root), stamp(readTemplate('build-log.md'), title, CHECK_ECHO))
     excludeSidecar(root)
     intentLocation = '.plumbbob/intent.md'
   } else {
     const dir = buildDir(root, slug)
     mkdirSync(dir, { recursive: true })
     writeFileSync(join(dir, 'checkpoints'), `baseline ${sha}\n`)
-    writeFileSync(join(dir, 'intent.md'), stamp(readTemplate('intent.md'), title, check.command))
-    writeFileSync(join(dir, 'build-log.md'), stamp(readTemplate('build-log.md'), title, check.command))
+    writeFileSync(join(dir, 'intent.md'), stamp(readTemplate('intent.md'), title, CHECK_ECHO))
+    writeFileSync(join(dir, 'build-log.md'), stamp(readTemplate('build-log.md'), title, CHECK_ECHO))
     setLocalSetting(root, 'activeBuild', slug)
     excludeControl(root)
     intentLocation = `.plumbbob/builds/${slug}/intent.md`
   }
 
-  if (check.warn) {
-    process.stderr.write(
-      `plumbbob: WARNING the heavy check '${check.command}' is not defined in this repo's package.json. Set the "check" key in .plumbbob/settings.json to the real gate before \`review\`/\`done\`.\n`,
-    )
-  }
   process.stdout.write(
     `plumbbob: started "${title}" — baseline ${sha.slice(0, 9)}. Frame and decide in ${intentLocation}; \`build\` a step once the decisions are made.\n`,
   )
@@ -124,19 +121,6 @@ export function start(cwd: string, args: ReadonlyArray<string>): number {
 function flagValue(args: ReadonlyArray<string>, flag: string): string | undefined {
   const i = args.indexOf(flag)
   return i >= 0 ? args[i + 1] : undefined
-}
-
-// D24: default the heavy check to `pnpm run check`; warn (but still record it)
-// when the target repo has no such script, so a non-pnpm repo gets a clear nudge.
-function detectCheck(root: string): { readonly command: string; readonly warn: boolean } {
-  try {
-    const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as {
-      scripts?: Record<string, string>
-    }
-    return { command: DEFAULT_CHECK, warn: pkg.scripts?.check === undefined }
-  } catch {
-    return { command: DEFAULT_CHECK, warn: true }
-  }
 }
 
 function readTemplate(name: string): string {
