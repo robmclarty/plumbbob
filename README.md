@@ -118,24 +118,24 @@ write the short form `/pb-plan`.)
 **The happy path** — the three moves every session makes; many sessions need
 nothing else:
 
-| Skill | Does |
-|-------|------|
+| Skill <img width="110" height="1"> | Does |
+|------------------------------------|------|
 | `/pb-plan` | plan the whole goal — open the session and author intent's Frame, Decisions, Constraints, **and all Steps** |
 | `/pb-build` | implement the next planned step, then verify it to the pause — `--auto` self-approves and chains to done |
 | `/pb-finish` | finish up — write the report, make the final commit, clear for a fresh goal |
 
 **Plan-shaping moves** — optional, for when the plan needs work mid-flight:
 
-| Skill | Does |
-|-------|------|
+| Skill <img width="110" height="1"> | Does |
+|------------------------------------|------|
 | `/pb-step` | revise/sharpen the next step (empty input auto-syncs it to reality) |
 | `/pb-refine` | attack the frame for holes, or repair a drifted plan |
 | `/pb-spike` | throwaway worktree experiment for a fork the plan can't settle |
 
 **Helpers** — orient, verify, recover, diagnose:
 
-| Skill | Does |
-|-------|------|
+| Skill <img width="110" height="1"> | Does |
+|------------------------------------|------|
 | `/pb-status` | orient — where you are, the next step's done-when and seam, and the next move |
 | `/pb-verify` | the tick, standalone — check → self-review → validate → **PAUSE** → checkpoint, for a diff `/pb-build` didn't write |
 | `/pb-revert` | recover — `git reset --hard` to a recorded checkpoint |
@@ -143,8 +143,8 @@ nothing else:
 
 **Capture** — the park/harvest loop for mid-build ideas:
 
-| Skill | Does |
-|-------|------|
+| Skill <img width="110" height="1"> | Does |
+|------------------------------------|------|
 | `/pb-park` | capture a mid-build idea without chasing it |
 | `/pb-harvest` | triage parked ideas between steps (blocker / tangent / pivot) |
 

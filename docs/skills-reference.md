@@ -14,8 +14,8 @@ Two ground rules apply to all of them:
 
 ## At a glance
 
-| Skill | Takes | Does |
-|-------|-------|------|
+| Skill <img width="110" height="1"> | Takes <img width="150" height="1"> | Does |
+|------------------------------------|--------------------------------------|------|
 | [`/pb-plan`](#pb-plan) | `[spec-path \| intent]` | open the session and author the whole plan — Frame, Decisions, Constraints, all Steps |
 | [`/pb-step`](#pb-step) | `[what-changed]` | revise/sharpen the next step (empty input auto-syncs it to reality) |
 | [`/pb-build`](#pb-build) | `[step-number] [--auto]` | implement the next planned step, then verify it to the pause |
