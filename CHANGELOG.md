@@ -5,6 +5,44 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-07-03
+
+- **Added:** user agent plugins — a doorway for user-authored agents to join the
+  loop without ever being able to advance it. An agent is anything executable that
+  speaks the versioned contract-1 envelope: JSON on stdin, one JSON result on
+  stdout (status `done`/`blocked`/`drift`, summary, `parked[]`, notes), prose on
+  stderr. Agents live in `.plumbbob/agents/<name>/` (tracked, rides the PR) or
+  `~/.plumbbob/agents/<name>/` (personal), resolved flag → project → personal.
+- **Added:** `plumbbob agent run <name> [--step N] [--mode before|build|after]` and
+  `plumbbob agent list`. The run verb composes a StepContext from `intent.md` and
+  settings (decisions and constraints scraped best-effort as verbatim bullets),
+  spawns the manifest command via `sh -c` at repo root with `PLUMBBOB_AGENT_DIR`
+  in the child's env, streams the agent's stderr live, forwards SIGINT, validates
+  the output envelope (contract major-version mismatch refused with a hint),
+  re-emits it on its own stdout, appends it to the untracked
+  `builds/<slug>/handoff.json` (cleared at checkpoint), and applies `parked[]`
+  through the park verb. The envelope has no verb to checkpoint, flip a step, or
+  chain agents — the human stays the clock by construction.
+- **Added:** planned per-step bindings in `builds/<slug>/harness.json` with exactly
+  three lifecycle slots (`before` for context in, `build` for the diff, `after` for
+  advisory review) plus prose notes — bindings and prose only, never control flow.
+  Settings-level defaults merge under the harness file and the `--agent` flag
+  overrides both; a bound agent a teammate lacks downgrades to a warning, while an
+  explicitly named agent that cannot resolve errors loudly.
+- **Added:** an opt-in `agentTimeout` settings key (seconds; absent or 0 means no
+  timeout) that kills an overrunning agent and reports a failed run.
+- **Added:** `docs/agents.md` defining the full contract for agent authors, an
+  `agent run|list` section in `docs/cli-reference.md`, new entries in
+  `docs/decisions.md`, and a minimal working example agent under `examples/`.
+- **Changed:** `doctor` now validates every resolvable agent (well-formed manifest,
+  existing executable command, supported contract version) and `status` reports the
+  active build's harness bindings, warning on ones that do not resolve.
+- **Changed:** the pb-plan, pb-step, pb-build, and pb-verify skills learned the
+  three slots — harness authoring at plan time, just-in-time binding revision,
+  before-agents feeding `context[]`, build-slot delegation, and after-agent output
+  presented as advisory input at the verify pause, with `blocked` routed to
+  unblock-and-re-run and `drift` routed to `/pb-refine` repair.
+
 ## [0.5.4] - 2026-07-03
 
 - **Changed:** `plumbbob start` now derives build slugs as `YYYY-MM-DD-<title-slug>`
