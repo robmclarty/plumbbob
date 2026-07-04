@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-07-03
+
+- **Fixed:** the marketplace/plugin install no longer requires a global `npm i -g
+  plumbbob` to function. The plugin cache is a bare tarball extract that Claude
+  Code never runs `npm install` against, but the CLI's `check` verb statically
+  imports its `checkride` dependency, so every command failed once the skills
+  called the plugin's bundled `bin/` shim instead of a global `plumbbob` binary.
+  `checkride` is now declared as a `bundleDependency` so it ships inside the npm
+  tarball itself, resolvable with zero install step.
+- **Changed:** each skill's PATH-miss fallback message now covers both the
+  marketplace and skills-dir/global install paths, matching the wording already
+  used by `doctor`.
+
 ## [0.6.0] - 2026-07-03
 
 - **Added:** user agent plugins — a doorway for user-authored agents to join the
