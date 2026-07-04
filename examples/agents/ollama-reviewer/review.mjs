@@ -63,15 +63,35 @@ async function preflight() {
 }
 
 // The step's work at the verify pause is staged-or-unstaged but not yet
-// checkpointed (D56: after runs before checkpoint), so HEAD is the base.
-// seam entries are exact paths or dir/ grants — safe to hand to git as
-// pathspecs; an empty seam falls back to the whole tree.
+// checkpointed (D56: after runs before checkpoint), so HEAD is the base —
+// plus a pseudo-diff per untracked file, since a step that creates files
+// (most step 1s) is invisible to `git diff HEAD` alone. seam entries are
+// exact paths or dir/ grants — safe to hand to git as pathspecs; an empty
+// seam falls back to the whole tree.
 async function collectDiff(seam) {
   const paths = Array.isArray(seam) ? seam.filter((s) => typeof s === 'string' && s.length > 0) : []
-  const args = ['diff', 'HEAD', ...(paths.length > 0 ? ['--', ...paths] : [])]
-  const { stdout } = await execFileAsync('git', args, { maxBuffer: 10 * 1024 * 1024 })
-  if (stdout.length <= DIFF_BYTE_CAP) return { diff: stdout, truncated: false }
-  return { diff: stdout.slice(0, DIFF_BYTE_CAP), truncated: true }
+  const pathspec = paths.length > 0 ? ['--', ...paths] : []
+  const opts = { maxBuffer: 10 * 1024 * 1024 }
+
+  const { stdout: tracked } = await execFileAsync('git', ['diff', 'HEAD', ...pathspec], opts)
+
+  const { stdout: untrackedList } = await execFileAsync(
+    'git',
+    ['ls-files', '--others', '--exclude-standard', ...pathspec],
+    opts
+  )
+  const pieces = [tracked]
+  for (const file of untrackedList.split('\n').filter(Boolean)) {
+    // exits 1 when the files differ, which here is always — not a failure
+    const pseudo = await execFileAsync('git', ['diff', '--no-index', '--', '/dev/null', file], opts)
+      .then((r) => r.stdout)
+      .catch((err) => (typeof err?.stdout === 'string' ? err.stdout : ''))
+    pieces.push(pseudo)
+  }
+
+  const diff = pieces.join('')
+  if (diff.length <= DIFF_BYTE_CAP) return { diff, truncated: false }
+  return { diff: diff.slice(0, DIFF_BYTE_CAP), truncated: true }
 }
 
 function buildPrompt(ctx, diff) {
