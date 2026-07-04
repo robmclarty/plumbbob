@@ -10,7 +10,7 @@
   "dependencies": {
     "ai": "^6.0.0",
     "ai-sdk-ollama": "^3.0.0",
-    "fascicle": "^0.8.10",
+    "fascicle": "^0.8.11",
     "zod": "^4.0.0"
   }
 }

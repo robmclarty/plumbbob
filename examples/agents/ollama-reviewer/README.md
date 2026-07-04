@@ -7,9 +7,11 @@ via Ollama**, riding in the same PlumbBob session as Claude Code. The host model
 the local model gives an advisory second opinion on every step's diff at the verify
 pause. No API key, and the diff never leaves your machine.
 
-The contract it speaks is [`docs/agents.md`](../../../docs/agents.md) — this file is the
-worked answer to its § "The fascicle trap": trajectory on **stderr**, no signal handlers,
-`engine.dispose()` in `finally`, and exactly one envelope on **stdout**.
+The contract it speaks is [`docs/agents.md`](../../../docs/agents.md) — and since
+fascicle 0.8.11, most of it is the library's job: `run_stdio` (from `fascicle/stdio`)
+reads and validates the StepContext, routes trajectory to **stderr**, disposes the
+engine, writes exactly one schema-validated envelope to **stdout**, and makes the exit
+code the verdict. The § "The fascicle trap" discipline, enforced instead of hand-rolled.
 
 ## Prerequisites
 
@@ -95,12 +97,18 @@ Then, in Claude Code:
 
 ## When it can't run
 
-Every obstacle is a `blocked` envelope with the fix in `notes`, exit 0 — fix and re-run:
+Every *anticipated* obstacle is a `blocked` envelope with the fix in `notes`, exit 0 —
+fix and re-run:
 
 - **deps not installed** → `run: npm install (in the agent's own directory …)`
 - **Ollama down** → `Ollama is not reachable at … — start it (ollama serve) …`
 - **model not pulled** → `model qwen3:8b is not pulled — run: ollama pull qwen3:8b (or
   set OLLAMA_MODEL to one of: …)`
+
+Anything else is `run_stdio`'s verdict, with nothing on stdout and a machine-readable
+failure as the last stderr line: exit 1 when the flow fails mid-run (a PlumbBob "failed
+run"), exit 2 when the contract itself is violated (unparseable stdin, a StepContext or
+envelope that fails its schema).
 
 A review of a multi-KB diff takes ~30–60 s on an 8B model, plus model load on the first
 call. Runs are unbounded by default; set `agentTimeout` in `.plumbbob/settings.json` if
@@ -110,16 +118,20 @@ you want a ceiling.
 
 [`review.mjs`](review.mjs), one file, top to bottom:
 
-- **Two write sites** — `log()` → stderr, `emit()` → stdout. Nothing else touches
-  stdout; that's the whole stream discipline.
-- **Preflight** — `/api/tags` before burning a model call: server down and unpulled
-  model each become an actionable `blocked` envelope.
-- **The diff** — `git diff HEAD` scoped to the step's seam (the after slot runs before
-  the checkpoint, so HEAD is the base), capped at 40 KB for small-model context.
-- **The fascicle flow** — `create_engine({providers: {ollama}})`, `model_call` with a
-  zod review schema (`schema_repair_attempts` on top of Ollama's native constrained
-  decoding) wrapped in `retry`, run with `install_signal_handlers: false` and a
-  trajectory logger that routes everything to stderr, `engine.dispose()` in `finally`.
+- **`run_stdio` owns the process contract** — stdin read and validated against a loose
+  StepContext schema (only the `contract` gate is strict — the rest is best-effort
+  prose), the result validated against a zod schema *of the PlumbBob envelope itself*,
+  the engine disposed before stdout is written, exactly one JSON document emitted, exit
+  code as the verdict. The agent never touches stdout.
+- **The flow** — `gather` (preflight `/api/tags`, then `git diff HEAD` scoped to the
+  step's seam plus pseudo-diffs for untracked files, capped at 40 KB) feeds a `branch`:
+  an anticipated obstacle or empty diff short-circuits to its envelope; otherwise
+  `model_call` with a zod review schema (`schema_repair_attempts` on top of Ollama's
+  native constrained decoding) wrapped in `retry`, then mapped to the envelope.
+- **A human trajectory logger** — `run_stdio` defaults to `stderr_logger` (JSONL on
+  stderr, already in contract, aimed at machines); this agent swaps in a logger that
+  streams the model's text raw and prints span names, so the person at the pause
+  watches the review happen.
 - **The envelope** — a completed review is always `done` (advisory even with concerns);
   `now`-severity concerns go in `body` for the human at the pause, `later` ones become
   `parked[]` and land as park lines.
