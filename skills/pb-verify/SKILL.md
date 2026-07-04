@@ -8,7 +8,7 @@ allowed-tools: Read, Bash(plumbbob status:*), Bash(plumbbob check:*), Bash(plumb
 
 # PlumbBob — verify a step (the tick)
 
-Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npm i -g plumbbob && plumbbob init"`
+Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not on PATH in this session. Marketplace install: confirm the plugin is enabled in /plugin, then /reload-plugins. Skills-dir/global install: npm i -g plumbbob && plumbbob init."`
 
 This is the **tick** — the one beat where the human is the clock. Whatever produced
 the current diff — `/pb-build`, your own hands, a vibe session, another harness —

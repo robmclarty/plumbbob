@@ -9,7 +9,7 @@ allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob agent l
 
 # PlumbBob — revise the next step (the single-increment move)
 
-Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npm i -g plumbbob && plumbbob init"`
+Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not on PATH in this session. Marketplace install: confirm the plugin is enabled in /plugin, then /reload-plugins. Skills-dir/global install: npm i -g plumbbob && plumbbob init."`
 
 `/pb-plan` authors the **whole** step list up front, so `/pb-step` is the
 **just-in-time revision** move: it keeps the *next* undone step honest against what the

@@ -8,7 +8,7 @@ allowed-tools: Bash(plumbbob status:*)
 
 # PlumbBob — orient (the where-am-I move)
 
-Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npm i -g plumbbob && plumbbob init"`
+Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not on PATH in this session. Marketplace install: confirm the plugin is enabled in /plugin, then /reload-plugins. Skills-dir/global install: npm i -g plumbbob && plumbbob init."`
 
 This is a **thin driver** for `plumbbob status`. The dashboard above is your
 orientation — the intent, the step list, the parked/open-question counts, and the

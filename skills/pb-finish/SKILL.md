@@ -8,7 +8,7 @@ allowed-tools: Read, Write, Bash(plumbbob status:*), Bash(plumbbob finish:*)
 
 # PlumbBob — finish the build (the close-out)
 
-Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not found - install the dep and re-run: npm i -g plumbbob && plumbbob init"`
+Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not on PATH in this session. Marketplace install: confirm the plugin is enabled in /plugin, then /reload-plugins. Skills-dir/global install: npm i -g plumbbob && plumbbob init."`
 
 `/pb-finish` ends the build: it captures what happened, then makes the final commit
 that closes the session. **Report by default** (D9) — no refuse-without-report gate,

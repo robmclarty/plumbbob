@@ -5,3 +5,9 @@
 # cross-platform — the only cost is a one-line per-invocation stderr notice.
 allowBuilds:
   '@ast-grep/cli': false
+
+# `bundleDependencies` (checkride ships inside the npm tarball so the extracted
+# tarball runs with no install step — the Claude Code plugin cache is a bare
+# tarball extract) needs a real directory at node_modules/checkride to pack;
+# pnpm's default symlinked layout can't be bundled, so hoist.
+nodeLinker: hoisted
