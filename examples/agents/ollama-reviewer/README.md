@@ -7,6 +7,10 @@ via Ollama**, riding in the same PlumbBob session as Claude Code. The host model
 the local model gives an advisory second opinion on every step's diff at the verify
 pause. No API key, and the diff never leaves your machine.
 
+For the step-by-step walkthrough — install to every-pause review — see
+[`docs/local-model-review.md`](../../../docs/local-model-review.md). This README is the
+reference: prerequisites, configuration, failure modes, and how the file is built.
+
 The contract it speaks is [`docs/agents.md`](../../../docs/agents.md) — and since
 fascicle 0.8.11, most of it is the library's job: `run_stdio` (from `fascicle/stdio`)
 reads and validates the StepContext, routes trajectory to **stderr**, disposes the
