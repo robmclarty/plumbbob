@@ -271,7 +271,7 @@ distilled here so the build stands alone, pointer retained under ## Source.*
    `when` prose is documented as the host model's cue to fire `agent run`
    mid-build; `docs/skills-reference.md` updated
    - seam: `skills/pb-plan/SKILL.md`, `skills/pb-step/SKILL.md`, `skills/pb-build/SKILL.md`, `skills/pb-verify/SKILL.md`, `docs/skills-reference.md`
-8. [ ] Docs, example, decision log — **done when:** `docs/agents.md` defines the
+8. [x] Docs, example, decision log — **done when:** `docs/agents.md` defines the
    full contract for agent authors (envelope schema, manifest, harness.json, the
    three invariants, the fascicle trajectory-to-stderr trap, and the
    nested-invocation warning: composing agents from an agent is allowed, cutoffs
