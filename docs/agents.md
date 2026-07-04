@@ -179,7 +179,7 @@ skipped in favor of a different agent.
 Because the project tier is tracked, an agent you commit rides the branch into the PR — a
 teammate gets it for free. An agent only in your **personal** tier is yours alone: if the
 build's `harness.json` binds it and a teammate lacks it, the binding **downgrades to a
-warning** and the loop runs without it ([**D54**](decisions.md#d54)) — the same optionality contract as
+warning** and the loop runs without it ([**D54**](decisions.md#d54)) — the same never-required contract as
 `/pb-build` itself. (An agent you name *explicitly* is different — see "Fail loud vs degrade
 soft.")
 

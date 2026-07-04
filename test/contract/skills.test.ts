@@ -78,7 +78,7 @@ describe('every skill (the three reinforcing layers)', () => {
 // (A). They are pure mechanism — shell one verb, report it verbatim — and so are
 // pinned to haiku, disable model invocation, and carry no Edit/Write.
 // The surviving thin drivers: status (orient) plus the optional power moves
-// revert and spike. build is the optional engine (own contract); the superseded
+// revert and spike. build is the default engine (own contract); the superseded
 // start/review/done drivers were removed in step 8.
 const DRIVER_VERB: Record<string, string> = {
   'pb-status': 'status',
@@ -237,7 +237,7 @@ describe('step — the single-increment move: one verifiable step', () => {
   })
 })
 
-describe('build — the optional engine: implement the planned step, then verify', () => {
+describe('build — the default engine: implement the planned step, then verify', () => {
   const { data, body } = parseSkill('pb-build')
 
   it('names itself after its directory and disables model invocation', () => {
@@ -260,8 +260,8 @@ describe('build — the optional engine: implement the planned step, then verify
     expect(data['allowed-tools']).toContain('plumbbob checkpoint')
   })
 
-  it('declares itself optional — the executor is pluggable (D3)', () => {
-    expect(body).toMatch(/optional/i)
+  it('declares itself swappable — the executor is pluggable (D3)', () => {
+    expect(body).toMatch(/swappable/i)
     expect(body).toMatch(/by hand|vibed|another harness/i)
   })
 

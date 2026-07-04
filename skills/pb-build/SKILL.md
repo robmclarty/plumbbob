@@ -1,18 +1,18 @@
 ---
 name: pb-build
-description: The optional engine — read the next planned step from intent, implement it (its done-when, seam, Decisions, Constraints), then verify it through to the approval pause. Skip it to build by hand/vibed/another harness. `--auto` self-approves and chains to done.
+description: The default engine — read the next planned step from intent, implement it (its done-when, seam, Decisions, Constraints), then verify it through to the approval pause. Swappable — build by hand/vibed/another harness and run /pb-verify instead. `--auto` self-approves and chains to done.
 argument-hint: "[step-number] [--auto]"
 disable-model-invocation: true
 model: opus
 allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent:*), Bash(git diff:*)
 ---
 
-# PlumbBob — build a step (the optional engine)
+# PlumbBob — build a step (the default engine)
 
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not on PATH in this session. Marketplace install: confirm the plugin is enabled in /plugin, then /reload-plugins. Skills-dir/global install: npm i -g plumbbob && plumbbob init."`
 
-This is the **bundled executor** — one way to turn a planned step into code. It is
-**optional** (D3): you can implement any step by hand, in a vibe session, or with
+This is the **bundled executor** — the default engine, not the only one. It is
+**swappable** (D3): you can implement any step by hand, in a vibe session, or with
 another harness and go straight to `/pb-verify` instead — plumbbob does not care how
 the diff appeared. When you do run it, it reads the plan, writes the step, and
 carries straight through to the verify pause.
@@ -100,7 +100,7 @@ human asked for it by name. The default — no flag — always ends at the pause
 
 ## The hard contracts
 
-- **Optional, never required.** The loop works without this skill; `/pb-verify`
+- **Swappable, never required.** The loop works without this skill; `/pb-verify`
   checkpoints a hand-built or vibed diff just the same (D3).
 - **Build the decided step, not a new one.** Implement what `intent.md` settled. A
   new idea mid-build is a `/pb-park`, not an edit.

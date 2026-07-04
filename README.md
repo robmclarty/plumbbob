@@ -80,7 +80,7 @@ In Claude Code, inside any git repo with a clean tree:
 
 1. **Plan.** Fire `/pb-plan` and give it whatever you have — nothing (it interviews
    you), a rough line (`/pb-plan rate-limit POST /login, 5/min/IP, return 429`), or a
-   path to a spec file. Together you fill `.plumbbob/intent.md`. No code is written
+   path to a spec file. Together you fill the build's `intent.md`. No code is written
    yet.
 2. **Build.** Fire `/pb-build`. It implements the next undone step, runs the
    heavy check gate, reviews its own diff against the plan, and stops:
@@ -115,21 +115,40 @@ every move, and `/pb-status` always names your next one. (Claude Code namespaces
 under the plugin — the real command is `/plumbbob:pb-plan`; for readability these docs
 write the short form `/pb-plan`.)
 
+**The happy path** — the three moves every session makes; many sessions need
+nothing else:
+
 | Skill | Does |
 |-------|------|
 | `/pb-plan` | plan the whole goal — open the session and author intent's Frame, Decisions, Constraints, **and all Steps** |
-| `/pb-step` | revise/sharpen the next step (empty input auto-syncs it to reality) |
-| `/pb-build` | *(optional)* implement the next planned step, then verify it to the pause — `--auto` self-approves and chains to done |
-| `/pb-verify` | the tick — check → self-review → validate → **PAUSE** → checkpoint |
-| `/pb-park` | capture a mid-build idea without chasing it |
-| `/pb-status` | orient — where you are, the next step's done-when and seam, and the next move |
-| `/pb-harvest` | triage parked ideas between steps (blocker / tangent / pivot) |
+| `/pb-build` | implement the next planned step, then verify it to the pause — `--auto` self-approves and chains to done |
 | `/pb-finish` | finish up — write the report, make the final commit, clear for a fresh goal |
 
-Three power moves round it out — `/pb-revert` (recover to a checkpoint), `/pb-spike`
-(throwaway worktree experiment for a fork the plan can't settle), and `/pb-refine`
-(attack the frame for holes or repair a drifted plan) — plus `/pb-doctor` to check
-your install. All twelve, with inputs and effects, are in
+**Plan-shaping moves** — optional, for when the plan needs work mid-flight:
+
+| Skill | Does |
+|-------|------|
+| `/pb-step` | revise/sharpen the next step (empty input auto-syncs it to reality) |
+| `/pb-refine` | attack the frame for holes, or repair a drifted plan |
+| `/pb-spike` | throwaway worktree experiment for a fork the plan can't settle |
+
+**Helpers** — orient, verify, recover, diagnose:
+
+| Skill | Does |
+|-------|------|
+| `/pb-status` | orient — where you are, the next step's done-when and seam, and the next move |
+| `/pb-verify` | the tick, standalone — check → self-review → validate → **PAUSE** → checkpoint, for a diff `/pb-build` didn't write |
+| `/pb-revert` | recover — `git reset --hard` to a recorded checkpoint |
+| `/pb-doctor` | check the install from inside a session |
+
+**Capture** — the park/harvest loop for mid-build ideas:
+
+| Skill | Does |
+|-------|------|
+| `/pb-park` | capture a mid-build idea without chasing it |
+| `/pb-harvest` | triage parked ideas between steps (blocker / tangent / pivot) |
+
+All twelve, with inputs and effects, are in
 [`docs/skills-reference.md`](docs/skills-reference.md).
 
 Under the skills ships a lean `plumbbob` CLI (the mechanical verbs the
@@ -139,10 +158,10 @@ flow), and a `.plumbbob/` sidecar you can open and edit by hand at any time — 
 that rides the branch into the PR, plus an untracked control plane (`settings.local.json`,
 the session sentinel, the in-flight markers).
 
-**`/pb-build` is optional.** It's one executor, not the loop. Implement a step by
-hand — or vibe it in another session, or in another harness entirely — and run
-`/pb-verify` instead: same checks, same pause, same checkpoint. It reads the *diff,
-not the author*.
+**`/pb-build` is the default engine, not the only one.** It's one executor — the
+loop doesn't care who writes the code. Implement a step by hand — or vibe it in
+another session, or in another harness entirely — and run `/pb-verify` instead:
+same checks, same pause, same checkpoint. It reads the *diff, not the author*.
 
 **Bring your own agents.** Because the executor is author-blind, you can plug your
 own in. A **user-authored agent** is any executable that speaks one small JSON

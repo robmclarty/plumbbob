@@ -18,7 +18,7 @@ Two ground rules apply to all of them:
 |-------|-------|------|
 | [`/pb-plan`](#pb-plan) | `[spec-path \| intent]` | open the session and author the whole plan — Frame, Decisions, Constraints, all Steps |
 | [`/pb-step`](#pb-step) | `[what-changed]` | revise/sharpen the next step (empty input auto-syncs it to reality) |
-| [`/pb-build`](#pb-build) | `[step-number] [--auto]` | *(optional)* implement the next planned step, then verify it to the pause |
+| [`/pb-build`](#pb-build) | `[step-number] [--auto]` | implement the next planned step, then verify it to the pause |
 | [`/pb-verify`](#pb-verify) | — | the tick — check → self-review → validate → **PAUSE** → checkpoint |
 | [`/pb-park`](#pb-park) | `[idea]` | capture a mid-build idea without chasing it |
 | [`/pb-status`](#pb-status) | — | orient — where you are, the next step, the next move |
@@ -56,8 +56,8 @@ have drifted. Most steps need nothing — skip straight to `/pb-build`.
 
 ### pb-build
 
-The bundled executor, and **optional** — implement a step any other way and run
-`/pb-verify` instead. Fired bare it picks the next undone step (a number jumps); it reads
+The bundled executor — the default engine, not the only one. It's **swappable**:
+implement a step any other way and run `/pb-verify` instead. Fired bare it picks the next undone step (a number jumps); it reads
 the step's done-when, seam, Decisions, and Constraints, goes in-flight
 (`plumbbob build <n>`), implements *only that step*, then carries straight through the
 verify tick to the pause. When the step is [bound to agents](#the-harness-slots) it runs

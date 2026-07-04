@@ -325,7 +325,7 @@ And you're back at step 0 with a clean head and the previous goal safely on the 
 
 ---
 
-## The pluggable executor — `/pb-build` is optional
+## The pluggable executor — `/pb-build` is the default engine, not the only one
 
 The happy path above used `/pb-build` to write every step, but it's just *one* way to
 turn a planned step into code. Implement the step by hand, in a vibe session, or with

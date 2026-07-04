@@ -128,7 +128,8 @@ Re-firing the next build *is* the clock tick.
 
 ### The pluggable executor reads the diff, not the author
 
-`/pb-build` is *one* way to turn a planned step into code, and it is **optional**.
+`/pb-build` is the default way to turn a planned step into code, but it is
+**swappable**.
 Implement a step by hand, in a vibe session, or with another harness, and run
 `/pb-verify` instead — it runs the identical tick and **reads the diff, not who wrote
 it.** PlumbBob is the harness-agnostic spine; how the diff appears is a slot you fill

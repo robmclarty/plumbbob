@@ -68,7 +68,7 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   a hand-rolled `plumbbob` CLI built on node builtins (plus the deliberate few of [**C2**](#c2)),
   and a deciding/executing boundary held by a pause rather than enforced by a file lock.
   *Tagged in* `cli-core.ts`.
-- <a id="d3"></a>**D3 — The pluggable, author-blind executor.** `/pb-build` is optional; `verify`
+- <a id="d3"></a>**D3 — The pluggable, author-blind executor.** `/pb-build` is swappable, never required; `verify`
   and `checkpoint` read *the diff, not who wrote it*, so a hand-built, vibed, or
   other-harness diff checkpoints identically. *Tagged in* `checkpoint.ts`, the `build` and
   `verify` skills.
@@ -277,7 +277,7 @@ below.)
   declare slot X **refuses** — the user who typed the name asked for that agent
   specifically. Only a harness-*bound* agent a teammate lacks downgrades to a warning and
   is skipped, because a binding is ambient configuration the loop must survive without
-  (the same optionality contract as `/pb-build` itself). A run that actually starts and
+  (the same never-required contract as `/pb-build` itself). A run that actually starts and
   fails is a hard failure either way — this softens a *missing* agent, never a broken one.
   *Tagged in* `agent.ts`, `agents.ts`, `status.ts`, the `pb-plan` skill.
 - <a id="d55"></a>**D55 — The manifest speaks to two audiences.** `command` is for the deterministic CLI;
