@@ -78,7 +78,7 @@ across `npm i -g plumbbob@latest`, but the running editor still caches the plugi
 tracked `builds/<slug>/` folders. **Fix.** Run `plumbbob doctor` inside the repo — it detects
 the legacy flat sidecar and offers the move. `plumbbob doctor --migrate` relocates the archive
 entries and the active session into `builds/<slug>/`, turns `config` into `settings.json`, and
-**stages** the whole move without committing (**D31**). Review it with `git status` and make
+**stages** the whole move without committing ([**D31**](decisions.md#d31)). Review it with `git status` and make
 the commit yourself.
 
 ### `status` shows `NO ACTIVE SESSION`
@@ -89,7 +89,7 @@ the commit yourself.
 
 ### `start` refuses with "the working tree is dirty"
 
-**Cause.** `start` records a clean baseline commit (**D22**). **Fix.** Commit or stash
+**Cause.** `start` records a clean baseline commit ([**D22**](decisions.md#d22)). **Fix.** Commit or stash
 first, or run `plumbbob start --allow-dirty "<title>"` to record the current HEAD as the
 baseline — but a later revert-to-baseline will then discard the uncommitted work.
 
@@ -114,7 +114,7 @@ harvest from the boundary.
 
 ### `checkpoint` (or `verify`) refuses because the check is red
 
-**Cause.** The heavy gate failed; the tick refuses to checkpoint on red (**D16**). **Fix.**
+**Cause.** The heavy gate failed; the tick refuses to checkpoint on red ([**D16**](decisions.md#d16)). **Fix.**
 Read the failing slots the gate printed — each names its raw output under `.check/`
 (canonical index: `.check/summary.json`) — fix the failure, and re-run. Red means stop,
 not pause — there is nothing to approve until it is green. Narrow the loop while
@@ -122,7 +122,7 @@ iterating: `plumbbob check --bail --only types,lint`.
 
 ### The check gate refuses with "found nothing to check"
 
-**Cause.** No `check` setting is configured, so the gate is checkride (**D24**/**D32**),
+**Cause.** No `check` setting is configured, so the gate is checkride ([**D24**](decisions.md#d24)/[**D32**](decisions.md#d32)),
 and checkride detected no tool configs in this repo — an all-slots-skipped run refuses
 rather than passing vacuously. **Fix.** Either give checkride something to check (a
 `tsconfig.json`, a `vitest.config.ts`, a `checkride.config.json` custom check, …) or set
@@ -132,22 +132,22 @@ the `"check"` key in `.plumbbob/settings.json` to your own command (e.g.
 ### The check exits 2 — "the gate itself broke"
 
 **Cause.** Checkride couldn't run at all — usually a malformed
-`checkride.config.json` (**D32**). This is a harness failure, not a code failure; both
+`checkride.config.json` ([**D32**](decisions.md#d32)). This is a harness failure, not a code failure; both
 block. **Fix.** Repair the config (or set a `"check"` override) and re-run.
 
 ### The heavy check runs the wrong command (or fails in a non-pnpm repo)
 
 **Cause.** A `"check"` key in the settings ladder overrides checkride and is spawned
-verbatim (**D24**). **Fix.** Set the `"check"` key in `.plumbbob/settings.json` to your
+verbatim ([**D24**](decisions.md#d24)). **Fix.** Set the `"check"` key in `.plumbbob/settings.json` to your
 command (e.g. `"check": "npm test"`), remove it to gate through checkride, or override it
-per-worktree in `settings.local.json` (**D27**). The command is run in the repo root via
+per-worktree in `settings.local.json` ([**D27**](decisions.md#d27)). The command is run in the repo root via
 a shell.
 
 ### `build` refuses with "build needs a step number" or a seam error
 
 **Cause.** `build <n>` could not find step `n`, or the step's seam is unparseable. **Fix.**
 Make sure `## Steps` has the step in the standard format with a `- seam:` line of exact
-paths or `dir/` grants — never a glob (**D23**). Sharpen it with `/pb-step`, then
+paths or `dir/` grants — never a glob ([**D23**](decisions.md#d23)). Sharpen it with `/pb-step`, then
 build again.
 
 ## The post-edit hook (light feedback)
@@ -155,7 +155,7 @@ build again.
 ### No light feedback appears after edits
 
 The `post-edit` hook is intentionally quiet, and several conditions make it a no-op — all
-by design (**D25**):
+by design ([**D25**](decisions.md#d25)):
 
 - **No active build.** The hook is gated on the `activeBuild` cursor in
   `.plumbbob/settings.local.json`: with no cursor — no session, or a `--local` session,
@@ -181,7 +181,7 @@ unaffected — `npm i -g plumbbob` ignores `devEngines` (it is dev-scoped to thi
 
 ### `spike` refuses to start
 
-**Cause.** Spikes start from a settled boundary (**D18**) — not while a step is in flight.
+**Cause.** Spikes start from a settled boundary ([**D18**](decisions.md#d18)) — not while a step is in flight.
 **Fix.** If a step is in flight, finish or revert it first. "Already in a spike" → run
 `plumbbob spike done` to close the current one.
 If a worktree path "already exists," remove it or run `spike done`.

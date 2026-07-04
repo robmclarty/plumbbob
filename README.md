@@ -194,7 +194,7 @@ actually learning is the method: decisions before code, one verified step at a
 time, capture instead of chase. That transfers to whatever tool wins. If
 something better ships, you walk away with your archives and your habits intact.
 
-**…admit the pause is unenforceable?** It is — on purpose (D10/D13 in
+**…admit the pause is unenforceable?** It is — on purpose ([D10](docs/decisions.md#d10)/[D13](docs/decisions.md#d13) in
 [`docs/decisions.md`](docs/decisions.md)). A hard lock buys ritual, not control:
 a determined model routes around it. So PlumbBob enforces deterministically where
 it can — `checkpoint` refuses on a red check, `revert` restores only recorded

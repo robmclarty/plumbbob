@@ -28,7 +28,7 @@ same, so you rarely need `pnpm build` — only when you want to exercise the pub
 ## The check gate
 
 `pnpm check` is the one gate, and it must be green before a change lands. It is
-[checkride](https://www.npmjs.com/package/checkride) (**D32** — our sibling package, and
+[checkride](https://www.npmjs.com/package/checkride) ([**D32**](docs/decisions.md#d32) — our sibling package, and
 plumbbob's one runtime dependency), which runs the tools this repo configures, in order:
 
 | Slot | Tool | What it guards |
@@ -52,14 +52,14 @@ default gate so the ~19s loop stays fast. There is no CI yet —
 The constraints are real, and the `ast-grep` rules in `rules/` enforce several of them
 automatically. Full key in [`docs/decisions.md`](docs/decisions.md); the load-bearing ones:
 
-- **C1 — functional and procedural only.** No classes, no `this`, no default exports. Use
+- **[C1](docs/decisions.md#c1) — functional and procedural only.** No classes, no `this`, no default exports. Use
   plain functions and named exports so every symbol has a stable name. `ast-grep` fails the
   build on a class or a default export.
-- **C2 — node builtins plus a few deliberate dependencies.** Import nothing outside
+- **[C2](docs/decisions.md#c2) — node builtins plus a few deliberate dependencies.** Import nothing outside
   `node:*` and the explicit allowlist (currently `checkride` alone) in `src/`; `ast-grep`
   flags any other import. A new runtime dependency is a design decision to argue for —
   our own tools first, never a casual install; dev-only tooling is fine.
-- **C4 / C5 — never destroy, additive git only.** Nothing may lose park lines, intent
+- **[C4](docs/decisions.md#c4) / [C5](docs/decisions.md#c5) — never destroy, additive git only.** Nothing may lose park lines, intent
   edits, or a build's record: `revert` snapshots the tracked build folder across its
   `reset --hard`, `finish` leaves the folder in place as the archive, and every reset
   targets only plumbbob's own recorded SHAs; it never rewrites pushed history.

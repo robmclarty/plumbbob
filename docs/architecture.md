@@ -33,26 +33,26 @@ between them is never hidden: the sidecar is the whole memory.
   tests.
 - `cli-core.ts` — verb routing and the help table.
 - `verbs/` — one file per verb, each a pure `(cwd, args) → exit code` function.
-- `lib/` — the shared mechanics: `git.ts` (additive-only git, C5), `sidecar.ts` (paths,
+- `lib/` — the shared mechanics: `git.ts` (additive-only git, [C5](decisions.md#c5)), `sidecar.ts` (paths,
   planes, excludes), `intent.ts` (step/seam parsing), `orient.ts` (the dashboard),
-  `settings.ts` (the ladder, D27), `check.ts` (the gate), `buildlog.ts`, `plugins.ts`
+  `settings.ts` (the ladder, [D27](decisions.md#d27)), `check.ts` (the gate), `buildlog.ts`, `plugins.ts`
   (install detection).
 
 Structural invariants are machine-enforced by the ast-grep rules in `rules/`:
-functional/procedural only (C1), node builtins plus the dependency allowlist (C2),
+functional/procedural only ([C1](decisions.md#c1)), node builtins plus the dependency allowlist ([C2](decisions.md#c2)),
 subprocess spawning centralized, output through `process.stdout`/`stderr` only.
 
-## The two planes (D17/D26)
+## The two planes ([D17](decisions.md#d17)/[D26](decisions.md#d26))
 
 The sidecar splits by lifetime. The **artifact plane** is tracked — `settings.json`
 and each `builds/<slug>/` folder (intent, build-log, checkpoints, report) — so a
 build's record rides its branch into the PR. The **control plane** is per-worktree
-ephemera, excluded via the shared gitdir's `info/exclude` (D33), never `.gitignore`:
-`STATE`, `settings.local.json` (holding the `activeBuild` cursor, D28), and each
+ephemera, excluded via the shared gitdir's `info/exclude` ([D33](decisions.md#d33)), never `.gitignore`:
+`STATE`, `settings.local.json` (holding the `activeBuild` cursor, [D28](decisions.md#d28)), and each
 build's in-flight `STEP`/`SEAM`/`SPIKE` markers. Phase is **derived, not stored**:
 SPIKE marker ⇒ SPIKE, STEP present ⇒ BUILD, otherwise DESIGN.
 
-## The check gate (D32)
+## The check gate ([D32](decisions.md#d32))
 
 Two tiers with different jobs. The **heavy** gate runs inside the verify tick:
 [checkride](https://www.npmjs.com/package/checkride) imported programmatically (the one
