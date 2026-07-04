@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3] - 2026-07-03
+
+- **Added:** seven new ast-grep rules in `rules/` extending machine enforcement beyond
+  C1/C2 to the statically checkable edges of C4 (never destroy), C5 (additive git
+  footprint), C6 (the agent envelope's identity invariant), D13 (no edit-blocking
+  guards), D33 (excludes never touch `.gitignore`), and D60 (async spawn only in the
+  agent path): `additive-git-only`, `agent-no-advance`, `reset-hard-only-in-revert`,
+  `no-gitignore`, `centralize-destructive-fs`, `no-sync-spawn-in-agent-path`, and
+  `no-session-detection`. Each rule was smoke-tested by planting a violation and
+  confirming it fires before removing it.
+- **Changed:** `docs/decisions.md`, `docs/architecture.md`, and `CONTRIBUTING.md` now
+  cite the new rules against the constraints and decisions they enforce, and the
+  `centralize-subprocess` description was corrected to include `lib/agents.ts`, which
+  the rule has allowed since the agent doorway landed.
+- **Fixed:** a pre-existing markdownlint MD045 failure — spacer `<img>` tags in the
+  README and `docs/skills-reference.md` skills tables were missing alt text — that was
+  blocking `pnpm check` on `main`.
+
 ## [0.6.2] - 2026-07-04
 
 - **Added:** an `ollama-reviewer` example agent under `examples/agents/` — a
