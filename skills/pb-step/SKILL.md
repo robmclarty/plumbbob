@@ -40,7 +40,7 @@ grew — but its everyday job is to sharpen, not to invent.
 3. **Get the human's OK**, then write it into `## Steps` in the standard format —
    `N. [ ] <title> — **done when:** <criterion>` with a `- seam:` sub-line. Revise the
    existing step in place; only append when you are genuinely adding an increment.
-4. **Revise the step's harness bindings if they drifted too** *(optional — D4)*. If the
+4. **Revise the step's harness bindings if they drifted too** *(optional — D42)*. If the
    build carries a `harness.json` (beside `intent.md`) and the reality that moved the
    step also changed which agents it wants, sharpen that step's slot bindings
    (`before`/`build`/`after`) and `note` at the same time — this is the just-in-time

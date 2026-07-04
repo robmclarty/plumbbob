@@ -43,7 +43,7 @@ function startedBuild(): string {
 }
 
 // Drop a bash fixture agent under .plumbbob/agents/<name>/ — a run.sh speaking the
-// envelope and an agent.json pointing `command` at it via PLUMBBOB_AGENT_DIR (D18),
+// envelope and an agent.json pointing `command` at it via PLUMBBOB_AGENT_DIR (D49),
 // so the run proves the env var and the repo-root cwd at once.
 function makeAgent(
   root: string,
@@ -80,17 +80,17 @@ describe('agent run — happy path', () => {
     const { code, stdout, stderr } = await captureIoAsync(() => agent(dir, ['run', 'doer', '--step', '1']))
     expect(code).toBe(0)
 
-    // stdout carries the validated envelope and NOTHING else (D8/D20 stream discipline).
+    // stdout carries the validated envelope and NOTHING else (D46/D47 stream discipline).
     const envelope = envelopeFromStdout(stdout)
     expect(envelope).toMatchObject({ contract: 1, status: 'done', summary: 'did the thing' })
     // the human summary rides stderr, not stdout.
     expect(stderr).toContain('agent "doer" (build) — done: did the thing')
 
-    // the child ran at the repo root (D18) with PLUMBBOB_AGENT_DIR pointing at its own dir.
+    // the child ran at the repo root (D49) with PLUMBBOB_AGENT_DIR pointing at its own dir.
     const agentDir = join(dir, '.plumbbob', 'agents', 'doer')
     expect(realpathSync(readFileSync(join(agentDir, 'cwd.txt'), 'utf8').trim())).toBe(realpathSync(dir))
 
-    // the composed StepContext reached the child on stdin (D15/D23).
+    // the composed StepContext reached the child on stdin (D59/D61).
     const input = JSON.parse(readFileSync(join(agentDir, 'last-input.json'), 'utf8'))
     expect(input).toMatchObject({
       contract: 1,
@@ -112,7 +112,7 @@ describe('agent run — happy path', () => {
   })
 })
 
-describe('agent run — status routing (D24)', () => {
+describe('agent run — status routing (D52)', () => {
   it('surfaces a blocked run and its notes on stderr, exits 0 (mechanics succeeded)', async () => {
     const dir = startedBuild()
     makeAgent(dir, 'stuck', {
@@ -139,7 +139,7 @@ describe('agent run — status routing (D24)', () => {
   })
 })
 
-describe('agent run — failure modes (D8/D17)', () => {
+describe('agent run — failure modes (D46/D51)', () => {
   it('reports and stops on a non-zero exit, applying no side effects', async () => {
     const dir = startedBuild()
     makeAgent(dir, 'boom', { slots: ['build'], script: `cat >/dev/null\necho oops >&2\nexit 3\n` })
@@ -184,7 +184,7 @@ describe('agent run — failure modes (D8/D17)', () => {
   }, 15000)
 })
 
-describe('agent run — fail-loud resolution (D21)', () => {
+describe('agent run — fail-loud resolution (D54)', () => {
   it('errors on an explicitly named agent that does not resolve', async () => {
     const dir = startedBuild()
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', 'ghost', '--step', '1']))
@@ -209,7 +209,7 @@ describe('agent run — fail-loud resolution (D21)', () => {
   })
 })
 
-describe('agent run — side effects (D6/D20)', () => {
+describe('agent run — side effects (D44/D47)', () => {
   it('lands parked[] lines through the build-log Park list', async () => {
     const dir = startedBuild()
     makeAgent(dir, 'noticer', {
@@ -236,7 +236,7 @@ describe('agent run — side effects (D6/D20)', () => {
     expect(ledger[0]).toMatchObject({ agent: 'doer', mode: 'build', step: 1 })
     expect(ledger[0].envelope).toMatchObject({ status: 'done', summary: 'did the thing' })
 
-    // the ledger is step-scoped: checkpointing the step clears it (D20).
+    // the ledger is step-scoped: checkpointing the step clears it (D47).
     await captureIoAsync(() => checkpoint(dir, ['1']))
     expect(existsSync(handoffPath(dir))).toBe(false)
   })
@@ -251,7 +251,7 @@ function writeHarness(root: string, harness: Record<string, unknown>): void {
   writeFileSync(harnessPath(root), `${JSON.stringify(harness, null, 2)}\n`)
 }
 
-describe('agent run — harness bindings (D4/D13)', () => {
+describe('agent run — harness bindings (D42/D57)', () => {
   it('runs a step-bound agent when no name is given, overriding the harness defaults', async () => {
     const dir = startedBuild()
     makeAgent(dir, 'stepper', { slots: ['build'], script: DONE_SCRIPT })
@@ -281,7 +281,7 @@ describe('agent run — harness bindings (D4/D13)', () => {
     expect(stderr).toContain('agent "defaulter" (after)')
   })
 
-  it('merges settings-level defaults under the harness — a settings default binds with no harness file (D13)', async () => {
+  it('merges settings-level defaults under the harness — a settings default binds with no harness file (D57)', async () => {
     const dir = startedBuild()
     makeAgent(dir, 'settingsrev', { slots: ['after'], script: DONE_SCRIPT })
     writeFileSync(settingsPath(dir), JSON.stringify({ agents: { after: ['settingsrev'] } }))
@@ -311,7 +311,7 @@ describe('agent run — harness bindings (D4/D13)', () => {
     expect(existsSync(handoffPath(dir))).toBe(false)
   })
 
-  it('downgrades a missing bound agent to a warning and carries on (D10)', async () => {
+  it('downgrades a missing bound agent to a warning and carries on (D54)', async () => {
     const dir = startedBuild()
     writeHarness(dir, { contract: 1, defaults: {}, steps: { 1: { after: ['ghostreviewer'] } } })
 
@@ -333,7 +333,7 @@ describe('agent run — harness bindings (D4/D13)', () => {
     expect(stderr).toContain('Skipping')
   })
 
-  it('lets an explicit name override the bindings (D13: a name sits above the harness)', async () => {
+  it('lets an explicit name override the bindings (D57: a name sits above the harness)', async () => {
     const dir = startedBuild()
     makeAgent(dir, 'named', { slots: ['build'], script: DONE_SCRIPT })
     makeAgent(dir, 'bound', { slots: ['build'], script: DONE_SCRIPT })
@@ -354,7 +354,7 @@ describe('agent run — harness bindings (D4/D13)', () => {
     expect(stderr).toContain('"steps" must be an object')
   })
 
-  it('refuses a harness contract major-version mismatch with an upgrade hint (D8)', async () => {
+  it('refuses a harness contract major-version mismatch with an upgrade hint (D46)', async () => {
     const dir = startedBuild()
     writeFileSync(harnessPath(dir), JSON.stringify({ contract: 2, steps: {} }))
 

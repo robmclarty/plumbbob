@@ -4,7 +4,7 @@
 // absolute paths, a missing step, a missing seam, or more than one seam line,
 // rather than guessing. The best-effort scrapers below (title, done-when,
 // decisions, constraints) feed an agent's context, not a gate, so they never
-// refuse — they return what they can and report the lines they skipped (D23).
+// refuse — they return what they can and report the lines they skipped (D61).
 
 const GLOB_CHARS = /[*?[\]{}]/
 
@@ -138,7 +138,7 @@ export function scopeDrift(paths: ReadonlyArray<string>, seam: ReadonlyArray<str
   return paths.filter((p) => !matchesSeam(p, seam) && !isArtifactPath(p))
 }
 
-// --- best-effort scrapes (D23) ---
+// --- best-effort scrapes (D61) ---
 //
 // These feed an agent's StepContext, not a gate, so they never refuse: a
 // formatting quirk in a hand-edited intent must not wedge the loop. They return
@@ -192,7 +192,7 @@ export function parseBuildTitle(content: string): string {
 }
 
 // The top-level `- ` bullets under a `## Heading`, each verbatim with its wrapped
-// continuation lines joined into one string (D23 keeps the `*because*` rationale
+// continuation lines joined into one string (D61 keeps the `*because*` rationale
 // intact for the agent). `skipped` holds any line under the heading that was
 // neither a bullet, a continuation, nor blank — a malformed bullet the caller
 // warns about rather than dropping silently.

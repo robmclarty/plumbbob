@@ -32,7 +32,7 @@ at the pause for your approval. **Re-firing `/pb-build` is itself the clock tick
 3. **Read the plan.** Read the step's **done-when**, its **seam**, and the
    **Decisions** and **Constraints** in `intent.md`. Build to *that* — the deciding
    already happened, off the chat.
-   - **Run any bound `before`-agents** *(D5/D15)*. If the build's `harness.json` binds
+   - **Run any bound `before`-agents** *(D43/D59)*. If the build's `harness.json` binds
      agents to this step's `before` slot, run `plumbbob agent run --step <n> --mode
      before` first: each returns a validated envelope on stdout that plumbbob also
      appends to the step's `handoff.json`, and its `summary`/`body` become **context you
@@ -43,17 +43,17 @@ at the pause for your approval. **Re-firing `/pb-build` is itself the clock tick
    edit — capture it and stay on the step. If you genuinely cannot finish without
    touching more than the seam, that is scope drift: surface it to the human rather
    than sprawling.
-   - **If a `build`-slot agent is bound, delegate the diff to it** *(D5)*. Run
+   - **If a `build`-slot agent is bound, delegate the diff to it** *(D43)*. Run
      `plumbbob agent run --step <n> --mode build` and let that agent author the step's
      code instead of writing it yourself; its envelope reports what it did. You still
      own the verify tick below — the diff is reviewed the same way whoever wrote it (D3).
-   - **A manifest's `when` prose is your cue to fire an agent mid-build** *(D5/D11)*.
+   - **A manifest's `when` prose is your cue to fire an agent mid-build** *(D43/D55)*.
      The three slots are the only *declarative* lifecycle points; there is no config for
      "a salient moment in the middle." That is judgment, and you are the frontier model
      in the room: when the work reaches the situation a bound agent's `when` (or a step
      `note`) describes, fire `plumbbob agent run <name> --step <n>` yourself. Prose is
      the orchestration language; you are the workflow engine.
-   - **Route a non-`done` envelope by its status** *(D24)*. An agent that returns
+   - **Route a non-`done` envelope by its status** *(D52)*. An agent that returns
      `blocked` couldn't finish (missing input, failed precondition): surface its `notes`,
      let the human unblock, and re-run it — don't work around it. One that returns
      `drift` finished but found the plan no longer matches reality: **stop and send the
@@ -66,7 +66,7 @@ at the pause for your approval. **Re-firing `/pb-build` is itself the clock tick
    still runs everything) → run any bound `after`-agents (`plumbbob agent run --step
    <n> --mode after`) and fold their envelopes into the self-review as **advisory
    input** — they inform, they never gate (checkride gates, the human is the clock; an
-   `after`-agent that could fail a step is the lock in autonomy's costume, D7/C4) →
+   `after`-agent that could fail a step is the lock in autonomy's costume, D45) →
    self-review the diff against the done-when, the Decisions, and the Constraints (a
    single structured read, D16) → validate → **PAUSE
    for the human's approval** → only on approval, checkpoint with
@@ -84,7 +84,7 @@ progress instead of approving each step. It does the same work, but **the agent 
 and approves in the human's place**, and it **chains**:
 
 - Build the next step, running its slots in the same order as the default path
-  (D12): bound `before`-agents → implement (or the bound `build`-agent) → bound
+  (D56): bound `before`-agents → implement (or the bound `build`-agent) → bound
   `after`-agents → `check` → self-review → **if the check is green AND the
   self-review finds no done-when / Decision / Constraint mismatch, checkpoint** and move
   straight on to the next planned step. Repeat. `--auto` adds no new machinery — the
@@ -92,7 +92,7 @@ and approves in the human's place**, and it **chains**:
 - **Stop and hand back to the human** the moment any of these is true: the check is red,
   the self-review finds a mismatch (surface exactly what, and do not checkpoint it), a
   bound agent returns `blocked` or `drift` (unblock-and-re-run, or `/pb-refine` — an
-  agent cannot advance the loop, C2), a new decision is needed, or no planned steps
+  agent cannot advance the loop, C6), a new decision is needed, or no planned steps
   remain.
 
 `--auto` is the only path that checkpoints without a human pause, and only because the
@@ -107,7 +107,7 @@ human asked for it by name. The default — no flag — always ends at the pause
 - **Default ends at the pause.** Implement → verify → wait for approval; never
   checkpoint without it. Only an explicit `--auto` lets the agent approve in your place,
   and it still halts on a red check or any mismatch.
-- **Agents feed the beat; they never advance it** (C2/C4). `before` loads context,
+- **Agents feed the beat; they never advance it** (C6/D45). `before` loads context,
   `build` writes the diff, `after` is advisory — none can checkpoint, flip a step, or
   chain. `blocked` → unblock and re-run; `drift` → `/pb-refine`. You are still the one
   who verifies and (bar `--auto`) the human is still the clock.

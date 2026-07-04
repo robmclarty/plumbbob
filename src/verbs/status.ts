@@ -65,9 +65,9 @@ export function status(cwd: string, args: ReadonlyArray<string> = []): number {
   return 0
 }
 
-// The active build's harness bindings (D19): the agents bound to each slot, per
+// The active build's harness bindings (D48): the agents bound to each slot, per
 // `defaults` and per step, with a warning on any bound agent that does not resolve
-// (D10 — a teammate can lack a personal agent and the loop still works). Returns []
+// (D54 — a teammate can lack a personal agent and the loop still works). Returns []
 // when the build has no harness.json (a clean no-op) or the file binds nothing, so
 // the dashboard stays uncluttered for builds that use no agents. A broken
 // harness.json surfaces its parse error rather than hiding.
@@ -101,7 +101,7 @@ function slotFragments(bindings: SlotBindings): string[] {
 }
 
 // A warning line for every distinct agent bound anywhere in the harness that does
-// not resolve (D10). Deduped and sorted so the report is stable; a name bound in
+// not resolve (D54). Deduped and sorted so the report is stable; a name bound in
 // several slots warns once.
 function bindingWarnings(root: string, harness: HarnessBindings): string[] {
   const names = new Set<string>()

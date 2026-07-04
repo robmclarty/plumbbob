@@ -145,7 +145,7 @@ export function reportPath(root: string, slug?: string | null): string {
   return join(artifactDir(root, slug), 'report.md')
 }
 
-// handoff.json is the agent-run ledger (D20): each `agent run` appends its
+// handoff.json is the agent-run ledger (D47): each `agent run` appends its
 // validated envelope here so a later invocation can thread earlier results into
 // the next call's `context[]` — the CLI itself is memoryless between runs, and
 // the file survives context-window compaction where inline stdout does not. It is
@@ -185,7 +185,7 @@ export function appendHandoff(root: string, slug: string | null | undefined, ent
 }
 
 // Remove the build's handoff.json — the step-scoped ledger is cleared when the
-// step checkpoints (D20), the same beat that clears STEP/SEAM. Absent file is a
+// step checkpoints (D47), the same beat that clears STEP/SEAM. Absent file is a
 // no-op (`force`).
 export function clearHandoff(root: string, slug?: string | null): void {
   rmSync(handoffPath(root, slug), { force: true })
@@ -247,7 +247,7 @@ export function excludeControl(root: string): void {
     `${DIRNAME}/builds/*/STEP`,
     `${DIRNAME}/builds/*/SEAM`,
     `${DIRNAME}/builds/*/SPIKE`,
-    // The agent-run handoff ledger (D20) is step-scoped in-flight state, not a
+    // The agent-run handoff ledger (D47) is step-scoped in-flight state, not a
     // tracked artifact — it must never ride a step commit into the PR.
     `${DIRNAME}/builds/*/handoff.json`,
     // The checkride gate (D32) writes raw tool output to `.check/`; checkpoint's

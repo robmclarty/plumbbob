@@ -1,5 +1,5 @@
 // `plumbbob doctor` — all three sections, in-process. The sidecar tests build a
-// pre-restructure LEGACY flat sidecar in a throwaway repo (D14/C6) and assert the
+// pre-restructure LEGACY flat sidecar in a throwaway repo (D14) and assert the
 // move into the tracked builds/ layout: archive + active session become build
 // folders, config becomes settings.json, and the result is STAGED but never
 // committed (Q8), losing nothing on the way (C4). The plugin-link tests pin
@@ -262,7 +262,7 @@ describe('doctor — migration', () => {
     ])
   })
 
-  // `start` refuses collisions (D17); migration instead suffixes -2, -3, … because
+  // `start` refuses collisions (D38); migration instead suffixes -2, -3, … because
   // the folders it is moving already exist and aborting mid-move would destroy state.
   it('disambiguates colliding slugs with -2, -3 … suffixes', () => {
     const dir = partialLegacyRepo((sc) => {
@@ -409,7 +409,7 @@ describe('doctor — the verb', () => {
   })
 })
 
-// The agent-validation section (D19). overrideRepo + a seeded marketplace make the
+// The agent-validation section (D48). overrideRepo + a seeded marketplace make the
 // plugin and gate sections pass, so a test's problem count comes from the agents
 // alone; HOME is pinned so the personal tier is the throwaway home, not the dev's.
 type AgentOpts = {
@@ -437,7 +437,7 @@ function putAgent(agentsRoot: string, name: string, opts: AgentOpts): void {
   )
 }
 
-describe('doctor — agent validation (D19)', () => {
+describe('doctor — agent validation (D48)', () => {
   it('validates a healthy agent with a ✓ and its declared slots', async () => {
     const home = makeTempDir()
     seedMarketplace(home, ['plumbbob@robmclarty'])
@@ -450,7 +450,7 @@ describe('doctor — agent validation (D19)', () => {
     })
     const { code, stdout } = await doctorWithHome(home, dir)
     expect(code).toBe(0)
-    expect(stdout).toContain('plumbbob doctor — agents (D19)')
+    expect(stdout).toContain('plumbbob doctor — agents (D48)')
     expect(stdout).toContain('✓ good (project) [build, after]')
     expect(stdout).toContain('all checks passed')
   })

@@ -282,7 +282,7 @@ function sidecarReport(cwd: string, migrate: boolean): { readonly lines: string[
   return { lines, failed: 1 }
 }
 
-// --- agent validation (D19) ---
+// --- agent validation (D48) ---
 
 // Interpreters recognized as the program of a manifest `command`: when the command
 // is `sh <script>` / `node <script>` / …, the checkable artifact is the script
@@ -290,7 +290,7 @@ function sidecarReport(cwd: string, migrate: boolean): { readonly lines: string[
 // interpreter, which we trust to be on PATH.
 const INTERPRETERS = new Set(['sh', 'bash', 'zsh', 'dash', 'node', 'deno', 'bun', 'python', 'python3', 'ruby', 'perl'])
 
-// Expand PLUMBBOB_AGENT_DIR (D18) in a command and split it into bare tokens
+// Expand PLUMBBOB_AGENT_DIR (D49) in a command and split it into bare tokens
 // (surrounding quotes stripped). A deliberately shallow split — enough for the
 // static command check below, not a shell parser (which is neither possible nor
 // wanted for a best-effort diagnostic).
@@ -302,9 +302,9 @@ function commandTokens(command: string, agentDir: string): string[] {
     .map((t) => t.replace(/^['"]/, '').replace(/['"]$/, ''))
 }
 
-// Statically check a manifest `command` for the footgun D19 names: a script file
+// Statically check a manifest `command` for the footgun D48 names: a script file
 // that does not exist, or a directly-invoked one missing its +x bit. The command
-// is a shell string spawned via `sh -c` at the repo root (D18), so a relative path
+// is a shell string spawned via `sh -c` at the repo root (D49), so a relative path
 // resolves against `root` and PLUMBBOB_AGENT_DIR points at the agent's own dir.
 // Best-effort by design — a path-shaped program or an interpreter's script
 // argument is checked; a bare command (a PATH binary, an inline `node -e` program)
@@ -338,7 +338,7 @@ function checkCommand(command: string, agentDir: string, root: string): string |
   return null
 }
 
-// One agent's problem (D19), or null when it validates: a malformed or
+// One agent's problem (D48), or null when it validates: a malformed or
 // unsupported-contract manifest surfaces as its resolution error; an
 // otherwise-valid agent is checked for a missing/non-executable command.
 function agentProblem(listing: AgentListing, root: string): string | null {
@@ -347,7 +347,7 @@ function agentProblem(listing: AgentListing, root: string): string | null {
   return checkCommand(manifest.command, dir, root)
 }
 
-// The agent-validation section (D19): walk every resolvable agent across both
+// The agent-validation section (D48): walk every resolvable agent across both
 // tiers (project + personal) and flag a malformed agent.json, an unsupported
 // contract version (both arrive as the listing's parse error), or a
 // missing/non-executable command. A repo with no agents shows no section (like the
@@ -359,7 +359,7 @@ function agentReport(cwd: string): { readonly lines: string[]; readonly failed: 
   const listings = listAgents(root)
   if (listings.length === 0) return { lines: [], failed: 0 }
 
-  const lines = ['', 'plumbbob doctor — agents (D19)']
+  const lines = ['', 'plumbbob doctor — agents (D48)']
   let failed = 0
   for (const listing of listings) {
     const problem = agentProblem(listing, root)

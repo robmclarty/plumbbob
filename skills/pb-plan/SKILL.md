@@ -60,7 +60,7 @@ an agent can follow with `/pb-build`. The argument only seeds how you get there.
    paths it touches). Later steps may be fuzzier than the first — that's fine; they get
    sharpened just-in-time when you reach them with `/pb-step`. Keep each small enough to
    verify in one review pass.
-5. **Offer harness bindings** *(optional — D4/D5)*. If the build will lean on
+5. **Offer harness bindings** *(optional — D42/D43)*. If the build will lean on
    user-authored agents, author `harness.json` in the build folder (beside `intent.md`)
    and review it at the **same plan pause**, alongside the steps — bindings are
    plan-adjacent configuration, so they converge with the plan. It binds agents to a
@@ -79,7 +79,7 @@ an agent can follow with `/pb-build`. The argument only seeds how you get there.
    Keep it **bindings + prose only, never a conditional** (C3): the file says *which*
    agent, not *when* — the host model reads each manifest's `when` prose and a step's
    `note` and decides when to fire one mid-build. Skip the file entirely when no step
-   uses an agent — the loop runs identically without it (D10). The plan commit picks it
+   uses an agent — the loop runs identically without it (D54). The plan commit picks it
    up automatically (it lives in the build folder).
 6. **Commit the plan.** Once the human approves the frame and steps, run
    `plumbbob checkpoint --plan` to commit the scaffold on its own — subject

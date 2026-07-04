@@ -1,12 +1,12 @@
-// The agent contract (D1/D8): a user-authored agent is anything executable that
+// The agent contract (D39/D46): a user-authored agent is anything executable that
 // speaks a versioned JSON envelope — a JSON manifest on disk (`agent.json`), JSON
 // on the child's stdin, JSON on its stdout, prose on its stderr. This module is
 // the contract's validator AND resolver: it type-narrows the on-disk manifest and
 // the output envelope a child returns (refusing a contract major-version mismatch
 // with an upgrade hint rather than guessing at a shape that is only stable within a
-// major — C6: additions are minor, removals/renames are major), and it walks the
+// major — C7: additions are minor, removals/renames are major), and it walks the
 // two agent tiers to resolve an agent by name. The validators are pure; the
-// resolver reads `agent.json` files off disk (node builtins only, C1). Invocation
+// resolver reads `agent.json` files off disk (node builtins only, C2). Invocation
 // (step 4) spawns on top of these.
 
 import { spawn } from 'node:child_process'
@@ -16,28 +16,28 @@ import { join } from 'node:path'
 import { parseBuildTitle, parseStepMeta, parseStepSeam, scrapeBullets } from './intent.ts'
 
 // The contract major version this plumbbob speaks. A manifest or envelope
-// declaring a different major is refused (D8): within a major the envelope only
+// declaring a different major is refused (D46): within a major the envelope only
 // gains fields, so an older CLI can read a newer minor, but a major gap means the
 // shapes may genuinely disagree.
 export const CONTRACT_VERSION = 1
 
-// The three lifecycle slots an agent may bind to (D5): `before` (context in),
+// The three lifecycle slots an agent may bind to (D43): `before` (context in),
 // `build` (the diff), `after` (advisory review). Exactly these, never a fourth —
 // "a salient point in the middle" is judgment the host model handles in prose,
 // not a declarative slot.
 export const SLOTS = ['before', 'build', 'after'] as const
 export type Slot = (typeof SLOTS)[number]
 
-// The terminal states an agent reports (D24). `done` = finished; `blocked` = it
+// The terminal states an agent reports (D52). `done` = finished; `blocked` = it
 // couldn't finish, so the human unblocks and re-runs; `drift` = it finished but
 // found the plan no longer matches reality, so the route is /pb-refine repair.
 export const ENVELOPE_STATUSES = ['done', 'blocked', 'drift'] as const
 export type EnvelopeStatus = (typeof ENVELOPE_STATUSES)[number]
 
-// A validated agent manifest (D11). `command` is for the deterministic CLI — the
-// shell string spawned via `sh -c` at repo root (D18). `description` and `when`
+// A validated agent manifest (D55). `command` is for the deterministic CLI — the
+// shell string spawned via `sh -c` at repo root (D49). `description` and `when`
 // are prose for the host model (like a subagent frontmatter description); they
-// default to empty. Unknown manifest keys are tolerated (C6) and dropped from the
+// default to empty. Unknown manifest keys are tolerated (C7) and dropped from the
 // narrowed type.
 export type AgentManifest = {
   readonly contract: number
@@ -48,11 +48,11 @@ export type AgentManifest = {
   readonly when: string
 }
 
-// A validated output envelope (D8/D20): what a child writes to stdout, the single
+// A validated output envelope (D46/D47): what a child writes to stdout, the single
 // structured result plumbbob consumes at the pause. `summary` is the one-line
 // headline; `body` and `notes` are optional prose; `parked[]` are park lines the
-// CLI lands through the park verb (D6 — the agent never writes .plumbbob/ itself).
-// Nothing here can advance the loop (C2 — the identity invariant).
+// CLI lands through the park verb (D44 — the agent never writes .plumbbob/ itself).
+// Nothing here can advance the loop (C6 — the identity invariant).
 export type AgentEnvelope = {
   readonly contract: number
   readonly status: EnvelopeStatus
@@ -111,7 +111,7 @@ export function parseManifest(raw: unknown): ManifestParse {
 // Validate a child's output envelope (already JSON-parsed from its stdout).
 // Contract first (mismatch → upgrade hint), then a `status` in {done, blocked,
 // drift}, a non-empty `summary`, and a well-formed `parked[]`. Optional prose
-// fields default to empty; unknown keys are tolerated (C6).
+// fields default to empty; unknown keys are tolerated (C7).
 export function parseEnvelope(raw: unknown): EnvelopeParse {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
     return envelopeFail('the agent envelope must be a JSON object on stdout.')
@@ -147,13 +147,13 @@ export function parseEnvelope(raw: unknown): EnvelopeParse {
 }
 
 // True when a string names one of the three slots. Exported for step 4's
-// `--mode` refusal (D21): a mode the manifest doesn't declare is refused loud.
+// `--mode` refusal (D54): a mode the manifest doesn't declare is refused loud.
 export function isSlot(value: string): value is Slot {
   return (SLOTS as ReadonlyArray<string>).includes(value)
 }
 
 // Validate the shared `contract` field. A missing / non-integer contract is
-// malformed; a present-but-different major is a version mismatch (D8) and gets an
+// malformed; a present-but-different major is a version mismatch (D46) and gets an
 // upgrade hint pointing at whichever side is behind. Returns an error string, or
 // null when the contract is the supported major.
 function checkContract(value: unknown, what: string): string | null {
@@ -189,7 +189,7 @@ function parseSlots(value: unknown): ReadonlyArray<Slot> | string {
 
 // `parked[]` is optional (absent = none). Present, it must be an array of
 // non-blank strings — each becomes a park line the CLI lands through the park
-// verb (D6). A malformed list is refused rather than silently dropped: losing a
+// verb (D44). A malformed list is refused rather than silently dropped: losing a
 // parked concern is a quiet data loss. Returns the trimmed lines or an error.
 function parseParked(value: unknown): ReadonlyArray<string> | string {
   if (value === undefined || value === null) {
@@ -227,7 +227,7 @@ function envelopeFail(error: string): EnvelopeParse {
   return { ok: false, error }
 }
 
-// --- resolution (D3) ---
+// --- resolution (D41) ---
 
 // The tier an agent resolved from. `flag` is a `--agent <path>` override (top
 // priority, used by `agent run` in step 4); `project` is `.plumbbob/agents/`
@@ -237,7 +237,7 @@ export type AgentOrigin = 'flag' | 'project' | 'personal'
 
 // A resolved agent: its validated manifest, the tier it came from, and its own
 // directory — the last is what step 4 exposes to the child as PLUMBBOB_AGENT_DIR
-// (D18) so an agent whose cwd is the repo root can still reach its own files.
+// (D49) so an agent whose cwd is the repo root can still reach its own files.
 export type ResolvedAgent = {
   readonly manifest: AgentManifest
   readonly origin: AgentOrigin
@@ -272,10 +272,10 @@ function agentsHome(home?: string): string {
   return home ?? process.env.HOME ?? homedir()
 }
 
-// Resolve an agent by name across the tiers (D3), first hit wins. A `flagPath`
+// Resolve an agent by name across the tiers (D41), first hit wins. A `flagPath`
 // (from `--agent <path>`) points straight at an agent directory and takes top
 // priority. A tier "hits" when it holds an `agent.json`: a malformed one there is
-// surfaced as an error (project still shadows personal — D21's fail-loud), never
+// surfaced as an error (project still shadows personal — D54's fail-loud), never
 // silently skipped in favor of a different agent. Returns the not-found error only
 // when no tier holds a manifest at all.
 export function resolveAgent(
@@ -327,7 +327,7 @@ export function listAgents(root: string, opts: { readonly home?: string } = {}):
 
 // Render `agent list`'s output. Pure so the verb stays a thin read-write shell and
 // the formatting is unit-tested here. Prints name, origin, slots, and description
-// per agent (D3's done-when); a malformed manifest gets a `✗ … invalid:` line.
+// per agent (D41's done-when); a malformed manifest gets a `✗ … invalid:` line.
 export function formatAgentList(listings: ReadonlyArray<AgentListing>): string {
   if (listings.length === 0) {
     return 'plumbbob: no agents. Add one under .plumbbob/agents/<name>/ or ~/.plumbbob/agents/<name>/.'
@@ -382,14 +382,14 @@ function agentDirNames(dir: string): string[] {
   }
 }
 
-// --- step context (D15/D23) ---
+// --- step context (D59/D61) ---
 
 // The input JSON a child agent reads on stdin — the whole picture of the step it
 // runs against, composed deterministically from intent.md + settings. `mode` is
-// the slot being run; `context[]` carries before-slot outputs inline (D15);
-// `settings` is plumbbob's own relevant settings (never a provider key — D9). The
+// the slot being run; `context[]` carries before-slot outputs inline (D59);
+// `settings` is plumbbob's own relevant settings (never a provider key — D53). The
 // step's `seam` is parsed strictly (it gates git behavior); the title/done-when/
-// decisions/constraints are best-effort prose (D23).
+// decisions/constraints are best-effort prose (D61).
 export type StepContext = {
   readonly contract: number
   readonly mode: Slot
@@ -458,7 +458,7 @@ function skipWarnings(heading: string, skipped: ReadonlyArray<string>): string[]
   )
 }
 
-// --- harness bindings (D4/D13) ---
+// --- harness bindings (D42/D57) ---
 
 // A slot→agents map: the agents bound to each of the three lifecycle points. Only
 // bound slots are present as keys (an absent slot falls through the merge ladder,
@@ -475,8 +475,8 @@ export type StepBinding = {
 }
 
 // harness.json — the planned per-step agent bindings authored at /pb-plan time, a
-// sibling of intent.md in builds/<slug>/ (D4). Contract-gated like the manifest and
-// envelope (D8). `defaults` bind agents to every step; a per-step entry under
+// sibling of intent.md in builds/<slug>/ (D42). Contract-gated like the manifest and
+// envelope (D46). `defaults` bind agents to every step; a per-step entry under
 // `steps.<n>` overrides the defaults for the slots it names (replace, not append).
 export type HarnessBindings = {
   readonly contract: number
@@ -489,9 +489,9 @@ export type HarnessParse =
   | { readonly ok: false; readonly error: string }
 
 // Validate a parsed harness.json. Contract first (a major mismatch gets the same
-// upgrade hint as the manifest/envelope, D8). Structure is strict — a `steps` that
+// upgrade hint as the manifest/envelope, D46). Structure is strict — a `steps` that
 // is not an object, a non-numeric step key, or a step entry that is not an object
-// is the author's error and is refused loud. Slot *contents* stay lenient (D23): a
+// is the author's error and is refused loud. Slot *contents* stay lenient (D61): a
 // slot value may be one name or a list, and blanks/non-strings drop rather than
 // refuse, because bindings feed a spawn, not a git-gating parse.
 export function parseHarness(raw: unknown): HarnessParse {
@@ -547,7 +547,7 @@ export function readHarnessFile(path: string): HarnessParse | null {
 }
 
 // Narrow a raw slot→agents object (a harness `defaults`, a per-step entry, or the
-// settings-level defaults, D13) to the slots it actually binds. A slot value may be
+// settings-level defaults, D57) to the slots it actually binds. A slot value may be
 // a single agent name or a list; blanks and non-strings drop. Only the three real
 // slots are read — `note` and any stranger key are ignored here. A slot present but
 // naming no valid agent still counts as bound-to-nothing (an explicit override to
@@ -561,7 +561,7 @@ export function parseSlotBindings(raw: unknown): SlotBindings {
   return out
 }
 
-// The agents bound to one slot for one step, merging the ladder (D13): a per-step
+// The agents bound to one slot for one step, merging the ladder (D57): a per-step
 // slot entry overrides the harness `defaults`, which override the settings-level
 // defaults — the first level that names the slot wins (replace, not append). The
 // `--agent` flag and an explicit name sit above all of this, but the verb takes the
@@ -590,15 +590,15 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-// --- invocation (D8/D14/D17/D18/D22) ---
+// --- invocation (D46/D58/D51/D49/D60) ---
 
 // The outcome of one spawned agent run — a discriminated union the verb maps to
-// terminal reporting and side effects (D8's exit-code semantics). Exactly one is
+// terminal reporting and side effects (D46's exit-code semantics). Exactly one is
 // authoritative: `ok` only when the child exited 0 AND its stdout parsed to a
 // valid envelope. A non-zero exit is a failed run reported verbatim (we do NOT
 // trust the envelope of a child that failed); `contract` is exit-0-but-garbage
 // (unparseable stdout or a version mismatch, carrying parseEnvelope's hint);
-// `timeout` and `interrupted` are the kill paths (D17/D14); `spawn` is a shell
+// `timeout` and `interrupted` are the kill paths (D51/D58); `spawn` is a shell
 // that never started. `stdout` rides along on the outcomes that have it so the
 // verb can surface the raw bytes when a run went sideways.
 export type AgentRunResult =
@@ -609,14 +609,14 @@ export type AgentRunResult =
   | { readonly ok: false; readonly reason: 'interrupted' }
   | { readonly ok: false; readonly reason: 'spawn'; readonly error: string }
 
-// Spawn an agent's `command` via the shell (D18: `sh -c` on POSIX) at the repo
+// Spawn an agent's `command` via the shell (D49: `sh -c` on POSIX) at the repo
 // root, with the composed StepContext delivered as JSON on stdin. Stdout is piped
 // and captured (the envelope); stderr is inherited so the child's prose streams
-// live to the terminal (D8 — production narrates, consumption stays structured);
-// the agent's own directory rides in `PLUMBBOB_AGENT_DIR` (D18) so a root-cwd
+// live to the terminal (D46 — production narrates, consumption stays structured);
+// the agent's own directory rides in `PLUMBBOB_AGENT_DIR` (D49) so a root-cwd
 // agent can still reach its files. A SIGINT while the child runs kills it and
-// reports `interrupted` rather than orphaning it (D14); a positive `timeoutSeconds`
-// arms a kill timer (D17, 0 = off). Async `spawn`, not `spawnSync` (D22), so the
+// reports `interrupted` rather than orphaning it (D58); a positive `timeoutSeconds`
+// arms a kill timer (D51, 0 = off). Async `spawn`, not `spawnSync` (D60), so the
 // parent stays live to interrupt gracefully. Never rejects — every failure mode is
 // a resolved `AgentRunResult`.
 export function runAgent(params: {
@@ -646,7 +646,7 @@ export function runAgent(params: {
       resolve(result)
     }
 
-    // Kill the child and report, rather than let a Ctrl-C orphan it (D14). The
+    // Kill the child and report, rather than let a Ctrl-C orphan it (D58). The
     // SIGKILL escalation covers a child that ignores the interrupt.
     function onSigint(): void {
       child.kill('SIGKILL')
@@ -691,7 +691,7 @@ export function runAgent(params: {
 }
 
 // Parse the child's captured stdout into a validated envelope: JSON first (a
-// non-JSON stdout is out of contract, D8), then the envelope validator (which
+// non-JSON stdout is out of contract, D46), then the envelope validator (which
 // carries the contract-mismatch hint). Kept private — `runAgent` is the only
 // caller and the verb reads the union, not this.
 function parseChildEnvelope(stdout: string): EnvelopeParse {

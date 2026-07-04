@@ -31,6 +31,12 @@ the code.
   already provides is the anti-pattern, not the dependency. Enforced by
   `rules/node-builtins-only.yml` (the allowlist lives in its regex). *Tagged in*
   `git.ts`, `sidecar.ts`, `plugins.ts`, `doctor.ts`, `cli-core.ts`.
+- **C3 — `harness.json` stays bindings + prose, never control flow.** A build's agent
+  bindings file carries slot→agent maps and prose `note`s and nothing else — the moment it
+  grows an `if`, a `retry`, or a `loop`, the doorway has failed its own spec. Control flow
+  lives in *agents* (as code) and in *prose* (read by the host model), never in config
+  (GitHub Actions' YAML-grown-a-language is the cautionary tale). *Tagged in* `agents.ts`,
+  the `pb-plan`/`pb-step` skills, `docs/agents.md`.
 - **C4 — Never destroy.** No step, revert, or migration path may lose park lines, intent
   edits, or a recorded build folder. `revert` snapshots the tracked build folder and
   restores it after a `reset --hard` (**D26**); `doctor --migrate` moves the legacy sidecar
@@ -41,8 +47,14 @@ the code.
   and resets `--hard` to its own recorded SHAs. It never rewrites pushed history; your
   squash-merge collapses the checkpoint markers at PR time. *Tagged in* `git.ts`,
   `finish.ts`.
-
-*(`C3` is not referenced in the current code.)*
+- **C6 — The agent envelope has no verb to advance the loop** (the identity invariant). No
+  key, flag, or side effect a user-authored agent returns may checkpoint, flip a step, or
+  trigger another agent — the subprocess boundary then enforces human-as-clock *by
+  construction*, not by policy, at every nesting depth. This is the litmus for every field
+  the envelope will ever grow. *Tagged in* `agents.ts`, `agent.ts`, `docs/agents.md`.
+- **C7 — Keep the agent envelope minimal.** Resist field sprawl (SWE-agent's ACI lesson):
+  unknown fields are tolerated and dropped, additions are a minor-version bump, and
+  removals or renames are a major (**D46**). *Tagged in* `agents.ts`, `docs/agents.md`.
 
 Beyond the numbered constraints, `rules/` guards three architectural invariants:
 `no-process-exit` (only the bin entry exits, so verbs and `cli-core` stay importable by
@@ -187,6 +199,116 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   `YYYY-MM-DD-` prefix so `builds/` sorts chronologically under a plain lexical listing —
   ordering by construction, not by titling convention; an explicit `--slug` stays
   verbatim. *Tagged in* `sidecar.ts`, `start.ts`, `doctor.ts`.
+
+The **user-authored-agent doorway** (July 2026, `docs/agents.md`) added **D39**–**D61** and
+**C3**/**C6**/**C7**. (The build's own `intent.md` —
+`.plumbbob/builds/2026-07-02-user-agent-plugins-…/` — numbered these decisions locally as
+D1–D24/C1–C7, per this page's convention; the code and docs cite the renumbered global tags
+below.)
+
+- **D39 — The agent doorway is one versioned subprocess envelope.** A user-authored agent is
+  *anything executable* that speaks JSON-on-stdin / JSON-on-stdout / prose-on-stderr —
+  runtime-agnosticism is the doorway (Terraform's `external` has run this exact contract since
+  2017; checkride's stream discipline is already house style). *Tagged in* `agents.ts`,
+  `agent.ts`, the `pb-*` skills, `docs/agents.md`. (See **C6** for the identity invariant that
+  bounds it.)
+- **D40 — One verb, `agent run`, with no way to advance the loop.** Deterministic mechanics
+  only — compose the context, spawn, validate, apply side effects — and no checkpoint, step
+  flip, or chaining, so the boundary enforces human-as-clock by construction (**C6**).
+  *Tagged in* `agent.ts`.
+- **D41 — Agents resolve flag → project → personal.** `--agent <path>`, then
+  `.plumbbob/agents/<name>/` (tracked, rides the PR), then `~/.plumbbob/agents/<name>/`
+  (personal), first hit wins, project shadowing personal — the settings ladder's shape
+  (**D27**) and Claude Code's two-level `.claude/agents/` convention. *Tagged in* `agents.ts`.
+- **D42 — Planned bindings live in `builds/<slug>/harness.json`.** A sibling of `intent.md`
+  authored at `/pb-plan` time, not inside the executor-agnostic intent (**D3**) — the plan
+  says *what/why*, the harness says *with-what*. *Tagged in* `agents.ts`, `sidecar.ts`, the
+  `pb-plan`/`pb-step` skills.
+- **D43 — Exactly three slots: `before`, `build`, `after`.** Context-in, the diff, advisory
+  review — and no fourth, because no declarative format can name "a salient point in the
+  middle"; that judgment is prose the host model reads (a manifest `when`, a step `note`).
+  *Tagged in* `agents.ts`, the loop skills, `docs/agents.md`.
+- **D44 — The CLI applies every side effect; the agent never writes `.plumbbob/`.**
+  `parked[]` lands through the park verb; an agent writing the sidecar directly is out of
+  contract — the sidecar keeps a single writer. *Tagged in* `agent.ts`.
+- **D45 — `after` output is advisory; checkride gates; the human advances.** An after-agent
+  informs the verify pause and can never fail a step — a gate an agent can trip is the lock
+  returning in autonomy's costume. *Tagged in* `agent.ts`, the `pb-verify` skill.
+- **D46 — Stream discipline and exit-code semantics.** stdout carries the envelope alone,
+  stderr streams the child's prose live to the terminal, exit 0 makes the envelope
+  authoritative and any non-zero is a failed run (reported, not trusted); a contract
+  major-version mismatch is refused with an upgrade hint. Production (narrating) must never
+  collide with consumption (one structured result at the pause). *Tagged in* `agents.ts`,
+  `agent.ts`, `docs/agents.md`.
+- **D47 — The step-scoped handoff ledger.** `agent run` re-emits the envelope on its own
+  stdout (inline, for the calling skill) *and* appends it to `builds/<slug>/handoff.json` —
+  untracked in-flight control state, scoped to the current step and cleared when the step
+  checkpoints (like `STEP`/`SEAM`) — so sequential runs and a compacted context can thread
+  earlier envelopes into the next call's `context[]`. *Tagged in* `sidecar.ts`,
+  `checkpoint.ts`, `agent.ts`.
+- **D48 — `doctor` validates agents; `status` reports bindings.** `doctor` walks every
+  resolvable agent (manifest well-formed, command present/executable, contract supported);
+  `status` lists the active build's harness bindings and warns on ones that don't resolve —
+  the surfaces the user already checks carry the report, so no separate `agent check` verb.
+  *Tagged in* `doctor.ts`, `status.ts`.
+- **D49 — POSIX only; the command runs via `sh -c` at the repo root.** `command` is a shell
+  string (not an argv array), spawned with the **repo root** as cwd so a build-slot agent's
+  repo-relative seam edits resolve; the agent's own directory rides in `PLUMBBOB_AGENT_DIR`
+  so it can still reach its files. *Tagged in* `agents.ts`, `doctor.ts`, `docs/agents.md`.
+- **D50 — Nested invocation is allowed, uncapped.** An agent may shell `plumbbob agent run`
+  to compose other agents (a build/review loop, say); loops belong inside agents as code,
+  cutoffs are the author's job, and the identity invariant (**C6**) holds at every depth —
+  a documented warning, not enforcement. *Tagged in* `agents.ts`, `docs/agents.md`.
+- **D51 — `agentTimeout`, off by default.** A settings-ladder key (seconds): absent or `0`
+  means no timeout, set means kill the child on expiry and report a failed run — the human is
+  present (Ctrl-C works, **D58**), so enforcement is the user's explicit opt-in.
+  *Tagged in* `agents.ts`, `settings.ts`.
+- **D52 — `blocked` and `drift` route differently at the pause.** `blocked` = the agent
+  couldn't finish (surface its `notes`, unblock, re-run); `drift` = it finished but found the
+  plan no longer matches reality (repair with `/pb-refine` before continuing) — the two halts
+  need different medicine. *Tagged in* `agent.ts`, the loop skills.
+- **D53 — Keys, model choice, and sandboxing are the agent's business.** The `settings`
+  block in the StepContext carries plumbbob's own relevant settings and nothing else —
+  PlumbBob never touches a provider key; how an agent authenticates, which model it calls,
+  and how it sandboxes itself live in *its* env and config. *Tagged in* `agents.ts`,
+  `docs/agents.md`.
+- **D54 — Explicit asks fail loud; ambient bindings degrade soft.** `agent run <name>`
+  naming an unresolvable agent **errors**, and `--mode X` against a manifest that doesn't
+  declare slot X **refuses** — the user who typed the name asked for that agent
+  specifically. Only a harness-*bound* agent a teammate lacks downgrades to a warning and
+  is skipped, because a binding is ambient configuration the loop must survive without
+  (the same optionality contract as `/pb-build` itself). A run that actually starts and
+  fails is a hard failure either way — this softens a *missing* agent, never a broken one.
+  *Tagged in* `agent.ts`, `agents.ts`, `status.ts`, the `pb-plan` skill.
+- **D55 — The manifest speaks to two audiences.** `command` is for the deterministic CLI;
+  `description` and `when` are prose for the **host model** (the role a subagent's
+  frontmatter description plays) — `when` is the cue the model reads to fire an agent
+  mid-build, because each half of when/how feeds the layer that can actually use it.
+  *Tagged in* `agents.ts`, the `pb-build` skill.
+- **D56 — `--auto` composes with zero new machinery.** Bound `before`-agents → implement
+  (or the bound `build`-agent) → bound `after`-agents → check → self-review →
+  checkpoint-if-clean → next; the `after` output feeds the *existing* self-review halt
+  condition, so the default path — everything lands at the pause — stays unchanged.
+  *Tagged in* the `pb-build` skill.
+- **D57 — The bindings merge ladder.** For one step and slot: an explicit name or `--agent`
+  flag beats the per-step harness entry, which beats the harness `defaults`, which beat the
+  settings-level `agents` key — the first level that names the slot wins, **replace, not
+  append** — because that's the existing settings ladder (**D27**), down to the tier.
+  *Tagged in* `agents.ts`, `agent.ts`, `settings.ts`.
+- **D58 — SIGINT is forwarded to the child.** The human is present, so Ctrl-C kills the
+  agent (with a SIGKILL escalation) and reports, rather than orphaning it.
+  *Tagged in* `agents.ts`.
+- **D59 — Before-slot outputs travel inline as `context[]`.** Inline in the input JSON is
+  the simplest transport until size proves otherwise; revisit only on evidence.
+  *Tagged in* `agents.ts`, the `pb-build` skill.
+- **D60 — Async `spawn`, not `spawnSync`.** A live parent can interrupt gracefully
+  (message + cleanup) where a blocked one just dies with the child; `dispatch` is already
+  Promise-typed, so it costs no plumbing. *Tagged in* `agents.ts`, `agent.ts`.
+- **D61 — Decisions/constraints scraping is best-effort, verbatim.** Every top-level
+  dash bullet under `## Decisions`/`## Constraints` passes as one verbatim string (wrapped lines
+  joined, the `*because*` rationale intact), skipped lines warn on stderr, and the scrape
+  never refuses — it feeds an agent's context, not a gate; seam parsing stays strict
+  precisely because seams gate git behavior (**D23**). *Tagged in* `intent.ts`, `agents.ts`.
 
 ### Superseded
 

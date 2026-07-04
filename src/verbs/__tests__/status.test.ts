@@ -10,7 +10,7 @@ import { captureIo } from '../../../test/helpers/capture-io.ts'
 
 afterAll(cleanupTempRepos)
 
-// A started build carrying a harness.json (D19). `harness` is written verbatim so
+// A started build carrying a harness.json (D48). `harness` is written verbatim so
 // tests can exercise valid bindings and a broken file alike.
 const HARNESS_SLUG = 'harness-status'
 
@@ -93,7 +93,7 @@ describe('status', () => {
   })
 })
 
-describe('status — harness bindings (D19)', () => {
+describe('status — harness bindings (D48)', () => {
   it('lists the active build\'s defaults and per-step bindings', () => {
     const home = makeTempDir()
     const dir = startedWithHarness(

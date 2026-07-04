@@ -1,12 +1,12 @@
-// `plumbbob agent <subcommand>` — the doorway to user-authored agents (D1/D3).
+// `plumbbob agent <subcommand>` — the doorway to user-authored agents (D39/D41).
 // `agent list` walks the two tiers and prints each resolvable agent. `agent run
-// <name> [--step N] [--mode before|build|after]` (D22) composes the StepContext,
+// <name> [--step N] [--mode before|build|after]` (D60) composes the StepContext,
 // spawns the manifest command, streams its stderr live, captures and validates
 // the child's envelope, re-emits it on this verb's own stdout (machine) with the
-// human summary on stderr (D8/D20), lands `parked[]` through the build-log (D6),
-// and appends the envelope to the step-scoped handoff ledger (D20). There is no
+// human summary on stderr (D46/D47), lands `parked[]` through the build-log (D44),
+// and appends the envelope to the step-scoped handoff ledger (D47). There is no
 // code path here to checkpoint, flip a step, or chain agents — the identity
-// invariant (C2) holds by construction. A thin read-write shell: resolution,
+// invariant (C6) holds by construction. A thin read-write shell: resolution,
 // composition, and spawn mechanics live in lib/agents.ts.
 
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -54,8 +54,8 @@ function list(cwd: string, _args: ReadonlyArray<string>): number {
 }
 
 // `agent run`: with a name (or `--agent` flag) run exactly that agent, failing
-// loud on a miss (D21); with no name run the step's harness-bound agents for the
-// requested slot (D4). Either way this composes the StepContext, spawns, and
+// loud on a miss (D54); with no name run the step's harness-bound agents for the
+// requested slot (D42). Either way this composes the StepContext, spawns, and
 // applies side effects — never advancing the loop.
 async function run(cwd: string, args: ReadonlyArray<string>): Promise<number> {
   const root = findRepoRoot(cwd)
@@ -84,7 +84,7 @@ async function run(cwd: string, args: ReadonlyArray<string>): Promise<number> {
     return 1
   }
 
-  // Explicit ask (a name, above the bindings — D13): run exactly it, fail loud on
+  // Explicit ask (a name, above the bindings — D57): run exactly it, fail loud on
   // a miss. No name: resolve the harness bindings for the slot and run them.
   if (parsed.name !== undefined) {
     return runOne(root, slug, step, {
@@ -98,10 +98,10 @@ async function run(cwd: string, args: ReadonlyArray<string>): Promise<number> {
 }
 
 // One agent's full run: resolve it, pick its slot, compose the StepContext, spawn,
-// and report. `ambient` marks a harness-bound run (D4) whose resolution or slot
-// mismatch degrades to a warning (D10/D21) so a batch keeps going; an explicit
+// and report. `ambient` marks a harness-bound run (D42) whose resolution or slot
+// mismatch degrades to a warning (D54/D54) so a batch keeps going; an explicit
 // ask (`ambient: false`) fails loud on the same miss. A run that actually starts
-// and fails (non-zero exit, timeout, …) is a hard failure either way — D10 softens
+// and fails (non-zero exit, timeout, …) is a hard failure either way — D54 softens
 // a *missing* agent, not a broken one.
 type RunSpec = {
   readonly name: string
@@ -116,7 +116,7 @@ async function runOne(root: string, slug: string | null, step: number, spec: Run
     return degrade(
       spec.ambient,
       `plumbbob: ${resolution.error}`,
-      `plumbbob: bound agent "${spec.name}" did not resolve — ${resolution.error} Skipping (D10 — the loop works without it).`,
+      `plumbbob: bound agent "${spec.name}" did not resolve — ${resolution.error} Skipping (D54 — the loop works without it).`,
     )
   }
   const { manifest, dir } = resolution.agent
@@ -126,7 +126,7 @@ async function runOne(root: string, slug: string | null, step: number, spec: Run
     return degrade(
       spec.ambient,
       resolved.error,
-      `plumbbob: bound agent "${spec.name}" — ${resolved.error.replace(/^plumbbob:\s*/, '')} Skipping (D10).`,
+      `plumbbob: bound agent "${spec.name}" — ${resolved.error.replace(/^plumbbob:\s*/, '')} Skipping (D54).`,
     )
   }
   const mode = resolved.mode
@@ -168,9 +168,9 @@ async function runOne(root: string, slug: string | null, step: number, spec: Run
   return report(root, slug, spec.name, mode, step, result)
 }
 
-// No name given: run the harness-bound agents for the requested slot (D4). The
+// No name given: run the harness-bound agents for the requested slot (D42). The
 // bindings merge the ladder — per-step over harness defaults over settings-level
-// defaults (D13). A missing bound agent degrades to a warning (D10); an absent
+// defaults (D57). A missing bound agent degrades to a warning (D54); an absent
 // harness, or one that binds nothing to this slot, is a clean no-op. Each bound
 // agent runs in turn; the batch exits 1 if any agent that actually ran failed.
 async function runBound(root: string, slug: string | null, step: number, modeFlag: string | undefined): Promise<number> {
@@ -209,7 +209,7 @@ async function runBound(root: string, slug: string | null, step: number, modeFla
 }
 
 // Emit the loud error or the soft warning by whether this run was an explicit ask
-// (name/flag) or an ambient harness binding (D10/D21), and return the matching
+// (name/flag) or an ambient harness binding (D54/D54), and return the matching
 // code — a hard miss stops with 1, a degraded one warns and returns 0 so a batch
 // of bound agents carries on.
 function degrade(ambient: boolean, hard: string, soft: string): number {
@@ -257,7 +257,7 @@ function parseRunArgs(args: ReadonlyArray<string>): RunArgs | string {
 }
 
 // Resolve the slot the agent runs in. An explicit `--mode` must name a real slot
-// AND one the manifest declares — an undeclared slot is refused loud (D21). With
+// AND one the manifest declares — an undeclared slot is refused loud (D54). With
 // no `--mode`, a single-slot agent uses its only slot; a multi-slot agent must be
 // told which one (step 5's harness bindings pick the slot from the lifecycle
 // point; a bare `run` cannot guess).
@@ -279,11 +279,11 @@ function resolveMode(flag: string | undefined, manifest: AgentManifest): { ok: t
   }
 }
 
-// Map the run outcome to reporting and side effects (D8). A failed run — non-zero
+// Map the run outcome to reporting and side effects (D46). A failed run — non-zero
 // exit, out-of-contract stdout, timeout, interrupt, or a shell that never
 // started — reports on stderr and stops with NO side effects (the envelope of a
-// failed child is not authoritative). A clean run lands `parked[]` (D6), records
-// the envelope in the handoff ledger (D20), prints the human summary on stderr,
+// failed child is not authoritative). A clean run lands `parked[]` (D44), records
+// the envelope in the handoff ledger (D47), prints the human summary on stderr,
 // and re-emits the machine envelope on stdout — nothing else, ever (the stream
 // discipline: stdout carries the envelope alone).
 function report(
@@ -321,7 +321,7 @@ function failureLine(name: string, result: Exclude<AgentRunResult, { ok: true }>
   }
 }
 
-// Land each parked concern through the build-log's Park list (D6 — the agent
+// Land each parked concern through the build-log's Park list (D44 — the agent
 // never writes .plumbbob/ itself). A build-log with no "## Park list" section, or
 // no build-log at all, warns once rather than losing the lines silently.
 function applyParked(root: string, slug: string | null, parked: ReadonlyArray<string>): void {
@@ -346,8 +346,8 @@ function applyParked(root: string, slug: string | null, parked: ReadonlyArray<st
   writeFileSync(path, content)
 }
 
-// The human-facing summary on stderr (D20): a headline plus, for a halt, the
-// route the skills name (D24) — `blocked` unblocks and re-runs, `drift` sends the
+// The human-facing summary on stderr (D47): a headline plus, for a halt, the
+// route the skills name (D52) — `blocked` unblocks and re-runs, `drift` sends the
 // plan to /pb-refine. The machine envelope on stdout carries the same status for
 // the calling skill; this is the terminal read.
 function humanSummary(name: string, mode: Slot, envelope: AgentEnvelope): string {

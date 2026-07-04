@@ -1,0 +1,8 @@
+{
+  "contract": 1,
+  "name": "echo-reviewer",
+  "command": "sh \"$PLUMBBOB_AGENT_DIR/run.sh\"",
+  "slots": ["after"],
+  "description": "A worked example: echoes the step it was handed and returns a done envelope.",
+  "when": "never in earnest — this is the reference agent from docs/agents.md, here to be read and run once"
+}

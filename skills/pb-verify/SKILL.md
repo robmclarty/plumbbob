@@ -24,12 +24,12 @@ this skill verifies it the same way: **it reads the diff, not the author** (D3).
    scrollback. Report what failed and do **not** pause for approval — there is
    nothing to approve yet. The human fixes it and re-invokes. (Exit 2 means the gate
    itself broke — a harness problem to surface, not a code failure.)
-2. **Run any bound `after`-agents** *(optional — D7)*. If the build's `harness.json`
+2. **Run any bound `after`-agents** *(optional — D45)*. If the build's `harness.json`
    binds agents to this step's `after` slot, run `plumbbob agent run --step <n> --mode
    after`. Their envelopes are **advisory input to the self-review, never a gate** —
    `plumbbob check` already gated in step 1, and an `after`-agent that could fail a step
-   is the lock returning in autonomy's costume (C4). Fold a `done` envelope's
-   `summary`/`body` into the review below; route a non-`done` one by its status (D24): a
+   is the lock returning in autonomy's costume (D45). Fold a `done` envelope's
+   `summary`/`body` into the review below; route a non-`done` one by its status (D52): a
    `blocked` agent couldn't finish — surface its `notes`, let the human unblock, re-run;
    a `drift` agent found the plan no longer matches reality — stop and send the human to
    `/pb-refine` to repair the plan before checkpointing. No binding, or no harness, is a
@@ -74,6 +74,6 @@ this skill verifies it the same way: **it reads the diff, not the author** (D3).
   it and end your turn.
 - **You review; you do not build.** If the self-review finds a problem, surface it
   and stop — fixing is a new build beat, not part of verify.
-- **`after`-agents advise; they never gate** (D7/C4). Their output feeds the
+- **`after`-agents advise; they never gate** (D45). Their output feeds the
   self-review — checkride gates, the human approves. `blocked` → unblock and re-run;
   `drift` → `/pb-refine` before checkpointing. No code path makes them blocking.

@@ -144,6 +144,14 @@ hand — or vibe it in another session, or in another harness entirely — and r
 `/pb-verify` instead: same checks, same pause, same checkpoint. It reads the *diff,
 not the author*.
 
+**Bring your own agents.** Because the executor is author-blind, you can plug your
+own in. A **user-authored agent** is any executable that speaks one small JSON
+envelope; drop it under `.plumbbob/agents/`, bind it to a step's `before`, `build`,
+or `after` slot in the build's `harness.json`, and PlumbBob runs it through the same
+pause — with **no way for it to advance the loop** (checkride still gates, you're
+still the clock). The full contract for authors, with a copy-paste example, is in
+[`docs/agents.md`](docs/agents.md).
+
 ## Why "PlumbBob"
 
 The name is the method. A plumb bob is a weight on a string — gravity pulls it into a
@@ -203,6 +211,7 @@ Each doc answers one question — in rough reading order for a new user:
 - *Should I / can I / what about…?* → [`docs/faq.md`](docs/faq.md) — the adoption questions, answered straight.
 - *What is each method for?* → [`docs/techniques.md`](docs/techniques.md) — steps, seams, the pause, park/harvest, spikes.
 - *What does each skill do?* → [`docs/skills-reference.md`](docs/skills-reference.md) — all twelve `/pb-*` skills: inputs, effects, when to reach for each.
+- *How do I plug in my own agent?* → [`docs/agents.md`](docs/agents.md) — the subprocess envelope, the manifest, `harness.json`, and a working example.
 - *How do I install it, exactly?* → [`docs/install.md`](docs/install.md) — the full guide and the agent-neutral roadmap.
 - *What does the CLI underneath do?* → [`docs/cli-reference.md`](docs/cli-reference.md) — every verb, flag, exit code, and the `.plumbbob/` sidecar.
 - *Something's broken.* → [`docs/troubleshooting.md`](docs/troubleshooting.md) — fixes for the common snags.

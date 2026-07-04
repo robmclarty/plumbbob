@@ -61,7 +61,7 @@ export function resolveBoolean(root: string, key: string, fallback: boolean, fla
   return typeof value === 'boolean' ? value : fallback
 }
 
-// Resolve a non-negative integer setting (e.g. `agentTimeout`, D17). A missing
+// Resolve a non-negative integer setting (e.g. `agentTimeout`, D51). A missing
 // rung, or one holding a non-finite / negative / non-integer number, yields the
 // caller's fallback rather than a garbage timeout — 0 means "no timeout", so a
 // broken value must never silently become one.
@@ -70,7 +70,7 @@ export function resolveNumber(root: string, key: string, fallback: number, flag?
   return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : fallback
 }
 
-// Resolve an object-valued setting (e.g. the `agents` slot-binding defaults, D13)
+// Resolve an object-valued setting (e.g. the `agents` slot-binding defaults, D57)
 // across the same ladder. The first defined, object-typed rung wins; a missing
 // rung, or one holding a non-object / array / scalar, yields {} rather than
 // garbage — mirrors the string/boolean/number resolvers above. No flag rung: the

@@ -27,6 +27,7 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 | `revert` | `revert [--to <n>]` | `git reset --hard` to a checkpoint SHA |
 | `park` | `park <text>` | append a line to the park list |
 | `spike` | `spike <slug> [opt…]` \| `spike done` | throwaway worktree experiment |
+| `agent` | `agent list` \| `agent run <name> [--step N] [--mode …] [--agent <path>]` | list user-authored agents, or run one through the doorway |
 | `use` | `use <slug>` | re-point the active-build cursor and resume that build |
 | `finish` | `finish [--body <<'BODY'…]` | append checkpoints to the report, make the final commit, close the session |
 | `init` | `init [--uninstall] [--force]` | link plumbbob into Claude Code as the skills-dir plugin |
@@ -162,6 +163,51 @@ the repo root, and drops the `SPIKE` marker. `spike done` removes every spike wo
 branch and clears the marker. Refuses (exit 1) with no session, a step already in flight, an
 empty slug, or a worktree path that already exists; `done` refuses when no spike is open.
 
+### agent
+
+```text
+plumbbob agent list
+plumbbob agent run <name> [--step N] [--mode before|build|after] [--agent <path>]
+plumbbob agent run        --mode before|build|after [--step N]
+```
+
+The doorway to **user-authored agents** (**D39** — the full author contract is
+[`agents.md`](agents.md)). An agent is any executable that speaks a versioned
+JSON-stdin / JSON-stdout / prose-stderr envelope; these two subcommands list and run them,
+with **no code path to advance the loop** — no checkpoint, no step flip, no chaining
+(**C6**, the identity invariant).
+
+`agent list` prints every resolvable agent — name, origin tier (`project` /`personal`),
+slots, and description — walking `.plumbbob/agents/<name>/` (tracked) then
+`~/.plumbbob/agents/<name>/` (personal), project shadowing personal (**D41**). A malformed
+`agent.json` lists as an `✗ … invalid:` line rather than hiding. Refuses (exit 1) outside a
+git repository.
+
+`agent run` composes the step's `StepContext` from `intent.md` + settings, spawns the
+manifest `command` via `sh -c` at the **repo root** with the agent's own directory in
+`PLUMBBOB_AGENT_DIR` (**D49**) and the context JSON on stdin, streams the child's stderr
+live, and — on a clean run (exit 0 + a valid envelope) — lands any `parked[]` through the
+park verb (**D44**), appends the envelope to the step-scoped `builds/<slug>/handoff.json`
+ledger (untracked, cleared at checkpoint — **D47**), prints the human summary on stderr, and
+re-emits the machine envelope on **its own stdout** for the calling skill (**D46**).
+
+- **`--step N`** picks the step (else the in-flight `STEP`; without either it refuses).
+- **A name** runs exactly that agent and **fails loud** on a miss or an undeclared
+  `--mode` slot (**D54** — you asked for it by name). **No name + `--mode <slot>`** runs the
+  step's harness-**bound** agents for that slot (**D42**); a bound agent a teammate lacks
+  **degrades to a warning** and is skipped (**D54**).
+- **`--mode`** names the slot; it must be one the manifest declares. A single-slot agent
+  infers it; a multi-slot agent requires it.
+- **`--agent <path>`** points at an explicit agent directory (top of the ladder); it still
+  needs a name for the run label.
+- **Ctrl-C** kills the child and reports rather than orphaning it (**D58**); a positive
+  `agentTimeout` (below) arms a kill timer (**D51**).
+
+Exits **0** on a clean run, **1** on a failed one — a non-zero child exit (reported
+verbatim, the envelope of a failed child is *not* trusted), garbage on stdout (out of
+contract), a timeout kill, an interrupt, an explicit-name miss, or an undeclared-slot
+refusal. A batch of bound agents returns non-zero if any that actually ran failed.
+
 ### use
 
 ```text
@@ -258,15 +304,19 @@ stays git-excluded; a session is live iff `STATE` is present.
   STATE                    # untracked — session sentinel; its presence means a session is live
   settings.json            # tracked   — project defaults: {"check": "…", "auto": false}
   settings.local.json      # untracked — personal overlay + the cursor: {"activeBuild": "<slug>", …}
+  agents/                  # tracked   — optional: user-authored agents, one dir per agent (D41; see agents.md)
+    <name>/agent.json      #            — the manifest; personal agents live under ~/.plumbbob/agents/
   builds/
     <slug>/                # derived slugs are YYYY-MM-DD-<title-slug>, so ls sorts chronologically
       intent.md            # tracked   — canonical intent (rides the branch into the PR)
       build-log.md         # tracked   — live ledger + park list
       checkpoints          # tracked   — "baseline <sha>", "plan <sha>", "step N <sha>"
       report.md            # tracked   — written at finish
+      harness.json         # tracked   — optional: per-step agent slot bindings (D42; see agents.md)
       STEP                 # untracked — the in-flight step number (its presence is the BUILD phase)
       SEAM                 # untracked — the in-flight step's declared paths (awareness, not a lock)
       SPIKE                # untracked — marker, present while a spike fork is open
+      handoff.json         # untracked — step-scoped agent-run ledger, cleared at checkpoint (D47)
 ```
 
 Which build a verb acts on resolves `--build <slug>` → the `activeBuild` cursor → the sole
@@ -286,6 +336,8 @@ default. The known keys:
 // settings.json  (tracked — shared project defaults)
 { "auto": false }                        // no "check" key: checkride is the gate (D32)
 { "check": "npm test", "auto": false }   // or override the gate with any shell command
+{ "agents": { "after": ["reviewer"] } }  // project-wide slot bindings — the bottom of the ladder (D57)
+{ "agentTimeout": 120 }                  // kill a user-authored agent after N seconds (0/absent = off, D51)
 
 // settings.local.json  (untracked — personal, per-worktree)
 { "auto": true, "activeBuild": "<slug>" }
@@ -293,9 +345,12 @@ default. The known keys:
 
 `check` overrides the heavy gate (a shell command run in the repo root; its exit code is
 the result); **absent, the gate is checkride** (**D24**/**D32**). `auto` is whether the
-agent approves in your place. `activeBuild` is the per-worktree cursor. Both files are
-optional JSON — a missing or malformed one contributes nothing rather than wedging the
-tool.
+agent approves in your place. `activeBuild` is the per-worktree cursor. `agents` sets
+project-wide slot bindings for [user-authored agents](agents.md) — the bottom rung under a
+build's `harness.json` and the `--agent` flag (**D57**). `agentTimeout` (seconds) arms a
+kill timer for a spawned agent; absent or `0` means no timeout, since the human is present
+and Ctrl-C works (**D51**). Both files are optional JSON — a missing or malformed one
+contributes nothing rather than wedging the tool.
 
 ## Exit codes
 

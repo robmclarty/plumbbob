@@ -67,7 +67,7 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   logCheckpoint(root, step, sha)
   rmSync(seamPath(root), { force: true })
   rmSync(stepPath(root), { force: true })
-  clearHandoff(root) // the agent-run ledger is step-scoped (D20) — clear it with the markers.
+  clearHandoff(root) // the agent-run ledger is step-scoped (D47) — clear it with the markers.
 
   process.stdout.write(`plumbbob: step ${step} checkpointed — ${sha.slice(0, 9)}. Back at the boundary.\n`)
   return 0

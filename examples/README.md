@@ -44,3 +44,10 @@ this: four plain files anyone can read with no tooling.
 These artifacts are a worked example, curated for readability. For unedited, real
 records, this repository dogfoods its own loop — every build that shipped PlumbBob
 lives under [`.plumbbob/builds/`](../.plumbbob/builds/), messy parts included.
+
+## A user-authored agent
+
+[`agents/`](agents/) holds a second kind of example: a minimal **user-authored agent** —
+an executable that plugs into the loop through PlumbBob's subprocess envelope. It's the
+reference agent from [`docs/agents.md`](../docs/agents.md), a bash script and a four-line
+manifest with nothing to install.
