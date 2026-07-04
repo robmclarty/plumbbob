@@ -5,6 +5,31 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2026-07-04
+
+- **Added:** an `ollama-reviewer` example agent under `examples/agents/` — a
+  working `after`-slot reviewer built on fascicle's Ollama provider, with its
+  own package.json (not a workspace member), a demo spec, a stderr trajectory
+  logger, and a full `docs/local-model-review.md` walkthrough from install to
+  every-pause review.
+- **Changed:** `examples/agents/ollama-reviewer` adopted fascicle/stdio's
+  `run_stdio` (fascicle 0.8.11), which now owns the child-process contract
+  natively (stdin read, envelope validation, engine disposal, exit-code
+  verdict) instead of hand-rolling it; `docs/agents.md` was updated to note
+  the fascicle trap is closed at the source as of that version.
+- **Changed:** every inline `D#`/`C#` reference in the docs now links to its
+  definition's anchor in `docs/decisions.md`, so a tag hit in prose jumps
+  straight to its definition.
+- **Changed:** the README's skills table is now segmented into happy path
+  (`/pb-plan`, `/pb-build`, `/pb-finish`), plan-shaping moves, helpers, and
+  the park/harvest capture loop, instead of one flat list. `/pb-build` is no
+  longer described as "optional" — that word read as skippable when it means
+  swappable executor (D3) — and is now called the default, swappable engine
+  throughout the docs and skill description.
+- **Fixed:** `examples/agents/ollama-reviewer`'s seam diff now includes
+  untracked files as read-only pseudo-diffs, so a step that creates new files
+  (most step 1s) is no longer invisible to the reviewer.
+
 ## [0.6.1] - 2026-07-03
 
 - **Fixed:** the marketplace/plugin install no longer requires a global `npm i -g
