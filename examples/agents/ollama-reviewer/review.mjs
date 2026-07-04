@@ -91,10 +91,94 @@ function buildPrompt(ctx, diff) {
   return lines.join('\n')
 }
 
-// Placeholder until the fascicle model call lands: everything up to here is
-// testable without a model.
-async function reviewDiff() {
-  throw new Error('model call not implemented yet')
+// Imported lazily so every blocked path above — and the missing-install path
+// itself — still ends in one valid envelope instead of a module crash.
+async function loadDeps() {
+  try {
+    const [fascicle, zod] = await Promise.all([import('fascicle'), import('zod')])
+    return { fascicle, z: zod.z }
+  } catch (err) {
+    if (err?.code === 'ERR_MODULE_NOT_FOUND') return null
+    throw err
+  }
+}
+
+const SYSTEM = [
+  'You are a code reviewer giving an advisory second opinion at a checkpoint.',
+  'Judge the diff against the step\'s done-when, decisions, and constraints.',
+  'Be concrete and terse; cite file paths as they appear in the diff; only raise',
+  'concerns you can point to in the diff. Severity "now" means worth a human',
+  'look before continuing; "later" means a follow-up worth parking.',
+].join(' ')
+
+// Trajectory → stderr (never stdout): span names as narration lines, model
+// text streamed raw as it generates, so the human watches the review happen.
+function stderrTrajectory() {
+  let streamed = false
+  return {
+    record: (event) => {
+      const text = event.kind === 'model_chunk' ? event.chunk?.text : undefined
+      if (typeof text === 'string') {
+        process.stderr.write(text)
+        streamed = true
+      }
+    },
+    start_span: (name) => {
+      if (streamed) {
+        process.stderr.write('\n')
+        streamed = false
+      }
+      log(`… ${name}`)
+      return name
+    },
+    end_span: () => {
+      if (streamed) {
+        process.stderr.write('\n')
+        streamed = false
+      }
+    },
+  }
+}
+
+async function reviewDiff(prompt, deps) {
+  const { create_engine, model_call, retry, run } = deps.fascicle
+  const { z } = deps
+
+  const reviewSchema = z.object({
+    assessment: z.enum(['pass', 'concerns']),
+    summary: z.string(),
+    concerns: z.array(
+      z.object({
+        file: z.string(),
+        issue: z.string(),
+        severity: z.enum(['now', 'later']),
+      })
+    ),
+  })
+
+  // The fascicle-trap checklist (docs/agents.md): trajectory to stderr,
+  // no signal handlers (PlumbBob forwards Ctrl-C itself), dispose in finally.
+  const engine = create_engine({ providers: { ollama: { base_url: BASE_URL } } })
+  try {
+    const flow = retry(
+      model_call({
+        engine,
+        provider: 'ollama',
+        model: MODEL,
+        system: SYSTEM,
+        schema: reviewSchema,
+        schema_repair_attempts: 2,
+      }),
+      { max_attempts: 2 }
+    )
+    const result = await run(flow, prompt, {
+      install_signal_handlers: false,
+      trajectory: stderrTrajectory(),
+    })
+    return result.content
+  } finally {
+    await engine.dispose()
+  }
 }
 
 async function main() {
@@ -111,6 +195,15 @@ async function main() {
   }
 
   log(`reviewing step ${ctx.step?.n ?? '?'} of "${ctx.build?.title ?? ctx.build?.slug ?? 'unknown build'}" with ${MODEL} at ${BASE_URL}`)
+
+  const deps = await loadDeps()
+  if (deps === null) {
+    blocked(
+      'ollama-reviewer is missing its dependencies — no review was run.',
+      "run: npm install (in the agent's own directory, the one holding review.mjs)"
+    )
+    return
+  }
 
   const obstacle = await preflight()
   if (obstacle !== null) {
@@ -130,7 +223,7 @@ async function main() {
   }
   log(`diff is ${diff.length} bytes${truncated ? ` (truncated to the first ${DIFF_BYTE_CAP})` : ''}`)
 
-  const review = await reviewDiff(buildPrompt(ctx, diff))
+  const review = await reviewDiff(buildPrompt(ctx, diff), deps)
 
   const now = review.concerns.filter((c) => c.severity === 'now')
   const later = review.concerns.filter((c) => c.severity === 'later')
