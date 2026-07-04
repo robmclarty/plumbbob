@@ -1,0 +1,16 @@
+id: agent-no-advance
+language: typescript
+severity: error
+message: "C6/D40: the agent path has no verb to advance the loop — no commit, stage, reset, or checkpoint machinery may reach agent.ts/agents.ts. Agent side effects land through the park verb and the handoff ledger only."
+files:
+  - 'src/verbs/agent.ts'
+  - 'src/lib/agents.ts'
+rule:
+  any:
+    - kind: import_specifier
+      regex: '^(commit|stageAll|stagePath|resetHard)\b'
+    - kind: import_statement
+      has:
+        stopBy: end
+        kind: string_fragment
+        regex: 'checkpoint'

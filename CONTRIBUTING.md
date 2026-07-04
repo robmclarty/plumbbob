@@ -62,12 +62,18 @@ automatically. Full key in [`docs/decisions.md`](docs/decisions.md); the load-be
 - **[C4](docs/decisions.md#c4) / [C5](docs/decisions.md#c5) — never destroy, additive git only.** Nothing may lose park lines, intent
   edits, or a build's record: `revert` snapshots the tracked build folder across its
   `reset --hard`, `finish` leaves the folder in place as the archive, and every reset
-  targets only plumbbob's own recorded SHAs; it never rewrites pushed history.
+  targets only plumbbob's own recorded SHAs; it never rewrites pushed history. `ast-grep`
+  backs both: deletions compile only in their sanctioned files, no history-rewriting git
+  token (`push`, `rebase`, `--amend`, …) appears as a string literal, and `resetHard`
+  imports only in `revert.ts`.
 
 `rules/` also enforces three architectural invariants: `no-process-exit` (only the bin
 entry exits, so verbs stay testable), `no-console` (write through `process.stdout` /
 `process.stderr`), and `centralize-subprocess` (spawn only in `lib/git.ts`, `lib/check.ts`,
-`verbs/spike.ts`). If the gate rejects an edit for one of these, that is by design.
+`lib/agents.ts`, `verbs/spike.ts`) — plus decision-level tripwires: the agent path can't
+import loop-advancing verbs ([C6](docs/decisions.md#c6)) or sync spawns ([D60](docs/decisions.md#d60)), excludes never touch
+`.gitignore` ([D33](docs/decisions.md#d33)), and no `CLAUDECODE` session-sniffing guard can return ([D13](docs/decisions.md#d13)).
+If the gate rejects an edit for one of these, that is by design.
 
 When you make a genuinely new design decision, give it the next free `D#`, reference it
 inline where it is implemented, and add a one-line entry to

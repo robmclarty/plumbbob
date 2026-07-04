@@ -1,0 +1,11 @@
+id: additive-git-only
+language: typescript
+severity: error
+message: "C5: additive git footprint — stage, commit forward, reset --hard to a recorded SHA; never push, rebase, amend, or otherwise rewrite history."
+files:
+  - 'src/**/*.ts'
+ignores:
+  - 'src/**/__tests__/**'
+rule:
+  kind: string_fragment
+  regex: '^(push|rebase|filter-branch|--amend|update-ref|--force-with-lease)$'

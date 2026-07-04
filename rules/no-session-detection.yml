@@ -1,0 +1,10 @@
+id: no-session-detection
+language: typescript
+severity: error
+message: "D13: no edit-blocking guards — plumbbob never sniffs CLAUDECODE (or any agent-session marker) to refuse or gate in-session use. Guidance, not enforcement."
+files:
+  - 'src/**/*.ts'
+rule:
+  any:
+    - pattern: process.env.CLAUDECODE
+    - pattern: process.env['CLAUDECODE']

@@ -15,9 +15,9 @@ lands; [**D33**](#d33)–[**D38**](#d38) below came in that way from the July 20
 
 ## Constraints (C)
 
-Hard rules the code must honor. [**C1**](#c1) and [**C2**](#c2) are machine-enforced by the ast-grep
-rules in `rules/` (run via `pnpm check`); the rest are upheld by review and the design of
-the code.
+Hard rules the code must honor. [**C1**](#c1), [**C2**](#c2), and the statically checkable edges of
+[**C4**](#c4)–[**C6**](#c6) are machine-enforced by the ast-grep rules in `rules/` (run via `pnpm check`);
+the rest are upheld by review and the design of the code.
 
 - <a id="c1"></a>**C1 — Functional and procedural only.** No classes, no `this`, no default exports;
   every symbol has a stable named export. Enforced by `rules/no-class.yml` and
@@ -40,18 +40,25 @@ the code.
 - <a id="c4"></a>**C4 — Never destroy.** No step, revert, or migration path may lose park lines, intent
   edits, or a recorded build folder. `revert` snapshots the tracked build folder and
   restores it after a `reset --hard` ([**D26**](#d26)); `doctor --migrate` moves the legacy sidecar
-  and stages it without committing. *Tagged in* `revert.ts`. (The old archive-then-clear
+  and stages it without committing. The deletion perimeter is enforced by
+  `rules/centralize-destructive-fs.yml`: `rmSync` and friends compile only in the files
+  that legitimately clear control state, snapshots, or legacy layouts. *Tagged in* `revert.ts`. (The old archive-then-clear
   copy retired with `archive.ts` — a finished build folder is now the record it protected,
   [**D29**](#d29).)
 - <a id="c5"></a>**C5 — Additive git footprint.** PlumbBob only reads, locates, stages, commits forward,
   and resets `--hard` to its own recorded SHAs. It never rewrites pushed history; your
-  squash-merge collapses the checkpoint markers at PR time. *Tagged in* `git.ts`,
+  squash-merge collapses the checkpoint markers at PR time. Enforced by
+  `rules/additive-git-only.yml` (no history-rewriting git token — `push`, `rebase`,
+  `--amend`, and kin — compiles as a string literal) and `rules/reset-hard-only-in-revert.yml`
+  (`resetHard` has exactly one importer, `revert.ts`). *Tagged in* `git.ts`,
   `finish.ts`.
 - <a id="c6"></a>**C6 — The agent envelope has no verb to advance the loop** (the identity invariant). No
   key, flag, or side effect a user-authored agent returns may checkpoint, flip a step, or
   trigger another agent — the subprocess boundary then enforces human-as-clock *by
   construction*, not by policy, at every nesting depth. This is the litmus for every field
-  the envelope will ever grow. *Tagged in* `agents.ts`, `agent.ts`, `docs/agents.md`.
+  the envelope will ever grow. `rules/agent-no-advance.yml` enforces the firewall in code:
+  no commit, stage, reset, or checkpoint import compiles in the agent path. *Tagged in*
+  `agents.ts`, `agent.ts`, `docs/agents.md`.
 - <a id="c7"></a>**C7 — Keep the agent envelope minimal.** Resist field sprawl (SWE-agent's ACI lesson):
   unknown fields are tolerated and dropped, additions are a minor-version bump, and
   removals or renames are a major ([**D46**](#d46)). *Tagged in* `agents.ts`, `docs/agents.md`.
@@ -59,8 +66,8 @@ the code.
 Beyond the numbered constraints, `rules/` guards three architectural invariants:
 `no-process-exit` (only the bin entry exits, so verbs and `cli-core` stay importable by
 tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`), and
-`centralize-subprocess` (subprocess spawning stays in `lib/git.ts`, `lib/check.ts`, and
-`verbs/spike.ts`).
+`centralize-subprocess` (subprocess spawning stays in `lib/git.ts`, `lib/check.ts`,
+`lib/agents.ts`, and `verbs/spike.ts`).
 
 ## Decisions (D)
 
@@ -91,7 +98,8 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   to the verify pause and waits. *Tagged in* `cli-core.ts`.
 - <a id="d13"></a>**D13 — No edit-blocking guards.** There is no pre-edit muzzle, seam-guard, or bash-guard,
   no human-only `mode` escape hatch, and no `CLAUDECODE` in-session refusal — guidance, not
-  enforcement. *Tagged in* `cli-core.ts`.
+  enforcement. `rules/no-session-detection.yml` is the tripwire: `process.env.CLAUDECODE`
+  doesn't compile. *Tagged in* `cli-core.ts`.
 - <a id="d14"></a>**D14 — Subprocess testing in throwaway repos.** Tests run the real CLI against tmp git
   repos; because a real `pnpm check` would recurse into vitest, fixtures point the check at
   a stub. *Tagged in* `test/helpers/fixture-repo.ts`, `check.ts`, and the `check` tests.
@@ -173,8 +181,9 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   excludes are written to the *common* gitdir's `info/exclude` — reached via
   `git rev-parse --git-path info/exclude`, which resolves correctly from a linked worktree
   (a per-worktree gitdir has no `info/`) — never to `.gitignore`, so the exclusion is
-  personal machinery, not something imposed on the repo. *Tagged in* `git.ts`,
-  `sidecar.ts`.
+  personal machinery, not something imposed on the repo. Enforced by
+  `rules/no-gitignore.yml`: the string `.gitignore` doesn't appear in `src/`. *Tagged in*
+  `git.ts`, `sidecar.ts`.
 - <a id="d34"></a>**D34 — The CLI owns every commit subject; bodies arrive via `--body`.** One greppable
   shape across history — `plumbbob: plan — <title>`, `plumbbob: step N — <title>` (bare
   `step N done` as the titleless fallback), `plumbbob: finish — <title>` — composed by the
@@ -303,7 +312,8 @@ below.)
   *Tagged in* `agents.ts`, the `pb-build` skill.
 - <a id="d60"></a>**D60 — Async `spawn`, not `spawnSync`.** A live parent can interrupt gracefully
   (message + cleanup) where a blocked one just dies with the child; `dispatch` is already
-  Promise-typed, so it costs no plumbing. *Tagged in* `agents.ts`, `agent.ts`.
+  Promise-typed, so it costs no plumbing. Enforced by `rules/no-sync-spawn-in-agent-path.yml`.
+  *Tagged in* `agents.ts`, `agent.ts`.
 - <a id="d61"></a>**D61 — Decisions/constraints scraping is best-effort, verbatim.** Every top-level
   dash bullet under `## Decisions`/`## Constraints` passes as one verbatim string (wrapped lines
   joined, the `*because*` rationale intact), skipped lines warn on stderr, and the scrape

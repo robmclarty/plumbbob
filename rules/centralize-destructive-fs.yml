@@ -1,0 +1,19 @@
+id: centralize-destructive-fs
+language: typescript
+severity: error
+message: "C4: never destroy — deletions live only in the files that legitimately clear control state, snapshots, or legacy layouts (sidecar, checkpoint, finish, revert, doctor, init). A new deleter is a reviewed decision, not a convenience."
+files:
+  - 'src/**/*.ts'
+ignores:
+  - 'src/**/__tests__/**'
+  - 'src/lib/sidecar.ts'
+  - 'src/verbs/checkpoint.ts'
+  - 'src/verbs/finish.ts'
+  - 'src/verbs/revert.ts'
+  - 'src/verbs/doctor.ts'
+  - 'src/verbs/init.ts'
+rule:
+  any:
+    - pattern: rmSync($$$)
+    - pattern: unlinkSync($$$)
+    - pattern: rmdirSync($$$)

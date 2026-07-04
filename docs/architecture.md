@@ -40,7 +40,10 @@ between them is never hidden: the sidecar is the whole memory.
 
 Structural invariants are machine-enforced by the ast-grep rules in `rules/`:
 functional/procedural only ([C1](decisions.md#c1)), node builtins plus the dependency allowlist ([C2](decisions.md#c2)),
-subprocess spawning centralized, output through `process.stdout`/`stderr` only.
+subprocess spawning centralized, output through `process.stdout`/`stderr` only,
+deletions confined to their sanctioned files ([C4](decisions.md#c4)), no history-rewriting git token and
+`resetHard` importable only by `revert.ts` ([C5](decisions.md#c5)), and no loop-advancing import in the
+agent path ([C6](decisions.md#c6)).
 
 ## The two planes ([D17](decisions.md#d17)/[D26](decisions.md#d26))
 

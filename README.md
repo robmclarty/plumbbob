@@ -118,7 +118,7 @@ write the short form `/pb-plan`.)
 **The happy path** — the three moves every session makes; many sessions need
 nothing else:
 
-| Skill <img width="110" height="1"> | Does |
+| Skill <img alt="" width="110" height="1"> | Does |
 |------------------------------------|------|
 | `/pb-plan` | plan the whole goal — open the session and author intent's Frame, Decisions, Constraints, **and all Steps** |
 | `/pb-build` | implement the next planned step, then verify it to the pause — `--auto` self-approves and chains to done |
@@ -126,7 +126,7 @@ nothing else:
 
 **Plan-shaping moves** — optional, for when the plan needs work mid-flight:
 
-| Skill <img width="110" height="1"> | Does |
+| Skill <img alt="" width="110" height="1"> | Does |
 |------------------------------------|------|
 | `/pb-step` | revise/sharpen the next step (empty input auto-syncs it to reality) |
 | `/pb-refine` | attack the frame for holes, or repair a drifted plan |
@@ -134,7 +134,7 @@ nothing else:
 
 **Helpers** — orient, verify, recover, diagnose:
 
-| Skill <img width="110" height="1"> | Does |
+| Skill <img alt="" width="110" height="1"> | Does |
 |------------------------------------|------|
 | `/pb-status` | orient — where you are, the next step's done-when and seam, and the next move |
 | `/pb-verify` | the tick, standalone — check → self-review → validate → **PAUSE** → checkpoint, for a diff `/pb-build` didn't write |
@@ -143,7 +143,7 @@ nothing else:
 
 **Capture** — the park/harvest loop for mid-build ideas:
 
-| Skill <img width="110" height="1"> | Does |
+| Skill <img alt="" width="110" height="1"> | Does |
 |------------------------------------|------|
 | `/pb-park` | capture a mid-build idea without chasing it |
 | `/pb-harvest` | triage parked ideas between steps (blocker / tangent / pivot) |

@@ -1,0 +1,14 @@
+id: no-sync-spawn-in-agent-path
+language: typescript
+severity: error
+message: "D60: the agent path spawns async — a live parent can interrupt gracefully (SIGINT forwarding, D58) where a spawnSync-blocked one just dies with the child."
+files:
+  - 'src/lib/agents.ts'
+  - 'src/verbs/agent.ts'
+rule:
+  any:
+    - kind: import_specifier
+      regex: '^(spawnSync|execSync|execFileSync)\b'
+    - pattern: spawnSync($$$)
+    - pattern: execSync($$$)
+    - pattern: execFileSync($$$)
