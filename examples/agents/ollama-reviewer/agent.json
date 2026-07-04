@@ -1,0 +1,8 @@
+{
+  "contract": 1,
+  "name": "ollama-reviewer",
+  "command": "node \"$PLUMBBOB_AGENT_DIR/review.mjs\"",
+  "slots": ["after"],
+  "description": "Advisory review of a step's diff by a LOCAL model via Ollama (fascicle-composed). Returns pass/concerns; never gates.",
+  "when": "at any verify pause where a cheap second opinion on the diff is welcome — free, private, no API key"
+}

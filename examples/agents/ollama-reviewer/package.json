@@ -1,0 +1,16 @@
+{
+  "name": "plumbbob-example-ollama-reviewer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PlumbBob after-slot reviewer driven by a local Ollama model through fascicle",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "dependencies": {
+    "ai": "^6.0.0",
+    "ai-sdk-ollama": "^3.0.0",
+    "fascicle": "^0.8.10",
+    "zod": "^4.0.0"
+  }
+}
