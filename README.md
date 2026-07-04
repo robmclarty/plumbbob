@@ -1,7 +1,7 @@
 # PlumbBob
 
 <p align="center">
-  <img src="hero.jpg" alt="A row of plumb bobs of varying shapes hanging from strings" width="600">
+  <img src="hero.svg" alt="A row of plumb bobs of varying shapes hanging from strings" width="600">
 </p>
 
 PlumbBob is a Claude Code plugin — twelve `/pb-*` skills and a small CLI — that runs

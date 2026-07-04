@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="600" height="400">
+  <defs>
+    <linearGradient id="brass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4a3320"/>
+      <stop offset="0.15" stop-color="#6d4e33"/>
+      <stop offset="0.33" stop-color="#c8a67c"/>
+      <stop offset="0.45" stop-color="#e0c49c"/>
+      <stop offset="0.58" stop-color="#a5825f"/>
+      <stop offset="0.78" stop-color="#6d4f34"/>
+      <stop offset="1" stop-color="#3b2919"/>
+    </linearGradient>
+    <linearGradient id="brassDark" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#382716"/>
+      <stop offset="0.35" stop-color="#8a663f"/>
+      <stop offset="0.5" stop-color="#9d7850"/>
+      <stop offset="0.7" stop-color="#5c4128"/>
+      <stop offset="1" stop-color="#2f2012"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5a5a5a"/>
+      <stop offset="0.3" stop-color="#d8d8d8"/>
+      <stop offset="0.5" stop-color="#b9b9b9"/>
+      <stop offset="0.75" stop-color="#767676"/>
+      <stop offset="1" stop-color="#4b4b4b"/>
+    </linearGradient>
+    <linearGradient id="gunmetal" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2e2e2e"/>
+      <stop offset="0.3" stop-color="#8f8f8f"/>
+      <stop offset="0.45" stop-color="#cfcfcf"/>
+      <stop offset="0.6" stop-color="#9a9a9a"/>
+      <stop offset="0.8" stop-color="#4f4f4f"/>
+      <stop offset="1" stop-color="#262626"/>
+    </linearGradient>
+    <pattern id="knurl" width="5" height="5" patternUnits="userSpaceOnUse">
+      <rect width="5" height="5" fill="#7a5c40"/>
+      <path d="M0 0L5 5M5 0L0 5" stroke="#312414" stroke-width="1.1"/>
+    </pattern>
+  </defs>
+
+  <!-- strings -->
+  <g stroke="#3a322b" stroke-width="1.7" fill="none" stroke-linecap="round">
+    <path d="M46 0L46 87"/>
+    <path d="M88 0L88 82"/>
+    <path d="M122 0L122 81"/>
+    <path d="M166 0L166 87"/>
+    <path d="M213 0L213 96"/>
+    <path d="M258 0L258 92"/>
+    <path d="M298 0L298 85"/>
+    <path d="M338 0L338 87"/>
+    <path d="M378 0L378 84"/>
+    <path d="M433 0L433 86"/>
+    <path d="M478 0L478 85"/>
+    <path d="M540 0L540 93"/>
+  </g>
+
+  <!-- bob 1: long-necked cone with collar band -->
+  <g transform="translate(46 0)" stroke="#2f241a" stroke-width="1.4" stroke-linejoin="round">
+    <rect x="-12" y="87" width="24" height="10" rx="3" fill="url(#brassDark)"/>
+    <path d="M-8 97C-10 112 -14 126 -18 142L-19 150L19 150L18 142C14 126 10 112 8 97Z" fill="url(#brass)"/>
+    <path d="M-21 150L21 150L20 174L-20 174Z" fill="url(#brass)"/>
+    <path d="M-20 174L20 174L4.5 296L-4.5 296Z" fill="url(#brass)"/>
+    <path d="M-4.5 294L4.5 294L0 318Z" fill="url(#steel)"/>
+  </g>
+
+  <!-- bob 2: dome-top cone -->
+  <g transform="translate(88 0)" stroke="#2f241a" stroke-width="1.4" stroke-linejoin="round">
+    <rect x="-3.5" y="81" width="7" height="7" rx="2" fill="url(#brassDark)"/>
+    <path d="M-17 110C-17 96 -9 87 0 87C9 87 17 96 17 110Z" fill="url(#brass)"/>
+    <path d="M-17 112L17 112L1.5 186L-1.5 186Z" fill="url(#brass)"/>
+    <path d="M-2.5 182L2.5 182L0 194Z" fill="#3a3a3a" stroke-width="1"/>
+  </g>
+
+  <!-- bob 3: turned top, slim cone -->
+  <g transform="translate(122 0)" stroke="#2f241a" stroke-width="1.3" stroke-linejoin="round">
+    <rect x="-4" y="80" width="8" height="14" rx="1.5" fill="url(#brassDark)"/>
+    <rect x="-7" y="94" width="14" height="8" rx="2" fill="url(#brass)"/>
+    <rect x="-5.5" y="102" width="11" height="8" rx="2" fill="url(#brassDark)"/>
+    <path d="M-4.5 110C-8 116 -11 124 -11 134C-11 142 -9 152 -7 164L-2.6 232L2.6 232L7 164C9 152 11 142 11 134C11 124 8 116 4.5 110Z" fill="url(#brass)"/>
+    <path d="M-3 230L3 230L0 252Z" fill="url(#steel)" stroke-width="1"/>
+  </g>
+
+  <!-- bob 4: onion teardrop -->
+  <g transform="translate(166 0)" stroke="#2f241a" stroke-width="1.4" stroke-linejoin="round">
+    <rect x="-4" y="86" width="8" height="10" rx="2" fill="url(#brassDark)"/>
+    <path d="M-6 98C-14 102 -21 114 -21 132C-21 152 -13 168 -5.5 178L5.5 178C13 168 21 152 21 132C21 114 14 102 6 98Z" fill="url(#brass)"/>
+    <path d="M-4.5 174L4.5 174L0 192Z" fill="url(#steel)" stroke-width="1"/>
+  </g>
+
+  <!-- bob 5: double-lobed gourd with long spike -->
+  <g transform="translate(213 0)" stroke="#2f241a" stroke-width="1.4" stroke-linejoin="round">
+    <rect x="-3.5" y="95" width="7" height="24" rx="1.5" fill="url(#brassDark)"/>
+    <path d="M-3.5 118C-10 124 -16 134 -17 148C-17.5 158 -15 163 -15 168C-24 178 -27 192 -27 202C-27 220 -18 236 -8 241L8 241C18 236 27 220 27 202C27 192 24 178 15 168C15 163 17.5 158 17 148C16 134 10 124 3.5 118Z" fill="url(#brass)"/>
+    <path d="M-5 240L5 240L1.6 264L0 279L-1.6 264Z" fill="url(#steel)" stroke-width="1"/>
+  </g>
+
+  <!-- bob 6: ball-top bell finial -->
+  <g transform="translate(258 0)" stroke="#2f241a" stroke-width="1.4" stroke-linejoin="round">
+    <ellipse cx="0" cy="100" rx="8.5" ry="9" fill="url(#brass)"/>
+    <path d="M-5 108C-6 112 -6 114 -6 116C-12 122 -16.5 132 -17 144C-17.3 154 -14 164 -10 176L-1.6 202L0 207L1.6 202L10 176C14 164 17.3 154 17 144C16.5 132 12 122 6 116C6 114 6 112 5 108Z" fill="url(#brass)"/>
+  </g>
+
+  <!-- bob 7: collared bottle with stepped rings -->
+  <g transform="translate(298 0)" stroke="#2f241a" stroke-width="1.3" stroke-linejoin="round">
+    <rect x="-5" y="84" width="10" height="9" rx="2" fill="url(#brassDark)"/>
+    <rect x="-7.5" y="93" width="15" height="8" rx="2.5" fill="url(#brass)"/>
+    <path d="M-5.5 101C-9 112 -13 132 -15 152C-16 162 -15.5 168 -13 172L13 172C15.5 168 16 162 15 152C13 132 9 112 5.5 101Z" fill="url(#brass)"/>
+    <rect x="-10" y="172" width="20" height="9" rx="2" fill="url(#brass)"/>
+    <rect x="-7" y="181" width="14" height="8" rx="2" fill="url(#brassDark)"/>
+    <path d="M-4.5 189L4.5 189L0 232Z" fill="url(#steel)" stroke-width="1"/>
+  </g>
+
+  <!-- bob 8: knurled cap vase -->
+  <g transform="translate(338 0)" stroke="#2f241a" stroke-width="1.4" stroke-linejoin="round">
+    <rect x="-11" y="86" width="22" height="26" rx="3" fill="url(#knurl)"/>
+    <rect x="-11" y="86" width="22" height="26" rx="3" fill="url(#brass)" opacity="0.3" stroke="none"/>
+    <rect x="-9.5" y="112" width="19" height="4" fill="url(#brassDark)" stroke-width="1"/>
+    <path d="M-9 116C-14 120 -17 128 -17.5 138C-17.8 148 -14 160 -9.5 172L-6 182L6 182L9.5 172C14 160 17.8 148 17.5 138C17 128 14 120 9 116Z" fill="url(#brass)"/>
+    <rect x="-5.5" y="182" width="11" height="11" rx="1.5" fill="url(#steel)" stroke-width="1"/>
+    <path d="M-5 193L5 193L0 230Z" fill="url(#steel)" stroke-width="1"/>
+  </g>
+
+  <!-- bob 9: slender torpedo -->
+  <g transform="translate(378 0)" stroke="#2f241a" stroke-width="1.3" stroke-linejoin="round">
+    <rect x="-3.5" y="83" width="7" height="5" rx="1.5" fill="url(#brassDark)"/>
+    <rect x="-8" y="88" width="16" height="8" rx="2" fill="url(#brass)"/>
+    <path d="M-7 96C-9.5 102 -11 112 -11.2 124C-11.4 140 -8 168 -4.5 196L-1 240L0 247L1 240L4.5 196C8 168 11.4 140 11.2 124C11 112 9.5 102 7 96Z" fill="url(#brass)"/>
+  </g>
+
+  <!-- bob 10: mushroom-cap classic -->
+  <g transform="translate(433 0)" stroke="#2f241a" stroke-width="1.4" stroke-linejoin="round">
+    <ellipse cx="0" cy="90" rx="5.5" ry="4.5" fill="url(#brassDark)"/>
+    <path d="M-23 108C-23 103 -14 96 0 96C14 96 23 103 23 108L23 112L-23 112Z" fill="url(#brass)"/>
+    <path d="M-14 112L14 112L13.5 146L-13.5 146Z" fill="url(#brass)"/>
+    <path d="M-13.5 146C-17 148 -19.5 152 -19.5 156L-19.5 158L-1.5 250L0 255L1.5 250L19.5 158L19.5 156C19.5 152 17 148 13.5 146Z" fill="url(#brass)"/>
+  </g>
+
+  <!-- bob 11: reel frame with coiled line -->
+  <g transform="translate(478 0)" stroke="#2f241a" stroke-width="1.3" stroke-linejoin="round">
+    <rect x="-3" y="84" width="6" height="6" rx="2" fill="url(#brassDark)"/>
+    <rect x="-7.5" y="90" width="15" height="7" rx="2" fill="url(#brass)"/>
+    <rect x="-11" y="97" width="22" height="46" rx="3" fill="url(#brass)"/>
+    <rect x="-6.5" y="102" width="13" height="36" fill="#241c14" stroke-width="1"/>
+    <g stroke="#7a5f45" stroke-width="2.4" fill="none">
+      <path d="M-5.5 107Q0 105 5.5 107"/>
+      <path d="M-5.5 113Q0 111 5.5 113"/>
+      <path d="M-5.5 119Q0 117 5.5 119"/>
+      <path d="M-5.5 125Q0 123 5.5 125"/>
+      <path d="M-5.5 131Q0 129 5.5 131"/>
+    </g>
+    <path d="M-6.5 143C-9 148 -11 154 -11 161C-11 170 -8 178 -4.5 186L-3 190L3 190L4.5 186C8 178 11 170 11 161C11 154 9 148 6.5 143Z" fill="url(#brass)"/>
+    <path d="M-3.2 188L3.2 188L0 212Z" fill="url(#steel)" stroke-width="1"/>
+  </g>
+
+  <!-- bob 12: large teardrop with gunmetal tip -->
+  <g transform="translate(540 0)" stroke="#2f241a" stroke-width="1.4" stroke-linejoin="round">
+    <ellipse cx="0" cy="96" rx="5" ry="4.5" fill="url(#brassDark)"/>
+    <rect x="-10" y="100" width="20" height="10" rx="3" fill="url(#brass)"/>
+    <path d="M-10 110C-19 113 -27 127 -28 146C-29 162 -23 178 -17.5 192C-14 202 -11 212 -10.5 222L10.5 222C11 212 14 202 17.5 192C23 178 29 162 28 146C27 127 19 113 10 110Z" fill="url(#brass)"/>
+    <path d="M-10.5 220C-10.5 228 -9 236 -6 244L0 282L6 244C9 236 10.5 228 10.5 220Z" fill="url(#gunmetal)"/>
+  </g>
+
+  <!-- soft sheen highlights -->
+  <g fill="#ffffff" opacity="0.28" stroke="none">
+    <ellipse cx="41" cy="212" rx="3" ry="38"/>
+    <ellipse cx="208" cy="202" rx="4.5" ry="24"/>
+    <ellipse cx="208.5" cy="146" rx="2.5" ry="12"/>
+    <ellipse cx="254.5" cy="146" rx="3" ry="18"/>
+    <ellipse cx="429" cy="178" rx="3.5" ry="28"/>
+    <ellipse cx="534" cy="158" rx="5" ry="26"/>
+    <ellipse cx="161" cy="132" rx="3.5" ry="18"/>
+    <ellipse cx="334" cy="145" rx="3" ry="17"/>
+  </g>
+</svg>
