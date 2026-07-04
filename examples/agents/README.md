@@ -37,8 +37,8 @@ envelope on stdout — and you have a working agent.
 The step up from the reference agent: the same contract wrapped around
 [fascicle](https://github.com/robmclarty/fascicle) driving a **local model via Ollama** — an
 advisory reviewer for every step's diff, no API key, nothing leaving your machine. It's the
-worked answer to `docs/agents.md` § "The fascicle trap" (trajectory on stderr, no signal
-handlers, dispose in `finally`), and it ships [`demo/spec.md`](ollama-reviewer/demo/spec.md) —
+worked answer to `docs/agents.md` § "The fascicle trap" — fascicle's `run_stdio` (>= 0.8.11)
+enforces the stream discipline for it — and it ships [`demo/spec.md`](ollama-reviewer/demo/spec.md) —
 a complete spec `/pb-plan` can absorb to set up a build with the agent bound to every step's
 after slot.
 

@@ -300,8 +300,11 @@ stdout is a mailbox for exactly one letter, not a log. Everything the human shou
 to stderr (where it streams live); only the one structured *result* goes to stdout. Get this
 backwards and every run fails validation with "the agent wrote non-JSON to stdout."
 
-A worked, in-contract fascicle agent — trajectory to stderr, no signal handlers, dispose in
-`finally` — ships under [`examples/agents/ollama-reviewer/`](../examples/agents/ollama-reviewer/).
+As of fascicle 0.8.11 the library enforces this discipline for you: `run_stdio` (from
+`fascicle/stdio`) reads JSON from stdin, routes trajectory to stderr, disposes the engine, writes
+exactly one JSON document to stdout, and exits 0 only when that document is authoritative — the
+whole trap, closed at the source. A worked, in-contract agent built on it ships under
+[`examples/agents/ollama-reviewer/`](../examples/agents/ollama-reviewer/).
 
 ## Versioning
 
