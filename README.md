@@ -211,7 +211,7 @@ Each doc answers one question — in rough reading order for a new user:
 - *Should I / can I / what about…?* → [`docs/faq.md`](docs/faq.md) — the adoption questions, answered straight.
 - *What is each method for?* → [`docs/techniques.md`](docs/techniques.md) — steps, seams, the pause, park/harvest, spikes.
 - *What does each skill do?* → [`docs/skills-reference.md`](docs/skills-reference.md) — all twelve `/pb-*` skills: inputs, effects, when to reach for each.
-- *How do I plug in my own agent?* → [`docs/agents.md`](docs/agents.md) — the subprocess envelope, the manifest, `harness.json`, and a working example.
+- *How do I plug in my own agent?* → [`docs/agents.md`](docs/agents.md) — the subprocess envelope, the manifest, `harness.json`, and working examples (including a local-model reviewer via Ollama).
 - *How do I install it, exactly?* → [`docs/install.md`](docs/install.md) — the full guide and the agent-neutral roadmap.
 - *What does the CLI underneath do?* → [`docs/cli-reference.md`](docs/cli-reference.md) — every verb, flag, exit code, and the `.plumbbob/` sidecar.
 - *Something's broken.* → [`docs/troubleshooting.md`](docs/troubleshooting.md) — fixes for the common snags.

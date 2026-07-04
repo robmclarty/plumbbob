@@ -300,6 +300,9 @@ stdout is a mailbox for exactly one letter, not a log. Everything the human shou
 to stderr (where it streams live); only the one structured *result* goes to stdout. Get this
 backwards and every run fails validation with "the agent wrote non-JSON to stdout."
 
+A worked, in-contract fascicle agent — trajectory to stderr, no signal handlers, dispose in
+`finally` — ships under [`examples/agents/ollama-reviewer/`](../examples/agents/ollama-reviewer/).
+
 ## Versioning
 
 The envelope, manifest, and `harness.json` all carry a `contract` integer. This PlumbBob speaks
@@ -322,6 +325,11 @@ plumbbob agent run echo-reviewer --step 1 # runs it against step 1, streams its 
 ```
 
 It's a bash script and a four-line manifest — the whole contract, with nothing to install.
+
+The step up — the same contract wrapping a real framework and a real local model
+(fascicle + Ollama), plus a demo spec `/pb-plan` can absorb to bind it into a build —
+ships beside it under
+[`examples/agents/ollama-reviewer/`](../examples/agents/ollama-reviewer/).
 
 ## See also
 

@@ -47,7 +47,8 @@ lives under [`.plumbbob/builds/`](../.plumbbob/builds/), messy parts included.
 
 ## A user-authored agent
 
-[`agents/`](agents/) holds a second kind of example: a minimal **user-authored agent** —
-an executable that plugs into the loop through PlumbBob's subprocess envelope. It's the
-reference agent from [`docs/agents.md`](../docs/agents.md), a bash script and a four-line
-manifest with nothing to install.
+[`agents/`](agents/) holds a second kind of example: **user-authored agents** —
+executables that plug into the loop through PlumbBob's subprocess envelope. Two ship: the
+reference agent from [`docs/agents.md`](../docs/agents.md) (a bash script and a four-line
+manifest with nothing to install), and a fascicle-composed reviewer that drives a **local
+model via Ollama** — no API key, the diff never leaves your machine.
