@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.5] - 2026-07-07
+
+- **Fixed:** the command hints plumbbob prints at runtime — the `next →` line in
+  `plumbbob status`, the checkpoint scope-drift warning, and the `finish`/`doctor`
+  messages — now reference skills by their short `/pb-*` form instead of the
+  namespaced `/plumbbob:pb-*` form, matching how every skill already refers to
+  itself. The model was echoing the namespaced form verbatim in its own
+  hand-off text after a build or an approval; this was the source.
+
 ## [0.6.4] - 2026-07-07
 
 - **Added:** `/pb-build` accepts a step range like `1-3`, a bounded form of
