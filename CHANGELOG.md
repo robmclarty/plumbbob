@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.4] - 2026-07-07
+
+- **Added:** `/pb-build` accepts a step range like `1-3`, a bounded form of
+  `--auto` — it self-approves and checkpoints through the top of the range,
+  then pauses instead of chaining to done. The range is the opt-in itself,
+  and every existing `--auto` halt condition (a red check, a self-review
+  mismatch, a `blocked`/`drift` agent) still fires early within it.
+- **Changed:** `plumbbob build` now recognizes a step-range shape (`N-M`) at
+  the CLI and reports it as a `/pb-build` feature with a pointer to the
+  single-step form, rather than falling through to the generic "needs a
+  step number" message.
+
 ## [0.6.3] - 2026-07-03
 
 - **Added:** seven new ast-grep rules in `rules/` extending machine enforcement beyond
