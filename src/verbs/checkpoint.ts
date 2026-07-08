@@ -5,7 +5,7 @@
 // is already clean — the human's commit skill may have committed first), records the
 // SHA, flips the intent checkbox to `[x]`, and clears any STEP/SEAM (which returns
 // the dashboard to the DESIGN boundary). The diff's author is irrelevant:
-// `/plumbbob:pb-build`, your hands, a vibe session, or another harness all checkpoint
+// `/pb-build`, your hands, a vibe session, or another harness all checkpoint
 // the same way.
 
 import { appendFileSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -129,7 +129,7 @@ function warnScopeDrift(root: string, step: number): void {
   if (outside.length > 0) {
     process.stderr.write(
       `plumbbob: heads-up — staged paths outside step ${step}'s seam: ${outside.join(', ')}. ` +
-        `The checkpoint captures them; if that's real scope drift, the plan may need a \`/plumbbob:pb-step\` revision.\n`,
+        `The checkpoint captures them; if that's real scope drift, the plan may need a \`/pb-step\` revision.\n`,
     )
   }
 }

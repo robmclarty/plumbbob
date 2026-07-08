@@ -1,5 +1,5 @@
 // `plumbbob park "<text>"` — the dumb capture path: append one raw line under
-// the build-log's Park list. No model turn, no composition (that is /plumbbob:pb-park's job).
+// the build-log's Park list. No model turn, no composition (that is /pb-park's job).
 // Capture is not a transition, so it runs in any context (terminal or in-session).
 
 import { readFileSync, writeFileSync } from 'node:fs'

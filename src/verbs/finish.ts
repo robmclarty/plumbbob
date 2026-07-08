@@ -37,7 +37,7 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   } else {
     process.stderr.write(
       'plumbbob: note — no report.md found; finishing without one ' +
-        '(/plumbbob:pb-finish normally writes the report first). No gate (D9).\n',
+        '(/pb-finish normally writes the report first). No gate (D9).\n',
     )
   }
 
@@ -68,7 +68,7 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   const where = slug === null ? '.plumbbob/' : `.plumbbob/builds/${slug}/`
   process.stdout.write(
     `plumbbob: finished — ${sha.slice(0, 9)}. ${where} rides your branch into the PR. ` +
-      'Run `/plumbbob:pb-plan` (or `plumbbob start "<title>"`) to frame the next goal.\n',
+      'Run `/pb-plan` (or `plumbbob start "<title>"`) to frame the next goal.\n',
   )
   return 0
 }

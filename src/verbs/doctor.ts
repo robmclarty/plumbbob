@@ -5,7 +5,7 @@
 //    Code loads it in place as a plugin (skills `/plumbbob:*`, the post-edit hook from
 //    hooks.json). doctor verifies the link resolves to a package carrying the manifest,
 //    the skills, and the hook — and names the fix for anything missing. The failure
-//    class it exists for is SILENT (a `/plumbbob:pb-status` that opens an empty dashboard
+//    class it exists for is SILENT (a `/pb-status` that opens an empty dashboard
 //    because the plugin never linked).
 //
 // 2. The repo sidecar layout. A repo scaffolded by a pre-restructure plumbbob carries a
@@ -445,7 +445,7 @@ export async function doctor(cwd: string, args: ReadonlyArray<string> = []): Pro
       : `plumbbob: ${failed} problem(s) — apply the → fixes, then restart Claude Code.`,
   )
   out.push(
-    'plumbbob: skills shell a bare `plumbbob`. The marketplace plugin puts it on PATH only inside a Claude Code session (via bin/) — there is no terminal `plumbbob`; for one (or the skills-dir install) run `npm i -g plumbbob`. In-session you can also run this as `/plumbbob:pb-doctor`. Sessions are per-project via `plumbbob start`.',
+    'plumbbob: skills shell a bare `plumbbob`. The marketplace plugin puts it on PATH only inside a Claude Code session (via bin/) — there is no terminal `plumbbob`; for one (or the skills-dir install) run `npm i -g plumbbob`. In-session you can also run this as `/pb-doctor`. Sessions are per-project via `plumbbob start`.',
   )
 
   process.stdout.write(`${out.join('\n')}\n`)
