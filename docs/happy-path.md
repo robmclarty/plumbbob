@@ -124,7 +124,8 @@ straight to `/pb-build`.
 ## 3. Build each step — `/pb-build`, fired until done
 
 `/pb-build` is the bundled executor. Called bare, **it picks the next undone step
-automatically** (pass a number only to jump, e.g. `/pb-build 3`). It reads the step's
+automatically** (pass a number only to jump, e.g. `/pb-build 3`; a range like
+`/pb-build 1-3` auto-approves through step 3, then pauses). It reads the step's
 done-when, seam, Decisions, and Constraints, implements *only that step*, then carries
 straight through the verify tick to the pause.
 
@@ -181,8 +182,9 @@ tick*. The dashboard tracks the march:
 > **Unattended option — `/pb-build --auto`.** When you'd rather not approve each step
 > by hand, `/pb-build --auto` lets the agent self-review and approve in your place,
 > then chain straight to the next step until the plan is done. It **halts** the moment
-> the check goes red or the self-review finds a mismatch, and hands back to you. The
-> default — no flag — always waits at the pause.
+> the check goes red or the self-review finds a mismatch, and hands back to you. A step
+> range like `/pb-build 1-3` bounds this — it self-approves through step 3, then pauses.
+> The default — no flag — always waits at the pause.
 
 ---
 

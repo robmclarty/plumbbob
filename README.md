@@ -121,7 +121,7 @@ nothing else:
 | Skill <img alt="" width="110" height="1"> | Does |
 |------------------------------------|------|
 | `/pb-plan` | plan the whole goal — open the session and author intent's Frame, Decisions, Constraints, **and all Steps** |
-| `/pb-build` | implement the next planned step, then verify it to the pause — `--auto` self-approves and chains to done |
+| `/pb-build` | implement the next planned step, then verify it to the pause — `--auto` self-approves and chains to done; a range like `1-3` self-approves through step 3, then pauses |
 | `/pb-finish` | finish up — write the report, make the final commit, clear for a fresh goal |
 
 **Plan-shaping moves** — optional, for when the plan needs work mid-flight:

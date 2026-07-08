@@ -16,6 +16,15 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
 
   const { build: slug, rest } = resolveBuild(root, args)
   const raw = rest.find((a) => !a.startsWith('--'))
+  // A step range like `1-3` is a `/pb-build` skill affordance (auto-approve
+  // through the range, then pause), not a CLI capability — the CLI records one
+  // in-flight step at a time. Name it rather than bounce off the generic usage.
+  if (raw !== undefined && /^\d+-\d*$/.test(raw)) {
+    process.stderr.write(
+      `plumbbob: build takes one step number; \`${raw}\` step ranges are a \`/pb-build\` feature (auto-approve through the range, then pause). Try \`plumbbob build ${raw.split('-')[0]}\`.\n`,
+    )
+    return 1
+  }
   if (raw === undefined || !/^\d+$/.test(raw) || Number(raw) < 1) {
     process.stderr.write('plumbbob: build needs a step number. Try: plumbbob build 2.\n')
     return 1

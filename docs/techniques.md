@@ -123,8 +123,9 @@ Re-firing the next build *is* the clock tick.
 
 > **Unattended option — `--auto`.** `/pb-build --auto` lets the agent self-review and
 > approve in your place, then chain to the next step until done. It halts the moment the
-> check goes red or the self-review finds a mismatch. It is the one path that checkpoints
-> without a human pause, and only because you asked for it by name.
+> check goes red or the self-review finds a mismatch. A step range like `/pb-build 1-3`
+> is a bounded `--auto` — it self-approves through step 3, then pauses. These are the only
+> paths that checkpoint without a human pause, and only because you asked for it by name.
 
 ### The pluggable executor reads the diff, not the author
 

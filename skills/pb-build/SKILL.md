@@ -1,7 +1,7 @@
 ---
 name: pb-build
-description: The default engine — read the next planned step from intent, implement it (its done-when, seam, Decisions, Constraints), then verify it through to the approval pause. Swappable — build by hand/vibed/another harness and run /pb-verify instead. `--auto` self-approves and chains to done.
-argument-hint: "[step-number] [--auto]"
+description: The default engine — read the next planned step from intent, implement it (its done-when, seam, Decisions, Constraints), then verify it through to the approval pause. Swappable — build by hand/vibed/another harness and run /pb-verify instead. `--auto` self-approves and chains to done; a step range like `1-3` self-approves through step 3, then pauses.
+argument-hint: "[step-number | step-range] [--auto]"
 disable-model-invocation: true
 model: opus
 allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent:*), Bash(git diff:*)
@@ -23,9 +23,11 @@ at the pause for your approval. **Re-firing `/pb-build` is itself the clock tick
 
 ## What this skill does, in order
 
-1. **Pick the step.** Use the number you were invoked with (e.g. `/pb-build 4`), else
-   the next undone, planned step in `.plumbbob/intent.md`. If there is no planned step
-   to build, stop and tell the human to `/pb-step` first.
+1. **Pick the step.** Use the number you were invoked with (e.g. `/pb-build 4`) — or,
+   if you were given a range like `/pb-build 1-3`, start at the first number and treat
+   the second as the auto-approve ceiling (see the range note under `--auto`). With no
+   argument, take the next undone, planned step in `.plumbbob/intent.md`. If there is no
+   planned step to build, stop and tell the human to `/pb-step` first.
 2. **Enter the step.** Run `plumbbob build <n>` (records the in-flight STEP +
    SEAM so `/pb-status` shows the step in flight; the seam is awareness, not a
    lock).
@@ -92,11 +94,34 @@ and approves in the human's place**, and it **chains**:
 - **Stop and hand back to the human** the moment any of these is true: the check is red,
   the self-review finds a mismatch (surface exactly what, and do not checkpoint it), a
   bound agent returns `blocked` or `drift` (unblock-and-re-run, or `/pb-refine` — an
-  agent cannot advance the loop, C6), a new decision is needed, or no planned steps
-  remain.
+  agent cannot advance the loop, C6), a new decision is needed, no planned steps
+  remain, or the top of a requested range is reached.
 
-`--auto` is the only path that checkpoints without a human pause, and only because the
-human asked for it by name. The default — no flag — always ends at the pause.
+`--auto` and a step range are the only paths that checkpoint without a human pause, and
+only because the human asked for it by name; a range re-imposes the pause at its top.
+The default — no flag, no range — always ends at the pause.
+
+### A step range (`N-M`) is a bounded `--auto`
+
+`/pb-build 1-3` self-approves steps 1 through 3 exactly as `--auto` does, then **pauses
+after step 3** instead of chaining to done. The range *is* the opt-in — you do not also
+pass `--auto`. Run it as the `--auto` loop with one extra halt: **stop before building
+any next step whose plan number is past the top of the range.** It adds no machinery —
+just the one more entry already in the halt list above.
+
+- **`N-M` with N ≤ M** — build N…M, self-approving and checkpointing each, then pause at
+  M. `N-N` is just the single step `N` (which already ends at the pause).
+- **N > M** (e.g. `3-1`) — that is not a range you can walk; report it and stop rather
+  than guess the intent.
+- **M past the last planned step** (e.g. `1-9` with three steps) — build through the
+  last planned step and stop; that is the existing "no planned steps remain" halt, not
+  an error.
+- **A step inside the range won't build** (missing, or its seam won't parse) — `plumbbob
+  build <n>` fails exactly as it always does; surface it and stop, the same as a red
+  check. Do not skip past the gap.
+- **N is above the next undone step** — you are jumping over earlier planned work; note
+  that you are skipping the steps before N, then proceed (the same latitude as a
+  single-number jump like `/pb-build 4`).
 
 ## The hard contracts
 
@@ -105,8 +130,9 @@ human asked for it by name. The default — no flag — always ends at the pause
 - **Build the decided step, not a new one.** Implement what `intent.md` settled. A
   new idea mid-build is a `/pb-park`, not an edit.
 - **Default ends at the pause.** Implement → verify → wait for approval; never
-  checkpoint without it. Only an explicit `--auto` lets the agent approve in your place,
-  and it still halts on a red check or any mismatch.
+  checkpoint without it. Only an explicit `--auto` or a step range lets the agent approve
+  in your place, and it still halts on a red check or any mismatch — a range also stops
+  at its top.
 - **Agents feed the beat; they never advance it** (C6/D45). `before` loads context,
   `build` writes the diff, `after` is advisory — none can checkpoint, flip a step, or
   chain. `blocked` → unblock and re-run; `drift` → `/pb-refine`. You are still the one

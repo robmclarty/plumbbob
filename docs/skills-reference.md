@@ -18,7 +18,7 @@ Two ground rules apply to all of them:
 |------------------------------------|--------------------------------------|------|
 | [`/pb-plan`](#pb-plan) | `[spec-path \| intent]` | open the session and author the whole plan — Frame, Decisions, Constraints, all Steps |
 | [`/pb-step`](#pb-step) | `[what-changed]` | revise/sharpen the next step (empty input auto-syncs it to reality) |
-| [`/pb-build`](#pb-build) | `[step-number] [--auto]` | implement the next planned step, then verify it to the pause |
+| [`/pb-build`](#pb-build) | `[step-number \| step-range] [--auto]` | implement the next planned step, then verify it to the pause |
 | [`/pb-verify`](#pb-verify) | — | the tick — check → self-review → validate → **PAUSE** → checkpoint |
 | [`/pb-park`](#pb-park) | `[idea]` | capture a mid-build idea without chasing it |
 | [`/pb-status`](#pb-status) | — | orient — where you are, the next step, the next move |
@@ -65,7 +65,8 @@ the `before`-slot ones for context, delegates the diff to a `build`-slot agent i
 bound, and fires an agent mid-build when a manifest's `when` prose calls for it. `--auto`
 lets the agent self-approve and chain step after step until the plan is done, halting the
 moment a check goes red, the self-review finds a mismatch, or a bound agent returns
-`blocked`/`drift`.
+`blocked`/`drift`. A step range like `1-3` is a bounded `--auto` — it self-approves
+through step 3, then pauses.
 
 ### pb-verify
 

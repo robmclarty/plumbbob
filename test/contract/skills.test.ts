@@ -279,6 +279,11 @@ describe('build — the default engine: implement the planned step, then verify'
     expect(body).toMatch(/--auto/)
     expect(body).toMatch(/chain|continue/i)
   })
+
+  it('documents a step range as a bounded --auto that pauses at its top', () => {
+    expect(body).toMatch(/\d+-\d+/) // e.g. `1-3`
+    expect(body).toMatch(/range/i)
+  })
 })
 
 describe('verify — the tick: check, self-review, validate, PAUSE, checkpoint', () => {

@@ -297,8 +297,10 @@ below.)
 - <a id="d56"></a>**D56 — `--auto` composes with zero new machinery.** Bound `before`-agents → implement
   (or the bound `build`-agent) → bound `after`-agents → check → self-review →
   checkpoint-if-clean → next; the `after` output feeds the *existing* self-review halt
-  condition, so the default path — everything lands at the pause — stays unchanged.
-  *Tagged in* the `pb-build` skill.
+  condition, so the default path — everything lands at the pause — stays unchanged. A
+  step range `N-M` rides the same seam: it is `--auto` with one more halt of the same
+  kind (stop before any step past M), re-imposing the pause at the top of the range —
+  still zero new machinery. *Tagged in* the `pb-build` skill.
 - <a id="d57"></a>**D57 — The bindings merge ladder.** For one step and slot: an explicit name or `--agent`
   flag beats the per-step harness entry, which beats the harness `defaults`, which beat the
   settings-level `agents` key — the first level that names the slot wins, **replace, not
