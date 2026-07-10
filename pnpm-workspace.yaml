@@ -13,7 +13,9 @@ allowBuilds:
 nodeLinker: hoisted
 
 # pnpm 11's `minimumReleaseAge` (48h) refuses freshly-published versions as a
-# supply-chain cooldown. checkride is our own package (the approved first dep) —
-# exempt it so we can pull a just-published release without waiting out the age.
+# supply-chain cooldown. checkride and fascicle are our own packages (checkride =
+# the check gate dep; fascicle = the eval-tier driver, devDependency only) —
+# exempt them so we can pull a just-published release without waiting out the age.
 minimumReleaseAgeExclude:
   - checkride
+  - fascicle

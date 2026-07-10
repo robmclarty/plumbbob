@@ -121,9 +121,17 @@ reports/evals/         runs-<date>-<sweep>.jsonl + <date>.md (committed)
 ## Open questions
 
 - Q1: Does `claude -p` fire UserPromptSubmit hooks from `--plugin-dir` plugins,
-  and does the typed `/plumbbob:pb-build` form expand headless? — *resolve by:*
-  spike (step 1)
+  and does the typed `/plumbbob:pb-build` form expand headless? — *(resolved →
+  Verdicts, 2026-07-10)*
 
 ## Verdicts
 
-*(Filled by the spike.)*
+- 2026-07-10 — Q1 → YES to both, with three riders (full detail in the build
+  log's step-1 entry): (a) the `-p` tick lands ~session-end, so fixtures need a
+  warm-up turn before the first measured one; (b) fascicle 0.8.16 drops the
+  typed `plugin_dirs`/`setting_sources` provider config (`run_cli` passes
+  `provider_config: {}`) — the driver rides those flags through `extra_args`
+  until fascicle fixes it; (c) `--max-turns` exhaustion exits 1 → runner
+  classifies as `invalid`, never infra-retry. Contract 1 passed live through
+  the full fascicle path (sonnet, 50s, ~$0.37 est.): built, went green,
+  self-reviewed, paused, ledger untouched.
