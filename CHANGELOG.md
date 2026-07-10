@@ -5,6 +5,39 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-07-10
+
+- **Fixed:** grant parsing now reads only the `/pb-build` invocation's own
+  arguments — the token run immediately after it, ending at the first free-text
+  word — so an incidental range in prose ("the 1-5 endpoints", a pasted
+  `2020-2024`) can no longer mint a bounded self-approval, while trailing
+  sentence punctuation (`/pb-build 1-3.`) no longer drops the range the human
+  actually typed.
+- **Fixed:** latch state no longer leaks across sessions — `finish` clears the
+  one-turn grant and the entry stamp with the rest of the control state, and
+  `start` clears any grant an abandoned session left behind, so a stale `auto`
+  can never self-approve the next session's first landing.
+- **Fixed:** the git-commit ask-hook no longer fires on commands that merely
+  *mention* "git commit" inside a quoted string or a heredoc body (a grep, an
+  echoed sentence, a `checkpoint --body`), while a real commit whose message
+  rides `-m` prose or a `-F-` heredoc still asks. The hook now also guards
+  `--local` sessions, whose flat STEP it previously never saw.
+- **Fixed:** the out-of-band commit receipt anchors on the last ledger line of
+  any kind — baseline, plan, or step — so a commit landing between the plan
+  commit and the first step checkpoint now surfaces instead of hiding in
+  exactly the window the receipt exists for; and the count follows
+  `--first-parent`, so merging upstream reads as one commit rather than the
+  dozens it carried in.
+- **Changed:** a refused `checkpoint --plan` now speaks plan ("present the
+  plan, end the turn") instead of borrowing the step wording's diff and
+  self-review, and `doctor`'s dormant-latch line reads as a state rather than
+  an accusation — a wired hook may simply not have ticked yet this session.
+- **Changed:** `/pb-plan`'s close-out now disclosures what the plan commit
+  publishes — the tracked `.plumbbob/builds/<slug>/` folder teammates will see
+  in the PR — and offers `start --local` in the same breath, so the record is
+  disclosed, not discovered. The npm package description also catches up to
+  the 0.7.0 tagline: guidance on the work, a latch on the record.
+
 ## [0.7.0] - 2026-07-10
 
 - **Added:** the approval latch — plumbbob now latches the *checkpoint* to a

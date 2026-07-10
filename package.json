@@ -1,7 +1,7 @@
 {
   "name": "plumbbob",
-  "version": "0.7.0",
-  "description": "Attention-first build process: 12 skills + a CLI that keep you the decider — guidance, not enforcement.",
+  "version": "0.7.1",
+  "description": "Attention-first build process: 12 skills + a CLI that keep you the decider — guidance on the work, a latch on the record.",
   "keywords": [
     "claude-code",
     "claude",
