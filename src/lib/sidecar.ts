@@ -253,7 +253,7 @@ export function tickPath(root: string, slug?: string | null): string {
 // a host with no hooks never grows a ledger, so the latch stays dormant there
 // instead of wedging (row 2 of the matrix).
 export function stampTick(root: string, slug?: string | null): void {
-  const turn = readTurnCount(root)
+  const turn = readTurn(root)
   if (turn === null) return
   writeFileSync(tickPath(root, slug), `${turn}\n`)
 }
@@ -266,8 +266,9 @@ export function clearTick(root: string, slug?: string | null): void {
 }
 
 // The TURN count, or null when the ledger is absent or unreadable — absence is the
-// "dormant" signal stampTick keys off, never an error.
-function readTurnCount(root: string): number | null {
+// "dormant" signal stampTick keys off and the doctor latch probe reports (D64),
+// never an error.
+export function readTurn(root: string): number | null {
   try {
     const n = Number.parseInt(readFileSync(turnPath(root), 'utf8').trim(), 10)
     return Number.isFinite(n) && n >= 0 ? n : null

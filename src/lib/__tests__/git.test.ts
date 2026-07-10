@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import {
   commit,
+  commitsSince,
   findRepoRoot,
   gitPath,
   hasCommit,
@@ -93,5 +94,25 @@ describe('commit / resetHard', () => {
     const dir = makeTempRepo()
     const base = headSha(dir)
     expect(commit(dir, 'empty')).not.toBe(base)
+  })
+})
+
+describe('commitsSince', () => {
+  it('counts commits on HEAD since a SHA, and is 0 when HEAD is that SHA', () => {
+    const dir = makeTempRepo()
+    const base = headSha(dir)
+    expect(commitsSince(dir, base)).toBe(0) // nothing since the checkpoint
+    writeFileSync(join(dir, 'a.txt'), 'a\n')
+    stageAll(dir)
+    commit(dir, 'one')
+    writeFileSync(join(dir, 'b.txt'), 'b\n')
+    stageAll(dir)
+    commit(dir, 'two')
+    expect(commitsSince(dir, base)).toBe(2) // two commits landed out of band
+  })
+
+  it('is 0 for an unknown SHA rather than throwing (best-effort, never a gate)', () => {
+    const dir = makeTempRepo()
+    expect(commitsSince(dir, 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef')).toBe(0)
   })
 })

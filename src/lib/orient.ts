@@ -34,6 +34,10 @@ export type Orientation = {
   // The next step's advisory model recommendation (D62) — orientation for the
   // human choosing where to spend attention and tokens, never a gate.
   readonly nextModel: string | null
+  // Commits on HEAD since the last checkpoint that landed outside plumbbob's ledger
+  // (D66): surfaced as one neutral reconciliation line, never blocked — the human
+  // commits freely (repo D3/C5). 0 renders nothing.
+  readonly outOfBand: number
 }
 
 export type OrientInput = {
@@ -44,6 +48,11 @@ export type OrientInput = {
   // makes the phase "BUILD". `spiking` is the SPIKE marker's presence.
   readonly inFlight: number | null
   readonly spiking: boolean
+  // The out-of-band commit count (D66): commits since the last checkpoint's SHA,
+  // which only `status` can measure (it needs git) — orient stays pure/fs-free, so
+  // the caller computes it and passes it in. 0 when there is no checkpoint to
+  // reconcile against, or the tree is clean at the last checkpoint.
+  readonly outOfBand: number
 }
 
 // The lines of a named `## Section`, from its heading to the next `## ` (or EOF).
@@ -187,6 +196,7 @@ export function orient(input: OrientInput): Orientation {
     nextDoneWhen: nextUndone?.doneWhen ?? null,
     nextSeam: seamParse !== null && seamParse.ok ? seamParse.seam : [],
     nextModel: nextUndone?.model ?? null,
+    outOfBand: input.outOfBand,
   }
 }
 
@@ -220,12 +230,21 @@ export function formatOrientation(o: Orientation): string {
   const cp = o.lastCheckpoint
   const cpLine = cp === null ? 'last checkpoint  none yet' : `last checkpoint  step ${cp.n} · ${cp.sha.slice(0, 7)}`
 
+  // A neutral reconciliation note (D66), only when there is something to reconcile:
+  // commits landed since the last checkpoint that plumbbob's ledger didn't record.
+  // Informational — the human commits freely (repo D3/C5), so this never gates.
+  const receipts =
+    o.outOfBand > 0
+      ? [`${o.outOfBand} commit${o.outOfBand === 1 ? '' : 's'} since the last checkpoint landed outside plumbbob's ledger.`]
+      : []
+
   return [
     `PlumbBob — ${o.title ?? '(untitled)'}   [${o.phase}]`,
     '',
     stepsBlock,
     '',
     cpLine,
+    ...receipts,
     `parked ${o.parked} · open questions ${o.openQuestions}`,
     '',
     `next → ${o.next}`,

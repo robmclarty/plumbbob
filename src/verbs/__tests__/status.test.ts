@@ -3,7 +3,8 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { status } from '../status.ts'
 import { start } from '../start.ts'
-import { buildDir } from '../../lib/sidecar.ts'
+import { buildDir, checkpointsPath } from '../../lib/sidecar.ts'
+import { commit, headSha, stageAll } from '../../lib/git.ts'
 import { setLocalSetting } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo } from '../../../test/helpers/capture-io.ts'
@@ -90,6 +91,33 @@ describe('status', () => {
     const { code, stdout } = captureIo(() => status(dir, ['--build', 'second-build']))
     expect(code).toBe(0)
     expect(stdout).toContain('Second Feature')
+  })
+})
+
+describe('status — out-of-band receipts (D66)', () => {
+  it('surfaces commits landed since the last checkpoint outside the ledger', () => {
+    const dir = makeTempRepo()
+    captureIo(() => start(dir, ['Receipts']))
+    // Record the current HEAD as the last checkpoint, then let two commits land on
+    // top of it the way a human's own `git commit` would — outside plumbbob's ledger.
+    const sha = headSha(dir)
+    writeFileSync(checkpointsPath(dir), `baseline ${sha}\nstep 1 ${sha}\n`)
+    for (const name of ['one', 'two']) {
+      writeFileSync(join(dir, `${name}.txt`), `${name}\n`)
+      stageAll(dir)
+      commit(dir, `human ${name}`)
+    }
+    const { code, stdout } = captureIo(() => status(dir))
+    expect(code).toBe(0)
+    expect(stdout).toContain('2 commits since the last checkpoint landed outside plumbbob\'s ledger.')
+  })
+
+  it('stays quiet when HEAD is the last checkpoint (a clean ledger)', () => {
+    const dir = makeTempRepo()
+    captureIo(() => start(dir, ['Clean Ledger']))
+    writeFileSync(checkpointsPath(dir), `step 1 ${headSha(dir)}\n`)
+    const { stdout } = captureIo(() => status(dir))
+    expect(stdout).not.toContain('outside plumbbob')
   })
 })
 

@@ -12,7 +12,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
 import { doctor, inspectLegacy, migrateSidecar } from '../doctor.ts'
-import { buildDir, intentPath } from '../../lib/sidecar.ts'
+import { buildDir, intentPath, turnPath } from '../../lib/sidecar.ts'
 import { localSetting, settingsPath } from '../../lib/settings.ts'
 import { gitPath, headSha } from '../../lib/git.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -614,8 +614,43 @@ describe('doctor — plugin link (HOME pinned)', () => {
     expect(code).toBe(1) // not linked
     expect(stdout).not.toContain('sidecar layout')
     expect(stdout).not.toContain('check gate')
+    expect(stdout).not.toContain('approval latch') // no worktree ledger to probe
     // header + the two-line ✗ + blank + summary + PATH note: outside a repo the
-    // sidecar and gate sections must contribute zero lines, not empty headers.
+    // sidecar, gate, and latch sections must contribute zero lines, not empty headers.
     expect(stdout.trimEnd().split('\n')).toHaveLength(6)
+  })
+})
+
+// The approval-latch health probe (D64). overrideRepo + a seeded marketplace keep the
+// plugin and gate sections passing, so the probe's own line is what a test reads; the
+// probe never fails (dormant is legitimate), so the exit code stays 0 either way.
+describe('doctor — approval latch (D64)', () => {
+  it('reports the latch live with the turn count when the ledger exists', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    writeFileSync(turnPath(dir), '42\n') // the UserPromptSubmit hook has ticked
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(0)
+    expect(stdout).toContain('plumbbob doctor — approval latch (D64)')
+    expect(stdout).toContain('✓ latch: live (turn 42)')
+  })
+
+  it('reports the latch dormant with the hook hint when no ledger exists', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const { code, stdout } = await doctorWithHome(home, overrideRepo())
+    expect(code).toBe(0) // dormant is legitimate, never a failure
+    expect(stdout).toContain('○ latch: dormant — guidance only (turn ledger absent; is the UserPromptSubmit hook wired?)')
+  })
+
+  it('reads dormant when the ledger is present but garbled (never wedges on it)', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    writeFileSync(turnPath(dir), 'not a number\n')
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(0)
+    expect(stdout).toContain('○ latch: dormant')
   })
 })

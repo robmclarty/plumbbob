@@ -237,7 +237,7 @@ strike any you disagree with.)*
    7's mechanical half deterministic vitest territory — no model, no cost.**
    - seam: `src/lib/latch.ts` (new), `src/verbs/checkpoint.ts`, `src/verbs/__tests__/checkpoint.test.ts`, `src/lib/__tests__/latch.test.ts` (new)
    - model: opus — the load-bearing predicate; its correctness is the whole product
-4. [ ] The git-commit ask-hook — **done when:** a `git commit` command with a
+4. [x] The git-commit ask-hook — **done when:** a `git commit` command with a
    step in flight yields the `ask` JSON with the checkpoint-owns-the-landing reason;
    no step in flight, non-commit git, and no-session repos all pass silently; sh-level
    tests drive the hook with JSON stdin fixtures.

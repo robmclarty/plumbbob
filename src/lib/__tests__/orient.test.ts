@@ -47,7 +47,7 @@ const BUILDLOG = `# Build log
 `
 
 const CHECKPOINTS = 'baseline deadbeef\nstep 1 abc1234def\n'
-const base = { intent: INTENT, buildLog: BUILDLOG, checkpoints: CHECKPOINTS, inFlight: null, spiking: false }
+const base = { intent: INTENT, buildLog: BUILDLOG, checkpoints: CHECKPOINTS, inFlight: null, spiking: false, outOfBand: 0 }
 
 describe('orient parsers', () => {
   it('parseTitle takes the first heading', () => {
@@ -348,8 +348,26 @@ describe('formatOrientation', () => {
     expect(formatOrientation(orient({ ...base, intent }))).toContain('seam: src/a.ts, src/b.ts')
   })
 
+  it('surfaces out-of-band commits as one neutral line, just under the checkpoint (D66)', () => {
+    // The count reads back to the human, so pin the phrasing and its placement —
+    // the reconciliation note belongs with the ledger it reconciles.
+    const out = formatOrientation(orient({ ...base, outOfBand: 3 }))
+    expect(out).toContain('last checkpoint  step 1 · abc1234\n3 commits since the last checkpoint landed outside plumbbob\'s ledger.\nparked')
+  })
+
+  it('reads a single out-of-band commit as singular', () => {
+    expect(formatOrientation(orient({ ...base, outOfBand: 1 }))).toContain(
+      '1 commit since the last checkpoint landed outside plumbbob\'s ledger.',
+    )
+  })
+
+  it('prints no reconciliation line when nothing landed out of band', () => {
+    // The line appears only when the count is positive — a clean ledger stays quiet.
+    expect(formatOrientation(orient({ ...base, outOfBand: 0 }))).not.toContain('outside plumbbob')
+  })
+
   it('empty inputs degrade to placeholders, never throw', () => {
-    const out = formatOrientation(orient({ intent: '', buildLog: '', checkpoints: '', inFlight: null, spiking: false }))
+    const out = formatOrientation(orient({ intent: '', buildLog: '', checkpoints: '', inFlight: null, spiking: false, outOfBand: 0 }))
     expect(out).toContain('PlumbBob — (untitled)   [DESIGN]')
     expect(out).toContain('  (no steps planned yet)')
     expect(out).toContain('last checkpoint  none yet')

@@ -32,7 +32,7 @@ import type { DoctorCheck } from 'checkride'
 import { type AgentListing, listAgents } from '../lib/agents.ts'
 import { marketplacePlumbbob } from '../lib/plugins.ts'
 import { findRepoRoot, gitPath, stagePath } from '../lib/git.ts'
-import { buildDir, excludeControl, listBuilds, sidecarDir, slugify } from '../lib/sidecar.ts'
+import { buildDir, excludeControl, listBuilds, readTurn, sidecarDir, slugify } from '../lib/sidecar.ts'
 import { resolveString, settingsPath, setLocalSetting } from '../lib/settings.ts'
 
 type Check = { readonly ok: boolean; readonly label: string; readonly fix?: string }
@@ -421,6 +421,26 @@ function toolRow(c: DoctorCheck): string {
   return `  ${mark} ${c.slot ?? c.name} ← ${c.adapter}${version}${hint}`
 }
 
+// The approval-latch health probe (D64): is the turn ledger live? `.plumbbob/TURN`
+// holds a count once the UserPromptSubmit hook has ticked at least once, so a present
+// count means the checkpoint latch is armed — its absence means the tick is
+// guidance-only. Dormant is a legitimate state (a host with no hooks behaves exactly
+// as it always has), never a failure — so this section adds nothing to the problem
+// count. The dormant hint names the hook because a missing ledger almost always means
+// it never wired, and that hook rides in either install kind (the marketplace
+// plugin's hooks/hooks.json or an init-style link). Outside a repo there is no
+// worktree ledger to read, so the section is skipped entirely.
+function latchReport(cwd: string): { readonly lines: string[]; readonly failed: number } {
+  const root = findRepoRoot(cwd)
+  if (root === null) return { lines: [], failed: 0 }
+  const turn = readTurn(root)
+  const line =
+    turn === null
+      ? '  ○ latch: dormant — guidance only (turn ledger absent; is the UserPromptSubmit hook wired?)'
+      : `  ✓ latch: live (turn ${turn})`
+  return { lines: ['', 'plumbbob doctor — approval latch (D64)', line], failed: 0 }
+}
+
 export async function doctor(cwd: string, args: ReadonlyArray<string> = []): Promise<number> {
   const checks = pluginChecks()
   const out: string[] = ['plumbbob doctor — plugin install']
@@ -437,7 +457,10 @@ export async function doctor(cwd: string, args: ReadonlyArray<string> = []): Pro
   const gate = await gateReport(cwd)
   out.push(...gate.lines)
 
-  const failed = checks.filter((c) => !c.ok).length + sidecar.failed + agents.failed + gate.failed
+  const latch = latchReport(cwd)
+  out.push(...latch.lines)
+
+  const failed = checks.filter((c) => !c.ok).length + sidecar.failed + agents.failed + gate.failed + latch.failed
   out.push('')
   out.push(
     failed === 0
