@@ -17,6 +17,7 @@ import {
   hasSession,
   excludeControl,
   excludeSidecar,
+  setGrant,
   stampTick,
 } from '../lib/sidecar.ts'
 import { settingsPath, setLocalSetting } from '../lib/settings.ts'
@@ -113,7 +114,11 @@ export function start(cwd: string, args: ReadonlyArray<string>): number {
 
   // The plan's entry stamp (D64): `checkpoint --plan` latches on this tick. Skipped
   // when TURN is absent — including the known first-session seam where the hook has
-  // never ticked, which leaves that one plan commit guidance-governed.
+  // never ticked, which leaves that one plan commit guidance-governed. Any grant
+  // lying around is a leftover from an earlier session (a legitimate one is minted
+  // by a `/pb-build` prompt, which never runs `start`) — clear it so a stale `auto`
+  // can't self-approve this session's plan (D65: one-turn lifetime).
+  setGrant(root, null)
   stampTick(root, local ? null : slug)
 
   process.stdout.write(

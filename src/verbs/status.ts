@@ -23,7 +23,7 @@ import {
   resolveBuild,
   stepPath,
 } from '../lib/sidecar.ts'
-import { formatOrientation, orient, parseLastCheckpoint } from '../lib/orient.ts'
+import { formatOrientation, lastLedgerSha, orient } from '../lib/orient.ts'
 
 function readOr(path: string): string {
   try {
@@ -54,17 +54,18 @@ export function status(cwd: string, args: ReadonlyArray<string> = []): number {
   }
   const inFlightRaw = readOr(stepPath(root, slug)).trim()
   // The out-of-band count (D66) needs git (orient is pure), so status measures it:
-  // commits on HEAD since the last checkpoint's SHA. No checkpoint yet ⇒ nothing to
-  // reconcile against ⇒ 0.
+  // commits on HEAD since the last ledger line's SHA — baseline, plan, or step, so
+  // a commit landing before the first step checkpoint still surfaces. No ledger yet
+  // ⇒ nothing to reconcile against ⇒ 0.
   const checkpoints = readOr(checkpointsPath(root, slug))
-  const lastCheckpoint = parseLastCheckpoint(checkpoints)
+  const anchor = lastLedgerSha(checkpoints)
   const orientation = orient({
     intent: readOr(intentPath(root, slug)),
     buildLog: readOr(buildLogPath(root, slug)),
     checkpoints,
     inFlight: /^\d+$/.test(inFlightRaw) ? Number(inFlightRaw) : null,
     spiking: inSpike(root, slug),
-    outOfBand: lastCheckpoint === null ? 0 : commitsSince(root, lastCheckpoint.sha),
+    outOfBand: anchor === null ? 0 : commitsSince(root, anchor),
   })
   const lines = [formatOrientation(orientation), ...harnessSection(root, slug)]
   process.stdout.write(`${lines.join('\n')}\n`)

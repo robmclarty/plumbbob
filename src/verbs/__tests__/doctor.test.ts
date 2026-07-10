@@ -641,7 +641,11 @@ describe('doctor — approval latch (D64)', () => {
     seedMarketplace(home, ['plumbbob@robmclarty'])
     const { code, stdout } = await doctorWithHome(home, overrideRepo())
     expect(code).toBe(0) // dormant is legitimate, never a failure
-    expect(stdout).toContain('○ latch: dormant — guidance only (turn ledger absent; is the UserPromptSubmit hook wired?)')
+    // Dormant must read as a state, not an accusation — a wired hook simply may not
+    // have ticked yet this session.
+    expect(stdout).toContain(
+      '○ latch: dormant — guidance only (no turn ledger yet; it ticks on your first prompt when the UserPromptSubmit hook is wired — re-run after one to confirm)',
+    )
   })
 
   it('reads dormant when the ledger is present but garbled (never wedges on it)', async () => {

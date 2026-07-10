@@ -49,13 +49,16 @@ export function isDirty(root: string): boolean {
 }
 
 // The number of commits on HEAD not reachable from `sha` — `git rev-list --count
-// <sha>..HEAD`. The receipts line (D66) reads this to surface commits that landed
-// since the last checkpoint outside plumbbob's ledger. Best-effort and never throws:
-// 0 when the range is empty, `sha` is unknown to the repo, or HEAD is unborn — the
-// count is informational (the human commits freely, C5), never a gate.
+// --first-parent <sha>..HEAD`. The receipts line (D66) reads this to surface commits
+// that landed since the last checkpoint outside plumbbob's ledger. `--first-parent`
+// keeps the count on the branch's own line: merging upstream reads as the one merge
+// commit, not the dozens it carried — those didn't land "outside the ledger" in any
+// sense the receipt should nag about. Best-effort and never throws: 0 when the range
+// is empty, `sha` is unknown to the repo, or HEAD is unborn — the count is
+// informational (the human commits freely, C5), never a gate.
 export function commitsSince(root: string, sha: string): number {
   try {
-    const n = Number.parseInt(runGit(root, ['rev-list', '--count', `${sha}..HEAD`]), 10)
+    const n = Number.parseInt(runGit(root, ['rev-list', '--count', '--first-parent', `${sha}..HEAD`]), 10)
     return Number.isFinite(n) && n > 0 ? n : 0
   } catch {
     return 0

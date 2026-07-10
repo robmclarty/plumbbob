@@ -46,6 +46,27 @@ describe('grantFromPrompt', () => {
     expect(grantFromPrompt('please run it with --auto and steps 1-3')).toBeNull()
     expect(grantFromPrompt('just a normal message')).toBeNull()
   })
+
+  it('ignores an incidental range in prose after the invocation (D65 — arguments only)', () => {
+    expect(grantFromPrompt('/pb-build the 1-5 endpoints')).toBeNull()
+    expect(grantFromPrompt('/pb-build fix the issues from 2020-2024')).toBeNull()
+    // …but prose never retro-cancels a flag the human led with: arguments are the
+    // clean prefix, and a leading `--auto` is the literal ask.
+    expect(grantFromPrompt('/pb-build --auto please')).toBe('auto')
+  })
+
+  it('ignores a range on a later line of a multi-line prompt', () => {
+    expect(grantFromPrompt('/pb-build\ncontext: tickets 1-3 are related')).toBeNull()
+  })
+
+  it('tolerates trailing sentence punctuation on an argument', () => {
+    expect(grantFromPrompt('/pb-build 1-3.')).toBe('range 3')
+    expect(grantFromPrompt('/pb-build --auto!')).toBe('auto')
+  })
+
+  it('reads through a step number or another flag to reach a grant argument', () => {
+    expect(grantFromPrompt('/pb-build 2 --auto')).toBe('auto')
+  })
 })
 
 describe('applyTurn', () => {

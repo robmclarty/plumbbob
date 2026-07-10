@@ -119,6 +119,19 @@ describe('status — out-of-band receipts (D66)', () => {
     const { stdout } = captureIo(() => status(dir))
     expect(stdout).not.toContain('outside plumbbob')
   })
+
+  it('surfaces a commit landing after the plan but before the first step checkpoint', () => {
+    const dir = makeTempRepo()
+    captureIo(() => start(dir, ['Plan Window']))
+    // The ledger holds only baseline + plan — exactly the window where a routed-
+    // around commit would otherwise be invisible (no step line to anchor on).
+    writeFileSync(checkpointsPath(dir), `baseline ${headSha(dir)}\nplan ${headSha(dir)}\n`)
+    writeFileSync(join(dir, 'sneaky.txt'), 'landed by hand\n')
+    stageAll(dir)
+    commit(dir, 'raw commit mid-window')
+    const { stdout } = captureIo(() => status(dir))
+    expect(stdout).toContain("1 commit since the last checkpoint landed outside plumbbob's ledger.")
+  })
 })
 
 describe('status — harness bindings (D48)', () => {

@@ -35,12 +35,35 @@ export function applyTurn(cwd: string, raw: string): number {
 // keystroke, never model-authored pressure (D65). A bounded range beats `--auto`
 // (bounded wins); a bare `/pb-build`, or any non-invocation prompt, mints nothing.
 // The namespaced `/plumbbob:pb-build` form is honored alongside the bare one.
+//
+// Only the invocation's own arguments can mint: the tokens that follow it on its
+// line, up to the first token that isn't argument-shaped (a flag, a step number, a
+// range). An incidental range elsewhere in the prompt — an issue number, a pasted
+// `2020-2024` — is prose, not a grant. Trailing sentence punctuation on an argument
+// (`/pb-build 1-3.`) is still the argument the human typed.
 export function grantFromPrompt(prompt: string): string | null {
-  if (!/\/(?:plumbbob:)?pb-build\b/.test(prompt)) return null
-  const ceiling = prompt.match(/(?:^|\s)\d+-(\d+)(?=\s|$)/)?.[1]
+  const invocation = /\/(?:plumbbob:)?pb-build\b/.exec(prompt)
+  if (invocation === null) return null
+  const line = prompt.slice(invocation.index + invocation[0].length).split('\n', 1)[0] ?? ''
+  let auto = false
+  let ceiling: string | undefined
+  for (const token of line.split(/\s+/)) {
+    const word = token.replace(/[.,;:!?]+$/, '')
+    if (word === '') continue
+    if (word === '--auto') {
+      auto = true
+      continue
+    }
+    const range = /^\d+-(\d+)$/.exec(word)
+    if (range !== null) {
+      ceiling = range[1]
+      continue
+    }
+    if (/^\d+$/.test(word) || word.startsWith('-')) continue // a step number or another flag
+    break // free text — the arguments have ended
+  }
   if (ceiling !== undefined) return `range ${ceiling}`
-  if (/(?:^|\s)--auto\b/.test(prompt)) return 'auto'
-  return null
+  return auto ? 'auto' : null
 }
 
 // Extract the `prompt` field from the UserPromptSubmit JSON, or '' when the input is

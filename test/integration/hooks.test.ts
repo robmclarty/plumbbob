@@ -122,10 +122,54 @@ describe('git-commit ask-hook (D66 — checkpoint owns the landing)', () => {
     expect(result.stdout.trim()).toBe('')
   })
 
-  it('no-ops in a repo with no active build (no activeBuild cursor)', () => {
-    const dir = makeFixtureRepo() // no `start`, so find_root finds no cursor
+  it('no-ops in a repo with no active session (no STATE sentinel)', () => {
+    const dir = makeFixtureRepo() // no `start`, so find_root finds no session
     const result = preBashCommit(dir, 'git commit -m "wip"')
     expect(result.status).toBe(0)
     expect(result.stdout.trim()).toBe('')
+  })
+
+  it('stays silent when "git commit" is prose inside a quoted string, not an invocation', () => {
+    const dir = withStepInFlight()
+    for (const cmd of [
+      'grep -rn "git commit" src/',
+      "echo 'never route around it with a raw git commit -m wip'",
+      'rg "plumbbob checkpoint|git commit -am" docs/',
+    ]) {
+      const result = preBashCommit(dir, cmd)
+      expect(result.status).toBe(0)
+      expect(result.stdout.trim()).toBe('')
+    }
+  })
+
+  it('stays silent when "git commit" appears only in a heredoc body', () => {
+    const cmd = ["plumbbob checkpoint --body <<'BODY'", 'self-review: no raw git commit -m was used.', 'BODY'].join(
+      '\n',
+    )
+    const result = preBashCommit(withStepInFlight(), cmd)
+    expect(result.status).toBe(0)
+    expect(result.stdout.trim()).toBe('')
+  })
+
+  it('still asks on a real commit whose message rides a heredoc', () => {
+    const cmd = ['git commit -F- <<MSG', 'wip: landing by hand', 'MSG'].join('\n')
+    const result = preBashCommit(withStepInFlight(), cmd)
+    expect(result.status).toBe(0)
+    expect(result.stdout).toContain('"permissionDecision": "ask"')
+  })
+
+  it('still asks on a commit whose -m message is quoted prose', () => {
+    const result = preBashCommit(withStepInFlight(), 'git commit -m "docs: mention git commit etiquette"')
+    expect(result.status).toBe(0)
+    expect(result.stdout).toContain('"permissionDecision": "ask"')
+  })
+
+  it('guards a --local session too (flat STEP, no activeBuild cursor)', () => {
+    const dir = makeFixtureRepo()
+    runCli(dir, ['start', 'Latch', '--local'])
+    writeFileSync(join(dir, '.plumbbob', 'STEP'), '2\n')
+    const result = preBashCommit(dir, 'git commit -m "wip"')
+    expect(result.status).toBe(0)
+    expect(result.stdout).toContain('"permissionDecision": "ask"')
   })
 })

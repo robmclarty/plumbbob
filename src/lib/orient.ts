@@ -152,6 +152,23 @@ export function parseLastCheckpoint(checkpoints: string): Checkpoint | null {
   return last
 }
 
+// The SHA of the last ledger line of ANY kind — baseline, plan, or step. This is
+// the reconciliation anchor for the out-of-band count (D66): a commit that lands
+// after the plan but before the first step checkpoint is exactly the window the
+// receipt exists for, so anchoring on step lines alone would leave it invisible.
+// `parseLastCheckpoint` stays step-only — it feeds the "last checkpoint step N"
+// display, where baseline/plan would be noise.
+export function lastLedgerSha(checkpoints: string): string | null {
+  let last: string | null = null
+  for (const line of checkpoints.split('\n')) {
+    const m = /^(?:baseline|plan|step\s+\d+)\s+(\S+)/.exec(line.trim())
+    if (m) {
+      last = m[1] ?? null
+    }
+  }
+  return last
+}
+
 // The single primary next move (D15). It suggests; the dashboard prints the full
 // list + counts so the human can always override. The phase is derived: a spike
 // in progress and an in-flight step each have one obvious next move; otherwise you

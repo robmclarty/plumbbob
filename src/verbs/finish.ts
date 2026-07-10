@@ -11,11 +11,13 @@ import { join } from 'node:path'
 import { commit, findRepoRoot, isDirty, stageAll } from '../lib/git.ts'
 import {
   checkpointsPath,
+  clearTick,
   hasSession,
   intentPath,
   reportPath,
   resolveBuild,
   seamPath,
+  setGrant,
   sidecarDir,
   spikePath,
   stepPath,
@@ -57,6 +59,12 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   rmSync(seamPath(root, slug), { force: true })
   rmSync(stepPath(root, slug), { force: true })
   rmSync(spikePath(root, slug), { force: true })
+  // The latch's per-build entry stamp and the one-turn grant go with the session
+  // (D64/D65): a grant is one-turn by construction, but the session's last tick is
+  // the last time it was rewritten — left behind, a stale `auto` could self-approve
+  // the next session's first landing.
+  clearTick(root, slug)
+  setGrant(root, null)
   if (slug !== null) {
     // Drop the activeBuild key — JSON.stringify omits an `undefined` value, so the
     // cursor is removed while the other local settings (auto, …) survive. Skipped

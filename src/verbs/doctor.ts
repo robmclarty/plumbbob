@@ -436,7 +436,7 @@ function latchReport(cwd: string): { readonly lines: string[]; readonly failed: 
   const turn = readTurn(root)
   const line =
     turn === null
-      ? '  ○ latch: dormant — guidance only (turn ledger absent; is the UserPromptSubmit hook wired?)'
+      ? '  ○ latch: dormant — guidance only (no turn ledger yet; it ticks on your first prompt when the UserPromptSubmit hook is wired — re-run after one to confirm)'
       : `  ✓ latch: live (turn ${turn})`
   return { lines: ['', 'plumbbob doctor — approval latch (D64)', line], failed: 0 }
 }

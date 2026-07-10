@@ -82,6 +82,17 @@ describe('evaluateLatch — the six-row matrix, first hit wins', () => {
     }
   })
 
+  it('row 6: a plan refusal (step null) speaks plan, not step', () => {
+    const decision = evaluateLatch({ ...LATCHED, step: null })
+    expect(decision.allow).toBe(false)
+    if (!decision.allow) {
+      expect(decision.reason).toBe('no-turn')
+      expect(decision.message).toContain('no human turn since `start` stamped this plan')
+      expect(decision.message).toContain('present the plan')
+      expect(decision.message).not.toContain('self-review')
+    }
+  })
+
   it('row 6: a stale TICK above TURN also refuses — only a strictly later turn allows', () => {
     // TURN < TICK cannot arise from the verbs (TICK is copied from TURN), but a
     // mangled ledger must land on the safe side of the latch, not sneak past it.

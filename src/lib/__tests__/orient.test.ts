@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   formatOrientation,
+  lastLedgerSha,
   markStepDone,
   orient,
   parseLastCheckpoint,
@@ -188,6 +189,15 @@ describe('orient parsers', () => {
       '\n'
     )
     expect(parseLastCheckpoint(checkpoints)).toEqual({ n: 12, sha: 'cafe3333' })
+  })
+
+  it('lastLedgerSha anchors on the last line of ANY kind — baseline, plan, or step (D66)', () => {
+    expect(lastLedgerSha('baseline aaa1111\n')).toBe('aaa1111')
+    expect(lastLedgerSha('baseline aaa1111\nplan bbb2222\n')).toBe('bbb2222')
+    expect(lastLedgerSha('baseline aaa1111\nplan bbb2222\nstep 1 ccc3333\n')).toBe('ccc3333')
+    // A garbled or empty ledger anchors nothing rather than mis-anchoring.
+    expect(lastLedgerSha('')).toBe(null)
+    expect(lastLedgerSha('redo step 9 ffff9999\n')).toBe(null)
   })
 })
 

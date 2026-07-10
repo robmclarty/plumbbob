@@ -32,12 +32,20 @@ export type LatchDecision =
 const ALLOW: LatchDecision = { allow: true }
 
 // The exact refusal (the spec pins this prose): the message is the affordance —
-// it tells the model what the pause is and names the only legitimate grants.
+// it tells the model what the pause is and names the only legitimate grants. The
+// plan commit gets its own wording: there is no step, no diff, and no self-review
+// at plan time — what the human approves is the plan itself.
 const NO_TURN_MESSAGE = `plumbbob: checkpoint refused — no human turn since this step began. This is the
 pause: present the diff and the self-review, then end the turn; the human's next
 message is the tick. (An explicit \`/pb-build --auto\` or a step range in the human's
 own prompt grants self-approval; \`auto: true\` in settings.local.json is the standing
 grant.)
+`
+
+const NO_TURN_PLAN_MESSAGE = `plumbbob: checkpoint refused — no human turn since \`start\` stamped this plan. This
+is the plan pause: present the plan, then end the turn; the human's approving
+message is the tick that lets it land on re-fire. (\`auto: true\` in
+settings.local.json is the standing grant.)
 `
 
 function ceilingMessage(ceiling: number): string {
@@ -57,7 +65,8 @@ export function evaluateLatch(input: LatchInput): LatchDecision {
     return { allow: false, reason: 'ceiling', message: ceilingMessage(input.grant.ceiling) }
   }
   if (input.turn > input.tick) return ALLOW // 5 — a human turn intervened
-  return { allow: false, reason: 'no-turn', message: NO_TURN_MESSAGE } // 6 — the pause
+  // 6 — the pause (plan-worded when no step is landing)
+  return { allow: false, reason: 'no-turn', message: input.step === null ? NO_TURN_PLAN_MESSAGE : NO_TURN_MESSAGE }
 }
 
 // Parse a GRANT file's content (`auto` | `range <M>`). Anything else — including

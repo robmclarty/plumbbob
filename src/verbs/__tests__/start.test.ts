@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { start } from '../start.ts'
-import { buildDir, excludeControl, hasSession, sidecarDir, tickPath, turnPath } from '../../lib/sidecar.ts'
+import { buildDir, excludeControl, grantPath, hasSession, sidecarDir, tickPath, turnPath } from '../../lib/sidecar.ts'
 import { localSetting } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo } from '../../../test/helpers/capture-io.ts'
@@ -59,6 +59,17 @@ describe('start', () => {
     const dir = makeTempRepo()
     captureIo(() => start(dir, ['My Feature']))
     expect(existsSync(tickPath(dir))).toBe(false)
+  })
+
+  it('clears a stale GRANT left behind by an earlier session (D65 — one-turn lifetime)', () => {
+    const dir = makeTempRepo()
+    excludeControl(dir)
+    mkdirSync(sidecarDir(dir), { recursive: true })
+    writeFileSync(turnPath(dir), '3\n')
+    writeFileSync(grantPath(dir), 'auto\n') // an abandoned session's last tick minted this
+    const { code } = captureIo(() => start(dir, ['My Feature']))
+    expect(code).toBe(0)
+    expect(existsSync(grantPath(dir))).toBe(false)
   })
 
   it('refuses when the derived slug collides with an existing build (D17)', () => {

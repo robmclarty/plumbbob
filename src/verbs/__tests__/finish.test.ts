@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { finish } from '../finish.ts'
 import { start } from '../start.ts'
-import { checkpointsPath, hasSession, intentPath, reportPath, sidecarDir } from '../../lib/sidecar.ts'
+import { checkpointsPath, grantPath, hasSession, intentPath, reportPath, sidecarDir, tickPath } from '../../lib/sidecar.ts'
 import { localSettingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo } from '../../../test/helpers/capture-io.ts'
@@ -38,6 +38,18 @@ describe('finish', () => {
     const local = JSON.parse(readFileSync(localSettingsPath(dir), 'utf8'))
     expect(local.activeBuild).toBeUndefined()
     expect(execFileSync('git', ['-C', dir, 'status', '--porcelain'], { encoding: 'utf8' }).trim()).toBe('')
+  })
+
+  it('clears the one-turn GRANT and the entry TICK with the session (D64/D65)', () => {
+    const dir = makeTempRepo()
+    captureIo(() => start(dir, ['Latch state gone', '--slug', 'latch-state-gone']))
+    // The session's last tick minted a grant and a build stamped its entry; neither
+    // may survive into the next session.
+    writeFileSync(grantPath(dir), 'auto\n')
+    writeFileSync(tickPath(dir, 'latch-state-gone'), '4\n')
+    captureIo(() => finish(dir))
+    expect(existsSync(grantPath(dir))).toBe(false)
+    expect(existsSync(tickPath(dir, 'latch-state-gone'))).toBe(false)
   })
 
   it('appends the checkpoint SHAs to the report when one is present', () => {

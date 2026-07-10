@@ -427,7 +427,9 @@ describe('checkpoint — the approval latch (subprocess, D64)', () => {
     const dir = latchedRepo() // TICK stands in for the stamp `start` writes when TURN exists
     const refused = runCli(dir, ['checkpoint', '--plan'])
     expect(refused.status).toBe(1)
-    expect(refused.stderr).toContain('no human turn since this step began')
+    // The plan refusal speaks plan, not step — there is no diff or self-review yet.
+    expect(refused.stderr).toContain('no human turn since `start` stamped this plan')
+    expect(refused.stderr).toContain('present the plan')
     writeFileSync(turnPath(dir), '3\n') // the human's next message ticks the ledger
     const landed = runCli(dir, ['checkpoint', '--plan'])
     expect(landed.status).toBe(0)

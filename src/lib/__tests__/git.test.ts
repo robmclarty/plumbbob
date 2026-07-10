@@ -115,4 +115,21 @@ describe('commitsSince', () => {
     const dir = makeTempRepo()
     expect(commitsSince(dir, 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef')).toBe(0)
   })
+
+  it('counts a merge as one commit on the branch line, not the commits it carried', () => {
+    const dir = makeTempRepo()
+    const base = headSha(dir)
+    // Two commits land on a side branch; merging them back is ONE event on the
+    // branch's own line — the receipt (D66) must not read merged-in history as
+    // out-of-band work.
+    execFileSync('git', ['-C', dir, 'checkout', '-q', '-b', 'side'], { stdio: 'ignore' })
+    for (const name of ['s1', 's2']) {
+      writeFileSync(join(dir, `${name}.txt`), `${name}\n`)
+      stageAll(dir)
+      commit(dir, name)
+    }
+    execFileSync('git', ['-C', dir, 'checkout', '-q', 'main'], { stdio: 'ignore' })
+    execFileSync('git', ['-C', dir, 'merge', '-q', '--no-ff', '-m', 'merge side', 'side'], { stdio: 'ignore' })
+    expect(commitsSince(dir, base)).toBe(1)
+  })
 })
