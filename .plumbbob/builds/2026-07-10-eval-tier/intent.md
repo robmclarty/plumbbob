@@ -78,7 +78,7 @@ reports/evals/         runs-<date>-<sweep>.jsonl + <date>.md (committed)
 
 ## Steps
 
-1. [ ] Spike: contract 1, once, for real — **done when:** a throwaway
+1. [x] Spike: contract 1, once, for real — **done when:** a throwaway
    `test/evals/spike.ts` fires one real `claude -p` turn of `/plumbbob:pb-build`
    through fascicle with the repo root as plugin dir, prints a pass/fail verdict
    for "checkpoints still plan-only + box 1 still unchecked", and every spike

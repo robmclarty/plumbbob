@@ -114,4 +114,5 @@ folder, so it rides the branch into the PR.)*
      production-faithful (the human has always spoken at least once, at plan
      approval, before a build turn). The end-of-session tick cannot unlatch a
      checkpoint mid-turn (nothing runs after the final message).
+- 2026-07-10 — step 1 checkpointed · 133462543 — Spike: contract 1, once, for real
 
