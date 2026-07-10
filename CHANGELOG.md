@@ -5,6 +5,35 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-07-10
+
+- **Added:** the approval latch — plumbbob now latches the *checkpoint* to a
+  recorded human turn, so an agent can no longer self-commit a step in the same
+  turn it began. A `UserPromptSubmit` hook (via a new `plumbbob turn` verb) keeps
+  a monotonic turn ledger the model never writes, `build`/`start` stamp the turn
+  at entry, and `checkpoint` refuses to land until a human turn has intervened —
+  the refusal message itself being the pause. Nothing blocks an edit; only the
+  record is latched, and a host with no hooks grows no ledger and behaves exactly
+  as before.
+- **Added:** one-turn self-approval grants minted only from the human's literal
+  prompt — an explicit `/pb-build --auto` or a step range like `1-3` grants the
+  agent approval for that run, and a standing `auto: true` in settings is the
+  personal grant. Because `pb-build` disables model invocation, the model cannot
+  forge one.
+- **Added:** surfacing for commits that land outside the ledger — a `PreToolUse`
+  hook turns a model-issued `git commit` during a step into a permission
+  *question* (it asks, never denies), `plumbbob status` prints a neutral line when
+  commits have landed since the last checkpoint, and `plumbbob doctor` reports
+  whether the latch is live or dormant with a hook-wiring hint.
+- **Changed:** the checkpoint boundary now enforces on the ledger plane while the
+  work plane stays pure guidance — "guidance on the work, a latch on the record."
+  The skills (`pb-build`, `pb-plan`, `pb-verify`), the decisions log (D64–D66 and a
+  scope note on D10), the happy-path walkthrough, the README skeptic answer, and
+  the plugin tagline all carry the new framing.
+- **Changed:** bumped the `checkride` check-gate dependency to 0.3.0, and exempted
+  our own freshly-published releases from pnpm's supply-chain release-age cooldown
+  so the loop can dogfood them without waiting.
+
 ## [0.6.6] - 2026-07-09
 
 - **Added:** intent.md steps take an optional `- model:` sub-line beside the
