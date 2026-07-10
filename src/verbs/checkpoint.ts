@@ -101,9 +101,10 @@ function planSubject(root: string): string {
 }
 
 // Step resolution (D3): explicit arg > in-flight STEP file > first undone step in
-// intent.md. Returns null when none can be determined.
+// intent.md. Returns null when none can be determined. A `-m` value is a message,
+// never a step — `checkpoint -m "2"` must not read as step 2.
 function resolveStep(root: string, args: ReadonlyArray<string>): number | null {
-  const explicit = args.find((a) => /^\d+$/.test(a))
+  const explicit = args.filter((_, i) => args[i - 1] !== '-m').find((a) => /^\d+$/.test(a))
   if (explicit !== undefined) {
     return Number(explicit)
   }
@@ -157,7 +158,12 @@ function flipIntent(root: string, step: number): void {
   try {
     writeFileSync(intentPath(root), markStepDone(readFileSync(intentPath(root), 'utf8'), step))
   } catch {
-    // best-effort bookkeeping; the checkpoint SHA is the source of truth.
+    // Best-effort bookkeeping — the checkpoint SHA is the source of truth — but the
+    // dashboard reads intent.md, so a swallowed failure here makes orientation lie.
+    process.stderr.write(
+      `plumbbob: heads-up — could not flip step ${step} to [x] in intent.md; ` +
+        `the checkpoint is recorded, but the dashboard will still show step ${step} as next. Flip it by hand.\n`,
+    )
   }
 }
 
@@ -204,9 +210,10 @@ function messageArg(args: ReadonlyArray<string>): string | null {
 // so the skill can compose proportional prose the CLI never could. Returns null
 // when the flag is absent or stdin is empty — either way the deterministic
 // fallback body takes over. Reading fd 0 blocks until EOF, which the heredoc
-// supplies; a read error (no stdin attached) degrades to the fallback.
+// supplies; a read error (no stdin attached) degrades to the fallback, and an
+// interactive TTY — which would never send EOF — skips the read instead of hanging.
 function bodyArg(args: ReadonlyArray<string>): string | null {
-  if (!args.includes('--body')) {
+  if (!args.includes('--body') || process.stdin.isTTY === true) {
     return null
   }
   try {

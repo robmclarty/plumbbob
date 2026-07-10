@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { checkpoint } from '../checkpoint.ts'
@@ -196,6 +196,47 @@ describe('checkpoint', () => {
     expect(body).not.toContain('done when:')
     expect(body).not.toContain('seam:')
     expect(body).toContain('work.txt') // the diffstat still lands
+  })
+
+  it('reads a numeric -m value as the message, never the step', async () => {
+    const dir = startedGreen()
+    writeFileSync(join(dir, 'work.txt'), 'pending\n')
+    const { code } = await captureIoAsync(() => checkpoint(dir, ['-m', '2']))
+    expect(code).toBe(0)
+    // The step resolves from intent (step 1); the "2" lands as the commit subject.
+    expect(readFileSync(checkpointsPath(dir), 'utf8')).toMatch(/step 1 [0-9a-f]{40}/)
+    const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
+    expect(subject).toBe('2')
+  })
+
+  it('--body on an interactive TTY degrades to the fallback body instead of blocking', async () => {
+    const dir = startedGreen()
+    writeFileSync(join(dir, 'work.txt'), 'pending\n')
+    const stdin = process.stdin as unknown as { isTTY?: boolean }
+    const hadTty = stdin.isTTY
+    stdin.isTTY = true // a terminal never sends EOF — the read must be skipped, not hung
+    try {
+      const { code } = await captureIoAsync(() => checkpoint(dir, ['1', '--body']))
+      expect(code).toBe(0)
+    } finally {
+      stdin.isTTY = hadTty
+    }
+    const body = execFileSync('git', ['log', '-1', '--format=%b'], { cwd: dir, encoding: 'utf8' })
+    expect(body).toContain('done when: a works.') // the deterministic fallback took over
+  })
+
+  it('warns when the intent flip fails, instead of letting the dashboard lie', async () => {
+    const dir = startedGreen()
+    writeFileSync(join(dir, 'work.txt'), 'pending\n')
+    chmodSync(intentPath(dir), 0o444) // the flip's write will fail
+    try {
+      const { code, stderr } = await captureIoAsync(() => checkpoint(dir, ['1']))
+      expect(code).toBe(0) // the checkpoint itself still lands — the SHA is the source of truth
+      expect(readFileSync(checkpointsPath(dir), 'utf8')).toMatch(/step 1 [0-9a-f]{40}/)
+      expect(stderr).toContain('could not flip step 1')
+    } finally {
+      chmodSync(intentPath(dir), 0o644)
+    }
   })
 
   // Step 8 — the plan-approval commit (D11): its own commit, before any step,
