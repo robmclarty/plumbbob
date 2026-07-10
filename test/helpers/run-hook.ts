@@ -29,3 +29,13 @@ export function postEdit(repo: string, opts: { rel: string; tool?: string }): Ho
     tool_result: 'ok',
   })
 }
+
+// Drive the git-commit ask-hook with a synthetic PreToolUse Bash payload — just the
+// command string the model would run.
+export function preBashCommit(repo: string, command: string): HookResult {
+  return runHook('pre-bash-commit.sh', realpathSync(repo), {
+    hook_event_name: 'PreToolUse',
+    tool_name: 'Bash',
+    tool_input: { command },
+  })
+}

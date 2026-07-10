@@ -229,7 +229,7 @@ strike any you disagree with.)*
    `tickPath` helpers.
    - seam: `src/verbs/build.ts`, `src/verbs/start.ts`, `src/verbs/checkpoint.ts`, `src/lib/sidecar.ts`, existing verb tests
    - model: sonnet — rote wiring across existing verbs
-3. [ ] The latch — **done when:** the six-row matrix above is implemented (one
+3. [x] The latch — **done when:** the six-row matrix above is implemented (one
    small predicate, unit-testable) and subprocess-tested per row in fixture repos
    (write `TURN`/`TICK`/`GRANT` directly); refusal is exit 1 with the affordance
    message; range ceiling refuses past M; `--plan` latches on the `start` stamp; the

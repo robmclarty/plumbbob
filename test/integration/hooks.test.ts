@@ -1,8 +1,8 @@
 import { chmodSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupFixtures, makeFixtureRepo, runCli } from '../helpers/fixture-repo.ts'
-import { postEdit } from '../helpers/run-hook.ts'
+import { cleanupFixtures, makeFixtureRepo, runCli, writeSidecar } from '../helpers/fixture-repo.ts'
+import { postEdit, preBashCommit } from '../helpers/run-hook.ts'
 
 afterAll(cleanupFixtures)
 
@@ -66,6 +66,65 @@ describe('post-edit light feedback (D25 — the only edit-time hook)', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Lint'])
     const result = postEdit(dir, { rel: 'src/ghost.ts' }) // never created
+    expect(result.status).toBe(0)
+    expect(result.stdout.trim()).toBe('')
+  })
+})
+
+// The git-commit ask-hook (D66): a raw `git commit` mid-step becomes a permission
+// *question*, never a wall. checkpoint owns the landing; this only nudges the human
+// to route through it. Always exits 0, never `deny`s — C5 stays intact.
+describe('git-commit ask-hook (D66 — checkpoint owns the landing)', () => {
+  // Put a step in flight: `start` mints the activeBuild cursor + build folder, then
+  // a STEP file (what `build <n>` would write) is the "in flight" signal the hook reads.
+  function withStepInFlight(): string {
+    const dir = makeFixtureRepo()
+    runCli(dir, ['start', 'Latch'])
+    writeSidecar(dir, 'STEP', '4\n')
+    return dir
+  }
+
+  it('asks (never denies) on a git commit while a step is in flight', () => {
+    const result = preBashCommit(withStepInFlight(), 'git commit -m "wip"')
+    expect(result.status).toBe(0)
+    const out = JSON.parse(result.stdout) as {
+      hookSpecificOutput: { hookEventName: string; permissionDecision: string; permissionDecisionReason: string }
+    }
+    expect(out.hookSpecificOutput.hookEventName).toBe('PreToolUse')
+    expect(out.hookSpecificOutput.permissionDecision).toBe('ask')
+    expect(out.hookSpecificOutput.permissionDecision).not.toBe('deny')
+    expect(out.hookSpecificOutput.permissionDecisionReason).toContain('checkpoint owns the landing')
+  })
+
+  it('asks on a git commit carrying global options before the subcommand', () => {
+    const result = preBashCommit(withStepInFlight(), 'git -C sub -c user.name=x commit --amend')
+    expect(result.status).toBe(0)
+    expect(result.stdout).toContain('"permissionDecision": "ask"')
+  })
+
+  it('stays silent for a non-commit git command while a step is in flight', () => {
+    const result = preBashCommit(withStepInFlight(), 'git status --short')
+    expect(result.status).toBe(0)
+    expect(result.stdout.trim()).toBe('')
+  })
+
+  it('does not fire on a git command that merely mentions commit in an option value', () => {
+    const result = preBashCommit(withStepInFlight(), 'git log --grep=commit --oneline')
+    expect(result.status).toBe(0)
+    expect(result.stdout.trim()).toBe('')
+  })
+
+  it('stays silent when the active build has no step in flight (no STEP)', () => {
+    const dir = makeFixtureRepo()
+    runCli(dir, ['start', 'Latch']) // cursor + folder, but no STEP written
+    const result = preBashCommit(dir, 'git commit -m "wip"')
+    expect(result.status).toBe(0)
+    expect(result.stdout.trim()).toBe('')
+  })
+
+  it('no-ops in a repo with no active build (no activeBuild cursor)', () => {
+    const dir = makeFixtureRepo() // no `start`, so find_root finds no cursor
+    const result = preBashCommit(dir, 'git commit -m "wip"')
     expect(result.status).toBe(0)
     expect(result.stdout.trim()).toBe('')
   })

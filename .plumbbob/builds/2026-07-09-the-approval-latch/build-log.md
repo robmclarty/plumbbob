@@ -56,3 +56,4 @@ you point at to say "I did that — the LLM helped, but those were my calls."
 folder, so it rides the branch into the PR.)*
 - 2026-07-10 — step 1 checkpointed · 17ea758be — The turn ledger
 - 2026-07-10 — step 2 checkpointed · 11d2040db — Stamp at entry
+- 2026-07-10 — step 3 checkpointed · 13fbedcfb — The latch
