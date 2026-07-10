@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       checkride:
-        specifier: 0.1.6
-        version: 0.1.6
+        specifier: 0.3.0
+        version: 0.3.0
     devDependencies:
       '@ast-grep/cli':
         specifier: ^0.43.0
@@ -869,8 +869,8 @@ packages:
   chardet@2.2.0:
     resolution: {integrity: sha512-rddelWYNPRrXq6PtNEN2S3f6t9ILzvqaN5pVgi4kqt9jHQaXIial9PznB5iSPVlQSLNaaH22ItWz3EJtQ10+OA==}
 
-  checkride@0.1.6:
-    resolution: {integrity: sha512-z9plHoiEXPCFyl+E8n6yis2fMjgKyljwmAnDjzlBU2p4m+IJCSFIKfijrBCh+43p6Pr8MyS9Po59fxIhtqUJrw==}
+  checkride@0.3.0:
+    resolution: {integrity: sha512-nabc8TwfPTWUvk2gvlrKVTqGuMkM5vjH6CIGSuu5wLn+6eFhBN1YnjvZK37N/eHW3bSNgOB3nuQ4WEG2sITomg==}
     engines: {node: '>=22.18.0', pnpm: '>=9.0.0'}
     hasBin: true
 
@@ -2558,7 +2558,7 @@ snapshots:
 
   chardet@2.2.0: {}
 
-  checkride@0.1.6: {}
+  checkride@0.3.0: {}
 
   cli-width@4.1.0: {}
 

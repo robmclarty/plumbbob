@@ -11,3 +11,9 @@ allowBuilds:
 # tarball extract) needs a real directory at node_modules/checkride to pack;
 # pnpm's default symlinked layout can't be bundled, so hoist.
 nodeLinker: hoisted
+
+# pnpm 11's `minimumReleaseAge` (48h) refuses freshly-published versions as a
+# supply-chain cooldown. checkride is our own package (the approved first dep) —
+# exempt it so we can pull a just-published release without waiting out the age.
+minimumReleaseAgeExclude:
+  - checkride

@@ -61,7 +61,7 @@
     "vitest": "^4.1.8"
   },
   "dependencies": {
-    "checkride": "0.1.6"
+    "checkride": "0.3.0"
   },
   "bundleDependencies": [
     "checkride"
