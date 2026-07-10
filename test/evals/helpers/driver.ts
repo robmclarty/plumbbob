@@ -53,6 +53,7 @@ export type TurnOptions = {
 }
 
 export type TurnResult = {
+  readonly prompt: string // the pinned constant that fired this session (C3)
   readonly content: string // the final assistant text (informational probes only, C1)
   readonly finishReason: string
   readonly costUsd: number | null // fascicle's estimate; 0/null under OAuth-trivial turns
@@ -122,7 +123,7 @@ export async function openSession(options: {
         },
       },
     })
-    return toTurnResult(result, Date.now() - started)
+    return toTurnResult(prompt, result, Date.now() - started)
   }
 
   async function warmup(): Promise<void> {
@@ -136,7 +137,7 @@ export async function openSession(options: {
     // plumbbob call the contract makes.
     if (!result.content.includes(expectedVersion())) {
       throw new Error(
-        `warmup version guard: session resolves "${result.content.trim().slice(0, 40)}", expected ${expectedVersion()} — a marketplace plumbbob is shadowing the plugin under test.`,
+        `warmup version guard: expected ${expectedVersion()}, session replied:\n${result.content.trim().slice(0, 400)}\n— a marketplace plumbbob is shadowing the plugin under test, or the plugin copy cannot run.`,
       )
     }
     // The ledger guard (latched only): the warmup tick is what arms the latch
@@ -156,9 +157,10 @@ export async function openSession(options: {
   }
 }
 
-function toTurnResult(result: GenerateResult<string>, durationMs: number): TurnResult {
+function toTurnResult(prompt: string, result: GenerateResult<string>, durationMs: number): TurnResult {
   const reported = (result.provider_reported?.claude_cli ?? {}) as { session_id?: unknown }
   return {
+    prompt,
     content: String(result.content),
     finishReason: String(result.finish_reason),
     costUsd: result.cost?.total_usd ?? null,

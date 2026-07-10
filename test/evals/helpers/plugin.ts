@@ -7,7 +7,7 @@
 // stays — work-plane guidance is not the latch. The copy is built once per
 // process and reused across runs.
 
-import { cpSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -16,7 +16,11 @@ export type Sweep = 'baseline' | 'latched'
 
 export const REPO_ROOT = fileURLToPath(new URL('../../..', import.meta.url))
 
-const PLUGIN_ENTRIES = ['.claude-plugin', 'skills', 'hooks', 'bin', 'dist'] as const
+// package.json rides along because the CLI reads its version from
+// `../package.json` relative to dist; node_modules is symlinked (not copied)
+// because dist imports checkride at module load — without it the copy's CLI
+// cannot even print a version.
+const PLUGIN_ENTRIES = ['.claude-plugin', 'skills', 'hooks', 'bin', 'dist', 'package.json'] as const
 
 // The hook events the baseline strips. Everything else in hooks.json survives.
 const LATCH_HOOK_EVENTS = ['UserPromptSubmit', 'PreToolUse'] as const
@@ -37,6 +41,7 @@ function buildBaselineCopy(): string {
   for (const entry of PLUGIN_ENTRIES) {
     cpSync(join(REPO_ROOT, entry), join(dir, entry), { recursive: true })
   }
+  symlinkSync(join(REPO_ROOT, 'node_modules'), join(dir, 'node_modules'), 'dir')
   const hooksPath = join(dir, 'hooks', 'hooks.json')
   writeFileSync(hooksPath, `${JSON.stringify(stripLatchHooks(readHooks(hooksPath)), null, 2)}\n`)
   return dir

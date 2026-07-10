@@ -147,4 +147,5 @@ folder, so it rides the branch into the PR.)*
   detect this contamination (0.6.6 has no turn hook to double-tick).
 - 2026-07-10 — step 4 checkpointed · a489a069b — Green-gate contracts (1, 4, 7) + runner skeleton
 - 2026-07-10 — step 5 checkpointed · c3e8f4fe8 — Red-gate contracts (2, 3)
+- 2026-07-10 — step 6 checkpointed · bc14dd34c — Prose-governed contracts (5, 6)
 

@@ -39,7 +39,10 @@
     "build": "tsc -p tsconfig.build.json",
     "prepack": "pnpm run clean && pnpm run build",
     "check": "checkride",
-    "test": "vitest run"
+    "test": "vitest run",
+    "eval:baseline": "pnpm build && node test/evals/run.ts --sweep baseline",
+    "eval:latched": "pnpm build && node test/evals/run.ts --sweep latched",
+    "eval:report": "node test/evals/run.ts --report"
   },
   "devEngines": {
     "packageManager": {

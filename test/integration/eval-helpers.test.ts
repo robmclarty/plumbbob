@@ -45,6 +45,12 @@ describe('plugin-dir resolution (baseline strips the latch, nothing else)', () =
     for (const entry of ['.claude-plugin/plugin.json', 'skills/pb-build/SKILL.md', 'bin/plumbbob', 'dist/cli.js']) {
       expect(existsSync(join(dir, entry))).toBe(true)
     }
+    // Runnable means RUNNABLE: dist imports checkride (via the node_modules
+    // symlink) and --version reads ../package.json — a copy missing either
+    // cannot even print its version, which sank the first baseline runs.
+    const version = execFileSync('sh', [join(dir, 'bin', 'plumbbob'), '--version'], { encoding: 'utf8' })
+    const pkg = JSON.parse(readFileSync(join(REPO_ROOT, 'package.json'), 'utf8')) as { version: string }
+    expect(version).toContain(pkg.version)
   })
 
   it('stripLatchHooks removes exactly the latch events', () => {
@@ -121,6 +127,30 @@ describe('eval fixtures (seeded plan, deterministic gates)', () => {
   it('uses the shared eval slug so gate scripts and contracts agree on paths', () => {
     const { buildDir } = makeEvalFixture({ steps: STEPS, gate: 'green' })
     expect(buildDir.endsWith(join('.plumbbob', 'builds', EVAL_SLUG))).toBe(true)
+  })
+})
+
+describe('runner outcome derivation and retry classification', () => {
+  const req = (pass: boolean) => ({ name: 'r', pass, kind: 'required' as const })
+  const val = (pass: boolean) => ({ name: 'v', pass, kind: 'validity' as const })
+  const inf = (pass: boolean) => ({ name: 'i', pass, kind: 'info' as const })
+
+  it('derives pass/fail/invalid from check kinds; info never gates', async () => {
+    const { deriveOutcome } = await import('../evals/run.ts')
+    expect(deriveOutcome({ checks: [val(true), req(true), inf(false)], turns: [] })).toBe('pass')
+    expect(deriveOutcome({ checks: [val(true), req(false), inf(true)], turns: [] })).toBe('fail')
+    // A failed validity wins over everything — the run never earned a verdict.
+    expect(deriveOutcome({ checks: [val(false), req(false)], turns: [] })).toBe('invalid')
+  })
+
+  it('retries only the infra error class — a returned run is never rerun', async () => {
+    const { isInfraError } = await import('../evals/run.ts')
+    const { claude_cli_error } = await import('fascicle')
+    expect(isInfraError(new claude_cli_error('startup_timeout', 'x', {}))).toBe(true)
+    expect(isInfraError(new claude_cli_error('auth_expired', 'x', {}))).toBe(true)
+    // max-turns exhaustion comes back as subprocess_exit — terminal, not infra.
+    expect(isInfraError(new claude_cli_error('subprocess_exit', 'x', {}))).toBe(false)
+    expect(isInfraError(new Error('anything else'))).toBe(false)
   })
 })
 
