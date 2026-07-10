@@ -83,6 +83,15 @@ differs from the model you're running as, say so before implementing — the hum
    `--body` for the deterministic done-when + seam + diffstat fallback). Do **not** bump
    the version or changelog — that is the human's `/version` call.
 
+   **The latch makes this pause real (D64).** On the default (non-`--auto`) path you
+   build the step and reach the pause *in one turn* — so under plumbbob's turn hook the
+   checkpoint at the end of that turn is **refused** ("no human turn since this step
+   began"), and that refusal **is** the pause working as designed. Do exactly what the
+   pause already asks: present the diff and the self-review, **end the turn**, and the
+   human's next message is the tick that lands the checkpoint when you re-fire. **Never
+   route around a refusal with a raw `git commit`** — the work plane stays free (D10/D13),
+   but the *record* is latched on purpose.
+
 ## `--auto` — let the agent be the clock (opt-in)
 
 `/pb-build --auto` is the explicit escape hatch when the human wants unattended
@@ -141,3 +150,8 @@ just the one more entry already in the halt list above.
   `build` writes the diff, `after` is advisory — none can checkpoint, flip a step, or
   chain. `blocked` → unblock and re-run; `drift` → `/pb-refine`. You are still the one
   who verifies and (bar `--auto`) the human is still the clock.
+- **A refused checkpoint is the pause, not an error (D64).** Under plumbbob's turn
+  hook a same-turn `checkpoint` is refused by design — present the diff, **end the
+  turn**, and the human's next message is the tick that lands it on re-fire. Never route
+  around it with a raw `git commit`; `--auto`, a typed range, or `auto: true` are the
+  only self-approvals.

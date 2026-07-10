@@ -163,6 +163,16 @@ PAUSE — read the diff as an editor. Approve to checkpoint, or send fixes.
 > **This pause is the product.** You read the diff and say "yes, this matches what I
 > intended." It reads the *diff, not the author* — a step you wrote by hand or vibed in
 > another session verifies exactly the same way (see *The pluggable executor* below).
+>
+> **The latch makes the pause real.** Nothing ever blocks an edit — the work plane is
+> pure guidance — but the *record* is latched: when the session runs under plumbbob's
+> turn hook, `checkpoint` refuses to land a step in the same turn it began, so the agent
+> **cannot** self-checkpoint past you. That refusal *is* this pause — the agent presents
+> the diff and ends its turn, and **your next message is the tick** that lets the
+> checkpoint land. You don't have to trust the agent to stop; the ledger stops it. (Say
+> the word by name — `/pb-build --auto` or a range like `1-3` — and you grant it
+> self-approval for that run; that grant can only come from a prompt *you* typed. See
+> [D64–D66](decisions.md#d64).)
 
 You approve. Only then does it checkpoint — committing the work, recording the SHA,
 flipping the step to `[x]`, and returning to the `DESIGN` boundary, where it **stops**:

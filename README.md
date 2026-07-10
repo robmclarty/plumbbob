@@ -213,13 +213,25 @@ actually learning is the method: decisions before code, one verified step at a
 time, capture instead of chase. That transfers to whatever tool wins. If
 something better ships, you walk away with your archives and your habits intact.
 
-**…admit the pause is unenforceable?** It is — on purpose ([D10](docs/decisions.md#d10)/[D13](docs/decisions.md#d13) in
-[`docs/decisions.md`](docs/decisions.md)). A hard lock buys ritual, not control:
-a determined model routes around it. So PlumbBob enforces deterministically where
-it can — `checkpoint` refuses on a red check, `revert` restores only recorded
-SHAs — and leaves human what must be human: you, reading the diff at the pause.
-When guidance does get blown through, the checkpoint record makes recovery one
-command. Cheap recovery, not prevention, is the control that actually matters.
+**…admit the pause is unenforceable?** On the **work** plane, yes — on purpose
+([D10](docs/decisions.md#d10)/[D13](docs/decisions.md#d13) in
+[`docs/decisions.md`](docs/decisions.md)): a hard lock on every edit buys ritual, not
+control, because a determined model routes around it and a denial mid-thought leaves no
+legal move. But the **record** is a different plane, and there the tick *is* latched
+([D64–D66](docs/decisions.md#d64)): `checkpoint` refuses to land a step until the harness
+records a human turn since that step began, so the agent cannot self-commit past you —
+the refusal simply *is* the pause. That extends the deterministic edge PlumbBob already
+holds — `checkpoint` refuses a red check, `start` refuses a dirty tree, `revert` restores
+only recorded SHAs — to the one boundary the product is named after, while leaving human
+what must be human: you, reading the diff. **Guidance on the work, a latch on the
+record.** And when a raw commit does slip the ledger, `status` says so and the checkpoint
+record makes recovery one command — cheap recovery, not a cage, is the control that
+matters.
+
+> The latch's payoff is measured, not asserted: the review-hardening eval harness sweeps
+> this loop **before and after** the latch lands, and the before/after delta is the
+> receipt. That report is a forthcoming companion — until it publishes, see
+> [D64–D66](docs/decisions.md#d64) for the mechanics it measures.
 
 ## Documentation
 

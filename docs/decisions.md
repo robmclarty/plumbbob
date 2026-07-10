@@ -95,7 +95,10 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   clears the control state — but never refuses the exit without a report. Renamed from `wrap`
   ([**D29**](#d29)). *Tagged in* `finish.ts`, the `pb-finish` skill. (Supersedes [**D19**](#d19).)
 - <a id="d10"></a>**D10 — The boundary is a pause, not a lock.** Nothing blocks edits; the loop pulls up
-  to the verify pause and waits. *Tagged in* `cli-core.ts`.
+  to the verify pause and waits. *Scope note ([**D64**](#d64)):* this holds on the **work** plane — no
+  edit is ever blocked — but the checkpoint *tick* is now latched to the harness's record of a human
+  turn, so a same-turn land is refused and the refusal *is* the pause. Guidance on the work, a latch on
+  the record. *Tagged in* `cli-core.ts`, `latch.ts`.
 - <a id="d13"></a>**D13 — No edit-blocking guards.** There is no pre-edit muzzle, seam-guard, or bash-guard,
   no human-only `mode` escape hatch, and no `CLAUDECODE` in-session refusal — guidance, not
   enforcement. `rules/no-session-detection.yml` is the tripwire: `process.env.CLAUDECODE`
@@ -341,6 +344,43 @@ below.)
   reporter, and small-model economics beat the switch toll there. The human steers with `/model`,
   informed by the per-step recommendation ([**D62**](#d62)) — prose in `pb-plan`/`pb-build`
   nudges, never forces. *Expressed in* the `pb-*` skill frontmatters.
+
+The **approval latch** (July 2026, `.plumbbob/builds/2026-07-09-the-approval-latch/`, from
+`research/06-approval-latch.md`) added [**D64**](#d64)–[**D66**](#d66): ledger-plane
+enforcement of the checkpoint tick, while the work plane stays guidance ([**D10**](#d10)/[**D13**](#d13)).
+
+- <a id="d64"></a>**D64 — The approval latch: ledger-plane enforcement.** Nothing blocks an edit — the
+  work plane stays guidance ([**D10**](#d10)/[**D13**](#d13) intact) — but the checkpoint *tick* is
+  latched: `checkpoint` refuses to land a step until the harness's turn ledger records a **human turn
+  since the step was entered**, *because* the two boundaries live on different planes — guidance on the
+  **work**, a latch on the **record**. A refused checkpoint is not an error; the refusal message *is*
+  the pause (present the diff, end the turn, the human's next prompt is the tick that lands it on
+  re-fire). A six-row predicate decides it, first hit wins — `isTTY` (a human at the keyboard) → an
+  absent `TURN`/`TICK` (ledger dormant / hand-built diff) → the standing `auto` ([**D27**](#d27)) → a
+  one-turn `GRANT` ([**D65**](#d65)) → `TURN > TICK` → else refuse — reading only `TURN`/`TICK`/`GRANT`/
+  `isTTY`, never the host ([**D13**](#d13)), and running *before* the check gate (cheap first). It
+  **amends [**D10**](#d10)'s scope** and joins the existing verb-boundary family (`checkpoint` refuses
+  red [**D32**](#d32), `start` refuses dirty [**D22**](#d22), the agent envelope can't advance the loop
+  [**C6**](#c6)). A host with no hooks grows no ledger and behaves exactly as before — the latch stays
+  dormant rather than wedging. *Tagged in* `latch.ts`, `checkpoint.ts`, `sidecar.ts`, `build.ts`,
+  `start.ts`, `turn.ts`, `doctor.ts`.
+- <a id="d65"></a>**D65 — Grants come from the human's literal prompt.** One-turn self-approval is minted
+  only from strings the model cannot type — `pb-build` is `disable-model-invocation`, so a `--auto`
+  flag or an `N-M` range reaches the `turn` hook only because the human typed it — *because* a grant the
+  model can forge is no grant. The `GRANT` file is scoped (`auto` | `range M`) and rewritten on **every**
+  tick (minted on a match, cleared otherwise), so its lifetime is **one turn** by construction; a typed
+  range beats `--auto` (bounded wins), and a `range M` refuses at the ceiling (step > M) with a
+  top-of-range affordance. The [**D27**](#d27) `auto` settings key stays the *standing* personal grant,
+  visible in `status`. *Tagged in* `turn.ts`, `latch.ts`, `sidecar.ts`.
+- <a id="d66"></a>**D66 — Out-of-band commits are surfaced, never blocked.** The human commits freely
+  ([**C5**](#c5)); a raw `git commit` the model issues while a step is in flight becomes a permission
+  *question* (a `PreToolUse` ask-hook that emits `ask`, never `deny` — [**D13**](#d13) intact), and
+  `status` prints one neutral reconciliation line when commits landed since the last checkpoint outside
+  the ledger — *because* prevention where it's free (the ask-hook), detection where it isn't (the
+  receipts line). The latch is a ratchet against completion-drive, not a cage against a forger: every
+  forge stays loud (transcript, `status`, the eval tier), so `doctor` also reports the latch
+  live/dormant to make a missing turn hook visible. *Tagged in* `git.ts`, `orient.ts`, `status.ts`,
+  `doctor.ts`, `hooks/pre-bash-commit.sh`.
 
 ### Superseded
 

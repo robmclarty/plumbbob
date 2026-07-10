@@ -203,6 +203,12 @@ describe('plan — the whole-goal move: scaffold + frame, no code', () => {
     expect(body).toMatch(/open question/i)
     expect(body).toMatch(/human/i)
   })
+
+  it('names the latch on the plan commit, incl. the first-plan-of-session seam (D64)', () => {
+    expect(body).toMatch(/latch/i)
+    expect(body).toMatch(/git commit/) // never route around it with a raw git commit
+    expect(body).toMatch(/guidance-governed/i) // the documented first-plan-of-session seam
+  })
 })
 
 describe('step — the single-increment move: one verifiable step', () => {
@@ -287,6 +293,13 @@ describe('build — the default engine: implement the planned step, then verify'
     expect(body).toMatch(/\d+-\d+/) // e.g. `1-3`
     expect(body).toMatch(/range/i)
   })
+
+  it('names the approval latch — a refused same-turn checkpoint IS the pause, never a raw git commit (D64)', () => {
+    expect(body).toMatch(/latch/i)
+    expect(body).toMatch(/refus/i) // a refused checkpoint
+    expect(body).toMatch(/end the turn/i) // present the diff and end the turn
+    expect(body).toMatch(/git commit/) // never route around it with a raw git commit
+  })
 })
 
 describe('verify — the tick: check, self-review, validate, PAUSE, checkpoint', () => {
@@ -324,6 +337,13 @@ describe('verify — the tick: check, self-review, validate, PAUSE, checkpoint',
 
   it('leaves version bumps to the human (no auto /version)', () => {
     expect(body).toMatch(/version/i)
+  })
+
+  it('names the approval latch — the refusal is the pause, ended and re-ticked, never a raw git commit (D64)', () => {
+    expect(body).toMatch(/latch/i)
+    expect(body).toMatch(/refus/i)
+    expect(body).toMatch(/end the turn/i)
+    expect(body).toMatch(/git commit/)
   })
 })
 

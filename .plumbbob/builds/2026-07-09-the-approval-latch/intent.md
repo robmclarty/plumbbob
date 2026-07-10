@@ -243,7 +243,7 @@ strike any you disagree with.)*
    tests drive the hook with JSON stdin fixtures.
    - seam: `hooks/pre-bash-commit.sh` (new), `hooks/hooks.json`, `test/hooks.test.ts`
    - model: sonnet — a small hook script, fully specified by the done-when
-5. [ ] Receipts — **done when:** `status` prints the out-of-band-commits line
+5. [x] Receipts — **done when:** `status` prints the out-of-band-commits line
    only when the count is positive; `doctor` reports latch live/dormant with the
    wiring hint for both install kinds.
    - seam: `src/lib/orient.ts`, `src/verbs/status.ts`, `src/verbs/doctor.ts`, matching tests
