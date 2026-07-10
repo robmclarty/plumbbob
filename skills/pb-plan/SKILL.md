@@ -103,13 +103,19 @@ an agent can follow with `/pb-build`. The argument only seeds how you get there.
    baseline → plan → steps. Pass a proportional `--body` (the single-quoted stdin
    heredoc) when the rationale is worth carrying; skip it for a small plan. Do this
    only on the human's approval — the plan is their convergence.
-   - **The plan commit is latched too (D64).** Like a step, `checkpoint --plan` refuses
-     to land in the same turn `start` stamped it: present the plan, **end the turn**, and
-     the human's approving message is the tick that lets it commit on re-fire — the
-     refusal *is* the plan pause. Never route around it with a raw `git commit`. (One
-     documented seam: the very first plan of a brand-new session runs `start` *before*
-     the turn hook has ever ticked, so that single commit predates the ledger and stays
-     guidance-governed — it lands without a refusal.)
+   - **The plan commit is latched too (D64).** Once the turn ledger exists, `checkpoint
+     --plan` refuses to land in the same turn `start` stamped it: present the plan,
+     **end the turn**, and the human's approving message is the tick that lets it
+     commit on re-fire — the refusal *is* the plan pause. Never route around it with a
+     raw `git commit`. (One documented seam: the very first plan of a brand-new
+     session runs `start` *before* the turn hook has ever ticked, so that single
+     commit predates the ledger and stays guidance-governed — it lands without a
+     refusal.)
+   - **Say what the commit publishes.** The close-out line names the tracked folder:
+     `.plumbbob/builds/<slug>/` now rides this branch into the PR, so teammates will
+     see the plan and build record in review. In the same breath, offer the way out:
+     a repo that won't track a tool folder can restart with `plumbbob start --local`
+     (a fully untracked sidecar) before any steps are built.
 7. **Offer to stress-test it.** Suggest `/pb-refine` to attack the frame for holes (or
    to repair the plan as it drifts). Optional, the human's call.
 

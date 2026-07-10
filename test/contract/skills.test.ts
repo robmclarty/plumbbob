@@ -209,6 +209,12 @@ describe('plan — the whole-goal move: scaffold + frame, no code', () => {
     expect(body).toMatch(/git commit/) // never route around it with a raw git commit
     expect(body).toMatch(/guidance-governed/i) // the documented first-plan-of-session seam
   })
+
+  it('discloses the tracked builds/ folder at close-out and offers --local (disclosed, not discovered)', () => {
+    expect(body).toMatch(/rides this branch into the PR/i)
+    expect(body).toMatch(/teammates/i)
+    expect(body).toMatch(/start --local/)
+  })
 })
 
 describe('step — the single-increment move: one verifiable step', () => {
