@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import {
@@ -9,8 +9,10 @@ import {
   buildLogPath,
   checkpointsPath,
   clearSpike,
+  clearTick,
   excludeControl,
   excludeSidecar,
+  grantPath,
   hasSession,
   inSpike,
   intentPath,
@@ -20,7 +22,10 @@ import {
   sidecarDir,
   slugify,
   spikePath,
+  stampTick,
   stepPath,
+  tickPath,
+  turnPath,
 } from '../sidecar.ts'
 import { setLocalSetting } from '../settings.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -37,6 +42,35 @@ describe('path helpers', () => {
     expect(checkpointsPath(root)).toBe('/tmp/x/.plumbbob/checkpoints')
     expect(intentPath(root)).toBe('/tmp/x/.plumbbob/intent.md')
     expect(buildLogPath(root)).toBe('/tmp/x/.plumbbob/build-log.md')
+    // The turn ledger (D64) is per-worktree, so TURN/GRANT stay flat even when a
+    // build is active; TICK is per-build and follows the artifact folder.
+    expect(turnPath(root)).toBe('/tmp/x/.plumbbob/TURN')
+    expect(grantPath(root)).toBe('/tmp/x/.plumbbob/GRANT')
+    expect(tickPath(root)).toBe('/tmp/x/.plumbbob/TICK')
+    expect(tickPath(root, 'my-build')).toBe('/tmp/x/.plumbbob/builds/my-build/TICK')
+  })
+})
+
+describe('the entry stamp (TICK)', () => {
+  it('stampTick copies the current TURN; clearTick consumes it', () => {
+    const dir = makeTempRepo()
+    mkdirSync(sidecarDir(dir), { recursive: true })
+    writeFileSync(turnPath(dir), '7\n')
+    stampTick(dir)
+    expect(readFileSync(tickPath(dir), 'utf8')).toBe('7\n')
+    clearTick(dir)
+    expect(existsSync(tickPath(dir))).toBe(false)
+    clearTick(dir) // absent is a no-op, not an error
+  })
+
+  it('skips the stamp when the turn ledger is absent or unreadable — dormant, never an error', () => {
+    const dir = makeTempRepo()
+    mkdirSync(sidecarDir(dir), { recursive: true })
+    stampTick(dir) // no TURN at all — a hookless host grows no ledger
+    expect(existsSync(tickPath(dir))).toBe(false)
+    writeFileSync(turnPath(dir), 'not a number\n')
+    stampTick(dir) // a garbage ledger stamps nothing rather than a garbage tick
+    expect(existsSync(tickPath(dir))).toBe(false)
   })
 })
 
@@ -131,9 +165,12 @@ describe('excludeControl', () => {
     for (const pattern of [
       '.plumbbob/STATE',
       '.plumbbob/settings.local.json',
+      '.plumbbob/TURN', // the turn ledger and its grant (D64/D65) — per-worktree control
+      '.plumbbob/GRANT',
       '.plumbbob/builds/*/STEP',
       '.plumbbob/builds/*/SEAM',
       '.plumbbob/builds/*/SPIKE',
+      '.plumbbob/builds/*/TICK', // the entry stamp (D64) — never swept in by stageAll
       '.check/', // the checkride gate's raw output (D32) — never swept into a step commit
     ]) {
       expect(lines.filter((line) => line.trim() === pattern).length).toBe(1)

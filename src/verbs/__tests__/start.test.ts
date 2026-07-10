@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { start } from '../start.ts'
-import { buildDir, hasSession } from '../../lib/sidecar.ts'
+import { buildDir, excludeControl, hasSession, sidecarDir, tickPath, turnPath } from '../../lib/sidecar.ts'
 import { localSetting } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo } from '../../../test/helpers/capture-io.ts'
@@ -41,6 +41,24 @@ describe('start', () => {
     expect(exclude).toContain('.plumbbob/settings.local.json')
     expect(exclude).toContain('.plumbbob/builds/*/SEAM')
     expect(exclude).not.toContain('.plumbbob/')
+  })
+
+  it('stamps the plan entry TICK from a surviving turn ledger (D64)', () => {
+    const dir = makeTempRepo()
+    // A prior session left the ledger and its excludes behind — TURN is excluded
+    // control, so it must not read as the dirty tree `start` refuses on.
+    excludeControl(dir)
+    mkdirSync(sidecarDir(dir), { recursive: true })
+    writeFileSync(turnPath(dir), '3\n')
+    const { code } = captureIo(() => start(dir, ['My Feature']))
+    expect(code).toBe(0)
+    expect(readFileSync(tickPath(dir), 'utf8')).toBe('3\n')
+  })
+
+  it('stamps no TICK when the ledger is absent — the first-session plan stays guidance-governed', () => {
+    const dir = makeTempRepo()
+    captureIo(() => start(dir, ['My Feature']))
+    expect(existsSync(tickPath(dir))).toBe(false)
   })
 
   it('refuses when the derived slug collides with an existing build (D17)', () => {

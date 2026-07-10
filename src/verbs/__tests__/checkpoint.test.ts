@@ -1,10 +1,10 @@
 import { execFileSync } from 'node:child_process'
-import { chmodSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { checkpoint } from '../checkpoint.ts'
 import { start } from '../start.ts'
-import { buildLogPath, checkpointsPath, hasSession, intentPath, stepPath } from '../../lib/sidecar.ts'
+import { buildLogPath, checkpointsPath, hasSession, intentPath, stepPath, tickPath } from '../../lib/sidecar.ts'
 import { settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
@@ -99,6 +99,21 @@ describe('checkpoint', () => {
     expect(stderr).toContain("outside step 1's seam")
     expect(stderr).toContain('stray.ts')
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x]') // committed despite the drift
+  })
+
+  it('clears the entry stamp alongside STEP/SEAM — the next build re-stamps (D64)', async () => {
+    const dir = startedGreen()
+    writeFileSync(tickPath(dir), '4\n') // as `build <n>` stamps when the ledger is live
+    writeFileSync(join(dir, 'work.txt'), 'pending\n')
+    const { code } = await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(code).toBe(0)
+    expect(existsSync(tickPath(dir))).toBe(false)
+    // The stamp is excluded control — stageAll must not have swept it into the commit.
+    const names = execFileSync('git', ['show', '--pretty=format:', '--name-only', 'HEAD'], {
+      cwd: dir,
+      encoding: 'utf8',
+    })
+    expect(names).not.toContain('TICK')
   })
 
   it('refuses on a red check', async () => {
@@ -266,6 +281,13 @@ describe('checkpoint', () => {
       expect(names).not.toContain('work.txt')
       expect(names).not.toContain('.plumbbob/settings.json')
       expect(readFileSync(intentPath(dir), 'utf8')).not.toContain('1. [x]') // no step marked done
+    })
+    it("consumes start's entry stamp — a later hand-built diff finds no stale TICK (D64)", async () => {
+      const dir = startedGreen()
+      writeFileSync(tickPath(dir), '2\n') // as `start` stamps when the ledger is live
+      const { code } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
+      expect(code).toBe(0)
+      expect(existsSync(tickPath(dir))).toBe(false)
     })
     // `--body` reads fd 0, which an in-process unit test can't feed — the subprocess
     // integration test (verify.test.ts) covers the plan commit's `--body` path (C6).

@@ -17,6 +17,7 @@ import {
   hasSession,
   excludeControl,
   excludeSidecar,
+  stampTick,
 } from '../lib/sidecar.ts'
 import { settingsPath, setLocalSetting } from '../lib/settings.ts'
 
@@ -109,6 +110,11 @@ export function start(cwd: string, args: ReadonlyArray<string>): number {
     excludeControl(root)
     intentLocation = `.plumbbob/builds/${slug}/intent.md`
   }
+
+  // The plan's entry stamp (D64): `checkpoint --plan` latches on this tick. Skipped
+  // when TURN is absent — including the known first-session seam where the hook has
+  // never ticked, which leaves that one plan commit guidance-governed.
+  stampTick(root, local ? null : slug)
 
   process.stdout.write(
     `plumbbob: started "${title}" — baseline ${sha.slice(0, 9)}. Frame and decide in ${intentLocation}; \`build\` a step once the decisions are made.\n`,

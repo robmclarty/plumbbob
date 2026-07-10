@@ -4,7 +4,7 @@
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
-import { hasSession, intentPath, resolveBuild, seamPath, stepPath } from '../lib/sidecar.ts'
+import { hasSession, intentPath, resolveBuild, seamPath, stampTick, stepPath } from '../lib/sidecar.ts'
 import { parseStepSeam } from '../lib/intent.ts'
 
 export function build(cwd: string, args: ReadonlyArray<string>): number {
@@ -39,6 +39,7 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
 
   writeFileSync(seamPath(root, slug), `${parsed.seam.join('\n')}\n`)
   writeFileSync(stepPath(root, slug), `${step}\n`)
+  stampTick(root, slug) // the entry stamp (D64): TICK = TURN; skipped when the ledger is dormant.
 
   process.stdout.write(
     `plumbbob: building step ${step}. Seam (for orientation; not a lock):\n${parsed.seam.map((p) => `  ${p}`).join('\n')}\n`,

@@ -216,7 +216,7 @@ D27 the `auto` settings key, D33 `info/exclude`, C5 the human commits freely.)*
 sub-lines are advisory metadata for the human before each `/pb-build`, never a gate;
 strike any you disagree with.)*
 
-1. [ ] The turn ledger — **done when:** `plumbbob turn` ticks `TURN` and
+1. [x] The turn ledger — **done when:** `plumbbob turn` ticks `TURN` and
    mints/clears `GRANT` from hook JSON on stdin; no session ⇒ no-op; malformed input
    ⇒ exit 0; grant parsing covers `--auto`, ranges, range-beats-auto, the namespaced
    skill form; `hooks/hooks.json` registers `UserPromptSubmit`; the verb appears in

@@ -15,6 +15,7 @@ import {
   buildLogPath,
   checkpointsPath,
   clearHandoff,
+  clearTick,
   hasSession,
   intentPath,
   seamPath,
@@ -68,6 +69,7 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   rmSync(seamPath(root), { force: true })
   rmSync(stepPath(root), { force: true })
   clearHandoff(root) // the agent-run ledger is step-scoped (D47) — clear it with the markers.
+  clearTick(root) // the entry stamp (D64) is spent — the next `build <n>` re-stamps.
 
   process.stdout.write(`plumbbob: step ${step} checkpointed — ${sha.slice(0, 9)}. Back at the boundary.\n`)
   return 0
@@ -84,6 +86,9 @@ function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
   stagePath(root, buildFolder(root))
   const sha = commit(root, planSubject(root), bodyArg(args) ?? undefined)
   appendFileSync(checkpointsPath(root), `plan ${sha}\n`)
+  // The plan landing consumes `start`'s entry stamp (D64): a later hand-built diff
+  // (no `build <n>`) must find no stale TICK and stay guidance-governed.
+  clearTick(root)
   process.stdout.write(`plumbbob: plan committed — ${sha.slice(0, 9)}. Baseline → plan → steps.\n`)
   return 0
 }

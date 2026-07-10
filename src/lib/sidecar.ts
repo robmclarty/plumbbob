@@ -241,6 +241,41 @@ export function setGrant(root: string, grant: string | null): void {
   }
 }
 
+// TICK is the per-build entry stamp (D64): the TURN value recorded when work was
+// entered (`build <n>` for a step, `start` for the plan), cleared when `checkpoint`
+// lands. The latch compares TURN against it to know whether a human turn intervened
+// across the entry→checkpoint span.
+export function tickPath(root: string, slug?: string | null): string {
+  return join(artifactDir(root, slug), 'TICK')
+}
+
+// Stamp TICK with the current TURN. Stamped only when TURN holds a readable count:
+// a host with no hooks never grows a ledger, so the latch stays dormant there
+// instead of wedging (row 2 of the matrix).
+export function stampTick(root: string, slug?: string | null): void {
+  const turn = readTurnCount(root)
+  if (turn === null) return
+  writeFileSync(tickPath(root, slug), `${turn}\n`)
+}
+
+// Consume the entry stamp — `checkpoint` clears it when a step (or the plan) lands,
+// the same beat that clears STEP/SEAM/handoff. Absent is a no-op; the rmSync lives
+// here with the sidecar's other deletions.
+export function clearTick(root: string, slug?: string | null): void {
+  rmSync(tickPath(root, slug), { force: true })
+}
+
+// The TURN count, or null when the ledger is absent or unreadable — absence is the
+// "dormant" signal stampTick keys off, never an error.
+function readTurnCount(root: string): number | null {
+  try {
+    const n = Number.parseInt(readFileSync(turnPath(root), 'utf8').trim(), 10)
+    return Number.isFinite(n) && n >= 0 ? n : null
+  } catch {
+    return null
+  }
+}
+
 // Walk up from `cwd` to the nearest ancestor with an active session (a
 // `.plumbbob/STATE` file), or null when there is none. The turn hook runs on every
 // human prompt in every repo; this is the cheap, git-free probe that keeps it a
@@ -286,9 +321,16 @@ export function excludeControl(root: string): void {
   addExcludes(root, [
     `${DIRNAME}/STATE`,
     `${DIRNAME}/settings.local.json`,
+    // The turn ledger and its one-turn grant (D64/D65): per-worktree control the
+    // model never writes, and never commits.
+    `${DIRNAME}/TURN`,
+    `${DIRNAME}/GRANT`,
     `${DIRNAME}/builds/*/STEP`,
     `${DIRNAME}/builds/*/SEAM`,
     `${DIRNAME}/builds/*/SPIKE`,
+    // The entry stamp (D64) is in-flight control like STEP/SEAM — checkpoint's
+    // stageAll must never sweep it into a step commit.
+    `${DIRNAME}/builds/*/TICK`,
     // The agent-run handoff ledger (D47) is step-scoped in-flight state, not a
     // tracked artifact — it must never ride a step commit into the PR.
     `${DIRNAME}/builds/*/handoff.json`,

@@ -182,6 +182,7 @@ describe('runCheck (checkride seam, mocked runChecks)', () => {
       schema_version: 1,
       timestamp: '2026-01-01T00:00:00.000Z',
       ok: checks.every((c) => c.ok),
+      checks_run: checks.filter((c) => c.skipped !== true).length, // skipped entries excluded, per the contract
       total_duration_ms: 0,
       checks,
     }
@@ -204,7 +205,7 @@ describe('runCheck (checkride seam, mocked runChecks)', () => {
 
   const greenResult = (): RunResult => {
     const summary = summaryOf([summaryCheck({ name: 'stub' })])
-    return { ok: true, summary, exitCode: 0 }
+    return { ok: true, summary, exitCode: 0, runs: [] }
   }
 
   it('maps absent flags to checkride defaults: false booleans, null slot lists', async () => {
@@ -244,7 +245,7 @@ describe('runCheck (checkride seam, mocked runChecks)', () => {
       summaryCheck({ name: 'lint', adapter: 'eslint' }),
       summaryCheck({ name: 'docs', skipped: true }),
     ])
-    const { runCheck: run } = await loadWithRunChecksReturning({ ok: false, summary, exitCode: 1 })
+    const { runCheck: run } = await loadWithRunChecksReturning({ ok: false, summary, exitCode: 1, runs: [] })
     const { code, stderr } = await captureIoAsync(() => run(dir))
     expect(code).toBe(1)
     expect(stderr).toContain(

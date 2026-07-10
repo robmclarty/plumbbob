@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { build } from '../build.ts'
 import { start } from '../start.ts'
-import { buildDir, intentPath, seamPath, stepPath } from '../../lib/sidecar.ts'
+import { buildDir, intentPath, seamPath, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo } from '../../../test/helpers/capture-io.ts'
 
@@ -91,12 +91,30 @@ describe('build', () => {
     const alt = buildDir(dir, 'alt-build')
     mkdirSync(alt, { recursive: true })
     writeFileSync(join(alt, 'intent.md'), INTENT)
+    writeFileSync(turnPath(dir), '6\n') // the ledger is per-worktree; the stamp follows the build
 
     const { code } = captureIo(() => build(dir, ['--build', 'alt-build', '2']))
     expect(code).toBe(0)
     // the slug is a bare token after --build; it must not be read as the step number
     expect(readFileSync(join(alt, 'SEAM'), 'utf8')).toBe('src/b.ts\nsrc/c.ts\n')
     expect(readFileSync(join(alt, 'STEP'), 'utf8').trim()).toBe('2')
+    expect(readFileSync(join(alt, 'TICK'), 'utf8')).toBe('6\n')
     expect(existsSync(seamPath(dir))).toBe(false) // the cursor build was not touched
+    expect(existsSync(tickPath(dir))).toBe(false)
+  })
+
+  it('stamps TICK = TURN at entry — the span the checkpoint latch measures (D64)', () => {
+    const dir = startedWithSteps()
+    writeFileSync(turnPath(dir), '5\n')
+    const { code } = captureIo(() => build(dir, ['2']))
+    expect(code).toBe(0)
+    expect(readFileSync(tickPath(dir), 'utf8')).toBe('5\n')
+  })
+
+  it('stamps no TICK when TURN is absent — a hookless host grows no ledger', () => {
+    const dir = startedWithSteps()
+    const { code } = captureIo(() => build(dir, ['2']))
+    expect(code).toBe(0)
+    expect(existsSync(tickPath(dir))).toBe(false)
   })
 })
