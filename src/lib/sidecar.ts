@@ -215,6 +215,48 @@ export function clearSpike(root: string, slug?: string | null): void {
   rmSync(spikePath(root, slug), { force: true })
 }
 
+// --- The turn ledger (D64/D65): a `.plumbbob/TURN` count the model never writes,
+// and a one-turn `.plumbbob/GRANT` beside it — both flat, per-worktree control
+// (never per-build, never committed). `plumbbob turn` (the UserPromptSubmit hook)
+// ticks TURN once per human prompt and rewrites GRANT from the literal prompt; the
+// checkpoint latch reads them. Kept in the sidecar so the lone GRANT `rmSync` stays
+// where deletions are allowed (C4/centralize-destructive-fs). ---
+
+export function turnPath(root: string): string {
+  return join(root, DIRNAME, 'TURN')
+}
+
+export function grantPath(root: string): string {
+  return join(root, DIRNAME, 'GRANT')
+}
+
+// Rewrite (or clear) the one-turn GRANT: a non-null value is the minted grant
+// (`auto` | `range M`), null clears it. Pairing the write with its delete here means
+// a grant can never half-persist, and the delete lives where deletions belong.
+export function setGrant(root: string, grant: string | null): void {
+  if (grant === null) {
+    rmSync(grantPath(root), { force: true })
+  } else {
+    writeFileSync(grantPath(root), `${grant}\n`)
+  }
+}
+
+// Walk up from `cwd` to the nearest ancestor with an active session (a
+// `.plumbbob/STATE` file), or null when there is none. The turn hook runs on every
+// human prompt in every repo; this is the cheap, git-free probe that keeps it a
+// silent no-op outside a live plumbbob session — filesystem only, never a host
+// sniff (C5/D13).
+export function findSessionRoot(cwd: string): string | null {
+  let dir = cwd
+  let parent = dirname(dir)
+  while (dir !== parent) {
+    if (hasSession(dir)) return dir
+    dir = parent
+    parent = dirname(dir)
+  }
+  return hasSession(dir) ? dir : null
+}
+
 // Append `patterns` to the repo's info/exclude, each at most once (idempotent —
 // a re-`start` after finish must not double-add). `gitPath` resolves to the
 // *common* gitdir's exclude — the only one git reads — so this works from a

@@ -19,6 +19,7 @@ import { finish } from './verbs/finish.ts'
 import { init } from './verbs/init.ts'
 import { doctor } from './verbs/doctor.ts'
 import { agent } from './verbs/agent.ts'
+import { turn } from './verbs/turn.ts'
 
 type Verb = {
   readonly name: string
@@ -39,6 +40,7 @@ const VERBS: ReadonlyArray<Verb> = [
   { name: 'init', summary: 'link plumbbob into Claude Code as an in-place plugin (~/.claude/skills/plumbbob); --uninstall to undo' },
   { name: 'doctor', summary: 'diagnose the plugin link + detect a legacy flat sidecar; doctor --migrate moves it into builds/ (staged, not committed)' },
   { name: 'agent', summary: 'agent list | run <name> [--step N] [--mode before|build|after]: list or spawn a user-authored agent' },
+  { name: 'turn', summary: 'turn: UserPromptSubmit hook machinery — tick the turn ledger from stdin (not a user verb)' },
 ]
 
 // PlumbBob (D1/D10/D13): the deciding/executing boundary is a pause, not a lock,
@@ -98,6 +100,8 @@ async function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>):
       return doctor(cwd, rest)
     case 'agent':
       return agent(cwd, rest)
+    case 'turn':
+      return turn(cwd, rest)
     default:
       process.stderr.write(`plumbbob: unknown verb '${verb}'. Run 'plumbbob help' for the verb table.\n`)
       return 1
