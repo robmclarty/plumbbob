@@ -115,4 +115,5 @@ folder, so it rides the branch into the PR.)*
      approval, before a build turn). The end-of-session tick cannot unlatch a
      checkpoint mid-turn (nothing runs after the final message).
 - 2026-07-10 — step 1 checkpointed · 133462543 — Spike: contract 1, once, for real
+- 2026-07-10 — step 2 checkpointed · 613d9401d — Driver + plugin-dir resolver + fixtures
 

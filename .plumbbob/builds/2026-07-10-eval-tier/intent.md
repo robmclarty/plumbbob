@@ -86,7 +86,7 @@ reports/evals/         runs-<date>-<sweep>.jsonl + <date>.md (committed)
    cost) has a written answer in this build's log.
    - seam: `test/evals/spike.ts`, `package.json`, `pnpm-workspace.yaml`
    - model: sonnet — mechanical driver probe; the answers are boolean
-2. [ ] Driver + plugin-dir resolver + fixtures — **done when:** `openSession`/
+2. [x] Driver + plugin-dir resolver + fixtures — **done when:** `openSession`/
    `turn`/`close` and `resolvePluginDir` exist; the baseline copy's hooks.json
    provably lacks UserPromptSubmit/PreToolUse; `makeEvalFixture` covers all
    three gate variants; vitest.config.ts excludes `test/evals/**`.

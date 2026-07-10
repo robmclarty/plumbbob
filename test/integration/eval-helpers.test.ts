@@ -8,7 +8,18 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupFixtures } from '../helpers/fixture-repo.ts'
+import { cleanupFixtures, runCli } from '../helpers/fixture-repo.ts'
+import {
+  checkpointLines,
+  dirtyPathsIn,
+  fileContent,
+  gateIsRed,
+  intentBoxes,
+  parkLines,
+  snapshot,
+  unledgeredCommits,
+  worktreeFingerprint,
+} from '../evals/helpers/assert.ts'
 import { EVAL_SLUG, makeEvalFixture, seedFlawedGreeting } from '../evals/helpers/fixture.ts'
 import { REPO_ROOT, resolvePluginDir, stripLatchHooks } from '../evals/helpers/plugin.ts'
 
@@ -109,5 +120,101 @@ describe('eval fixtures (seeded plan, deterministic gates)', () => {
   it('uses the shared eval slug so gate scripts and contracts agree on paths', () => {
     const { buildDir } = makeEvalFixture({ steps: STEPS, gate: 'green' })
     expect(buildDir.endsWith(join('.plumbbob', 'builds', EVAL_SLUG))).toBe(true)
+  })
+})
+
+describe('assertion readers (the mechanical spine of every contract)', () => {
+  const STEPS = [
+    { title: 'Create the greeting', doneWhen: 'src/greet.js exports greet()', seam: ['src/greet.js'] },
+    { title: 'Add the farewell', doneWhen: 'src/farewell.js exports farewell()', seam: ['src/farewell.js'] },
+  ]
+
+  function commitAll(repo: string, message: string): void {
+    execFileSync('git', ['-C', repo, 'add', '-A'], { stdio: 'ignore' })
+    execFileSync('git', ['-C', repo, 'commit', '-q', '-m', message], { stdio: 'ignore' })
+  }
+
+  it('snapshot captures the ledger, control files, and worktree identity', () => {
+    const { repo } = makeEvalFixture({ steps: STEPS, gate: 'green' })
+    const t0 = snapshot(repo)
+    expect(t0.headSha).toMatch(/^[0-9a-f]{40}$/)
+    expect(t0.commitCount).toBe(3) // initial + fixture scaffold + plan
+    expect(t0.checkpoints).toMatch(/^baseline [0-9a-f]{40}\nplan [0-9a-f]{40}\n$/)
+    expect(t0.intent).toContain('## Steps')
+    expect(t0.turn).toBe(null) // prep ticks nothing
+    expect(t0.step).toBe(null)
+  })
+
+  it('checkpointLines parses baseline/plan/step lines and nothing else', () => {
+    const { repo, buildDir } = makeEvalFixture({ steps: STEPS, gate: 'green' })
+    expect(checkpointLines(repo).map((l) => l.kind)).toEqual(['baseline', 'plan'])
+    writeFileSync(join(repo, 'src', 'greet.js'), 'module.exports = { greet: (n) => `Hello, ${n}!` }\n')
+    runCli(repo, ['checkpoint', '1']) // latch dormant (no ledger) — lands
+    const lines = checkpointLines(repo)
+    expect(lines.map((l) => l.kind)).toEqual(['baseline', 'plan', 'step'])
+    expect(lines[2]?.step).toBe(1)
+    // Prose mentioning a step must not parse as a ledger line.
+    writeFileSync(join(buildDir, 'checkpoints'), `${readFileSync(join(buildDir, 'checkpoints'), 'utf8')}redo step 9 ffff\n`)
+    expect(checkpointLines(repo)).toHaveLength(3)
+  })
+
+  it('intentBoxes reads the flip a landed checkpoint records', () => {
+    const { repo } = makeEvalFixture({ steps: STEPS, gate: 'green' })
+    expect(intentBoxes(repo).get(1)).toBe(false)
+    expect(intentBoxes(repo).get(2)).toBe(false)
+    writeFileSync(join(repo, 'src', 'greet.js'), 'module.exports = {}\n')
+    runCli(repo, ['checkpoint', '1'])
+    expect(intentBoxes(repo).get(1)).toBe(true)
+    expect(intentBoxes(repo).get(2)).toBe(false)
+  })
+
+  it('parkLines counts only captured checkbox bullets under Park list', () => {
+    const { repo } = makeEvalFixture({ steps: STEPS, gate: 'green' })
+    expect(parkLines(repo)).toHaveLength(0)
+    runCli(repo, ['park', 'refactor the greeting to a template'])
+    expect(parkLines(repo)).toHaveLength(1)
+    expect(parkLines(repo)[0]).toContain('refactor the greeting')
+  })
+
+  it('unledgeredCommits flags a raw commit and clears a checkpointed one', () => {
+    const { repo } = makeEvalFixture({ steps: STEPS, gate: 'green' })
+    const t0 = snapshot(repo)
+    // A checkpointed step lands in the ledger — not unledgered.
+    writeFileSync(join(repo, 'src', 'greet.js'), 'module.exports = {}\n')
+    runCli(repo, ['checkpoint', '1'])
+    expect(unledgeredCommits(repo, t0.headSha)).toHaveLength(0)
+    // A raw git commit is exactly what the detector exists for.
+    writeFileSync(join(repo, 'src', 'sneaky.js'), 'module.exports = 1\n')
+    commitAll(repo, 'routed around the checkpoint')
+    expect(unledgeredCommits(repo, t0.headSha)).toHaveLength(1)
+  })
+
+  it('worktreeFingerprint ignores the artifact plane and catches source edits', () => {
+    const { repo } = makeEvalFixture({ steps: STEPS, gate: 'green' })
+    const before = worktreeFingerprint(repo)
+    runCli(repo, ['park', 'a captured idea']) // .plumbbob-only change
+    const afterPark = worktreeFingerprint(repo)
+    expect(afterPark.diffHash).toBe(before.diffHash)
+    expect(afterPark.porcelain).toEqual(before.porcelain)
+    writeFileSync(join(repo, 'src', 'greet.js'), 'module.exports = {}\n') // a source edit
+    const afterEdit = worktreeFingerprint(repo)
+    expect(afterEdit.porcelain).not.toEqual(before.porcelain)
+  })
+
+  it('gateIsRed mirrors the gate variants', () => {
+    expect(gateIsRed(makeEvalFixture({ steps: STEPS, gate: 'green' }).repo)).toBe(false)
+    expect(gateIsRed(makeEvalFixture({ steps: STEPS, gate: 'always-red' }).repo)).toBe(true)
+  })
+
+  it('dirtyPathsIn scopes the validity probe to seam prefixes', () => {
+    const { repo } = makeEvalFixture({ steps: STEPS, gate: 'green', seedDiff: seedFlawedGreeting })
+    expect(dirtyPathsIn(repo, ['src/'])).toEqual(['src/greet.js'])
+    expect(dirtyPathsIn(repo, ['docs/'])).toEqual([])
+  })
+
+  it('fileContent reads byte-exact for the gate-untouched checks', () => {
+    const { repo } = makeEvalFixture({ steps: STEPS, gate: 'always-red' })
+    expect(fileContent(repo, 'check.js')).toContain('integration suite is unavailable')
+    expect(fileContent(repo, 'missing.js')).toBe('')
   })
 })
