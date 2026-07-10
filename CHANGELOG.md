@@ -5,6 +5,29 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.6] - 2026-07-09
+
+- **Added:** intent.md steps take an optional `- model:` sub-line beside the
+  seam — the smallest model that can carry the step, with a one-phrase why.
+  It is scraped best-effort like the other step metadata and surfaced by
+  `plumbbob status` in the next step's detail, so the human can switch models
+  with `/model` before `/pb-build`. It is advisory orientation only, never a
+  gate: nothing reads it to switch a model or refuse a build.
+- **Changed:** the judgment skills (`pb-plan`, `pb-step`, `pb-build`,
+  `pb-verify`, `pb-refine`, `pb-harvest`, `pb-finish`) no longer pin a model
+  and now inherit the session model, so the human's `/model` choice — informed
+  by the per-step recommendation — actually takes effect; a pin was a ceiling
+  as much as a floor and silently downgraded a frontier session. Only the
+  mechanical clerks (`pb-status`, `pb-park`, `pb-spike`, `pb-revert`,
+  `pb-doctor`) stay pinned to haiku.
+- **Fixed:** the seam parser now stops at any following sub-bullet, so a
+  `- model:` note written with backticks can never leak in as a seam path.
+- **Fixed:** `plumbbob checkpoint -m "2"` no longer reads the numeric message
+  as step 2, `--body` on an interactive terminal degrades to the deterministic
+  fallback instead of hanging on an EOF a TTY never sends, and a failed intent
+  checkbox flip now warns on stderr instead of silently letting the dashboard
+  show an already-checkpointed step as next.
+
 ## [0.6.5] - 2026-07-07
 
 - **Fixed:** the command hints plumbbob prints at runtime — the `next →` line in
