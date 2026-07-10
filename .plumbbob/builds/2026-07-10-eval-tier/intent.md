@@ -96,7 +96,7 @@ reports/evals/         runs-<date>-<sweep>.jsonl + <date>.md (committed)
    assert.ts reader is covered by model-free vitest against runCli-driven
    fixtures in the default run.
    - seam: `test/evals/helpers/assert.ts`, `test/integration/eval-helpers.test.ts`
-4. [ ] Green-gate contracts (1, 4, 7) + runner skeleton — **done when:** each
+4. [x] Green-gate contracts (1, 4, 7) + runner skeleton — **done when:** each
    runs at `--n 1` end-to-end and emits structured checks; prompts pinned as
    exported constants.
    - seam: `test/evals/contracts/`, `test/evals/run.ts`
