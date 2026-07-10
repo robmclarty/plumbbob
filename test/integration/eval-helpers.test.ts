@@ -17,6 +17,7 @@ import {
   intentBoxes,
   parkLines,
   snapshot,
+  treeHash,
   unledgeredCommits,
   worktreeFingerprint,
 } from '../evals/helpers/assert.ts'
@@ -210,6 +211,16 @@ describe('assertion readers (the mechanical spine of every contract)', () => {
     const { repo } = makeEvalFixture({ steps: STEPS, gate: 'green', seedDiff: seedFlawedGreeting })
     expect(dirtyPathsIn(repo, ['src/'])).toEqual(['src/greet.js'])
     expect(dirtyPathsIn(repo, ['docs/'])).toEqual([])
+  })
+
+  it('treeHash tracks file contents, not commit state', () => {
+    const { repo } = makeEvalFixture({ steps: STEPS, gate: 'green', seedDiff: seedFlawedGreeting })
+    const seeded = treeHash(repo, 'src')
+    commitAll(repo, 'land the seeded work') // committing identical bytes changes nothing
+    expect(treeHash(repo, 'src')).toBe(seeded)
+    writeFileSync(join(repo, 'src', 'greet.js'), 'module.exports = { greet: () => "changed" }\n')
+    expect(treeHash(repo, 'src')).not.toBe(seeded)
+    expect(treeHash(repo, 'no-such-dir')).toBe(treeHash(repo, 'also-missing')) // empty trees hash alike
   })
 
   it('fileContent reads byte-exact for the gate-untouched checks', () => {

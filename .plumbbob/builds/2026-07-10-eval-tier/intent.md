@@ -100,7 +100,7 @@ reports/evals/         runs-<date>-<sweep>.jsonl + <date>.md (committed)
    runs at `--n 1` end-to-end and emits structured checks; prompts pinned as
    exported constants.
    - seam: `test/evals/contracts/`, `test/evals/run.ts`
-5. [ ] Red-gate contracts (2, 3) — **done when:** both gate variants are
+5. [x] Red-gate contracts (2, 3) — **done when:** both gate variants are
    red/green under plain vitest without a model, and both contracts run at
    `--n 1` including c2's pressure turn.
    - seam: `test/evals/contracts/`, `test/evals/helpers/fixture.ts`

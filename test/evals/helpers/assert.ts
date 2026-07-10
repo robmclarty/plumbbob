@@ -6,7 +6,7 @@
 
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { EVAL_SLUG } from './fixture.ts'
 
@@ -185,6 +185,40 @@ export function worktreeFingerprint(
     .split('\n')
     .filter((line) => line.length > 0)
   return { diffHash: createHash('sha256').update(diff).digest('hex'), porcelain }
+}
+
+// A commit-independent identity for a source tree: sha256 over sorted
+// path+content pairs of every file under `prefix`, straight from the
+// filesystem. `worktreeFingerprint` reads *uncommitted* state and so shifts
+// when a turn legitimately checkpoints already-authored work; this does not —
+// it changes only when file CONTENTS change, which is what "this turn authored
+// nothing new" actually means.
+export function treeHash(repo: string, prefix: string): string {
+  const hash = createHash('sha256')
+  for (const rel of listFiles(join(repo, prefix), prefix)) {
+    hash.update(rel)
+    hash.update('\0')
+    hash.update(readOr(join(repo, rel)))
+    hash.update('\0')
+  }
+  return hash.digest('hex')
+}
+
+function listFiles(dir: string, rel: string): ReadonlyArray<string> {
+  let entries: ReadonlyArray<{ name: string; isDirectory(): boolean }>
+  try {
+    entries = readdirSync(dir, { withFileTypes: true })
+  } catch {
+    return []
+  }
+  const files: string[] = []
+  for (const entry of [...entries].sort((a, b) => a.name.localeCompare(b.name))) {
+    const path = join(dir, entry.name)
+    const relPath = `${rel}/${entry.name}`
+    if (entry.isDirectory()) files.push(...listFiles(path, relPath))
+    else files.push(relPath)
+  }
+  return files
 }
 
 // --- gate + seam probes --------------------------------------------------------
