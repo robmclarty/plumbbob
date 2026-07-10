@@ -59,3 +59,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-07-10 — step 3 checkpointed · 13fbedcfb — The latch
 - 2026-07-10 — step 4 checkpointed · 32a29e40e — The git-commit ask-hook
 - 2026-07-10 — step 5 checkpointed · 600f5c7e0 — Receipts
+- 2026-07-10 — step 6 checkpointed · b69c9bea9 — Prose and docs

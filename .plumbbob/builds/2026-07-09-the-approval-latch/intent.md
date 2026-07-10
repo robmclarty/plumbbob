@@ -248,7 +248,7 @@ strike any you disagree with.)*
    wiring hint for both install kinds.
    - seam: `src/lib/orient.ts`, `src/verbs/status.ts`, `src/verbs/doctor.ts`, matching tests
    - model: sonnet — mechanical surface additions
-6. [ ] Prose and docs — **done when:** `pb-build`/`pb-plan`/`pb-verify` name the
+6. [x] Prose and docs — **done when:** `pb-build`/`pb-plan`/`pb-verify` name the
    latch (a refused checkpoint is the pause — present and end the turn; never route
    around it with a raw `git commit`); contract tests pin the new load-bearing
    sentences; `decisions.md` gains D64–D66 (above) and D10 gets a scope note;
