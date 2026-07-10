@@ -1,15 +1,17 @@
 import { execFileSync } from 'node:child_process'
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { checkpoint } from '../checkpoint.ts'
 import { start } from '../start.ts'
-import { buildLogPath, checkpointsPath, hasSession, intentPath, stepPath, tickPath } from '../../lib/sidecar.ts'
-import { settingsPath } from '../../lib/settings.ts'
+import { buildLogPath, checkpointsPath, grantPath, hasSession, intentPath, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
+import { setLocalSetting, settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
+import { cleanupFixtures, makeFixtureRepo, runCli } from '../../../test/helpers/fixture-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
 afterAll(cleanupTempRepos)
+afterAll(cleanupFixtures)
 
 const INTENT = `# Checkpoint test
 
@@ -254,6 +256,25 @@ describe('checkpoint', () => {
     }
   })
 
+  // Latch row 1 lives here rather than in the subprocess suite below: a child of
+  // runCli always gets a piped stdin, so a real TTY row needs the in-process
+  // patch (the same plumbing the `--body` TTY test uses).
+  it('latch row 1: a TTY stdin is its own approval — allows with no turn since entry (D64)', async () => {
+    const dir = startedGreen()
+    writeFileSync(turnPath(dir), '2\n')
+    writeFileSync(tickPath(dir), '2\n')
+    const stdin = process.stdin as unknown as { isTTY?: boolean }
+    const hadTty = stdin.isTTY
+    stdin.isTTY = true
+    try {
+      const { code } = await captureIoAsync(() => checkpoint(dir, ['1']))
+      expect(code).toBe(0)
+    } finally {
+      stdin.isTTY = hadTty
+    }
+    expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x]')
+  })
+
   // Step 8 — the plan-approval commit (D11): its own commit, before any step,
   // carrying only the build's scaffold so the first step's diff stays clean.
   describe('--plan', () => {
@@ -291,5 +312,125 @@ describe('checkpoint', () => {
     })
     // `--body` reads fd 0, which an in-process unit test can't feed — the subprocess
     // integration test (verify.test.ts) covers the plan commit's `--body` path (C6).
+  })
+})
+
+// Step 3 — the approval latch (D64), driven through the real CLI so each matrix
+// row is proven at the process boundary: a runCli child gets a piped (non-TTY)
+// stdin, and the tests write TURN/TICK/GRANT directly, standing in for the hook
+// tick and the entry stamp. Row 1 (a real TTY) is the in-process test above.
+describe('checkpoint — the approval latch (subprocess, D64)', () => {
+  const LATCH_INTENT = `# Latch test
+
+## Steps
+
+1. [ ] First — **done when:** a works.
+2. [ ] Second — **done when:** b works.
+`
+
+  // A started fixture with the ledger live and no human turn since entry:
+  // TURN == TICK, no grant — the strictest state, refused unless a row above
+  // row 6 speaks. Tests relax exactly the file their row reads.
+  function latchedRepo(): string {
+    const dir = makeFixtureRepo()
+    runCli(dir, ['start', 'Latch test', '--slug', 'latch-test'])
+    writeFileSync(intentPath(dir), LATCH_INTENT)
+    writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true' }))
+    writeFileSync(turnPath(dir), '2\n')
+    writeFileSync(tickPath(dir), '2\n')
+    return dir
+  }
+
+  it('row 6: refuses with exit 1 and the pause affordance when no human turn intervened', () => {
+    const dir = latchedRepo()
+    const { status, stderr } = runCli(dir, ['checkpoint', '1'])
+    expect(status).toBe(1)
+    expect(stderr).toContain('checkpoint refused — no human turn since this step began')
+    expect(stderr).toContain('present the diff and the self-review')
+    expect(stderr).toContain('`/pb-build --auto`')
+    // Nothing landed: the step is still open.
+    expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [ ]')
+  })
+
+  it('the latch precedes the check gate (C4): a latched repo refuses as the pause, not as red', () => {
+    const dir = latchedRepo()
+    writeFileSync(settingsPath(dir), JSON.stringify({ check: 'false' })) // red gate
+    const { status, stderr } = runCli(dir, ['checkpoint', '1'])
+    expect(status).toBe(1)
+    expect(stderr).toContain('no human turn since this step began')
+    expect(stderr).not.toContain('check failed')
+  })
+
+  it('row 5: a human turn since entry allows the land', () => {
+    const dir = latchedRepo()
+    writeFileSync(turnPath(dir), '3\n') // the hook ticked after entry
+    const { status } = runCli(dir, ['checkpoint', '1'])
+    expect(status).toBe(0)
+    expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x]')
+  })
+
+  it('row 2: a host with no hooks grows no ledger and lands exactly as today (dormant)', () => {
+    const dir = makeFixtureRepo()
+    runCli(dir, ['start', 'Latch test', '--slug', 'latch-test'])
+    writeFileSync(intentPath(dir), LATCH_INTENT)
+    writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true' }))
+    const { status } = runCli(dir, ['checkpoint', '1'])
+    expect(status).toBe(0)
+  })
+
+  it('row 2: a hand-built diff (no entry stamp) stays guidance-governed', () => {
+    const dir = latchedRepo()
+    rmSync(tickPath(dir)) // no `build <n>` ran — TURN alone does not latch
+    const { status } = runCli(dir, ['checkpoint', '1'])
+    expect(status).toBe(0)
+  })
+
+  it('row 3: the standing `auto: true` in settings.local.json allows (D27)', () => {
+    const dir = latchedRepo()
+    setLocalSetting(dir, 'auto', true) // merges beside the activeBuild cursor
+    const { status } = runCli(dir, ['checkpoint', '1'])
+    expect(status).toBe(0)
+  })
+
+  it('row 4: a one-turn `auto` grant allows (D65)', () => {
+    const dir = latchedRepo()
+    writeFileSync(grantPath(dir), 'auto\n')
+    const { status } = runCli(dir, ['checkpoint', '1'])
+    expect(status).toBe(0)
+  })
+
+  it('row 4: a range grant allows steps at or under its ceiling', () => {
+    const dir = latchedRepo()
+    writeFileSync(grantPath(dir), 'range 2\n')
+    const { status } = runCli(dir, ['checkpoint', '1'])
+    expect(status).toBe(0)
+  })
+
+  it('row 4: a range grant refuses past its ceiling with the top-of-range affordance', () => {
+    const dir = latchedRepo()
+    writeFileSync(grantPath(dir), 'range 1\n')
+    const { status, stderr } = runCli(dir, ['checkpoint', '2'])
+    expect(status).toBe(1)
+    expect(stderr).toContain('the range you granted ends at step 1')
+    expect(stderr).toContain('re-fire to continue')
+  })
+
+  it('a malformed GRANT contributes nothing — the latch still refuses (D27)', () => {
+    const dir = latchedRepo()
+    writeFileSync(grantPath(dir), 'garbage\n')
+    const { status, stderr } = runCli(dir, ['checkpoint', '1'])
+    expect(status).toBe(1)
+    expect(stderr).toContain('no human turn since this step began')
+  })
+
+  it("--plan latches on start's stamp: refused same-turn, landed after a human turn", () => {
+    const dir = latchedRepo() // TICK stands in for the stamp `start` writes when TURN exists
+    const refused = runCli(dir, ['checkpoint', '--plan'])
+    expect(refused.status).toBe(1)
+    expect(refused.stderr).toContain('no human turn since this step began')
+    writeFileSync(turnPath(dir), '3\n') // the human's next message ticks the ledger
+    const landed = runCli(dir, ['checkpoint', '--plan'])
+    expect(landed.status).toBe(0)
+    expect(readFileSync(checkpointsPath(dir), 'utf8')).toMatch(/plan [0-9a-f]{40}/)
   })
 })

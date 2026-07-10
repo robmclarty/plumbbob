@@ -223,7 +223,7 @@ strike any you disagree with.)*
    help as machinery.
    - seam: `src/verbs/turn.ts` (new), `src/lib/sidecar.ts`, `src/cli-core.ts`, `hooks/hooks.json`, `src/verbs/__tests__/turn.test.ts` (new)
    - model: sonnet — mechanical stdin/regex work, fully enumerated by the done-when
-2. [ ] Stamp at entry — **done when:** `build <n>` and `start` write `TICK` =
+2. [x] Stamp at entry — **done when:** `build <n>` and `start` write `TICK` =
    current `TURN` when `TURN` exists (and skip when it doesn't); `checkpoint` clears
    `TICK` alongside `STEP`/`SEAM`/handoff; sidecar grows `turnPath`/`grantPath`/
    `tickPath` helpers.

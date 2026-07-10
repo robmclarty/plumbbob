@@ -22,6 +22,7 @@ import {
   stepPath,
 } from '../lib/sidecar.ts'
 import { runCheck } from '../lib/check.ts'
+import { checkLatch } from '../lib/latch.ts'
 import { markStepDone, parseSteps, parseTitle } from '../lib/orient.ts'
 import { parseStepSeam, scopeDrift } from '../lib/intent.ts'
 import { appendToSection, checkpointLogLine } from '../lib/buildlog.ts'
@@ -40,6 +41,15 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   const step = resolveStep(root, args)
   if (step === null) {
     process.stderr.write('plumbbob: no step to checkpoint — pass a number, or plan a step in intent.md first.\n')
+    return 1
+  }
+
+  // The approval latch (D64) precedes the check gate (C4): the tick may not land
+  // without a human turn since entry, a grant, or a dormant ledger. The refusal
+  // message is the pause affordance — exit 1 and hand the turn back.
+  const latch = checkLatch(root, step)
+  if (!latch.allow) {
+    process.stderr.write(latch.message)
     return 1
   }
 
@@ -83,6 +93,15 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
 // An optional `--body` (stdin heredoc, D34) rides along; the folder is whitelisted
 // artifact plane, so there is no scope-drift to warn about.
 function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
+  // The latch (D64) covers the plan commit too, keyed on the TICK that `start`
+  // stamped: the plan pause is a pause. No step number — a range grant does not
+  // speak to a plan.
+  const latch = checkLatch(root, null)
+  if (!latch.allow) {
+    process.stderr.write(latch.message)
+    return 1
+  }
+
   stagePath(root, buildFolder(root))
   const sha = commit(root, planSubject(root), bodyArg(args) ?? undefined)
   appendFileSync(checkpointsPath(root), `plan ${sha}\n`)
