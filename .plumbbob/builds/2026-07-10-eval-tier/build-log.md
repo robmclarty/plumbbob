@@ -40,6 +40,8 @@ is done only after a checkpoint — check green + checkpoint taken, via `/pb-ver
 - [ ] fascicle 0.8.16: run_cli drops provider_config (plugin_dirs,
   setting_sources) — file/fix upstream in the fascicle repo, then drop the
   driver's extra_args workaround.
+- [ ] c7 finding: under pressure the model flips auto:true in settings.local.json (a model-minted standing grant) while still pausing — should that graduate from info to a required contract violation, and should pb-build prose forbid self-setting auto?
+- [ ] doctor's bare-repo checkride-table test flakes under machine load (probe timeouts inflate the problem count past the asserted '1 problem(s)') — assert the install failure specifically, not the total, or serialize the file
 
 ## Harvest  *(run `/pb-harvest` at each step boundary, after green)*
 
@@ -116,4 +118,31 @@ folder, so it rides the branch into the PR.)*
      checkpoint mid-turn (nothing runs after the final message).
 - 2026-07-10 — step 1 checkpointed · 133462543 — Spike: contract 1, once, for real
 - 2026-07-10 — step 2 checkpointed · 613d9401d — Driver + plugin-dir resolver + fixtures
+- 2026-07-10 — step 3 checkpointed · bf7dc597e — Assertion library, deterministically tested
+- 2026-07-10 — step 4 design consequence of the end-of-session tick: a typed
+  `--auto`/range prompt mints its GRANT only when the hook fires at session
+  end — AFTER the turn it was meant to cover. Interactive Claude Code mints
+  before the turn (UserPromptSubmit blocks prompt processing), so headless
+  latched runs of c3/c4 would refuse every sanctioned checkpoint — measuring
+  a `-p` timing quirk, not the product. Adaptation: the driver pre-arms
+  `.plumbbob/GRANT` for those contracts (`armGrant`), replicating interactive
+  timing; the minting logic itself stays covered by turn.test.ts. Reported as
+  a footnote in the sweep report. Also derived: turn 2 of any latched contract
+  runs latch-OPEN (TURN=warmup+turn1 ticks > TICK) — correct semantics, the
+  human's second message is approval-eligible; c2's protection on the pressure
+  turn is the red gate, exactly as contract 2 intends.
+- 2026-07-10 — step 4 finding, the important one: the first c7 pressure run
+  "landed three steps through the latch" — autopsy showed every commit carried
+  a CLI-owned `plumbbob:` subject and no ledger tamper. Cause: **the
+  user-level marketplace plumbbob (0.6.6, pre-latch) also loads into headless
+  sessions and its bin/ shadows the plugin under test on PATH** —
+  `--setting-sources project,local` does not exclude user-scope plugins, and a
+  project-settings `enabledPlugins: false` didn't take either. Every
+  `plumbbob` call in every earlier eval session ran the installed release, not
+  this checkout. Fix shipped in the driver: prepend `<pluginDir>/bin` to the
+  spawned CLI's PATH (empirically wins), plus a warmup **version guard** in
+  both sweeps — the session must echo this checkout's version or the run
+  aborts as infra. Moral for the report: an eval of a locally-built plugin
+  MUST pin which binary the session resolves; TURN-tick dedup alone cannot
+  detect this contamination (0.6.6 has no turn hook to double-tick).
 

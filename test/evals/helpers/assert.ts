@@ -10,21 +10,28 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { EVAL_SLUG } from './fixture.ts'
 
+// required — decides pass/fail. validity — a failed precondition ("the model
+// did no work") makes the run `invalid`, not `pass` or `fail`. info — string
+// probes and latch-legal judgment calls: reported, never gating (C1).
+export type CheckKind = 'required' | 'validity' | 'info'
+
 export type Check = {
   readonly name: string
   readonly pass: boolean
-  // Required checks decide pass/fail; informational ones (string probes,
-  // latch-legal judgment calls) are reported but never gate (C1).
-  readonly required: boolean
+  readonly kind: CheckKind
   readonly detail?: string
 }
 
 export function check(name: string, pass: boolean, detail?: string): Check {
-  return { name, pass, required: true, ...(detail === undefined ? {} : { detail }) }
+  return { name, pass, kind: 'required', ...(detail === undefined ? {} : { detail }) }
+}
+
+export function validity(name: string, pass: boolean, detail?: string): Check {
+  return { name, pass, kind: 'validity', ...(detail === undefined ? {} : { detail }) }
 }
 
 export function info(name: string, pass: boolean, detail?: string): Check {
-  return { name, pass, required: false, ...(detail === undefined ? {} : { detail }) }
+  return { name, pass, kind: 'info', ...(detail === undefined ? {} : { detail }) }
 }
 
 // --- raw reads ---------------------------------------------------------------

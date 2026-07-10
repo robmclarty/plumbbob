@@ -8,10 +8,20 @@
 // flag rides `extra_args`, which does flow. Drop the workaround when fascicle
 // threads the real config (parked in the build log).
 
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { create_engine, type Engine, type GenerateResult } from 'fascicle'
-import { resolvePluginDir, type Sweep } from './plugin.ts'
+import { REPO_ROOT, resolvePluginDir, type Sweep } from './plugin.ts'
+
+let cachedVersion: string | null = null
+
+function expectedVersion(): string {
+  if (cachedVersion === null) {
+    const pkg = JSON.parse(readFileSync(join(REPO_ROOT, 'package.json'), 'utf8')) as { version: string }
+    cachedVersion = pkg.version
+  }
+  return cachedVersion
+}
 
 export const EVAL_MODEL = process.env.PLUMBBOB_EVAL_MODEL ?? 'opus'
 export const EVAL_N = readCount(process.env.PLUMBBOB_EVAL_N, 5)
@@ -67,6 +77,14 @@ export type EvalSession = {
   close(): Promise<void>
 }
 
+// The PATH the eval process started with. Each session prepends its plugin's
+// bin/ ahead of it: a user-level marketplace plumbbob install ALSO loads into
+// headless sessions and its bin/ otherwise shadows the plugin under test —
+// every `plumbbob` call in the session would silently run the installed
+// release instead of this checkout (discovered live: c7 "passed through the
+// latch" because the latch wasn't in the 0.6.6 binary it was calling).
+const BASE_PATH = process.env.PATH ?? ''
+
 export async function openSession(options: {
   readonly repo: string
   readonly sweep: Sweep
@@ -76,6 +94,9 @@ export async function openSession(options: {
   const model = options.model ?? EVAL_MODEL
   const pluginDir = resolvePluginDir(sweep)
   const pluginArgs = ['--plugin-dir', pluginDir, '--setting-sources', 'project,local']
+  // The spawned CLI inherits this env; sessions run sequentially, so the
+  // per-sweep prepend can safely live on process.env.
+  process.env.PATH = `${join(pluginDir, 'bin')}:${BASE_PATH}`
   const engine: Engine = create_engine({
     providers: { claude_cli: { default_cwd: repo, auth_mode: 'auto' } },
   })
@@ -105,9 +126,22 @@ export async function openSession(options: {
   }
 
   async function warmup(): Promise<void> {
-    if (sweep === 'baseline') return
-    await turn('Reply with exactly: ok', { allowedTools: 'Read', maxTurns: 3, timeoutMs: 120_000 })
-    if (!existsSync(join(repo, '.plumbbob', 'TURN'))) {
+    const result = await turn('Run exactly `plumbbob --version` and reply with only its output.', {
+      allowedTools: 'Bash(plumbbob --version:*)',
+      maxTurns: 4,
+      timeoutMs: 120_000,
+    })
+    // The version guard (both sweeps): the session must resolve THIS checkout's
+    // CLI, not a marketplace install's — anything else invalidates every
+    // plumbbob call the contract makes.
+    if (!result.content.includes(expectedVersion())) {
+      throw new Error(
+        `warmup version guard: session resolves "${result.content.trim().slice(0, 40)}", expected ${expectedVersion()} — a marketplace plumbbob is shadowing the plugin under test.`,
+      )
+    }
+    // The ledger guard (latched only): the warmup tick is what arms the latch
+    // for the first measured turn.
+    if (sweep === 'latched' && !existsSync(join(repo, '.plumbbob', 'TURN'))) {
       throw new Error('warmup turn completed but the turn ledger did not tick — is the plugin loading?')
     }
   }
@@ -148,4 +182,16 @@ export function readLedger(repo: string, name: 'TURN' | 'GRANT'): string | null 
   } catch {
     return null
   }
+}
+
+// Pre-arm a one-turn grant for the auto/range contracts (c3/c4). Interactive
+// Claude Code mints the grant BEFORE the turn (UserPromptSubmit blocks prompt
+// processing); headless `-p` ticks at ~session end, after the turn it should
+// have covered — so without this, a latched sweep would refuse every
+// sanctioned checkpoint and measure a `-p` timing quirk instead of the skill.
+// The minting logic itself stays covered by turn.test.ts; the sweep report
+// footnotes this. No-op on baseline (no ledger exists to grant against).
+export function armGrant(repo: string, sweep: Sweep, grant: 'auto' | `range ${number}`): void {
+  if (sweep === 'baseline') return
+  writeFileSync(join(repo, '.plumbbob', 'GRANT'), `${grant}\n`)
 }

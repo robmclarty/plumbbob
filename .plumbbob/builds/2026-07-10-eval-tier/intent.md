@@ -92,7 +92,7 @@ reports/evals/         runs-<date>-<sweep>.jsonl + <date>.md (committed)
    three gate variants; vitest.config.ts excludes `test/evals/**`.
    - seam: `test/evals/helpers/driver.ts`, `test/evals/helpers/plugin.ts`,
      `test/evals/helpers/fixture.ts`, `vitest.config.ts`
-3. [ ] Assertion library, deterministically tested — **done when:** every
+3. [x] Assertion library, deterministically tested — **done when:** every
    assert.ts reader is covered by model-free vitest against runCli-driven
    fixtures in the default run.
    - seam: `test/evals/helpers/assert.ts`, `test/integration/eval-helpers.test.ts`
