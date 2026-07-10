@@ -3,7 +3,6 @@ name: pb-plan
 description: "Frame a fresh goal and author the whole plan — Frame, Decisions, Constraints, and all Steps — before any code. Three input modes: no arg interviews you; a file path absorbs a spec; any other text expands your inline intent."
 argument-hint: "[spec-path | intent]"
 disable-model-invocation: true
-model: opus
 allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob start:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent list:*)
 ---
 
@@ -16,6 +15,11 @@ of your head and onto `intent.md` *before* any code. By default it authors the
 **complete plan, including all the Steps**, so the happy path afterward is just
 `/pb-build` until done. (Revising a single increment later is the separate `/pb-step`
 move; do not confuse the two.)
+
+A model note: this skill **inherits the session model** — nothing pins or switches
+it. Planning is where frontier-class judgment pays for itself, so if the session is
+running a small model, suggest `/model opus` (or better) before framing — the
+human's call, never a gate.
 
 ## Three input modes (disambiguated for you — no quotes needed)
 
@@ -54,13 +58,24 @@ an agent can follow with `/pb-build`. The argument only seeds how you get there.
    ```markdown
    1. [ ] <title> — **done when:** <criterion, ideally a test or check result>
       - seam: `<file>`, `<file>`
+      - model: <optional — smallest that can carry it, with the one-phrase why>
    ```
 
    Every step needs a **done-when** `/pb-verify` can check and a **seam** (the exact
    paths it touches). Later steps may be fuzzier than the first — that's fine; they get
    sharpened just-in-time when you reach them with `/pb-step`. Keep each small enough to
    verify in one review pass.
-5. **Offer harness bindings** *(optional — D42/D43)*. If the build will lean on
+
+   **Recommend a model per step where the signal is clear** *(optional)*: the
+   `- model:` sub-line names the **smallest model that can carry the step**, with the
+   one-phrase why — the human buys capability only where the step needs it. E.g.
+   `model: sonnet — mechanical, fully specified by the done-when` for rote edits;
+   `model: opus — strong-assertion test authoring` where the tests do the thinking;
+   `model: fable — subtle cross-cutting design` for judgment-heavy or creative work.
+   It is advisory metadata for the human — `/pb-status` surfaces it before each build —
+   never a gate, and nothing switches models automatically. Write it plain (no
+   backticks) and omit it when any model would do.
+5. **Offer harness bindings** *(optional)*. If the build will lean on
    user-authored agents, author `harness.json` in the build folder (beside `intent.md`)
    and review it at the **same plan pause**, alongside the steps — bindings are
    plan-adjacent configuration, so they converge with the plan. It binds agents to a
@@ -76,15 +91,15 @@ an agent can follow with `/pb-build`. The argument only seeds how you get there.
    }
    ```
 
-   Keep it **bindings + prose only, never a conditional** (C3): the file says *which*
+   Keep it **bindings + prose only, never a conditional**: the file says *which*
    agent, not *when* — the host model reads each manifest's `when` prose and a step's
    `note` and decides when to fire one mid-build. Skip the file entirely when no step
-   uses an agent — the loop runs identically without it (D54). The plan commit picks it
+   uses an agent — the loop runs identically without it. The plan commit picks it
    up automatically (it lives in the build folder).
 6. **Commit the plan.** Once the human approves the frame and steps, run
    `plumbbob checkpoint --plan` to commit the scaffold on its own — subject
    `plumbbob: plan — <title>`, only `.plumbbob/builds/<slug>/`, a `plan <sha>` line in
-   `checkpoints` (D36). This keeps the first step's diff clean, so history reads
+   `checkpoints`. This keeps the first step's diff clean, so history reads
    baseline → plan → steps. Pass a proportional `--body` (the single-quoted stdin
    heredoc) when the rationale is worth carrying; skip it for a small plan. Do this
    only on the human's approval — the plan is their convergence.

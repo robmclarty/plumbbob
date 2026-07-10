@@ -37,7 +37,9 @@ Frames a fresh goal and authors the **complete** plan before any code. It disamb
 its input itself: no argument runs an interview, a file path absorbs an out-of-band spec,
 any other text is expanded as inline intent. Under the hood it runs `plumbbob start`
 (recording the baseline), fills the build's `intent.md` — Frame, Decisions, Constraints,
-and **all** Steps, each with a done-when and a seam — and commits the plan on its own
+and **all** Steps, each with a done-when, a seam, and (where the signal is clear) an
+advisory `model:` recommendation naming the smallest model that can carry the step — and
+commits the plan on its own
 (`plumbbob checkpoint --plan`), so the first step's diff stays clean. It writes intent
 only, never source. If the build will lean on user-authored agents it also offers to
 author `harness.json` beside `intent.md` — the per-step [slot bindings](#the-harness-slots)
@@ -88,9 +90,11 @@ step in flight stays protected; the list gets triaged later by `/pb-harvest`.
 ### pb-status
 
 The orientation move — a thin trigger for `plumbbob status`. Prints the dashboard (title,
-phase, the step list with the next step's done-when and seam, last checkpoint, parked and
-open-question counts) and names the single next move. Read-only; fire it any time you lose
-the thread.
+phase, the step list with the next step's done-when, seam, and advisory model
+recommendation, last checkpoint, parked and open-question counts) and names the single
+next move. The model line is the plan's suggestion of the smallest model that can carry
+the next step — switch before building, or ignore it; guidance, never a gate. Read-only;
+fire it any time you lose the thread.
 
 ### pb-harvest
 

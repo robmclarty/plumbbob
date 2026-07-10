@@ -71,12 +71,13 @@ export function parseStepSeam(content: string, step: number): SeamParse {
   // The seam declaration is the seam line plus any wrapped continuation lines.
   // Truncate each at an HTML-comment opener so a trailing `<!-- ... -->` note
   // (which may carry its own backticks) is never read as a seam token; a
-  // continuation ends at the first line whose pre-comment text has no backtick.
+  // continuation ends at the first line whose pre-comment text has no backtick
+  // or that opens a new sub-bullet (a `- model:` note may carry backticks too, D62).
   const seamStart = seamLines[0] ?? 0
   const decl: string[] = []
   for (let i = seamStart; i < itemLines.length; i++) {
     const beforeComment = (itemLines[i] ?? '').split('<!--')[0] ?? ''
-    if (i > seamStart && !beforeComment.includes('`')) {
+    if (i > seamStart && (!beforeComment.includes('`') || /^\s*-\s/.test(beforeComment))) {
       break
     }
     decl.push(beforeComment)

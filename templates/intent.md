@@ -47,12 +47,16 @@ holes `/pb-refine` surfaces, and as blockers fold in during BUILD.)*
 *(The build plan. `/pb-plan` authors the **whole list up front** — each step a small,
 verifiable increment with its own **done-when** and **seam** (the paths it will touch,
 which `/pb-build` records in the build folder's `SEAM` for orientation — awareness, not a lock).
+An optional **model** line recommends the smallest model that can carry the step —
+mechanical work runs fine on a small model; subtle or creative work earns a frontier
+one. Advisory for the human, never a gate; write it plain, no backticks (D62).
 Then drive `/pb-build` until done. Later steps may be fuzzier than the first;
 sharpen the next one just-in-time with `/pb-step` (empty input auto-syncs it), and use
 `/pb-refine` to repair the whole plan when a blocker rewrites it.)*
 
 1. [ ] <step> — **done when:** <criterion, ideally a test or check result>
    - seam: `<file>`, `<file>`
+   - model: <smallest that can carry it, e.g. sonnet — mechanical, fully specified>
 2. [ ] <step> — **done when:** <criterion>
    - seam: `<file>`
 

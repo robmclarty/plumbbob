@@ -3,7 +3,6 @@ name: pb-step
 description: Revise the next increment just-in-time — sharpen the next undone step against what's now true, or (with input) re-cut, split, or add a step. Empty input runs an automatic sharpen. One at a time; the human approves.
 argument-hint: "[what-changed]"
 disable-model-invocation: true
-model: opus
 allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob agent list:*)
 ---
 
@@ -36,17 +35,19 @@ grew — but its everyday job is to sharpen, not to invent.
 2. **Propose the revision** (or the new/split step): a one-line **title**, a **done-when**
    `/pb-verify` can validate, and a **seam** (exact paths, or a `dir/` grant). Keep it
    small enough to verify in one review pass. Show the before/after so the human can see
-   what you changed and why.
+   what you changed and why. Re-check the optional `- model:` recommendation too:
+   a step that sharpened into rote work can drop to a smaller model; one that grew subtle
+   earns a frontier one. Advisory, plain text (no backticks), never a gate.
 3. **Get the human's OK**, then write it into `## Steps` in the standard format —
    `N. [ ] <title> — **done when:** <criterion>` with a `- seam:` sub-line. Revise the
    existing step in place; only append when you are genuinely adding an increment.
-4. **Revise the step's harness bindings if they drifted too** *(optional — D42)*. If the
+4. **Revise the step's harness bindings if they drifted too** *(optional)*. If the
    build carries a `harness.json` (beside `intent.md`) and the reality that moved the
    step also changed which agents it wants, sharpen that step's slot bindings
    (`before`/`build`/`after`) and `note` at the same time — this is the just-in-time
    counterpart to `/pb-plan`'s plan-time binding. `plumbbob agent list` shows what's
    resolvable. Same rule as the plan move: bindings + prose only, never a conditional
-   (C3). Leave it untouched when the step's agents are still right, or when the build
+  . Leave it untouched when the step's agents are still right, or when the build
    uses none.
 
 ## The hard contracts

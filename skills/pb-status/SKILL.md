@@ -19,4 +19,8 @@ skill carries **no Edit and no Write tool**: the CLI is the source of truth, so
 ## What it does
 
 1. Surface the injected `status` output — the dashboard and its suggested next move.
-2. If it reads `NO ACTIVE SESSION`, tell the human to `/pb-plan` to frame a goal.
+2. If the next step's detail carries a `model:` line, point it out: it is the
+   plan's recommendation of the smallest model that can carry that step, so the human
+   can switch (e.g. `/model sonnet`) before firing `/pb-build` — or ignore it. Guidance,
+   never a gate.
+3. If it reads `NO ACTIVE SESSION`, tell the human to `/pb-plan` to frame a goal.

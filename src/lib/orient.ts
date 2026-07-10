@@ -12,6 +12,7 @@ export type Step = {
   readonly title: string
   readonly planned: boolean // carries a `done when:` criterion
   readonly doneWhen: string | null // the criterion text, for the dashboard
+  readonly model: string | null // the advisory `- model:` recommendation, verbatim (D62)
 }
 
 export type Checkpoint = { readonly n: number; readonly sha: string }
@@ -30,6 +31,9 @@ export type Orientation = {
   // the human can review (and `/pb-step`-revise) before `/pb-build`.
   readonly nextDoneWhen: string | null
   readonly nextSeam: ReadonlyArray<string>
+  // The next step's advisory model recommendation (D62) — orientation for the
+  // human choosing where to spend attention and tokens, never a gate.
+  readonly nextModel: string | null
 }
 
 export type OrientInput = {
@@ -89,7 +93,9 @@ export function parseSteps(intent: string): Step[] {
     const block = lines.slice(s.idx, blockEnd).join('\n')
     const dw = /\*\*done when:\*\*\s*(.+)/i.exec(block)
     const doneWhen = dw ? (dw[1] ?? '').trim() : null
-    return { n: s.n, done: s.done, title: s.title, planned: /done when/i.test(block), doneWhen }
+    const md = /^\s*-\s*model:\s*(.+)$/im.exec(block)
+    const model = md ? (md[1] ?? '').trim() : null
+    return { n: s.n, done: s.done, title: s.title, planned: /done when/i.test(block), doneWhen, model }
   })
 }
 
@@ -180,6 +186,7 @@ export function orient(input: OrientInput): Orientation {
     next: nextMove(input.spiking, steps, input.inFlight, parked),
     nextDoneWhen: nextUndone?.doneWhen ?? null,
     nextSeam: seamParse !== null && seamParse.ok ? seamParse.seam : [],
+    nextModel: nextUndone?.model ?? null,
   }
 }
 
@@ -201,6 +208,9 @@ export function formatOrientation(o: Orientation): string {
     }
     if (o.nextSeam.length > 0) {
       detail.push(`        seam: ${o.nextSeam.join(', ')}`)
+    }
+    if (o.nextModel !== null) {
+      detail.push(`        model: ${o.nextModel}`)
     }
     return detail.length > 0 ? [head, ...detail].join('\n') : head
   })

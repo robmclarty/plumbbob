@@ -321,6 +321,26 @@ below.)
   joined, the `*because*` rationale intact), skipped lines warn on stderr, and the scrape
   never refuses — it feeds an agent's context, not a gate; seam parsing stays strict
   precisely because seams gate git behavior ([**D23**](#d23)). *Tagged in* `intent.ts`, `agents.ts`.
+- <a id="d62"></a>**D62 — A step's model recommendation is advisory metadata.** An optional
+  `- model:` sub-line beside the seam names the **smallest model that can carry the step**, with
+  the one-phrase why (mechanical, fully-specified work → a small model; strong-assertion test
+  authoring → a mid one; subtle, creative, or cross-cutting work → a frontier one) — the human
+  buys capability only where the step needs it. Scraped best-effort like the other step meta
+  ([**D61**](#d61)) and surfaced by `status` in the next step's detail; orientation for the human
+  choosing where to spend attention and tokens, **never a gate** — nothing reads it to switch a
+  model or refuse a build. Plain text, no backticks, so it can never be mistaken for a seam token.
+  *Tagged in* `orient.ts`, `intent.ts`, the intent template, the `pb-plan`/`pb-step`/`pb-status`
+  skills.
+- <a id="d63"></a>**D63 — Judgment skills inherit the session model; only the clerks pin.** The
+  judgment moves (`pb-plan`, `pb-step`, `pb-build`, `pb-verify`, `pb-refine`, `pb-harvest`,
+  `pb-finish`) carry no `model:` frontmatter — a pin is a ceiling as much as a floor (it silently
+  downgrades a frontier session), it overrides the very choice [**D62**](#d62) asks the human to
+  make, and prompt caches are model-scoped, so every pinned hop re-reads the whole conversation
+  uncached at full input price. The mechanical clerks (`pb-status`, `pb-park`, `pb-spike`,
+  `pb-revert`, `pb-doctor`) stay pinned to `haiku`: model quality is irrelevant to a verbatim
+  reporter, and small-model economics beat the switch toll there. The human steers with `/model`,
+  informed by the per-step recommendation ([**D62**](#d62)) — prose in `pb-plan`/`pb-build`
+  nudges, never forces. *Expressed in* the `pb-*` skill frontmatters.
 
 ### Superseded
 

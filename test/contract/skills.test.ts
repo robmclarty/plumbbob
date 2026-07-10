@@ -1,7 +1,8 @@
 // Static content-contract tests for the skills (step 7). These parse the
 // SKILL.md files directly — no fixture repos, no CLI subprocess — and assert the
-// enforced contracts: D12 (fixed names, disable-model-invocation, model pins,
-// status pre-injection, wrong-state refusal, /park is Bash-only) and the
+// enforced contracts: fixed names, disable-model-invocation, the D63 model
+// policy (clerks pin haiku; judgment skills inherit the session model),
+// status pre-injection, wrong-state refusal, /park is Bash-only, and the
 // refine/harvest propose-then-confirm handoffs.
 
 import { readFileSync } from 'node:fs'
@@ -36,10 +37,12 @@ function parseSkill(dir: string): { data: Record<string, string>; body: string }
 
 const ALL = ['pb-refine', 'pb-park', 'pb-harvest'] as const
 
-const MODEL_PINS: Record<string, string> = {
-  'pb-refine': 'opus',
+// The model policy (D63): mechanical clerks pin haiku; the judgment moves carry
+// no pin and inherit the session model — a pin is a ceiling as much as a floor.
+const MODEL_PINS: Record<string, string | undefined> = {
+  'pb-refine': undefined,
   'pb-park': 'haiku',
-  'pb-harvest': 'opus',
+  'pb-harvest': undefined,
 }
 
 describe('every skill (the three reinforcing layers)', () => {
@@ -55,7 +58,7 @@ describe('every skill (the three reinforcing layers)', () => {
         expect(data['disable-model-invocation']).toBe('true')
       })
 
-      it('pins the model per D12', () => {
+      it('follows the model policy (D63): clerks pin haiku, judgment inherits', () => {
         expect(data.model).toBe(MODEL_PINS[dir])
       })
 
@@ -127,10 +130,10 @@ describe('driver skills — the human fires the transition from the chat', () =>
 describe('finish — the close-out: report by default, final commit, clear (D9/D15)', () => {
   const { data, body } = parseSkill('pb-finish')
 
-  it('names itself, disables model invocation, is opus', () => {
+  it('names itself, disables model invocation, inherits the session model (D63)', () => {
     expect(data.name).toBe('pb-finish')
     expect(data['disable-model-invocation']).toBe('true')
-    expect(data.model).toBe('opus')
+    expect(data.model).toBeUndefined()
   })
 
   it('opens with the status pre-injection', () => {
@@ -162,10 +165,10 @@ describe('finish — the close-out: report by default, final commit, clear (D9/D
 describe('plan — the whole-goal move: scaffold + frame, no code', () => {
   const { data, body } = parseSkill('pb-plan')
 
-  it('names itself, disables model invocation, is opus', () => {
+  it('names itself, disables model invocation, inherits the session model (D63)', () => {
     expect(data.name).toBe('pb-plan')
     expect(data['disable-model-invocation']).toBe('true')
-    expect(data.model).toBe('opus')
+    expect(data.model).toBeUndefined()
   })
 
   it('opens with the status pre-injection', () => {
@@ -205,10 +208,10 @@ describe('plan — the whole-goal move: scaffold + frame, no code', () => {
 describe('step — the single-increment move: one verifiable step', () => {
   const { data, body } = parseSkill('pb-step')
 
-  it('names itself, disables model invocation, is opus', () => {
+  it('names itself, disables model invocation, inherits the session model (D63)', () => {
     expect(data.name).toBe('pb-step')
     expect(data['disable-model-invocation']).toBe('true')
-    expect(data.model).toBe('opus')
+    expect(data.model).toBeUndefined()
   })
 
   it('opens with the status pre-injection', () => {
@@ -245,8 +248,8 @@ describe('build — the default engine: implement the planned step, then verify'
     expect(data['disable-model-invocation']).toBe('true')
   })
 
-  it('is opus (implementing a decided step is judgment-laden)', () => {
-    expect(data.model).toBe('opus')
+  it('inherits the session model — the human steers with /model per the step rec (D62/D63)', () => {
+    expect(data.model).toBeUndefined()
   })
 
   it('opens with the status pre-injection', () => {
@@ -294,8 +297,8 @@ describe('verify — the tick: check, self-review, validate, PAUSE, checkpoint',
     expect(data['disable-model-invocation']).toBe('true')
   })
 
-  it('is opus (the self-review is judgment, not mechanism)', () => {
-    expect(data.model).toBe('opus')
+  it('inherits the session model (D63 — judgment runs on what the human chose)', () => {
+    expect(data.model).toBeUndefined()
   })
 
   it('opens with the status pre-injection', () => {
@@ -327,8 +330,8 @@ describe('verify — the tick: check, self-review, validate, PAUSE, checkpoint',
 describe('refine — keep intent.md true: attack for holes + repair drift', () => {
   const { data, body } = parseSkill('pb-refine')
 
-  it('is opus with Read + Edit and no Write', () => {
-    expect(data.model).toBe('opus')
+  it('inherits the session model, with Read + Edit and no Write', () => {
+    expect(data.model).toBeUndefined()
     expect(data['allowed-tools']).toMatch(/\bRead\b/)
     expect(data['allowed-tools']).toMatch(/\bEdit\b/)
     expect(data['allowed-tools']).not.toMatch(/\bWrite\b/)
@@ -377,8 +380,8 @@ describe('park — capture via the dumb CLI, never an edit', () => {
 describe('harvest — propose, the human confirms', () => {
   const { data, body } = parseSkill('pb-harvest')
 
-  it('is opus and DESIGN-only', () => {
-    expect(data.model).toBe('opus')
+  it('inherits the session model and is DESIGN-only', () => {
+    expect(data.model).toBeUndefined()
     expect(body).toMatch(/DESIGN/)
   })
 

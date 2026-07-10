@@ -67,8 +67,10 @@ seam**:
 ## Steps
 1. [ ] Add a token-bucket limiter — **done when:** `test/limiter.test.ts` passes
    - seam: `src/limiter.ts`, `test/limiter.test.ts`
+   - model: opus — strong-assertion test authoring
 2. [ ] Wire the limiter into POST /login — **done when:** the 6th request in 60s returns 429
    - seam: `src/routes/login.ts`, `test/login.rate.test.ts`
+   - model: sonnet — mechanical wiring, fully specified
 3. [ ] Make the limit configurable via env — **done when:** `RATE_LIMIT_MAX` overrides the default in a test
    - seam: `src/limiter.ts`, `src/config.ts`, `test/limiter.config.test.ts`
 ```
@@ -83,8 +85,9 @@ seam**:
 ## 1. Review the plan — `/pb-status`
 
 Before building, glance at what's next. `/pb-status` is read-only; it prints the
-dashboard, surfaces the **next step's done-when and seam** so you can sanity-check it,
-and names the single next move:
+dashboard, surfaces the **next step's done-when, seam, and model recommendation** so
+you can sanity-check it (and switch models before building, if you agree with the
+recommendation), and names the single next move:
 
 ```text
 PlumbBob — Rate-limit the login endpoint   [DESIGN]
@@ -93,6 +96,7 @@ PlumbBob — Rate-limit the login endpoint   [DESIGN]
   ▸ 1  Add a token-bucket limiter   ← next
         done when: `test/limiter.test.ts` passes
         seam: src/limiter.ts, test/limiter.test.ts
+        model: opus — strong-assertion test authoring
     2  Wire the limiter into POST /login
     3  Make the limit configurable via env
 
@@ -176,6 +180,7 @@ tick*. The dashboard tracks the march:
   ▸ 2  Wire the limiter into POST /login   ← next
         done when: the 6th request in 60s returns 429
         seam: src/routes/login.ts, test/login.rate.test.ts
+        model: sonnet — mechanical wiring, fully specified
     3  Make the limit configurable via env
 ```
 

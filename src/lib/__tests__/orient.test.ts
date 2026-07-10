@@ -23,6 +23,7 @@ const INTENT = `# My Feature
    - seam: \`src/a.ts\`
 2. [ ] Second step — **done when:** the thing works.
    - seam: \`src/b.ts\`
+   - model: sonnet — mechanical
 3. [ ] Third step
 
 ## Open questions
@@ -118,6 +119,23 @@ describe('orient parsers', () => {
     expect(steps[0]).toMatchObject({ n: 1, done: true, title: 'First step', planned: false })
     expect(steps[1]).toMatchObject({ n: 2, done: false, title: 'Second step', planned: true })
     expect(steps[2]).toMatchObject({ n: 3, done: false, title: 'Third step', planned: false })
+  })
+
+  it('parseSteps scrapes the optional model recommendation verbatim, per step (D62)', () => {
+    // The recommendation is advisory prose echoed back to the human, so it must
+    // come through verbatim — and only from the step's own block, never a neighbor's.
+    const intent = [
+      '## Steps',
+      '',
+      '1. [ ] a — **done when:** ok',
+      '   - seam: `a.ts`',
+      '   - model: sonnet — mechanical, fully specified',
+      '2. [ ] b — **done when:** ok',
+      '   - seam: `b.ts`',
+    ].join('\n')
+    const steps = parseSteps(intent)
+    expect(steps[0]?.model).toBe('sonnet — mechanical, fully specified')
+    expect(steps[1]?.model).toBe(null)
   })
 
   it('parseOpenQuestions counts only unresolved Q lines', () => {
@@ -286,10 +304,11 @@ describe('formatOrientation', () => {
     expect(out).toContain('next →')
   })
 
-  it('surfaces the next undone step\'s done-when and seam so the human can review it', () => {
+  it('surfaces the next undone step\'s done-when, seam, and model so the human can review it', () => {
     const out = formatOrientation(orient({ ...base }))
     expect(out).toContain('done when: the thing works.')
     expect(out).toContain('seam: src/b.ts')
+    expect(out).toContain('model: sonnet — mechanical')
   })
 
   it('renders the whole dashboard exactly', () => {
@@ -304,6 +323,7 @@ describe('formatOrientation', () => {
         '  ▸ 2  Second step   ← next',
         '        done when: the thing works.',
         '        seam: src/b.ts',
+        '        model: sonnet — mechanical',
         '    3  Third step',
         '',
         'last checkpoint  step 1 · abc1234',
@@ -314,12 +334,13 @@ describe('formatOrientation', () => {
     )
   })
 
-  it('a rough next step shows neither done-when nor seam detail', () => {
+  it('a rough next step shows no done-when, seam, or model detail', () => {
     // "Only what's present" — a rough step must not render empty detail rows.
     const intent = '# T\n\n## Steps\n\n1. [x] a — **done**\n2. [ ] rough idea\n'
     const out = formatOrientation(orient({ ...base, intent }))
     expect(out).not.toContain('done when:')
     expect(out).not.toContain('seam:')
+    expect(out).not.toContain('model:')
   })
 
   it('a multi-file seam joins with commas', () => {

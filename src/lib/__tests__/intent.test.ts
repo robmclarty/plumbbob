@@ -24,6 +24,16 @@ describe('parseStepSeam', () => {
     expect(r.ok && r.seam).toEqual(['a.ts', 'b.ts', 'c.ts', 'd.ts'])
   })
 
+  it('a following sub-bullet is not a seam continuation, even when it carries backticks (D62)', () => {
+    // A `- model:` line written with backticks (against the convention) must end
+    // the seam declaration, never leak its content in as seam tokens.
+    const intent = intentWith(
+      ['1. [ ] Step — **done when:** ok', '   - seam: `a.ts`,', '     `b.ts`', '   - model: `sonnet` — mechanical'].join('\n'),
+    )
+    const r = parseStepSeam(intent, 1)
+    expect(r.ok && r.seam).toEqual(['a.ts', 'b.ts'])
+  })
+
   it('ignores backticks in the done-when line and a trailing HTML comment', () => {
     const intent = intentWith(
       [
