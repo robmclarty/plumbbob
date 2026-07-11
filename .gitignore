@@ -11,6 +11,7 @@ coverage/
 .claude/settings.local.json
 .pnpm-store/
 tsconfig.tsbuildinfo
+.env
 
 # Plumbbob control plane: per-worktree ephemera stay untracked (D2/D3);
 # builds/<slug>/ artifacts are tracked and ride the branch into the PR.
