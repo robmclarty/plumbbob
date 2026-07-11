@@ -107,7 +107,7 @@ an agent can follow with `/pb-build`. The argument only seeds how you get there.
    baseline → plan → steps. Pass a proportional `--body` (the single-quoted stdin
    heredoc) when the rationale is worth carrying; skip it for a small plan. Do this
    only on the human's approval — the plan is their convergence.
-   - **The plan commit is latched too (D64).** Once the turn ledger exists, `checkpoint
+   - **The plan commit is latched too.** Once the turn ledger exists, `checkpoint
      --plan` refuses to land in the same turn `start` stamped it: present the plan,
      **end the turn**, and the human's approving message is the tick that lets it
      commit on re-fire — the refusal *is* the plan pause. Never route around it with a

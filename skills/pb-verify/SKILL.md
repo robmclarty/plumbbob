@@ -63,7 +63,7 @@ this skill verifies it the same way: **it reads the diff, not the author**.
    (done-when + seam + diffstat) on its own. Either way, do **not** bump the version or
    touch the changelog — that is the human's `/version` call.
 
-## The latch makes the pause real (D64)
+## The latch makes the pause real
 
 When this session runs under plumbbob's turn hook, `plumbbob checkpoint` **refuses to
 land a step in the same turn it was entered** — and that refusal **is** this pause, not
@@ -73,7 +73,7 @@ the self-review, **end the turn**, and the human's next message is the tick that
 the checkpoint land when you re-fire. **Never reach for a raw `git commit` to force the
 land** — that forges the very record the latch exists to keep honest, and the
 commit-ask hook asks the human about it anyway. The refusal is a healthy latch doing its
-job on the *record* while the *work* plane stays free (D10/D13); a `/pb-build --auto` or
+job on the *record* while the *work* plane stays free; a `/pb-build --auto` or
 a typed step range in the human's own prompt is the only self-approval, and `auto: true`
 in settings is the standing one.
 
@@ -90,7 +90,7 @@ in settings is the standing one.
 - **`after`-agents advise; they never gate**. Their output feeds the
   self-review — checkride gates, the human approves. `blocked` → unblock and re-run;
   `drift` → `/pb-refine` before checkpointing. No code path makes them blocking.
-- **A refused checkpoint is the pause, never a workaround (D64).** Under the turn
+- **A refused checkpoint is the pause, never a workaround.** Under the turn
   hook a same-turn checkpoint is refused *by design* — present the diff, **end the
   turn**, and let the human's next message re-tick it. Never route around it with a raw
   `git commit`; the latch guards the record, not the work.
