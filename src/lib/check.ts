@@ -13,9 +13,56 @@
 // because a misconfigured gate must not read as broken code (both still block).
 
 import { spawnSync } from 'node:child_process'
-import { runChecks } from 'checkride'
-import type { Summary } from 'checkride'
+import { runChecks, runDoctor } from 'checkride'
+import type { DoctorCheck, Summary } from 'checkride'
 import { resolveString } from './settings.ts'
+
+// The plan-time gate probe (research/07 Build 2): would the gate have anything
+// to run in this repo? `configured` is the settings-ladder `check` override
+// (its presence answers the question by itself); otherwise checkride's doctor
+// detection runs in-process — the same pass `plumbbob doctor` reports as a
+// table. `start` reads this to surface "nothing to check" at PLAN time, while
+// the human is still deciding, instead of at the first refused checkpoint.
+export type GateDetection = {
+  readonly configured: string | null
+  readonly detected: boolean
+}
+
+export async function detectGate(root: string): Promise<GateDetection> {
+  const command = resolveString(root, 'check', '')
+  if (command.length > 0) return { configured: command, detected: true }
+  try {
+    const silent = { write: () => true }
+    const { report } = await runDoctor({ cwd: root, stdout: silent })
+    return { configured: null, detected: gateDetectsTools(report.checks) }
+  } catch {
+    // A broken checkride harness is a different problem with its own reporters
+    // (doctor's ✗ row, runCheck's exit 2) — the plan-time probe stays quiet
+    // rather than mislabeling it "nothing to check".
+    return { configured: null, detected: true }
+  }
+}
+
+// Checkride's always-on repo checks: the adapters its doctor reports even for
+// an EMPTY directory (links, the pnpm-audit security scan, and the
+// publint/attw package-shape probes). They exercise the repo's plumbing, not
+// its code — a gate made only of these green-lights every checkpoint while the
+// human believes their work is being checked. Coupled to checkride's built-in
+// set by construction; the doctor.test.ts probe pins the coupling.
+const ALWAYS_ON_ADAPTERS: ReadonlyArray<string> = ['links', 'pnpm-audit', 'publint', 'attw']
+
+// The detection rule, shared by `start`'s probe and doctor's callout: some tool
+// slot beyond the always-on family has an adapter — i.e. checkride can see the
+// CODE (a tsconfig, a test runner, a linter…), not just the repo.
+export function gateDetectsTools(checks: ReadonlyArray<DoctorCheck>): boolean {
+  return checks.some(
+    (c) =>
+      c.category === 'tool' &&
+      c.adapter !== null &&
+      c.adapter !== undefined &&
+      !ALWAYS_ON_ADAPTERS.includes(c.adapter),
+  )
+}
 
 // Narrowing flags for iteration loops (`plumbbob check --bail --only types,lint`),
 // mapped 1:1 onto checkride's RunFlags. Only the checkride path honors them; the

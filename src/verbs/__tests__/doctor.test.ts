@@ -394,6 +394,10 @@ describe('doctor — the verb', () => {
     expect(stdout).not.toContain('✗ node') // passing env checks stay silent
     expect(stdout).toContain('  ✓ links ← links (built-in)') // an ok adapter row carries what was found
     expect(stdout).toContain('  ○ types — Enable by adding') // an empty slot surfaces checkride's enable hint
+    // The week-1-bounce callout (research/07 Build 2a): a bare repo's gate has
+    // no code checks — say so with the exact settings fix, informationally.
+    expect(stdout).toContain('○ gate: no code checks detected')
+    expect(stdout).toContain('set {"check": "npm test"} in .plumbbob/settings.json')
     expect(stdout).toContain('\n\nplumbbob: 1 problem(s)') // install is the only required failure
   })
 

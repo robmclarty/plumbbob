@@ -1,8 +1,8 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest'
-import type { RunOptions, RunResult, Summary, SummaryCheck } from 'checkride'
-import { runCheck } from '../check.ts'
+import type { DoctorCheck, RunOptions, RunResult, Summary, SummaryCheck } from 'checkride'
+import { detectGate, gateDetectsTools, runCheck } from '../check.ts'
 import type { CheckFlags } from '../check.ts'
 import { sidecarDir } from '../sidecar.ts'
 import { settingsPath, localSettingsPath } from '../settings.ts'
@@ -256,5 +256,47 @@ describe('runCheck (checkride seam, mocked runChecks)', () => {
     )
     expect(stderr).not.toContain('✘ lint')
     expect(stderr).not.toContain('✘ docs')
+  })
+})
+
+describe('detectGate (the plan-time probe, research/07 Build 2a)', () => {
+  // Synthetic DoctorCheck rows — only the fields the rule reads matter.
+  const row = (partial: Partial<DoctorCheck>): DoctorCheck =>
+    ({ category: 'tool', name: 'types', adapter: null, status: 'skip', required: false, ...partial }) as DoctorCheck
+
+  it('gateDetectsTools: a code-slot adapter counts; the always-on family alone does not', () => {
+    expect(gateDetectsTools([row({ name: 'types', adapter: 'tsc' })])).toBe(true)
+    // The always-on repo checks (present even for an empty directory) prove
+    // nothing about the code — a gate of only these is the silent version of
+    // the week-1 bounce.
+    expect(
+      gateDetectsTools([
+        row({ name: 'links (links)', adapter: 'links' }),
+        row({ name: 'pnpm-audit (security)', adapter: 'pnpm-audit' }),
+        row({ name: 'publint (publint)', adapter: 'publint' }),
+        row({ name: 'attw (attw)', adapter: 'attw' }),
+      ]),
+    ).toBe(false)
+    expect(gateDetectsTools([row({ name: 'types', adapter: null })])).toBe(false)
+    // Non-tool categories (env checks) never count as a gate.
+    expect(gateDetectsTools([row({ category: 'env', name: 'node', adapter: 'node' })])).toBe(false)
+    expect(gateDetectsTools([])).toBe(false)
+  })
+
+  it('a configured check answers without running detection', async () => {
+    const dir = makeTempDir()
+    writeSettings(dir, 'npm test')
+    expect(await detectGate(dir)).toEqual({ configured: 'npm test', detected: true })
+  })
+
+  it('a bare repo detects nothing', async () => {
+    const dir = makeTempDir()
+    expect(await detectGate(dir)).toEqual({ configured: null, detected: false })
+  })
+
+  it('a repo with a detectable tool config reads as detected, tool installed or not', async () => {
+    const dir = makeTempDir()
+    writeFileSync(join(dir, 'tsconfig.json'), '{}\n')
+    expect(await detectGate(dir)).toEqual({ configured: null, detected: true })
   })
 })

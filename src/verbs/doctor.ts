@@ -30,6 +30,7 @@ import { fileURLToPath } from 'node:url'
 import { runDoctor } from 'checkride'
 import type { DoctorCheck } from 'checkride'
 import { type AgentListing, listAgents } from '../lib/agents.ts'
+import { gateDetectsTools } from '../lib/check.ts'
 import { marketplacePlumbbob } from '../lib/plugins.ts'
 import { findRepoRoot, gitPath, stagePath } from '../lib/git.ts'
 import { buildDir, excludeControl, listBuilds, readTurn, sidecarDir, slugify } from '../lib/sidecar.ts'
@@ -401,6 +402,17 @@ async function gateReport(cwd: string): Promise<{ readonly lines: string[]; read
         lines.push(`  ✗ ${c.name}${c.hint === null ? '' : `\n      → ${c.hint}`}`)
       }
       if (c.required && c.status !== 'ok') failed += 1
+    }
+    // The week-1 bounce, called out where the human can see it coming
+    // (research/07 Build 2a): no CODE checks detected means checkpoints are
+    // gated only by checkride's always-on repo checks — either a vacuous
+    // refusal or, worse, a green that tested nothing. Informational, with the
+    // exact fix; `start` surfaces the same probe at plan time.
+    if (!gateDetectsTools(report.checks)) {
+      lines.push(
+        '  ○ gate: no code checks detected — checkpoints would be gated by the always-on repo checks alone;' +
+          ' set {"check": "npm test"} in .plumbbob/settings.json, or add tool configs checkride can see',
+      )
     }
     return { lines, failed }
   } catch (err) {
