@@ -27,6 +27,7 @@ is done only after a checkpoint — check green + checkpoint taken, via `/pb-ver
 > Mid-step, every new problem / idea / "ooh what if" lands HERE, untouched, and you
 > go straight back to the step. Acting the instant an idea arrives is the disease.
 > Capture is one line (`/pb-park` composes it). Harvest happens only at the boundary.
+- [ ] pre-existing: start unconditionally rewrites .plumbbob/settings.json ({auto:false}), clobbering a configured check key on a re-start in the same repo — intended seeding or a bug?
 
 ## Harvest  *(run `/pb-harvest` at each step boundary, after green)*
 
@@ -54,3 +55,4 @@ fills in as you go, not at the end. Add your own decision/event lines too: this 
 you point at to say "I did that — the LLM helped, but those were my calls."
 `/pb-finish` reads this for the report; `plumbbob finish` commits it with the build
 folder, so it rides the branch into the PR.)*
+- 2026-07-11 — step 1 checkpointed · 756dcaeed — detectGate + doctor's nothing-to-check callout

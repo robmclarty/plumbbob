@@ -5,7 +5,7 @@ import { build } from '../build.ts'
 import { start } from '../start.ts'
 import { buildDir, intentPath, seamPath, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
-import { captureIo } from '../../../test/helpers/capture-io.ts'
+import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
 afterAll(cleanupTempRepos)
 
@@ -19,16 +19,16 @@ const INTENT = `# Build test
    - seam: \`src/b.ts\`, \`src/c.ts\`
 `
 
-function startedWithSteps(): string {
+async function startedWithSteps(): Promise<string> {
   const dir = makeTempRepo()
-  captureIo(() => start(dir, ['Build test']))
+  await captureIoAsync(() => start(dir, ['Build test']))
   writeFileSync(intentPath(dir), INTENT)
   return dir
 }
 
 describe('build', () => {
-  it('writes the seam + step and goes in-flight (the BUILD phase signal)', () => {
-    const dir = startedWithSteps()
+  it('writes the seam + step and goes in-flight (the BUILD phase signal)', async () => {
+    const dir = await startedWithSteps()
     const { code, stdout } = captureIo(() => build(dir, ['2']))
     expect(code).toBe(0)
     expect(readFileSync(seamPath(dir), 'utf8')).toBe('src/b.ts\nsrc/c.ts\n')
@@ -38,56 +38,60 @@ describe('build', () => {
     expect(stdout).toContain('not a lock):\n  src/b.ts\n  src/c.ts')
   })
 
-  it('rejects a non-numeric, mixed, or sub-1 step with the usage message', () => {
+  it('rejects a non-numeric, mixed, or sub-1 step with the usage message', async () => {
     // Each shape trips a different validation clause: no digits, digits at the
     // wrong end (both ends), and a number below 1.
     for (const bad of ['nope', 'x2', '2x', '0']) {
-      const { code, stderr } = captureIo(() => build(startedWithSteps(), [bad]))
+      const dir = await startedWithSteps()
+      const { code, stderr } = captureIo(() => build(dir, [bad]))
       expect(code).toBe(1)
       expect(stderr).toContain('build needs a step number')
     }
   })
 
-  it('accepts a multi-digit step number as a number, not a stray token', () => {
+  it('accepts a multi-digit step number as a number, not a stray token', async () => {
     // Step 12 does not exist in the intent — but it must reach seam parsing,
     // not bounce off the step-number validation.
-    const { code, stderr } = captureIo(() => build(startedWithSteps(), ['12']))
+    const dir = await startedWithSteps()
+    const { code, stderr } = captureIo(() => build(dir, ['12']))
     expect(code).toBe(1)
     expect(stderr).not.toContain('build needs a step number')
     expect(stderr).toContain('`build 12` again')
   })
 
-  it('rejects a step range, naming it a /pb-build feature (not the generic usage)', () => {
+  it('rejects a step range, naming it a /pb-build feature (not the generic usage)', async () => {
     // `1-3` looks like a step arg but is a skill-level affordance; the CLI records
     // one in-flight step at a time, so it points back at the skill and a single step.
-    const { code, stderr } = captureIo(() => build(startedWithSteps(), ['1-3']))
+    const dir = await startedWithSteps()
+    const { code, stderr } = captureIo(() => build(dir, ['1-3']))
     expect(code).toBe(1)
     expect(stderr).not.toContain('build needs a step number')
     expect(stderr).toContain('step ranges are a `/pb-build` feature')
     expect(stderr).toContain('plumbbob build 1')
   })
 
-  it('skips flag args when finding the step number', () => {
-    const dir = startedWithSteps()
+  it('skips flag args when finding the step number', async () => {
+    const dir = await startedWithSteps()
     const { code } = captureIo(() => build(dir, ['--quiet', '2']))
     expect(code).toBe(0)
     expect(readFileSync(stepPath(dir), 'utf8').trim()).toBe('2')
   })
 
-  it('reports a step with no parseable seam, pointing at intent.md', () => {
-    const { code, stderr } = captureIo(() => build(startedWithSteps(), ['9']))
+  it('reports a step with no parseable seam, pointing at intent.md', async () => {
+    const dir = await startedWithSteps()
+    const { code, stderr } = captureIo(() => build(dir, ['9']))
     expect(code).toBe(1)
     expect(stderr).toContain("Fix the step's seam in intent.md, then `build 9` again.")
   })
 
-  it('refuses with no active session — and says so', () => {
+  it('refuses with no active session — and says so', async () => {
     const { code, stderr } = captureIo(() => build(makeTempRepo(), ['1']))
     expect(code).toBe(1)
     expect(stderr).toContain('no active session')
   })
 
-  it('targets a non-cursor build with --build, landing SEAM/STEP in that folder', () => {
-    const dir = startedWithSteps() // cursor build is `build-test`
+  it('targets a non-cursor build with --build, landing SEAM/STEP in that folder', async () => {
+    const dir = await startedWithSteps() // cursor build is `build-test`
     const alt = buildDir(dir, 'alt-build')
     mkdirSync(alt, { recursive: true })
     writeFileSync(join(alt, 'intent.md'), INTENT)
@@ -103,16 +107,16 @@ describe('build', () => {
     expect(existsSync(tickPath(dir))).toBe(false)
   })
 
-  it('stamps TICK = TURN at entry — the span the checkpoint latch measures (D64)', () => {
-    const dir = startedWithSteps()
+  it('stamps TICK = TURN at entry — the span the checkpoint latch measures (D64)', async () => {
+    const dir = await startedWithSteps()
     writeFileSync(turnPath(dir), '5\n')
     const { code } = captureIo(() => build(dir, ['2']))
     expect(code).toBe(0)
     expect(readFileSync(tickPath(dir), 'utf8')).toBe('5\n')
   })
 
-  it('stamps no TICK when TURN is absent — a hookless host grows no ledger', () => {
-    const dir = startedWithSteps()
+  it('stamps no TICK when TURN is absent — a hookless host grows no ledger', async () => {
+    const dir = await startedWithSteps()
     const { code } = captureIo(() => build(dir, ['2']))
     expect(code).toBe(0)
     expect(existsSync(tickPath(dir))).toBe(false)

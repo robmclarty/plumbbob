@@ -4,6 +4,7 @@
 import { fileURLToPath } from 'node:url'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { detectGate } from '../lib/check.ts'
 import { findRepoRoot, hasCommit, headSha, isDirty } from '../lib/git.ts'
 import {
   sidecarDir,
@@ -27,7 +28,7 @@ import { settingsPath, setLocalSetting } from '../lib/settings.ts'
 // templates' {{CHECK}} line is a human-readable echo of that.
 const CHECK_ECHO = 'checkride (set a "check" key in .plumbbob/settings.json to override)'
 
-export function start(cwd: string, args: ReadonlyArray<string>): number {
+export async function start(cwd: string, args: ReadonlyArray<string>): Promise<number> {
   const positionals = args.filter((a) => !a.startsWith('--'))
   const allowDirty = args.includes('--allow-dirty')
   const local = args.includes('--local')
@@ -124,6 +125,20 @@ export function start(cwd: string, args: ReadonlyArray<string>): number {
   process.stdout.write(
     `plumbbob: started "${title}" — baseline ${sha.slice(0, 9)}. Frame and decide in ${intentLocation}; \`build\` a step once the decisions are made.\n`,
   )
+
+  // The plan-time gate probe (research/07 Build 2a): if checkride sees no code
+  // checks here, say so NOW — while the human is still deciding — instead of at
+  // the first checkpoint, where the gate either refuses a vacuous run or, worse,
+  // greens on the always-on repo checks alone. Guidance only: never the exit
+  // code (C1), and a configured `check` or a probe hiccup stays silent.
+  const gate = await detectGate(root)
+  if (gate.configured === null && !gate.detected) {
+    process.stderr.write(
+      'plumbbob: heads-up — the check gate sees no code checks in this repo (checkride detected no tools).\n' +
+        '  Set one while you are still planning: add {"check": "npm test"} to .plumbbob/settings.json.\n' +
+        '  Checkpoints gate on it — with nothing to run, the gate refuses or greens vacuously.\n',
+    )
+  }
   return 0
 }
 

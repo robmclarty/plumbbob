@@ -70,8 +70,9 @@ export function readVersion(): string {
   }
 }
 
-// Async because the checkride gate (D32) is: `check` and `checkpoint` await it;
-// every other verb returns synchronously through the same Promise-typed seam.
+// Async because checkride is: `check` and `checkpoint` await the gate (D32),
+// `start` awaits the plan-time detection probe (research/07 2a); every other
+// verb returns synchronously through the same Promise-typed seam.
 async function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): Promise<number> {
   switch (verb) {
     case 'start':

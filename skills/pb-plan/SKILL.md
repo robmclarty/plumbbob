@@ -45,6 +45,10 @@ an agent can follow with `/pb-build`. The argument only seeds how you get there.
 1. **Scaffold.** If there is no active session, run `plumbbob start "<title>"`
    to create `.plumbbob/` (baseline recorded, session opened). If a session already
    exists, say so and edit the existing `intent.md` rather than starting over.
+   - **If `start` warns that the gate sees no code checks**, surface that to the
+     human now — while they're still deciding, not at the first refused
+     checkpoint — and offer to set the `check` key in `.plumbbob/settings.json`
+     (e.g. `"check": "npm test"`) before any step is built.
 2. **Frame** (`.plumbbob/intent.md`), with the human: the **Problem** in plain words,
    the **smallest thing** that solves it, what **done looks like**, and what you are
    **explicitly NOT doing**. This is the human's convergence — propose wording, but

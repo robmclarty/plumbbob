@@ -7,7 +7,7 @@ import { start } from '../start.ts'
 import { buildFolder, buildLogPath, handoffPath, intentPath } from '../../lib/sidecar.ts'
 import { settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
-import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
+import { captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
 afterAll(cleanupTempRepos)
 
@@ -35,9 +35,9 @@ const INTENT = `# Agent run test
 
 // A started build whose intent carries one planned step plus Decisions/Constraints
 // to scrape, ready for an agent to run against step 1.
-function startedBuild(): string {
+async function startedBuild(): Promise<string> {
   const dir = makeTempRepo()
-  captureIo(() => start(dir, ['Agent run test', '--slug', SLUG]))
+  await captureIoAsync(() => start(dir, ['Agent run test', '--slug', SLUG]))
   writeFileSync(intentPath(dir), INTENT)
   return dir
 }
@@ -74,7 +74,7 @@ function envelopeFromStdout(stdout: string): Record<string, unknown> {
 
 describe('agent run — happy path', () => {
   it('composes the input, spawns at repo root with PLUMBBOB_AGENT_DIR, re-emits the envelope on stdout', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     makeAgent(dir, 'doer', { slots: ['build'], script: DONE_SCRIPT })
 
     const { code, stdout, stderr } = await captureIoAsync(() => agent(dir, ['run', 'doer', '--step', '1']))
@@ -104,7 +104,7 @@ describe('agent run — happy path', () => {
   })
 
   it('defaults the mode to a single-slot agent, so --mode is optional', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     makeAgent(dir, 'onlyafter', { slots: ['after'], script: DONE_SCRIPT })
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', 'onlyafter', '--step', '1']))
     expect(code).toBe(0)
@@ -114,7 +114,7 @@ describe('agent run — happy path', () => {
 
 describe('agent run — status routing (D52)', () => {
   it('surfaces a blocked run and its notes on stderr, exits 0 (mechanics succeeded)', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     makeAgent(dir, 'stuck', {
       slots: ['build'],
       script: `cat >/dev/null\necho '{"contract":1,"status":"blocked","summary":"need a key","notes":"missing FOO"}'\n`,
@@ -127,7 +127,7 @@ describe('agent run — status routing (D52)', () => {
   })
 
   it('routes a drift run to /pb-refine on stderr', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     makeAgent(dir, 'drifter', {
       slots: ['build'],
       script: `cat >/dev/null\necho '{"contract":1,"status":"drift","summary":"plan is stale"}'\n`,
@@ -141,7 +141,7 @@ describe('agent run — status routing (D52)', () => {
 
 describe('agent run — failure modes (D46/D51)', () => {
   it('reports and stops on a non-zero exit, applying no side effects', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     makeAgent(dir, 'boom', { slots: ['build'], script: `cat >/dev/null\necho oops >&2\nexit 3\n` })
     const { code, stdout, stderr } = await captureIoAsync(() => agent(dir, ['run', 'boom', '--step', '1']))
     expect(code).toBe(1)
@@ -151,7 +151,7 @@ describe('agent run — failure modes (D46/D51)', () => {
   })
 
   it('refuses garbage stdout as out of contract', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     makeAgent(dir, 'garbage', { slots: ['build'], script: `cat >/dev/null\necho "this is not json"\n` })
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', 'garbage', '--step', '1']))
     expect(code).toBe(1)
@@ -160,7 +160,7 @@ describe('agent run — failure modes (D46/D51)', () => {
   })
 
   it('refuses a contract major-version mismatch with an upgrade hint', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     makeAgent(dir, 'newer', {
       slots: ['build'],
       script: `cat >/dev/null\necho '{"contract":2,"status":"done","summary":"from the future"}'\n`,
@@ -172,7 +172,7 @@ describe('agent run — failure modes (D46/D51)', () => {
   })
 
   it('kills the child and reports on an agentTimeout expiry', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     writeFileSync(settingsPath(dir), JSON.stringify({ agentTimeout: 1 }))
     makeAgent(dir, 'slow', {
       slots: ['build'],
@@ -186,14 +186,14 @@ describe('agent run — failure modes (D46/D51)', () => {
 
 describe('agent run — fail-loud resolution (D54)', () => {
   it('errors on an explicitly named agent that does not resolve', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', 'ghost', '--step', '1']))
     expect(code).toBe(1)
     expect(stderr).toContain('no agent named "ghost"')
   })
 
   it('refuses a --mode the manifest does not declare', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     makeAgent(dir, 'afteronly', { slots: ['after'], script: DONE_SCRIPT })
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', 'afteronly', '--step', '1', '--mode', 'build']))
     expect(code).toBe(1)
@@ -201,7 +201,7 @@ describe('agent run — fail-loud resolution (D54)', () => {
   })
 
   it('refuses a --mode that is not a slot at all', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     makeAgent(dir, 'doer', { slots: ['build'], script: DONE_SCRIPT })
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', 'doer', '--step', '1', '--mode', 'sideways']))
     expect(code).toBe(1)
@@ -211,7 +211,7 @@ describe('agent run — fail-loud resolution (D54)', () => {
 
 describe('agent run — side effects (D44/D47)', () => {
   it('lands parked[] lines through the build-log Park list', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     makeAgent(dir, 'noticer', {
       slots: ['build'],
       script: `cat >/dev/null\necho '{"contract":1,"status":"done","summary":"noticed","parked":["a stray idea","another one"]}'\n`,
@@ -225,7 +225,7 @@ describe('agent run — side effects (D44/D47)', () => {
   })
 
   it('appends each run to the handoff ledger, and checkpoint clears it', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true' }))
     makeAgent(dir, 'doer', { slots: ['build'], script: DONE_SCRIPT })
 
@@ -253,7 +253,7 @@ function writeHarness(root: string, harness: Record<string, unknown>): void {
 
 describe('agent run — harness bindings (D42/D57)', () => {
   it('runs a step-bound agent when no name is given, overriding the harness defaults', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     makeAgent(dir, 'stepper', { slots: ['build'], script: DONE_SCRIPT })
     makeAgent(dir, 'defaulter', { slots: ['build'], script: DONE_SCRIPT })
     writeHarness(dir, {
@@ -272,7 +272,7 @@ describe('agent run — harness bindings (D42/D57)', () => {
   })
 
   it('falls back to the harness defaults for a step that does not override the slot', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     makeAgent(dir, 'defaulter', { slots: ['after'], script: DONE_SCRIPT })
     writeHarness(dir, { contract: 1, defaults: { after: ['defaulter'] }, steps: {} })
 
@@ -282,7 +282,7 @@ describe('agent run — harness bindings (D42/D57)', () => {
   })
 
   it('merges settings-level defaults under the harness — a settings default binds with no harness file (D57)', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     makeAgent(dir, 'settingsrev', { slots: ['after'], script: DONE_SCRIPT })
     writeFileSync(settingsPath(dir), JSON.stringify({ agents: { after: ['settingsrev'] } }))
 
@@ -292,7 +292,7 @@ describe('agent run — harness bindings (D42/D57)', () => {
   })
 
   it('runs every agent bound to the slot, in order', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     makeAgent(dir, 'first', { slots: ['before'], script: DONE_SCRIPT })
     makeAgent(dir, 'second', { slots: ['before'], script: DONE_SCRIPT })
     writeHarness(dir, { contract: 1, defaults: {}, steps: { 1: { before: ['first', 'second'] } } })
@@ -304,7 +304,7 @@ describe('agent run — harness bindings (D42/D57)', () => {
   })
 
   it('is a clean no-op when no harness file and no default binds the slot', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', '--step', '1', '--mode', 'build']))
     expect(code).toBe(0)
     expect(stderr).toContain("no agents bound to the 'build' slot")
@@ -312,7 +312,7 @@ describe('agent run — harness bindings (D42/D57)', () => {
   })
 
   it('downgrades a missing bound agent to a warning and carries on (D54)', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     writeHarness(dir, { contract: 1, defaults: {}, steps: { 1: { after: ['ghostreviewer'] } } })
 
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', '--step', '1', '--mode', 'after']))
@@ -323,7 +323,7 @@ describe('agent run — harness bindings (D42/D57)', () => {
   })
 
   it('warns and skips a bound agent that does not declare the slot it is bound to', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     makeAgent(dir, 'afteronly', { slots: ['after'], script: DONE_SCRIPT })
     writeHarness(dir, { contract: 1, defaults: {}, steps: { 1: { build: ['afteronly'] } } })
 
@@ -334,7 +334,7 @@ describe('agent run — harness bindings (D42/D57)', () => {
   })
 
   it('lets an explicit name override the bindings (D57: a name sits above the harness)', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     makeAgent(dir, 'named', { slots: ['build'], script: DONE_SCRIPT })
     makeAgent(dir, 'bound', { slots: ['build'], script: DONE_SCRIPT })
     writeHarness(dir, { contract: 1, defaults: {}, steps: { 1: { build: ['bound'] } } })
@@ -346,7 +346,7 @@ describe('agent run — harness bindings (D42/D57)', () => {
   })
 
   it('refuses a present-but-broken harness (bad structure) loud', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     writeFileSync(harnessPath(dir), JSON.stringify({ contract: 1, steps: [] }))
 
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', '--step', '1', '--mode', 'build']))
@@ -355,7 +355,7 @@ describe('agent run — harness bindings (D42/D57)', () => {
   })
 
   it('refuses a harness contract major-version mismatch with an upgrade hint (D46)', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     writeFileSync(harnessPath(dir), JSON.stringify({ contract: 2, steps: {} }))
 
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', '--step', '1', '--mode', 'after']))
@@ -367,14 +367,14 @@ describe('agent run — harness bindings (D42/D57)', () => {
 
 describe('agent run — guards', () => {
   it('needs an agent name', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', '--step', '1']))
     expect(code).toBe(1)
     expect(stderr).toContain('needs an agent name')
   })
 
   it('needs a step when none is in flight', async () => {
-    const dir = startedBuild()
+    const dir = await startedBuild()
     makeAgent(dir, 'doer', { slots: ['build'], script: DONE_SCRIPT })
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', 'doer']))
     expect(code).toBe(1)

@@ -53,7 +53,7 @@
 
 ## Steps
 
-1. [ ] detectGate + doctor's nothing-to-check callout — **done when:**
+1. [x] detectGate + doctor's nothing-to-check callout — **done when:**
    `detectGate(root)` returns `{configured, detected}` (configured
    short-circuits; else checkride runDoctor, detected = any tool adapter
    present), unit-tested for all three shapes; `doctor` prints an
@@ -69,8 +69,8 @@
    `captureIo(() => start(…))` call sites converted to `captureIoAsync`;
    `skills/pb-plan/SKILL.md` surfaces the warning at plan time (one sentence,
    contract-pinned).
-   - seam: `src/verbs/start.ts`, `src/verbs/__tests__/*.test.ts`,
-     `skills/pb-plan/SKILL.md`, `test/contract/skills.test.ts`
+   - seam: `src/verbs/start.ts`, `src/verbs/__tests__/`, `src/lib/__tests__/`,
+     `test/helpers/`, `skills/pb-plan/SKILL.md`, `test/contract/skills.test.ts`
 3. [ ] Stats sidecar helpers — **done when:** `statsPath(root, slug?)` +
    `readStats` + `recordStepStat(root, slug, step, mutation)` exist beside the
    handoff helpers, are excluded from NOTHING (tracked by default), tolerate a

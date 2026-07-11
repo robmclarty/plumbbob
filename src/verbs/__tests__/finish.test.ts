@@ -7,7 +7,7 @@ import { start } from '../start.ts'
 import { checkpointsPath, grantPath, hasSession, intentPath, reportPath, sidecarDir, tickPath } from '../../lib/sidecar.ts'
 import { localSettingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
-import { captureIo } from '../../../test/helpers/capture-io.ts'
+import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
 afterAll(cleanupTempRepos)
 
@@ -16,9 +16,9 @@ function subject(dir: string): string {
 }
 
 describe('finish', () => {
-  it('makes the final commit, keeps the folder in place, and ends the session', () => {
+  it('makes the final commit, keeps the folder in place, and ends the session', async () => {
     const dir = makeTempRepo()
-    captureIo(() => start(dir, ['Finishing up', '--slug', 'finishing-up']))
+    await captureIoAsync(() => start(dir, ['Finishing up', '--slug', 'finishing-up']))
     const { code, stdout } = captureIo(() => finish(dir))
     expect(code).toBe(0)
     expect(hasSession(dir)).toBe(false)
@@ -31,18 +31,18 @@ describe('finish', () => {
     expect(stdout).toContain('pb-plan')
   })
 
-  it('drops the activeBuild cursor and leaves a clean tree', () => {
+  it('drops the activeBuild cursor and leaves a clean tree', async () => {
     const dir = makeTempRepo()
-    captureIo(() => start(dir, ['Cursor gone']))
+    await captureIoAsync(() => start(dir, ['Cursor gone']))
     captureIo(() => finish(dir))
     const local = JSON.parse(readFileSync(localSettingsPath(dir), 'utf8'))
     expect(local.activeBuild).toBeUndefined()
     expect(execFileSync('git', ['-C', dir, 'status', '--porcelain'], { encoding: 'utf8' }).trim()).toBe('')
   })
 
-  it('clears the one-turn GRANT and the entry TICK with the session (D64/D65)', () => {
+  it('clears the one-turn GRANT and the entry TICK with the session (D64/D65)', async () => {
     const dir = makeTempRepo()
-    captureIo(() => start(dir, ['Latch state gone', '--slug', 'latch-state-gone']))
+    await captureIoAsync(() => start(dir, ['Latch state gone', '--slug', 'latch-state-gone']))
     // The session's last tick minted a grant and a build stamped its entry; neither
     // may survive into the next session.
     writeFileSync(grantPath(dir), 'auto\n')
@@ -52,9 +52,9 @@ describe('finish', () => {
     expect(existsSync(tickPath(dir, 'latch-state-gone'))).toBe(false)
   })
 
-  it('appends the checkpoint SHAs to the report when one is present', () => {
+  it('appends the checkpoint SHAs to the report when one is present', async () => {
     const dir = makeTempRepo()
-    captureIo(() => start(dir, ['With report']))
+    await captureIoAsync(() => start(dir, ['With report']))
     writeFileSync(reportPath(dir), '# Report\n')
     captureIo(() => finish(dir))
     const report = readFileSync(reportPath(dir), 'utf8')
@@ -63,9 +63,9 @@ describe('finish', () => {
     expect(report).toMatch(/- baseline [0-9a-f]{40}/)
   })
 
-  it('writes an empty Checkpoints section when the checkpoints file is unreadable', () => {
+  it('writes an empty Checkpoints section when the checkpoints file is unreadable', async () => {
     const dir = makeTempRepo()
-    captureIo(() => start(dir, ['No checkpoints']))
+    await captureIoAsync(() => start(dir, ['No checkpoints']))
     writeFileSync(reportPath(dir), '# Report\n')
     rmSync(checkpointsPath(dir), { force: true })
     captureIo(() => finish(dir))
@@ -74,15 +74,15 @@ describe('finish', () => {
     expect(report).not.toMatch(/^- /m) // best-effort: no bullets, no crash, no junk
   })
 
-  it('notes a missing report but finishes anyway (D9)', () => {
+  it('notes a missing report but finishes anyway (D9)', async () => {
     const dir = makeTempRepo()
-    captureIo(() => start(dir, ['No report']))
+    await captureIoAsync(() => start(dir, ['No report']))
     const { code, stderr } = captureIo(() => finish(dir))
     expect(code).toBe(0)
     expect(stderr).toContain('no report.md found')
   })
 
-  it('refuses with no active session', () => {
+  it('refuses with no active session', async () => {
     const { code, stderr } = captureIo(() => finish(makeTempRepo()))
     expect(code).toBe(1)
     expect(stderr).toContain('no active session')

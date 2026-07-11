@@ -215,6 +215,11 @@ describe('plan — the whole-goal move: scaffold + frame, no code', () => {
     expect(body).toMatch(/teammates/i)
     expect(body).toMatch(/start --local/)
   })
+
+  it('surfaces the plan-time gate warning while the human is still deciding (research/07 2a)', () => {
+    expect(body).toMatch(/gate sees no code checks/i)
+    expect(body).toMatch(/"check": "npm test"/)
+  })
 })
 
 describe('step — the single-increment move: one verifiable step', () => {

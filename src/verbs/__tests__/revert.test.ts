@@ -28,9 +28,9 @@ function git(dir: string, args: ReadonlyArray<string>): void {
 }
 
 // A started session with one planned step and a green stub gate.
-function startedGreen(): string {
+async function startedGreen(): Promise<string> {
   const dir = makeTempRepo()
-  captureIo(() => start(dir, ['Revert test', '--slug', 'revert-test']))
+  await captureIoAsync(() => start(dir, ['Revert test', '--slug', 'revert-test']))
   writeFileSync(intentPath(dir), INTENT)
   writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true' }))
   return dir
@@ -38,7 +38,7 @@ function startedGreen(): string {
 
 describe('revert', () => {
   it('rewinds tracked work to the last step checkpoint and clears the in-flight step', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     writeFileSync(join(dir, 'feature.txt'), 'v1\n')
     await captureIoAsync(() => checkpoint(dir, ['1'])) // commits feature.txt=v1, records step 1
     captureIo(() => build(dir, ['1'])) // go in-flight: writes SEAM + STEP
@@ -50,8 +50,8 @@ describe('revert', () => {
     expect(stdout).toMatch(/reverted to [0-9a-f]{9} — back at the boundary/) // short SHA, not the full 40
   })
 
-  it('reverts --to a multi-digit step by its recorded SHA', () => {
-    const dir = startedGreen()
+  it('reverts --to a multi-digit step by its recorded SHA', async () => {
+    const dir = await startedGreen()
     const first = headSha(dir)
     writeFileSync(join(dir, 'feature.txt'), 'later\n')
     git(dir, ['add', '-A'])
@@ -64,8 +64,8 @@ describe('revert', () => {
     expect(headSha(dir)).toBe(first)
   })
 
-  it('falls back to the baseline when no step checkpoint exists', () => {
-    const dir = startedGreen()
+  it('falls back to the baseline when no step checkpoint exists', async () => {
+    const dir = await startedGreen()
     const baseline = headSha(dir)
     writeFileSync(join(dir, 'feature.txt'), 'drift\n')
     git(dir, ['add', '-A'])
@@ -75,8 +75,8 @@ describe('revert', () => {
     expect(headSha(dir)).toBe(baseline)
   })
 
-  it('removes untracked files in the seam but leaves out-of-seam files', () => {
-    const dir = startedGreen()
+  it('removes untracked files in the seam but leaves out-of-seam files', async () => {
+    const dir = await startedGreen()
     captureIo(() => build(dir, ['1'])) // writes SEAM=feature.txt, STEP=1 (in-flight)
     writeFileSync(join(dir, 'feature.txt'), 'scratch\n') // untracked, in seam
     writeFileSync(join(dir, 'other.txt'), 'keep\n') // untracked, out of seam
@@ -85,8 +85,8 @@ describe('revert', () => {
     expect(existsSync(join(dir, 'other.txt'))).toBe(true)
   })
 
-  it('a directory seam token sweeps untracked files under it by prefix', () => {
-    const dir = startedGreen()
+  it('a directory seam token sweeps untracked files under it by prefix', async () => {
+    const dir = await startedGreen()
     writeFileSync(seamPath(dir), 'stuff/\n') // a directory seam token
     mkdirSync(join(dir, 'stuff'))
     writeFileSync(join(dir, 'stuff', 'scratch.txt'), 'wip\n')
@@ -95,10 +95,10 @@ describe('revert', () => {
     expect(existsSync(join(dir, 'stuff', 'scratch.txt'))).toBe(false)
   })
 
-  it('carries an installed driver skill across a baseline reset', () => {
+  it('carries an installed driver skill across a baseline reset', async () => {
     // The skill was committed after the baseline, so a bare reset --hard would
     // delete it with the work; revert protects plumbbob's own machinery.
-    const dir = startedGreen()
+    const dir = await startedGreen()
     const skill = join(dir, '.claude', 'skills', 'pb-verify')
     mkdirSync(skill, { recursive: true })
     writeFileSync(join(skill, 'SKILL.md'), '# pb-verify\n')
@@ -108,8 +108,8 @@ describe('revert', () => {
     expect(readFileSync(join(skill, 'SKILL.md'), 'utf8')).toBe('# pb-verify\n')
   })
 
-  it('refuses when the ledger records no baseline at all', () => {
-    const dir = startedGreen()
+  it('refuses when the ledger records no baseline at all', async () => {
+    const dir = await startedGreen()
     rmSync(checkpointsPath(dir), { force: true })
     const { code, stderr } = captureIo(() => revert(dir, []))
     expect(code).toBe(1)
@@ -117,7 +117,7 @@ describe('revert', () => {
   })
 
   it('preserves sidecar edits (intent/park) across the reset (C4)', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     writeFileSync(join(dir, 'feature.txt'), 'v1\n')
     await captureIoAsync(() => checkpoint(dir, ['1']))
     writeFileSync(intentPath(dir), `${readFileSync(intentPath(dir), 'utf8')}\n<!-- note made after the checkpoint -->\n`)
@@ -130,7 +130,7 @@ describe('revert', () => {
   // folder exists at the target SHA but with older content) and to the baseline
   // (the folder does not exist at the target SHA at all).
   it('revert-to-step: the whole build folder and park lines survive (Q7)', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     writeFileSync(join(dir, 'feature.txt'), 'v1\n')
     await captureIoAsync(() => checkpoint(dir, ['1'])) // commits feature.txt=v1 AND the tracked build folder; records step 1
     captureIo(() => build(dir, ['1'])) // in-flight
@@ -143,8 +143,8 @@ describe('revert', () => {
     expect(readFileSync(buildLogPath(dir), 'utf8')).toContain('survive the step revert') // park line kept (C4)
   })
 
-  it('revert-to-baseline: the build folder survives even when it does not exist at the baseline SHA (Q7)', () => {
-    const dir = startedGreen()
+  it('revert-to-baseline: the build folder survives even when it does not exist at the baseline SHA (Q7)', async () => {
+    const dir = await startedGreen()
     const baseline = headSha(dir) // predates any commit of the build folder
     writeFileSync(join(dir, 'feature.txt'), 'work\n')
     captureIo(() => park(dir, ['survive the baseline revert']))
@@ -159,21 +159,23 @@ describe('revert', () => {
     expect(readFileSync(buildLogPath(dir), 'utf8')).toContain('survive the baseline revert')
   })
 
-  it('rejects --to without a numeric step — including mixed digit shapes', () => {
+  it('rejects --to without a numeric step — including mixed digit shapes', async () => {
     for (const bad of ['abc', 'x2', '2x']) {
-      const { code, stderr } = captureIo(() => revert(startedGreen(), ['--to', bad]))
+      const dir = await startedGreen()
+    const { code, stderr } = captureIo(() => revert(dir, ['--to', bad]))
       expect(code).toBe(1)
       expect(stderr).toContain('--to needs a step number')
     }
   })
 
-  it('rejects --to for a step with no recorded checkpoint — echoing the full number', () => {
-    const { code, stderr } = captureIo(() => revert(startedGreen(), ['--to', '15']))
+  it('rejects --to for a step with no recorded checkpoint — echoing the full number', async () => {
+    const dir = await startedGreen()
+    const { code, stderr } = captureIo(() => revert(dir, ['--to', '15']))
     expect(code).toBe(1)
     expect(stderr).toContain('no checkpoint recorded for step 15')
   })
 
-  it('refuses with no active session — and says so', () => {
+  it('refuses with no active session — and says so', async () => {
     const { code, stderr } = captureIo(() => revert(makeTempRepo(), []))
     expect(code).toBe(1)
     expect(stderr).toContain('no active session')

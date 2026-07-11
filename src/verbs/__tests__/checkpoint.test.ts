@@ -8,7 +8,7 @@ import { buildLogPath, checkpointsPath, grantPath, hasSession, intentPath, stepP
 import { setLocalSetting, settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { cleanupFixtures, makeFixtureRepo, runCli } from '../../../test/helpers/fixture-repo.ts'
-import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
+import { captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
 afterAll(cleanupTempRepos)
 afterAll(cleanupFixtures)
@@ -24,9 +24,9 @@ const INTENT = `# Checkpoint test
 // A started session with one planned step and a green stub gate. In the tracked
 // layout the build folder rides the tree (D2), so overwriting intent/settings
 // dirties it — checkpoint stages that alongside the step's work.
-function startedGreen(): string {
+async function startedGreen(): Promise<string> {
   const dir = makeTempRepo()
-  captureIo(() => start(dir, ['Checkpoint test', '--slug', 'checkpoint-test']))
+  await captureIoAsync(() => start(dir, ['Checkpoint test', '--slug', 'checkpoint-test']))
   writeFileSync(intentPath(dir), INTENT)
   writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true' }))
   return dir
@@ -34,7 +34,7 @@ function startedGreen(): string {
 
 describe('checkpoint', () => {
   it('commits pending work, records the SHA, flips the step, stays at the boundary', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     writeFileSync(join(dir, 'work.txt'), 'pending\n') // dirty the tracked tree
     const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['1']))
     expect(code).toBe(0)
@@ -47,7 +47,7 @@ describe('checkpoint', () => {
   })
 
   it('titles the commit subject `plumbbob: step N — <title>` from intent.md', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     writeFileSync(join(dir, 'work.txt'), 'pending\n') // ensure a fresh commit is made
     await captureIoAsync(() => checkpoint(dir, ['1']))
     const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
@@ -55,7 +55,7 @@ describe('checkpoint', () => {
   })
 
   it('composes a deterministic body — done-when, seam, diffstat — when no --body is given', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     writeFileSync(join(dir, 'work.txt'), 'pending\n')
     await captureIoAsync(() => checkpoint(dir, ['1']))
     const body = execFileSync('git', ['log', '-1', '--format=%b'], { cwd: dir, encoding: 'utf8' })
@@ -65,7 +65,7 @@ describe('checkpoint', () => {
   })
 
   it('falls back to `plumbbob: step N done` when intent carries no title', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     writeFileSync(intentPath(dir), '# Untitled steps\n\n## Steps\n\n1. [ ] — **done when:** a works.\n')
     writeFileSync(join(dir, 'work.txt'), 'pending\n')
     await captureIoAsync(() => checkpoint(dir, ['1']))
@@ -74,14 +74,14 @@ describe('checkpoint', () => {
   })
 
   it("appends a dated history line to the build-log's Log, naming the step", async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     await captureIoAsync(() => checkpoint(dir, ['1']))
     const log = readFileSync(buildLogPath(dir), 'utf8')
     expect(log).toMatch(/- \d{4}-\d{2}-\d{2} — step 1 checkpointed · [0-9a-f]{9} — First/)
   })
 
   it('whitelists its own staged artifact writes — no scope-drift warning (step 7)', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     mkdirSync(join(dir, 'src'), { recursive: true })
     writeFileSync(join(dir, 'src', 'a.ts'), 'in seam\n') // matches the step's `src/a.ts` seam
     const { code, stderr } = await captureIoAsync(() => checkpoint(dir, ['1']))
@@ -92,7 +92,7 @@ describe('checkpoint', () => {
   })
 
   it('warns (but still commits) when staged work reaches outside the step seam', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     mkdirSync(join(dir, 'src'), { recursive: true })
     writeFileSync(join(dir, 'src', 'a.ts'), 'in seam\n')
     writeFileSync(join(dir, 'stray.ts'), 'out of seam\n') // not in `src/a.ts`, not artifact
@@ -104,7 +104,7 @@ describe('checkpoint', () => {
   })
 
   it('clears the entry stamp alongside STEP/SEAM — the next build re-stamps (D64)', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     writeFileSync(tickPath(dir), '4\n') // as `build <n>` stamps when the ledger is live
     writeFileSync(join(dir, 'work.txt'), 'pending\n')
     const { code } = await captureIoAsync(() => checkpoint(dir, ['1']))
@@ -119,7 +119,7 @@ describe('checkpoint', () => {
   })
 
   it('refuses on a red check', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     writeFileSync(settingsPath(dir), JSON.stringify({ check: 'false' }))
     const { code, stderr } = await captureIoAsync(() => checkpoint(dir, ['1']))
     expect(code).toBe(1)
@@ -127,7 +127,7 @@ describe('checkpoint', () => {
   })
 
   it('refuses distinctly when the gate itself breaks (checkride exit 2)', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     writeFileSync(settingsPath(dir), JSON.stringify({ auto: false })) // no check key → checkride
     writeFileSync(join(dir, 'checkride.config.json'), '{not json')
     const { code, stderr } = await captureIoAsync(() => checkpoint(dir, ['1']))
@@ -136,7 +136,7 @@ describe('checkpoint', () => {
   })
 
   it('resolves the first undone step when none is given (clean tree records HEAD)', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     const { code } = await captureIoAsync(() => checkpoint(dir, []))
     expect(code).toBe(0)
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x]')
@@ -149,7 +149,7 @@ describe('checkpoint', () => {
   })
 
   it('refuses when no step can be resolved — all steps already done', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     writeFileSync(intentPath(dir), '# Done\n\n## Steps\n\n1. [x] First — **done when:** a works.\n')
     const { code, stderr } = await captureIoAsync(() => checkpoint(dir, []))
     expect(code).toBe(1)
@@ -157,7 +157,7 @@ describe('checkpoint', () => {
   })
 
   it('prefers the explicit arg — multi-digit — over the first undone step', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     writeFileSync(
       intentPath(dir),
       '# Two\n\n## Steps\n\n1. [ ] First — **done when:** a.\n10. [ ] Tenth — **done when:** j.\n',
@@ -169,7 +169,7 @@ describe('checkpoint', () => {
   })
 
   it('does not mistake digits inside a -m message for the step number', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     writeFileSync(join(dir, 'work.txt'), 'pending\n')
     const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['-m', 'fix part 2']))
     expect(code).toBe(0)
@@ -180,7 +180,7 @@ describe('checkpoint', () => {
   })
 
   it('reads the in-flight STEP file (trailing newline and all) when no arg is given', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     writeFileSync(
       intentPath(dir),
       '# Two\n\n## Steps\n\n1. [ ] First — **done when:** a.\n2. [ ] Second — **done when:** b.\n',
@@ -193,7 +193,7 @@ describe('checkpoint', () => {
   })
 
   it('records the existing HEAD without a new commit when the tree is truly clean', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     execFileSync('git', ['-C', dir, 'add', '-A'], { stdio: 'ignore' })
     execFileSync('git', ['-C', dir, 'commit', '-q', '-m', 'work already committed'], { stdio: 'ignore' })
     const head = execFileSync('git', ['-C', dir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
@@ -205,7 +205,7 @@ describe('checkpoint', () => {
   })
 
   it('omits done-when and seam from the fallback body when the step declares neither', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     writeFileSync(intentPath(dir), '# Bare\n\n## Steps\n\n1. [ ] Bare step\n')
     writeFileSync(join(dir, 'work.txt'), 'pending\n')
     await captureIoAsync(() => checkpoint(dir, ['1']))
@@ -216,7 +216,7 @@ describe('checkpoint', () => {
   })
 
   it('reads a numeric -m value as the message, never the step', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     writeFileSync(join(dir, 'work.txt'), 'pending\n')
     const { code } = await captureIoAsync(() => checkpoint(dir, ['-m', '2']))
     expect(code).toBe(0)
@@ -227,7 +227,7 @@ describe('checkpoint', () => {
   })
 
   it('--body on an interactive TTY degrades to the fallback body instead of blocking', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     writeFileSync(join(dir, 'work.txt'), 'pending\n')
     const stdin = process.stdin as unknown as { isTTY?: boolean }
     const hadTty = stdin.isTTY
@@ -243,7 +243,7 @@ describe('checkpoint', () => {
   })
 
   it('warns when the intent flip fails, instead of letting the dashboard lie', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     writeFileSync(join(dir, 'work.txt'), 'pending\n')
     chmodSync(intentPath(dir), 0o444) // the flip's write will fail
     try {
@@ -260,7 +260,7 @@ describe('checkpoint', () => {
   // runCli always gets a piped stdin, so a real TTY row needs the in-process
   // patch (the same plumbing the `--body` TTY test uses).
   it('latch row 1: a TTY stdin is its own approval — allows with no turn since entry (D64)', async () => {
-    const dir = startedGreen()
+    const dir = await startedGreen()
     writeFileSync(turnPath(dir), '2\n')
     writeFileSync(tickPath(dir), '2\n')
     const stdin = process.stdin as unknown as { isTTY?: boolean }
@@ -279,7 +279,7 @@ describe('checkpoint', () => {
   // carrying only the build's scaffold so the first step's diff stays clean.
   describe('--plan', () => {
     it('commits as `plumbbob: plan — <title>` and records a `plan <sha>` line', async () => {
-      const dir = startedGreen()
+      const dir = await startedGreen()
       const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
       expect(code).toBe(0)
       expect(stdout).toMatch(/plan committed — [0-9a-f]{9}\./) // short SHA, not the full 40
@@ -289,7 +289,7 @@ describe('checkpoint', () => {
     })
 
     it('commits only the build folder — not settings.json or code, and no step flip', async () => {
-      const dir = startedGreen()
+      const dir = await startedGreen()
       writeFileSync(join(dir, 'work.txt'), 'code, not plan\n') // stray dirt outside the build folder
       await captureIoAsync(() => checkpoint(dir, ['--plan']))
       const names = execFileSync('git', ['show', '--pretty=format:', '--name-only', 'HEAD'], {
@@ -304,7 +304,7 @@ describe('checkpoint', () => {
       expect(readFileSync(intentPath(dir), 'utf8')).not.toContain('1. [x]') // no step marked done
     })
     it("consumes start's entry stamp — a later hand-built diff finds no stale TICK (D64)", async () => {
-      const dir = startedGreen()
+      const dir = await startedGreen()
       writeFileSync(tickPath(dir), '2\n') // as `start` stamps when the ledger is live
       const { code } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
       expect(code).toBe(0)
@@ -341,7 +341,7 @@ describe('checkpoint — the approval latch (subprocess, D64)', () => {
     return dir
   }
 
-  it('row 6: refuses with exit 1 and the pause affordance when no human turn intervened', () => {
+  it('row 6: refuses with exit 1 and the pause affordance when no human turn intervened', async () => {
     const dir = latchedRepo()
     const { status, stderr } = runCli(dir, ['checkpoint', '1'])
     expect(status).toBe(1)
@@ -352,7 +352,7 @@ describe('checkpoint — the approval latch (subprocess, D64)', () => {
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [ ]')
   })
 
-  it('the latch precedes the check gate (C4): a latched repo refuses as the pause, not as red', () => {
+  it('the latch precedes the check gate (C4): a latched repo refuses as the pause, not as red', async () => {
     const dir = latchedRepo()
     writeFileSync(settingsPath(dir), JSON.stringify({ check: 'false' })) // red gate
     const { status, stderr } = runCli(dir, ['checkpoint', '1'])
@@ -361,7 +361,7 @@ describe('checkpoint — the approval latch (subprocess, D64)', () => {
     expect(stderr).not.toContain('check failed')
   })
 
-  it('row 5: a human turn since entry allows the land', () => {
+  it('row 5: a human turn since entry allows the land', async () => {
     const dir = latchedRepo()
     writeFileSync(turnPath(dir), '3\n') // the hook ticked after entry
     const { status } = runCli(dir, ['checkpoint', '1'])
@@ -369,7 +369,7 @@ describe('checkpoint — the approval latch (subprocess, D64)', () => {
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x]')
   })
 
-  it('row 2: a host with no hooks grows no ledger and lands exactly as today (dormant)', () => {
+  it('row 2: a host with no hooks grows no ledger and lands exactly as today (dormant)', async () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Latch test', '--slug', 'latch-test'])
     writeFileSync(intentPath(dir), LATCH_INTENT)
@@ -378,35 +378,35 @@ describe('checkpoint — the approval latch (subprocess, D64)', () => {
     expect(status).toBe(0)
   })
 
-  it('row 2: a hand-built diff (no entry stamp) stays guidance-governed', () => {
+  it('row 2: a hand-built diff (no entry stamp) stays guidance-governed', async () => {
     const dir = latchedRepo()
     rmSync(tickPath(dir)) // no `build <n>` ran — TURN alone does not latch
     const { status } = runCli(dir, ['checkpoint', '1'])
     expect(status).toBe(0)
   })
 
-  it('row 3: the standing `auto: true` in settings.local.json allows (D27)', () => {
+  it('row 3: the standing `auto: true` in settings.local.json allows (D27)', async () => {
     const dir = latchedRepo()
     setLocalSetting(dir, 'auto', true) // merges beside the activeBuild cursor
     const { status } = runCli(dir, ['checkpoint', '1'])
     expect(status).toBe(0)
   })
 
-  it('row 4: a one-turn `auto` grant allows (D65)', () => {
+  it('row 4: a one-turn `auto` grant allows (D65)', async () => {
     const dir = latchedRepo()
     writeFileSync(grantPath(dir), 'auto\n')
     const { status } = runCli(dir, ['checkpoint', '1'])
     expect(status).toBe(0)
   })
 
-  it('row 4: a range grant allows steps at or under its ceiling', () => {
+  it('row 4: a range grant allows steps at or under its ceiling', async () => {
     const dir = latchedRepo()
     writeFileSync(grantPath(dir), 'range 2\n')
     const { status } = runCli(dir, ['checkpoint', '1'])
     expect(status).toBe(0)
   })
 
-  it('row 4: a range grant refuses past its ceiling with the top-of-range affordance', () => {
+  it('row 4: a range grant refuses past its ceiling with the top-of-range affordance', async () => {
     const dir = latchedRepo()
     writeFileSync(grantPath(dir), 'range 1\n')
     const { status, stderr } = runCli(dir, ['checkpoint', '2'])
@@ -415,7 +415,7 @@ describe('checkpoint — the approval latch (subprocess, D64)', () => {
     expect(stderr).toContain('re-fire to continue')
   })
 
-  it('a malformed GRANT contributes nothing — the latch still refuses (D27)', () => {
+  it('a malformed GRANT contributes nothing — the latch still refuses (D27)', async () => {
     const dir = latchedRepo()
     writeFileSync(grantPath(dir), 'garbage\n')
     const { status, stderr } = runCli(dir, ['checkpoint', '1'])
@@ -423,7 +423,7 @@ describe('checkpoint — the approval latch (subprocess, D64)', () => {
     expect(stderr).toContain('no human turn since this step began')
   })
 
-  it("--plan latches on start's stamp: refused same-turn, landed after a human turn", () => {
+  it("--plan latches on start's stamp: refused same-turn, landed after a human turn", async () => {
     const dir = latchedRepo() // TICK stands in for the stamp `start` writes when TURN exists
     const refused = runCli(dir, ['checkpoint', '--plan'])
     expect(refused.status).toBe(1)
