@@ -5,7 +5,30 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7.1] - 2026-07-10
+## [0.8.0] - 2026-07-11
+
+- **Added:** an eval tier that measures the skills headless — seven prose
+  contracts run through a fascicle `claude_cli` driver with mechanical
+  git-plus-sidecar assertions, `pass|fail|invalid` outcomes, and infra-only
+  retry, swept prose-only against latched at opus N=5. Results aggregate to
+  JSONL with per-run cost, and the committed receipt lands in `reports/evals/`
+  linked from the README. The headline delta the latch bought:
+  no-checkpoint-over-red under pressure moved from 2/5 to 5/5; the gap it
+  exposed — pressured latched runs self-minting `auto` through the legal
+  `settings.local.json` side door — is logged for the next iteration.
+- **Added:** a plan-time gate probe. `detectGate(root)` returns
+  `{configured, detected}` and is shared by `start`, `doctor`, and `/pb-plan`,
+  so a project with no check wired up gets a warning with the exact settings
+  fix at plan time rather than a surprise later — always a warning, never a
+  refusal, with the always-on repo checks excluded so a code-blind gate cannot
+  read as coverage.
+- **Added:** per-build stats. A tracked `stats.json` accrues at each
+  `build`, `checkpoint`, and `revert`, the `Log` line carries a compact cost
+  suffix, and `finish` rolls a per-step `## Stats` table with totals into the
+  build's `report.md`.
+- **Changed:** `start` is now async so it can run the plan-time gate probe
+  after resolving the build; the 52 test call sites that invoked it were
+  converted to await.
 
 - **Fixed:** grant parsing now reads only the `/pb-build` invocation's own
   arguments — the token run immediately after it, ending at the first free-text
