@@ -2,7 +2,7 @@
 // the session. Refuses on a dirty tree (D22), an existing session, or a non-git dir.
 
 import { fileURLToPath } from 'node:url'
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { detectGate } from '../lib/check.ts'
 import { findRepoRoot, hasCommit, headSha, isDirty } from '../lib/git.ts'
@@ -88,7 +88,16 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
 
   mkdirSync(sidecarDir(root), { recursive: true })
   beginSession(root)
-  writeFileSync(settingsPath(root), `${JSON.stringify({ auto: false }, null, 2)}\n`)
+  // Scaffold the tracked settings.json ONLY when absent, and seed it EMPTY — the
+  // human owns this file once it exists (their `check` gate lives here), so a
+  // re-start must never touch it. We inject no opinions even on first create:
+  // absence of `check` already means checkride and absence of `auto` already means
+  // false (see settings.ts), so `{}` is exactly "all defaults". `auto` in
+  // particular is a personal preference that belongs in settings.local.json, not
+  // this tracked file — seeding it here was the bug that clobbered custom checks.
+  if (!existsSync(settingsPath(root))) {
+    writeFileSync(settingsPath(root), `${JSON.stringify({}, null, 2)}\n`)
+  }
 
   // D26: `--local` keeps today's fully-untracked flat layout (whole `.plumbbob/`
   // excluded); the default plants a tracked, PR-riding `builds/<slug>/` folder

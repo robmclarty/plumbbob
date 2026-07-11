@@ -221,8 +221,12 @@ export function migrateSidecar(root: string): string[] {
   const configPath = join(dir, 'config')
   if (existsSync(configPath)) {
     if (!existsSync(settingsPath(root))) {
+      // Carry forward ONLY what the legacy config actually held — a `check` line,
+      // nothing else. No invented `auto` (the config never had one, it defaults to
+      // false, and it belongs in settings.local.json): migration yields exactly what
+      // a fresh `start` would, plus the check. An empty config → an empty `{}`.
       const check = configCheck(configPath)
-      const settings = check === null ? { auto: false } : { check, auto: false }
+      const settings = check === null ? {} : { check }
       writeFileSync(settingsPath(root), `${JSON.stringify(settings, null, 2)}\n`)
       actions.push(check === null ? 'config → settings.json' : `config → settings.json (check: ${check})`)
     }

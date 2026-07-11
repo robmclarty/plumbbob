@@ -138,16 +138,35 @@ describe('start', () => {
     expect(exclude).toContain('.plumbbob/')
   })
 
-  it('scaffolds settings.json with auto only — no check key, absence means checkride (D32)', async () => {
+  it('scaffolds an empty settings.json — no check, no auto; absence is the default (D32)', async () => {
     const dir = makeTempRepo()
     await captureIoAsync(() => start(dir, ['My Feature']))
     expect(existsSync(join(dir, '.plumbbob', 'config'))).toBe(false)
     const settings = JSON.parse(readFileSync(join(dir, '.plumbbob', 'settings.json'), 'utf8')) as {
       check?: string
-      auto: boolean
+      auto?: boolean
     }
-    expect(settings.check).toBeUndefined()
-    expect(settings.auto).toBe(false)
+    // No plumbbob-injected opinions in the tracked file: absence of `check` means
+    // checkride, absence of `auto` means false. The human owns this file.
+    expect(settings).toEqual({})
+  })
+
+  it('preserves an existing settings.json — a re-start never clobbers a hand-added check', async () => {
+    const dir = makeTempRepo()
+    // A prior session left a tracked settings.json carrying the human's custom
+    // gate. Commit it so the tree is clean (exactly what a re-start faces); `start`
+    // must scaffold write-if-absent, not overwrite it.
+    mkdirSync(join(dir, '.plumbbob'), { recursive: true })
+    writeFileSync(join(dir, '.plumbbob', 'settings.json'), `${JSON.stringify({ check: 'fascicle run check', auto: true }, null, 2)}\n`)
+    execFileSync('git', ['-C', dir, 'add', '-A'], { stdio: 'ignore' })
+    execFileSync('git', ['-C', dir, 'commit', '-q', '-m', 'seed settings'], { stdio: 'ignore' })
+    await captureIoAsync(() => start(dir, ['My Feature']))
+    const settings = JSON.parse(readFileSync(join(dir, '.plumbbob', 'settings.json'), 'utf8')) as {
+      check?: string
+      auto?: boolean
+    }
+    expect(settings.check).toBe('fascicle run check')
+    expect(settings.auto).toBe(true)
   })
 
   it('echoes the checkride gate into the scaffolded build-log (documentation only)', async () => {

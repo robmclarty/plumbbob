@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.2] - 2026-07-11
+
+- **Fixed:** `plumbbob start` no longer clobbers `.plumbbob/settings.json`. Every
+  start overwrote the tracked file with `{ auto: false }`, wiping any hand-added
+  `check` gate (and anything else) on each new session — so a custom check command
+  vanished the moment the next build began. Start now scaffolds the file only when
+  it is absent and never touches an existing one; the human owns that file.
+- **Changed:** a freshly scaffolded `settings.json` is now empty (`{}`) rather than
+  seeded with `{ auto: false }`. Absence of `check` already means checkride and
+  absence of `auto` already means false, so the empty object is exactly "all
+  defaults" — and `auto`, a personal preference, belongs in `settings.local.json`,
+  not the tracked file. The `doctor --migrate` config-to-settings translation is
+  aligned the same way: it carries forward only the legacy `check` line, yielding
+  `{ check }` or `{}` with no invented `auto`.
+
 ## [0.8.1] - 2026-07-11
 
 - **Added:** the checkpoint hand-off now names the next step's model. When a

@@ -231,14 +231,14 @@ describe('doctor — migration', () => {
       'config → settings.json (check: pnpm run check)',
       'staged the move (builds/ + settings.json) — commit it yourself',
     ])
-    expect(settingsJson(dir)).toEqual({ check: 'pnpm run check', auto: false })
+    expect(settingsJson(dir)).toEqual({ check: 'pnpm run check' }) // only what the config held — no invented auto
   })
 
-  it('writes {auto:false} with no check key when config carries no check line', () => {
+  it('writes an empty settings.json when config carries no check line', () => {
     const dir = partialLegacyRepo((sc) => writeFileSync(join(sc, 'config'), 'other=1\n'))
     const actions = migrateSidecar(dir)
     expect(actions[0]).toBe('config → settings.json')
-    expect(settingsJson(dir)).toEqual({ auto: false }) // no "check": null leaking in
+    expect(settingsJson(dir)).toEqual({}) // no "check": null and no invented auto leaking in
   })
 
   it('never overwrites an existing settings.json', () => {
