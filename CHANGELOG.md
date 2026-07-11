@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-07-11
+
+- **Added:** the checkpoint hand-off now names the next step's model. When a
+  step lands, `/pb-build` and `/pb-verify` close the turn by citing the
+  completed step, the next undone step, and — when the plan set one — that next
+  step's `- model:` recommendation, so a fresh context window knows which
+  `/model` to select before re-firing. It covers the default pause, the
+  `--auto` halt, and the happy-path walkthrough. Advisory, never a gate; the
+  source of truth stays the plan's model line that `plumbbob status` already
+  surfaces.
+- **Added:** a `.env.example` template documenting the environment variables
+  the project expects, with local `.env` files now kept out of version control.
+- **Changed:** stripped the parenthetical decision references from the
+  `/pb-build`, `/pb-verify`, and `/pb-plan` pause prose the model echoes at each
+  beat — refs like `D64` surfaced to the user as "the D64 latch," noise they
+  can't decode, so the latch now reads plainly. Code comments and
+  `docs/decisions.md` keep the D-register for internal reference.
+
 ## [0.8.0] - 2026-07-11
 
 - **Added:** an eval tier that measures the skills headless — seven prose
