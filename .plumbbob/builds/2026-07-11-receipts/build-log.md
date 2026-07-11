@@ -11,7 +11,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — Receipts — plan-time gate probe and per-build stats
 
-**Current step:** none (at the boundary)
+**Current step:** none — all 5 landed; finishing
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -20,7 +20,11 @@ step boundaries. The antidote to "my plan got lost in the noise."
 is done only after a checkpoint — check green + checkpoint taken, via `/pb-verify` or
 `/pb-build`.)*
 
-- ☐ 1. <step>
+- ☑ 1. detectGate + doctor's nothing-to-check callout
+- ☑ 2. `start` probes at plan time (async conversion, 52 call sites)
+- ☑ 3. Stats sidecar helpers
+- ☑ 4. Accrual at the beats the CLI owns
+- ☑ 5. Finish rolls up `## Stats`
 
 ## Park list
 
@@ -43,9 +47,13 @@ from sprawling across branches.
 > Reality check: almost everything that *feels* like a pivot is a tangent. Require a
 > failed assumption, not a shinier idea, before you pivot.
 
-Harvest results this boundary:
+Harvest results this boundary (final, at finish):
 
-- (none yet)
+- **tangent** — `start` unconditionally rewrites `.plumbbob/settings.json`
+  (`{auto:false}`), clobbering a configured `check` key on a re-start in the
+  same repo. Pre-existing behavior, discovered while testing the probe's
+  configured-check path. Rob's call: intended seeding, or make it
+  write-if-absent (one-line fix + test) in a future patch.
 
 ## Log
 
@@ -59,3 +67,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-07-11 — step 2 checkpointed · e89965c78 — `start` probes at plan time
 - 2026-07-11 — step 3 checkpointed · de3b250bc — Stats sidecar helpers
 - 2026-07-11 — step 4 checkpointed · 7127db5f8 — Accrual at the beats the CLI owns
+- 2026-07-11 — step 5 checkpointed · 6067093da — Finish rolls up `## Stats` (3m)

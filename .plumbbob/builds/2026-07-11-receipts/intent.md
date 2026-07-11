@@ -85,7 +85,7 @@
    nothing today); all best-effort.
    - seam: `src/verbs/build.ts`, `src/verbs/checkpoint.ts`,
      `src/verbs/revert.ts`, `src/lib/buildlog.ts`, matching tests
-5. [ ] Finish rolls up `## Stats` — **done when:** finish appends a per-step
+5. [x] Finish rolls up `## Stats` — **done when:** finish appends a per-step
    table (red checks, drift warnings, reverts, wall-clock) plus a totals row to
    report.md beside the `## Checkpoints` append; silently skipped when
    stats.json is absent (old builds); tested both ways.
