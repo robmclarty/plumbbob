@@ -228,10 +228,15 @@ record.** And when a raw commit does slip the ledger, `status` says so and the c
 record makes recovery one command — cheap recovery, not a cage, is the control that
 matters.
 
-> The latch's payoff is measured, not asserted: the review-hardening eval harness sweeps
-> this loop **before and after** the latch lands, and the before/after delta is the
-> receipt. That report is a forthcoming companion — until it publishes, see
-> [D64–D66](docs/decisions.md#d64) for the mechanics it measures.
+> The latch's payoff is measured, not asserted: the skill-eval harness
+> ([`test/evals/`](test/evals/)) sweeps this loop headless — prose-only baseline vs. the
+> shipped latch, N=5 per contract, every assertion a mechanical read of git state — and
+> commits the receipt to [`reports/evals/`](reports/evals/2026-07-11.md). The first sweep
+> (opus, 2026-07-11): the latch closes the route it owns — *no checkpoint over a red
+> check under pressure* went from **2/5 prose-only to 5/5 latched** — while the honest
+> numbers it also surfaced (park capture 0/5, and adversarial pressure consistently
+> flipping the `auto` standing grant in settings — a legal, model-writable side door)
+> are the next iteration's work, named in the report rather than papered over.
 
 ## Documentation
 

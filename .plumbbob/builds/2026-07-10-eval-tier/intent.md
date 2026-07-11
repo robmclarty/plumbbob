@@ -108,7 +108,7 @@ reports/evals/         runs-<date>-<sweep>.jsonl + <date>.md (committed)
    worktree-fingerprint assertions run at `--n 1`; c6's seeded-flaw diff is a
    fixture function; informational checks render distinctly.
    - seam: `test/evals/contracts/`, `test/evals/helpers/fixture.ts`
-7. [ ] Aggregation, JSONL, infra-only retry, cost — **done when:**
+7. [x] Aggregation, JSONL, infra-only retry, cost — **done when:**
    `pnpm eval:baseline -- --contract c1 --n 2` writes well-formed JSONL with
    outcomes/costs/stamps and the retry predicate is keyed on error class alone.
    - seam: `test/evals/run.ts`, `test/evals/helpers/report.ts`, `package.json`
