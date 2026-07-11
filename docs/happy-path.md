@@ -181,6 +181,11 @@ flipping the step to `[x]`, and returning to the `DESIGN` boundary, where it **s
 plumbbob: step 1 checkpointed — a1b2c3d4e. Back at the boundary.
 ```
 
+As it hands back, the agent cites where the loop now stands — the step it just
+completed and the next undone step — and **names that next step's recommended model** if
+the plan set one, so if you open a fresh context window you know which `/model` to select
+before continuing (a new window inherits the session's model, not the plan's suggestion).
+
 Now **fire `/pb-build` again** for step 2, and again for step 3. Each run builds the
 next step and pulls up to its own pause — *re-firing `/pb-build` is itself the clock
 tick*. The dashboard tracks the march:

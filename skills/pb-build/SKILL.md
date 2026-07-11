@@ -92,6 +92,15 @@ differs from the model you're running as, say so before implementing — the hum
    route around a refusal with a raw `git commit`** — the work plane stays free,
    but the *record* is latched on purpose.
 
+   **Then hand off with the next model.** Once the checkpoint lands on re-fire, close the
+   turn by citing where the loop now stands: the step you just completed and the next
+   undone step. If that next step carries a `- model:` recommendation (the plan's
+   smallest-model-that-fits call, echoed on `plumbbob status`'s `▸ next` line), **name
+   it** so the human knows which `/model` to select before firing `/pb-build` again — it
+   is what carries the plan's suggestion across a fresh context window, which inherits the
+   session model, not the plan's. No `- model:` line means any model will do. Guidance,
+   never a gate.
+
 ## `--auto` — let the agent be the clock (opt-in)
 
 `/pb-build --auto` is the explicit escape hatch when the human wants unattended
@@ -108,7 +117,10 @@ and approves in the human's place**, and it **chains**:
   the self-review finds a mismatch (surface exactly what, and do not checkpoint it), a
   bound agent returns `blocked` or `drift` (unblock-and-re-run, or `/pb-refine` — an
   agent cannot advance the loop), a new decision is needed, no planned steps
-  remain, or the top of a requested range is reached.
+  remain, or the top of a requested range is reached. **When `--auto` halts back to the
+  human, give the same hand-off the default pause does** — the step just completed, the
+  next undone step, and that next step's `- model:` recommendation if it has one, so a
+  fresh context window knows which `/model` to select.
 
 `--auto` and a step range are the only paths that checkpoint without a human pause, and
 only because the human asked for it by name; a range re-imposes the pause at its top.
@@ -155,3 +167,7 @@ just the one more entry already in the halt list above.
   turn**, and the human's next message is the tick that lands it on re-fire. Never route
   around it with a raw `git commit`; `--auto`, a typed range, or `auto: true` are the
   only self-approvals.
+- **Close with the next model.** When a step lands, cite the completed step and the next
+  undone step, and name that next step's `- model:` recommendation if it has one — it's
+  what a fresh context window needs to pick the right `/model` before re-firing.
+  Guidance, never a gate.
