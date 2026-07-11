@@ -30,7 +30,16 @@ export function appendToSection(content: string, heading: string, line: string):
 // The Log line `checkpoint` writes for a landed step: dated, names the step (its
 // title when intent.md still carries it), and carries the short SHA. One line of the
 // build's history — `/pb-finish` reads these instead of re-narrating the build.
-export function checkpointLogLine(date: string, step: number, sha: string, title: string | null): string {
+// `stats` is the optional compact receipt (research/07 2b), e.g. `2 red, 34m` —
+// null when nothing accrued, so a clean first-try step reads exactly as before.
+export function checkpointLogLine(
+  date: string,
+  step: number,
+  sha: string,
+  title: string | null,
+  stats: string | null = null,
+): string {
   const head = `- ${date} — step ${step} checkpointed · ${sha.slice(0, 9)}`
-  return title !== null && title.length > 0 ? `${head} — ${title}` : head
+  const titled = title !== null && title.length > 0 ? `${head} — ${title}` : head
+  return stats !== null && stats.length > 0 ? `${titled} (${stats})` : titled
 }

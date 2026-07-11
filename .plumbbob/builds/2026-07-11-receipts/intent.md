@@ -71,7 +71,7 @@
    contract-pinned).
    - seam: `src/verbs/start.ts`, `src/verbs/__tests__/`, `src/lib/__tests__/`,
      `test/helpers/`, `skills/pb-plan/SKILL.md`, `test/contract/skills.test.ts`
-3. [ ] Stats sidecar helpers — **done when:** `statsPath(root, slug?)` +
+3. [x] Stats sidecar helpers — **done when:** `statsPath(root, slug?)` +
    `readStats` + `recordStepStat(root, slug, step, mutation)` exist beside the
    handoff helpers, are excluded from NOTHING (tracked by default), tolerate a
    corrupt file by starting fresh, and are unit-tested.

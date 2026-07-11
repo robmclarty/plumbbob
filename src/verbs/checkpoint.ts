@@ -13,12 +13,15 @@ import { commit, findRepoRoot, headSha, isDirty, stageAll, stagePath, stagedPath
 import {
   buildFolder,
   buildLogPath,
+  bumpStepStat,
   checkpointsPath,
   clearHandoff,
   clearTick,
   hasSession,
   intentPath,
+  readStats,
   seamPath,
+  stampStepStat,
   stepPath,
 } from '../lib/sidecar.ts'
 import { runCheck } from '../lib/check.ts'
@@ -55,6 +58,11 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
 
   const gate = await runCheck(root)
   if (gate !== 0) {
+    if (gate === 1) {
+      // The dogfood receipt (research/07 Build 2b): red attempts before green
+      // are a per-step count. Harness breakage (2) is not a red check.
+      bumpStepStat(root, undefined, step, 'redChecks')
+    }
     process.stderr.write(
       gate === 2
         ? 'plumbbob: the check gate itself broke — checkpoint refuses until the harness is fixed.\n'
@@ -75,6 +83,7 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
 
   appendFileSync(checkpointsPath(root), `step ${step} ${sha}\n`)
   flipIntent(root, step)
+  stampStepStat(root, undefined, step, 'landedAt', new Date().toISOString())
   logCheckpoint(root, step, sha)
   rmSync(seamPath(root), { force: true })
   rmSync(stepPath(root), { force: true })
@@ -152,6 +161,7 @@ function warnScopeDrift(root: string, step: number): void {
   const seam = seamTokens(root, step)
   const outside = scopeDrift(stagedPaths(root), seam)
   if (outside.length > 0) {
+    bumpStepStat(root, undefined, step, 'driftWarnings') // the dogfood receipt (research/07 2b)
     process.stderr.write(
       `plumbbob: heads-up — staged paths outside step ${step}'s seam: ${outside.join(', ')}. ` +
         `The checkpoint captures them; if that's real scope drift, the plan may need a \`/pb-step\` revision.\n`,
@@ -199,7 +209,7 @@ function logCheckpoint(root: string, step: number, sha: string): void {
   try {
     const path = buildLogPath(root)
     const date = new Date().toISOString().slice(0, 10)
-    const line = checkpointLogLine(date, step, sha, titleForStep(root, step))
+    const line = checkpointLogLine(date, step, sha, titleForStep(root, step), statsSuffix(root, step))
     const updated = appendToSection(readFileSync(path, 'utf8'), 'Log', line)
     if (updated !== null) {
       writeFileSync(path, updated)
@@ -207,6 +217,23 @@ function logCheckpoint(root: string, step: number, sha: string): void {
   } catch {
     // best-effort ledger; never fail a checkpoint over the build-log.
   }
+}
+
+// The compact receipt riding the Log line (research/07 Build 2b): only what
+// accrued — a clean first-try step gets no suffix at all. Wall-clock needs both
+// stamps (a hand-built step never ran `build <n>`, so it has no startedAt).
+function statsSuffix(root: string, step: number): string | null {
+  const stats = readStats(root)[String(step)]
+  if (stats === undefined) return null
+  const parts: string[] = []
+  if ((stats.redChecks ?? 0) > 0) parts.push(`${stats.redChecks} red`)
+  if ((stats.driftWarnings ?? 0) > 0) parts.push(`${stats.driftWarnings} drift`)
+  if ((stats.reverts ?? 0) > 0) parts.push(`${stats.reverts} revert${stats.reverts === 1 ? '' : 's'}`)
+  if (stats.startedAt !== undefined && stats.landedAt !== undefined) {
+    const ms = Date.parse(stats.landedAt) - Date.parse(stats.startedAt)
+    if (Number.isFinite(ms) && ms >= 0) parts.push(ms < 60_000 ? '<1m' : `${Math.round(ms / 60_000)}m`)
+  }
+  return parts.length > 0 ? parts.join(', ') : null
 }
 
 // The CLI-owned, deterministic commit subject: the step's title when intent.md still

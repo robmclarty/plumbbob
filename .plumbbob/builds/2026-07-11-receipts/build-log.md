@@ -57,3 +57,4 @@ you point at to say "I did that — the LLM helped, but those were my calls."
 folder, so it rides the branch into the PR.)*
 - 2026-07-11 — step 1 checkpointed · 756dcaeed — detectGate + doctor's nothing-to-check callout
 - 2026-07-11 — step 2 checkpointed · e89965c78 — `start` probes at plan time
+- 2026-07-11 — step 3 checkpointed · de3b250bc — Stats sidecar helpers

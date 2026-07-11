@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { checkpoint } from '../checkpoint.ts'
 import { start } from '../start.ts'
-import { buildLogPath, checkpointsPath, grantPath, hasSession, intentPath, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
+import { buildLogPath, checkpointsPath, grantPath, hasSession, intentPath, readStats, stampStepStat, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
 import { setLocalSetting, settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { cleanupFixtures, makeFixtureRepo, runCli } from '../../../test/helpers/fixture-repo.ts'
@@ -434,5 +434,46 @@ describe('checkpoint — the approval latch (subprocess, D64)', () => {
     const landed = runCli(dir, ['checkpoint', '--plan'])
     expect(landed.status).toBe(0)
     expect(readFileSync(checkpointsPath(dir), 'utf8')).toMatch(/plan [0-9a-f]{40}/)
+  })
+})
+
+describe('checkpoint — the dogfood receipt (research/07 2b)', () => {
+  it('bumps redChecks on a red gate, not on harness breakage', async () => {
+    const dir = await startedGreen()
+    writeFileSync(settingsPath(dir), JSON.stringify({ check: 'false' }))
+    await captureIoAsync(() => checkpoint(dir, ['1']))
+    await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(readStats(dir)['1']?.redChecks).toBe(2)
+  })
+
+  it('bumps driftWarnings when the seam warning fires', async () => {
+    const dir = await startedGreen()
+    writeFileSync(join(dir, 'stray.ts'), 'out of seam\n')
+    await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(readStats(dir)['1']?.driftWarnings).toBe(1)
+  })
+
+  it('stamps landedAt on land and rides the compact suffix on the Log line', async () => {
+    const dir = await startedGreen()
+    stampStepStat(dir, 'checkpoint-test', 1, 'startedAt', new Date(Date.now() - 120_000).toISOString())
+    writeFileSync(settingsPath(dir), JSON.stringify({ check: 'false' }))
+    await captureIoAsync(() => checkpoint(dir, ['1'])) // one red attempt
+    writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true' }))
+    mkdirSync(join(dir, 'src'), { recursive: true })
+    writeFileSync(join(dir, 'src', 'a.ts'), 'in seam\n') // in-seam, so no drift joins the suffix
+    const { code } = await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(code).toBe(0)
+    expect(readStats(dir)['1']?.landedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+    const log = readFileSync(buildLogPath(dir), 'utf8')
+    expect(log).toMatch(/step 1 checkpointed · [0-9a-f]{9} — First \(1 red, (<1m|2m)\)/)
+  })
+
+  it('adds no suffix to a clean first-try step with no stamps', async () => {
+    const dir = await startedGreen()
+    mkdirSync(join(dir, 'src'), { recursive: true })
+    writeFileSync(join(dir, 'src', 'a.ts'), 'in seam\n')
+    await captureIoAsync(() => checkpoint(dir, ['1']))
+    const log = readFileSync(buildLogPath(dir), 'utf8')
+    expect(log).toMatch(/step 1 checkpointed · [0-9a-f]{9} — First\n/)
   })
 })

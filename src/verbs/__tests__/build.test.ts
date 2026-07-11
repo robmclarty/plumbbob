@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { build } from '../build.ts'
 import { start } from '../start.ts'
-import { buildDir, intentPath, seamPath, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
+import { buildDir, intentPath, readStats, seamPath, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
@@ -120,5 +120,14 @@ describe('build', () => {
     const { code } = captureIo(() => build(dir, ['2']))
     expect(code).toBe(0)
     expect(existsSync(tickPath(dir))).toBe(false)
+  })
+})
+
+describe('build — the wall-clock receipt (research/07 2b)', () => {
+  it('stamps startedAt for the step on entry', async () => {
+    const dir = await startedWithSteps()
+    captureIo(() => build(dir, ['1']))
+    const started = readStats(dir)['1']?.startedAt
+    expect(started).toMatch(/^\d{4}-\d{2}-\d{2}T/)
   })
 })

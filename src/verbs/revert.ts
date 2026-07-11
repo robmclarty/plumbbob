@@ -19,7 +19,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { findRepoRoot, resetHard, untrackedPaths } from '../lib/git.ts'
-import { checkpointsPath, hasSession, resolveBuild, seamPath, sidecarDir, stepPath } from '../lib/sidecar.ts'
+import { bumpStepStat, checkpointsPath, hasSession, resolveBuild, seamPath, sidecarDir, stepPath } from '../lib/sidecar.ts'
 import { isArtifactPath, matchesSeam } from '../lib/intent.ts'
 
 export function revert(cwd: string, args: ReadonlyArray<string>): number {
@@ -57,6 +57,10 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
   // ignored files alone, so they must be removed explicitly afterward).
   const seam = readSeamTokens(root, slug)
   const toRemove = untrackedPaths(root).filter((p) => matchesSeam(p, seam) && !isArtifactPath(p))
+  // The dogfood receipt (research/07 2b): a revert against an in-flight step is a
+  // datapoint — read the marker before it goes, bump after the reset (the sidecar
+  // is preserved through it, so the write survives).
+  const inFlight = readInFlightStep(root, slug)
 
   resetPreserving(root, sha, plumbbobOwnedPaths(root))
   for (const rel of toRemove) {
@@ -64,6 +68,9 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
   }
   rmSync(seamPath(root, slug), { force: true })
   rmSync(stepPath(root, slug), { force: true })
+  if (inFlight !== null) {
+    bumpStepStat(root, slug, inFlight, 'reverts')
+  }
 
   process.stdout.write(
     `plumbbob: reverted to ${sha.slice(0, 9)} — back at the boundary. Park lines and intent edits were preserved.\n`,
@@ -151,5 +158,16 @@ function readSeamTokens(root: string, slug: string | null): ReadonlyArray<string
       .filter((l) => l.length > 0)
   } catch {
     return []
+  }
+}
+
+// The in-flight STEP number, or null when none — read for the revert receipt
+// before the marker is cleared.
+function readInFlightStep(root: string, slug: string | null): number | null {
+  try {
+    const raw = readFileSync(stepPath(root, slug), 'utf8').trim()
+    return /^\d+$/.test(raw) ? Number(raw) : null
+  } catch {
+    return null
   }
 }

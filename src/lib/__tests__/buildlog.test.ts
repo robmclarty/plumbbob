@@ -57,3 +57,20 @@ describe('checkpointLogLine', () => {
     expect(checkpointLogLine('2026-06-30', 3, 'a1b2c3d4e5f6', '')).toBe('- 2026-06-30 — step 3 checkpointed · a1b2c3d4e')
   })
 })
+
+describe('checkpointLogLine — the compact stats receipt (research/07 2b)', () => {
+  it('appends the suffix in parens when stats accrued', () => {
+    expect(checkpointLogLine('2026-07-11', 2, 'a1b2c3d4e5f6', 'Wire it', '2 red, 34m')).toBe(
+      '- 2026-07-11 — step 2 checkpointed · a1b2c3d4e — Wire it (2 red, 34m)',
+    )
+  })
+
+  it('reads exactly as before when nothing accrued (null or empty)', () => {
+    expect(checkpointLogLine('2026-07-11', 2, 'a1b2c3d4e5f6', 'Wire it', null)).toBe(
+      '- 2026-07-11 — step 2 checkpointed · a1b2c3d4e — Wire it',
+    )
+    expect(checkpointLogLine('2026-07-11', 2, 'a1b2c3d4e5f6', 'Wire it', '')).toBe(
+      '- 2026-07-11 — step 2 checkpointed · a1b2c3d4e — Wire it',
+    )
+  })
+})

@@ -7,7 +7,7 @@ import { start } from '../start.ts'
 import { build } from '../build.ts'
 import { checkpoint } from '../checkpoint.ts'
 import { park } from '../park.ts'
-import { buildDir, buildLogPath, checkpointsPath, intentPath, seamPath, stepPath } from '../../lib/sidecar.ts'
+import { buildDir, buildLogPath, checkpointsPath, intentPath, readStats, seamPath, stepPath } from '../../lib/sidecar.ts'
 import { settingsPath } from '../../lib/settings.ts'
 import { headSha } from '../../lib/git.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -179,5 +179,21 @@ describe('revert', () => {
     const { code, stderr } = captureIo(() => revert(makeTempRepo(), []))
     expect(code).toBe(1)
     expect(stderr).toContain('no active session')
+  })
+})
+
+describe('revert — the receipt bump (research/07 2b)', () => {
+  it('bumps the reverts counter against the in-flight step, surviving the reset', async () => {
+    const dir = await startedGreen()
+    writeFileSync(stepPath(dir), '1\n') // a step in flight, as `build 1` would leave it
+    const { code } = captureIo(() => revert(dir, []))
+    expect(code).toBe(0)
+    expect(readStats(dir)['1']?.reverts).toBe(1)
+  })
+
+  it('bumps nothing when no step is in flight', async () => {
+    const dir = await startedGreen()
+    captureIo(() => revert(dir, []))
+    expect(readStats(dir)).toEqual({})
   })
 })
