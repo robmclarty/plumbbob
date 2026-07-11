@@ -44,6 +44,18 @@ bounce now surfaces at plan time, and the loop finally counts what it costs.
 configured `check` on re-start — pre-existing; write-if-absent is the likely
 one-line fix, pending the human's call on whether the seeding is intentional.
 
+## Stats
+
+| step | red checks | drift warnings | reverts | wall-clock |
+|------|------------|----------------|---------|------------|
+| 5 | 0 | 0 | 0 | 3m |
+| **total** | 0 | 0 | 0 | 3m |
+
+*(Partial by construction: the stats code shipped in steps 3–5 of this very
+build, and the finish itself ran a `dist/` built before the roll-up landed —
+this table was appended by hand from the accrued stats.json, in the exact
+format `finish` now writes. The next build gets the full table for free.)*
+
 ## Checkpoints
 
 - baseline 3e453b2c2059760412899ee63f8cad27ae57c250
