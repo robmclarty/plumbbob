@@ -77,7 +77,7 @@
    corrupt file by starting fresh, and are unit-tested.
    - seam: `src/lib/sidecar.ts`, `src/lib/__tests__/sidecar.test.ts`
    - model: sonnet — mirrors appendHandoff exactly
-4. [ ] Accrual at the beats the CLI owns — **done when:** `build <n>` stamps
+4. [x] Accrual at the beats the CLI owns — **done when:** `build <n>` stamps
    `startedAt`; checkpoint bumps `redChecks` on a red gate and `driftWarnings`
    when the seam warning fires, stamps `landedAt` on land, and the build-log
    Log line gains a compact suffix when stats exist (e.g. `(2 red, 1 revert,

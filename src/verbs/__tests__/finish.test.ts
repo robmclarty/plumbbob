@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { finish } from '../finish.ts'
 import { start } from '../start.ts'
-import { checkpointsPath, grantPath, hasSession, intentPath, reportPath, sidecarDir, tickPath } from '../../lib/sidecar.ts'
+import { bumpStepStat, checkpointsPath, grantPath, hasSession, intentPath, reportPath, sidecarDir, stampStepStat, tickPath } from '../../lib/sidecar.ts'
 import { localSettingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
@@ -86,5 +86,33 @@ describe('finish', () => {
     const { code, stderr } = captureIo(() => finish(makeTempRepo()))
     expect(code).toBe(1)
     expect(stderr).toContain('no active session')
+  })
+})
+
+describe('finish — the Stats roll-up (research/07 2b)', () => {
+  it('appends a per-step table with totals when stats accrued', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['With stats', '--slug', 'with-stats']))
+    writeFileSync(reportPath(dir), '# Report\n')
+    stampStepStat(dir, 'with-stats', 1, 'startedAt', '2026-07-11T10:00:00Z')
+    stampStepStat(dir, 'with-stats', 1, 'landedAt', '2026-07-11T10:34:00Z')
+    bumpStepStat(dir, 'with-stats', 1, 'redChecks')
+    bumpStepStat(dir, 'with-stats', 1, 'redChecks')
+    bumpStepStat(dir, 'with-stats', 2, 'reverts')
+    captureIo(() => finish(dir))
+    const report = readFileSync(reportPath(dir), 'utf8')
+    expect(report).toContain('## Stats')
+    expect(report).toContain('| step | red checks | drift warnings | reverts | wall-clock |')
+    expect(report).toContain('| 1 | 2 | 0 | 0 | 34m |')
+    expect(report).toContain('| 2 | 0 | 0 | 1 | — |') // hand-built step: no stamps, no wall
+    expect(report).toContain('| **total** | 2 | 0 | 1 | 34m |')
+  })
+
+  it('appends no Stats section when nothing accrued (old builds)', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['No stats']))
+    writeFileSync(reportPath(dir), '# Report\n')
+    captureIo(() => finish(dir))
+    expect(readFileSync(reportPath(dir), 'utf8')).not.toContain('## Stats')
   })
 })

@@ -14,6 +14,7 @@ import {
   clearTick,
   hasSession,
   intentPath,
+  readStats,
   reportPath,
   resolveBuild,
   seamPath,
@@ -21,6 +22,7 @@ import {
   sidecarDir,
   spikePath,
   stepPath,
+  type StepStats,
 } from '../lib/sidecar.ts'
 import { setLocalSetting } from '../lib/settings.ts'
 import { parseTitle } from '../lib/orient.ts'
@@ -36,6 +38,7 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
 
   if (existsSync(reportPath(root, slug))) {
     appendCheckpointShas(root, slug)
+    appendStats(root, slug)
   } else {
     process.stderr.write(
       'plumbbob: note — no report.md found; finishing without one ' +
@@ -108,6 +111,61 @@ function bodyArg(args: ReadonlyArray<string>): string | null {
   } catch {
     return null
   }
+}
+
+// Roll the per-step receipts (research/07 Build 2b) into report.md as a `## Stats`
+// table — one row per step plus totals, so "is the loop worth it?" is a table,
+// not a feeling. Silently skipped when nothing accrued (an old build, a build
+// with no red/revert/drift and no `build <n>` stamps has nothing to say).
+function appendStats(root: string, slug: string | null): void {
+  const stats = readStats(root, slug)
+  const steps = Object.keys(stats)
+    .map(Number)
+    .filter((n) => Number.isFinite(n))
+    .sort((a, b) => a - b)
+  if (steps.length === 0) {
+    return
+  }
+  const totals = { redChecks: 0, driftWarnings: 0, reverts: 0, wallMs: 0 }
+  const rows = steps.map((n) => {
+    const s = stats[String(n)] ?? {}
+    totals.redChecks += s.redChecks ?? 0
+    totals.driftWarnings += s.driftWarnings ?? 0
+    totals.reverts += s.reverts ?? 0
+    const wall = wallClockMs(s)
+    totals.wallMs += wall ?? 0
+    return `| ${n} | ${s.redChecks ?? 0} | ${s.driftWarnings ?? 0} | ${s.reverts ?? 0} | ${formatWall(wall)} |`
+  })
+  appendFileSync(
+    reportPath(root, slug),
+    [
+      '',
+      '## Stats',
+      '',
+      '| step | red checks | drift warnings | reverts | wall-clock |',
+      '|------|------------|----------------|---------|------------|',
+      ...rows,
+      `| **total** | ${totals.redChecks} | ${totals.driftWarnings} | ${totals.reverts} | ${formatWall(totals.wallMs > 0 ? totals.wallMs : null)} |`,
+      '',
+    ].join('\n'),
+  )
+}
+
+function wallClockMs(s: StepStats): number | null {
+  if (s.startedAt === undefined || s.landedAt === undefined) {
+    return null
+  }
+  const ms = Date.parse(s.landedAt) - Date.parse(s.startedAt)
+  return Number.isFinite(ms) && ms >= 0 ? ms : null
+}
+
+// `—` when unknown (a hand-built step never ran `build <n>`, so it has no
+// startedAt), `<1m` under a minute, whole minutes otherwise.
+function formatWall(ms: number | null): string {
+  if (ms === null) {
+    return '—'
+  }
+  return ms < 60_000 ? '<1m' : `${Math.round(ms / 60_000)}m`
 }
 
 // Append the recorded checkpoints (baseline + each `step n <sha>`) to report.md as a
