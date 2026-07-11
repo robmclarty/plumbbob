@@ -191,6 +191,78 @@ export function clearHandoff(root: string, slug?: string | null): void {
   rmSync(handoffPath(root, slug), { force: true })
 }
 
+// --- Per-build stats (research/07 Build 2b): the dogfood receipt. One tracked
+// stats.json beside checkpoints — it rides the branch, because the numbers are
+// the record's evidence. Keyed by step number; accrued at the beats the CLI
+// already owns (build stamps startedAt, checkpoint bumps/lands, revert bumps).
+// Single-writer and malformed-tolerant like handoff.json (D27): a corrupt file
+// starts fresh, and no helper here may ever wedge the verb that called it. ---
+
+export type StepStats = {
+  readonly redChecks?: number
+  readonly driftWarnings?: number
+  readonly reverts?: number
+  readonly startedAt?: string
+  readonly landedAt?: string
+}
+
+export type BuildStats = Readonly<Record<string, StepStats>>
+
+export function statsPath(root: string, slug?: string | null): string {
+  return join(artifactDir(root, slug), 'stats.json')
+}
+
+// The whole file, or {} when absent or corrupt — malformed contributes nothing.
+export function readStats(root: string, slug?: string | null): BuildStats {
+  try {
+    const parsed = JSON.parse(readFileSync(statsPath(root, slug), 'utf8')) as unknown
+    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? (parsed as BuildStats) : {}
+  } catch {
+    return {}
+  }
+}
+
+// Increment one counter on one step. Best-effort by contract: a failed write is
+// swallowed — the stats are a receipt, never a gate on the verb that accrues them.
+export function bumpStepStat(
+  root: string,
+  slug: string | null | undefined,
+  step: number,
+  key: 'redChecks' | 'driftWarnings' | 'reverts',
+): void {
+  patchStepStat(root, slug, step, (current) => ({ [key]: (current[key] ?? 0) + 1 }))
+}
+
+// Stamp one timestamp on one step (startedAt at `build <n>`, landedAt at
+// checkpoint). Same best-effort contract as bumpStepStat.
+export function stampStepStat(
+  root: string,
+  slug: string | null | undefined,
+  step: number,
+  key: 'startedAt' | 'landedAt',
+  value: string,
+): void {
+  patchStepStat(root, slug, step, () => ({ [key]: value }))
+}
+
+function patchStepStat(
+  root: string,
+  slug: string | null | undefined,
+  step: number,
+  patch: (current: StepStats) => Partial<StepStats>,
+): void {
+  try {
+    const stats = readStats(root, slug)
+    const current = stats[String(step)] ?? {}
+    const next = { ...stats, [String(step)]: { ...current, ...patch(current) } }
+    const path = statsPath(root, slug)
+    mkdirSync(dirname(path), { recursive: true })
+    writeFileSync(path, `${JSON.stringify(next, null, 2)}\n`)
+  } catch {
+    // Best-effort receipt (D27/D4): never wedge build/checkpoint/revert over it.
+  }
+}
+
 // A session exists iff STATE exists. Deleting STATE (at finish) is what flips the
 // repo back to "no session" — so it is the single source of truth for "is there
 // a session". `start` calls beginSession; `finish` removes the file.

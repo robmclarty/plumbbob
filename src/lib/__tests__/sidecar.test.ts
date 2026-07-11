@@ -9,6 +9,7 @@ import {
   buildLogPath,
   checkpointsPath,
   clearSpike,
+  bumpStepStat,
   clearTick,
   excludeControl,
   excludeSidecar,
@@ -18,11 +19,14 @@ import {
   intentPath,
   listBuilds,
   markSpike,
+  readStats,
   seamPath,
   sidecarDir,
   slugify,
   spikePath,
+  stampStepStat,
   stampTick,
+  statsPath,
   stepPath,
   tickPath,
   turnPath,
@@ -201,5 +205,56 @@ describe('excludeSidecar', () => {
     // per-worktree gitdir, whose missing info/ was the ENOENT crash this fixes.
     const commonExclude = readFileSync(join(realpathSync(main), '.git', 'info', 'exclude'), 'utf8')
     expect(commonExclude.split('\n')).toContain('.plumbbob/')
+  })
+})
+
+describe('per-build stats (research/07 Build 2b)', () => {
+  function statsRepo(): string {
+    const dir = makeTempRepo()
+    mkdirSync(buildDir(dir, 'stats-build'), { recursive: true })
+    beginSession(dir)
+    writeFileSync(join(sidecarDir(dir), 'settings.local.json'), JSON.stringify({ activeBuild: 'stats-build' }))
+    return dir
+  }
+
+  it('bumps counters per step, creating the file on first accrual', () => {
+    const dir = statsRepo()
+    bumpStepStat(dir, 'stats-build', 1, 'redChecks')
+    bumpStepStat(dir, 'stats-build', 1, 'redChecks')
+    bumpStepStat(dir, 'stats-build', 2, 'reverts')
+    const stats = readStats(dir, 'stats-build')
+    expect(stats['1']?.redChecks).toBe(2)
+    expect(stats['2']?.reverts).toBe(1)
+    expect(stats['1']?.reverts).toBeUndefined()
+  })
+
+  it('stamps timestamps without clobbering counters on the same step', () => {
+    const dir = statsRepo()
+    bumpStepStat(dir, 'stats-build', 1, 'driftWarnings')
+    stampStepStat(dir, 'stats-build', 1, 'startedAt', '2026-07-11T10:00:00Z')
+    stampStepStat(dir, 'stats-build', 1, 'landedAt', '2026-07-11T10:34:00Z')
+    const step = readStats(dir, 'stats-build')['1']
+    expect(step?.driftWarnings).toBe(1)
+    expect(step?.startedAt).toBe('2026-07-11T10:00:00Z')
+    expect(step?.landedAt).toBe('2026-07-11T10:34:00Z')
+  })
+
+  it('tolerates a corrupt file by starting fresh — never wedges the caller (D27)', () => {
+    const dir = statsRepo()
+    writeFileSync(statsPath(dir, 'stats-build'), '{corrupt')
+    expect(readStats(dir, 'stats-build')).toEqual({})
+    expect(() => bumpStepStat(dir, 'stats-build', 1, 'redChecks')).not.toThrow()
+    expect(readStats(dir, 'stats-build')['1']?.redChecks).toBe(1)
+  })
+
+  it('resolves the flat sidecar under --local (null slug) and is NOT git-excluded when tracked', () => {
+    const dir = statsRepo()
+    stampStepStat(dir, null, 1, 'startedAt', 'x')
+    expect(existsSync(join(sidecarDir(dir), 'stats.json'))).toBe(true)
+    // Tracked layout: stats.json must ride the branch — nothing in excludeControl
+    // may match it.
+    excludeControl(dir)
+    const exclude = readFileSync(join(dir, '.git', 'info', 'exclude'), 'utf8')
+    expect(exclude).not.toContain('stats')
   })
 })

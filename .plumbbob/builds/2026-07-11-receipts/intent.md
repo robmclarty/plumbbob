@@ -62,7 +62,7 @@
    - seam: `src/lib/check.ts`, `src/verbs/doctor.ts`,
      `src/lib/__tests__/check.test.ts`, `src/verbs/__tests__/doctor.test.ts`
    - model: sonnet — mechanical extraction of an existing pattern
-2. [ ] `start` probes at plan time — **done when:** `start` is async and, after
+2. [x] `start` probes at plan time — **done when:** `start` is async and, after
    scaffolding, prints the nothing-to-check warning naming
    `{"check": "npm test"}` in `.plumbbob/settings.json`; silent when a check is
    configured or tools are detected; exit code unchanged either way; all
