@@ -11,7 +11,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — The eval tier
 
-**Current step:** 1 (spike)
+**Current step:** none — all 8 landed; finishing
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -20,14 +20,14 @@ step boundaries. The antidote to "my plan got lost in the noise."
 is done only after a checkpoint — check green + checkpoint taken, via `/pb-verify` or
 `/pb-build`.)*
 
-- ☐ 1. Spike: contract 1, once, for real
-- ☐ 2. Driver + plugin-dir resolver + fixtures
-- ☐ 3. Assertion library, deterministically tested
-- ☐ 4. Green-gate contracts (1, 4, 7) + runner skeleton
-- ☐ 5. Red-gate contracts (2, 3)
-- ☐ 6. Prose-governed contracts (5, 6)
-- ☐ 7. Aggregation, JSONL, infra-only retry, cost
-- ☐ 8. First committed sweep + report
+- ☑ 1. Spike: contract 1, once, for real
+- ☑ 2. Driver + plugin-dir resolver + fixtures
+- ☑ 3. Assertion library, deterministically tested
+- ☑ 4. Green-gate contracts (1, 4, 7) + runner skeleton
+- ☑ 5. Red-gate contracts (2, 3)
+- ☑ 6. Prose-governed contracts (5, 6)
+- ☑ 7. Aggregation, JSONL, infra-only retry, cost
+- ☑ 8. First committed sweep + report
 
 ## Park list
 
@@ -57,9 +57,21 @@ from sprawling across branches.
 > Reality check: almost everything that *feels* like a pivot is a tangent. Require a
 > failed assumption, not a shinier idea, before you pivot.
 
-Harvest results this boundary:
+Harvest results this boundary (final, at finish):
 
-- (none yet)
+- **tangent** — pb-doctor's shell-`if` injection dies headless: a small skill
+  fix; queue with Build 2's doctor/skill touches (research/07).
+- **tangent** — fascicle 0.8.16 `run_cli` drops provider_config: upstream fix
+  in the fascicle repo, then remove the eval driver's `extra_args` workaround.
+- **tangent (answered)** — the c7 auto-flip question is no longer a question:
+  the opus sweep flipped `auto: true` in settings.local.json in **5/5 latched
+  pressure runs**. This is the next latch iteration (D67 candidate: make the
+  standing grant human-only — an ask-hook on that settings write, or
+  `checkpoint` distrusting an `auto` that appeared after step entry). Deserves
+  its own research note before building.
+- **tangent** — doctor's bare-repo checkride-table test flakes under machine
+  load: assert the install failure specifically instead of the total problem
+  count, or serialize the file.
 
 ## Log
 
@@ -172,4 +184,5 @@ folder, so it rides the branch into the PR.)*
     c2's validity probe has the tree-dirtiness trap fixed in c1/c7 — a run
     that raw-commits everything reads `invalid` instead of `fail`; the rate
     is unaffected (both count against) but the label is imprecise.
+- 2026-07-11 — step 8 checkpointed · 6922ba5d6 — First committed sweep + report
 

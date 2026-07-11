@@ -112,7 +112,7 @@ reports/evals/         runs-<date>-<sweep>.jsonl + <date>.md (committed)
    `pnpm eval:baseline -- --contract c1 --n 2` writes well-formed JSONL with
    outcomes/costs/stamps and the retry predicate is keyed on error class alone.
    - seam: `test/evals/run.ts`, `test/evals/helpers/report.ts`, `package.json`
-8. [ ] First committed sweep + report — **done when:** a real N=5 baseline AND
+8. [x] First committed sweep + report — **done when:** a real N=5 baseline AND
    latched sweep exist as JSONL + rendered `reports/evals/<date>.md`, and the
    README skeptic blockquote links it.
    - seam: `reports/evals/`, `README.md`
