@@ -81,19 +81,19 @@ export function runCli(
 // The tracked artifact plane (D2) lives under `.plumbbob/builds/<slug>/`; the
 // control plane (session sentinel, settings) stays flat at `.plumbbob/`. These
 // helpers mirror that split so a test can name a file without knowing which
-// plane it is on: build-plane names resolve under the active build folder (the
-// `activeBuild` cursor in settings.local.json), everything else stays flat.
-// report.md rides with the build folder now: `finish` writes/commits it there so
-// it merges into the branch and shows up in the PR (the local-only `archive/`
-// retired), so it resolves under `builds/<slug>/` like the other artifacts.
+// plane it is on: build-plane names resolve under the active build folder (named
+// by STATE's content, the D28 cursor), everything else stays flat. report.md rides
+// with the build folder now: `finish` writes/commits it there so it merges into the
+// branch and shows up in the PR (the local-only `archive/` retired), so it resolves
+// under `builds/<slug>/` like the other artifacts.
 const BUILD_PLANE = new Set(['intent.md', 'build-log.md', 'report.md', 'checkpoints', 'SEAM', 'STEP', 'SPIKE'])
 
+// Mirror the CLI's readCursor (sidecar.ts): the cursor is STATE's single-line
+// content, empty under --local, and the legacy `active` sentinel counts as unset.
 function activeBuildSlug(dir: string): string | null {
   try {
-    const local = JSON.parse(readFileSync(join(dir, '.plumbbob', 'settings.local.json'), 'utf8')) as {
-      activeBuild?: unknown
-    }
-    return typeof local.activeBuild === 'string' && local.activeBuild.length > 0 ? local.activeBuild : null
+    const content = readFileSync(join(dir, '.plumbbob', 'STATE'), 'utf8').trim()
+    return content.length > 0 && content !== 'active' ? content : null
   } catch {
     return null
   }

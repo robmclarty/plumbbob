@@ -38,10 +38,9 @@ describe('plumbbob finish (the close-out, D9/D15)', () => {
     expect(gitTracked(dir, '.plumbbob/builds/finish-demo/intent.md')).toBe(true)
     expect(gitTracked(dir, '.plumbbob/builds/finish-demo/report.md')).toBe(true)
 
-    // control state cleared: no session sentinel, the cursor is dropped, tree clean.
+    // control state cleared: removing STATE drops the session sentinel AND the cursor
+    // (they share the one file now, D28), tree clean.
     expect(sidecarExists(dir, 'STATE')).toBe(false)
-    const local = JSON.parse(readFileSync(join(dir, '.plumbbob', 'settings.local.json'), 'utf8'))
-    expect(local.activeBuild).toBeUndefined()
     expect(execFileSync('git', ['-C', dir, 'status', '--porcelain'], { encoding: 'utf8' }).trim()).toBe('')
     expect(runCli(dir, ['status']).stdout).toContain('NO ACTIVE SESSION')
   })

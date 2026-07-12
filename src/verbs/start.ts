@@ -21,7 +21,7 @@ import {
   setGrant,
   stampTick,
 } from '../lib/sidecar.ts'
-import { settingsPath, setLocalSetting } from '../lib/settings.ts'
+import { settingsPath } from '../lib/settings.ts'
 
 // D24/D32: the gate is checkride unless a `check` setting overrides it, so
 // settings.json seeds with no `check` key at all — absence IS the default. The
@@ -87,7 +87,10 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
   const sha = headSha(root)
 
   mkdirSync(sidecarDir(root), { recursive: true })
-  beginSession(root)
+  // beginSession writes STATE — the session sentinel and, in its content, the cursor
+  // (D28). Point it at this build (null under --local, which has no cursor). The
+  // cursor lives in STATE, not settings.local.json, so that overlay stays human-owned.
+  beginSession(root, local ? null : slug)
   // Scaffold the tracked settings.json ONLY when absent, and seed it EMPTY — the
   // human owns this file once it exists (their `check` gate lives here), so a
   // re-start must never touch it. We inject no opinions even on first create:
@@ -117,7 +120,6 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
     writeFileSync(join(dir, 'checkpoints'), `baseline ${sha}\n`)
     writeFileSync(join(dir, 'intent.md'), stamp(readTemplate('intent.md'), title, CHECK_ECHO))
     writeFileSync(join(dir, 'build-log.md'), stamp(readTemplate('build-log.md'), title, CHECK_ECHO))
-    setLocalSetting(root, 'activeBuild', slug)
     excludeControl(root)
     intentLocation = `.plumbbob/builds/${slug}/intent.md`
   }

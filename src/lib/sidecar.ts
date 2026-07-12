@@ -2,15 +2,19 @@
 // read it with a grep and no markdown parsing (D7). Functional/procedural,
 // node builtins only (C1/C2).
 //
-// STATE is a pure session sentinel: its EXISTENCE means "a session is active",
-// and nothing reads its content. The phase the dashboard shows (DESIGN/BUILD/
-// SPIKE) is derived, not stored — BUILD ⇔ a STEP is in flight, SPIKE ⇔ the SPIKE
-// marker is present, otherwise DESIGN.
+// STATE is the session sentinel AND the active-build cursor (D28): its EXISTENCE
+// means "a session is active", and its CONTENT names the build that session is on —
+// the two reinforce each other (a session is always on some build; the cursor is
+// meaningless without a session). Content is empty under --local / no build.
+// hasSession stays existence-only; activeBuild reads the content. Homing the cursor
+// here — not in settings.local.json — keeps that overlay purely human-owned
+// (check/auto): the tool only ever reads it, never rewrites it. The phase the
+// dashboard shows (DESIGN/BUILD/SPIKE) is derived, not stored — BUILD ⇔ a STEP is
+// in flight, SPIKE ⇔ the SPIKE marker is present, otherwise DESIGN.
 
 import { existsSync, readdirSync, readFileSync, writeFileSync, appendFileSync, rmSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { gitPath } from './git.ts'
-import { localSetting } from './settings.ts'
 
 const DIRNAME = '.plumbbob'
 
@@ -57,16 +61,32 @@ export function listBuilds(root: string): ReadonlyArray<string> {
 }
 
 // Resolve which build a verb acts on (D28): an explicit `--build <slug>` flag →
-// the `activeBuild` cursor in settings.local.json → the sole build in `builds/`
-// → null (the caller then refuses with a hint). One-active-per-worktree holds by
-// construction: the cursor is a single scalar key in an untracked file, so it can
-// never point at two builds (D28).
+// the cursor in STATE → the sole build in `builds/` → null (the caller then refuses
+// with a hint). One-active-per-worktree holds by construction: the cursor is STATE's
+// single-line content, so it can never point at two builds (D28).
 export function activeBuild(root: string, flag?: string): string | null {
   if (flag !== undefined && flag.length > 0) return flag
-  const cursor = localSetting(root, 'activeBuild')
-  if (typeof cursor === 'string' && cursor.length > 0) return cursor
+  const cursor = readCursor(root)
+  if (cursor !== null) return cursor
   const builds = listBuilds(root)
   return builds.length === 1 ? (builds[0] ?? null) : null
+}
+
+// STATE's content is the active-build cursor. Empty means "no build" (--local, or a
+// session whose cursor is unset) → null, so activeBuild falls through to the
+// sole-build rule. A pre-STATE-cursor session wrote the literal `active` sentinel
+// here (the cursor lived in settings.local.json then); treat that legacy value as
+// unset so an in-flight upgrade degrades gracefully instead of chasing a build named
+// "active". `active` is thus reserved and never a valid cursor — no derived slug
+// collides (they carry a YYYY-MM-DD- prefix).
+function readCursor(root: string): string | null {
+  let content: string
+  try {
+    content = readFileSync(statePath(root), 'utf8').trim()
+  } catch {
+    return null
+  }
+  return content.length > 0 && content !== 'active' ? content : null
 }
 
 // The build a verb should act on, plus its argv with the `--build <slug>` pair
@@ -265,13 +285,29 @@ function patchStepStat(
 
 // A session exists iff STATE exists. Deleting STATE (at finish) is what flips the
 // repo back to "no session" — so it is the single source of truth for "is there
-// a session". `start` calls beginSession; `finish` removes the file.
+// a session". `start` calls beginSession; `finish` removes the file. Existence is
+// the whole session signal; STATE's content is a separate axis (the cursor).
 export function hasSession(root: string): boolean {
   return existsSync(statePath(root))
 }
 
-export function beginSession(root: string): void {
-  writeFileSync(statePath(root), 'active\n')
+// Open the session and point its cursor at `slug` — null under --local / no build,
+// which leaves STATE present but empty so activeBuild falls through to the sole-build
+// rule. `finish` removes the file, closing the session and clearing the cursor in
+// one delete.
+export function beginSession(root: string, slug: string | null = null): void {
+  writeCursor(root, slug)
+}
+
+// Re-point the cursor at an existing build (`use`) — a plain content rewrite that
+// leaves the session sentinel (STATE's existence) intact. Callers guard hasSession
+// first, so this never resurrects a finished session.
+export function setActiveBuild(root: string, slug: string): void {
+  writeCursor(root, slug)
+}
+
+function writeCursor(root: string, slug: string | null): void {
+  writeFileSync(statePath(root), slug === null ? '' : `${slug}\n`)
 }
 
 // SPIKE marker helpers — existence is the whole signal (content is irrelevant).
@@ -386,10 +422,11 @@ function addExcludes(root: string, patterns: ReadonlyArray<string>): void {
 }
 
 // The narrowed control plane (D17): with `builds/<slug>/` now tracked, only the
-// per-worktree control files stay git-excluded — the local settings overlay (its
-// `activeBuild` cursor), the session sentinel, and the in-flight step markers
-// inside every build. Everything else under `.plumbbob/` (settings.json, and each
-// build's intent/build-log/checkpoints/report) rides the branch into the PR.
+// per-worktree control files stay git-excluded — the session sentinel STATE (whose
+// content is the active-build cursor, D28), the personal settings overlay, and the
+// in-flight step markers inside every build. Everything else under `.plumbbob/`
+// (settings.json, and each build's intent/build-log/checkpoints/report) rides the
+// branch into the PR.
 export function excludeControl(root: string): void {
   addExcludes(root, [
     `${DIRNAME}/STATE`,

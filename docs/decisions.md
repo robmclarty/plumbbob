@@ -150,18 +150,22 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   your-place) is a personal preference. Both files are optional JSON; a malformed one
   contributes nothing rather than wedging the tool. Supersedes the flat `.plumbbob/config`.
   *Tagged in* `settings.ts`, `check.ts`, `start.ts`.
-- <a id="d28"></a>**D28 — The active-build cursor.** Which build a verb acts on resolves `--build <slug>`
-  → the `activeBuild` cursor in `settings.local.json` → the sole build in `builds/` → a
-  refusal with a hint. Because the cursor is a single scalar key in an untracked per-worktree
-  file, one-active-per-worktree holds *by construction* — it cannot point at two builds.
-  *Tagged in* `sidecar.ts`.
+- <a id="d28"></a>**D28 — The active-build cursor lives in `STATE`.** Which build a verb acts on resolves
+  `--build <slug>` → the cursor in `.plumbbob/STATE` → the sole build in `builds/` → a refusal
+  with a hint. The session sentinel and the cursor are the *same* file: `STATE`'s existence
+  means a session is live, and its single-line content names the build that session is on (empty
+  under `--local`). Because that content is one line in an untracked per-worktree file,
+  one-active-per-worktree holds *by construction* — it cannot point at two builds. (The cursor
+  was formerly an `activeBuild` key in `settings.local.json`; homing it in `STATE` keeps that
+  overlay purely human-owned — plumbbob only ever *reads* it — and lets one `finish` delete both
+  the session and the cursor at once.) *Tagged in* `sidecar.ts`.
 - <a id="d29"></a>**D29 — `finish` replaces `wrap`; the build folder is the archive.** The close-out verb
   was renamed `wrap` → `finish` (a clean break, no alias) and gutted: it writes `report.md`
   into the build folder, makes the final commit, and clears the control state — no separate
   archive copy, because the tracked folder already *is* the record and merges into main with
   the branch. Retired `archive.ts`. Supersedes [**D20**](#d20). *Tagged in* `finish.ts`.
 - <a id="d30"></a>**D30 — `use <slug>` switches and resumes.** One `nvm use`-shaped verb re-points the
-  `activeBuild` cursor at a build, validating the folder and warning (but allowing) a leave
+  active-build cursor (`STATE`'s content, [**D28**](#d28)) at a build, validating the folder and warning (but allowing) a leave
   with a step in flight — that surviving in-flight state is the point of per-build markers
   ([**D26**](#d26)). *Tagged in* `use.ts`.
 - <a id="d31"></a>**D31 — `doctor --migrate` moves a legacy flat sidecar into `builds/`.** `doctor` detects a

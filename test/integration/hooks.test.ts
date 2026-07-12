@@ -47,8 +47,8 @@ describe('post-edit light feedback (D25 — the only edit-time hook)', () => {
     expect(result.stdout.trim()).toBe('')
   })
 
-  it('no-ops when there is no active build (no settings.local.json activeBuild cursor)', () => {
-    const dir = makeFixtureRepo() // note: no `start`, so find_root finds no cursor and fails
+  it('no-ops when there is no active build (STATE absent / empty)', () => {
+    const dir = makeFixtureRepo() // note: no `start`, so find_root finds no non-empty STATE and fails
     const result = postEdit(dir, { rel: 'src/a.ts' })
     expect(result.status).toBe(0)
     expect(result.stdout.trim()).toBe('')
@@ -75,7 +75,7 @@ describe('post-edit light feedback (D25 — the only edit-time hook)', () => {
 // *question*, never a wall. checkpoint owns the landing; this only nudges the human
 // to route through it. Always exits 0, never `deny`s — C5 stays intact.
 describe('git-commit ask-hook (D66 — checkpoint owns the landing)', () => {
-  // Put a step in flight: `start` mints the activeBuild cursor + build folder, then
+  // Put a step in flight: `start` mints the STATE cursor + build folder, then
   // a STEP file (what `build <n>` would write) is the "in flight" signal the hook reads.
   function withStepInFlight(): string {
     const dir = makeFixtureRepo()

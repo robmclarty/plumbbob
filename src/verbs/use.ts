@@ -1,15 +1,14 @@
 // `plumbbob use <slug>` (D30) — re-point the per-worktree cursor at an existing
 // build and resume it. Both switching and resuming are the same one word (Q10,
-// `nvm use`-shaped): the cursor is a single scalar key in settings.local.json, so
-// pointing it elsewhere IS the switch and one-active-per-worktree holds by
+// `nvm use`-shaped): the cursor is STATE's single-line content, so pointing it
+// elsewhere IS the switch and one-active-per-worktree holds by
 // construction (D28). It validates the target folder exists, and warns — but
 // allows — leaving a build with a step in flight: that surviving in-flight state
 // is D26's whole payoff, resumed the next time you `use` that build.
 
 import { existsSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
-import { activeBuild, hasSession, intentPath, listBuilds, stepPath } from '../lib/sidecar.ts'
-import { setLocalSetting } from '../lib/settings.ts'
+import { activeBuild, hasSession, intentPath, listBuilds, setActiveBuild, stepPath } from '../lib/sidecar.ts'
 
 export function use(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
@@ -42,7 +41,7 @@ export function use(cwd: string, args: ReadonlyArray<string>): number {
     )
   }
 
-  setLocalSetting(root, 'activeBuild', target)
+  setActiveBuild(root, target)
 
   const resuming = existsSync(stepPath(root, target)) ? ' (a step is in flight — `status` shows where)' : ''
   process.stdout.write(`plumbbob: now on build "${target}"${resuming}. \`status\` to orient.\n`)

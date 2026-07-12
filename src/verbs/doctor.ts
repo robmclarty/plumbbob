@@ -33,8 +33,8 @@ import { type AgentListing, listAgents } from '../lib/agents.ts'
 import { gateDetectsTools } from '../lib/check.ts'
 import { marketplacePlumbbob } from '../lib/plugins.ts'
 import { findRepoRoot, gitPath, stagePath } from '../lib/git.ts'
-import { buildDir, excludeControl, listBuilds, readTurn, sidecarDir, slugify } from '../lib/sidecar.ts'
-import { resolveString, settingsPath, setLocalSetting } from '../lib/settings.ts'
+import { buildDir, excludeControl, listBuilds, readTurn, setActiveBuild, sidecarDir, slugify } from '../lib/sidecar.ts'
+import { resolveString, settingsPath } from '../lib/settings.ts'
 
 type Check = { readonly ok: boolean; readonly label: string; readonly fix?: string }
 
@@ -240,7 +240,7 @@ export function migrateSidecar(root: string): string[] {
     const slug = uniqueSlug(slugify(titleFromIntent(flatIntent)), taken)
     taken.add(slug)
     moveInto(dir, buildDir(root, slug), ['intent.md', 'build-log.md', 'checkpoints', 'STEP', 'SEAM', 'SPIKE'])
-    setLocalSetting(root, 'activeBuild', slug)
+    setActiveBuild(root, slug)
     actions.push(`active session → builds/${slug} (the cursor)`)
   }
 

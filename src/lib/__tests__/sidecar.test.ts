@@ -21,6 +21,7 @@ import {
   markSpike,
   readStats,
   seamPath,
+  setActiveBuild,
   sidecarDir,
   slugify,
   spikePath,
@@ -31,7 +32,6 @@ import {
   tickPath,
   turnPath,
 } from '../sidecar.ts'
-import { setLocalSetting } from '../settings.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 
 afterAll(cleanupTempRepos)
@@ -86,6 +86,17 @@ describe('session sentinel', () => {
     beginSession(dir)
     expect(hasSession(dir)).toBe(true)
   })
+
+  it('beginSession homes the cursor in STATE content; setActiveBuild re-points it', () => {
+    const dir = makeTempRepo()
+    mkdirSync(buildDir(dir, 'first'), { recursive: true })
+    mkdirSync(buildDir(dir, 'second'), { recursive: true })
+    beginSession(dir, 'first')
+    expect(activeBuild(dir)).toBe('first') // content wins over the ambiguous two-build fallback
+    setActiveBuild(dir, 'second')
+    expect(activeBuild(dir)).toBe('second')
+    expect(hasSession(dir)).toBe(true) // re-pointing never disturbs the sentinel
+  })
 })
 
 describe('spike marker', () => {
@@ -135,14 +146,25 @@ describe('listBuilds', () => {
 describe('activeBuild', () => {
   it('prefers an explicit flag over everything else', () => {
     const dir = makeTempRepo()
-    setLocalSetting(dir, 'activeBuild', 'from-cursor')
+    mkdirSync(sidecarDir(dir), { recursive: true })
+    setActiveBuild(dir, 'from-cursor')
     expect(activeBuild(dir, 'from-flag')).toBe('from-flag')
   })
 
-  it('falls back to the settings.local.json cursor', () => {
+  it('falls back to the STATE cursor', () => {
     const dir = makeTempRepo()
-    setLocalSetting(dir, 'activeBuild', 'the-cursor')
+    mkdirSync(sidecarDir(dir), { recursive: true })
+    setActiveBuild(dir, 'the-cursor')
     expect(activeBuild(dir)).toBe('the-cursor')
+  })
+
+  it('treats a legacy `active` STATE sentinel as no cursor (pre-STATE-cursor migration)', () => {
+    const dir = makeTempRepo()
+    mkdirSync(buildDir(dir, 'only-one'), { recursive: true })
+    writeFileSync(join(sidecarDir(dir), 'STATE'), 'active\n')
+    // Old sessions wrote "active" here while the cursor lived in settings.local.json;
+    // it must fall through to the sole build, not resolve a build named "active".
+    expect(activeBuild(dir)).toBe('only-one')
   })
 
   it('falls back to the sole build folder when no cursor is set', () => {
@@ -212,8 +234,7 @@ describe('per-build stats (research/07 Build 2b)', () => {
   function statsRepo(): string {
     const dir = makeTempRepo()
     mkdirSync(buildDir(dir, 'stats-build'), { recursive: true })
-    beginSession(dir)
-    writeFileSync(join(sidecarDir(dir), 'settings.local.json'), JSON.stringify({ activeBuild: 'stats-build' }))
+    beginSession(dir, 'stats-build')
     return dir
   }
 

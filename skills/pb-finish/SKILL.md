@@ -31,7 +31,8 @@ record.
 2. **Finish.** Run `plumbbob finish`, which appends the checkpoint SHAs to the
    report and makes the final commit — subject `plumbbob: finish — <title>`,
    with an optional proportional body via `--body` (the stdin heredoc) — then
-   clears the control state (markers, the `activeBuild` cursor, STATE last). The
+   clears the control state (the in-flight markers, then `STATE` last — one delete
+   drops both the session sentinel and the active-build cursor it carries). The
    build folder stays in place, committed, and rides the branch into the PR.
 3. **Point at the next goal** — `/pb-plan` to frame the next one.
 

@@ -51,7 +51,7 @@ The sidecar splits by lifetime. The **artifact plane** is tracked — `settings.
 and each `builds/<slug>/` folder (intent, build-log, checkpoints, report) — so a
 build's record rides its branch into the PR. The **control plane** is per-worktree
 ephemera, excluded via the shared gitdir's `info/exclude` ([D33](decisions.md#d33)), never `.gitignore`:
-`STATE`, `settings.local.json` (holding the `activeBuild` cursor, [D28](decisions.md#d28)), and each
+`STATE` (its content is the active-build cursor, [D28](decisions.md#d28)), `settings.local.json` (the personal overlay), and each
 build's in-flight `STEP`/`SEAM`/`SPIKE` markers. Phase is **derived, not stored**:
 SPIKE marker ⇒ SPIKE, STEP present ⇒ BUILD, otherwise DESIGN.
 

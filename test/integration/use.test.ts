@@ -50,7 +50,7 @@ describe('plumbbob use', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'First Build', '--slug', 'first-build'])
     seedBuild(dir, 'second-build', 'Second Feature')
-    writeFileSync(join(dir, '.plumbbob', 'settings.local.json'), JSON.stringify({ activeBuild: '' }))
+    writeFileSync(join(dir, '.plumbbob', 'STATE'), '') // empty the cursor; two builds → resolves to none
 
     const out = runCli(dir, ['status']).stdout
     expect(out).toContain('NO ACTIVE BUILD')
@@ -60,17 +60,17 @@ describe('plumbbob use', () => {
 })
 
 describe('post-edit hook in a linked worktree (D1/D16 — the cursor is per-worktree)', () => {
-  it('finds the root via the worktree-local settings.local.json activeBuild cursor', () => {
+  it('finds the root via the worktree-local STATE cursor', () => {
     const main = makeFixtureRepo()
     runCli(main, ['start', 'Feature', '--slug', 'feature'])
 
     const wt = join(dirname(main), `${basename(main)}-linked`)
     git(main, ['worktree', 'add', '-q', wt, 'HEAD'])
     try {
-      // The worktree's own untracked cursor + settings.local.json (STATE and the
-      // local overlay are git-excluded, so the linked worktree carries its own).
+      // The worktree's own untracked STATE (git-excluded, so the linked worktree
+      // carries its own cursor — non-empty content = a tracked build is live here).
       mkdirSync(join(wt, '.plumbbob'), { recursive: true })
-      writeFileSync(join(wt, '.plumbbob', 'settings.local.json'), JSON.stringify({ activeBuild: 'feature' }))
+      writeFileSync(join(wt, '.plumbbob', 'STATE'), 'feature\n')
       const bin = join(wt, 'node_modules', '.bin')
       mkdirSync(bin, { recursive: true })
       const oxlint = join(bin, 'oxlint')

@@ -60,7 +60,7 @@ matters.
 
 ## Can I work on more than one goal at once?
 
-One build is active per worktree — the `activeBuild` cursor in `settings.local.json` is a
+One build is active per worktree — the active-build cursor (the content of `.plumbbob/STATE`) is a
 single value by construction. But builds are cheap to park and resume: `plumbbob use
 <slug>` switches the cursor (an in-flight step survives the switch), and separate git
 worktrees each carry their own cursor, so parallel goals live naturally in parallel

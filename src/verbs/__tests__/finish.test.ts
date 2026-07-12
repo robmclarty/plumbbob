@@ -5,7 +5,6 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { finish } from '../finish.ts'
 import { start } from '../start.ts'
 import { bumpStepStat, checkpointsPath, grantPath, hasSession, intentPath, reportPath, sidecarDir, stampStepStat, tickPath } from '../../lib/sidecar.ts'
-import { localSettingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
@@ -31,12 +30,14 @@ describe('finish', () => {
     expect(stdout).toContain('pb-plan')
   })
 
-  it('drops the activeBuild cursor and leaves a clean tree', async () => {
+  it('clears the cursor by removing STATE and leaves a clean tree', async () => {
     const dir = makeTempRepo()
     await captureIoAsync(() => start(dir, ['Cursor gone']))
     captureIo(() => finish(dir))
-    const local = JSON.parse(readFileSync(localSettingsPath(dir), 'utf8'))
-    expect(local.activeBuild).toBeUndefined()
+    // Cursor and session share STATE now, so one delete both closes the session and
+    // clears the cursor — no separate settings.local.json write to undo.
+    expect(hasSession(dir)).toBe(false)
+    expect(existsSync(join(sidecarDir(dir), 'STATE'))).toBe(false)
     expect(execFileSync('git', ['-C', dir, 'status', '--porcelain'], { encoding: 'utf8' }).trim()).toBe('')
   })
 

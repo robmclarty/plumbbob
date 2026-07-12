@@ -9,9 +9,9 @@
 //
 // Known keys: `check` (string — the heavy gate, tracked in settings.json) and
 // `auto` (boolean — whether the agent approves in the human's place; a personal
-// preference, so it belongs in settings.local.json). `activeBuild` (the
-// per-worktree cursor) also lives in settings.local.json but is resolved by
-// sidecar.ts, not here.
+// preference, so it belongs in settings.local.json). The per-worktree active-build
+// cursor is NOT here — it lives in the STATE file (see sidecar.ts), so this overlay
+// stays purely human-owned and the tool never rewrites it.
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -78,13 +78,6 @@ export function resolveNumber(root: string, key: string, fallback: number, flag?
 export function resolveRecord(root: string, key: string): Record<string, unknown> {
   const value = resolveSetting(root, key, undefined)
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
-}
-
-// Read one key from the untracked local overlay ONLY — no project or built-in
-// fallback. The `activeBuild` cursor lives here and must never resolve from the
-// tracked settings.json (it is per-worktree state, not a shared default).
-export function localSetting(root: string, key: string): unknown {
-  return readSettings(localSettingsPath(root))[key]
 }
 
 // Merge one key into settings.local.json, preserving the other keys and creating

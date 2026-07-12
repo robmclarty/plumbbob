@@ -52,7 +52,7 @@ as `YYYY-MM-DD-<title-slug>`, date-prefixed so `builds/` lists chronologically (
 overrides it verbatim, no prefix) — holding `intent.md`, `build-log.md`, and `checkpoints`
 (`baseline <sha>`); it writes the tracked `settings.json` (`{"auto": false}` — no `check`
 key, because absence means checkride is the gate, [**D24**](decisions.md#d24)/[**D32**](decisions.md#d32)) and the untracked
-`STATE` sentinel, points the `activeBuild` cursor at the new build ([**D28**](decisions.md#d28)), and narrows the
+`STATE` sentinel — whose content is the active-build cursor, pointed at the new build ([**D28**](decisions.md#d28)) — and narrows the
 repo's `info/exclude` to the control-plane patterns ([**D17**](decisions.md#d17)/[**D26**](decisions.md#d26)). `--local` opts out into
 the old fully-untracked flat layout — everything under `.plumbbob/` excluded ([**D26**](decisions.md#d26)).
 Refuses (exit 1) on an empty title, a slug that collides with an existing build, a non-git
@@ -214,9 +214,9 @@ refusal. A batch of bound agents returns non-zero if any that actually ran faile
 plumbbob use <slug>
 ```
 
-Re-points the `activeBuild` cursor at the named build and resumes it — the one verb for both
+Re-points the active-build cursor at the named build and resumes it — the one verb for both
 switching between builds and picking one back up ([**D30**](decisions.md#d30)). Validates that
-`builds/<slug>/` exists, then rewrites the cursor in `settings.local.json`. It warns (but
+`builds/<slug>/` exists, then rewrites the cursor in `STATE` (leaving the session sentinel intact). It warns (but
 allows) leaving a build that still has a step in flight — that surviving `STEP`/`SEAM` is the
 payoff of per-build markers. Refuses (exit 1) with an empty slug or a slug with no build
 folder; `status` with no cursor lists the available builds instead of refusing.
@@ -301,9 +301,9 @@ stays git-excluded; a session is live iff `STATE` is present.
 
 ```text
 .plumbbob/
-  STATE                    # untracked — session sentinel; its presence means a session is live
+  STATE                    # untracked — session sentinel (presence = live) AND the active-build cursor (its content, D28)
   settings.json            # tracked   — project defaults: {"check": "…", "auto": false}
-  settings.local.json      # untracked — personal overlay + the cursor: {"activeBuild": "<slug>", …}
+  settings.local.json      # untracked — personal overlay only: {"auto": true, …} (no cursor — that lives in STATE)
   agents/                  # tracked   — optional: user-authored agents, one dir per agent (D41; see agents.md)
     <name>/agent.json      #            — the manifest; personal agents live under ~/.plumbbob/agents/
   builds/
@@ -319,7 +319,7 @@ stays git-excluded; a session is live iff `STATE` is present.
       handoff.json         # untracked — step-scoped agent-run ledger, cleared at checkpoint (D47)
 ```
 
-Which build a verb acts on resolves `--build <slug>` → the `activeBuild` cursor → the sole
+Which build a verb acts on resolves `--build <slug>` → the active-build cursor in `STATE` → the sole
 build in `builds/` → a refusal with a hint ([**D28**](decisions.md#d28)). `plumbbob start --local` opts back into
 the old fully-untracked flat layout — `intent.md`/`build-log.md`/`checkpoints` at the sidecar
 root, the whole `.plumbbob/` excluded — for repos that will not track tool folders ([**D26**](decisions.md#d26)).
@@ -340,12 +340,13 @@ default. The known keys:
 { "agentTimeout": 120 }                  // kill a user-authored agent after N seconds (0/absent = off, D51)
 
 // settings.local.json  (untracked — personal, per-worktree)
-{ "auto": true, "activeBuild": "<slug>" }
+{ "auto": true }
 ```
 
 `check` overrides the heavy gate (a shell command run in the repo root; its exit code is
 the result); **absent, the gate is checkride** ([**D24**](decisions.md#d24)/[**D32**](decisions.md#d32)). `auto` is whether the
-agent approves in your place. `activeBuild` is the per-worktree cursor. `agents` sets
+agent approves in your place. The per-worktree active-build cursor is **not** a setting — it
+is `STATE`'s content, so plumbbob never rewrites this hand-editable overlay ([**D28**](decisions.md#d28)). `agents` sets
 project-wide slot bindings for [user-authored agents](agents.md) — the bottom rung under a
 build's `harness.json` and the `--agent` flag ([**D57**](decisions.md#d57)). `agentTimeout` (seconds) arms a
 kill timer for a spawned agent; absent or `0` means no timeout, since the human is present

@@ -3,8 +3,7 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { use } from '../use.ts'
 import { start } from '../start.ts'
-import { buildDir, stepPath } from '../../lib/sidecar.ts'
-import { localSetting } from '../../lib/settings.ts'
+import { activeBuild, buildDir, stepPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
@@ -26,7 +25,7 @@ describe('use', () => {
     seedBuild(dir, 'other-build')
     const { code, stdout, stderr } = captureIo(() => use(dir, ['other-build']))
     expect(code).toBe(0)
-    expect(localSetting(dir, 'activeBuild')).toBe('other-build')
+    expect(activeBuild(dir)).toBe('other-build')
     // Exact tail: no in-flight note when the target has no STEP file.
     expect(stdout).toContain('now on build "other-build". `status` to orient.')
     // And no in-flight warning when the build being left has none either.
@@ -39,7 +38,7 @@ describe('use', () => {
     seedBuild(dir, 'other-build')
     const { code } = captureIo(() => use(dir, ['--quiet', 'other-build']))
     expect(code).toBe(0)
-    expect(localSetting(dir, 'activeBuild')).toBe('other-build')
+    expect(activeBuild(dir)).toBe('other-build')
   })
 
   it('treats an empty slug as missing, not as a build lookup', async () => {
@@ -57,7 +56,7 @@ describe('use', () => {
     expect(code).toBe(1)
     expect(stderr).toContain('no build named "ghost"')
     expect(stderr).toContain('Builds: my-feature.')
-    expect(localSetting(dir, 'activeBuild')).toBe('my-feature') // unchanged
+    expect(activeBuild(dir)).toBe('my-feature') // unchanged
   })
 
   it('needs a slug', async () => {
@@ -77,7 +76,7 @@ describe('use', () => {
     expect(code).toBe(0)
     expect(stderr).toContain('has a step in flight')
     expect(stderr).toContain('resumes when you `use my-feature`') // points back at the door
-    expect(localSetting(dir, 'activeBuild')).toBe('other-build')
+    expect(activeBuild(dir)).toBe('other-build')
   })
 
   it('does not warn when re-using the current build, even mid-step', async () => {

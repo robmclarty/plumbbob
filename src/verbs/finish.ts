@@ -24,7 +24,6 @@ import {
   stepPath,
   type StepStats,
 } from '../lib/sidecar.ts'
-import { setLocalSetting } from '../lib/settings.ts'
 import { parseTitle } from '../lib/orient.ts'
 
 export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
@@ -56,9 +55,10 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   }
   const sha = commit(root, subject(root, slug), bodyArg(args) ?? undefined)
 
-  // Clear the control state: the in-flight markers, the per-worktree cursor (D28),
-  // and the session sentinel (STATE last, so "no session" flips exactly at the end).
-  // The tracked artifacts stay in place — only the ephemera go.
+  // Clear the control state: the in-flight markers first, then the session sentinel
+  // last (so "no session" flips exactly at the end). Deleting STATE also drops the
+  // cursor (D28) — cursor and session share the one file now, so a single delete does
+  // both. The tracked artifacts stay in place — only the ephemera go.
   rmSync(seamPath(root, slug), { force: true })
   rmSync(stepPath(root, slug), { force: true })
   rmSync(spikePath(root, slug), { force: true })
@@ -68,12 +68,6 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   // the next session's first landing.
   clearTick(root, slug)
   setGrant(root, null)
-  if (slug !== null) {
-    // Drop the activeBuild key — JSON.stringify omits an `undefined` value, so the
-    // cursor is removed while the other local settings (auto, …) survive. Skipped
-    // under `--local`, where there is no cursor to clear.
-    setLocalSetting(root, 'activeBuild', undefined)
-  }
   rmSync(join(sidecarDir(root), 'STATE'), { force: true })
 
   const where = slug === null ? '.plumbbob/' : `.plumbbob/builds/${slug}/`

@@ -3,8 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { start } from '../start.ts'
-import { buildDir, excludeControl, grantPath, hasSession, sidecarDir, tickPath, turnPath } from '../../lib/sidecar.ts'
-import { localSetting } from '../../lib/settings.ts'
+import { activeBuild, buildDir, excludeControl, grantPath, hasSession, sidecarDir, tickPath, turnPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
@@ -29,10 +28,10 @@ describe('start', () => {
     expect(stdout).toContain(`.plumbbob/builds/${TODAY}-my-feature/intent.md`)
   })
 
-  it('points the settings.local.json activeBuild cursor at the new build (D3)', async () => {
+  it('points the STATE cursor at the new build (D3)', async () => {
     const dir = makeTempRepo()
     await captureIoAsync(() => start(dir, ['My Feature']))
-    expect(localSetting(dir, 'activeBuild')).toBe(`${TODAY}-my-feature`)
+    expect(activeBuild(dir)).toBe(`${TODAY}-my-feature`)
   })
 
   it('narrows info/exclude to the control patterns, tracking the artifact plane', async () => {
@@ -115,7 +114,7 @@ describe('start', () => {
     const { code } = await captureIoAsync(() => start(dir, ['My Feature', '--slug', 'custom-name']))
     expect(code).toBe(0)
     expect(existsSync(join(dir, '.plumbbob', 'builds', 'custom-name', 'intent.md'))).toBe(true)
-    expect(localSetting(dir, 'activeBuild')).toBe('custom-name')
+    expect(activeBuild(dir)).toBe('custom-name')
   })
 
   it('refuses when the title yields an empty slug and no --slug is given', async () => {
@@ -132,7 +131,7 @@ describe('start', () => {
     expect(code).toBe(0)
     expect(existsSync(join(dir, '.plumbbob', 'intent.md'))).toBe(true)
     expect(existsSync(join(dir, '.plumbbob', 'builds'))).toBe(false)
-    expect(localSetting(dir, 'activeBuild')).toBeUndefined()
+    expect(activeBuild(dir)).toBeNull() // STATE present but empty; no builds/ to fall back to
     expect(stdout).toContain('.plumbbob/intent.md')
     const exclude = readFileSync(join(dir, '.git', 'info', 'exclude'), 'utf8').split('\n')
     expect(exclude).toContain('.plumbbob/')

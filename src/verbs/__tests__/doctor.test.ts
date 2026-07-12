@@ -12,8 +12,8 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
 import { doctor, inspectLegacy, migrateSidecar } from '../doctor.ts'
-import { buildDir, intentPath, turnPath } from '../../lib/sidecar.ts'
-import { localSetting, settingsPath } from '../../lib/settings.ts'
+import { activeBuild, buildDir, intentPath, turnPath } from '../../lib/sidecar.ts'
+import { settingsPath } from '../../lib/settings.ts'
 import { gitPath, headSha } from '../../lib/git.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIoAsync } from '../../../test/helpers/capture-io.ts'
@@ -169,7 +169,7 @@ describe('doctor — migration', () => {
     migrateSidecar(dir)
     expect(existsSync(intentPath(dir, 'my-legacy-build'))).toBe(true)
     expect(readFileSync(intentPath(dir, 'my-legacy-build'), 'utf8')).toContain('My Legacy Build')
-    expect(localSetting(dir, 'activeBuild')).toBe('my-legacy-build')
+    expect(activeBuild(dir)).toBe('my-legacy-build')
   })
 
   it('moves archive entries into builds/ (done: not the cursor) and removes archive/', () => {
@@ -273,7 +273,7 @@ describe('doctor — migration', () => {
       writeFileSync(join(sc, 'archive', 'old-one', 'b.md'), 'b\n')
     })
     const actions = migrateSidecar(dir)
-    expect(localSetting(dir, 'activeBuild')).toBe('old-one')
+    expect(activeBuild(dir)).toBe('old-one')
     expect(actions).toContain('archive/old one!! → builds/old-one-2') // slugified, then suffixed
     expect(actions).toContain('archive/old-one → builds/old-one-3')
     expect(existsSync(join(buildDir(dir, 'old-one-2'), 'a.md'))).toBe(true)
@@ -285,13 +285,13 @@ describe('doctor — migration', () => {
       writeFileSync(join(sc, 'intent.md'), 'preamble mentioning a # Not This\n\n# Real Title\nbody\n'),
     )
     migrateSidecar(dir)
-    expect(localSetting(dir, 'activeBuild')).toBe('real-title')
+    expect(activeBuild(dir)).toBe('real-title')
   })
 
   it('falls back to migrated-build when the intent has no heading', () => {
     const dir = partialLegacyRepo((sc) => writeFileSync(join(sc, 'intent.md'), 'no heading at all\n'))
     migrateSidecar(dir)
-    expect(localSetting(dir, 'activeBuild')).toBe('migrated-build')
+    expect(activeBuild(dir)).toBe('migrated-build')
     expect(existsSync(intentPath(dir, 'migrated-build'))).toBe(true)
   })
 

@@ -224,8 +224,8 @@ The checks come in two tiers with different jobs:
 - **Light** — the `post-edit` hook: a non-blocking, file-scoped lint pass that runs after
   each edit and injects any findings into the model's context so it self-corrects in flow.
   It never blocks an edit, and it exists because the model cannot see your editor's LSP — so
-  the light tier *serves the model*. It is gated on an active build: a repo with no
-  `activeBuild` cursor in `.plumbbob/settings.local.json` behaves like plain Claude Code.
+  the light tier *serves the model*. It is gated on an active build: a repo with an empty or
+  absent `.plumbbob/STATE` (no active-build cursor) behaves like plain Claude Code.
 - **Heavy** — the full project check: checkride ([D32](decisions.md#d32) — in this repo: tsc, oxlint,
   ast-grep, fallow, vitest, markdownlint-cli2, links), overridable per repo via the
   `"check"` key in `.plumbbob/settings.json`. It is **not** a hook; it runs *inside* the verify tick, which
@@ -273,7 +273,7 @@ every move and `/pb-status` always names the next one.
 | Triage parked ideas | `/pb-harvest` | — (edits markdown) | `build-log.md` Harvest |
 | Experiment on a fork | `/pb-spike` | `plumbbob spike` | worktrees, `SPIKE` marker |
 | Undo a step | `/pb-revert` | `plumbbob revert` | `git reset`, `checkpoints` |
-| Switch or resume a build | — (CLI verb) | `plumbbob use` | `activeBuild` cursor |
+| Switch or resume a build | — (CLI verb) | `plumbbob use` | `STATE` cursor |
 | Close out the goal | `/pb-finish` | `plumbbob finish` | `builds/<slug>/report.md` |
 
 ---

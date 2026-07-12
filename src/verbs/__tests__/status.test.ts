@@ -3,9 +3,8 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { status } from '../status.ts'
 import { start } from '../start.ts'
-import { buildDir, checkpointsPath } from '../../lib/sidecar.ts'
+import { buildDir, checkpointsPath, sidecarDir } from '../../lib/sidecar.ts'
 import { commit, headSha, stageAll } from '../../lib/git.ts'
-import { setLocalSetting } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
@@ -71,7 +70,7 @@ describe('status', () => {
     // a second build folder + no cursor → activeBuild cannot resolve one
     mkdirSync(buildDir(dir, 'second-build'), { recursive: true })
     writeFileSync(join(buildDir(dir, 'second-build'), 'intent.md'), '# Second\n')
-    setLocalSetting(dir, 'activeBuild', '') // clear the cursor
+    writeFileSync(join(sidecarDir(dir), 'STATE'), '') // clear the cursor (empty STATE content)
 
     const { code, stdout } = captureIo(() => status(dir))
     expect(code).toBe(0)

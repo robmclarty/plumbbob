@@ -387,7 +387,7 @@ describe('checkpoint — the approval latch (subprocess, D64)', () => {
 
   it('row 3: the standing `auto: true` in settings.local.json allows (D27)', async () => {
     const dir = latchedRepo()
-    setLocalSetting(dir, 'auto', true) // merges beside the activeBuild cursor
+    setLocalSetting(dir, 'auto', true) // the standing personal grant in settings.local.json (the cursor lives in STATE)
     const { status } = runCli(dir, ['checkpoint', '1'])
     expect(status).toBe(0)
   })

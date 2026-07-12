@@ -8,8 +8,8 @@
 
 # The repo root is the nearest ancestor with an active session — `.plumbbob/STATE`,
 # the sentinel `start` writes and `finish` removes. Present in both the tracked and
-# the `--local` layout (the activeBuild cursor post-edit.sh probes exists only in
-# the tracked one, and this hook must guard `--local` steps too).
+# the `--local` layout (post-edit.sh only fires when STATE is non-empty, i.e. a
+# tracked build; this hook must guard `--local` steps too, so it probes existence).
 find_root() {
   d=$(pwd -P)
   while [ -n "$d" ]; do
@@ -26,12 +26,11 @@ find_root() {
 root=$(find_root) || exit 0 # no active session here: nothing to guard
 
 # The in-flight signal is STEP (cleared when the step checkpoints): inside the
-# active build's folder when the cursor names one, else the flat sidecar STEP of
-# the `--local` layout. jq if present, else the same sed fallback post-edit.sh
-# uses for its field read.
-settings="$root/.plumbbob/settings.local.json"
-slug=$(jq -r '.activeBuild // empty' "$settings" 2>/dev/null)
-[ -z "$slug" ] && slug=$(sed -n 's/.*"activeBuild"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$settings" 2>/dev/null | head -n1)
+# active build's folder when STATE names one, else the flat sidecar STEP of the
+# `--local` layout. STATE's content IS the cursor (D28) — read the first line, trim
+# whitespace, and treat the legacy `active` sentinel (pre-STATE-cursor) as no cursor.
+slug=$(head -n1 "$root/.plumbbob/STATE" 2>/dev/null | tr -d '[:space:]')
+[ "$slug" = "active" ] && slug=""
 if [ -n "$slug" ]; then
   step_file="$root/.plumbbob/builds/$slug/STEP"
 else
