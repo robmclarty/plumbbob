@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.3] - 2026-07-11
+
+- **Changed:** the per-worktree active-build cursor now lives in `.plumbbob/STATE`
+  rather than as an `activeBuild` key in `settings.local.json`. That overlay is the
+  file you hand-edit for your `check`/`auto` preferences, yet every `start` and `use`
+  did a read-merge-write over it to move the cursor — so the tool churned a file it
+  also tells you to own. `STATE` already owns the session lifecycle: its existence
+  means "a session is live", and its content now names the build that session is on.
+  The two reinforce each other, one `finish` delete clears both, and `settings.local.json`
+  goes back to being purely human-owned — plumbbob only ever reads it. Build
+  resolution (`--build` flag → cursor → sole build) is unchanged.
+- **Changed:** the `post-edit` and `git-commit` hooks read the cursor from `STATE`
+  now — `post-edit` gates on a non-empty `STATE` (a `--local` session leaves it empty,
+  as before), and the commit ask-hook reads the in-flight build's slug from it.
+- **Fixed:** a session left open across the upgrade degrades gracefully. Older
+  sessions wrote the literal `active` into `STATE` while the cursor lived elsewhere;
+  that value is now treated as "no cursor" so the tool falls through to the sole-build
+  rule instead of chasing a build named `active`.
+
 ## [0.8.2] - 2026-07-11
 
 - **Fixed:** `plumbbob start` no longer clobbers `.plumbbob/settings.json`. Every
