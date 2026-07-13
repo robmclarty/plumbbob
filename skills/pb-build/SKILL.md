@@ -38,43 +38,24 @@ differs from the model you're running as, say so before implementing — the hum
 3. **Read the plan.** Read the step's **done-when**, its **seam**, and the
    **Decisions** and **Constraints** in `intent.md`. Build to *that* — the deciding
    already happened, off the chat.
-   - **Run any bound `before`-agents**. If the build's `harness.json` binds
-     agents to this step's `before` slot, run `plumbbob agent run --step <n> --mode
-     before` first: each returns a validated envelope on stdout that plumbbob also
-     appends to the step's `handoff.json`, and its `summary`/`body` become **context you
-     read into the build** (that is the whole point of the slot — load the context in
-     before you write). No binding, or no harness, is a clean no-op — just build.
+   - **Bound `before`-agents load context first.** If `plumbbob status` shows a
+     `harness bindings:` block, this build binds agents — see **§ Running bound agents**
+     and load their context in before you write. No bindings, no harness: just build.
 4. **Implement** the step, and only that step, staying within the declared seam. A
    new problem or "ooh what if" that surfaces mid-build is a `/pb-park`, **not** an
    edit — capture it and stay on the step. If you genuinely cannot finish without
    touching more than the seam, that is scope drift: surface it to the human rather
    than sprawling.
-   - **If a `build`-slot agent is bound, delegate the diff to it**. Run
-     `plumbbob agent run --step <n> --mode build` and let that agent author the step's
-     code instead of writing it yourself; its envelope reports what it did. You still
-     own the verify tick below — the diff is reviewed the same way whoever wrote it.
-   - **A manifest's `when` prose is your cue to fire an agent mid-build**.
-     The three slots are the only *declarative* lifecycle points; there is no config for
-     "a salient moment in the middle." That is judgment, and you are the frontier model
-     in the room: when the work reaches the situation a bound agent's `when` (or a step
-     `note`) describes, fire `plumbbob agent run <name> --step <n>` yourself. Prose is
-     the orchestration language; you are the workflow engine.
-   - **Route a non-`done` envelope by its status**. An agent that returns
-     `blocked` couldn't finish (missing input, failed precondition): surface its `notes`,
-     let the human unblock, and re-run it — don't work around it. One that returns
-     `drift` finished but found the plan no longer matches reality: **stop and send the
-     human to `/pb-refine`** to repair the plan before continuing, rather than building
-     on a plan that's now wrong. A non-zero exit is a failed run: report it and stop.
+   - **Bound agents can shape the build.** If `plumbbob status` shows a
+     `harness bindings:` block, a `build`-slot agent may author the diff, a `when`-cue may
+     fire an agent mid-build, and a non-`done` envelope routes by its status — see
+     **§ Running bound agents**.
 5. **Verify, through to the pause.** Run the verify tick exactly as `/pb-verify`
    does: `plumbbob check` (on red, read `.check/summary.json` and the failing slot's
    raw output under `.check/` for the actual diagnostics; while iterating on a fix,
    narrow the loop with `plumbbob check --bail --only <slots>` — the checkpoint gate
-   still runs everything) → run any bound `after`-agents (`plumbbob agent run --step
-   <n> --mode after`) and fold their envelopes into the self-review as **advisory
-   input** — they inform, they never gate (checkride gates, the human is the clock; an
-   `after`-agent that could fail a step is the lock in autonomy's costume) →
-   self-review the diff against the done-when, the Decisions, and the Constraints (a
-   single structured read) → validate → **PAUSE
+   still runs everything) → self-review the diff against the done-when, the Decisions,
+   and the Constraints (a single structured read) → validate → **PAUSE
    for the human's approval** → only on approval, checkpoint with
    `plumbbob checkpoint <n> --body <<'BODY' … BODY` — a commit body **proportional to the
    step** (a line for a trivial change, a short paragraph for a meatier one; no TIL scan,
@@ -82,6 +63,9 @@ differs from the model you're running as, say so before implementing — the hum
    build-log's `## Log`, so the history writes itself — you only supply the body (or omit
    `--body` for the deterministic done-when + seam + diffstat fallback). Do **not** bump
    the version or changelog — that is the human's `/version` call.
+   - **If `plumbbob status` shows a `harness bindings:` block**, fold any bound
+     `after`-agents into that self-review as advisory input — see **§ Running bound
+     agents**.
 
    **The latch makes this pause real.** On the default (non-`--auto`) path you
    build the step and reach the pause *in one turn* — so under plumbbob's turn hook the
@@ -120,14 +104,48 @@ differs from the model you're running as, say so before implementing — the hum
    session model, not the plan's. No `- model:` line means any model will do. Guidance,
    never a gate.
 
+## Running bound agents
+
+Skip this section unless `plumbbob status` shows a `harness bindings:` block. Nearly every
+build binds **no** agents — for them the default path above is the whole story. When a
+harness *is* bound, this is what each affected step gains, in lifecycle order.
+
+- **`before` — load context in (step 3).** If the build's `harness.json` binds agents to
+  this step's `before` slot, run `plumbbob agent run --step <n> --mode before` first: each
+  returns a validated envelope on stdout that plumbbob also appends to the step's
+  `handoff.json`, and its `summary`/`body` become **context you read into the build** (that
+  is the whole point of the slot — load the context in before you write). No binding, or no
+  harness, is a clean no-op — just build.
+- **`build` — delegate the diff (step 4).** If a `build`-slot agent is bound, run
+  `plumbbob agent run --step <n> --mode build` and let that agent author the step's code
+  instead of writing it yourself; its envelope reports what it did. You still own the verify
+  tick — the diff is reviewed the same way whoever wrote it.
+- **A manifest's `when` prose is your cue to fire an agent mid-build (step 4).** The three
+  slots are the only *declarative* lifecycle points; there is no config for "a salient
+  moment in the middle." That is judgment, and you are the frontier model in the room: when
+  the work reaches the situation a bound agent's `when` (or a step `note`) describes, fire
+  `plumbbob agent run <name> --step <n>` yourself. Prose is the orchestration language; you
+  are the workflow engine.
+- **Route a non-`done` envelope by its status (step 4).** An agent that returns `blocked`
+  couldn't finish (missing input, failed precondition): surface its `notes`, let the human
+  unblock, and re-run it — don't work around it. One that returns `drift` finished but found
+  the plan no longer matches reality: **stop and send the human to `/pb-refine`** to repair
+  the plan before continuing, rather than building on a plan that's now wrong. A non-zero
+  exit is a failed run: report it and stop.
+- **`after` — advisory input to the verify tick (step 5).** After `plumbbob check`, run any
+  bound `after`-agents (`plumbbob agent run --step <n> --mode after`) and fold their
+  envelopes into the self-review as **advisory input** — they inform, they never gate
+  (checkride gates, the human is the clock; an `after`-agent that could fail a step is the
+  lock in autonomy's costume).
+
 ## `--auto` — let the agent be the clock (opt-in)
 
 `/pb-build --auto` is the explicit escape hatch when the human wants unattended
 progress instead of approving each step. It does the same work, but **the agent reviews
 and approves in the human's place**, and it **chains**:
 
-- Build the next step, running its slots in the same order as the default
-  path: bound `before`-agents → implement (or the bound `build`-agent) → bound
+- Build the next step, running its slots (see **§ Running bound agents**) in the same
+  order as the default path: bound `before`-agents → implement (or the bound `build`-agent) → bound
   `after`-agents → `check` → self-review → **if the check is green AND the
   self-review finds no done-when / Decision / Constraint mismatch, checkpoint** and move
   straight on to the next planned step. Repeat. `--auto` adds no new machinery — the
@@ -180,7 +198,8 @@ just the one more entry already in the halt list above.
 - **Agents feed the beat; they never advance it**. `before` loads context,
   `build` writes the diff, `after` is advisory — none can checkpoint, flip a step, or
   chain. `blocked` → unblock and re-run; `drift` → `/pb-refine`. You are still the one
-  who verifies and (bar `--auto`) the human is still the clock.
+  who verifies and (bar `--auto`) the human is still the clock. See **§ Running bound
+  agents** for the mechanics.
 - **A refused checkpoint is the pause, not an error.** Under plumbbob's turn
   hook a same-turn `checkpoint` is refused by design — present the diff and the closing
   block, **end the turn**; the human's approval on their next turn is what lets you land

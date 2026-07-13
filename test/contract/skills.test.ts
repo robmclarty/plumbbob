@@ -311,6 +311,20 @@ describe('build — the default engine: implement the planned step, then verify'
     expect(body).toMatch(/end the turn/i) // present the diff and end the turn
     expect(body).toMatch(/git commit/) // never route around it with a raw git commit
   })
+
+  it('lifts slot mechanics into a gated "Running bound agents" section, keeping the default path slim (3b)', () => {
+    // (1) the consolidated section exists — all five slot passages live behind one trigger.
+    expect(body).toContain('## Running bound agents')
+    // (2) the default-path region (steps 1–5, from its heading to the next `## `) carries
+    // no slot mechanics — only conditional pointers. A location-aware pin, not a
+    // presence-anywhere one, so the slimming can't silently regress.
+    const start = body.indexOf('## What this skill does, in order')
+    const region = body.slice(start + 1)
+    const next = region.search(/\n## /) // first top-level heading after it = ## Running bound agents
+    const defaultPath = next === -1 ? region : region.slice(0, next)
+    expect(defaultPath).not.toMatch(/plumbbob agent run/)
+    expect(defaultPath).not.toMatch(/--mode\b/)
+  })
 })
 
 describe('verify — the tick: check, self-review, validate, PAUSE, checkpoint', () => {
