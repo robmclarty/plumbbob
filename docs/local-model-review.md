@@ -8,6 +8,14 @@ step's diff at the verify pause — no API key, and the diff never leaves your m
 This is one worked path through the general agent machinery; the contract behind it is
 [`agents.md`](agents.md).
 
+> **Want a switch instead of Ollama-only?** [`reviewer`](../examples/agents/reviewer/) is the
+> same advisory review with a **switchable model provider** — `claude_cli` by default (it
+> piggybacks the logged-in Claude session; no API key, no local model to pull), or `ollama`
+> for the local, private path this page walks. It's configured through the settings ladder
+> (`agentConfig.reviewer`) rather than env-only. This page stays the `ollama-reviewer`
+> walkthrough; everything below applies to `reviewer` with `provider: "ollama"` set, and its
+> [README](../examples/agents/reviewer/README.md) has the full provider matrix.
+
 ## One-time setup
 
 **1. Install the agent into a repo.** Copy the directory into the project tier and install

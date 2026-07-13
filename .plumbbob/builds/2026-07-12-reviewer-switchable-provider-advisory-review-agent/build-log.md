@@ -56,3 +56,4 @@ you point at to say "I did that — the LLM helped, but those were my calls."
 folder, so it rides the branch into the PR.)*
 - 2026-07-13 — step 1 checkpointed · d2213f599 — Create the `reviewer` sibling package (seeded from `ollama-reviewer`): the provider switch + the ollama path (1 drift, 13m)
 - 2026-07-13 — step 2 checkpointed · 95b7e6265 — The `claude_cli` default provider (fascicle ≥ 0.9.5) (10m)
+- 2026-07-13 — step 3 checkpointed · 8abb98bd6 — The one plumbbob-CLI change: forward each agent's own config block (20m)

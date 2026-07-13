@@ -334,6 +334,14 @@ The step up — the same contract wrapping a real framework and a real local mod
 ships beside it under
 [`examples/agents/ollama-reviewer/`](../examples/agents/ollama-reviewer/).
 
+And the same review with a **switchable model provider** — `claude_cli` by default (it
+piggybacks the logged-in Claude session; no API key, no local model to pull) or `ollama`
+for local, private compute, chosen through the settings ladder (`agentConfig.<name>`,
+forwarded to the agent as `ctx.settings.agent`) rather than by editing the agent — ships
+under [`examples/agents/reviewer/`](../examples/agents/reviewer/). It's the worked example of
+config travelling the frozen envelope `settings` field; its README carries the full provider
+matrix.
+
 ## See also
 
 - [`skills-reference.md`](skills-reference.md#the-harness-slots) — how `/pb-plan`, `/pb-step`,

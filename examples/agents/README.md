@@ -3,11 +3,29 @@
 A **user-authored agent** is any executable that speaks PlumbBob's subprocess envelope — the
 doorway that lets a program plug into the loop as a step's `before`, `build`, or `after` slot.
 The full contract for authors is [`docs/agents.md`](../../docs/agents.md); this folder holds
-two working examples — the contract bare, and the contract wrapping a real framework:
+three working examples — the contract bare, the contract wrapping a real framework, and the
+same reviewer made provider-switchable:
 
 - [`echo-reviewer/`](echo-reviewer/) — POSIX `sh`, nothing to install; read it top to bottom.
 - [`ollama-reviewer/`](ollama-reviewer/) — a [fascicle](https://github.com/robmclarty/fascicle)-composed
   agent driving a **local model via Ollama** to review each step's diff.
+- [`reviewer/`](reviewer/) — the same review, with a **switchable model provider**
+  (`claude_cli` by default, `ollama` for local/private compute) chosen through the settings
+  ladder.
+
+The two fascicle reviewers are two shapes of the same idea, worth holding side by side:
+
+| | `ollama-reviewer` | `reviewer` |
+|---|-------------------|------------|
+| **Provider** | single — Ollama only | **switchable** — `claude_cli` (default) or `ollama` |
+| **Transport / deps** | AI-SDK (`ai` + `ai-sdk-ollama`) | **native** — `fascicle` + `zod` only |
+| **Configured by** | env vars only | the **settings ladder** (`agentConfig.reviewer`), env under it |
+| **Default cost** | free, private (local) | no API key — piggybacks the logged-in Claude session |
+
+`ollama-reviewer` stays as the single-provider / AI-SDK reference; `reviewer` is the
+switchable / native evolution. Reach for `reviewer` when you want one maintained agent whose
+provider is a config choice; keep `ollama-reviewer` when the AI-SDK path (its
+constrained-decode-on-small-models, or other AI-SDK providers) is what you're after.
 
 ## `echo-reviewer/`
 
@@ -52,3 +70,24 @@ Unlike echo-reviewer it has real dependencies (a standalone package — `npm ins
 copied directory) and prerequisites (Node ≥ 24, Ollama running, a model pulled). Its
 [README](ollama-reviewer/README.md) has the two-minute smoke run and the full-build
 walkthrough.
+
+## `reviewer/`
+
+The same advisory review, made **provider-switchable**. `ollama-reviewer` is hard-wired to one
+local model configured by env vars; `reviewer` puts the model provider on a switch —
+`claude_cli` by default (it piggybacks the Claude session you're already logged into — no API
+key, no local model to pull), or `ollama` for local, private compute — and configures it the
+way every other environment property is configured: through the settings ladder, not env-only.
+
+| File | What it is |
+|------|-----------|
+| [`reviewer/agent.json`](reviewer/agent.json) | the manifest — binds the after slot, `node` as the command |
+| [`reviewer/review.mjs`](reviewer/review.mjs) | the agent — a `PROVIDERS` map of descriptors, per-provider preflight, seam-scoped diff, native/external fascicle composition, envelope mapping |
+
+The switch reads `agentConfig.reviewer` from the settings ladder (tracked default in
+`.plumbbob/settings.json`, personal override in the untracked `settings.local.json`), with an
+env var (`PB_REVIEWER_PROVIDER`, `PB_REVIEWER_MODEL`, …) as an ephemeral override under it and
+the `claude_cli` default as the floor. Its dependencies are `fascicle` (>= 0.9.5, for
+`claude_cli`) + `zod` only — the native transport keeps the AI-SDK peers out. The
+[README](reviewer/README.md) carries the full provider matrix, the precedence rules, and the
+per-provider prerequisites.
