@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.4] - 2026-07-12
+
+- **Added:** the `reviewer` example agent — a switchable-provider advisory review
+  agent for the verify pause. It defaults to `claude_cli` (oauth, piggybacking the
+  logged-in Claude session, model `sonnet`) and switches to `ollama` for local or
+  private compute, resolving provider/model/baseUrl on a `settings.json → env →
+  default` ladder. It rides the existing frozen contract-1 envelope over the
+  `settings` field, so no new verb or envelope field was needed; the single-provider
+  `ollama-reviewer` stays alongside it as a frozen AI-SDK comparison point.
+- **Changed:** `runOne` now forwards each bound agent its own config block —
+  `settings.json → agentConfig[<name>]` reaches the agent as `ctx.settings.agent`,
+  with the untracked `settings.local.json` overlay shadowing the whole project rung
+  and `{}` when neither file names the agent.
+- **Changed:** the `pb-build` skill's agent-slot mechanics were lifted out of the
+  default-path steps into a single gated `## Running bound agents` section, entered
+  only when `plumbbob status` shows a `harness bindings:` block. Each affected step
+  keeps one conditional pointer, so the default no-agent path reads far lighter while
+  the contracts are preserved verbatim.
+- **Changed:** the `pb-build` end-of-build hand-off is now standardized around one
+  deliberate checkpoint per step, with a canonical three-part closing block (state →
+  choice → what's next) mirrored in the latch's `NO_TURN_MESSAGE`.
+
 ## [0.8.3] - 2026-07-11
 
 - **Changed:** the per-worktree active-build cursor now lives in `.plumbbob/STATE`
