@@ -131,7 +131,7 @@ one-line `$schema`/`$id` strip in fascicle's `claude_cli` adapter `compile_schem
 applied and **fascicle 0.9.5 is published** (npm `latest`, verified). Step 2 is
 unblocked; the reviewer package pins `fascicle ^0.9.5`.
 
-1. [ ] Create the `reviewer` sibling package (seeded from `ollama-reviewer`): the provider switch + the ollama path — **done when:** `PB_REVIEWER_PROVIDER=ollama node review.mjs < demo/stepcontext.json` returns a valid `done` envelope when Ollama is up (or an actionable `blocked` when it is not), and an import check confirms deps resolve to `fascicle` + `zod` only
+1. [x] Create the `reviewer` sibling package (seeded from `ollama-reviewer`): the provider switch + the ollama path — **done when:** `PB_REVIEWER_PROVIDER=ollama node review.mjs < demo/stepcontext.json` returns a valid `done` envelope when Ollama is up (or an actionable `blocked` when it is not), and an import check confirms deps resolve to `fascicle` + `zod` only
    - seam: `examples/agents/reviewer/agent.json`, `examples/agents/reviewer/package.json`, `examples/agents/reviewer/review.mjs`, `examples/agents/reviewer/.gitignore`, `examples/agents/reviewer/demo/stepcontext.json`
    - model: opus — the provider-abstraction shape (read precedence, per-provider preflight, native fascicle composition) is the design core of the build
 2. [ ] The `claude_cli` default provider (fascicle ≥ 0.9.5) — **done when:** with no `PB_REVIEWER_PROVIDER` and no `settings.agent`, `node review.mjs < demo/stepcontext.json` drives claude_cli through the logged-in session and returns a valid structured review in one shot; with `claude` absent from PATH it returns an actionable `blocked`

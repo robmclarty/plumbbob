@@ -75,6 +75,39 @@ function fromEnv(...names) {
 
 const DEFAULT_PROVIDER = 'claude_cli'
 
+function claudeCliProvider(ctx) {
+  const model = fromSettings(ctx, 'model') ?? fromEnv('PB_REVIEWER_MODEL') ?? 'sonnet'
+  const binary = fromSettings(ctx, 'binary') ?? fromEnv('PB_REVIEWER_CLAUDE_BINARY') ?? 'claude'
+  return {
+    label: `claude_cli · ${model} (logged-in session)`,
+    // 'claude_cli' is fascicle's external-agent kind: it spawns the `claude`
+    // binary and drives it, so auth_mode 'oauth' inherits the full env and
+    // piggybacks the logged-in Claude session — no API key, no local model to
+    // pull (D3). Structured output rides claude's real --json-schema constrained
+    // decode; needs fascicle >= 0.9.5, which strips the $schema/$id keys
+    // z.toJSONSchema stamps and the CLI rejects (D1).
+    engineProviders: { claude_cli: { auth_mode: 'oauth', binary } },
+    call: { provider: 'claude_cli', model },
+    // Preflight the one obstacle the adapter would otherwise surface as a raw
+    // crash: no `claude` on PATH. `claude --version` is instant, auth-free, and
+    // network-free — its presence is the whole check. ENOENT → an actionable
+    // blocked (the D52 loop); anything else (a broken or hung install) blocks
+    // with the real error rather than crashing. null = good to go.
+    preflight: async () => {
+      try {
+        await execFileAsync(binary, ['--version'], { timeout: 10_000 })
+        return null
+      } catch (err) {
+        if (err?.code === 'ENOENT') {
+          return `the \`${binary}\` CLI is not on PATH — install Claude Code (https://claude.com/claude-code), or switch this reviewer to a local model with agentConfig.reviewer.provider = "ollama". The default claude_cli provider drives your logged-in Claude session.`
+        }
+        const detail = err instanceof Error ? err.message : String(err)
+        return `\`${binary} --version\` failed (${detail}) — check the Claude Code install and that you are logged in (run: claude).`
+      }
+    },
+  }
+}
+
 function ollamaProvider(ctx) {
   const model = fromSettings(ctx, 'model') ?? fromEnv('PB_REVIEWER_MODEL') ?? 'qwen3:8b'
   const baseUrl =
@@ -109,10 +142,12 @@ function ollamaProvider(ctx) {
   }
 }
 
-// The default, `claude_cli` (external transport), is wired alongside its own
-// provider descriptor. Until then a request for it lands a clean `blocked` that
-// names the providers that are wired.
+// One descriptor factory per provider, keyed by name (D4's switch). claude_cli
+// is the default (D3) — it piggybacks the logged-in Claude session, needing no
+// key and no local pull; ollama is the local, private alternative whose diff
+// never leaves the machine. Adding a provider is one more entry here.
 const PROVIDERS = {
+  claude_cli: claudeCliProvider,
   ollama: ollamaProvider,
 }
 
