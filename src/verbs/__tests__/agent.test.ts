@@ -5,7 +5,7 @@ import { agent } from '../agent.ts'
 import { checkpoint } from '../checkpoint.ts'
 import { start } from '../start.ts'
 import { buildFolder, buildLogPath, handoffPath, intentPath } from '../../lib/sidecar.ts'
-import { settingsPath } from '../../lib/settings.ts'
+import { localSettingsPath, settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
@@ -72,6 +72,12 @@ function envelopeFromStdout(stdout: string): Record<string, unknown> {
   return JSON.parse(stdout.trim()) as Record<string, unknown>
 }
 
+// Read back the StepContext the DONE_SCRIPT agent recorded from its stdin, so a
+// test can assert what plumbbob composed and forwarded (here: settings.agent).
+function recordedInput(root: string, name: string) {
+  return JSON.parse(readFileSync(join(root, '.plumbbob', 'agents', name, 'last-input.json'), 'utf8'))
+}
+
 describe('agent run — happy path', () => {
   it('composes the input, spawns at repo root with PLUMBBOB_AGENT_DIR, re-emits the envelope on stdout', async () => {
     const dir = await startedBuild()
@@ -109,6 +115,41 @@ describe('agent run — happy path', () => {
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', 'onlyafter', '--step', '1']))
     expect(code).toBe(0)
     expect(stderr).toContain('agent "onlyafter" (after) —')
+  })
+})
+
+describe('agent run — per-agent config (D5/D6/D7)', () => {
+  it('forwards settings.json → agentConfig[name] as ctx.settings.agent', async () => {
+    const dir = await startedBuild()
+    writeFileSync(settingsPath(dir), JSON.stringify({ agentConfig: { doer: { provider: 'ollama', model: 'qwen3:8b' } } }))
+    makeAgent(dir, 'doer', { slots: ['build'], script: DONE_SCRIPT })
+
+    const { code } = await captureIoAsync(() => agent(dir, ['run', 'doer', '--step', '1']))
+    expect(code).toBe(0)
+    expect(recordedInput(dir, 'doer').settings.agent).toEqual({ provider: 'ollama', model: 'qwen3:8b' })
+  })
+
+  it('lets settings.local.json shadow the project rung whole (D7 — no deep merge)', async () => {
+    const dir = await startedBuild()
+    writeFileSync(settingsPath(dir), JSON.stringify({ agentConfig: { doer: { provider: 'claude_cli', model: 'sonnet' } } }))
+    writeFileSync(localSettingsPath(dir), JSON.stringify({ agentConfig: { doer: { provider: 'ollama' } } }))
+    makeAgent(dir, 'doer', { slots: ['build'], script: DONE_SCRIPT })
+
+    const { code } = await captureIoAsync(() => agent(dir, ['run', 'doer', '--step', '1']))
+    expect(code).toBe(0)
+    // The local overlay replaces the whole agentConfig rung — `model` does NOT leak
+    // through from the project rung; the agent's own `?? default` softens a partial.
+    expect(recordedInput(dir, 'doer').settings.agent).toEqual({ provider: 'ollama' })
+  })
+
+  it('is {} when neither settings file defines the config for this agent', async () => {
+    const dir = await startedBuild()
+    writeFileSync(settingsPath(dir), JSON.stringify({ agentConfig: { someoneelse: { provider: 'ollama' } } }))
+    makeAgent(dir, 'doer', { slots: ['build'], script: DONE_SCRIPT })
+
+    const { code } = await captureIoAsync(() => agent(dir, ['run', 'doer', '--step', '1']))
+    expect(code).toBe(0)
+    expect(recordedInput(dir, 'doer').settings.agent).toEqual({})
   })
 })
 

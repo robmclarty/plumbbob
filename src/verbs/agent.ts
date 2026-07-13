@@ -147,6 +147,11 @@ async function runOne(root: string, slug: string | null, step: number, spec: Run
     settings: {
       auto: resolveBoolean(root, 'auto', false),
       agentTimeout: resolveNumber(root, 'agentTimeout', 0),
+      // Hand this agent its own config block over the frozen envelope `settings`
+      // field (D5/D6): settings.json → agentConfig[name], with the local overlay
+      // shadowing the project rung whole (D7 — no deep merge), and {} when neither
+      // defines it. No new envelope field, no new verb — the config just rides here.
+      agent: resolveRecord(root, 'agentConfig')[spec.name] ?? {},
     },
   })
   if (!composed.ok) {
