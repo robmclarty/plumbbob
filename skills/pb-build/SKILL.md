@@ -3,7 +3,7 @@ name: pb-build
 description: The default engine — read the next planned step from intent, implement it (its done-when, seam, Decisions, Constraints), then verify it through to the approval pause. Swappable — build by hand/vibed/another harness and run /pb-verify instead. `--auto` self-approves and chains to done; a step range like `1-3` self-approves through step 3, then pauses.
 argument-hint: "[step-number | step-range] [--auto]"
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent:*), Bash(git diff:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent:*), Bash(git diff:*)
 ---
 
 # PlumbBob — build a step (the default engine)
@@ -30,11 +30,12 @@ differs from the model you're running as, say so before implementing — the hum
 1. **Pick the step.** Use the number you were invoked with (e.g. `/pb-build 4`) — or,
    if you were given a range like `/pb-build 1-3`, start at the first number and treat
    the second as the auto-approve ceiling (see the range note under `--auto`). With no
-   argument, take the next undone, planned step in `.plumbbob/intent.md`. If there is no
-   planned step to build, stop and tell the human to `/pb-step` first.
-2. **Enter the step.** Run `plumbbob build <n>` (records the in-flight STEP +
-   SEAM so `/pb-status` shows the step in flight; the seam is awareness, not a
-   lock).
+   argument, don't resolve the next step yourself — the CLI does: bare `plumbbob build`
+   (step 2) enters the next undone step and refuses with a `/pb-step` nudge when every
+   step is checkpointed.
+2. **Enter the step.** Run `plumbbob build <n>` — or bare `plumbbob build` to enter the
+   next undone step (records the in-flight STEP + SEAM so `/pb-status` shows the step in
+   flight; the seam is awareness, not a lock).
 3. **Read the plan.** Read the step's **done-when**, its **seam**, and the
    **Decisions** and **Constraints** in `intent.md`. Build to *that* — the deciding
    already happened, off the chat.
@@ -79,30 +80,23 @@ differs from the model you're running as, say so before implementing — the hum
    `/pb-build` only ever starts the *next* step. **Never route around a refusal with a
    raw `git commit`** — the work plane stays free, but the *record* is latched on purpose.
 
-   **End every default build turn with this closing block** — adapt the specifics, keep
-   the shape, so the human always sees the same three-part hand-off (the state, the
-   choice, what's next):
-
-   > Step N is built and the check is green — here's the diff and my self-review.
-   > **Review it, then:**
-   > - **looks good** → tell me and I'll checkpoint it — that lands step N as its own
-   >   commit and returns us to the boundary
-   > - **needs work** → tell me what to change and I'll iterate on this same step
-   >
-   > Next up is step N+1 *(it recommends `- model: X` — `/model X` before firing
-   > `/pb-build` to honor it)*. Fire `/pb-build` to start it once N is checkpointed.
-
-   Drop the `- model:` parenthetical when the next step has no recommendation, and drop
-   the whole "Next up" line when no planned step remains (say so instead).
+   **End every default build turn with the standardized hand-off block.** Run `plumbbob
+   handoff` and present its output — it renders the same three-part shape (the state, the
+   choice, what's next) straight from the session: step N built, the looks-good /
+   needs-work choice, and the next undone step with its `- model:` recommendation. Show
+   your diff and self-review above it. The CLI owns the block so it can't drift from what
+   `/pb-status` reports; you supply only the judgment above it. It already drops the model
+   clause when the next step has none, and says so when no planned step remains — you
+   don't reproduce the template by hand.
 
    **Then hand off with the next model.** Once the checkpoint lands in the approval turn,
-   close that turn by citing where the loop now stands: the step you just completed and the
-   next undone step. If that next step carries a `- model:` recommendation (the plan's
-   smallest-model-that-fits call, echoed on `plumbbob status`'s `▸ next` line), **name
-   it** so the human knows which `/model` to select before firing `/pb-build` again — it
-   is what carries the plan's suggestion across a fresh context window, which inherits the
-   session model, not the plan's. No `- model:` line means any model will do. Guidance,
-   never a gate.
+   run `plumbbob handoff` again and relay its boundary block — with the step gone from
+   in-flight it renders "step N checkpointed" and points at the next undone step, carrying
+   that step's `- model:` recommendation (the plan's smallest-model-that-fits call) so the
+   human knows which `/model` to select before firing `/pb-build` again. It is what
+   carries the plan's suggestion across a fresh context window, which inherits the session
+   model, not the plan's. No `- model:` line means any model will do. Guidance, never a
+   gate.
 
 ## Running bound agents
 
@@ -155,9 +149,10 @@ and approves in the human's place**, and it **chains**:
   bound agent returns `blocked` or `drift` (unblock-and-re-run, or `/pb-refine` — an
   agent cannot advance the loop), a new decision is needed, no planned steps
   remain, or the top of a requested range is reached. **When `--auto` halts back to the
-  human, give the same hand-off the default pause does** — the step just completed, the
-  next undone step, and that next step's `- model:` recommendation if it has one, so a
-  fresh context window knows which `/model` to select.
+  human, give the same hand-off the default pause does** — run `plumbbob handoff` and
+  relay its block: the step just completed, the next undone step, and that next step's
+  `- model:` recommendation if it has one, so a fresh context window knows which `/model`
+  to select.
 
 `--auto` and a step range are the only paths that checkpoint without a human pause, and
 only because the human asked for it by name; a range re-imposes the pause at its top.
@@ -206,7 +201,7 @@ just the one more entry already in the halt list above.
   it, and landing it is a deliberate beat, not a side effect of the next `/pb-build`.
   Never route around it with a raw `git commit`; `--auto`, a typed range, or `auto: true`
   are the only self-approvals.
-- **Close with the next model.** When a step lands, cite the completed step and the next
-  undone step, and name that next step's `- model:` recommendation if it has one — it's
-  what a fresh context window needs to pick the right `/model` before re-firing.
-  Guidance, never a gate.
+- **Close with the next model.** When a step lands, run `plumbbob handoff` and relay its
+  block — it cites the completed step and the next undone step, and names that next step's
+  `- model:` recommendation if it has one, which is what a fresh context window needs to
+  pick the right `/model` before re-firing. Guidance, never a gate.

@@ -6,6 +6,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { hasSession, intentPath, resolveBuild, seamPath, stampStepStat, stampTick, stepPath } from '../lib/sidecar.ts'
 import { parseStepSeam } from '../lib/intent.ts'
+import { parseSteps } from '../lib/orient.ts'
 
 export function build(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
@@ -25,13 +26,34 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
     )
     return 1
   }
-  if (raw === undefined || !/^\d+$/.test(raw) || Number(raw) < 1) {
+  // An explicit arg that isn't a positive integer is a usage error — caught before
+  // reading intent.md so the message doesn't depend on the plan being present.
+  if (raw !== undefined && (!/^\d+$/.test(raw) || Number(raw) < 1)) {
     process.stderr.write('plumbbob: build needs a step number. Try: plumbbob build 2.\n')
     return 1
   }
-  const step = Number(raw)
 
-  const parsed = parseStepSeam(readFileSync(intentPath(root, slug), 'utf8'), step)
+  const intent = readFileSync(intentPath(root, slug), 'utf8')
+
+  // No argument ⇒ enter the next undone step in intent.md (the same idiom
+  // `checkpoint` uses), so a bare `plumbbob build` advances the loop without the
+  // skill re-deriving the step in prose. Every step checkpointed ⇒ a `/pb-step`
+  // nudge, not a silent no-op.
+  let step: number
+  if (raw === undefined) {
+    const nextUndone = parseSteps(intent).find((s) => !s.done)
+    if (nextUndone === undefined) {
+      process.stderr.write(
+        'plumbbob: no undone step to build — every planned step is checkpointed. `/pb-step` to add an increment, or `/pb-finish`.\n',
+      )
+      return 1
+    }
+    step = nextUndone.n
+  } else {
+    step = Number(raw)
+  }
+
+  const parsed = parseStepSeam(intent, step)
   if (!parsed.ok) {
     process.stderr.write(`plumbbob: ${parsed.error} Fix the step's seam in intent.md, then \`build ${step}\` again.\n`)
     return 1
@@ -44,8 +66,9 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
   // landedAt, and the pair becomes the step's duration in the finish report.
   stampStepStat(root, slug, step, 'startedAt', new Date().toISOString())
 
+  const picked = raw === undefined ? ' (next undone)' : ''
   process.stdout.write(
-    `plumbbob: building step ${step}. Seam (for orientation; not a lock):\n${parsed.seam.map((p) => `  ${p}`).join('\n')}\n`,
+    `plumbbob: building step ${step}${picked}. Seam (for orientation; not a lock):\n${parsed.seam.map((p) => `  ${p}`).join('\n')}\n`,
   )
   return 0
 }

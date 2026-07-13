@@ -38,6 +38,25 @@ describe('build', () => {
     expect(stdout).toContain('not a lock):\n  src/b.ts\n  src/c.ts')
   })
 
+  it('with no argument, enters the next undone step', async () => {
+    const dir = await startedWithSteps() // steps 1 and 2 both undone
+    const { code, stdout } = captureIo(() => build(dir, []))
+    expect(code).toBe(0)
+    expect(readFileSync(stepPath(dir), 'utf8').trim()).toBe('1')
+    expect(readFileSync(seamPath(dir), 'utf8')).toBe('src/a.ts\n')
+    expect(stdout).toContain('building step 1 (next undone)')
+  })
+
+  it('with no argument and every step checkpointed, refuses and writes nothing', async () => {
+    const dir = await startedWithSteps()
+    writeFileSync(intentPath(dir), INTENT.replace('1. [ ]', '1. [x]').replace('2. [ ]', '2. [x]'))
+    const { code, stderr } = captureIo(() => build(dir, []))
+    expect(code).toBe(1)
+    expect(stderr).toContain('no undone step to build')
+    expect(existsSync(stepPath(dir))).toBe(false)
+    expect(existsSync(seamPath(dir))).toBe(false)
+  })
+
   it('rejects a non-numeric, mixed, or sub-1 step with the usage message', async () => {
     // Each shape trips a different validation clause: no digits, digits at the
     // wrong end (both ends), and a number below 1.

@@ -2,7 +2,7 @@
 name: pb-verify
 description: "The verify tick — run the check, self-review the diff against intent, validate the step's done-when, pause for your approval, then checkpoint. Executor-agnostic: it reads the diff, not who wrote it."
 disable-model-invocation: true
-allowed-tools: Read, Bash(plumbbob status:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent:*), Bash(git diff:*), Bash(git status:*)
+allowed-tools: Read, Bash(plumbbob status:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent:*), Bash(git diff:*), Bash(git status:*)
 ---
 
 # PlumbBob — verify a step (the tick)
@@ -63,15 +63,14 @@ this skill verifies it the same way: **it reads the diff, not the author**.
    (done-when + seam + diffstat) on its own. Either way, do **not** bump the version or
    touch the changelog — that is the human's `/version` call.
 7. **Hand off with the next model** *(once the checkpoint lands)*. `plumbbob checkpoint`
-   prints `step N checkpointed … Back at the boundary` and returns to DESIGN. Close the
-   turn by citing where the loop now stands: the step you just completed and the **next
-   undone step** — its title and done-when. If that next step carries a `- model:`
-   recommendation (the plan's smallest-model-that-fits call, which `plumbbob status`
-   echoes on the `▸ next` line), **name it in the hand-off** so the human knows which
-   `/model` to select before firing `/pb-build` again. This matters most across a context
-   boundary: a fresh window inherits the *session's* model, not the plan's suggestion, so
-   this line is what carries the recommendation over. No `- model:` line means any model
-   will do — say nothing about it. Guidance, never a gate.
+   returns to DESIGN; then run `plumbbob handoff` and relay its boundary block. With the
+   step gone from in-flight it renders `step N checkpointed — back at the boundary` and
+   points at the **next undone step**, carrying that step's `- model:` recommendation (the
+   plan's smallest-model-that-fits call) so the human knows which `/model` to select before
+   firing `/pb-build` again. This matters most across a context boundary: a fresh window
+   inherits the *session's* model, not the plan's suggestion, so this line is what carries
+   the recommendation over. The CLI owns the block, so it can't drift from what `plumbbob
+   status` reports; no `- model:` line means any model will do. Guidance, never a gate.
 
 ## The latch makes the pause real
 
@@ -104,7 +103,7 @@ in settings is the standing one.
   hook a same-turn checkpoint is refused *by design* — present the diff, **end the
   turn**, and let the human's next message re-tick it. Never route around it with a raw
   `git commit`; the latch guards the record, not the work.
-- **Close with the next model.** After the checkpoint lands, cite the completed step
-  and the next undone step, and surface that next step's `- model:` recommendation when
-  it has one — it is the plan's smallest-model-that-fits call, and it's what a fresh
-  context window needs to pick the right `/model`. Guidance, never a gate.
+- **Close with the next model.** After the checkpoint lands, run `plumbbob handoff` and
+  relay its block — it cites the completed step and the next undone step, and surfaces that
+  next step's `- model:` recommendation when it has one, which is what a fresh context
+  window needs to pick the right `/model`. Guidance, never a gate.

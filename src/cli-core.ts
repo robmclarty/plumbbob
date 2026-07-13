@@ -10,6 +10,7 @@ import { start } from './verbs/start.ts'
 import { status } from './verbs/status.ts'
 import { park } from './verbs/park.ts'
 import { build } from './verbs/build.ts'
+import { handoff } from './verbs/handoff.ts'
 import { check } from './verbs/check.ts'
 import { checkpoint } from './verbs/checkpoint.ts'
 import { revert } from './verbs/revert.ts'
@@ -29,7 +30,8 @@ type Verb = {
 const VERBS: ReadonlyArray<Verb> = [
   { name: 'start', summary: 'scaffold .plumbbob/; open the session; record the baseline commit' },
   { name: 'status', summary: 'print the orientation dashboard, or NO ACTIVE SESSION' },
-  { name: 'build', summary: 'build <n>: write the seam from step n (in-flight, not a lock)' },
+  { name: 'build', summary: 'build [<n>]: write the seam from step n, or the next undone step (in-flight, not a lock)' },
+  { name: 'handoff', summary: 'print the standardized build hand-off block (pause or post-checkpoint); read-only' },
   { name: 'check', summary: 'run the heavy check and report; no state change (--bail --only a,b … narrow the checkride gate)' },
   { name: 'checkpoint', summary: 'checkpoint [<n>]: gate on green, commit/record SHA, mark step done (executor-agnostic)' },
   { name: 'revert', summary: 'revert [--to n]: git reset --hard to a checkpoint SHA' },
@@ -83,6 +85,8 @@ async function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>):
       return park(cwd, rest)
     case 'build':
       return build(cwd, rest)
+    case 'handoff':
+      return handoff(cwd, rest)
     case 'check':
       return check(cwd, rest)
     case 'checkpoint':
