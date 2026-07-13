@@ -76,7 +76,8 @@ describe('evaluateLatch — the six-row matrix, first hit wins', () => {
       expect(decision.reason).toBe('no-turn')
       expect(decision.message).toContain('no human turn since this step began')
       expect(decision.message).toContain('This is the')
-      expect(decision.message).toContain("the human's next")
+      expect(decision.message).toContain("The human's approval on")
+      expect(decision.message).toContain('`/pb-build` only starts the next step')
       expect(decision.message).toContain('`/pb-build --auto`')
       expect(decision.message).toContain('`auto: true` in settings.local.json')
     }

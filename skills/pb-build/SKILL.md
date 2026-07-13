@@ -87,14 +87,33 @@ differs from the model you're running as, say so before implementing — the hum
    build the step and reach the pause *in one turn* — so under plumbbob's turn hook the
    checkpoint at the end of that turn is **refused** ("no human turn since this step
    began"), and that refusal **is** the pause working as designed. Do exactly what the
-   pause already asks: present the diff and the self-review, **end the turn**, and the
-   human's next message is the tick that lands the checkpoint when you re-fire. **Never
-   route around a refusal with a raw `git commit`** — the work plane stays free,
-   but the *record* is latched on purpose.
+   pause asks: present the diff and the self-review, emit the closing block below, and
+   **end the turn**. The human's next message — their approval — is the human turn that
+   lets the checkpoint land: on that turn you run `plumbbob checkpoint <n>` (now allowed)
+   and **stop at the boundary**. Landing the checkpoint is its own deliberate beat — the
+   thing approval triggers — never a side effect of starting the next step, and
+   `/pb-build` only ever starts the *next* step. **Never route around a refusal with a
+   raw `git commit`** — the work plane stays free, but the *record* is latched on purpose.
 
-   **Then hand off with the next model.** Once the checkpoint lands on re-fire, close the
-   turn by citing where the loop now stands: the step you just completed and the next
-   undone step. If that next step carries a `- model:` recommendation (the plan's
+   **End every default build turn with this closing block** — adapt the specifics, keep
+   the shape, so the human always sees the same three-part hand-off (the state, the
+   choice, what's next):
+
+   > Step N is built and the check is green — here's the diff and my self-review.
+   > **Review it, then:**
+   > - **looks good** → tell me and I'll checkpoint it — that lands step N as its own
+   >   commit and returns us to the boundary
+   > - **needs work** → tell me what to change and I'll iterate on this same step
+   >
+   > Next up is step N+1 *(it recommends `- model: X` — `/model X` before firing
+   > `/pb-build` to honor it)*. Fire `/pb-build` to start it once N is checkpointed.
+
+   Drop the `- model:` parenthetical when the next step has no recommendation, and drop
+   the whole "Next up" line when no planned step remains (say so instead).
+
+   **Then hand off with the next model.** Once the checkpoint lands in the approval turn,
+   close that turn by citing where the loop now stands: the step you just completed and the
+   next undone step. If that next step carries a `- model:` recommendation (the plan's
    smallest-model-that-fits call, echoed on `plumbbob status`'s `▸ next` line), **name
    it** so the human knows which `/model` to select before firing `/pb-build` again — it
    is what carries the plan's suggestion across a fresh context window, which inherits the
@@ -163,10 +182,11 @@ just the one more entry already in the halt list above.
   chain. `blocked` → unblock and re-run; `drift` → `/pb-refine`. You are still the one
   who verifies and (bar `--auto`) the human is still the clock.
 - **A refused checkpoint is the pause, not an error.** Under plumbbob's turn
-  hook a same-turn `checkpoint` is refused by design — present the diff, **end the
-  turn**, and the human's next message is the tick that lands it on re-fire. Never route
-  around it with a raw `git commit`; `--auto`, a typed range, or `auto: true` are the
-  only self-approvals.
+  hook a same-turn `checkpoint` is refused by design — present the diff and the closing
+  block, **end the turn**; the human's approval on their next turn is what lets you land
+  it, and landing it is a deliberate beat, not a side effect of the next `/pb-build`.
+  Never route around it with a raw `git commit`; `--auto`, a typed range, or `auto: true`
+  are the only self-approvals.
 - **Close with the next model.** When a step lands, cite the completed step and the next
   undone step, and name that next step's `- model:` recommendation if it has one — it's
   what a fresh context window needs to pick the right `/model` before re-firing.

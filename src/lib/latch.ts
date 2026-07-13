@@ -31,15 +31,17 @@ export type LatchDecision =
 
 const ALLOW: LatchDecision = { allow: true }
 
-// The exact refusal (the spec pins this prose): the message is the affordance —
-// it tells the model what the pause is and names the only legitimate grants. The
-// plan commit gets its own wording: there is no step, no diff, and no self-review
-// at plan time — what the human approves is the plan itself.
+// The refusal message is the affordance — it tells the model what the pause is,
+// how it ends (approval on the next turn lands it; `/pb-build` only starts the next
+// step), and names the only legitimate grants. The plan commit gets its own wording:
+// there is no step, no diff, and no self-review at plan time — what the human approves
+// is the plan itself.
 const NO_TURN_MESSAGE = `plumbbob: checkpoint refused — no human turn since this step began. This is the
-pause: present the diff and the self-review, then end the turn; the human's next
-message is the tick. (An explicit \`/pb-build --auto\` or a step range in the human's
-own prompt grants self-approval; \`auto: true\` in settings.local.json is the standing
-grant.)
+pause: present the diff and the self-review, then end the turn. The human's approval on
+their next turn is what lets this land — re-run \`checkpoint\` then and stop at the
+boundary; \`/pb-build\` only starts the next step, it never lands this one. (An explicit
+\`/pb-build --auto\` or a step range in the human's own prompt grants self-approval;
+\`auto: true\` in settings.local.json is the standing grant.)
 `
 
 const NO_TURN_PLAN_MESSAGE = `plumbbob: checkpoint refused — no human turn since \`start\` stamped this plan. This
