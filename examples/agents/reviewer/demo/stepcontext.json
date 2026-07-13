@@ -1,0 +1,15 @@
+{
+  "contract": 1,
+  "mode": "after",
+  "build": { "slug": "2026-07-03-wordwrap", "title": "A text-wrapping utility" },
+  "step": {
+    "n": 1,
+    "title": "Greedy wrap(text, width) with tests",
+    "doneWhen": "wrap() breaks lines at the last space that fits; node --test passes",
+    "seam": []
+  },
+  "decisions": ["D1: greedy line breaking over optimal — because it is what fmt/fold do and the simplest thing that works"],
+  "constraints": ["C1: no runtime dependencies — because the demo must run anywhere Node runs", "C2: node:test only — because the point is the loop, not the test framework"],
+  "context": [],
+  "settings": { "auto": false, "agentTimeout": 0 }
+}

@@ -1,0 +1,8 @@
+{
+  "contract": 1,
+  "name": "reviewer",
+  "command": "node \"$PLUMBBOB_AGENT_DIR/review.mjs\"",
+  "slots": ["after"],
+  "description": "Advisory review of a step's diff by a switchable-provider model (claude_cli by default, ollama for local/private compute), fascicle-composed. Returns pass/concerns; never gates.",
+  "when": "at any verify pause where a second opinion on the diff is welcome — the default claude_cli provider piggybacks the logged-in Claude session (no API key); switch to ollama for local, private compute"
+}
