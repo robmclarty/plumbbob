@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.5] - 2026-07-13
+
+- **Added:** the `plumbbob handoff` verb — a read-only command that renders the
+  standardized build hand-off block straight from session state: the pause block
+  (built → looks-good / needs-work → what's next) while a step is in flight, and the
+  post-checkpoint boundary block otherwise. It derives the next step and its
+  `- model:` recommendation from the same `parseSteps` source the dashboard uses, so
+  the hand-off can no longer drift from what `plumbbob status` reports.
+- **Changed:** bare `plumbbob build` with no step number now enters the next undone
+  step instead of refusing — resolving it the same way `checkpoint` does, and nudging
+  toward `/pb-step` only when every planned step is already checkpointed.
+- **Changed:** the `pb-build` and `pb-verify` skills now delegate their end-of-build
+  and post-checkpoint hand-offs to `plumbbob handoff` rather than restating the block
+  as prose, and `pb-build`'s step-1 selection is trimmed now that the CLI picks the
+  next step. The block lives in one place, so the skills can no longer fall out of sync
+  with the CLI.
+- **Changed:** every dependency is pinned to an exact version, with a new `.npmrc`
+  `save-exact=true` to keep future installs exact, and `vitest` is bumped 4.1.8 → 4.1.9
+  to match `@vitest/coverage-v8`'s exact peer. Aligning the pair collapses the
+  duplicated `@vitest/*` copies the mismatch was carrying and clears the "Running mixed
+  versions is not supported" warning.
+
 ## [0.8.4] - 2026-07-12
 
 - **Added:** the `reviewer` example agent — a switchable-provider advisory review
