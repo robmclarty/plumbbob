@@ -98,7 +98,7 @@ so `harness bindings:` prints only when a harness is bound (pinned in status.tes
 
 ## Steps
 
-1. [ ] Consolidate the agent-slot passages into `## Running bound agents`, gated on the
+1. [x] Consolidate the agent-slot passages into `## Running bound agents`, gated on the
    status cue — **done when:** the five passages (before / build / when-prose /
    status-routing / after) are lifted out of default-path steps 3–5 into one new
    `## Running bound agents` section entered only when `plumbbob status` shows
