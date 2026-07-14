@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# One run per ref: a new push to a PR supersedes its in-flight run; pushes to
+# main queue instead of cancelling, so every landed commit gets a full verdict.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    name: check + build (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The supported floor (engines.node 22.18.0) and the current major.
+        # macOS/Windows wait for a consumer who needs them.
+        node: ['22.18.0', '24']
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      # plumbbob pins pnpm in devEngines.packageManager (not the top-level
+      # packageManager field action-setup auto-reads), so state the version.
+      - name: Install pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        with:
+          version: 11.1.2
+
+      - name: Install Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      # Frozen install reproduces the hoisted layout (pnpm-workspace.yaml sets
+      # nodeLinker: hoisted) so the checkride bundleDependency resolves the same
+      # way it will at publish time.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The full gate (checkride: types, lint, struct, dead, tests, docs, links)
+      # - the same command publish.yaml gates a release on, so main is already
+      # green before a tag is ever pushed.
+      - name: Check
+        run: pnpm check
+
+      # `check` type-checks (tsc) but doesn't emit; build runs the emit pass
+      # (tsc -p tsconfig.build.json) so a dist-only break surfaces here.
+      - name: Build
+        run: pnpm build
