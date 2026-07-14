@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.6] - 2026-07-13
+
+- **Changed:** `pb-plan`'s spec-absorb mode (mode 2) now recognizes a file reference in
+  any form — a bare path, an `@spec.md` mention, or a path wrapped in a sentence — where
+  before it keyed only on a bare path that `Read` could open. It strips a leading `@`
+  before probing, uses the referenced file's contents when Claude Code has already
+  injected them, and folds any surrounding prose in as extra intent, so
+  `/pb-plan absorb @spec.md` absorbs the spec instead of falling through to inline-intent
+  expansion. The skills reference documents that a plain path is the surest form and that
+  a slash command whose sole argument is an `@`-mention silently drops to a plain message
+  — a Claude Code input-parsing limit, not a plumbbob bug.
+
 ## [0.8.5] - 2026-07-13
 
 - **Added:** the `plumbbob handoff` verb — a read-only command that renders the
