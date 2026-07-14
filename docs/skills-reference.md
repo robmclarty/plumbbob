@@ -34,8 +34,8 @@ Two ground rules apply to all of them:
 ### pb-plan
 
 Frames a fresh goal and authors the **complete** plan before any code. It disambiguates
-its input itself: no argument runs an interview, a file path absorbs an out-of-band spec,
-any other text is expanded as inline intent. Under the hood it runs `plumbbob start`
+its input itself: no argument runs an interview, a file path (or an `@`-mention) absorbs
+an out-of-band spec, any other text is expanded as inline intent. Under the hood it runs `plumbbob start`
 (recording the baseline), fills the build's `intent.md` — Frame, Decisions, Constraints,
 and **all** Steps, each with a done-when, a seam, and (where the signal is clear) an
 advisory `model:` recommendation naming the smallest model that can carry the step — and
@@ -45,6 +45,11 @@ only, never source. If the build will lean on user-authored agents it also offer
 author `harness.json` beside `intent.md` — the per-step [slot bindings](#the-harness-slots)
 reviewed at the same plan pause. Reach for it whenever there is no active session and a
 goal worth more than a one-liner.
+
+> **Passing a spec:** a plain path is the surest form (`/pb-plan specs/foo.md`). An
+> `@`-mention works too, but only with leading text (`/pb-plan absorb @specs/foo.md`) —
+> Claude Code doesn't recognize a slash command whose *sole* argument is an `@`-mention,
+> so `/pb-plan @specs/foo.md` silently drops to a plain message. Prefer the path.
 
 ### pb-step
 

@@ -1,6 +1,6 @@
 ---
 name: pb-plan
-description: "Frame a fresh goal and author the whole plan — Frame, Decisions, Constraints, and all Steps — before any code. Three input modes: no arg interviews you; a file path absorbs a spec; any other text expands your inline intent."
+description: "Frame a fresh goal and author the whole plan — Frame, Decisions, Constraints, and all Steps — before any code. Three input modes: no arg interviews you; a file path (or @-mention) absorbs a spec; any other text expands your inline intent."
 argument-hint: "[spec-path | intent]"
 disable-model-invocation: true
 allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob start:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent list:*)
@@ -27,11 +27,15 @@ Look at the argument the human gave and pick the mode yourself:
 
 1. **No argument → interview.** Walk the human through a short, friendly Q&A to draw
    the plan out of their head (see *The interview* below).
-2. **The argument is a path to a file that exists → absorb the spec.** Read that file
-   and distill it into `intent.md`, **retaining enough detail that `intent.md` stands
-   on its own** — don't just link to the source. Add a one-line provenance
-   (`*Source: <path>*`) and, for anything sizable, a `## Source` appendix preserving
-   the original text. (Probe with the `Read` tool; if it isn't a real file, fall to
+2. **The argument points at a file → absorb the spec.** A bare path, an `@spec.md`
+   mention, or a path wrapped in a sentence all count. Strip any leading `@` and probe
+   the token with the `Read` tool; if Claude Code has already injected the referenced
+   file's contents into your context, treat that as the spec rather than re-fetching.
+   Read the spec and distill it into `intent.md`, **retaining enough detail that
+   `intent.md` stands on its own** — don't just link to the source. Add a one-line
+   provenance (`*Source: <path>*`) and, for anything sizable, a `## Source` appendix
+   preserving the original text. Any prose wrapped around the reference (e.g. "absorb
+   @spec.md") is extra intent — fold it in. (If the token isn't a real file, fall to
    mode 3.)
 3. **Any other text → expand the inline intent.** Treat the text as the human's
    rough plan, expand it into the full `intent.md`, and ask only about what is
