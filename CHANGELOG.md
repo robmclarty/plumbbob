@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.7] - 2026-07-13
+
+- **Added:** GitHub Actions publishing automation that carries a release from a pushed
+  `v*` tag through to npm. `publish.yaml` publishes with provenance via npm Trusted
+  Publishing (OIDC) — no long-lived npm token lives anywhere; the registry mints a
+  short-lived credential from the workflow's identity per run — gated behind an
+  `npm-publish` environment with a required reviewer (the CI stand-in for the local MFA
+  prompt) and a tag-versus-`package.json` version guard so a mistagged push fails closed.
+  `release.yaml` cuts a GitHub Release from the same tag, with notes lifted from the
+  matching `CHANGELOG.md` section. `ci.yaml` runs the full `pnpm check` gate and build on
+  pull requests and `main` across the supported Node floor (22.18.0) and current major, so
+  `main` is already green before any tag is pushed. Actions are SHA-pinned, and the
+  `id-token: write` publish job is kept separate from the `contents: write` release job.
+
 ## [0.8.6] - 2026-07-13
 
 - **Changed:** `pb-plan`'s spec-absorb mode (mode 2) now recognizes a file reference in
