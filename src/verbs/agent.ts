@@ -145,6 +145,9 @@ async function runOne(root: string, slug: string | null, step: number, spec: Run
     step,
     mode,
     settings: {
+      // The frozen envelope still reports settings `auto` to agents (doorway freeze —
+      // no envelope changes). Note it is no longer a checkpoint grant (D67): the latch
+      // stopped reading it, so a `true` here informs an agent, it does not self-approve.
       auto: resolveBoolean(root, 'auto', false),
       agentTimeout: resolveNumber(root, 'agentTimeout', 0),
       // Hand this agent its own config block over the frozen envelope `settings`

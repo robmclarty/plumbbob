@@ -64,8 +64,13 @@ describe('grantFromPrompt', () => {
     expect(grantFromPrompt('/pb-build --auto!')).toBe('auto')
   })
 
-  it('reads through a step number or another flag to reach a grant argument', async () => {
-    expect(grantFromPrompt('/pb-build 2 --auto')).toBe('auto')
+  it('reads through a bare step number to a grant, but an unrecognized flag ends the scan', async () => {
+    expect(grantFromPrompt('/pb-build 2 --auto')).toBe('auto') // a step number is argument-shaped
+    // Only `--auto` is a sanctioned flag; any other `-` token ends the scan before a
+    // following range can mint — so `--wip 2020-2024` grants nothing (the residual D65 gap).
+    expect(grantFromPrompt('/pb-build --wip 2020-2024')).toBeNull()
+    expect(grantFromPrompt('/pb-build --draft 1-3')).toBeNull()
+    expect(grantFromPrompt('/pb-build 1-3 --auto')).toBe('range 3') // sanctioned args still compose
   })
 })
 

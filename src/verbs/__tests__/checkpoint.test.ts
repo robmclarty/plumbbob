@@ -385,14 +385,16 @@ describe('checkpoint — the approval latch (subprocess, D64)', () => {
     expect(status).toBe(0)
   })
 
-  it('row 3: the standing `auto: true` in settings.local.json allows (D27)', async () => {
+  it('D67: a standing `auto: true` in settings is ignored — checkpoint still refuses', async () => {
     const dir = latchedRepo()
-    setLocalSetting(dir, 'auto', true) // the standing personal grant in settings.local.json (the cursor lives in STATE)
-    const { status } = runCli(dir, ['checkpoint', '1'])
-    expect(status).toBe(0)
+    setLocalSetting(dir, 'auto', true) // a model can write this file, so it is no longer a grant
+    const { status, stderr } = runCli(dir, ['checkpoint', '1'])
+    expect(status).toBe(1)
+    expect(stderr).toContain('no longer a grant (D67)')
+    expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [ ]') // nothing landed
   })
 
-  it('row 4: a one-turn `auto` grant allows (D65)', async () => {
+  it('the model-forgeable route is closed but the human-typed one still lands: a one-turn `auto` grant allows (D65)', async () => {
     const dir = latchedRepo()
     writeFileSync(grantPath(dir), 'auto\n')
     const { status } = runCli(dir, ['checkpoint', '1'])

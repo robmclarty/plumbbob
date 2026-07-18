@@ -14,7 +14,7 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { doctor, inspectLegacy, migrateSidecar } from '../doctor.ts'
 import type { GateEnv } from '../doctor.ts'
 import { activeBuild, buildDir, intentPath, turnPath } from '../../lib/sidecar.ts'
-import { settingsPath } from '../../lib/settings.ts'
+import { setLocalSetting, settingsPath } from '../../lib/settings.ts'
 import { gitPath, headSha } from '../../lib/git.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIoAsync } from '../../../test/helpers/capture-io.ts'
@@ -681,5 +681,15 @@ describe('doctor — approval latch (D64)', () => {
     const { code, stdout } = await doctorWithHome(home, dir)
     expect(code).toBe(0)
     expect(stdout).toContain('○ latch: dormant')
+  })
+
+  it('surfaces a set settings `auto` as informational (D67) — no longer a grant, never a problem', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    setLocalSetting(dir, 'auto', true)
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(0) // informational, not a failure
+    expect(stdout).toContain('○ auto: set in settings but not a grant since D67')
   })
 })

@@ -3,7 +3,7 @@ name: pb-build
 description: The default engine — read the next planned step from intent, implement it (its done-when, seam, Decisions, Constraints), then verify it through to the approval pause. Swappable — build by hand/vibed/another harness and run /pb-verify instead. `--auto` self-approves and chains to done; a step range like `1-3` self-approves through step 3, then pauses.
 argument-hint: "[step-number | step-range] [--auto]"
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent:*), Bash(git diff:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob park:*), Bash(plumbbob agent:*), Bash(git diff:*)
 ---
 
 # PlumbBob — build a step (the default engine)
@@ -43,10 +43,13 @@ differs from the model you're running as, say so before implementing — the hum
      `harness bindings:` block, this build binds agents — see **§ Running bound agents**
      and load their context in before you write. No bindings, no harness: just build.
 4. **Implement** the step, and only that step, staying within the declared seam. A
-   new problem or "ooh what if" that surfaces mid-build is a `/pb-park`, **not** an
-   edit — capture it and stay on the step. If you genuinely cannot finish without
-   touching more than the seam, that is scope drift: surface it to the human rather
-   than sprawling.
+   new problem or "ooh what if" that surfaces mid-build is a park, **not** an edit:
+   capture it by running `plumbbob park "<one tidy line>"` — **saying "let's defer
+   that" writes nothing; only the park line in the build log is a capture.** When the
+   *human* hands you the tangent mid-build, their message **is** the approval to park
+   it — capture it right away, say what you parked, and stay on the step. If you
+   genuinely cannot finish without touching more than the seam, that is scope drift:
+   surface it to the human rather than sprawling.
    - **Bound agents can shape the build.** If `plumbbob status` shows a
      `harness bindings:` block, a `build`-slot agent may author the diff, a `when`-cue may
      fire an agent mid-build, and a non-`done` envelope routes by its status — see
@@ -185,7 +188,8 @@ just the one more entry already in the halt list above.
 - **Swappable, never required.** The loop works without this skill; `/pb-verify`
   checkpoints a hand-built or vibed diff just the same.
 - **Build the decided step, not a new one.** Implement what `intent.md` settled. A
-  new idea mid-build is a `/pb-park`, not an edit.
+  new idea mid-build is captured with `plumbbob park`, not an edit — a promise to
+  defer writes nothing; the park line does.
 - **Default ends at the pause.** Implement → verify → wait for approval; never
   checkpoint without it. Only an explicit `--auto` or a step range lets the agent approve
   in your place, and it still halts on a red check or any mismatch — a range also stops
@@ -199,8 +203,10 @@ just the one more entry already in the halt list above.
   hook a same-turn `checkpoint` is refused by design — present the diff and the closing
   block, **end the turn**; the human's approval on their next turn is what lets you land
   it, and landing it is a deliberate beat, not a side effect of the next `/pb-build`.
-  Never route around it with a raw `git commit`; `--auto`, a typed range, or `auto: true`
-  are the only self-approvals.
+  Never route around it with a raw `git commit`. An explicit `/pb-build --auto` or a typed
+  step range in the human's own prompt are the only self-approvals — **never write `auto`
+  into a settings file yourself to unlock a checkpoint. A grant you mint is no grant (the
+  latch ignores it since D67); ask the human to re-fire `/pb-build --auto` instead.**
 - **Close with the next model.** When a step lands, run `plumbbob handoff` and relay its
   block — it cites the completed step and the next undone step, and names that next step's
   `- model:` recommendation if it has one, which is what a fresh context window needs to

@@ -83,8 +83,9 @@ the checkpoint land when you re-fire. **Never reach for a raw `git commit` to fo
 land** — that forges the very record the latch exists to keep honest, and the
 commit-ask hook asks the human about it anyway. The refusal is a healthy latch doing its
 job on the *record* while the *work* plane stays free; a `/pb-build --auto` or
-a typed step range in the human's own prompt is the only self-approval, and `auto: true`
-in settings is the standing one.
+a typed step range in the human's own prompt is the only self-approval — **never write
+`auto` into a settings file to unlock the land; the latch ignores a model-minted grant
+(D67), so ask the human to re-fire `/pb-build --auto` instead.**
 
 ## The hard contracts
 

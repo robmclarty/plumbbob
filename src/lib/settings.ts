@@ -8,10 +8,13 @@
 // overlay can never wedge the tool. Functional/procedural, node builtins (C1/C2).
 //
 // Known keys: `check` (string — the heavy gate, tracked in settings.json) and
-// `auto` (boolean — whether the agent approves in the human's place; a personal
-// preference, so it belongs in settings.local.json). The per-worktree active-build
-// cursor is NOT here — it lives in the STATE file (see sidecar.ts), so this overlay
-// stays purely human-owned and the tool never rewrites it.
+// `auto` (boolean — a personal preference, so it belongs in settings.local.json).
+// Since D67 `auto` is NOT a checkpoint grant: the latch no longer reads it to allow
+// a land (a model can write this file, and a grant it can forge is no grant), only to
+// note it at the pause; self-approval comes from the human's literal `/pb-build --auto`
+// or a range. The per-worktree active-build cursor is NOT here — it lives in the STATE
+// file (see sidecar.ts), so this overlay stays purely human-owned and the tool never
+// rewrites it.
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'

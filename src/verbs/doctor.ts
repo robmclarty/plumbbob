@@ -34,7 +34,7 @@ import { gateDetectsTools } from '../lib/check.ts'
 import { marketplacePlumbbob } from '../lib/plugins.ts'
 import { findRepoRoot, gitPath, stagePath } from '../lib/git.ts'
 import { buildDir, excludeControl, listBuilds, readTurn, setActiveBuild, sidecarDir, slugify } from '../lib/sidecar.ts'
-import { resolveString, settingsPath } from '../lib/settings.ts'
+import { resolveBoolean, resolveString, settingsPath } from '../lib/settings.ts'
 
 // checkride's `DoctorEnv` isn't a named export, so derive it from `runDoctor`'s
 // options. It's the injectable toolchain-probe seam the check-gate tests use to
@@ -462,7 +462,14 @@ function latchReport(cwd: string): { readonly lines: string[]; readonly failed: 
     turn === null
       ? '  ○ latch: dormant — guidance only (no turn ledger yet; it ticks on your first prompt when the UserPromptSubmit hook is wired — re-run after one to confirm)'
       : `  ✓ latch: live (turn ${turn})`
-  return { lines: ['', 'plumbbob doctor — approval latch (D64)', line], failed: 0 }
+  const lines = ['', 'plumbbob doctor — approval latch (D64)', line]
+  // D67: a settings `auto` used to be a standing grant; the latch no longer honors it
+  // (a model can write that file). Surface a set value so a human who relied on it isn't
+  // silently changed — informational, never a problem.
+  if (resolveBoolean(root, 'auto', false)) {
+    lines.push('  ○ auto: set in settings but not a grant since D67 — self-approve per run with `/pb-build --auto`')
+  }
+  return { lines, failed: 0 }
 }
 
 export async function doctor(cwd: string, args: ReadonlyArray<string> = [], env?: GateEnv): Promise<number> {

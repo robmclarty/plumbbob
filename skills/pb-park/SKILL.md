@@ -38,4 +38,7 @@ later. Then:
 The capture itself is the **dumb CLI**, never an edit. This skill carries **no Edit and
 no Write tool** on purpose: you may not append to `build-log.md` yourself. Compose, get
 approval, then shell `plumbbob park` — that is the only write path. If approval
-never comes, capture nothing.
+never comes, capture nothing. (When the human's **own message** states the idea — a
+tangent they raise mid-build — that message **is** the approval: capture it directly
+with `plumbbob park`, don't ask again. Deferring in words without the CLI line captures
+nothing.)

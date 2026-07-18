@@ -147,8 +147,10 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
 - <a id="d27"></a>**D27 — The settings ladder replaces `config`.** A setting resolves flag →
   `settings.local.json` (untracked personal overlay) → `settings.json` (tracked project
   defaults) → built-in default. `check` is a project default; `auto` (agent-approves-in-
-  your-place) is a personal preference. Both files are optional JSON; a malformed one
-  contributes nothing rather than wedging the tool. Supersedes the flat `.plumbbob/config`.
+  your-place) is a personal preference — but since [**D67**](#d67) it is *not* a checkpoint
+  grant (the latch no longer reads it to allow a land; a model can write the file). Both
+  files are optional JSON; a malformed one contributes nothing rather than wedging the
+  tool. Supersedes the flat `.plumbbob/config`.
   *Tagged in* `settings.ts`, `check.ts`, `start.ts`.
 - <a id="d28"></a>**D28 — The active-build cursor lives in `STATE`.** Which build a verb acts on resolves
   `--build <slug>` → the cursor in `.plumbbob/STATE` → the sole build in `builds/` → a refusal
@@ -359,9 +361,9 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10*
   since the step was entered**, *because* the two boundaries live on different planes — guidance on the
   **work**, a latch on the **record**. A refused checkpoint is not an error; the refusal message *is*
   the pause (present the diff, end the turn, the human's next prompt is the tick that lands it on
-  re-fire). A six-row predicate decides it, first hit wins — `isTTY` (a human at the keyboard) → an
-  absent `TURN`/`TICK` (ledger dormant / hand-built diff) → the standing `auto` ([**D27**](#d27)) → a
-  one-turn `GRANT` ([**D65**](#d65)) → `TURN > TICK` → else refuse — reading only `TURN`/`TICK`/`GRANT`/
+  re-fire). A five-row predicate decides it, first hit wins — `isTTY` (a human at the keyboard) → an
+  absent `TURN`/`TICK` (ledger dormant / hand-built diff) → a one-turn `GRANT` ([**D65**](#d65)) →
+  `TURN > TICK` → else refuse — reading only `TURN`/`TICK`/`GRANT`/
   `isTTY`, never the host ([**D13**](#d13)), and running *before* the check gate (cheap first). It
   **amends [**D10**](#d10)'s scope** and joins the existing verb-boundary family (`checkpoint` refuses
   red [**D32**](#d32), `start` refuses dirty [**D22**](#d22), the agent envelope can't advance the loop
@@ -374,8 +376,8 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10*
   model can forge is no grant. The `GRANT` file is scoped (`auto` | `range M`) and rewritten on **every**
   tick (minted on a match, cleared otherwise), so its lifetime is **one turn** by construction; a typed
   range beats `--auto` (bounded wins), and a `range M` refuses at the ceiling (step > M) with a
-  top-of-range affordance. The [**D27**](#d27) `auto` settings key stays the *standing* personal grant,
-  visible in `status`. *Tagged in* `turn.ts`, `latch.ts`, `sidecar.ts`.
+  top-of-range affordance. The `GRANT` file is the *only* self-approval — the [**D27**](#d27) `auto`
+  settings key is not a grant ([**D67**](#d67)). *Tagged in* `turn.ts`, `latch.ts`, `sidecar.ts`.
 - <a id="d66"></a>**D66 — Out-of-band commits are surfaced, never blocked.** The human commits freely
   ([**C5**](#c5)); a raw `git commit` the model issues while a step is in flight becomes a permission
   *question* (a `PreToolUse` ask-hook that emits `ask`, never `deny` — [**D13**](#d13) intact), and
@@ -385,6 +387,20 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10*
   forge stays loud (transcript, `status`, the eval tier), so `doctor` also reports the latch
   live/dormant to make a missing turn hook visible. *Tagged in* `git.ts`, `orient.ts`, `status.ts`,
   `doctor.ts`, `hooks/pre-bash-commit.sh`.
+- <a id="d67"></a>**D67 — Self-approval is human-typed only; the standing settings `auto` is retired.**
+  The latch no longer honors an `auto` in a settings file — the one row of [**D64**](#d64)'s matrix that
+  read it is removed, leaving five. *Because* a model can write `settings.local.json`, that standing grant
+  was the one self-approval it could **forge** (measured: the eval tier's adversarial-pressure contract had
+  models minting `auto: true` under pressure, a legal side door the latch honored), and [**D65**](#d65)'s
+  own rule already says a grant the model can forge is no grant. Self-approval now comes *only* from the
+  human's literal `/pb-build --auto` or `N-M` range through the `GRANT` file (D65) — the routes a model
+  cannot type, since `pb-build` is `disable-model-invocation`. This is **guidance-first — it removes a
+  mechanical honor, it adds no lock**: TTY (row 1), hookless hosts (row 2, dormant), `--auto`, and ranges
+  all still work; unattended autonomy is one typed `--auto` away. A set-but-ignored `auto` is **surfaced,
+  not punished** — the refusal message names it and `doctor` prints an informational `○` line — so a human
+  who relied on it isn't silently changed. Amends [**D64**](#d64) (five-row), [**D65**](#d65), and
+  [**D27**](#d27). *Tagged in* `latch.ts`, `settings.ts`, `doctor.ts`, `agent.ts`, `skills/pb-build`,
+  `skills/pb-verify`.
 
 ### Superseded
 

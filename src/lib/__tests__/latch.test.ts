@@ -10,9 +10,9 @@ afterAll(cleanupTempRepos)
 
 // The strictest baseline: every row's allow condition false, so evaluation falls
 // through to row 6. Each test flips exactly the input its row reads.
-const LATCHED: LatchInput = { isTTY: false, turn: 2, tick: 2, auto: false, grant: null, step: 1 }
+const LATCHED: LatchInput = { isTTY: false, turn: 2, tick: 2, grant: null, step: 1, settingsAuto: false }
 
-describe('evaluateLatch — the six-row matrix, first hit wins', () => {
+describe('evaluateLatch — the five-row matrix, first hit wins', () => {
   it('row 1: a TTY stdin allows — a human at the keyboard is their own approval', () => {
     expect(evaluateLatch({ ...LATCHED, isTTY: true }).allow).toBe(true)
   })
@@ -25,21 +25,33 @@ describe('evaluateLatch — the six-row matrix, first hit wins', () => {
     expect(evaluateLatch({ ...LATCHED, tick: null }).allow).toBe(true)
   })
 
-  it('row 3: the standing settings grant allows (D27)', () => {
-    expect(evaluateLatch({ ...LATCHED, auto: true }).allow).toBe(true)
+  it('D67: a settings `auto` no longer allows — it refuses with the migration note', () => {
+    const decision = evaluateLatch({ ...LATCHED, settingsAuto: true })
+    expect(decision.allow).toBe(false)
+    if (!decision.allow) {
+      expect(decision.reason).toBe('no-turn')
+      expect(decision.message).toContain('`auto` is set in settings but is no longer a grant (D67)')
+      expect(decision.message).toContain('re-fire `/pb-build --auto`')
+    }
   })
 
-  it('row 4: a one-turn `auto` grant allows (D65)', () => {
+  it('the settings note rides only when set — a clean pause carries no note', () => {
+    const decision = evaluateLatch(LATCHED)
+    expect(decision.allow).toBe(false)
+    if (!decision.allow) expect(decision.message).not.toContain('no longer a grant')
+  })
+
+  it('row 3: a one-turn `auto` grant allows (D65)', () => {
     expect(evaluateLatch({ ...LATCHED, grant: { kind: 'auto' } }).allow).toBe(true)
   })
 
-  it('row 4: a range grant allows a step at or under its ceiling', () => {
+  it('row 3: a range grant allows a step at or under its ceiling', () => {
     const grant = { kind: 'range', ceiling: 3 } as const
     expect(evaluateLatch({ ...LATCHED, grant, step: 3 }).allow).toBe(true)
     expect(evaluateLatch({ ...LATCHED, grant, step: 1 }).allow).toBe(true)
   })
 
-  it('row 4: a range grant refuses past its ceiling, with the top-of-range affordance', () => {
+  it('row 3: a range grant refuses past its ceiling, with the top-of-range affordance', () => {
     const decision = evaluateLatch({ ...LATCHED, grant: { kind: 'range', ceiling: 3 }, step: 4 })
     expect(decision.allow).toBe(false)
     if (!decision.allow) {
@@ -49,27 +61,27 @@ describe('evaluateLatch — the six-row matrix, first hit wins', () => {
     }
   })
 
-  it('row 4 precedes row 5: the ceiling refuses even when a human turn intervened', () => {
+  it('row 3 precedes row 4: the ceiling refuses even when a human turn intervened', () => {
     // First hit wins: a freshly minted `range M` speaks for this turn, and a step
-    // past M refuses at row 4 before the turn comparison is ever reached.
+    // past M refuses at row 3 before the turn comparison is ever reached.
     const decision = evaluateLatch({ ...LATCHED, turn: 3, tick: 2, grant: { kind: 'range', ceiling: 1 }, step: 2 })
     expect(decision.allow).toBe(false)
     if (!decision.allow) expect(decision.reason).toBe('ceiling')
   })
 
-  it('row 4: a range grant does not speak to a plan checkpoint — falls through', () => {
+  it('row 3: a range grant does not speak to a plan checkpoint — falls through', () => {
     const grant = { kind: 'range', ceiling: 3 } as const
-    // With no intervening turn the plan still refuses at row 6…
+    // With no intervening turn the plan still refuses at row 5…
     expect(evaluateLatch({ ...LATCHED, grant, step: null }).allow).toBe(false)
-    // …and with one, row 5 allows it.
+    // …and with one, row 4 allows it.
     expect(evaluateLatch({ ...LATCHED, grant, step: null, turn: 3 }).allow).toBe(true)
   })
 
-  it('row 5: a human turn since entry allows', () => {
+  it('row 4: a human turn since entry allows', () => {
     expect(evaluateLatch({ ...LATCHED, turn: 3, tick: 2 }).allow).toBe(true)
   })
 
-  it('row 6: no turn since entry refuses with the pause affordance', () => {
+  it('row 5: no turn since entry refuses with the pause affordance', () => {
     const decision = evaluateLatch(LATCHED)
     expect(decision.allow).toBe(false)
     if (!decision.allow) {
@@ -79,11 +91,11 @@ describe('evaluateLatch — the six-row matrix, first hit wins', () => {
       expect(decision.message).toContain("The human's approval on")
       expect(decision.message).toContain('`/pb-build` only starts the next step')
       expect(decision.message).toContain('`/pb-build --auto`')
-      expect(decision.message).toContain('`auto: true` in settings.local.json')
+      expect(decision.message).toContain('is the only self-approval')
     }
   })
 
-  it('row 6: a plan refusal (step null) speaks plan, not step', () => {
+  it('row 5: a plan refusal (step null) speaks plan, not step', () => {
     const decision = evaluateLatch({ ...LATCHED, step: null })
     expect(decision.allow).toBe(false)
     if (!decision.allow) {
@@ -94,7 +106,7 @@ describe('evaluateLatch — the six-row matrix, first hit wins', () => {
     }
   })
 
-  it('row 6: a stale TICK above TURN also refuses — only a strictly later turn allows', () => {
+  it('row 5: a stale TICK above TURN also refuses — only a strictly later turn allows', () => {
     // TURN < TICK cannot arise from the verbs (TICK is copied from TURN), but a
     // mangled ledger must land on the safe side of the latch, not sneak past it.
     const decision = evaluateLatch({ ...LATCHED, turn: 1, tick: 2 })
@@ -159,9 +171,11 @@ describe('checkLatch — gathering from the worktree', () => {
     expect(withoutTty(() => checkLatch(dir, 1)).allow).toBe(true)
   })
 
-  it('reads the standing `auto` from the settings ladder (D27)', () => {
+  it('reads a settings `auto` only to note it — it no longer allows (D67)', () => {
     const dir = latchedRepo()
     setLocalSetting(dir, 'auto', true)
-    expect(withoutTty(() => checkLatch(dir, 1)).allow).toBe(true)
+    const decision = withoutTty(() => checkLatch(dir, 1))
+    expect(decision.allow).toBe(false)
+    if (!decision.allow) expect(decision.message).toContain('no longer a grant (D67)')
   })
 })

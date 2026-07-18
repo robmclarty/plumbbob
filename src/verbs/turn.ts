@@ -37,10 +37,12 @@ export function applyTurn(cwd: string, raw: string): number {
 // The namespaced `/plumbbob:pb-build` form is honored alongside the bare one.
 //
 // Only the invocation's own arguments can mint: the tokens that follow it on its
-// line, up to the first token that isn't argument-shaped (a flag, a step number, a
-// range). An incidental range elsewhere in the prompt — an issue number, a pasted
-// `2020-2024` — is prose, not a grant. Trailing sentence punctuation on an argument
-// (`/pb-build 1-3.`) is still the argument the human typed.
+// line, up to the first token that isn't a sanctioned argument (`--auto`, a step
+// number, or a range — the argument-hint sanctions nothing else). An unrecognized
+// flag ends the scan, so `/pb-build --wip 2020-2024` mints nothing — the `2020-2024`
+// is never reached. An incidental range elsewhere in the prompt — an issue number, a
+// pasted `2020-2024` — is prose, not a grant. Trailing sentence punctuation on an
+// argument (`/pb-build 1-3.`) is still the argument the human typed.
 export function grantFromPrompt(prompt: string): string | null {
   const invocation = /\/(?:plumbbob:)?pb-build\b/.exec(prompt)
   if (invocation === null) return null
@@ -59,8 +61,8 @@ export function grantFromPrompt(prompt: string): string | null {
       ceiling = range[1]
       continue
     }
-    if (/^\d+$/.test(word) || word.startsWith('-')) continue // a step number or another flag
-    break // free text — the arguments have ended
+    if (/^\d+$/.test(word)) continue // a bare step number — keep scanning for a range/--auto
+    break // an unrecognized flag or free text — the arguments have ended
   }
   if (ceiling !== undefined) return `range ${ceiling}`
   return auto ? 'auto' : null

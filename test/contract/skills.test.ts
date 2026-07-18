@@ -273,11 +273,12 @@ describe('build — the default engine: implement the planned step, then verify'
     expect(body).toContain('!`plumbbob status 2>/dev/null')
   })
 
-  it('can implement (Edit/Write) and drive build + the verify tick', () => {
+  it('can implement (Edit/Write) and drive build + the verify tick + park capture', () => {
     expect(data['allowed-tools']).toMatch(/\bEdit\b/)
     expect(data['allowed-tools']).toMatch(/\bWrite\b/)
     expect(data['allowed-tools']).toContain('plumbbob build')
     expect(data['allowed-tools']).toContain('plumbbob checkpoint')
+    expect(data['allowed-tools']).toContain('plumbbob park') // capture a tangent without leaving the step
   })
 
   it('declares itself swappable — the executor is pluggable (D3)', () => {
@@ -285,9 +286,10 @@ describe('build — the default engine: implement the planned step, then verify'
     expect(body).toMatch(/by hand|vibed|another harness/i)
   })
 
-  it('builds the decided step and parks new ideas instead of sprawling', () => {
+  it('builds the decided step and captures new ideas by shelling park, not merely deferring', () => {
     expect(body).toMatch(/done.?when/i)
-    expect(body).toMatch(/\/pb-park/)
+    expect(body).toMatch(/plumbbob park "/) // the actual capture invocation, not a promise
+    expect(body).toMatch(/writes nothing/i) // deferring in words captures nothing
   })
 
   it('defaults to ending at the verify pause for the human to approve', () => {
@@ -310,6 +312,11 @@ describe('build — the default engine: implement the planned step, then verify'
     expect(body).toMatch(/refus/i) // a refused checkpoint
     expect(body).toMatch(/end the turn/i) // present the diff and end the turn
     expect(body).toMatch(/git commit/) // never route around it with a raw git commit
+  })
+
+  it('forbids self-minting a settings `auto` grant — a grant you mint is no grant (D67)', () => {
+    expect(body).toMatch(/a grant you mint is no grant/i)
+    expect(body).toMatch(/re-fire `?\/pb-build --auto`?/i) // the sanctioned route instead
   })
 
   it('lifts slot mechanics into a gated "Running bound agents" section, keeping the default path slim (3b)', () => {
@@ -370,6 +377,10 @@ describe('verify — the tick: check, self-review, validate, PAUSE, checkpoint',
     expect(body).toMatch(/end the turn/i)
     expect(body).toMatch(/git commit/)
   })
+
+  it('forbids self-minting a settings `auto` grant to force the land (D67)', () => {
+    expect(body).toMatch(/latch ignores a model-minted grant/i)
+  })
 })
 
 describe('refine — keep intent.md true: attack for holes + repair drift', () => {
@@ -419,6 +430,11 @@ describe('park — capture via the dumb CLI, never an edit', () => {
   it('requires in-turn human approval before the append', () => {
     expect(body).toMatch(/approv/i)
     expect(body).toMatch(/only after/i)
+  })
+
+  it('treats a human-voiced mid-build tangent as its own approval — capture directly, do not re-ask', () => {
+    expect(body).toMatch(/own message.*is.*the approval|that message \*\*is\*\* the approval/i)
+    expect(body).toMatch(/don't ask again|capture it directly/i)
   })
 })
 
