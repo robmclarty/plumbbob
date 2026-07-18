@@ -11,7 +11,7 @@
 // itemized). Behavioral results are never retried; infra errors retry once,
 // stamped. Every run appends one JSONL line to reports/evals/.
 
-import { writeFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { claude_cli_error, provider_auth_error } from 'fascicle'
 import { cleanupFixtures } from '../helpers/fixture-repo.ts'
@@ -19,7 +19,7 @@ import { CONTRACTS } from './contracts/index.ts'
 import type { Contract, ContractResult } from './contracts/contract.ts'
 import { EVAL_MODEL, EVAL_N, openSession } from './helpers/driver.ts'
 import type { Sweep } from './helpers/plugin.ts'
-import { appendRun, renderReport, REPORTS_DIR, stamps } from './helpers/report.ts'
+import { appendRun, RECEIPTS_DIR, renderReport, REPORTS_DIR, stamps } from './helpers/report.ts'
 
 export type Outcome = 'pass' | 'fail' | 'invalid'
 
@@ -182,7 +182,8 @@ async function main(): Promise<number> {
 
   if (argv.includes('--report')) {
     const date = flagValue(argv, '--date') ?? today()
-    const path = join(REPORTS_DIR, `${date}.md`)
+    mkdirSync(RECEIPTS_DIR, { recursive: true })
+    const path = join(RECEIPTS_DIR, `${date}.md`)
     writeFileSync(path, renderReport(date))
     process.stdout.write(`report written: ${path}\n`)
     return 0

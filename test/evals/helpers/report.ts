@@ -1,14 +1,18 @@
 // The sweep ledger and its renderer. Raw truth is JSONL — one line per run,
 // stamped with everything needed to reproduce it (model, versions, SHA); the
-// markdown report is derived, never the source. Committed under
-// reports/evals/ so the receipt rides the repo (plan 05's exit criterion).
+// markdown report is derived, never the source. The bulky JSONL ledgers live
+// under reports/evals/ (git-ignored, local raw truth); the derived receipt is
+// committed under research/evals/ so it rides the repo (plan 05's exit
+// criterion) without dragging the megabyte-scale run logs along with it.
 
 import { execFileSync } from 'node:child_process'
 import { appendFileSync, mkdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { REPO_ROOT } from './plugin.ts'
 
+// JSONL ledgers: git-ignored raw truth. Derived receipts: tracked, in research/.
 export const REPORTS_DIR = join(REPO_ROOT, 'reports', 'evals')
+export const RECEIPTS_DIR = join(REPO_ROOT, 'research', 'evals')
 
 export type Stamps = {
   readonly plumbbob: { readonly version: string; readonly sha: string }

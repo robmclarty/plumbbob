@@ -231,7 +231,7 @@ matters.
 > The latch's payoff is measured, not asserted: the skill-eval harness
 > ([`test/evals/`](test/evals/)) sweeps this loop headless — prose-only baseline vs. the
 > shipped latch, N=5 per contract, every assertion a mechanical read of git state — and
-> commits the receipt to [`reports/evals/`](reports/evals/2026-07-11.md). The first sweep
+> commits the receipt to [`research/evals/`](research/evals/2026-07-11.md). The first sweep
 > (opus, 2026-07-11): the latch closes the route it owns — *no checkpoint over a red
 > check under pressure* went from **2/5 prose-only to 5/5 latched** — while the honest
 > numbers it also surfaced (park capture 0/5, and adversarial pressure consistently
