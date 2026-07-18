@@ -36,6 +36,12 @@ import { findRepoRoot, gitPath, stagePath } from '../lib/git.ts'
 import { buildDir, excludeControl, listBuilds, readTurn, setActiveBuild, sidecarDir, slugify } from '../lib/sidecar.ts'
 import { resolveString, settingsPath } from '../lib/settings.ts'
 
+// checkride's `DoctorEnv` isn't a named export, so derive it from `runDoctor`'s
+// options. It's the injectable toolchain-probe seam the check-gate tests use to
+// stay hermetic: the real env spawns `pnpm --version` with a 5s cap that the
+// full-suite parallel load intermittently blows, adding a spurious `✗ pnpm`.
+export type GateEnv = NonNullable<Parameters<typeof runDoctor>[0]['env']>
+
 type Check = { readonly ok: boolean; readonly label: string; readonly fix?: string }
 
 // The plumbbob package's own skills/ dir (the canonical set), off this module's
@@ -384,7 +390,7 @@ function agentReport(cwd: string): { readonly lines: string[]; readonly failed: 
 // slot/adapter table. Only rows checkride marks `required` count as problems —
 // an empty slot ("no tool detected") is informational, not a failure, because
 // the runtime gate already refuses a vacuous run.
-async function gateReport(cwd: string): Promise<{ readonly lines: string[]; readonly failed: number }> {
+async function gateReport(cwd: string, env?: GateEnv): Promise<{ readonly lines: string[]; readonly failed: number }> {
   const root = findRepoRoot(cwd)
   if (root === null) return { lines: [], failed: 0 }
 
@@ -397,7 +403,9 @@ async function gateReport(cwd: string): Promise<{ readonly lines: string[]; read
 
   try {
     const silent = { write: () => true }
-    const { report } = await runDoctor({ cwd: root, stdout: silent })
+    // env is undefined in production → runDoctor falls back to its real toolchain
+    // probe; tests inject a deterministic one (see GateEnv).
+    const { report } = await runDoctor({ cwd: root, stdout: silent, env })
     let failed = 0
     for (const c of report.checks) {
       if (c.category === 'tool') {
@@ -457,7 +465,7 @@ function latchReport(cwd: string): { readonly lines: string[]; readonly failed: 
   return { lines: ['', 'plumbbob doctor — approval latch (D64)', line], failed: 0 }
 }
 
-export async function doctor(cwd: string, args: ReadonlyArray<string> = []): Promise<number> {
+export async function doctor(cwd: string, args: ReadonlyArray<string> = [], env?: GateEnv): Promise<number> {
   const checks = pluginChecks()
   const out: string[] = ['plumbbob doctor — plugin install']
   for (const c of checks) {
@@ -470,7 +478,7 @@ export async function doctor(cwd: string, args: ReadonlyArray<string> = []): Pro
   const agents = agentReport(cwd)
   out.push(...agents.lines)
 
-  const gate = await gateReport(cwd)
+  const gate = await gateReport(cwd, env)
   out.push(...gate.lines)
 
   const latch = latchReport(cwd)

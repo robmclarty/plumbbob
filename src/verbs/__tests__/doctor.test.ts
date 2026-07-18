@@ -12,6 +12,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
 import { doctor, inspectLegacy, migrateSidecar } from '../doctor.ts'
+import type { GateEnv } from '../doctor.ts'
 import { activeBuild, buildDir, intentPath, turnPath } from '../../lib/sidecar.ts'
 import { settingsPath } from '../../lib/settings.ts'
 import { gitPath, headSha } from '../../lib/git.ts'
@@ -63,17 +64,37 @@ function settingsJson(dir: string): unknown {
   return JSON.parse(readFileSync(settingsPath(dir), 'utf8')) as unknown
 }
 
+// A deterministic toolchain probe for the tests that exercise the LIVE check gate
+// (no `check` setting → checkride's doctor runs). checkride's real env spawns
+// `pnpm --version` with a 5s cap; under the full-suite parallel load that probe
+// intermittently times out, which renders a spurious `✗ pnpm` and breaks the
+// exact problem-count assertions. Canned which/version keep it load-independent;
+// `exists` stays real so install- and adapter-binary detection reads the temp repo
+// (node_modules absent → `✗ install`, node_modules/.bin/tsc absent → `✗ types`).
+const GATE_TOOLS = new Set(['node', 'git', 'pnpm'])
+const gateEnv: GateEnv = {
+  which: (cmd) => Promise.resolve(GATE_TOOLS.has(cmd) ? `/usr/bin/${cmd}` : null),
+  version: (cmd) =>
+    Promise.resolve(cmd === 'node' ? process.versions.node : cmd === 'pnpm' ? '11.1.2' : cmd === 'git' ? '2.40.0' : null),
+  exists: existsSync,
+  canWrite: () => Promise.resolve(true),
+  readEngines: () => ({}),
+  platform: () => ({ os: process.platform, arch: process.arch }),
+  packageManager: () => 'pnpm',
+}
+
 // pluginChecks reads process.env.HOME, so pinning it to a throwaway home makes the
 // plugin section deterministic no matter what the developer's real ~/.claude holds.
 async function doctorWithHome(
   home: string,
   cwd: string,
   args: ReadonlyArray<string> = [],
+  env?: GateEnv,
 ): Promise<{ readonly code: number; readonly stdout: string }> {
   const saved = process.env.HOME
   process.env.HOME = home
   try {
-    return await captureIoAsync(() => doctor(cwd, args))
+    return await captureIoAsync(() => doctor(cwd, args, env))
   } finally {
     if (saved === undefined) delete process.env.HOME
     else process.env.HOME = saved
@@ -387,7 +408,7 @@ describe('doctor — the verb', () => {
   it("renders checkride's table for a bare repo: ○ empty slots, ✓ built-ins, ✗ counted failures", async () => {
     const home = makeTempDir()
     seedMarketplace(home, ['plumbbob@robmclarty'])
-    const { code, stdout } = await doctorWithHome(home, makeTempRepo())
+    const { code, stdout } = await doctorWithHome(home, makeTempRepo(), [], gateEnv)
     expect(code).toBe(1)
     expect(stdout).toContain('\n\nplumbbob doctor — check gate (D32)\n')
     expect(stdout).toContain('  ✗ install\n      → ') // a required failure carries its hint on the arrow line
@@ -406,7 +427,7 @@ describe('doctor — the verb', () => {
     seedMarketplace(home, ['plumbbob@robmclarty'])
     const dir = makeTempRepo()
     writeFileSync(join(dir, 'tsconfig.json'), '{}\n') // tsc detected, but no node_modules to run it
-    const { code, stdout } = await doctorWithHome(home, dir)
+    const { code, stdout } = await doctorWithHome(home, dir, [], gateEnv)
     expect(code).toBe(1)
     expect(stdout).toContain('  ✗ types ← tsc\n      → ') // no version suffix when nothing was found
     expect(stdout).toContain('\n\nplumbbob: 2 problem(s)') // install + types
