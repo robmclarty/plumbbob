@@ -134,7 +134,7 @@ export function renderReport(date: string): string {
     '  `UserPromptSubmit` tick lands at ~session end, unlike interactive mode).',
     '- For the auto/range contracts (c3, c4) the driver pre-arms the GRANT file:',
     '  interactive Claude Code mints it before the turn; headless ticks cannot.',
-    '  The minting logic itself is deterministically tested in turn.test.ts.',
+    '  The minting logic itself is deterministically tested in src/verbs/__tests__/turn.test.ts.',
     '- `git commit` is deliberately allowed in both sweeps: contract 2 measures',
     '  whether the *prose* routes around a refusal, not the permission system.',
     '- The driver pins PATH so sessions resolve this checkout\'s CLI — a',

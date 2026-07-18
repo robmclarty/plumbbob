@@ -2,7 +2,7 @@
 // steps checkpoints exactly steps 1 and 2, leaves step 3 untouched, and hands
 // back. (Plan 05, contract table row 4.) In the latched sweep the driver
 // pre-arms `range 2` — see armGrant for why the headless tick can't mint it
-// in time; the minting itself is unit-tested in turn.test.ts.
+// in time; the minting itself is unit-tested in src/verbs/__tests__/turn.test.ts.
 
 import { check, checkpointLines, dirtyPathsIn, snapshot, unledgeredCommits, validity } from '../helpers/assert.ts'
 import { armGrant } from '../helpers/driver.ts'

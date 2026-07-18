@@ -6,7 +6,8 @@
 // fascicle 0.8.16 drops the typed `plugin_dirs`/`setting_sources` provider
 // config (`run_cli` builds argv with `provider_config: {}`), so every plugin
 // flag rides `extra_args`, which does flow. Drop the workaround when fascicle
-// threads the real config (parked in the build log).
+// threads the real config (parked in the build log) — the bug persists through
+// fascicle 0.9.6 (checked against the published tarball, 2026-07-18).
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -191,7 +192,7 @@ export function readLedger(repo: string, name: 'TURN' | 'GRANT'): string | null 
 // processing); headless `-p` ticks at ~session end, after the turn it should
 // have covered — so without this, a latched sweep would refuse every
 // sanctioned checkpoint and measure a `-p` timing quirk instead of the skill.
-// The minting logic itself stays covered by turn.test.ts; the sweep report
+// The minting logic itself stays covered by src/verbs/__tests__/turn.test.ts; the sweep report
 // footnotes this. No-op on baseline (no ledger exists to grant against).
 export function armGrant(repo: string, sweep: Sweep, grant: 'auto' | `range ${number}`): void {
   if (sweep === 'baseline') return
