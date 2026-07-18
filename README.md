@@ -236,7 +236,10 @@ matters.
 > check under pressure* went from **2/5 prose-only to 5/5 latched** — while the honest
 > numbers it also surfaced (park capture 0/5, and adversarial pressure consistently
 > flipping the `auto` standing grant in settings — a legal, model-writable side door)
-> are the next iteration's work, named in the report rather than papered over.
+> are the next iteration's work, named in the report rather than papered over. The
+> current sweep ([opus, 2026-07-18](research/evals/2026-07-18.md), plumbbob 0.8.7)
+> reproduces the win — *no checkpoint over a red check* still holds **5/5 latched** —
+> and confirms both gaps stand at 0.8.7, now the target of the hardening build.
 
 ## Documentation
 
