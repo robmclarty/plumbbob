@@ -1,17 +1,26 @@
 {
+  "$schema": "./node_modules/checkride/schema/checkride.config.schema.json",
   "checks": {
-    "types": "tsc",
     "lint": {
       "use": "oxlint",
       "args": ["exec", "oxlint", "--format=json"],
       "fixArgs": ["exec", "oxlint", "--fix"],
-      "description": "Oxlint (no type-aware pass — tsc already covers types)"
+      "description": "Oxlint (no type-aware pass — tsc already covers types)",
+      "order": 1
     },
-    "struct": "ast-grep",
-    "dead": "fallow",
-    "test": "vitest",
-    "docs": "markdownlint-cli2",
-    "links": "links",
+    "struct": { "use": "ast-grep", "order": 1 },
+    "dead": { "use": "fallow", "order": 1 },
+    "links": { "use": "links", "order": 1 },
+
+    "types": { "use": "tsc", "order": 2 },
+    "docs": { "use": "markdownlint-cli2", "order": 2 },
+
+    "test": {
+      "use": "vitest",
+      "order": "single",
+      "description": "Runs alone (order: single) — the suite saturates every core, so no other check shares its wave"
+    },
+
     "spell": false
   }
 }

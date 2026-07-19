@@ -275,6 +275,9 @@ describe('detectGate (the plan-time probe, research/07 Build 2a)', () => {
         row({ name: 'pnpm-audit (security)', adapter: 'pnpm-audit' }),
         row({ name: 'publint (publint)', adapter: 'publint' }),
         row({ name: 'attw (attw)', adapter: 'attw' }),
+        row({ name: 'pack (pack)', adapter: 'pack' }),
+        row({ name: 'smoke (smoke)', adapter: 'smoke' }),
+        row({ name: 'snippets (snippets)', adapter: 'snippets' }),
       ]),
     ).toBe(false)
     expect(gateDetectsTools([row({ name: 'types', adapter: null })])).toBe(false)

@@ -9,12 +9,15 @@ importers:
   .:
     dependencies:
       checkride:
-        specifier: 0.3.0
-        version: 0.3.0
+        specifier: 0.5.2
+        version: 0.5.2
     devDependencies:
       '@ast-grep/cli':
         specifier: 0.43.0
         version: 0.43.0
+      '@stryker-mutator/api':
+        specifier: 9.6.1
+        version: 9.6.1
       '@stryker-mutator/core':
         specifier: 9.6.1
         version: 9.6.1(@types/node@24.13.1)
@@ -896,8 +899,8 @@ packages:
   chardet@2.2.0:
     resolution: {integrity: sha512-rddelWYNPRrXq6PtNEN2S3f6t9ILzvqaN5pVgi4kqt9jHQaXIial9PznB5iSPVlQSLNaaH22ItWz3EJtQ10+OA==}
 
-  checkride@0.3.0:
-    resolution: {integrity: sha512-nabc8TwfPTWUvk2gvlrKVTqGuMkM5vjH6CIGSuu5wLn+6eFhBN1YnjvZK37N/eHW3bSNgOB3nuQ4WEG2sITomg==}
+  checkride@0.5.2:
+    resolution: {integrity: sha512-El8gd/vYNPSytX+dYzVaZx9Dgcs7TObTeRz2DAtyTJQryxMrXtwFuKA3d3MocH6B/0Dg/3B2urSfdo/3XA2wOg==}
     engines: {node: '>=22.18.0', pnpm: '>=9.0.0'}
     hasBin: true
 
@@ -2645,7 +2648,7 @@ snapshots:
 
   chardet@2.2.0: {}
 
-  checkride@0.3.0: {}
+  checkride@0.5.2: {}
 
   cli-width@4.1.0: {}
 

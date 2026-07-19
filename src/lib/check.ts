@@ -44,12 +44,15 @@ export async function detectGate(root: string): Promise<GateDetection> {
 }
 
 // Checkride's always-on repo checks: the adapters its doctor reports even for
-// an EMPTY directory (links, the pnpm-audit security scan, and the
-// publint/attw package-shape probes). They exercise the repo's plumbing, not
-// its code — a gate made only of these green-lights every checkpoint while the
-// human believes their work is being checked. Coupled to checkride's built-in
-// set by construction; the doctor.test.ts probe pins the coupling.
-const ALWAYS_ON_ADAPTERS: ReadonlyArray<string> = ['links', 'pnpm-audit', 'publint', 'attw']
+// an EMPTY directory — the built-in `links` slot, the pnpm-audit security
+// scan, the publint/attw package-shape probes, and (checkride 0.5.0's
+// publish bundle) the built-in pack/smoke/snippets slots, which resolve on any
+// package with no tool config of their own. They exercise the repo's plumbing
+// or its shipped artifact, not its code — a gate made only of these green-lights
+// every checkpoint while the human believes their work is being checked. Coupled
+// to checkride's built-in set by construction; the check.test.ts and
+// doctor.test.ts probes pin the coupling.
+const ALWAYS_ON_ADAPTERS: ReadonlyArray<string> = ['links', 'pnpm-audit', 'publint', 'attw', 'pack', 'smoke', 'snippets']
 
 // The detection rule, shared by `start`'s probe and doctor's callout: some tool
 // slot beyond the always-on family has an adapter — i.e. checkride can see the

@@ -10,6 +10,10 @@ entry = [
   "vitest.config.ts",
 ]
 
+# Standalone example packages carry their own package.json and dependency graph
+# (D-ollama-reviewer-example) — not part of this project's source, so exclude them.
+ignorePatterns = ["examples/**"]
+
 # CLI/config-plane deps never imported from source.
 ignoreDependencies = ["@ast-grep/cli", "markdownlint-cli2", "oxlint", "typescript", "@vitest/coverage-v8", "@types/node"]
 
