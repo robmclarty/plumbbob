@@ -227,6 +227,13 @@ describe('plan — the whole-goal move: scaffold + frame, no code', () => {
     expect(body).toMatch(/gate sees no code checks/i)
     expect(body).toMatch(/"check": "npm test"/)
   })
+
+  it('authors the title as the commit subject — type(scope): desc, paths in seam, scope default + ≤72 (D1/D2/D8/D9)', () => {
+    expect(body).toMatch(/type\(scope\):\s+description/) // the title IS the subject shape (D1)
+    expect(body).toMatch(/never jammed into the title/i) // load-bearing paths leave the title (D2)
+    expect(body).toMatch(/\*\*Scope:\*\*/) // the build-default scope header a step overrides (D8)
+    expect(body).toMatch(/≤ ?72/) // the soft GitHub subject aim, no lint, no gate (D9)
+  })
 })
 
 describe('step — the single-increment move: one verifiable step', () => {

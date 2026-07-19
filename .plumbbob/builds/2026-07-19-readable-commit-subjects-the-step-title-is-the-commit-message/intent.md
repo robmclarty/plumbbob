@@ -110,7 +110,7 @@ git diff at checkpoint ───────┘─▶ body pass may reconcile vi
    - seam: `src/lib/intent.ts`, `src/verbs/checkpoint.ts`, `src/verbs/finish.ts`,
      `src/verbs/__tests__/checkpoint.test.ts`, `src/lib/__tests__/intent.test.ts`
    - model: sonnet — a bounded parser + fallback chain, fully specified by the done-when
-2. [ ] docs(intent-template): make the step title double as the commit subject —
+2. [x] docs(intent-template): make the step title double as the commit subject —
    **done when:** `templates/intent.md` carries the `**Scope:**` header field with its
    guidance, and the `## Steps` guidance states that the title *is* the commit subject
    (plain single line, `type(scope): description`), that paths live in `seam` not the

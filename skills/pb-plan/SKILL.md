@@ -74,7 +74,7 @@ an agent can follow with `/pb-build`. The argument only seeds how you get there.
    small, verifiable increment in the exact format the parser reads:
 
    ```markdown
-   1. [ ] <title> — **done when:** <criterion, ideally a test or check result>
+   1. [ ] feat(scope): <title> — **done when:** <criterion, ideally a test or check result>
       - seam: `<file>`, `<file>`
       - model: <optional — smallest that can carry it, with the one-phrase why>
    ```
@@ -84,12 +84,23 @@ an agent can follow with `/pb-build`. The argument only seeds how you get there.
    sharpened just-in-time when you reach them with `/pb-step`. Keep each small enough to
    verify in one review pass.
 
-   **Give the title a Conventional-Commit type where the change has one** *(optional)*:
-   a `<title>` that opens with `fix:`, `feat(escape-hatch):`, `chore:`, … becomes the
-   checkpoint's commit subject verbatim (its scope and breaking `!` honored) — this is
-   how each step lands a *real* `feat`/`fix`/`chore` in `git log`. Skip the prefix and
-   the checkpoint defaults the type to `feat` and draws the scope from the build slug, so
-   a plain title still yields a clean `feat(<slug>): <title>` ([D68](../../docs/decisions.md#d68)).
+   **The title *is* the commit subject — author it as one** *(D1)*: write each
+   `<title>` as a plain, single-line Conventional-Commit subject,
+   `type(scope): description`, and it lands in `git log` verbatim (its breaking `!`
+   honored) — this is how each step lands a *real* `feat`/`fix`/`chore` in the history.
+   Keep load-bearing detail — file paths, module names — in `seam` and `done-when`; it is
+   **never jammed into the title** (D2), which has to read as plain English and as a clean
+   subject at once. Aim for **≤72 characters** (GitHub's subject convention) — soft
+   guidance you eyeball at plan time, no lint, no gate (D9).
+
+   **Set the build's default scope, then let steps override it** *(D8)*: fill the
+   `**Scope:**` header once with a short feature-level name — the catch-all every step
+   inherits — and give a step its own `(scope)` when it touches a distinct code area
+   (`pb-plan`, `commitmsg`, `docs`). A step's `(scope)` names the *code area*; the header
+   names the *feature*, so scopes stay consistent and greppable across builds. Scope
+   resolves title-scope → `**Scope:**` default → build slug → bare, and type resolves
+   title-type → `feat`, so a scopeless plain title still yields a clean
+   `feat(<slug>): <title>` unchanged ([D68](../../docs/decisions.md#d68), D3).
 
    **Recommend a model per step where the signal is clear** *(optional)*: the
    `- model:` sub-line names the **smallest model that can carry the step**, with the
