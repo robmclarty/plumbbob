@@ -99,7 +99,7 @@ git diff at checkpoint ───────┘─▶ body pass may reconcile vi
 
 ## Steps
 
-1. [ ] feat: fall back through step scope, build default, then slug —
+1. [x] feat: fall back through step scope, build default, then slug —
    **done when:** `subjectForStep` resolves the scope as title-scope → `**Scope:**`
    default → build slug → bare, and the type as title-type → `feat`; a new
    `parseBuildScope` reads the header field; unit tests pin all four scope rungs, the

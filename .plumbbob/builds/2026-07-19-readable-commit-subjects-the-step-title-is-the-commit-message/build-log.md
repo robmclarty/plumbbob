@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — Readable commit subjects: the step title is the commit message
 
-**Current step:** 1 — feat: fall back through step scope, build default, then slug
+**Current step:** 2 — docs(intent-template): make the step title double as the commit subject
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -23,7 +23,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 line above. Only ONE step is in flight; a step is done only after a checkpoint —
 check green + checkpoint taken, via `/pb-verify` or `/pb-build`.)*
 
-- ☐ 1. feat: fall back through step scope, build default, then slug
+- ☑ 1. feat: fall back through step scope, build default, then slug
 - ☐ 2. docs(intent-template): make the step title double as the commit subject
 - ☐ 3. feat(pb-plan): author titles as commit subjects and set the build scope
 - ☐ 4. feat(pb-step): keep the sharpened title a clean commit subject
@@ -63,3 +63,4 @@ fills in as you go, not at the end. Add your own decision/event lines too: this 
 you point at to say "I did that — the LLM helped, but those were my calls."
 `/pb-finish` reads this for the report; `plumbbob finish` commits it with the build
 folder, so it rides the branch into the PR.)*
+- 2026-07-19 — step 1 checkpointed · 6479ab667 — feat: fall back through step scope, build default, then slug (8m)
