@@ -108,7 +108,7 @@ src/lib/orient.ts parseOpenQuestions ◀─counts opener lines only (pinned, unc
    matches `*plain:*` and `*lean:*` in the body; contract suite green
    - seam: `skills/pb-refine/SKILL.md`, `test/contract/skills.test.ts`
    - model: opus — skill prose sets future authoring behavior
-5. [ ] skills/pb-plan: glossed-reference + slug-at-birth house style — **done
+5. [x] skills/pb-plan: glossed-reference + slug-at-birth house style — **done
    when:** the Decisions/Open-questions authoring steps carry the slug-at-birth
    and never-a-bare-reference sentences; a new contract pin matches them; suite
    green

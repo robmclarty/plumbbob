@@ -449,6 +449,11 @@ describe('park — capture via the dumb CLI, never an edit', () => {
     expect(body).toMatch(/own message.*is.*the approval|that message \*\*is\*\* the approval/i)
     expect(body).toMatch(/don't ask again|capture it directly/i)
   })
+
+  it('composes a one-clause why into the park line so it reads cold at harvest (C3 legibility)', () => {
+    expect(body).toMatch(/one-clause why/i) // the compose guidance names the why explicitly
+    expect(body).toMatch(/why it's worth revisiting/i) // what it is and why it matters later
+  })
 })
 
 describe('harvest — propose, the human confirms', () => {

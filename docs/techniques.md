@@ -53,13 +53,24 @@ structured to force that order:
 - **Frame** — the problem in plain words: the **Problem**, the **smallest thing** that
   solves it, what **done looks like**, and what you are **explicitly NOT doing** (so scope
   cannot creep). You write this first, before any solution.
-- **Decisions** — the settled calls, one line each, each with the *because* that mattered
-  (`D1: in-memory bucket — because single instance today`). They are numbered so the rest
-  of the plan and the verify pass can refer to them.
-- **Constraints** — the hard rules the build must honor (`C1: no new dependencies`).
-  `verify` and `refine` read the diff against these.
-- **Open questions** — holes you could *not* settle on paper. They are never guessed into
-  a Decision; an unresolved fork becomes a spike instead.
+- **Decisions** — the settled calls, one line each, each with the *because* that mattered,
+  and each **slugged where it is born** (`D1 (in-memory-bucket): single instance today`).
+  The slug travels: everywhere the plan or the verify pass refers back, it copies the gloss
+  (`D1 (in-memory-bucket)`), never a bare `D1` — so the reference reads on its own, without
+  flipping back to look the number up.
+- **Constraints** — the hard rules the build must honor (`C1 (no-new-deps): no new
+  dependencies`), slugged and referenced the same way. `verify` and `refine` read the diff
+  against these.
+- **Open questions** — holes you could *not* settle on paper. They are never guessed into a
+  Decision; an unresolved fork becomes a spike instead. A real one expands in place: an
+  opener plus a `*plain:*` sub-line (a cold-reader explanation, stakes included) and a
+  `*lean:*` sub-line (the model's proposed resolution), so you can answer it without a
+  round-trip back to the chat — and it self-collapses to one line once resolved.
+
+The shape underneath is one rule: **compress what's settled, expand what's pending.**
+Decisions and Constraints stay terse because they are re-injected into every step — those
+tokens recur; an open question's prose is read once, by a human deciding, so it earns the
+room to explain itself.
 
 This is also what lets you look back and say the calls were yours: they were written down,
 as decisions, before any code existed.

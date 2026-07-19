@@ -25,8 +25,9 @@ is fine; capture is always available, which is the whole point of parking.
 ## What this skill does
 
 Take the idea, problem, or "ooh what if" the human just had and **compose it into one
-tidy, tagged line** — short, legible, self-contained, so it still reads cleanly weeks
-later. Then:
+tidy, tagged line** — short, legible, self-contained, and carrying a **one-clause why**
+(what it is *and* why it's worth revisiting), so it still reads cleanly weeks later when
+harvest triages it cold. Then:
 
 1. **Show the composed line to the human** and wait for **in-turn approval** — they
    confirm it as-is or edit the wording.
