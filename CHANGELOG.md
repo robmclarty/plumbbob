@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.13] - 2026-07-19
+
+- **Added:** every spike now leaves a durable `spike-NN-<slug>.md` report in the build
+  folder, beside `intent.md` and `report.md`, so a fork's verdict rides the branch into the
+  PR instead of evaporating when the worktrees are torn down. There are two entry points to
+  one template: `plumbbob spike "<slug>"` scaffolds the report at open, so findings accrue
+  while the throwaway worktrees are still live, and the new `plumbbob spike report "<slug>"`
+  scaffolds one without worktrees for a spike-as-step — a planned step titled `spike: …`,
+  stamped with `via: step <n>`. The CLI owns the file and its gap-free numbering; the human
+  never creates or numbers it.
+- **Changed:** build-log.md's `## Steps` mirror and its `**Current step:**` line are now
+  maintained by the CLI rather than by hand or model whim. `build` sets the current step to
+  `<n> — <title>` and marks the ☐/☑ mirror on entry, `checkpoint` flips the landed step to ☑
+  and returns to the boundary, and `revert` resets it — each re-rendered from intent.md as a
+  best-effort write that never blocks the verb.
+- **Changed:** `plumbbob spike done` now points the verdict at the spike report rather than
+  intent.md, and nudges when a report's verdict is still unrecorded — but it still closes the
+  spike, keeping the guidance-not-a-gate posture.
+
 ## [0.8.12] - 2026-07-18
 
 - **Changed:** plumbbob's plan, step, and finish commits now carry Conventional Commit
