@@ -137,7 +137,7 @@ git diff at checkpoint ───────┘─▶ body pass may reconcile vi
    in line when the plan drifts from the diff (D5); a contract pin matches; suite green
    - seam: `skills/pb-refine/SKILL.md`, `test/contract/skills.test.ts`
    - model: opus — skill prose sets future authoring behavior
-6. [ ] feat(pb-verify): present a reconciled subject at the pause before it lands —
+6. [x] feat(pb-verify): present a reconciled subject at the pause before it lands —
    **done when:** `/pb-verify` and `/pb-build` document that when the diff has drifted from
    the planned title, the body pass PRESENTS a reconciled subject at the verify pause
    (planned title → proposed subject) for explicit approval and lands it via `-m`; with

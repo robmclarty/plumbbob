@@ -103,6 +103,31 @@ and the model where the
 step is supposed to live, so straying out of it is a visible signal rather than a silent
 sprawl.
 
+### The step title is the commit subject
+
+A step's title line is not just a label — it *is* the Conventional-Commit subject that
+lands when the step checkpoints (`type(scope): description`). Author it once, as a
+plain single line: an author-written prefix (`fix(parser): handle empty seam`) is
+honored verbatim, while a bare prose title (`Add the token bucket`) defaults to `feat`
+and gets de-capitalised to match Conventional style. Load-bearing detail — file paths,
+module names — stays out of the title and lives in the step's **seam** instead: the
+title has to read as plain English and as a clean subject line at the same time, and a
+jammed-in path breaks that. Aim for **≤72 characters** (GitHub's subject convention) —
+a soft guideline, not a lint.
+
+The **scope** — the `(scope)` in `type(scope): description` — resolves through a
+fallback chain, most specific first: a scope named in the title itself, then the
+build's own default (a `**Scope:**` header authored once in `intent.md` at plan time),
+then the build's slug, then no scope at all. A step's own `(scope)` should name the
+code area it touches (`pb-plan`, `commitmsg`); the build-default names the feature as
+the catch-all. A build that sets neither behaves exactly as it always has — slug-derived
+scope, `feat` default.
+
+If the diff drifts from the planned title before the verify pause, `/pb-build` and
+`/pb-verify` present a reconciled subject for your explicit approval rather than
+silently swapping it in; with nothing presented, the deterministic title-derived
+subject lands.
+
 ## The build loop and the verify tick
 
 Plan once, then repeat one tick per step until the list is done. The tick — whether

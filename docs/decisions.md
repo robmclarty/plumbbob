@@ -402,21 +402,25 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10*
   [**D27**](#d27). *Tagged in* `latch.ts`, `settings.ts`, `doctor.ts`, `agent.ts`, `skills/pb-build`,
   `skills/pb-verify`.
 - <a id="d68"></a>**D68 — Commit subjects are Conventional Commits; `plumbbob`/`step N` move to the body.**
-  Every plumbbob commit subject now reads as `type(scope): description`, so `git log` speaks the same
-  grammar as the rest of the branch: `chore(<scope>): plan`, a per-step `<type>(<scope>): <description>`
-  (titleless fallback `chore(<scope>): checkpoint`), and `chore(<scope>): finish`. The **scope** is the
-  build's slug with its `YYYY-MM-DD-` date prefix stripped (`2026-07-18-escape-hatch` → `escape-hatch`),
-  omitted entirely when none resolves (`--local` → a bare `chore: finish`). The **type** comes from the
-  step's title: an author-written Conventional prefix (`fix(parser): handle empty seam`) is honored
-  verbatim — its scope and breaking `!` win — while a bare prose title defaults to `feat` (plan and
-  finish default to `chore`) and has its sentence-case opener de-capitalised. The `plumbbob` and
-  `step N` identifiers the old subject carried now ride a **marker line at the head of the body**
-  (`plumbbob step 1`, `plumbbob plan`, `plumbbob finish`), prepended whether the body is `--body` prose,
-  the deterministic fallback ([**D35**](#d35)), or empty — so `git log --grep plumbbob` still finds every
-  plumbbob commit. Supersedes the greppable-subject *shape* of [**D34**](#d34); D34's ownership principle —
-  the CLI owns every subject, bodies arrive via `--body` — stands, as does [**D36**](#d36)'s
-  plan-gets-its-own-commit. *Tagged in* `commitmsg.ts`, `sidecar.ts`, `checkpoint.ts`, `finish.ts`,
-  the `pb-verify`/`pb-plan`/`pb-finish` skills.
+  *Amended* — every plumbbob commit subject reads as `type(scope): description`, so `git log` speaks the
+  same grammar as the rest of the branch: `chore(<scope>): plan`, a per-step `<type>(<scope>): <description>`
+  (titleless fallback `chore(<scope>): checkpoint`), and `chore(<scope>): finish`. The step's own **title
+  line is the subject, authored once**: an author-written Conventional prefix (`fix(parser): handle empty
+  seam`) is honored verbatim — its scope and breaking `!` win — while a bare prose title defaults to `feat`
+  (plan and finish default to `chore`) and has its sentence-case opener de-capitalised; load-bearing detail
+  stays out of the title and lives in the step's seam instead. The **scope** resolves through a fallback
+  chain, most specific first: the title's own `(scope)` → the build's `**Scope:**` default header (authored
+  once in `intent.md` at plan time) → the build's slug with its `YYYY-MM-DD-` date prefix stripped
+  (`2026-07-18-escape-hatch` → `escape-hatch`, this decision's original rung) → no scope at all (`--local` →
+  a bare `chore: finish`) — so a build that predates the `**Scope:**` header, or never fills it, keeps
+  behaving exactly as it did before this amendment. The `plumbbob` and `step N` identifiers the old subject
+  carried ride a **marker line at the head of the body** (`plumbbob step 1`, `plumbbob plan`,
+  `plumbbob finish`), prepended whether the body is `--body` prose, the deterministic fallback
+  ([**D35**](#d35)), or empty — so `git log --grep plumbbob` still finds every plumbbob commit. Supersedes
+  the greppable-subject *shape* of [**D34**](#d34); D34's ownership principle — the CLI owns every subject,
+  bodies arrive via `--body` — stands, as does [**D36**](#d36)'s plan-gets-its-own-commit. *Tagged in*
+  `commitmsg.ts`, `intent.ts`, `sidecar.ts`, `checkpoint.ts`, `finish.ts`, the
+  `pb-plan`/`pb-step`/`pb-refine`/`pb-verify`/`pb-finish` skills.
 
 - <a id="d69"></a>**D69 — The build-log's Steps mirror and Current step line are CLI-owned.**
   build-log.md's `## Steps` checklist and its `**Current step:**` line are now maintained by the
