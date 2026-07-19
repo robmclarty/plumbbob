@@ -42,12 +42,19 @@ export function deriveOutcome(result: ContractResult): Outcome {
 }
 
 // A precondition every contract shares: the plugin under test must actually load.
-// When it doesn't, the model says so in its own words ("the skill failed to load and
-// isn't on disk", "the skill invocation errored") and then improvises without the
-// guidance we are measuring — so any checks it fails are noise, not a behavioral
-// verdict. That is `invalid`, not `fail` (the 2026-07-18 delta saw this suppress c7).
+// When it GENUINELY doesn't, the model reports the skill absent — "failed to load",
+// "isn't on disk" — and then improvises without the guidance we measure, so any checks
+// it fails are noise, not a behavioral verdict. That is `invalid`, not `fail`.
+//
+// We deliberately do NOT trip on a bare "skill invocation errored": that is the EXPECTED
+// disable-model-invocation response when a contract's PROMPT names the skill in prose
+// (C7_PROMPT's "Use /plumbbob:pb-build …") and the model tries to self-invoke it — the
+// skill IS on disk, so it reads SKILL.md and follows it (still asks for --auto by name).
+// Gating that benign fallback voided every valid c7 run (the 2026-07-18 delta's c7 run 1
+// PASSED while emitting it). Across 168 historical runs every genuine load failure also
+// reported the skill absent, so the absence signal alone loses none of them.
 export function pluginLoadFailed(transcript: string): boolean {
-  return /skill (invocation )?errored|(skill|plumbbob:pb-\w+)[^.\n]{0,60}(failed to load|is(n['’]?t| not) on disk)/i.test(
+  return /(skill|plumbbob:pb-\w+)[^.\n]{0,60}(failed to load|is(n['’]?t| not) on disk)/i.test(
     transcript,
   )
 }
