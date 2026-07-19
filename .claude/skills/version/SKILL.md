@@ -1,11 +1,12 @@
 ---
 name: version
-description: Bump the project version (major, minor, or patch) and add a changelog entry. Use when preparing a release, bumping versions, or the user says "/version".
+description: Bump the project version (major, minor, or patch), add a changelog entry, then tag and push to trigger the npm publish + GitHub Release. Use when preparing a release, cutting a version, or the user says "/version".
 argument-hint: "[major | minor | patch]"
 allowed-tools: Read Edit Bash(git:*), Bash(date:*)
 ---
 
-Bump the project version using semver. Accepts one argument: `major`, `minor`, or `patch`.
+Bump the project version using semver, add the changelog entry, then tag and push
+the release to trigger publishing. Accepts one argument: `major`, `minor`, or `patch`.
 
 ## Semver rules
 
@@ -39,6 +40,24 @@ labels — only include the categories that apply:
 Match the existing entries: bullets are full sentences (prose, not terse
 fragments), wrapped to roughly the same width as the surrounding entries.
 
+## Publishing
+
+Both the npm package and the GitHub Release are driven by CI, triggered by a
+pushed `vA.B.C` git tag — **not** by this skill running `npm publish` directly:
+
+- `.github/workflows/publish.yaml` reruns the check gate, builds, and runs
+  `npm publish --provenance` over tokenless OIDC. It **pauses at the `npm-publish`
+  environment for a required-reviewer approval** — nothing reaches npm until a
+  maintainer approves that run in the Actions tab.
+- `.github/workflows/release.yaml` creates the GitHub Release immediately on the
+  tag push (no approval gate), pulling notes from the matching `## [A.B.C]`
+  section of `CHANGELOG.md`.
+
+So this skill's release step ends at pushing the tag; the npm publish completes
+after the human approval gate. The tag must sit on the `chore: release A.B.C`
+commit so `package.json`'s version matches the tag — publish.yaml verifies this
+and fails the run otherwise.
+
 ## Steps
 
 1. If no argument is provided, ask the user which bump type they want (major, minor, or patch).
@@ -60,4 +79,15 @@ fragments), wrapped to roughly the same width as the surrounding entries.
    ```
 
 10. Report the updated version.
-11. Stage the changed files (`package.json`, `.claude-plugin/plugin.json`, `CHANGELOG.md`) and commit with the message: `chore: release A.B.C`
+11. Stage the changed files (`package.json`, `.claude-plugin/plugin.json`, `CHANGELOG.md`) and commit with the message: `chore: release A.B.C`.
+12. **Confirm before publishing.** Tell the user exactly what the next step does and ask them to confirm: pushing the current branch and a `vA.B.C` tag to `origin` triggers the npm publish (which then waits on their approval in the `npm-publish` GitHub environment) and immediately creates the GitHub Release. If they decline, stop here — the `chore: release A.B.C` commit stays local for them to push by hand.
+13. Push the release commit, then create and push the tag — the tag is the publish trigger:
+
+    ```bash
+    git push origin HEAD
+    git tag -a vA.B.C -m "vA.B.C"
+    git push origin vA.B.C
+    ```
+
+    Use the exact new version in the tag name and message. First check that a `vA.B.C` tag does not already exist (`git tag -l vA.B.C` and `git ls-remote --tags origin vA.B.C`); if it does, stop and tell the user rather than overwriting it.
+14. Report what was triggered and the one manual step left: the **Publish** workflow is now paused for approval — direct the user to GitHub → Actions → the Publish run → approve the `npm-publish` environment to complete `npm publish --provenance`. The **Release** workflow creates the GitHub Release from the `## [A.B.C]` changelog section automatically.
