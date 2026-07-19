@@ -11,7 +11,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — Intent legibility: plain-lean open questions and glossed references
 
-**Current step:** none (at the boundary)
+**Current step:** 1 — Pin the parser: expanded questions don't move the count
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -20,13 +20,18 @@ step boundaries. The antidote to "my plan got lost in the noise."
 is done only after a checkpoint — check green + checkpoint taken, via `/pb-verify` or
 `/pb-build`.)*
 
-- ☐ 1. <step>
+- ☐ 1. Pin the parser: expanded questions don't move the count
+- ☐ 2. templates/intent.md: plain/lean question form, slugged Decisions, header
+- ☐ 3. skills/pb-refine: attack mode authors and presents the expanded form
+- ☐ 4. skills/pb-plan: glossed-reference + slug-at-birth house style
+- ☐ 5. Docs sweep: techniques.md principle + pb-park one-clause why
 
 ## Park list
 
 > Mid-step, every new problem / idea / "ooh what if" lands HERE, untouched, and you
 > go straight back to the step. Acting the instant an idea arrives is the disease.
 > Capture is one line (`/pb-park` composes it). Harvest happens only at the boundary.
+- [ ] D3 (slug-at-birth) applied to a Q opener (e.g. `Q2 (some-slug):`) breaks parseOpenQuestions' regex (/^- Q\d+:/ requires the colon right after the digits) — the counter would silently read 0 for a genuinely open, slug-bearing question
 
 ## Harvest  *(run `/pb-harvest` at each step boundary, after green)*
 

@@ -10,6 +10,7 @@ import {
   parseSteps,
   parseTitle,
 } from '../orient.ts'
+import { readTemplate } from '../templates.ts'
 
 const INTENT = `# My Feature
 
@@ -153,6 +154,56 @@ describe('orient parsers', () => {
       '- Q4: was answered — resolved',
     ].join('\n')
     expect(parseOpenQuestions(intent)).toBe(2) // Q10 + indented Q2
+  })
+
+  it('parseOpenQuestions is unmoved by *plain:*/*lean:* sub-lines under an opener (D2/research/08 R1)', () => {
+    // The expanded question form (opener + explanation + proposal) is parser-safe:
+    // the counter matches opener lines only, so the sub-lines add zero to the count.
+    const intent = [
+      '## Open questions',
+      '',
+      '- Q7: the pack check isn\'t read-only — *resolve by:* decide',
+      '  - *plain:* `npm pack --dry-run` runs `prepack`/`prepare` first, so the',
+      '    check can rebuild dist/ mid-wave while other slots read those files.',
+      '  - *lean:* spawn pack with `--ignore-scripts` instead.',
+    ].join('\n')
+    expect(parseOpenQuestions(intent)).toBe(1)
+  })
+
+  it('parseOpenQuestions drops an opener whose *resolved:* marker lands on the opener line, sub-lines and all', () => {
+    // D5 (resolved-on-opener): the marker must be on the opener for the count to
+    // drop — pinning that the still-present *plain:*/*lean:* scaffolding doesn't
+    // prevent it, and that a genuinely open neighbor still counts.
+    const intent = [
+      '## Open questions',
+      '',
+      '- Q7: *resolved:* 2026-07-18, ignore-scripts',
+      '  - *plain:* `npm pack --dry-run` runs `prepack`/`prepare` first.',
+      '  - *lean:* spawn pack with `--ignore-scripts` instead.',
+      '- Q8: another real open question — *resolve by:* decide',
+    ].join('\n')
+    expect(parseOpenQuestions(intent)).toBe(1) // Q7 resolved, Q8 open
+  })
+
+  it('parseOpenQuestions is not resolved by the word "resolved" appearing on a sub-line', () => {
+    // The parser tests each opener line in isolation (research/08 R1's noted sharp
+    // edge) — a *lean:* sub-line that merely discusses "resolved" downstream must
+    // not silently drop the opener from the count.
+    const intent = [
+      '## Open questions',
+      '',
+      '- Q9: a real open question — *resolve by:* decide',
+      '  - *plain:* explains what happens once this gets resolved downstream.',
+      '  - *lean:* a proposal, not yet resolved by anyone.',
+    ].join('\n')
+    expect(parseOpenQuestions(intent)).toBe(1)
+  })
+
+  it('the real templates/intent.md parses to an open-question count of 0 (D7 placeholder-uncounted)', () => {
+    // The scaffolded Q1 placeholder must never read as an open question — a fresh
+    // build showing "open questions 1" would be shipped noise. This pin lands
+    // before step 2 touches the template, per D7.
+    expect(parseOpenQuestions(readTemplate('intent.md'))).toBe(0)
   })
 
   it('parseParked counts only OPEN [ ] items, not harvested [x], the placeholder, or instructions', () => {

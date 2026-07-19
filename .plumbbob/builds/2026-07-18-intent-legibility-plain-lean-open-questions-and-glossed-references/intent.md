@@ -17,14 +17,17 @@ head; the chat is the hand. When the model floods you, read this, not your memor
   bare numbered references (D4, C6) force doc-flipping — so the human can't judge
   questions cold and pays for it in chat round-trips.
 - **Smallest thing that solves it:** change the *authoring guidance* — the template
-  and the skill prose — plus one parser regression pin. No parser code changes;
-  research/08 verified the expanded form is already parser-safe.
+  and the skill prose — plus one narrow parser fix (slug-aware open-question
+  counting) and its regression pins. research/08 verified the *plain* expanded form
+  is parser-safe, but the slugged opener form D3/R2 mandate is not, so the counter
+  has to learn the slug.
 - **Done looks like:** a fresh `/pb-plan` or `/pb-refine` session scaffolds and
   authors open questions in the plain/lean form with glossed references, and the
   status open-question count is test-pinned as unaffected by the sub-lines.
-- **Explicitly NOT doing:** no companion "plain English" doc; no changes to
-  `src/` parser code; no agent-envelope changes; no loosening of the one-line
-  convention for Decisions/Constraints; no retrofitting of existing build folders.
+- **Explicitly NOT doing:** no companion "plain English" doc; no `src/` parser
+  changes beyond slug-aware open-question counting; no agent-envelope changes; no
+  loosening of the one-line convention for Decisions/Constraints; no retrofitting of
+  existing build folders.
 
 ## Architecture sketch
 
@@ -63,8 +66,9 @@ src/lib/orient.ts parseOpenQuestions ◀─counts opener lines only (pinned, unc
 
 ## Constraints
 
-- C1 (guidance-only): nothing under `src/` changes except the test file — parser
-  behavior is pinned, never modified.
+- C1 (guidance-only): the only `src/` parser change is slug-aware open-question
+  counting in `orient.ts` (step 2, pinned by tests) — every other parser behavior
+  stays pinned, never modified.
 - C2 (doorway-freeze): no agent-envelope changes (standing, research/07).
 - C3 (pins-travel-with-prose): every SKILL.md wording change lands in the same step
   as its contract-pin update in `test/contract/skills.test.ts`.
@@ -76,10 +80,19 @@ src/lib/orient.ts parseOpenQuestions ◀─counts opener lines only (pinned, unc
    opener are not counted; `*resolved:*` on the opener drops it; the word
    "resolved" on a sub-line does NOT resolve the opener; and the real
    `templates/intent.md` parses to an open-question count of 0 — the
-   D7 (placeholder-uncounted) pin, landing before step 2 touches the template
+   D7 (placeholder-uncounted) pin, landing before step 3 touches the template
    - seam: `src/lib/__tests__/orient.test.ts`
    - model: sonnet — mechanical, fully specified by the done-when
-2. [ ] templates/intent.md: plain/lean question form, slugged Decisions, header
+2. [ ] Slug-aware open-question counting: parseOpenQuestions counts slugged
+   openers — **done when:** `parseOpenQuestions` (orient.ts) counts a slugged
+   opener `- Q2 (some-slug): ...` as OPEN and still drops it when `*resolved:*`
+   lands on that opener; `orient.test.ts` pins the slugged-open and
+   slugged-resolved cases; the plain form and the
+   real-`templates/intent.md`-parses-to-0 pin (step 1) still hold; full check green
+   - seam: `src/lib/orient.ts`, `src/lib/__tests__/orient.test.ts`
+   - model: sonnet — a one-line regex extension (`/^- Q\d+(?: \([^)]+\))?:/`), fully
+     specified by the done-when
+3. [ ] templates/intent.md: plain/lean question form, slugged Decisions, header
    principle — **done when:** the template shows the three-line Q form with its
    guidance comment (cold-reader test, D5 (resolved-on-opener) edge, D6
    (size-to-work) sizing rule), the slug-at-birth D form, and the "compress what's
@@ -88,20 +101,20 @@ src/lib/orient.ts parseOpenQuestions ◀─counts opener lines only (pinned, unc
    step 1's pin proves it); full check green
    - seam: `templates/intent.md`
    - model: opus — the template prose is the product
-3. [ ] skills/pb-refine: attack mode authors and presents the expanded form —
+4. [ ] skills/pb-refine: attack mode authors and presents the expanded form —
    **done when:** attack mode instructs the opener+plain+lean form (dropping
    "one-line question") and the walkthrough chat presentation (every hole listed
    with explanation then lean, inviting per-question answers); a new contract pin
    matches `*plain:*` and `*lean:*` in the body; contract suite green
    - seam: `skills/pb-refine/SKILL.md`, `test/contract/skills.test.ts`
    - model: opus — skill prose sets future authoring behavior
-4. [ ] skills/pb-plan: glossed-reference + slug-at-birth house style — **done
+5. [ ] skills/pb-plan: glossed-reference + slug-at-birth house style — **done
    when:** the Decisions/Open-questions authoring steps carry the slug-at-birth
    and never-a-bare-reference sentences; a new contract pin matches them; suite
    green
    - seam: `skills/pb-plan/SKILL.md`, `test/contract/skills.test.ts`
    - model: opus — skill prose sets future authoring behavior
-5. [ ] Docs sweep: techniques.md principle + pb-park one-clause why — **done
+6. [ ] Docs sweep: techniques.md principle + pb-park one-clause why — **done
    when:** `docs/techniques.md` carries the compression principle and the
    glossed-reference style; `skills/pb-park/SKILL.md`'s compose guidance adds the
    one-clause-why; check green
