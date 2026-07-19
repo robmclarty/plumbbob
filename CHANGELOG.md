@@ -5,6 +5,36 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.8] - 2026-07-18
+
+- **Changed:** the approval latch no longer honors an `auto` grant set in a settings file.
+  A model can write `.plumbbob/settings.local.json`, so the standing `auto` was the one
+  self-approval it could forge — and a grant a model can forge is no grant. Self-approval
+  now comes only from the human's literal `/pb-build --auto` or a step range, minted into
+  the one-turn `GRANT` file by the UserPromptSubmit hook (a route a model cannot type,
+  since `pb-build` is `disable-model-invocation`). This is guidance-first: it removes a
+  mechanical honor rather than adding a lock — a human at the keyboard, a host with no
+  hooks, `--auto`, and ranges all still work, and unattended autonomy is one typed
+  `--auto` away. An `auto` that is still set is surfaced (in the refusal message and by
+  `plumbbob doctor`), never silently changed. The measured payoff: under adversarial
+  pause pressure the settings side door held untouched across every run. (D67.)
+- **Added:** while a step is in flight, the turn hook now injects one line of guidance on
+  each prompt — a mid-step tangent is a park (`plumbbob park "<line>"`), not an edit, and
+  the step lands on `plumbbob checkpoint` after approval. This reaches a fresh session
+  that no longer has the `pb-build` skill in context (after a compaction, or a new
+  headless turn), which prose alone cannot. It is guidance only: it never gates, and any
+  failure degrades to no output, so it can never wedge a prompt.
+- **Fixed:** the `pb-doctor` skill's install diagnostic now renders inside headless
+  (`-p`) sessions. Its previous `if command -v plumbbob … fi` pre-injection led with
+  commands outside the skill's allowed tools, so a restricted session's permission gate
+  dropped the whole injection silently; it now leads with the granted `plumbbob doctor`
+  command, mirroring the `pb-status` pattern, and the skill recovers in prose if nothing
+  renders.
+- **Fixed:** an unrecognized flag before a step range in a `/pb-build` prompt — e.g.
+  `/pb-build --wip 2020-2024` — no longer mints a `range 2024` grant. Only `--auto`
+  continues the argument scan; any other flag ends it, so an incidental range never
+  becomes a self-approval.
+
 ## [0.8.7] - 2026-07-13
 
 - **Added:** GitHub Actions publishing automation that carries a release from a pushed
