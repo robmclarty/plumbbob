@@ -269,6 +269,13 @@ describe('step — the single-increment move: one verifiable step', () => {
     expect(body).toMatch(/\bone\b/i)
     expect(body).toMatch(/approv|decide/i)
   })
+
+  it('keeps the sharpened title a clean type(scope): subject — paths in seam, overrides the build scope (D1/D2/D8)', () => {
+    expect(body).toMatch(/type\(scope\):\s+description/) // the sharpened title stays the subject (D1)
+    expect(body).toMatch(/never jammed into the title/i) // load-bearing paths stay in seam (D2)
+    expect(body).toMatch(/overrides the build-default/i) // a step's own (scope) beats the default...
+    expect(body).toMatch(/\*\*Scope:\*\*/) // ...that build-default `**Scope:**` header (D8)
+  })
 })
 
 describe('build — the default engine: implement the planned step, then verify', () => {

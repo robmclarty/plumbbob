@@ -119,7 +119,7 @@ git diff at checkpoint ───────┘─▶ body pass may reconcile vi
    full check green
    - seam: `templates/intent.md`
    - model: opus — the template prose is the product
-3. [ ] feat(pb-plan): author titles as commit subjects and set the build scope —
+3. [x] feat(pb-plan): author titles as commit subjects and set the build scope —
    **done when:** the Steps-authoring guidance instructs a plain `type(scope):
    description` title with paths kept in `seam`, directs setting the `**Scope:**` default
    plus per-step overrides that name the code area (D8), and notes the soft ≤72-char aim
