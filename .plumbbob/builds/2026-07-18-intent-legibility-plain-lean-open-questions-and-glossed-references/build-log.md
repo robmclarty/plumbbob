@@ -11,7 +11,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — Intent legibility: plain-lean open questions and glossed references
 
-**Current step:** 2 — Slug-aware open-question counting: parseOpenQuestions counts slugged
+**Current step:** 3 — templates/intent.md: plain/lean question form, slugged Decisions, header
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -21,7 +21,7 @@ is done only after a checkpoint — check green + checkpoint taken, via `/pb-ver
 `/pb-build`.)*
 
 - ☑ 1. Pin the parser: expanded questions don't move the count
-- ☐ 2. Slug-aware open-question counting: parseOpenQuestions counts slugged
+- ☑ 2. Slug-aware open-question counting: parseOpenQuestions counts slugged
 - ☐ 3. templates/intent.md: plain/lean question form, slugged Decisions, header
 - ☐ 4. skills/pb-refine: attack mode authors and presents the expanded form
 - ☐ 5. skills/pb-plan: glossed-reference + slug-at-birth house style
@@ -61,3 +61,4 @@ you point at to say "I did that — the LLM helped, but those were my calls."
 `/pb-finish` reads this for the report; `plumbbob finish` commits it with the build
 folder, so it rides the branch into the PR.)*
 - 2026-07-19 — step 1 checkpointed · 56330dc14 — Pin the parser: expanded questions don't move the count (27m)
+- 2026-07-19 — step 2 checkpointed · 959c84e27 — Slug-aware open-question counting: parseOpenQuestions counts slugged (7m)

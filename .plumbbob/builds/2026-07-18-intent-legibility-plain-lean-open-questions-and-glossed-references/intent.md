@@ -83,7 +83,7 @@ src/lib/orient.ts parseOpenQuestions ◀─counts opener lines only (pinned, unc
    D7 (placeholder-uncounted) pin, landing before step 3 touches the template
    - seam: `src/lib/__tests__/orient.test.ts`
    - model: sonnet — mechanical, fully specified by the done-when
-2. [ ] Slug-aware open-question counting: parseOpenQuestions counts slugged
+2. [x] Slug-aware open-question counting: parseOpenQuestions counts slugged
    openers — **done when:** `parseOpenQuestions` (orient.ts) counts a slugged
    opener `- Q2 (some-slug): ...` as OPEN and still drops it when `*resolved:*`
    lands on that opener; `orient.test.ts` pins the slugged-open and
