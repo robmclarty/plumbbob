@@ -3,20 +3,53 @@
 // monotonic count of human turns the checkpoint latch reads to know a human turn
 // intervened since a step began) and rewrites `.plumbbob/GRANT` from the literal
 // prompt — minting a one-turn self-approval only when the human typed
-// `/pb-build --auto` or a `N-M` range (D65), clearing it otherwise. Pure machinery,
-// not a user verb: it writes nothing to stdout and ALWAYS exits 0, so a broken tick
-// can never wedge prompting (C3).
+// `/pb-build --auto` or a `N-M` range (D65), clearing it otherwise. When a step is
+// in flight it also emits ONE `UserPromptSubmit` additionalContext line so a fresh
+// session (post-compaction, or a new `-p` turn where no skill is in context) still
+// knows the beat — a tangent is parked, not chased (amends D64's "writes nothing";
+// guidance only, D10/D13). It ALWAYS exits 0 and any failure degrades to no output,
+// so neither the tick nor the emit can ever wedge prompting (C3).
 
 import { readFileSync, writeFileSync } from 'node:fs'
-import { findSessionRoot, setGrant, turnPath } from '../lib/sidecar.ts'
+import { findSessionRoot, setGrant, stepPath, turnPath } from '../lib/sidecar.ts'
 
 export function turn(cwd: string, _args: ReadonlyArray<string>): number {
   try {
     applyTurn(cwd, readStdin())
+    const context = stepInFlightContext(cwd)
+    if (context !== null) process.stdout.write(context)
   } catch {
     // C3: a broken turn must never wedge a prompt — swallow and exit 0.
   }
   return 0
+}
+
+// The `UserPromptSubmit` additionalContext payload when a step is in flight (a STEP
+// marker between `build` and `checkpoint`), or null. Guidance only: it reminds a
+// fresh session that a tangent is a park (not an edit) and how the step lands, since
+// the pb-build prose may not be in context after compaction or on a scripted turn.
+// Exported because an in-process test cannot read the hook's real stdout.
+export function stepInFlightContext(cwd: string): string | null {
+  const root = findSessionRoot(cwd)
+  if (root === null) return null
+  const step = inFlightStep(root)
+  if (step === null) return null
+  const text =
+    `plumbbob: step ${step} is in flight — a new idea or tangent is a park, not an edit: ` +
+    `capture it with \`plumbbob park "<one line>"\`, then stay on the step. ` +
+    `It lands when you run \`plumbbob checkpoint ${step}\` after approval.`
+  return `${JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: text } })}\n`
+}
+
+// The in-flight step number, or null when no STEP marker is present (no step entered,
+// or it already checkpointed). A garbled marker reads as null — never an error (C3).
+function inFlightStep(root: string): number | null {
+  try {
+    const n = Number.parseInt(readFileSync(stepPath(root), 'utf8').trim(), 10)
+    return Number.isFinite(n) && n > 0 ? n : null
+  } catch {
+    return null
+  }
 }
 
 // The testable core: apply one tick given the raw hook stdin. Split from the fd-0

@@ -1,12 +1,12 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
-import { applyTurn, grantFromPrompt, turn } from '../turn.ts'
+import { applyTurn, grantFromPrompt, stepInFlightContext, turn } from '../turn.ts'
 import { start } from '../start.ts'
-import { grantPath, turnPath } from '../../lib/sidecar.ts'
+import { grantPath, stepPath, turnPath } from '../../lib/sidecar.ts'
 import { formatHelp } from '../../cli-core.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
-import { captureIoAsync } from '../../../test/helpers/capture-io.ts'
+import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
 afterAll(cleanupTempRepos)
 
@@ -114,6 +114,41 @@ describe('applyTurn', () => {
   })
 })
 
+describe('stepInFlightContext — the park nudge (D64 amended: guidance, not silence)', () => {
+  it('is null when no step is in flight (session started, none entered)', async () => {
+    const dir = await startedSession()
+    expect(stepInFlightContext(dir)).toBeNull()
+  })
+
+  it('is null outside a session', () => {
+    expect(stepInFlightContext(makeTempRepo())).toBeNull()
+  })
+
+  it('emits one UserPromptSubmit additionalContext line naming the in-flight step and the park verb', async () => {
+    const dir = await startedSession()
+    writeFileSync(stepPath(dir), '2\n') // a step entered, as `build 2` would mark it
+    const out = stepInFlightContext(dir)
+    expect(out).not.toBeNull()
+    if (out === null) return
+    const parsed = JSON.parse(out) as {
+      hookSpecificOutput: { hookEventName: string; additionalContext: string }
+    }
+    expect(parsed.hookSpecificOutput.hookEventName).toBe('UserPromptSubmit')
+    expect(parsed.hookSpecificOutput.additionalContext).toContain('step 2 is in flight')
+    expect(parsed.hookSpecificOutput.additionalContext).toContain('plumbbob park "')
+    expect(parsed.hookSpecificOutput.additionalContext).toContain('plumbbob checkpoint 2')
+  })
+
+  it('goes quiet again once the step checkpoints (STEP marker gone)', async () => {
+    const dir = await startedSession()
+    writeFileSync(stepPath(dir), '2\n')
+    expect(stepInFlightContext(dir)).not.toBeNull()
+    // checkpoint clears STEP; the nudge must stop so the boundary reads as guidance-free
+    rmSync(stepPath(dir), { force: true })
+    expect(stepInFlightContext(dir)).toBeNull()
+  })
+})
+
 describe('turn (the verb)', () => {
   it('exits 0 and skips the fd-0 read on an interactive TTY (never wedges a prompt, C3)', async () => {
     const dir = await startedSession()
@@ -128,6 +163,22 @@ describe('turn (the verb)', () => {
     // The TTY path reads '' → the tick still lands and the grant clears.
     expect(readFileSync(turnPath(dir), 'utf8').trim()).toBe('1')
     expect(existsSync(grantPath(dir))).toBe(false)
+  })
+
+  it('rides the in-flight nudge on stdout as the hook additionalContext (silent when no step)', async () => {
+    const dir = await startedSession()
+    const stdin = process.stdin as unknown as { isTTY?: boolean }
+    const had = stdin.isTTY
+    stdin.isTTY = true
+    try {
+      expect(captureIo(() => turn(dir, [])).stdout).toBe('') // no step in flight → silent
+      writeFileSync(stepPath(dir), '3\n')
+      const loud = captureIo(() => turn(dir, []))
+      expect(loud.stdout).toContain('"hookEventName":"UserPromptSubmit"')
+      expect(loud.stdout).toContain('step 3 is in flight')
+    } finally {
+      stdin.isTTY = had
+    }
   })
 })
 
