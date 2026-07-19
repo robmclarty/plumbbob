@@ -27,9 +27,19 @@ is fine — refining is always available.
 - **Attack (diverge in the problem space).** Hand the **Frame**, **Decisions**, and
   **Architecture sketch** a cold, adversarial read and surface holes — ambiguities,
   unhandled edge cases, hidden assumptions, collisions with the existing code. Append
-  each as a one-line question under `## Open questions`, **never** as a Decision:
-  resolving a hole is the human's convergence, not yours. This mode surfaces; it does
-  not decide.
+  each under `## Open questions` in the expanded form the template shows — an opener
+  line (the hole as a question, slugged at birth: `- Q2 (some-slug): …`), a `*plain:*`
+  sub-line (what's at stake in plain words, enough to judge it cold), and a `*lean:*`
+  sub-line (your proposed resolution — one answer to react to, not a menu). Never
+  append a hole as a Decision: resolving it is the human's convergence, not yours —
+  the lean proposes; this mode surfaces, it does not decide. (A tiny, obvious question
+  may stay one bare line; the sub-lines earn their keep only when a human decision
+  genuinely waits on it.)
+
+  Then walk the human through it in the chat: list every hole you appended, each as
+  its explanation first and its lean second, and invite per-question answers — the
+  human can settle any of them right there in one message, no doc-flipping, no extra
+  round-trip per hole.
 - **Repair (re-sync to reality).** When the plan has drifted — a Decision was overtaken
   by what you built, a Constraint changed, a Step no longer matches the seam — propose
   the edits that bring `intent.md` back in line with the truth. Show the before/after for

@@ -92,7 +92,7 @@ src/lib/orient.ts parseOpenQuestions ◀─counts opener lines only (pinned, unc
    - seam: `src/lib/orient.ts`, `src/lib/__tests__/orient.test.ts`
    - model: sonnet — a one-line regex extension (`/^- Q\d+(?: \([^)]+\))?:/`), fully
      specified by the done-when
-3. [ ] templates/intent.md: plain/lean question form, slugged Decisions, header
+3. [x] templates/intent.md: plain/lean question form, slugged Decisions, header
    principle — **done when:** the template shows the three-line Q form with its
    guidance comment (cold-reader test, D5 (resolved-on-opener) edge, D6
    (size-to-work) sizing rule), the slug-at-birth D form, and the "compress what's

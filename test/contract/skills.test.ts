@@ -408,6 +408,12 @@ describe('refine — keep intent.md true: attack for holes + repair drift', () =
     expect(body).toMatch(/repair/i)
     expect(body).toMatch(/approv/i)
   })
+
+  it('attack authors the expanded question form and walks it through in the chat (D2 plain-lean-format)', () => {
+    expect(body).toContain('*plain:*')
+    expect(body).toContain('*lean:*')
+    expect(body).toMatch(/per-question answers/i)
+  })
 })
 
 describe('park — capture via the dumb CLI, never an edit', () => {
