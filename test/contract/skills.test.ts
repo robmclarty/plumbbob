@@ -204,6 +204,13 @@ describe('plan — the whole-goal move: scaffold + frame, no code', () => {
     expect(body).toMatch(/human/i)
   })
 
+  it('carries the glossed-reference house style — slug at birth, never a bare ref, plain/lean holes (D3)', () => {
+    expect(body).toMatch(/slug .*at birth/i) // mint the slug where the item is born
+    expect(body).toMatch(/never a bare/i) // no bare D4/C6/Q2 reference — always the gloss
+    expect(body).toContain('*plain:*') // Open questions author the expanded form
+    expect(body).toContain('*lean:*')
+  })
+
   it('names the latch on the plan commit, incl. the first-plan-of-session seam (D64)', () => {
     expect(body).toMatch(/latch/i)
     expect(body).toMatch(/git commit/) // never route around it with a raw git commit

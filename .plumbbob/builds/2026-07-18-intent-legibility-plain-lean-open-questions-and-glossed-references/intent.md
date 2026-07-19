@@ -101,7 +101,7 @@ src/lib/orient.ts parseOpenQuestions ◀─counts opener lines only (pinned, unc
    step 1's pin proves it); full check green
    - seam: `templates/intent.md`
    - model: opus — the template prose is the product
-4. [ ] skills/pb-refine: attack mode authors and presents the expanded form —
+4. [x] skills/pb-refine: attack mode authors and presents the expanded form —
    **done when:** attack mode instructs the opener+plain+lean form (dropping
    "one-line question") and the walkthrough chat presentation (every hole listed
    with explanation then lean, inviting per-question answers); a new contract pin
