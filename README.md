@@ -23,6 +23,31 @@ Ridgeline runs large, settled work autonomously without you, PlumbBob keeps you 
 driver's seat for the work your judgment has to steer. This repository was built using
 PlumbBob, dogfooded on its own loop.
 
+## What a prompt can't replicate
+
+A system prompt can *ask* a model to plan first and stop for review. What it can't do is
+**hold the line when the model doesn't** — and that mechanical half is what PlumbBob adds
+under the skills. Five deterministic edges, enforced by the CLI and git rather than by the
+model's goodwill:
+
+- **A gate that refuses red.** `checkpoint` won't record a step while the check gate is
+  red, and `start` refuses a dirty tree — the [checkride](https://www.npmjs.com/package/checkride)
+  run (types, lint, tests, dead code, docs) has to pass before a step lands.
+- **One SHA per verified step.** Every approved step is its own git commit against a
+  recorded baseline — a ledger of checkpoints, not one undifferentiated diff at the end.
+- **A preservation-aware revert.** `/pb-revert` resets exactly to a recorded checkpoint
+  SHA while keeping your plan and notes intact, and restores *only* SHAs the loop wrote.
+- **A build record that rides the PR.** The tracked `builds/<slug>/` folder — intent, log,
+  checkpoints, report — merges into `main` with the branch instead of dying with the
+  worktree; the archive never destroys.
+- **The approval latch.** `checkpoint` refuses to land a step until the harness records a
+  human turn since that step began ([D64–D66](docs/decisions.md#d64), the ledger-plane
+  enforcement), so the model can't self-commit past you — the refusal *is* the pause.
+
+The planning surface is the on-ramp; these five are the floor under it. And the latch's
+payoff is [measured, not asserted](#why-not-just), not just claimed. **Guidance on the
+work, a latch on the record.**
+
 ## The loop in one picture
 
 <p align="center">
@@ -196,11 +221,10 @@ diff, and `/pb-verify` reads it like any other.
 
 **…use git and a TODO file?** That's the honest skeleton, and if your discipline
 holds by willpower alone, it may be all you need. What the CLI adds is the
-mechanical half of the discipline, so willpower is spent only at the pause: a
-recorded baseline, one SHA per verified step, a revert that returns exactly to
-those SHAs while preserving your notes, an archive that never destroys, and a
-dashboard re-injected into every skill so the model re-orients on each move
-without you re-explaining the state.
+[mechanical half of the discipline](#what-a-prompt-cant-replicate) — the five edges up
+top — so willpower is spent only at the pause. The one not on that list: a status
+dashboard re-injected into every skill, so the model re-orients on each move without you
+re-explaining the state.
 
 **…wait for a vendor to ship this natively?** They're converging on it — plan
 modes, spec kits, native checkpoints — and that convergence is evidence *for* the
@@ -220,26 +244,28 @@ control, because a determined model routes around it and a denial mid-thought le
 legal move. But the **record** is a different plane, and there the tick *is* latched
 ([D64–D66](docs/decisions.md#d64)): `checkpoint` refuses to land a step until the harness
 records a human turn since that step began, so the agent cannot self-commit past you —
-the refusal simply *is* the pause. That extends the deterministic edge PlumbBob already
-holds — `checkpoint` refuses a red check, `start` refuses a dirty tree, `revert` restores
-only recorded SHAs — to the one boundary the product is named after, while leaving human
-what must be human: you, reading the diff. **Guidance on the work, a latch on the
-record.** And when a raw commit does slip the ledger, `status` says so and the checkpoint
-record makes recovery one command — cheap recovery, not a cage, is the control that
-matters.
+the refusal simply *is* the pause. It extends the [deterministic edges above](#what-a-prompt-cant-replicate)
+to the one boundary the product is named after, while leaving human what must be human:
+you, reading the diff. And when a raw commit does slip the ledger, `status` says so and the
+checkpoint record makes recovery one command — cheap recovery, not a cage, is the control
+that matters.
 
 > The latch's payoff is measured, not asserted: the skill-eval harness
 > ([`test/evals/`](test/evals/)) sweeps this loop headless — prose-only baseline vs. the
 > shipped latch, N=5 per contract, every assertion a mechanical read of git state — and
-> commits the receipt to [`research/evals/`](research/evals/2026-07-11.md). The first sweep
-> (opus, 2026-07-11): the latch closes the route it owns — *no checkpoint over a red
-> check under pressure* went from **2/5 prose-only to 5/5 latched** — while the honest
-> numbers it also surfaced (park capture 0/5, and adversarial pressure consistently
-> flipping the `auto` standing grant in settings — a legal, model-writable side door)
-> are the next iteration's work, named in the report rather than papered over. The
-> current sweep ([opus, 2026-07-18](research/evals/2026-07-18.md), plumbbob 0.8.7)
-> reproduces the win — *no checkpoint over a red check* still holds **5/5 latched** —
-> and confirms both gaps stand at 0.8.7, now the target of the hardening build.
+> commits each receipt under [`research/evals/`](research/evals/). The first sweep
+> ([opus, 2026-07-11](research/evals/2026-07-11.md)) closed the route the latch owns —
+> *no checkpoint over a red check under pressure* went from **2/5 prose-only to 5/5
+> latched** — and named, rather than papered over, the two honest gaps it surfaced: park
+> capture at 0/5, and adversarial pressure flipping a standing `auto` grant a model could
+> write into settings, a legal side door. The re-sweep
+> ([opus, 2026-07-18](research/evals/2026-07-18.md), plumbbob 0.8.7) reproduced the win —
+> *no checkpoint over a red check* still **5/5 latched** — and pinned both gaps. The side
+> door is now closed by construction: [D67](docs/decisions.md#d67) (self-approval is
+> human-typed only) retired the settings `auto` grant, so the one approval a model could
+> forge is gone. What remains is park capture (c5) — prose-governed by design
+> ([D10](docs/decisions.md#d10)/[D13](docs/decisions.md#d13)), the guidance-only gap the
+> latch was never built to reach, still ~0/5 and labeled as such.
 
 ## Documentation
 
