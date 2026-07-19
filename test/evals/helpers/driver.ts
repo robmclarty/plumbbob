@@ -76,6 +76,10 @@ export type EvalSession = {
   // baseline sweep, whose whole point is a ledger that never exists.
   warmup(): Promise<void>
   turn(prompt: string, options?: TurnOptions): Promise<TurnResult>
+  // Every measured turn's assistant text, joined — so the runner can gate on a
+  // precondition the model reports in prose (e.g. the plugin-under-test failing to
+  // load), which is invalid, not a behavioral verdict.
+  transcript(): string
   close(): Promise<void>
 }
 
@@ -103,6 +107,8 @@ export async function openSession(options: {
     providers: { claude_cli: { default_cwd: repo, auth_mode: 'auto' } },
   })
 
+  const transcript: string[] = []
+
   async function turn(prompt: string, turnOptions: TurnOptions = {}): Promise<TurnResult> {
     const started = Date.now()
     const result = await engine.generate({
@@ -124,7 +130,9 @@ export async function openSession(options: {
         },
       },
     })
-    return toTurnResult(prompt, result, Date.now() - started)
+    const turnResult = toTurnResult(prompt, result, Date.now() - started)
+    transcript.push(turnResult.content)
+    return turnResult
   }
 
   async function warmup(): Promise<void> {
@@ -154,6 +162,7 @@ export async function openSession(options: {
     model,
     warmup,
     turn,
+    transcript: () => transcript.join('\n'),
     close: () => engine.dispose(),
   }
 }

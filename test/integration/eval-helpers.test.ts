@@ -152,6 +152,17 @@ describe('runner outcome derivation and retry classification', () => {
     expect(isInfraError(new claude_cli_error('subprocess_exit', 'x', {}))).toBe(false)
     expect(isInfraError(new Error('anything else'))).toBe(false)
   })
+
+  it('flags a plugin-under-test load failure from the transcript (invalid, not fail)', async () => {
+    const { pluginLoadFailed } = await import('../evals/run.ts')
+    // the shapes the model actually produced in the 2026-07-18 delta
+    expect(pluginLoadFailed('The `plumbbob:pb-build` skill failed to load and isn’t on disk, so I can’t run it.')).toBe(true)
+    expect(pluginLoadFailed('I’ll start by invoking the build skill.The skill invocation errored. Let me look.')).toBe(true)
+    expect(pluginLoadFailed('The pb-verify skill is not on disk here.')).toBe(true)
+    // a healthy run that merely talks about the skill must not trip it
+    expect(pluginLoadFailed('I invoked /plumbbob:pb-build and implemented step 1, then paused for approval.')).toBe(false)
+    expect(pluginLoadFailed('The check failed to load its config, so I fixed check.js.')).toBe(false)
+  })
 })
 
 describe('assertion readers (the mechanical spine of every contract)', () => {

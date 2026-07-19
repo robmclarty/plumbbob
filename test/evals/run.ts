@@ -41,6 +41,17 @@ export function deriveOutcome(result: ContractResult): Outcome {
   return result.checks.some((c) => c.kind === 'required' && !c.pass) ? 'fail' : 'pass'
 }
 
+// A precondition every contract shares: the plugin under test must actually load.
+// When it doesn't, the model says so in its own words ("the skill failed to load and
+// isn't on disk", "the skill invocation errored") and then improvises without the
+// guidance we are measuring — so any checks it fails are noise, not a behavioral
+// verdict. That is `invalid`, not `fail` (the 2026-07-18 delta saw this suppress c7).
+export function pluginLoadFailed(transcript: string): boolean {
+  return /skill (invocation )?errored|(skill|plumbbob:pb-\w+)[^.\n]{0,60}(failed to load|is(n['’]?t| not) on disk)/i.test(
+    transcript,
+  )
+}
+
 // The whole retry policy, in one reviewable function, keyed on error CLASS
 // alone (intent D5). Infra = the session machinery failed before a behavioral
 // verdict could exist: the CLI binary/auth/startup/stall family, or our own
@@ -65,14 +76,17 @@ async function attempt(contract: Contract, sweep: Sweep, model: string, run: num
   try {
     await session.warmup()
     const result = await contract.run(session, fixture)
+    // Gate: if the plugin-under-test never loaded, the behavioral checks are noise —
+    // classify invalid (precondition failed), not a fail, so it doesn't understate the rate.
+    const loadFailed = pluginLoadFailed(session.transcript())
     return {
       contract: contract.id,
       run,
       sweep,
       model,
-      outcome: deriveOutcome(result),
+      outcome: loadFailed ? 'invalid' : deriveOutcome(result),
       result,
-      error: null,
+      error: loadFailed ? 'plugin-under-test failed to load (invalid precondition)' : null,
       durationMs: Date.now() - started,
       repo: fixture.repo,
       infraRetries,
