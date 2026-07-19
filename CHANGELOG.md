@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.11] - 2026-07-18
+
+- **Changed:** the README now leads with the mechanical substrate — the gate that refuses a
+  red check, the SHA-per-step ledger, the preservation-aware revert, the PR-riding build
+  record, and the approval latch — as the thing a prompt cannot replicate, with the skeptic
+  answers referencing that lead instead of restating it. The skill-eval blockquote is
+  reframed for the shipped hardening: the adversarial-pressure side door is now closed by
+  construction (D67 retired the model-writable settings `auto` grant), and park capture is
+  named plainly as the remaining guidance-only gap.
+- **Fixed:** the skill-eval harness no longer voids a valid run as a plugin-load failure. A
+  bare "skill invocation errored" is the expected `disable-model-invocation` response when a
+  contract's prompt names a skill in prose and the model self-invokes it — the skill is on
+  disk, so the model reads `SKILL.md` and follows it — so `pluginLoadFailed` now trips only
+  on a genuine "failed to load" / "not on disk", which had been voiding every valid `c7` run.
+
 ## [0.8.10] - 2026-07-18
 
 - **Fixed:** the publish workflow no longer fails at `npm publish`. The `devEngines` pnpm
