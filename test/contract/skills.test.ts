@@ -353,6 +353,12 @@ describe('build — the default engine: implement the planned step, then verify'
     expect(defaultPath).not.toMatch(/plumbbob agent run/)
     expect(defaultPath).not.toMatch(/--mode\b/)
   })
+
+  it('reconciles a drifted subject only at the pause — presented for approval, else the deterministic subject lands (D5/D6/Q5)', () => {
+    expect(body).toMatch(/planned title → proposed\s+subject/) // the presented reconcile shape (Q5)
+    expect(body).toMatch(/-m/) // landed via the existing -m subject override (D5)
+    expect(body).toMatch(/D68 refuses/) // determinism preserved — no silent agent-authored swap (D6)
+  })
 })
 
 describe('verify — the tick: check, self-review, validate, PAUSE, checkpoint', () => {
@@ -401,6 +407,12 @@ describe('verify — the tick: check, self-review, validate, PAUSE, checkpoint',
 
   it('forbids self-minting a settings `auto` grant to force the land (D67)', () => {
     expect(body).toMatch(/latch ignores a model-minted grant/i)
+  })
+
+  it('reconciles a drifted subject only at the pause — presented for approval, else the deterministic subject lands (D5/D6/Q5)', () => {
+    expect(body).toMatch(/planned title → proposed\s+subject/) // the presented reconcile shape (Q5)
+    expect(body).toMatch(/-m/) // landed via the existing -m subject override (D5)
+    expect(body).toMatch(/D68 refuses/) // determinism preserved — no silent agent-authored swap (D6)
   })
 })
 

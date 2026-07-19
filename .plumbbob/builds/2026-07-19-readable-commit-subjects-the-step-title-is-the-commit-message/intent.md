@@ -132,7 +132,7 @@ git diff at checkpoint ───────┘─▶ body pass may reconcile vi
    suite green
    - seam: `skills/pb-step/SKILL.md`, `test/contract/skills.test.ts`
    - model: opus — skill prose sets future authoring behavior
-5. [ ] feat(pb-refine): resync the commit subject when the plan drifts —
+5. [x] feat(pb-refine): resync the commit subject when the plan drifts —
    **done when:** repair mode's guidance names the title-subject as something to bring back
    in line when the plan drifts from the diff (D5); a contract pin matches; suite green
    - seam: `skills/pb-refine/SKILL.md`, `test/contract/skills.test.ts`

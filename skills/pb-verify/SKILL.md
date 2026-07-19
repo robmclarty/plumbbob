@@ -45,6 +45,14 @@ this skill verifies it the same way: **it reads the diff, not the author**.
    findings), and the validation, then
    **stop and wait for the human's explicit approval.** This is the convergence beat;
    the human is the clock. Never checkpoint without it.
+   - **Reconcile a drifted subject here, in the open (D5).** The planned title *is* the
+     checkpoint subject (D1). If the diff drifted from it — the step landed something the
+     title no longer describes — the body pass may propose a corrected subject, but it
+     **presents** it at this pause for explicit approval: show `planned title → proposed
+     subject`, one line, as part of what the human OKs. This is the exception, not the
+     default (D6): with **nothing presented**, the deterministic title-derived subject
+     lands untouched. A silent `-m` swap is exactly the agent-authored subject D68 refuses
+     — so a reconcile is *only ever* the visible, approved kind.
 6. **Checkpoint** *(only after approval)*. Run `plumbbob checkpoint`: it makes the WIP
    commit, records the SHA, flips the step to done, appends the step to the build-log's
    `## Log`, and returns to DESIGN. The CLI owns the commit **subject** — a Conventional
@@ -62,7 +70,10 @@ this skill verifies it the same way: **it reads the diff, not the author**.
    Do **not** run a TIL scan or reach for a separate commit skill — the body is yours to
    write in one breath. Omit `--body` entirely and the CLI writes a deterministic body
    (done-when + seam + diffstat) on its own. Either way, do **not** bump the version or
-   touch the changelog — that is the human's `/version` call.
+   touch the changelog — that is the human's `/version` call. And if step 5 surfaced a
+   drifted subject the human approved, land *that* subject by adding `-m "<subject>"` —
+   overriding the title-derived default for this one commit; unpresented, the CLI's
+   deterministic subject stands.
 7. **Hand off with the next model** *(once the checkpoint lands)*. `plumbbob checkpoint`
    returns to DESIGN; then run `plumbbob handoff` and relay its boundary block. With the
    step gone from in-flight it renders `step N checkpointed — back at the boundary` and

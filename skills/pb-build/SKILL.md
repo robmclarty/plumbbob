@@ -74,6 +74,13 @@ differs from the model you're running as, say so before implementing — the hum
    build-log's `## Log`, so the history writes itself — you only supply the body (or omit
    `--body` for the deterministic done-when + seam + diffstat fallback). Do **not** bump
    the version or changelog — that is the human's `/version` call.
+   - **A drifted subject is reconciled at the pause, never silently (D5/D6).** The planned
+     title *is* the checkpoint subject (D1). If the diff drifted from it, **present** a
+     corrected subject at the pause — `planned title → proposed subject`, one line — for
+     explicit approval, and only on approval land it by adding `-m "<subject>"` to the
+     checkpoint. Present nothing and the deterministic title-derived subject lands
+     untouched: the reconcile is the human-approved exception, not a quiet `-m` swap (which
+     is the agent-authored subject D68 refuses).
    - **If `plumbbob status` shows a `harness bindings:` block**, fold any bound
      `after`-agents into that self-review as advisory input — see **§ Running bound
      agents**.
