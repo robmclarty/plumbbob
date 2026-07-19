@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.12] - 2026-07-18
+
+- **Changed:** plumbbob's plan, step, and finish commits now carry Conventional Commit
+  subjects — `chore(<scope>): plan`, `<type>(<scope>): <description>` per step, and
+  `chore(<scope>): finish` — in place of the old `plumbbob: <verb> — <title>` shape. The
+  scope is drawn from the build slug (its `YYYY-MM-DD-` date prefix stripped), and a step's
+  type comes from its title: an author-written Conventional prefix such as `fix(parser):` is
+  honored verbatim, while a bare title defaults to `feat` and plan/finish default to `chore`.
+- **Changed:** the `plumbbob` and `step N` identifiers that used to prefix the commit subject
+  now ride a marker line at the head of the commit body, so subjects stay clean while
+  `git log --grep plumbbob` still finds every plumbbob commit (D68 supersedes the
+  greppable-subject shape of D34 while keeping its CLI-owns-the-subject principle).
+
 ## [0.8.11] - 2026-07-18
 
 - **Changed:** the README now leads with the mechanical substrate — the gate that refuses a
