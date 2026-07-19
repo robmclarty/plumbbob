@@ -192,6 +192,28 @@ export function parseBuildTitle(content: string): string {
   return ''
 }
 
+const SCOPE_HEADER = /^\*\*Scope:\*\*\s*(.*)$/
+const SCOPE_PLACEHOLDER = /^<.*>$/
+
+// The build's default Conventional-Commit scope (D4): the `**Scope:**` header
+// field authored once at plan time, its value read verbatim off the line with any
+// trailing `<!-- ... -->` guidance note stripped. An unfilled placeholder — an
+// empty value or an angle-bracket placeholder like `<feature>` — parses as absent
+// (D7), so a freshly scaffolded, not-yet-edited build falls through to the next
+// scope rung (the build slug) rather than landing commits scoped `(<feature>)`.
+// null when the header is absent entirely — the pre-D4 shape (C2 back-compat).
+export function parseBuildScope(content: string): string | null {
+  for (const line of content.split('\n')) {
+    const m = SCOPE_HEADER.exec(line.trim())
+    if (m === null) {
+      continue
+    }
+    const value = (m[1] ?? '').split('<!--')[0]?.trim() ?? ''
+    return value === '' || SCOPE_PLACEHOLDER.test(value) ? null : value
+  }
+  return null
+}
+
 // The top-level `- ` bullets under a `## Heading`, each verbatim with its wrapped
 // continuation lines joined into one string (D61 keeps the `*because*` rationale
 // intact for the agent). `skipped` holds any line under the heading that was

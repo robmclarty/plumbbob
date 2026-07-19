@@ -89,6 +89,58 @@ describe('checkpoint', () => {
     expect(subject).toBe('chore(checkpoint-test): checkpoint')
   })
 
+  // Step 1 — the scope fallback chain (D3): title-scope → build-default `**Scope:**`
+  // → build slug → bare. The slug rung is already pinned by the tests above (no
+  // `**Scope:**` field, C2 back-compat); these pin the other rungs.
+  describe('the scope fallback chain (D3)', () => {
+    it("a step's own `(scope)` prefix wins over the build-default `**Scope:**` header", async () => {
+      const dir = await startedGreen()
+      writeFileSync(
+        intentPath(dir),
+        '# Checkpoint test\n\n**Scope:** build-default\n\n## Steps\n\n1. [ ] fix(widget): correct it — **done when:** a works.\n   - seam: `src/a.ts`\n',
+      )
+      writeFileSync(join(dir, 'work.txt'), 'pending\n')
+      await captureIoAsync(() => checkpoint(dir, ['1']))
+      const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
+      expect(subject).toBe('fix(widget): correct it')
+    })
+
+    it('a scopeless title falls to the `**Scope:**` header ahead of the build slug', async () => {
+      const dir = await startedGreen()
+      writeFileSync(
+        intentPath(dir),
+        '# Checkpoint test\n\n**Scope:** build-default\n\n## Steps\n\n1. [ ] First — **done when:** a works.\n   - seam: `src/a.ts`\n',
+      )
+      writeFileSync(join(dir, 'work.txt'), 'pending\n')
+      await captureIoAsync(() => checkpoint(dir, ['1']))
+      const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
+      expect(subject).toBe('feat(build-default): first')
+    })
+
+    it('an unfilled `**Scope:**` placeholder parses as absent and falls to the slug rung (D7)', async () => {
+      const dir = await startedGreen()
+      writeFileSync(
+        intentPath(dir),
+        '# Checkpoint test\n\n**Scope:** <scope>\n\n## Steps\n\n1. [ ] First — **done when:** a works.\n   - seam: `src/a.ts`\n',
+      )
+      writeFileSync(join(dir, 'work.txt'), 'pending\n')
+      await captureIoAsync(() => checkpoint(dir, ['1']))
+      const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
+      expect(subject).toBe('feat(checkpoint-test): first') // the placeholder is absent — slug wins
+    })
+
+    it('the `--plan` commit subject uses the same build-default `**Scope:**` header', async () => {
+      const dir = await startedGreen()
+      writeFileSync(
+        intentPath(dir),
+        '# Checkpoint test\n\n**Scope:** build-default\n\n## Steps\n\n1. [ ] First — **done when:** a works.\n   - seam: `src/a.ts`\n',
+      )
+      await captureIoAsync(() => checkpoint(dir, ['--plan']))
+      const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
+      expect(subject).toBe('chore(build-default): plan')
+    })
+  })
+
   it("appends a dated history line to the build-log's Log, naming the step", async () => {
     const dir = await startedGreen()
     await captureIoAsync(() => checkpoint(dir, ['1']))

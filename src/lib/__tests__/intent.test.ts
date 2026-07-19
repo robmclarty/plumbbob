@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { matchesSeam, parseBuildTitle, parseStepMeta, parseStepSeam, scrapeBullets } from '../intent.ts'
+import { matchesSeam, parseBuildScope, parseBuildTitle, parseStepMeta, parseStepSeam, scrapeBullets } from '../intent.ts'
 
 function intentWith(stepsBody: string): string {
   return `# Title\n\n## Frame\n\nstuff\n\n## Steps\n\n${stepsBody}\n\n## Open questions\n\n- none\n`
@@ -180,6 +180,31 @@ describe('scrapeBullets', () => {
     const { items, skipped } = scrapeBullets(malformed, '## Decisions')
     expect(items).toEqual(['D1: fine', 'D3: fine again'])
     expect(skipped).toEqual(['D2 forgot its dash'])
+  })
+})
+
+describe('parseBuildScope', () => {
+  it('reads the `**Scope:**` header value', () => {
+    expect(parseBuildScope('**Phase**: frame\n**Scope:** commit-subject\n\n## Frame\n')).toBe('commit-subject')
+  })
+
+  it('strips a trailing HTML comment note', () => {
+    expect(parseBuildScope('**Scope:** commit-subject  <!-- the per-build default scope (D4) -->\n')).toBe(
+      'commit-subject',
+    )
+  })
+
+  it('parses an angle-bracket placeholder as absent (D7)', () => {
+    expect(parseBuildScope('**Scope:** <scope>\n')).toBeNull()
+  })
+
+  it('parses an empty value as absent (D7)', () => {
+    expect(parseBuildScope('**Scope:**\n')).toBeNull()
+    expect(parseBuildScope('**Scope:**   \n')).toBeNull()
+  })
+
+  it('is absent when the header is missing entirely (C2 back-compat)', () => {
+    expect(parseBuildScope('# Title\n\n## Frame\n\nno scope header here\n')).toBeNull()
   })
 })
 

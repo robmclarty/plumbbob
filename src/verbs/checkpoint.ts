@@ -29,7 +29,7 @@ import {
 import { runCheck } from '../lib/check.ts'
 import { checkLatch } from '../lib/latch.ts'
 import { markStepDone, parseSteps } from '../lib/orient.ts'
-import { parseStepSeam, scopeDrift } from '../lib/intent.ts'
+import { parseBuildScope, parseStepSeam, scopeDrift } from '../lib/intent.ts'
 import { conventionalSubject, subjectFromTitle, withMarker } from '../lib/commitmsg.ts'
 import { appendToSection, checkpointLogLine } from '../lib/buildlog.ts'
 import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
@@ -129,11 +129,12 @@ function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
   return 0
 }
 
-// The plan commit's CLI-owned subject (D68): `chore(<scope>): plan`, the scope drawn
-// from the active build's slug (a bare `chore: plan` when none resolves). The
-// `plumbbob plan` identifier rides the body marker, not the subject.
+// The plan commit's CLI-owned subject (D68): `chore(<scope>): plan`, the scope
+// resolved through the build-default fallback chain (a bare `chore: plan` when
+// none resolves). The `plumbbob plan` identifier rides the body marker, not the
+// subject.
 function planSubject(root: string): string {
-  return conventionalSubject({ type: 'chore', scope: buildScope(activeBuild(root)), description: 'plan' })
+  return conventionalSubject({ type: 'chore', scope: buildDefaultScope(root), description: 'plan' })
 }
 
 // Step resolution (D3): explicit arg > in-flight STEP file > first undone step in
@@ -240,17 +241,35 @@ function statsSuffix(root: string, step: number): string | null {
 }
 
 // The CLI-owned, deterministic commit subject (D68): a Conventional `type(scope):
-// description`. The scope comes from the active build's slug; the type and wording
-// come from the step's title — an author-written prefix (`fix(parser): …`) is honoured
-// verbatim, a bare title defaults to `feat`. A titleless step falls back to
-// `chore(<scope>): checkpoint`. The `plumbbob`/`step N` identifiers ride the body
-// marker, not the subject; a `-m` override or `--body` prose is a separate concern.
+// description`. The type and wording come from the step's title — an author-written
+// prefix (`fix(parser): …`) is honoured verbatim, a bare title defaults to `feat`.
+// The scope falls back through the chain (D3): the title's own `(scope)` wins
+// (handled inside `subjectFromTitle`), else `buildDefaultScope`. A titleless step
+// falls back to `chore(<scope>): checkpoint`. The `plumbbob`/`step N` identifiers
+// ride the body marker, not the subject; a `-m` override or `--body` prose is a
+// separate concern.
 function subjectForStep(root: string, step: number): string {
-  const scope = buildScope(activeBuild(root))
+  const scope = buildDefaultScope(root)
   const title = titleForStep(root, step)
   return title !== null && title.trim().length > 0
     ? subjectFromTitle(title, 'feat', scope)
     : conventionalSubject({ type: 'chore', scope, description: 'checkpoint' })
+}
+
+// The build-default Conventional scope (D3/D4): the `**Scope:**` header field in
+// intent.md when authored and filled, else the build slug (D68's original rung,
+// now the penultimate one), else null — a bare subject (C2 back-compat: a build
+// with neither field behaves exactly as before D4).
+function buildDefaultScope(root: string): string | null {
+  try {
+    const fromHeader = parseBuildScope(readFileSync(intentPath(root), 'utf8'))
+    if (fromHeader !== null) {
+      return fromHeader
+    }
+  } catch {
+    // no intent.md yet — fall through to the slug rung.
+  }
+  return buildScope(activeBuild(root))
 }
 
 function titleForStep(root: string, step: number): string | null {

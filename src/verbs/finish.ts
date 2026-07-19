@@ -15,6 +15,7 @@ import {
   checkpointsPath,
   clearTick,
   hasSession,
+  intentPath,
   readStats,
   reportPath,
   resolveBuild,
@@ -26,6 +27,7 @@ import {
   type StepStats,
 } from '../lib/sidecar.ts'
 import { conventionalSubject, withMarker } from '../lib/commitmsg.ts'
+import { parseBuildScope } from '../lib/intent.ts'
 
 export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   const root = findRepoRoot(cwd)
@@ -54,7 +56,7 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   if (isDirty(root)) {
     stageAll(root)
   }
-  const sha = commit(root, subject(slug), withMarker('plumbbob finish', bodyArg(args) ?? undefined))
+  const sha = commit(root, subject(root, slug), withMarker('plumbbob finish', bodyArg(args) ?? undefined))
 
   // Clear the control state: the in-flight markers first, then the session sentinel
   // last (so "no session" flips exactly at the end). Deleting STATE also drops the
@@ -79,12 +81,27 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   return 0
 }
 
-// The CLI-owned final-commit subject (D68): `chore(<scope>): finish`, the scope drawn
-// from the build's slug (a bare `chore: finish` when none resolves, e.g. `--local`),
-// mirroring the plan/step Conventional shape so one grammar spans the whole history.
-// The `plumbbob finish` identifier rides the body marker, not the subject.
-function subject(slug: string | null): string {
-  return conventionalSubject({ type: 'chore', scope: buildScope(slug), description: 'finish' })
+// The CLI-owned final-commit subject (D68): `chore(<scope>): finish`, the scope
+// resolved through the same build-default fallback chain as plan/step subjects
+// (D3/D4): the `**Scope:**` header field, else the build slug, else bare (e.g.
+// `--local`). The `plumbbob finish` identifier rides the body marker, not the
+// subject.
+function subject(root: string, slug: string | null): string {
+  return conventionalSubject({ type: 'chore', scope: buildDefaultScope(root, slug), description: 'finish' })
+}
+
+// See checkpoint.ts's twin of this helper (same fallback, this verb's own `slug`
+// resolution instead of the active-build cursor).
+function buildDefaultScope(root: string, slug: string | null): string | null {
+  try {
+    const fromHeader = parseBuildScope(readFileSync(intentPath(root, slug), 'utf8'))
+    if (fromHeader !== null) {
+      return fromHeader
+    }
+  } catch {
+    // no intent.md — fall through to the slug rung.
+  }
+  return buildScope(slug)
 }
 
 // `--body` reads the final-commit body from stdin (the single-quoted heredoc of
