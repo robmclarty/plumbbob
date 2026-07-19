@@ -126,7 +126,7 @@ git diff at checkpoint ───────┘─▶ body pass may reconcile vi
    (D9); a contract pin matches the new guidance; suite green
    - seam: `skills/pb-plan/SKILL.md`, `test/contract/skills.test.ts`
    - model: opus — skill prose sets future authoring behavior
-4. [ ] feat(pb-step): keep the sharpened title a clean commit subject —
+4. [x] feat(pb-step): keep the sharpened title a clean commit subject —
    **done when:** the sharpen guidance keeps the next step's title a plain `type(scope):`
    subject (paths to `seam`) and lets it override the build scope; a contract pin matches;
    suite green

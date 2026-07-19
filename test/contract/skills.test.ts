@@ -430,6 +430,11 @@ describe('refine — keep intent.md true: attack for holes + repair drift', () =
     expect(body).toMatch(/approv/i)
   })
 
+  it('names the step title-subject among the drift repair re-syncs — a clean type(scope): subject (D5)', () => {
+    expect(body).toMatch(/type\(scope\):\s+description/) // the title IS the commit subject (D1)
+    expect(body).toMatch(/never jammed into the title/i) // load-bearing paths stay in seam (D2)
+  })
+
   it('attack authors the expanded question form and walks it through in the chat (D2 plain-lean-format)', () => {
     expect(body).toContain('*plain:*')
     expect(body).toContain('*lean:*')
