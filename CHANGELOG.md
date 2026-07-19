@@ -5,6 +5,38 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.14] - 2026-07-19
+
+- **Changed:** a plumbbob step's title line is now authored as the Conventional Commit
+  subject itself — one source of truth the human writes once — rather than a line-item the
+  checkpoint assembler jams into a slug-scoped subject. Load-bearing detail (file paths,
+  module names) moves out of the title into the step's `seam`, so the title reads as plain
+  English and a clean subject at the same time, and titles aim for a soft ≤72 characters
+  (GitHub's convention, no lint). The `pb-plan`, `pb-step`, and `pb-refine` skills and the
+  intent template teach this, and `pb-refine`'s repair mode now treats a title that no
+  longer describes the diff as drift to re-sync.
+- **Changed:** the commit scope now resolves through a graceful fallback chain — the title's
+  own `(scope)` → a per-build `**Scope:**` default header authored once in `intent.md` →
+  the build slug → no scope at all. A step's `(scope)` names the code area it touches while
+  the build-default names the feature as the catch-all; a build that sets neither keeps the
+  prior slug-derived behavior, and an unfilled `**Scope:**` placeholder parses as absent so
+  a freshly scaffolded build never lands `(<scope>)` commits (amends D68).
+- **Changed:** when the diff drifts from the planned title before the verify pause,
+  `/pb-build` and `/pb-verify` now present a reconciled subject (planned title → proposed
+  subject) for explicit approval and land it via the existing `-m` override; with nothing
+  presented, the deterministic title-derived subject stands — a silent swap would reopen the
+  agent-authored subjects D68 refuses.
+- **Changed:** `intent.md` open questions now author in an expanded plain/lean form — an
+  opener slugged at birth, a `*plain:*` cold-reader explanation with stakes, and a `*lean:*`
+  proposed resolution — so a hole can be decided without a round-trip back to the chat, and
+  self-collapses to one line once resolved. Decisions and Constraints are slugged where they
+  are born (`D1 (in-memory-bucket)`) and every reference copies the gloss rather than a bare
+  `D4`, so a reference reads on its own. The `pb-plan`, `pb-refine`, and `pb-park` skills,
+  the intent template, and `docs/techniques.md` all teach this, with the compression
+  principle (compress what's settled, expand what's pending) written into the docs.
+- **Fixed:** `parseOpenQuestions` reads through the slug-at-birth gloss on a question opener
+  (`- Q2 (some-slug): …`) so the expanded plain/lean sub-lines never move the status count.
+
 ## [0.8.13] - 2026-07-19
 
 - **Added:** every spike now leaves a durable `spike-NN-<slug>.md` report in the build
