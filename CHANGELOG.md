@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.10] - 2026-07-18
+
+- **Fixed:** the publish workflow no longer fails at `npm publish`. The `devEngines` pnpm
+  pin made npm 11 reject every npm command with `EBADDEVENGINES` — including the publish
+  itself, since the runner's package manager is npm — so the release job now strips that
+  dev-only field from the ephemeral checkout just before publishing. The repo keeps the
+  strict pnpm guard for contributors, and the published tarball simply omits a field
+  consumers never use.
+
 ## [0.8.9] - 2026-07-18
 
 - **Fixed:** `pnpm check` is now self-contained on a clean checkout. The default test
