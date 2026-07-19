@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.9] - 2026-07-18
+
+- **Fixed:** `pnpm check` is now self-contained on a clean checkout. The default test
+  suite drives the built plugin (`dist/cli.js`), but CI — and the publish gate — run the
+  check before the build, so a fresh checkout had no `dist` and three eval-helper tests
+  threw, leaving CI red since it was introduced (0.8.7, 0.8.8). It passed locally only
+  because a stale `dist` from an earlier build was lying around. A vitest global setup now
+  builds `dist` on demand when it is absent, so the gate no longer depends on a prior
+  build; it is a no-op when `dist` already exists, and the eval tier is untouched.
+- **Fixed:** the `/version` release skill now tags and pushes the release commit, so a
+  bump actually triggers the npm publish and GitHub Release workflows instead of stopping
+  at a local `chore: release` commit that never reached a tag.
+
 ## [0.8.8] - 2026-07-18
 
 - **Changed:** the approval latch no longer honors an `auto` grant set in a settings file.
