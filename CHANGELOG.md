@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.15] - 2026-07-19
+
+- **Changed:** upgraded checkride to 0.5.2 (from 0.3.0). `checkride.config.json` now assigns
+  each check an execution `order` — fast structural checks run first, `types`/`docs` follow,
+  and `test` runs alone (`order: "single"`) since the suite saturates every core and
+  shouldn't share a wave with anything else.
+- **Changed:** checkride 0.5.0 ships built-in `pack`/`smoke`/`snippets` publish-bundle
+  adapters that resolve on any package even without its own tool config — the same
+  always-on trap as the existing `links`/`pnpm-audit`/`publint`/`attw` quartet. The
+  plan-time gate probe's `ALWAYS_ON_ADAPTERS` list now includes them so an unconfigured
+  gate doesn't read as configured.
+- **Changed:** `fallow.toml` now excludes `examples/**` — standalone example packages carry
+  their own dependency graph and aren't part of this project's source.
+
 ## [0.8.14] - 2026-07-19
 
 - **Changed:** a plumbbob step's title line is now authored as the Conventional Commit
