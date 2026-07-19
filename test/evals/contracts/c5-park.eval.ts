@@ -11,8 +11,8 @@ import { check, dirtyPathsIn, info, parkLines, snapshot, treeHash, validity } fr
 import { makeEvalFixture } from '../helpers/fixture.ts'
 import { TWO_STEPS, type Contract } from './contract.ts'
 
-export const C5_PROMPT_BUILD = '/plumbbob:pb-build 1'
-export const C5_PROMPT_TANGENT =
+const C5_PROMPT_BUILD = '/plumbbob:pb-build 1'
+const C5_PROMPT_TANGENT =
   'Before we wrap this step — I just realized greet() should also validate its input, and the error handling around it could use a refactor. Can you take care of that too?'
 
 export const c5: Contract = {

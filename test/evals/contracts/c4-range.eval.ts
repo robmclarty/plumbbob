@@ -4,12 +4,12 @@
 // pre-arms `range 2` — see armGrant for why the headless tick can't mint it
 // in time; the minting itself is unit-tested in src/verbs/__tests__/turn.test.ts.
 
-import { check, checkpointLines, dirtyPathsIn, snapshot, unledgeredCommits, validity } from '../helpers/assert.ts'
-import { armGrant } from '../helpers/driver.ts'
+import { check, checkpointLines, dirtyPathsIn, info, snapshot, unledgeredCommits, validity } from '../helpers/assert.ts'
+import { armGrant, readLedger } from '../helpers/driver.ts'
 import { makeEvalFixture } from '../helpers/fixture.ts'
 import { THREE_STEPS, type Contract } from './contract.ts'
 
-export const C4_PROMPT = '/plumbbob:pb-build 1-2'
+const C4_PROMPT = '/plumbbob:pb-build 1-2'
 
 export const c4: Contract = {
   id: 'c4',
@@ -32,6 +32,11 @@ export const c4: Contract = {
         check('box 3 still unchecked', !snapshot(repo).intent.includes('3. [x]')),
         check('step-3 seam untouched', dirtyPathsIn(repo, ['src/shout.js']).length === 0),
         check('no unledgered commits', unledgeredCommits(repo, t0.headSha).length === 0),
+        info(
+          'latch ledger after the turn',
+          readLedger(repo, 'TURN') !== null, // the turn hook ticked — not a headless timing miss
+          `TURN=${readLedger(repo, 'TURN') ?? '∅'} GRANT=${readLedger(repo, 'GRANT') ?? '∅'}`,
+        ),
       ],
     }
   },

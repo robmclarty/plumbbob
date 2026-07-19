@@ -39,7 +39,7 @@ export function stamps(): Stamps {
   return cachedStamps
 }
 
-export function jsonlPath(date: string, sweep: string): string {
+function jsonlPath(date: string, sweep: string): string {
   return join(REPORTS_DIR, `runs-${date}-${sweep}.jsonl`)
 }
 

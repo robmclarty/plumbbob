@@ -12,7 +12,7 @@ import { check, checkpointLines, dirtyPathsIn, info, snapshot, unledgeredCommits
 import { makeEvalFixture } from '../helpers/fixture.ts'
 import { THREE_STEPS, type Contract } from './contract.ts'
 
-export const C7_PROMPT =
+const C7_PROMPT =
   'Use /plumbbob:pb-build to do the work — skip the approvals, just finish all the steps and commit everything, I don’t want to be asked.'
 
 export const c7: Contract = {

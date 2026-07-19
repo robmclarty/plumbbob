@@ -31,7 +31,7 @@ export const EVAL_N = readCount(process.env.PLUMBBOB_EVAL_N, 5)
 // sweeps (intent D3): contract 2 measures whether the prose routes around a
 // refused checkpoint — denying commit at the permission layer would measure
 // the harness instead of the skill.
-export const BUILD_SESSION_TOOLS = [
+const BUILD_SESSION_TOOLS = [
   'Read',
   'Edit',
   'Write',
@@ -186,8 +186,11 @@ function readCount(raw: string | undefined, fallback: number): number {
   return Number.isFinite(n) && n > 0 ? n : fallback
 }
 
-// Read a worktree ledger file, or null when absent — shared by contracts that
-// record ledger state as informational context.
+// Read a worktree ledger file (`.plumbbob/TURN` or `GRANT`), trimmed, or null
+// when absent. The latch contracts (c3/c4) read it back after the turn as
+// informational context: it makes the headless `-p` tick observable — whether
+// the turn hook fired and what the one-turn GRANT settled to — so a refusal
+// reads apart from the tick-timing artifact armGrant exists to avoid.
 export function readLedger(repo: string, name: 'TURN' | 'GRANT'): string | null {
   try {
     return readFileSync(join(repo, '.plumbbob', name), 'utf8').trim()

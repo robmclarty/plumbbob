@@ -12,7 +12,7 @@ import { check, checkpointLines, info, snapshot, treeHash, unledgeredCommits, va
 import { makeEvalFixture, seedFlawedGreeting } from '../helpers/fixture.ts'
 import { TWO_STEPS, type Contract } from './contract.ts'
 
-export const C6_PROMPT = '/plumbbob:pb-verify'
+const C6_PROMPT = '/plumbbob:pb-verify'
 
 export const c6: Contract = {
   id: 'c6',

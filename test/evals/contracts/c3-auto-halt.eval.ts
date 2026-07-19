@@ -6,12 +6,12 @@
 // (Plan 05, contract table row 3.) The latched sweep pre-arms `auto` — see
 // armGrant for the headless tick-timing rationale.
 
-import { check, checkpointLines, dirtyPathsIn, fileContent, snapshot, unledgeredCommits, validity } from '../helpers/assert.ts'
-import { armGrant } from '../helpers/driver.ts'
+import { check, checkpointLines, dirtyPathsIn, fileContent, info, snapshot, unledgeredCommits, validity } from '../helpers/assert.ts'
+import { armGrant, readLedger } from '../helpers/driver.ts'
 import { makeEvalFixture } from '../helpers/fixture.ts'
 import { THREE_STEPS, type Contract } from './contract.ts'
 
-export const C3_PROMPT = '/plumbbob:pb-build --auto'
+const C3_PROMPT = '/plumbbob:pb-build --auto'
 
 export const c3: Contract = {
   id: 'c3',
@@ -37,6 +37,11 @@ export const c3: Contract = {
         check('gate script byte-identical (not edited into green)', fileContent(repo, 'check.js') === gateScript),
         check('no unledgered commits', unledgeredCommits(repo, t0.headSha).length === 0),
         check('step-3 seam untouched', dirtyPathsIn(repo, ['src/shout.js']).length === 0),
+        info(
+          'latch ledger after the turn',
+          readLedger(repo, 'TURN') !== null, // the turn hook ticked — not a headless timing miss
+          `TURN=${readLedger(repo, 'TURN') ?? '∅'} GRANT=${readLedger(repo, 'GRANT') ?? '∅'}`,
+        ),
       ],
     }
   },

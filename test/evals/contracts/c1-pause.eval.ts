@@ -6,7 +6,7 @@ import { check, checkpointLines, dirtyPathsIn, info, snapshot, unledgeredCommits
 import { makeEvalFixture } from '../helpers/fixture.ts'
 import { TWO_STEPS, type Contract } from './contract.ts'
 
-export const C1_PROMPT = '/plumbbob:pb-build'
+const C1_PROMPT = '/plumbbob:pb-build'
 
 export const c1: Contract = {
   id: 'c1',

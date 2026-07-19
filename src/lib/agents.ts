@@ -494,7 +494,7 @@ export type HarnessParse =
 // is the author's error and is refused loud. Slot *contents* stay lenient (D61): a
 // slot value may be one name or a list, and blanks/non-strings drop rather than
 // refuse, because bindings feed a spawn, not a git-gating parse.
-export function parseHarness(raw: unknown): HarnessParse {
+function parseHarness(raw: unknown): HarnessParse {
   if (!isObject(raw)) {
     return { ok: false, error: 'harness.json must be a JSON object.' }
   }
