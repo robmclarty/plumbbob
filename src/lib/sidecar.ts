@@ -47,6 +47,19 @@ export function slugify(title: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
+// The Conventional-Commit scope for a build (D68): its slug with the `YYYY-MM-DD-`
+// date prefix `start` prepends stripped off, so `2026-07-18-escape-hatch` yields the
+// human-meaningful `escape-hatch`. Null when no build resolves (`--local`, or a slug
+// that is nothing but a date) — the caller then omits the `(scope)` segment, which
+// Conventional Commits permit.
+export function buildScope(slug: string | null): string | null {
+  if (slug === null) {
+    return null
+  }
+  const stripped = slug.replace(/^\d{4}-\d{2}-\d{2}-/, '')
+  return stripped.length > 0 ? stripped : null
+}
+
 // Existing build slugs — the directory names under `builds/`, sorted. Empty when
 // `builds/` is absent (a `--local` repo, or before the first tracked `start`).
 export function listBuilds(root: string): ReadonlyArray<string> {

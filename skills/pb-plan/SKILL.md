@@ -74,6 +74,13 @@ an agent can follow with `/pb-build`. The argument only seeds how you get there.
    sharpened just-in-time when you reach them with `/pb-step`. Keep each small enough to
    verify in one review pass.
 
+   **Give the title a Conventional-Commit type where the change has one** *(optional)*:
+   a `<title>` that opens with `fix:`, `feat(escape-hatch):`, `chore:`, … becomes the
+   checkpoint's commit subject verbatim (its scope and breaking `!` honored) — this is
+   how each step lands a *real* `feat`/`fix`/`chore` in `git log`. Skip the prefix and
+   the checkpoint defaults the type to `feat` and draws the scope from the build slug, so
+   a plain title still yields a clean `feat(<slug>): <title>` ([D68](../../docs/decisions.md#d68)).
+
    **Recommend a model per step where the signal is clear** *(optional)*: the
    `- model:` sub-line names the **smallest model that can carry the step**, with the
    one-phrase why — the human buys capability only where the step needs it. E.g.
@@ -106,7 +113,8 @@ an agent can follow with `/pb-build`. The argument only seeds how you get there.
    up automatically (it lives in the build folder).
 6. **Commit the plan.** Once the human approves the frame and steps, run
    `plumbbob checkpoint --plan` to commit the scaffold on its own — subject
-   `plumbbob: plan — <title>`, only `.plumbbob/builds/<slug>/`, a `plan <sha>` line in
+   `chore(<scope>): plan` (with a `plumbbob plan` body marker), only `.plumbbob/builds/<slug>/`,
+   a `plan <sha>` line in
    `checkpoints`. This keeps the first step's diff clean, so history reads
    baseline → plan → steps. Pass a proportional `--body` (the single-quoted stdin
    heredoc) when the rationale is worth carrying; skip it for a small plan. Do this

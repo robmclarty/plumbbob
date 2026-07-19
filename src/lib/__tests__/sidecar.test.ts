@@ -7,6 +7,7 @@ import {
   beginSession,
   buildDir,
   buildLogPath,
+  buildScope,
   checkpointsPath,
   clearSpike,
   bumpStepStat,
@@ -120,6 +121,21 @@ describe('slugify', () => {
 
   it('yields an empty slug when the title has no alphanumerics (caller must reject)', () => {
     expect(slugify('!!! ??? ---')).toBe('')
+  })
+})
+
+describe('buildScope (D68 — the Conventional-Commit scope)', () => {
+  it('strips the YYYY-MM-DD- date prefix start prepends', () => {
+    expect(buildScope('2026-07-18-escape-hatch')).toBe('escape-hatch')
+  })
+
+  it('leaves an already-dateless slug untouched (e.g. an explicit --slug)', () => {
+    expect(buildScope('checkpoint-test')).toBe('checkpoint-test')
+  })
+
+  it('returns null when no build resolves or nothing survives the strip', () => {
+    expect(buildScope(null)).toBeNull()
+    expect(buildScope('2026-07-18-')).toBeNull()
   })
 })
 

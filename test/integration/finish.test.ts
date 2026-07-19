@@ -27,8 +27,11 @@ describe('plumbbob finish (the close-out, D9/D15)', () => {
     writeReport(dir)
     expect(runCli(dir, ['finish']).status).toBe(0)
 
-    // final commit under the greppable `finish` subject (D15).
-    expect(headSubject(dir)).toBe('plumbbob: finish — Finish demo')
+    // final commit under the Conventional `finish` subject (D68); the `plumbbob
+    // finish` identifier moved to the body, where `git log --grep` still finds it.
+    expect(headSubject(dir)).toBe('chore(finish-demo): finish')
+    const body = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%b'], { encoding: 'utf8' })
+    expect(body).toContain('plumbbob finish')
 
     // the build folder IS the archive (D8): artifacts stay in place, committed, and
     // ride the branch into the PR. No local-only `archive/` copy is made.
@@ -52,7 +55,7 @@ describe('plumbbob finish (the close-out, D9/D15)', () => {
     expect(res.status).toBe(0) // the defining choice: no refuse-without-report gate
     expect(res.stderr).toContain('no report.md found')
     expect(existsSync(join(dir, '.plumbbob', 'builds', 'no-report-here', 'report.md'))).toBe(false)
-    expect(headSubject(dir)).toBe('plumbbob: finish — No report here')
+    expect(headSubject(dir)).toBe('chore(no-report-here): finish')
   })
 
   it('appends the checkpoint SHAs to the committed report', () => {
@@ -76,7 +79,8 @@ describe('plumbbob finish (the close-out, D9/D15)', () => {
     runCli(dir, ['start', '--local', 'Local run'])
     writeReport(dir)
     expect(runCli(dir, ['finish']).status).toBe(0)
-    expect(headSubject(dir)).toBe('plumbbob: finish — Local run')
+    // --local resolves no build, so no scope: a bare `chore: finish` (D68).
+    expect(headSubject(dir)).toBe('chore: finish')
     // --local excludes the whole sidecar, so nothing under .plumbbob is tracked.
     expect(gitTracked(dir, '.plumbbob/report.md')).toBe(false)
     expect(sidecarExists(dir, 'STATE')).toBe(false)

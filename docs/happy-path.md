@@ -305,7 +305,8 @@ Done. All three steps checkpointed and green.
 ```
 
 Then `plumbbob finish` appends the checkpoint SHAs to the report, makes the final commit
-(subject `plumbbob: finish — <title>`), and clears the control state (`STATE`, the cursor,
+(subject `chore(rate-limit-the-login-endpoint): finish`, with a `plumbbob finish` body marker),
+and clears the control state (`STATE`, the cursor,
 the in-flight markers). There's no separate archive copy — the tracked build folder *is*
 the record now, so it merges into `main` with the branch:
 

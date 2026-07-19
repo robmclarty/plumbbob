@@ -193,17 +193,17 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   personal machinery, not something imposed on the repo. Enforced by
   `rules/no-gitignore.yml`: the string `.gitignore` doesn't appear in `src/`. *Tagged in*
   `git.ts`, `sidecar.ts`.
-- <a id="d34"></a>**D34 — The CLI owns every commit subject; bodies arrive via `--body`.** One greppable
-  shape across history — `plumbbob: plan — <title>`, `plumbbob: step N — <title>` (bare
-  `step N done` as the titleless fallback), `plumbbob: finish — <title>` — composed by the
-  CLI, never the skill. A skill-composed, proportional commit *body* rides along through a
-  `--body` stdin heredoc. *Tagged in* `git.ts`, `checkpoint.ts`, `finish.ts`, the
+- <a id="d34"></a>**D34 — The CLI owns every commit subject; bodies arrive via `--body`.** The subject is
+  composed by the CLI, never the skill; a skill-composed, proportional commit *body* rides along through
+  a `--body` stdin heredoc. The subject *shape* — originally one greppable
+  `plumbbob: plan/step N/finish — <title>` family — is now Conventional ([**D68**](#d68)); this
+  decision's ownership principle is unchanged. *Tagged in* `git.ts`, `checkpoint.ts`, `finish.ts`, the
   `pb-finish` skill.
 - <a id="d35"></a>**D35 — The deterministic fallback body.** Without `--body`, a checkpoint's commit body
-  is derived, not generated: the step's done-when, its seam, and the staged diffstat.
-  *Tagged in* `git.ts`, `checkpoint.ts`.
+  is derived, not generated: the step's done-when, its seam, and the staged diffstat — all following the
+  `plumbbob step N` marker line ([**D68**](#d68)). *Tagged in* `git.ts`, `checkpoint.ts`.
 - <a id="d36"></a>**D36 — Plan approval gets its own commit.** `checkpoint --plan` commits only the
-  build's artifact folder as `plumbbob: plan — <title>` and records a `plan <sha>` line,
+  build's artifact folder as `chore(<scope>): plan` ([**D68**](#d68)) and records a `plan <sha>` line,
   so the scaffold never pollutes the first step's diff and history reads baseline → plan →
   steps → finish. *Tagged in* `checkpoint.ts`, `git.ts`, `sidecar.ts`, the `pb-plan`
   skill.
@@ -401,6 +401,22 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10*
   who relied on it isn't silently changed. Amends [**D64**](#d64) (five-row), [**D65**](#d65), and
   [**D27**](#d27). *Tagged in* `latch.ts`, `settings.ts`, `doctor.ts`, `agent.ts`, `skills/pb-build`,
   `skills/pb-verify`.
+- <a id="d68"></a>**D68 — Commit subjects are Conventional Commits; `plumbbob`/`step N` move to the body.**
+  Every plumbbob commit subject now reads as `type(scope): description`, so `git log` speaks the same
+  grammar as the rest of the branch: `chore(<scope>): plan`, a per-step `<type>(<scope>): <description>`
+  (titleless fallback `chore(<scope>): checkpoint`), and `chore(<scope>): finish`. The **scope** is the
+  build's slug with its `YYYY-MM-DD-` date prefix stripped (`2026-07-18-escape-hatch` → `escape-hatch`),
+  omitted entirely when none resolves (`--local` → a bare `chore: finish`). The **type** comes from the
+  step's title: an author-written Conventional prefix (`fix(parser): handle empty seam`) is honored
+  verbatim — its scope and breaking `!` win — while a bare prose title defaults to `feat` (plan and
+  finish default to `chore`) and has its sentence-case opener de-capitalised. The `plumbbob` and
+  `step N` identifiers the old subject carried now ride a **marker line at the head of the body**
+  (`plumbbob step 1`, `plumbbob plan`, `plumbbob finish`), prepended whether the body is `--body` prose,
+  the deterministic fallback ([**D35**](#d35)), or empty — so `git log --grep plumbbob` still finds every
+  plumbbob commit. Supersedes the greppable-subject *shape* of [**D34**](#d34); D34's ownership principle —
+  the CLI owns every subject, bodies arrive via `--body` — stands, as does [**D36**](#d36)'s
+  plan-gets-its-own-commit. *Tagged in* `commitmsg.ts`, `sidecar.ts`, `checkpoint.ts`, `finish.ts`,
+  the `pb-verify`/`pb-plan`/`pb-finish` skills.
 
 ### Superseded
 

@@ -39,8 +39,11 @@ grew — but its everyday job is to sharpen, not to invent.
    a step that sharpened into rote work can drop to a smaller model; one that grew subtle
    earns a frontier one. Advisory, plain text (no backticks), never a gate.
 3. **Get the human's OK**, then write it into `## Steps` in the standard format —
-   `N. [ ] <title> — **done when:** <criterion>` with a `- seam:` sub-line. Revise the
-   existing step in place; only append when you are genuinely adding an increment.
+   `N. [ ] <title> — **done when:** <criterion>` with a `- seam:` sub-line. Give the
+   `<title>` an optional Conventional-Commit prefix (`fix:`, `feat(scope):`, …) when the
+   change has a clear type — it becomes the checkpoint's commit subject; a plain title
+   defaults to `feat` with the build slug as scope ([D68](../../docs/decisions.md#d68)).
+   Revise the existing step in place; only append when you are genuinely adding an increment.
 4. **Revise the step's harness bindings if they drifted too** *(optional)*. If the
    build carries a `harness.json` (beside `intent.md`) and the reality that moved the
    step also changed which agents it wants, sharpen that step's slot bindings

@@ -59,6 +59,8 @@ describe('e2e: a full PlumbBob session end to end', () => {
     expect(phase(dir)).toBe('DESIGN')
     expect(readSidecar(dir, 'checkpoints')).toMatch(/step 1 [0-9a-f]{7,}/)
     expect(readSidecar(dir, 'intent.md')).toContain('1. [x] Build the widget') // box flipped
+    // Conventional step subject: type defaults to feat, scope is the slug (D68).
+    expect(headSubject(dir)).toBe('feat(e2e-demo): build the widget')
 
     // capture a tangent (the dumb CLI path).
     expect(runCli(dir, ['park', 'a deferred idea for later']).status).toBe(0)
@@ -69,8 +71,12 @@ describe('e2e: a full PlumbBob session end to end', () => {
     writeSidecar(dir, 'report.md', '# Report — E2E demo\n\n## What shipped\n\nThe widget.\n')
     expect(runCli(dir, ['finish']).status).toBe(0)
 
-    // the final commit lands under the greppable `finish` subject (D15).
-    expect(headSubject(dir)).toBe('plumbbob: finish — E2E demo')
+    // the final commit lands under the Conventional `finish` subject (D68); its
+    // `plumbbob finish` identifier keeps the body greppable.
+    expect(headSubject(dir)).toBe('chore(e2e-demo): finish')
+    expect(execFileSync('git', ['-C', dir, 'log', '-1', '--format=%b'], { encoding: 'utf8' })).toContain(
+      'plumbbob finish',
+    )
 
     // the build folder IS the archive (D8): its artifacts stay in place, committed,
     // so they ride the branch into the PR. No `archive/` copy exists.

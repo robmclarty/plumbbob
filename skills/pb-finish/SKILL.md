@@ -29,8 +29,9 @@ record.
    - **Deferred tangents** — the harvested items that become future work.
    This is the "yeah, I did that" artifact. Write it by default; the human may edit it.
 2. **Finish.** Run `plumbbob finish`, which appends the checkpoint SHAs to the
-   report and makes the final commit — subject `plumbbob: finish — <title>`,
-   with an optional proportional body via `--body` (the stdin heredoc) — then
+   report and makes the final commit — subject `chore(<scope>): finish`, its body
+   led by a `plumbbob finish` marker plus an optional proportional `--body` (the
+   stdin heredoc) — then
    clears the control state (the in-flight markers, then `STATE` last — one delete
    drops both the session sentinel and the active-build cursor it carries). The
    build folder stays in place, committed, and rides the branch into the PR.

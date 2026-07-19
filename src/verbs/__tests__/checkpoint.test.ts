@@ -46,31 +46,37 @@ describe('checkpoint', () => {
     expect(stdout).toMatch(/step 1 checkpointed — [0-9a-f]{9}\. Back at the boundary/)
   })
 
-  it('titles the commit subject `plumbbob: step N — <title>` from intent.md', async () => {
+  it('titles the commit subject `type(scope): description` from intent.md, keeping plumbbob/step in the body (D68)', async () => {
     const dir = await startedGreen()
     writeFileSync(join(dir, 'work.txt'), 'pending\n') // ensure a fresh commit is made
     await captureIoAsync(() => checkpoint(dir, ['1']))
     const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
-    expect(subject).toBe('plumbbob: step 1 — First')
+    // Conventional subject: scope is the build slug, type defaults to `feat`, the
+    // sentence-case title is de-capitalised. No `plumbbob`/`step N` in the subject.
+    expect(subject).toBe('feat(checkpoint-test): first')
+    expect(subject).not.toMatch(/plumbbob|step 1/)
+    const body = execFileSync('git', ['log', '-1', '--format=%b'], { cwd: dir, encoding: 'utf8' })
+    expect(body).toContain('plumbbob step 1') // the relocated identifier keeps `git log --grep` working
   })
 
-  it('composes a deterministic body — done-when, seam, diffstat — when no --body is given', async () => {
+  it('composes a deterministic body — marker, done-when, seam, diffstat — when no --body is given', async () => {
     const dir = await startedGreen()
     writeFileSync(join(dir, 'work.txt'), 'pending\n')
     await captureIoAsync(() => checkpoint(dir, ['1']))
     const body = execFileSync('git', ['log', '-1', '--format=%b'], { cwd: dir, encoding: 'utf8' })
+    expect(body.startsWith('plumbbob step 1')).toBe(true) // the marker leads the body (D68)
     expect(body).toContain('done when: a works.')
     expect(body).toContain('seam: src/a.ts')
     expect(body).toContain('work.txt') // the staged diffstat names the changed file
   })
 
-  it('falls back to `plumbbob: step N done` when intent carries no title', async () => {
+  it('falls back to `chore(scope): checkpoint` when intent carries no title', async () => {
     const dir = await startedGreen()
     writeFileSync(intentPath(dir), '# Untitled steps\n\n## Steps\n\n1. [ ] — **done when:** a works.\n')
     writeFileSync(join(dir, 'work.txt'), 'pending\n')
     await captureIoAsync(() => checkpoint(dir, ['1']))
     const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
-    expect(subject).toBe('plumbbob: step 1 done')
+    expect(subject).toBe('chore(checkpoint-test): checkpoint')
   })
 
   it("appends a dated history line to the build-log's Log, naming the step", async () => {
@@ -278,13 +284,15 @@ describe('checkpoint', () => {
   // Step 8 — the plan-approval commit (D11): its own commit, before any step,
   // carrying only the build's scaffold so the first step's diff stays clean.
   describe('--plan', () => {
-    it('commits as `plumbbob: plan — <title>` and records a `plan <sha>` line', async () => {
+    it('commits as `chore(scope): plan` with a `plumbbob plan` body marker and records a `plan <sha>` line', async () => {
       const dir = await startedGreen()
       const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
       expect(code).toBe(0)
       expect(stdout).toMatch(/plan committed — [0-9a-f]{9}\./) // short SHA, not the full 40
       const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
-      expect(subject).toBe('plumbbob: plan — Checkpoint test')
+      expect(subject).toBe('chore(checkpoint-test): plan')
+      const body = execFileSync('git', ['log', '-1', '--format=%b'], { cwd: dir, encoding: 'utf8' })
+      expect(body).toContain('plumbbob plan') // identifier lives in the body now (D68)
       expect(readFileSync(checkpointsPath(dir), 'utf8')).toMatch(/plan [0-9a-f]{40}/)
     })
 

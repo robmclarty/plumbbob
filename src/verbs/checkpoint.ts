@@ -11,8 +11,10 @@
 import { appendFileSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { commit, findRepoRoot, headSha, isDirty, stageAll, stagePath, stagedPaths, stagedStat } from '../lib/git.ts'
 import {
+  activeBuild,
   buildFolder,
   buildLogPath,
+  buildScope,
   bumpStepStat,
   checkpointsPath,
   clearHandoff,
@@ -26,8 +28,9 @@ import {
 } from '../lib/sidecar.ts'
 import { runCheck } from '../lib/check.ts'
 import { checkLatch } from '../lib/latch.ts'
-import { markStepDone, parseSteps, parseTitle } from '../lib/orient.ts'
+import { markStepDone, parseSteps } from '../lib/orient.ts'
 import { parseStepSeam, scopeDrift } from '../lib/intent.ts'
+import { conventionalSubject, subjectFromTitle, withMarker } from '../lib/commitmsg.ts'
 import { appendToSection, checkpointLogLine } from '../lib/buildlog.ts'
 
 export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Promise<number> {
@@ -75,7 +78,7 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   if (isDirty(root)) {
     stageAll(root)
     warnScopeDrift(root, step)
-    const body = bodyArg(args) ?? fallbackBody(root, step)
+    const body = withMarker(`plumbbob step ${step}`, bodyArg(args) ?? fallbackBody(root, step))
     sha = commit(root, messageArg(args) ?? subjectForStep(root, step), body)
   } else {
     sha = headSha(root)
@@ -95,12 +98,12 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
 }
 
 // The plan-approval commit (D36): stage only the active build's artifact folder and
-// commit it as `plumbbob: plan — <title>`, then record a `plan <sha>` line. Giving
+// commit it as `chore(<scope>): plan` (D68), then record a `plan <sha>` line. Giving
 // the plan its own commit keeps the first step's diff from absorbing the scaffold, so
 // `git log` reads baseline → plan → steps. No check gate (there is no code work to
 // verify yet), no intent flip, no step markers — the plan lives entirely in DESIGN.
-// An optional `--body` (stdin heredoc, D34) rides along; the folder is whitelisted
-// artifact plane, so there is no scope-drift to warn about.
+// An optional `--body` (stdin heredoc, D68) rides after the `plumbbob plan` marker;
+// the folder is whitelisted artifact plane, so there is no scope-drift to warn about.
 function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
   // The latch (D64) covers the plan commit too, keyed on the TICK that `start`
   // stamped: the plan pause is a pause. No step number — a range grant does not
@@ -112,7 +115,7 @@ function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
   }
 
   stagePath(root, buildFolder(root))
-  const sha = commit(root, planSubject(root), bodyArg(args) ?? undefined)
+  const sha = commit(root, planSubject(root), withMarker('plumbbob plan', bodyArg(args) ?? undefined))
   appendFileSync(checkpointsPath(root), `plan ${sha}\n`)
   // The plan landing consumes `start`'s entry stamp (D64): a later hand-built diff
   // (no `build <n>`) must find no stale TICK and stay guidance-governed.
@@ -121,16 +124,11 @@ function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
   return 0
 }
 
-// The plan commit's CLI-owned subject: the intent's `# <title>`, else a bare
-// `plumbbob: plan` when the title can't be read (mirrors `subjectForStep`'s fallback).
+// The plan commit's CLI-owned subject (D68): `chore(<scope>): plan`, the scope drawn
+// from the active build's slug (a bare `chore: plan` when none resolves). The
+// `plumbbob plan` identifier rides the body marker, not the subject.
 function planSubject(root: string): string {
-  let title: string | null = null
-  try {
-    title = parseTitle(readFileSync(intentPath(root), 'utf8'))
-  } catch {
-    title = null
-  }
-  return title ? `plumbbob: plan — ${title}` : 'plumbbob: plan'
+  return conventionalSubject({ type: 'chore', scope: buildScope(activeBuild(root)), description: 'plan' })
 }
 
 // Step resolution (D3): explicit arg > in-flight STEP file > first undone step in
@@ -236,12 +234,18 @@ function statsSuffix(root: string, step: number): string | null {
   return parts.length > 0 ? parts.join(', ') : null
 }
 
-// The CLI-owned, deterministic commit subject: the step's title when intent.md still
-// carries one, else the bare `plumbbob: step N done` fallback (D34 — the CLI owns the
-// subject; a `-m` override or `--body` prose is a separate concern).
+// The CLI-owned, deterministic commit subject (D68): a Conventional `type(scope):
+// description`. The scope comes from the active build's slug; the type and wording
+// come from the step's title — an author-written prefix (`fix(parser): …`) is honoured
+// verbatim, a bare title defaults to `feat`. A titleless step falls back to
+// `chore(<scope>): checkpoint`. The `plumbbob`/`step N` identifiers ride the body
+// marker, not the subject; a `-m` override or `--body` prose is a separate concern.
 function subjectForStep(root: string, step: number): string {
+  const scope = buildScope(activeBuild(root))
   const title = titleForStep(root, step)
-  return title ? `plumbbob: step ${step} — ${title}` : `plumbbob: step ${step} done`
+  return title !== null && title.trim().length > 0
+    ? subjectFromTitle(title, 'feat', scope)
+    : conventionalSubject({ type: 'chore', scope, description: 'checkpoint' })
 }
 
 function titleForStep(root: string, step: number): string | null {

@@ -1,19 +1,20 @@
-// `plumbbob finish` (D9/D34) — the close-out: append the checkpoint SHAs to the
+// `plumbbob finish` (D9/D68) — the close-out: append the checkpoint SHAs to the
 // report, make the final commit, and clear the control state. The build folder is
 // NOT deleted — it IS the archive now (D29): tracked, it merges with the branch and
 // shows up in the PR, so nothing is copied into a local-only `archive/` (that
 // helper retired with this step). No refuse-without-report gate — guidance offers
 // the artifact, it does not wall the exit (D9). Git footprint stays additive (C5):
-// one forward commit under the greppable `plumbbob: finish — <title>` subject.
+// one forward commit under the Conventional `chore(<scope>): finish` subject, its
+// `plumbbob finish` identifier riding the body marker (D68).
 
 import { appendFileSync, existsSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { commit, findRepoRoot, isDirty, stageAll } from '../lib/git.ts'
 import {
+  buildScope,
   checkpointsPath,
   clearTick,
   hasSession,
-  intentPath,
   readStats,
   reportPath,
   resolveBuild,
@@ -24,7 +25,7 @@ import {
   stepPath,
   type StepStats,
 } from '../lib/sidecar.ts'
-import { parseTitle } from '../lib/orient.ts'
+import { conventionalSubject, withMarker } from '../lib/commitmsg.ts'
 
 export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   const root = findRepoRoot(cwd)
@@ -53,7 +54,7 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   if (isDirty(root)) {
     stageAll(root)
   }
-  const sha = commit(root, subject(root, slug), bodyArg(args) ?? undefined)
+  const sha = commit(root, subject(slug), withMarker('plumbbob finish', bodyArg(args) ?? undefined))
 
   // Clear the control state: the in-flight markers first, then the session sentinel
   // last (so "no session" flips exactly at the end). Deleting STATE also drops the
@@ -78,17 +79,12 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   return 0
 }
 
-// The CLI-owned final-commit subject (D34): `plumbbob: finish — <title>`, mirroring
-// the step-checkpoint format exactly so one greppable shape spans the whole history.
-// Falls back to a bare `plumbbob: finish` when intent.md carries no title.
-function subject(root: string, slug: string | null): string {
-  let title: string | null = null
-  try {
-    title = parseTitle(readFileSync(intentPath(root, slug), 'utf8'))
-  } catch {
-    title = null
-  }
-  return title ? `plumbbob: finish — ${title}` : 'plumbbob: finish'
+// The CLI-owned final-commit subject (D68): `chore(<scope>): finish`, the scope drawn
+// from the build's slug (a bare `chore: finish` when none resolves, e.g. `--local`),
+// mirroring the plan/step Conventional shape so one grammar spans the whole history.
+// The `plumbbob finish` identifier rides the body marker, not the subject.
+function subject(slug: string | null): string {
+  return conventionalSubject({ type: 'chore', scope: buildScope(slug), description: 'finish' })
 }
 
 // `--body` reads the final-commit body from stdin (the single-quoted heredoc of

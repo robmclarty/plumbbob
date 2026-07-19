@@ -24,7 +24,9 @@ describe('finish', () => {
     // the folder IS the archive (D8) — intent.md stays, and no archive/ is created.
     expect(existsSync(intentPath(dir))).toBe(true)
     expect(existsSync(join(sidecarDir(dir), 'archive'))).toBe(false)
-    expect(subject(dir)).toBe('plumbbob: finish — Finishing up')
+    expect(subject(dir)).toBe('chore(finishing-up): finish') // Conventional; `plumbbob finish` moves to the body (D68)
+    const body = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%b'], { encoding: 'utf8' })
+    expect(body).toContain('plumbbob finish')
     // Short SHA (exactly 9 hex), the archive pointer, and the next-goal nudge.
     expect(stdout).toMatch(/finished — [0-9a-f]{9}\. \.plumbbob\/builds\/finishing-up\/ rides your branch/)
     expect(stdout).toContain('pb-plan')

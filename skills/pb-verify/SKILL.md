@@ -47,10 +47,11 @@ this skill verifies it the same way: **it reads the diff, not the author**.
    the human is the clock. Never checkpoint without it.
 6. **Checkpoint** *(only after approval)*. Run `plumbbob checkpoint`: it makes the WIP
    commit, records the SHA, flips the step to done, appends the step to the build-log's
-   `## Log`, and returns to DESIGN. The CLI owns the commit **subject**
-   (`plumbbob: step N — <title>`); you own the **body**. Compose a body *proportional to
-   the step* — a one-liner for a trivial change, a short paragraph on the what/why for a
-   meatier one — and pass it on stdin:
+   `## Log`, and returns to DESIGN. The CLI owns the commit **subject** — a Conventional
+   `<type>(<scope>): <description>` composed from the step title and the build slug — and
+   leads the **body** with a `plumbbob step N` marker; you own the rest of the **body**.
+   Compose a body *proportional to the step* — a one-liner for a trivial change, a short
+   paragraph on the what/why for a meatier one — and pass it on stdin:
 
    ```bash
    plumbbob checkpoint <n> --body <<'BODY'

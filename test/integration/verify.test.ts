@@ -87,17 +87,19 @@ describe('plumbbob checkpoint — executor-agnostic (D3)', () => {
     expect(res.status).toBe(0)
     const subject = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%s'], { encoding: 'utf8' }).trim()
     const body = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%b'], { encoding: 'utf8' })
-    expect(subject).toBe('plumbbob: step 1 — first')
+    expect(subject).toBe('feat(verify-test): first') // Conventional subject (D68)
+    expect(body).toContain('plumbbob step 1') // marker leads the body even with --body prose
     expect(body).toContain('Proportional prose.')
     expect(body).toContain('A second paragraph.')
   })
 
-  it('carries a deterministic body — done-when, seam, diffstat — without --body (D6)', () => {
+  it('carries a deterministic body — marker, done-when, seam, diffstat — without --body (D6)', () => {
     const dir = makeFixtureRepo()
     startWithSteps(dir, '1. [ ] first — **done when:** it works\n   - seam: `x.txt`')
     writeFileSync(join(dir, 'x.txt'), 'x\n')
     expect(runCli(dir, ['checkpoint']).status).toBe(0)
     const body = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%b'], { encoding: 'utf8' })
+    expect(body.startsWith('plumbbob step 1')).toBe(true)
     expect(body).toContain('done when: it works')
     expect(body).toContain('seam: x.txt')
     expect(body).toContain('x.txt') // diffstat
@@ -131,14 +133,14 @@ describe('plumbbob checkpoint — executor-agnostic (D3)', () => {
 })
 
 describe('plumbbob checkpoint --plan — the plan-approval commit (D11)', () => {
-  it('commits only the build folder as `plumbbob: plan — <title>` and records `plan <sha>`', () => {
+  it('commits only the build folder as `chore(scope): plan` and records `plan <sha>`', () => {
     const dir = makeFixtureRepo()
     startWithSteps(dir, '1. [ ] first — **done when:** ok')
     writeFileSync(join(dir, 'code.txt'), 'not part of the plan\n') // stray dirt outside the scaffold
     const res = runCli(dir, ['checkpoint', '--plan'])
     expect(res.status).toBe(0)
     const subject = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%s'], { encoding: 'utf8' }).trim()
-    expect(subject).toBe('plumbbob: plan — Verify test')
+    expect(subject).toBe('chore(verify-test): plan')
     expect(readSidecar(dir, 'checkpoints')).toMatch(/plan [0-9a-f]{7,}/)
     const names = execFileSync('git', ['-C', dir, 'show', '--pretty=format:', '--name-only', 'HEAD'], {
       encoding: 'utf8',
@@ -157,7 +159,8 @@ describe('plumbbob checkpoint --plan — the plan-approval commit (D11)', () => 
     expect(res.status).toBe(0)
     const subject = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%s'], { encoding: 'utf8' }).trim()
     const body = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%b'], { encoding: 'utf8' })
-    expect(subject).toBe('plumbbob: plan — Verify test')
+    expect(subject).toBe('chore(verify-test): plan')
+    expect(body).toContain('plumbbob plan') // marker leads the plan body (D68)
     expect(body).toContain('Why this plan.')
     expect(body).toContain('Second paragraph.')
   })

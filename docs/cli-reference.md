@@ -115,13 +115,14 @@ plumbbob checkpoint --plan  [--body …]
 The executor-agnostic commit tick ([**D3**](decisions.md#d3)). Resolves the step — explicit `<n>`, else the
 in-flight `STEP`, else the first undone step in `intent.md` — then gates on a green check,
 commits any pending work (or records the existing `HEAD` if the tree is already clean) with a
-CLI-owned subject `plumbbob: step N — <title>`, appends `step <n> <sha>` to `checkpoints`,
+CLI-owned Conventional subject `<type>(<scope>): <description>` — scope from the build slug, type
+from the step title (author prefix honored, else `feat`) — appends `step <n> <sha>` to `checkpoints`,
 flips the step to `[x]`, and clears `SEAM`/`STEP` — dropping the dashboard back to the
-`DESIGN` boundary. `-m <msg>` overrides the subject. The commit **body** comes from a
-`--body` heredoc on stdin (skill-composed,
+`DESIGN` boundary. `-m <msg>` overrides the subject. The commit **body** leads with a
+`plumbbob step N` marker, then a `--body` heredoc on stdin (skill-composed,
 proportional); without it a deterministic fallback carries done-when + seam + diffstat
-([**D34**](decisions.md#d34)/[**D35**](decisions.md#d35)). `--plan` instead commits *only* the build's artifact folder as
-`plumbbob: plan — <title>` and records a `plan <sha>` line, giving the plan its own commit so
+([**D68**](decisions.md#d68)/[**D35**](decisions.md#d35)). `--plan` instead commits *only* the build's artifact folder as
+`chore(<scope>): plan` and records a `plan <sha>` line, giving the plan its own commit so
 the first step's diff doesn't absorb the scaffold ([**D36**](decisions.md#d36)). Refuses (exit 1) with no session,
 no resolvable step, or a red check.
 
@@ -230,8 +231,8 @@ plumbbob finish [--body <<'BODY' … BODY]
 The close-out ([**D9**](decisions.md#d9)/[**D29**](decisions.md#d29)). Appends the checkpoint SHAs to the build's `report.md`
 (the report itself is written by the `/pb-finish` skill; a missing one is noted, never a
 refusal), makes the final
-commit (subject `plumbbob: finish — <title>`, mirroring the step-checkpoint shape; body
-from an optional `--body` heredoc), and clears
+commit (subject `chore(<scope>): finish`, mirroring the step-checkpoint Conventional shape; body
+leads with a `plumbbob finish` marker, then an optional `--body` heredoc), and clears
 the control state (`STATE`, the cursor, the in-flight markers). No separate archive copy — the
 tracked build folder already *is* the record and merges into `main` with the branch, so it
 rides into the PR ([**D26**](decisions.md#d26)). There is **no** refuse-without-report gate. Refuses (exit 1) only

@@ -140,9 +140,9 @@ however you like.
 
 A **checkpoint** is one commit per verified step. `plumbbob start` records the baseline
 HEAD, and each checkpoint appends `step N <git-sha>` to the build's `checkpoints` file. The
-git footprint is **additive only**: cheap markers (`plumbbob: step N — <title>`) on your
-feature branch that your normal squash-merge collapses at PR time. PlumbBob never rewrites
-pushed history.
+git footprint is **additive only**: cheap Conventional-Commit markers (`<type>(<scope>):
+<description>`, with a `plumbbob step N` line in the body) on your feature branch that your
+normal squash-merge collapses at PR time. PlumbBob never rewrites pushed history.
 
 **Revert** is the undo. `/pb-revert` does a `git reset --hard` to the last checkpoint
 (or `--to <n>` for a specific step, with the baseline as the fallback), discarding the
@@ -251,7 +251,7 @@ default** — what shipped, the decisions and why, what was parked and how it wa
 the final status, and the deferred tangents that become future work — but there is **no
 refuse-without-report gate**; guidance offers the artifact, it does not wall the exit. Then
 `plumbbob finish` appends the checkpoint SHAs to the report, makes the final commit (subject
-`plumbbob: finish — <title>`), and clears the control state. There is **no separate archive
+`chore(<scope>): finish`), and clears the control state. There is **no separate archive
 copy** — the build's `builds/<slug>/` folder is tracked, so it merges into `main` with the
 branch and rides into the PR (the local-only `.plumbbob/archive/` retired).
 

@@ -20,9 +20,10 @@ knows PlumbBob was there.
 
 ## What ends up in my git history?
 
-Only additive, greppable commits on your feature branch: one `plumbbob: plan — <title>`,
-one `plumbbob: step N — <title>` per verified step, one `plumbbob: finish — <title>`. Your
-normal squash-merge collapses them at PR time. The build's record —
+Only additive, Conventional-Commit subjects on your feature branch: one `chore(<scope>): plan`,
+one `<type>(<scope>): <description>` per verified step, one `chore(<scope>): finish`. Each carries
+a `plumbbob step N` (or `plumbbob plan`/`plumbbob finish`) marker in its body, so `git log --grep
+plumbbob` still finds them all. Your normal squash-merge collapses them at PR time. The build's record —
 `.plumbbob/builds/<slug>/` with the intent, log, checkpoints, and report — is tracked and
 rides the branch into the PR, so the "what did we decide, and why" survives the merge.
 PlumbBob never rewrites pushed history.
