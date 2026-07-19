@@ -128,10 +128,13 @@ export function markStepDone(intent: string, n: number): string {
     .join('\n')
 }
 
-// Open questions still open: `- Q\d+:` lines that do not say "resolved".
+// Open questions still open: `- Q\d+:` openers that do not say "resolved". The
+// opener may carry a slug-at-birth gloss — `- Q2 (some-slug): ...` (D3) — which
+// the count reads through; sub-lines (`*plain:*`/`*lean:*`) never match.
 export function parseOpenQuestions(intent: string): number {
-  return sectionLines(intent, '## Open questions').filter((l) => /^- Q\d+:/.test(l.trim()) && !/resolved/i.test(l))
-    .length
+  return sectionLines(intent, '## Open questions').filter(
+    (l) => /^- Q\d+(?: \([^)]+\))?:/.test(l.trim()) && !/resolved/i.test(l),
+  ).length
 }
 
 // Open parked items: `- [ ]` lines under `## Park list` (the `park` verb's format).

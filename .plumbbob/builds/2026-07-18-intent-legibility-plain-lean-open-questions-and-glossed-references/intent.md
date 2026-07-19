@@ -75,7 +75,7 @@ src/lib/orient.ts parseOpenQuestions ◀─counts opener lines only (pinned, unc
 
 ## Steps
 
-1. [ ] Pin the parser: expanded questions don't move the count — **done when:**
+1. [x] Pin the parser: expanded questions don't move the count — **done when:**
    `orient.test.ts` gains passing cases: `*plain:*`/`*lean:*` sub-lines under an
    opener are not counted; `*resolved:*` on the opener drops it; the word
    "resolved" on a sub-line does NOT resolve the opener; and the real

@@ -199,6 +199,32 @@ describe('orient parsers', () => {
     expect(parseOpenQuestions(intent)).toBe(1)
   })
 
+  it('parseOpenQuestions counts a slugged opener `- Q2 (some-slug): ...` as open (D3 slug-at-birth)', () => {
+    // The slug-at-birth gloss lands on the opener; the count reads through it so a
+    // genuinely open slugged question still registers, sub-lines and all.
+    const intent = [
+      '## Open questions',
+      '',
+      '- Q2 (default-waves): should waves default on? — *resolve by:* decide',
+      '  - *plain:* the plan leaves the default unstated, so a fresh run guesses.',
+      '  - *lean:* default off; opt in per build.',
+    ].join('\n')
+    expect(parseOpenQuestions(intent)).toBe(1)
+  })
+
+  it('parseOpenQuestions drops a slugged opener when *resolved:* lands on that opener (D3 + D5)', () => {
+    // Slug on the opener must not shield it from resolution: a *resolved:* marker on
+    // the slugged opener drops it, while a slugged open neighbor still counts.
+    const intent = [
+      '## Open questions',
+      '',
+      '- Q2 (default-waves): *resolved:* 2026-07-18, default off',
+      '  - *lean:* default off; opt in per build.',
+      '- Q3 (retry-budget): how many retries? — *resolve by:* decide',
+    ].join('\n')
+    expect(parseOpenQuestions(intent)).toBe(1) // Q2 resolved, Q3 open
+  })
+
   it('the real templates/intent.md parses to an open-question count of 0 (D7 placeholder-uncounted)', () => {
     // The scaffolded Q1 placeholder must never read as an open question — a fresh
     // build showing "open questions 1" would be shipped noise. This pin lands
