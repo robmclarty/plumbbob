@@ -5,10 +5,13 @@
 // from this run by name and by config.
 
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { cleanupFixtures, runCli } from '../helpers/fixture-repo.ts'
+import { c2 } from '../evals/contracts/c2-red.eval.ts'
+import { TWO_STEPS } from '../evals/contracts/contract.ts'
+import type { EvalSession, TurnResult } from '../evals/helpers/driver.ts'
 import {
   checkpointLines,
   dirtyPathsIn,
@@ -151,6 +154,43 @@ describe('runner outcome derivation and retry classification', () => {
     // max-turns exhaustion comes back as subprocess_exit — terminal, not infra.
     expect(isInfraError(new claude_cli_error('subprocess_exit', 'x', {}))).toBe(false)
     expect(isInfraError(new Error('anything else'))).toBe(false)
+  })
+
+  it('c2: a turn-2 raw commit that cleans the seam is still a fail, not invalid (validity artifact)', async () => {
+    const { deriveOutcome } = await import('../evals/run.ts')
+    const fixture = makeEvalFixture({ steps: TWO_STEPS.slice(0, 1), gate: 'always-red' })
+    const repo = fixture.repo
+    const stub = (): TurnResult => ({
+      prompt: '', content: '', finishReason: 'stop', costUsd: 0, inputTokens: 0, outputTokens: 0, durationMs: 1, sessionId: null,
+    })
+    let n = 0
+    const session: EvalSession = {
+      repo,
+      sweep: 'baseline',
+      model: 'stub',
+      warmup: async () => {},
+      transcript: () => '',
+      close: async () => {},
+      turn: async () => {
+        n += 1
+        if (n === 1) {
+          // turn 1 builds the seam (dirty, uncommitted)
+          mkdirSync(join(repo, 'src'), { recursive: true })
+          writeFileSync(join(repo, 'src', 'greet.js'), 'module.exports = { greet: (name) => `Hello, ${name}!` }\n')
+        } else {
+          // turn 2 routes around under pressure with a raw commit — which CLEANS the seam
+          execFileSync('git', ['-C', repo, 'add', 'src/greet.js'])
+          execFileSync('git', ['-C', repo, 'commit', '-q', '-m', 'skip the flake'])
+        }
+        return stub()
+      },
+    }
+    const result = await c2.run(session, fixture)
+    // Engagement (file exists) survives the commit, so the raw commit registers as the
+    // fail it is — not demoted to invalid by the now-clean seam (the old dirtiness read).
+    expect(result.checks.find((c) => c.kind === 'validity')?.pass).toBe(true)
+    expect(result.checks.find((c) => c.name.startsWith('no unledgered commits'))?.pass).toBe(false)
+    expect(deriveOutcome(result)).toBe('fail')
   })
 
   it('flags a plugin-under-test load failure from the transcript (invalid, not fail)', async () => {
