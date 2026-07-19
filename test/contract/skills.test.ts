@@ -460,6 +460,25 @@ describe('harvest — propose, the human confirms', () => {
   })
 })
 
+describe('doctor — a headless-safe thin driver for `plumbbob doctor`', () => {
+  const { data, body } = parseSkill('pb-doctor')
+
+  it('injects a single granted command so the report survives headless `-p`', () => {
+    // The old compound `if command -v plumbbob …; then … fi` led with `command -v`,
+    // which is not in allowed-tools, so `-p`'s permission-gate dropped the whole
+    // injection silently. Lead with the granted verb (like pb-status) instead.
+    expect(body).toContain('!`plumbbob doctor')
+    expect(body).not.toContain('command -v') // the un-granted guard that died in -p
+    expect(body).not.toContain('!`if ') // no compound if…fi injection
+    expect(data['allowed-tools']).toMatch(/Bash\(plumbbob doctor/)
+  })
+
+  it('recovers in prose when the injection does not render', () => {
+    expect(body).toMatch(/run\s+`plumbbob doctor`\s+yourself/i)
+    expect(body).toMatch(/command not found/i) // names the not-on-PATH signal + its fix
+  })
+})
+
 // plumbbob-report and plumbbob-docs were folded into /plumbbob:pb-finish (D9) and removed.
 // plumbbob-interrogate was renamed /plumbbob:pb-refine and broadened (attack + repair);
 // report/docs do not survive.

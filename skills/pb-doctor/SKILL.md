@@ -8,7 +8,7 @@ allowed-tools: Bash(plumbbob doctor:*)
 
 # PlumbBob — doctor (the is-it-installed-right move)
 
-Install diagnostic (injected when this skill runs): !`if command -v plumbbob >/dev/null 2>&1; then plumbbob doctor 2>&1; else echo "plumbbob CLI not on PATH in this session. Marketplace install: confirm the plugin is enabled in /plugin, then /reload-plugins. Skills-dir/global install: npm i -g plumbbob && plumbbob init."; fi`
+Install diagnostic (injected when this skill runs): !`plumbbob doctor 2>&1 || true`
 
 This is a **thin driver** for `plumbbob doctor`. The report above is read-only — `doctor`
 inspects, it never writes. This skill carries **no Edit and no Write tool**: never edit a file
@@ -34,6 +34,10 @@ and if you are reading this, that is not your situation.
 ## What it does
 
 1. Surface the injected `doctor` report verbatim — every `✓` and any `✗` with its `→ fix`.
+   If nothing rendered above (a few headless `-p` sessions skip the injection), just run
+   `plumbbob doctor` yourself — it is in your tools — and surface that.
 2. If all checks passed, say so; if a skill still misbehaves, the fix is a restart, not a re-run.
 3. If a check failed, apply its named `→ fix`, then restart Claude Code (or `/reload-plugins`).
-4. If the line above says the CLI is not on PATH, follow the install-path branch it printed.
+4. If the report is empty or shows `command not found`, the CLI is not on PATH: for a
+   skills-dir / global install run `npm i -g plumbbob && plumbbob init`; for a marketplace
+   install, confirm the plugin is enabled in `/plugin`, then `/reload-plugins`.
