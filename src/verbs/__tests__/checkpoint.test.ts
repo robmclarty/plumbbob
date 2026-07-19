@@ -46,6 +46,16 @@ describe('checkpoint', () => {
     expect(stdout).toMatch(/step 1 checkpointed — [0-9a-f]{9}\. Back at the boundary/)
   })
 
+  it('flips the build-log mirror to ☑ and returns Current step to the boundary (D69)', async () => {
+    const dir = await startedGreen()
+    writeFileSync(join(dir, 'work.txt'), 'pending\n')
+    await captureIoAsync(() => checkpoint(dir, ['1']))
+    const log = readFileSync(buildLogPath(dir), 'utf8')
+    expect(log).toContain('- ☑ 1. First')
+    expect(log).toContain('**Current step:** none (at the boundary)')
+    expect(log).not.toContain('- ☐ 1. <step>')
+  })
+
   it('titles the commit subject `type(scope): description` from intent.md, keeping plumbbob/step in the body (D68)', async () => {
     const dir = await startedGreen()
     writeFileSync(join(dir, 'work.txt'), 'pending\n') // ensure a fresh commit is made

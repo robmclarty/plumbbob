@@ -50,6 +50,16 @@ describe('revert', () => {
     expect(stdout).toMatch(/reverted to [0-9a-f]{9} — back at the boundary/) // short SHA, not the full 40
   })
 
+  it('returns the build-log Current step to the boundary after abandoning a step (D69)', async () => {
+    const dir = await startedGreen()
+    captureIo(() => build(dir, ['1'])) // go in-flight: Current step → `1 — First`
+    expect(readFileSync(buildLogPath(dir), 'utf8')).toContain('**Current step:** 1 — First')
+    captureIo(() => revert(dir, []))
+    const log = readFileSync(buildLogPath(dir), 'utf8')
+    expect(log).toContain('**Current step:** none (at the boundary)')
+    expect(log).toContain('- ☐ 1. First') // mirror re-rendered from the preserved intent.md
+  })
+
   it('reverts --to a multi-digit step by its recorded SHA', async () => {
     const dir = await startedGreen()
     const first = headSha(dir)

@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url'
 import { findRepoRoot, resetHard, untrackedPaths } from '../lib/git.ts'
 import { bumpStepStat, checkpointsPath, hasSession, resolveBuild, seamPath, sidecarDir, stepPath } from '../lib/sidecar.ts'
 import { isArtifactPath, matchesSeam } from '../lib/intent.ts'
+import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
 
 export function revert(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
@@ -71,6 +72,10 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
   if (inFlight !== null) {
     bumpStepStat(root, slug, inFlight, 'reverts')
   }
+  // The step is abandoned: the build-log returns to the boundary and its mirror
+  // re-renders from the preserved intent.md (D69) — revert keeps intent edits (D26),
+  // so intent's checkboxes stay the truth to reflect. Best-effort, like the rest.
+  syncBuildLogState(root, slug, AT_BOUNDARY)
 
   process.stdout.write(
     `plumbbob: reverted to ${sha.slice(0, 9)} — back at the boundary. Park lines and intent edits were preserved.\n`,

@@ -19,7 +19,9 @@ import {
   inSpike,
   intentPath,
   listBuilds,
+  listSpikeReports,
   markSpike,
+  nextSpikeReportPath,
   readStats,
   seamPath,
   setActiveBuild,
@@ -142,6 +144,34 @@ describe('buildScope (D68 — the Conventional-Commit scope)', () => {
 describe('buildDir', () => {
   it('resolves under <root>/.plumbbob/builds/<slug>', () => {
     expect(buildDir('/tmp/x', 'my-build')).toBe('/tmp/x/.plumbbob/builds/my-build')
+  })
+})
+
+describe('spike reports (D70)', () => {
+  it('lists only spike-NN-*.md files, sorted', () => {
+    const dir = makeTempRepo()
+    const b = buildDir(dir, 'b')
+    mkdirSync(b, { recursive: true })
+    writeFileSync(join(b, 'spike-02-two.md'), 'x')
+    writeFileSync(join(b, 'spike-01-one.md'), 'x')
+    writeFileSync(join(b, 'report.md'), 'x') // not a spike report
+    writeFileSync(join(b, 'spike-notes.md'), 'x') // wrong shape
+    expect(listSpikeReports(dir, 'b')).toEqual(['spike-01-one.md', 'spike-02-two.md'])
+  })
+
+  it('allocates spike-01 in an empty build folder', () => {
+    const dir = makeTempRepo()
+    mkdirSync(buildDir(dir, 'b'), { recursive: true })
+    expect(nextSpikeReportPath(dir, 'b', 'auth')).toBe(join(buildDir(dir, 'b'), 'spike-01-auth.md'))
+  })
+
+  it('allocates one past the highest index — never refills a gap', () => {
+    const dir = makeTempRepo()
+    const b = buildDir(dir, 'b')
+    mkdirSync(b, { recursive: true })
+    writeFileSync(join(b, 'spike-01-one.md'), 'x')
+    writeFileSync(join(b, 'spike-03-three.md'), 'x') // gap at 02
+    expect(nextSpikeReportPath(dir, 'b', 'next')).toBe(join(b, 'spike-04-next.md'))
   })
 })
 

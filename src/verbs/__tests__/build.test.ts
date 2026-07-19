@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { build } from '../build.ts'
 import { start } from '../start.ts'
-import { buildDir, intentPath, readStats, seamPath, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
+import { buildDir, buildLogPath, intentPath, readStats, seamPath, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
@@ -139,6 +139,27 @@ describe('build', () => {
     const { code } = captureIo(() => build(dir, ['2']))
     expect(code).toBe(0)
     expect(existsSync(tickPath(dir))).toBe(false)
+  })
+})
+
+describe('build — the build-log mirror (D69)', () => {
+  it('sets Current step to `<n> — <title>` and marks the mirror', async () => {
+    const dir = await startedWithSteps()
+    captureIo(() => build(dir, ['2']))
+    const log = readFileSync(buildLogPath(dir), 'utf8')
+    expect(log).toContain('**Current step:** 2 — Second')
+    expect(log).toContain('- ☐ 1. First')
+    expect(log).toContain('- ☐ 2. Second')
+    expect(log).not.toContain('- ☐ 1. <step>')
+  })
+
+  it('reflects an already-checkpointed step as ☑ in the mirror', async () => {
+    const dir = await startedWithSteps()
+    writeFileSync(intentPath(dir), INTENT.replace('1. [ ]', '1. [x]'))
+    captureIo(() => build(dir, ['2']))
+    const log = readFileSync(buildLogPath(dir), 'utf8')
+    expect(log).toContain('- ☑ 1. First')
+    expect(log).toContain('- ☐ 2. Second')
   })
 })
 

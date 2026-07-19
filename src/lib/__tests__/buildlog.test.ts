@@ -1,5 +1,32 @@
 import { describe, expect, it } from 'vitest'
-import { appendToSection, checkpointLogLine } from '../buildlog.ts'
+import { appendToSection, checkpointLogLine, setCurrentStep, syncStepsSection } from '../buildlog.ts'
+import type { Step } from '../orient.ts'
+
+const step = (n: number, done: boolean, title: string): Step => ({
+  n,
+  done,
+  title,
+  planned: true,
+  doneWhen: null,
+  model: null,
+})
+
+// The relevant top-half shape of templates/build-log.md.
+const LEDGER = `# Build log — Demo
+
+**Current step:** none (at the boundary)
+**Heavy check:** checkride
+
+## Steps
+
+*(Mirror of intent.md's Steps, with live status. Only ONE step is in flight.)*
+
+- ☐ 1. <step>
+
+## Park list
+
+> guidance line
+`
 
 const DOC = `# Build log
 
@@ -41,6 +68,65 @@ describe('appendToSection', () => {
 
   it('returns null when the section is absent', () => {
     expect(appendToSection(DOC, 'Nope', '- x')).toBeNull()
+  })
+})
+
+describe('setCurrentStep', () => {
+  it('replaces the Current step line with the given label', () => {
+    const out = setCurrentStep(LEDGER, '2 — Wire the mirror') as string
+    expect(out).toContain('**Current step:** 2 — Wire the mirror')
+    expect(out).not.toContain('**Current step:** none (at the boundary)')
+  })
+
+  it('does not disturb the rest of the doc', () => {
+    const out = setCurrentStep(LEDGER, 'none (at the boundary)') as string
+    expect(out).toContain('**Heavy check:** checkride')
+    expect(out).toContain('- ☐ 1. <step>')
+  })
+
+  it('returns null when the Current step line is absent', () => {
+    expect(setCurrentStep('# Build log\n\n## Steps\n', 'anything')).toBeNull()
+  })
+})
+
+describe('syncStepsSection', () => {
+  it('regenerates the ☑/☐ list from parsed steps, replacing the placeholder', () => {
+    const out = syncStepsSection(LEDGER, [step(1, true, 'First'), step(2, false, 'Second')]) as string
+    expect(out).toContain('- ☑ 1. First')
+    expect(out).toContain('- ☐ 2. Second')
+    expect(out).not.toContain('- ☐ 1. <step>')
+  })
+
+  it('preserves the instructions paragraph and the surrounding sections', () => {
+    const out = syncStepsSection(LEDGER, [step(1, false, 'Only')]) as string
+    expect(out).toContain('*(Mirror of intent.md')
+    expect(out).toContain('**Current step:** none (at the boundary)')
+    expect(out).toContain('> guidance line')
+  })
+
+  it('does not bleed the list into the next section', () => {
+    const out = syncStepsSection(LEDGER, [step(1, true, 'First'), step(2, false, 'Second')]) as string
+    const lines = out.split('\n')
+    expect(lines.indexOf('- ☐ 2. Second')).toBeLessThan(lines.indexOf('## Park list'))
+  })
+
+  it('re-syncs in place on a second run (owns only its own list lines)', () => {
+    const once = syncStepsSection(LEDGER, [step(1, false, 'First')]) as string
+    const twice = syncStepsSection(once, [step(1, true, 'First'), step(2, false, 'Second')]) as string
+    expect(twice.match(/- [☑☐] 1\. First/g)?.length).toBe(1)
+    expect(twice).toContain('- ☑ 1. First')
+    expect(twice).toContain('- ☐ 2. Second')
+  })
+
+  it('renders an empty mirror when there are no steps', () => {
+    const out = syncStepsSection(LEDGER, []) as string
+    expect(out).not.toContain('- ☐ 1. <step>')
+    expect(out).toContain('*(Mirror of intent.md')
+    expect(out).toContain('## Park list')
+  })
+
+  it('returns null when the Steps section is absent', () => {
+    expect(syncStepsSection('# Build log\n\n## Log\n', [step(1, false, 'x')])).toBeNull()
   })
 })
 

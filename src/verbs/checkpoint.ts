@@ -32,6 +32,7 @@ import { markStepDone, parseSteps } from '../lib/orient.ts'
 import { parseStepSeam, scopeDrift } from '../lib/intent.ts'
 import { conventionalSubject, subjectFromTitle, withMarker } from '../lib/commitmsg.ts'
 import { appendToSection, checkpointLogLine } from '../lib/buildlog.ts'
+import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
 
 export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Promise<number> {
   const root = findRepoRoot(cwd)
@@ -88,6 +89,10 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   flipIntent(root, step)
   stampStepStat(root, undefined, step, 'landedAt', new Date().toISOString())
   logCheckpoint(root, step, sha)
+  // The step landed: the build-log's mirror flips to ☑ and Current step returns to
+  // the boundary (D69), re-read from the intent.md `flipIntent` just wrote. The
+  // artifact-plane whitelist keeps this build-log write from ever reading as drift.
+  syncBuildLogState(root, activeBuild(root), AT_BOUNDARY)
   rmSync(seamPath(root), { force: true })
   rmSync(stepPath(root), { force: true })
   clearHandoff(root) // the agent-run ledger is step-scoped (D47) — clear it with the markers.

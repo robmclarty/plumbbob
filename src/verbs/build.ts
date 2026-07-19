@@ -7,6 +7,7 @@ import { findRepoRoot } from '../lib/git.ts'
 import { hasSession, intentPath, resolveBuild, seamPath, stampStepStat, stampTick, stepPath } from '../lib/sidecar.ts'
 import { parseStepSeam } from '../lib/intent.ts'
 import { parseSteps } from '../lib/orient.ts'
+import { stepLabel, syncBuildLogState } from '../lib/buildlogsync.ts'
 
 export function build(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
@@ -65,6 +66,10 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
   // The wall-clock receipt starts here (research/07 Build 2b): checkpoint stamps
   // landedAt, and the pair becomes the step's duration in the finish report.
   stampStepStat(root, slug, step, 'startedAt', new Date().toISOString())
+  // The build-log's top half now shows this step in flight (D69): Current step +
+  // the ☐/☑ mirror, re-rendered from intent.md. Best-effort — never blocks the build.
+  const title = parseSteps(intent).find((s) => s.n === step)?.title ?? null
+  syncBuildLogState(root, slug, stepLabel(step, title))
 
   const picked = raw === undefined ? ' (next undone)' : ''
   process.stdout.write(

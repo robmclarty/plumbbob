@@ -36,7 +36,7 @@ const VERBS: ReadonlyArray<Verb> = [
   { name: 'checkpoint', summary: 'checkpoint [<n>]: gate on green, commit/record SHA, mark step done (executor-agnostic)' },
   { name: 'revert', summary: 'revert [--to n]: git reset --hard to a checkpoint SHA' },
   { name: 'park', summary: 'park "<text>": append a raw line to the park list' },
-  { name: 'spike', summary: 'spike "<slug>" | spike done: throwaway worktree experiment' },
+  { name: 'spike', summary: 'spike "<slug>" | spike report "<slug>" | spike done: worktree experiment + report' },
   { name: 'use', summary: 'use <slug>: re-point the active-build cursor and resume that build' },
   { name: 'finish', summary: 'close-out: report + final commit (no gate), clear the control state, close the session' },
   { name: 'init', summary: 'link plumbbob into Claude Code as an in-place plugin (~/.claude/skills/plumbbob); --uninstall to undo' },

@@ -2,7 +2,9 @@
 build-log.md — your live ledger for execution. Append constantly; reorganize at
 step boundaries. The antidote to "my plan got lost in the noise."
 
-  Steps     : where you are. One step in flight at a time.
+  Steps     : where you are. One step in flight at a time. CLI-maintained: `build`,
+              `checkpoint`, and `revert` keep this mirror and the Current step line
+              in sync with intent.md — you never hand-edit them.
   Park list : where ideas go so you do not chase them. CAPTURE, never act inline.
   Harvest   : the boundary ritual that keeps you on one branch.
   Log       : the build's history. `plumbbob checkpoint` appends a line per step as it
@@ -16,9 +18,10 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 ## Steps
 
-*(Mirror of intent.md's Steps, with live status. Only ONE step is in flight. A step
-is done only after a checkpoint — check green + checkpoint taken, via `/pb-verify` or
-`/pb-build`.)*
+*(Mirror of intent.md's Steps, with live status — CLI-maintained, not hand-edited.
+`build`/`checkpoint`/`revert` re-render this from intent.md, and set the Current step
+line above. Only ONE step is in flight; a step is done only after a checkpoint —
+check green + checkpoint taken, via `/pb-verify` or `/pb-build`.)*
 
 - ☐ 1. <step>
 

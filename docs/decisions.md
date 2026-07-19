@@ -418,6 +418,39 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10*
   plan-gets-its-own-commit. *Tagged in* `commitmsg.ts`, `sidecar.ts`, `checkpoint.ts`, `finish.ts`,
   the `pb-verify`/`pb-plan`/`pb-finish` skills.
 
+- <a id="d69"></a>**D69 — The build-log's Steps mirror and Current step line are CLI-owned.**
+  build-log.md's `## Steps` checklist and its `**Current step:**` line are now maintained by the
+  CLI, not by a skill or by hand. The three verbs that move step state each re-render them from
+  intent.md: `build` sets Current step to `<n> — <title>` and marks the ☐/☑ mirror on entry,
+  `checkpoint` flips the landed step to ☑ and returns Current step to `none (at the boundary)`,
+  and `revert` returns it to the boundary while re-rendering the mirror from the preserved
+  intent.md ([**D26**](#d26) keeps intent edits across a reset, so its checkboxes stay the truth).
+  Before this the mirror had no owner — neither the CLI nor any skill wrote it, so whether it
+  tracked reality was model whim, and most builds left the raw `- ☐ 1. <step>` placeholder beside
+  a fully populated `## Log`. This is the same cure the orphaned `## Log` got when `checkpoint`
+  took it over: the human-facing ledger's top half is mechanical, so it never lies. Every write is
+  best-effort — a missing or hand-edited build-log never fails a verb; the checkpoints ledger and
+  intent.md remain the source of truth — mirroring how the `## Log` append already behaves.
+  *Tagged in* `buildlog.ts`, `buildlogsync.ts`, `build.ts`, `checkpoint.ts`, `revert.ts`,
+  `templates/build-log.md`.
+
+- <a id="d70"></a>**D70 — Spikes leave a durable report: one artifact, two entry points.** A spike's
+  verdict used to evaporate — `spike done` said "record it in intent.md" and the throwaway worktrees
+  (with the learning that justified the call) were gone. Now every spike leaves a `spike-NN-<slug>.md`
+  report in the build folder, beside `intent.md`/`report.md`, so it rides the branch into the PR the
+  way the finish report does. The CLI owns the file and its numbering (next free zero-padded index, a
+  gap is never refilled) — the human never creates or numbers it. **Two entry points, one template**
+  (`templates/spike-report.md`, sections Question / Options tried / Findings / **Verdict** / What this
+  decides): `plumbbob spike "<slug>"` scaffolds it *at open* so findings accrue while the worktrees
+  live; `plumbbob spike report "<slug>"` scaffolds it with no worktrees for a **spike-as-step** — a
+  planned step titled `spike: …` where the increment itself is the experiment — stamping provenance as
+  `step <n>` when a step is in flight, else `/pb-spike`. `spike done` scans for the verbatim Verdict
+  placeholder and **nudges** when it is unfilled, but still closes (guidance, not a gate — the
+  enforce→guide pivot). `spike` is not a Conventional-Commit type ([**D68**](#d68)), so a `Spike:`
+  step title falls through to the `feat` default with no special-casing. *Tagged in* `spike.ts`,
+  `sidecar.ts`, `templates/spike-report.md`, `templates.ts`, `cli-core.ts`, the `pb-spike`/`pb-build`
+  skills.
+
 ### Superseded
 
 - <a id="d20"></a>**D20 — The archive was local-only markdown.** Wrapping wrote a plain-markdown archive

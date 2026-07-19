@@ -178,6 +178,33 @@ export function reportPath(root: string, slug?: string | null): string {
   return join(artifactDir(root, slug), 'report.md')
 }
 
+// Spike reports (D70): `spike-NN-<slug>.md` in the build folder, beside report.md.
+// One per spike — an explicit `/pb-spike` or a planned `spike:` step — so a build with
+// several forks tells its decision history through the folder listing. NN is
+// CLI-allocated (the human never numbers them), zero-padded for a stable sort.
+
+// The existing spike-report filenames in the build folder, sorted. Empty when the
+// folder is absent or holds none.
+export function listSpikeReports(root: string, slug?: string | null): ReadonlyArray<string> {
+  try {
+    return readdirSync(artifactDir(root, slug))
+      .filter((name) => /^spike-\d\d-.+\.md$/.test(name))
+      .sort()
+  } catch {
+    return []
+  }
+}
+
+// The path for a NEW spike report: the next free zero-padded index (one past the
+// highest existing NN, so a gap never reallocates a number) and the sanitized spike
+// slug. Pure allocation — the caller writes the stamped template there.
+export function nextSpikeReportPath(root: string, slug: string | null, spikeSlug: string): string {
+  const used = listSpikeReports(root, slug).map((name) => Number(name.slice('spike-'.length, 'spike-'.length + 2)))
+  const next = (used.length > 0 ? Math.max(...used) : 0) + 1
+  const nn = String(next).padStart(2, '0')
+  return join(artifactDir(root, slug), `spike-${nn}-${spikeSlug}.md`)
+}
+
 // handoff.json is the agent-run ledger (D47): each `agent run` appends its
 // validated envelope here so a later invocation can thread earlier results into
 // the next call's `context[]` — the CLI itself is memoryless between runs, and

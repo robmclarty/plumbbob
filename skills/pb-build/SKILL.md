@@ -3,7 +3,7 @@ name: pb-build
 description: The default engine — read the next planned step from intent, implement it (its done-when, seam, Decisions, Constraints), then verify it through to the approval pause. Swappable — build by hand/vibed/another harness and run /pb-verify instead. `--auto` self-approves and chains to done; a step range like `1-3` self-approves through step 3, then pauses.
 argument-hint: "[step-number | step-range] [--auto]"
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob park:*), Bash(plumbbob agent:*), Bash(git diff:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob park:*), Bash(plumbbob agent:*), Bash(plumbbob spike:*), Bash(git diff:*)
 ---
 
 # PlumbBob — build a step (the default engine)
@@ -36,6 +36,13 @@ differs from the model you're running as, say so before implementing — the hum
 2. **Enter the step.** Run `plumbbob build <n>` — or bare `plumbbob build` to enter the
    next undone step (records the in-flight STEP + SEAM so `/pb-status` shows the step in
    flight; the seam is awareness, not a lock).
+   - **Spike-as-step.** If the step's title opens with `spike:` / `Spike:`, the increment
+     *is* the experiment — resolving a fork the plan couldn't settle on paper. After
+     entering it, run `plumbbob spike report "<slug>"` (the CLI scaffolds a
+     `spike-NN-<slug>.md` in the build folder, stamped `via: step <n>`), then work the
+     experiment and record your **Findings** and **Verdict** there. A recorded verdict is
+     what the step's done-when should check — the report, not just the code, is the
+     deliverable. This is the same artifact `/pb-spike` produces for a mid-build fork (D70).
 3. **Read the plan.** Read the step's **done-when**, its **seam**, and the
    **Decisions** and **Constraints** in `intent.md`. Build to *that* — the deciding
    already happened, off the chat.

@@ -1,10 +1,10 @@
 // `plumbbob start "<title>"` — scaffold the sidecar, record the baseline, open
 // the session. Refuses on a dirty tree (D22), an existing session, or a non-git dir.
 
-import { fileURLToPath } from 'node:url'
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { existsSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { detectGate } from '../lib/check.ts'
+import { readTemplate, stampTemplate } from '../lib/templates.ts'
 import { findRepoRoot, hasCommit, headSha, isDirty } from '../lib/git.ts'
 import {
   sidecarDir,
@@ -110,16 +110,16 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
   let intentLocation: string
   if (local) {
     writeFileSync(checkpointsPath(root), `baseline ${sha}\n`)
-    writeFileSync(intentPath(root), stamp(readTemplate('intent.md'), title, CHECK_ECHO))
-    writeFileSync(buildLogPath(root), stamp(readTemplate('build-log.md'), title, CHECK_ECHO))
+    writeFileSync(intentPath(root), stampBuild(readTemplate('intent.md'), title))
+    writeFileSync(buildLogPath(root), stampBuild(readTemplate('build-log.md'), title))
     excludeSidecar(root)
     intentLocation = '.plumbbob/intent.md'
   } else {
     const dir = buildDir(root, slug)
     mkdirSync(dir, { recursive: true })
     writeFileSync(join(dir, 'checkpoints'), `baseline ${sha}\n`)
-    writeFileSync(join(dir, 'intent.md'), stamp(readTemplate('intent.md'), title, CHECK_ECHO))
-    writeFileSync(join(dir, 'build-log.md'), stamp(readTemplate('build-log.md'), title, CHECK_ECHO))
+    writeFileSync(join(dir, 'intent.md'), stampBuild(readTemplate('intent.md'), title))
+    writeFileSync(join(dir, 'build-log.md'), stampBuild(readTemplate('build-log.md'), title))
     excludeControl(root)
     intentLocation = `.plumbbob/builds/${slug}/intent.md`
   }
@@ -173,10 +173,8 @@ function flagValue(args: ReadonlyArray<string>, flag: string): string | undefine
   return i >= 0 ? args[i + 1] : undefined
 }
 
-function readTemplate(name: string): string {
-  return readFileSync(fileURLToPath(new URL(`../../templates/${name}`, import.meta.url)), 'utf8')
-}
-
-function stamp(template: string, title: string, check: string): string {
-  return template.split('{{TITLE}}').join(title).split('{{CHECK}}').join(check)
+// Stamp a build template's `{{TITLE}}`/`{{CHECK}}` — the check is always the echo
+// constant (absence of a `check` setting IS the default, D24/D32).
+function stampBuild(template: string, title: string): string {
+  return stampTemplate(template, { TITLE: title, CHECK: CHECK_ECHO })
 }
