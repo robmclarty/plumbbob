@@ -114,7 +114,7 @@ src/lib/orient.ts parseOpenQuestions ◀─counts opener lines only (pinned, unc
    green
    - seam: `skills/pb-plan/SKILL.md`, `test/contract/skills.test.ts`
    - model: opus — skill prose sets future authoring behavior
-6. [ ] Docs sweep: techniques.md principle + pb-park one-clause why — **done
+6. [x] Docs sweep: techniques.md principle + pb-park one-clause why — **done
    when:** `docs/techniques.md` carries the compression principle and the
    glossed-reference style; `skills/pb-park/SKILL.md`'s compose guidance adds the
    one-clause-why; check green
@@ -125,8 +125,8 @@ src/lib/orient.ts parseOpenQuestions ◀─counts opener lines only (pinned, unc
 
 *(research/08's forks arrived resolved; this one came out of the refine attack.)*
 
-- Q1 (placeholder-count-trap): the template's question placeholder is uncounted
-  only by accident — *resolved:* 2026-07-18, pin-first — became
+- Q1 (placeholder-count-trap): *resolved:* 2026-07-18, pin-first — the template's
+  question placeholder was uncounted only by accident; became
   D7 (placeholder-uncounted); the template-count test lands in step 1, before
   step 2 touches the placeholder.
 

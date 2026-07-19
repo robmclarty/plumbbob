@@ -11,7 +11,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — Intent legibility: plain-lean open questions and glossed references
 
-**Current step:** 6 — Docs sweep: techniques.md principle + pb-park one-clause why
+**Current step:** none (at the boundary)
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -25,15 +25,15 @@ is done only after a checkpoint — check green + checkpoint taken, via `/pb-ver
 - ☑ 3. templates/intent.md: plain/lean question form, slugged Decisions, header
 - ☑ 4. skills/pb-refine: attack mode authors and presents the expanded form
 - ☑ 5. skills/pb-plan: glossed-reference + slug-at-birth house style
-- ☐ 6. Docs sweep: techniques.md principle + pb-park one-clause why
+- ☑ 6. Docs sweep: techniques.md principle + pb-park one-clause why
 
 ## Park list
 
 > Mid-step, every new problem / idea / "ooh what if" lands HERE, untouched, and you
 > go straight back to the step. Acting the instant an idea arrives is the disease.
 > Capture is one line (`/pb-park` composes it). Harvest happens only at the boundary.
-- [ ] D3 (slug-at-birth) applied to a Q opener (e.g. `Q2 (some-slug):`) breaks parseOpenQuestions' regex (/^- Q\d+:/ requires the colon right after the digits) — the counter would silently read 0 for a genuinely open, slug-bearing question
-- [ ] This build's intent.md shows 'open questions 1' — Q1's *resolved:* marker sits on its second line, not the opener, so per D5 (resolved-on-opener) the parser counts it as open; move the marker onto the Q1 opener line to clear the phantom count (the exact D7 shipped-noise case, in our own dogfood folder).
+- [x] D3 (slug-at-birth) applied to a Q opener (e.g. `Q2 (some-slug):`) breaks parseOpenQuestions' regex (/^- Q\d+:/ requires the colon right after the digits) — the counter would silently read 0 for a genuinely open, slug-bearing question
+- [x] This build's intent.md shows 'open questions 1' — Q1's *resolved:* marker sits on its second line, not the opener, so per D5 (resolved-on-opener) the parser counts it as open; move the marker onto the Q1 opener line to clear the phantom count (the exact D7 shipped-noise case, in our own dogfood folder).
 
 ## Harvest  *(run `/pb-harvest` at each step boundary, after green)*
 
@@ -51,7 +51,13 @@ from sprawling across branches.
 
 Harvest results this boundary:
 
-- (none yet)
+- **tangent** (killed) — *slug-at-birth Q opener breaks the regex.* The risk was real
+  but already closed by **step 2**: `parseOpenQuestions` now counts a slugged opener
+  `- Q2 (some-slug):` as open, pinned in `orient.test.ts`. No further action.
+- **blocker** (fixed now) — *this build's intent.md phantom `open questions 1`.* Q1's
+  `*resolved:*` sat on its second line; the parser tests opener lines only (D5), so it
+  counted. Moved the marker onto the Q1 opener — status now reads `open questions 0`.
+  The exact D7 shipped-noise case, caught in our own dogfood folder.
 
 ## Log
 
@@ -66,3 +72,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-07-19 — step 3 checkpointed · ecb519914 — templates/intent.md: plain/lean question form, slugged Decisions, header (7m)
 - 2026-07-19 — step 4 checkpointed · b105b702d — skills/pb-refine: attack mode authors and presents the expanded form (4m)
 - 2026-07-19 — step 5 checkpointed · f04fbbc14 — skills/pb-plan: glossed-reference + slug-at-birth house style (9m)
+- 2026-07-19 — step 6 checkpointed · 920b9f082 — Docs sweep: techniques.md principle + pb-park one-clause why (1 drift, 11m)
