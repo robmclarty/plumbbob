@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — Readable commit subjects: the step title is the commit message
 
-**Current step:** 7 — docs: record the title-is-subject rule and the D68 amendment
+**Current step:** none (at the boundary)
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -29,7 +29,7 @@ check green + checkpoint taken, via `/pb-verify` or `/pb-build`.)*
 - ☑ 4. feat(pb-step): keep the sharpened title a clean commit subject
 - ☑ 5. feat(pb-refine): resync the commit subject when the plan drifts
 - ☑ 6. feat(pb-verify): present a reconciled subject at the pause before it lands
-- ☐ 7. docs: record the title-is-subject rule and the D68 amendment
+- ☑ 7. docs: record the title-is-subject rule and the D68 amendment
 
 ## Park list
 
@@ -69,3 +69,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-07-19 — step 4 checkpointed · 90bd34b18 — feat(pb-step): keep the sharpened title a clean commit subject (4m)
 - 2026-07-19 — step 5 checkpointed · a1f5f29c3 — feat(pb-refine): resync the commit subject when the plan drifts (5m)
 - 2026-07-19 — step 6 checkpointed · a3d2045cc — feat(pb-verify): present a reconciled subject at the pause before it lands (9m)
+- 2026-07-19 — step 7 checkpointed · 154f2bf85 — docs: record the title-is-subject rule and the D68 amendment (5m)

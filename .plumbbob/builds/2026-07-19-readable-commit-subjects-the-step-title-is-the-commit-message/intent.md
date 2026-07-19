@@ -146,7 +146,7 @@ git diff at checkpoint ───────┘─▶ body pass may reconcile vi
    - seam: `skills/pb-verify/SKILL.md`, `skills/pb-build/SKILL.md`,
      `test/contract/skills.test.ts`
    - model: opus — skill prose sets future authoring behavior
-7. [ ] docs: record the title-is-subject rule and the D68 amendment —
+7. [x] docs: record the title-is-subject rule and the D68 amendment —
    **done when:** `docs/techniques.md` states the step-title-is-the-subject rule and the
    scope fallback chain, and `docs/decisions.md`'s D68 entry is amended to note the
    title-carries-the-subject shape and the default-scope fallback; check green
