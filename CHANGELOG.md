@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.16] - 2026-07-19
+
+- **Added:** a public marketing and documentation site under `site/` — a landing page, a
+  task-focused docs guide, and a full CLI and skills API reference — rendered by the shared
+  DC runtime and deployed to GitHub Pages via a new `.github/workflows/pages.yaml`. It mirrors
+  the fascicle and checkride sites but carries a distinct indigo-violet palette and a
+  plumb-line logo mark, frames the marketplace plugin as the primary install with the npm CLI
+  as the power-user path, and leads the API reference with the `/pb-*` skills while presenting
+  the lower-level CLI verbs as an advanced reference.
+
 ## [0.8.15] - 2026-07-19
 
 - **Changed:** upgraded checkride to 0.5.2 (from 0.3.0). `checkride.config.json` now assigns
