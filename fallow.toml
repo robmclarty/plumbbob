@@ -12,7 +12,9 @@ entry = [
 
 # Standalone example packages carry their own package.json and dependency graph
 # (D-ollama-reviewer-example) — not part of this project's source, so exclude them.
-ignorePatterns = ["examples/**"]
+# The marketing site (site/) is static Pages assets: its JS is <script>-loaded by
+# the HTML, not part of the module graph, so it reads as unused-file noise here.
+ignorePatterns = ["examples/**", "site/**"]
 
 # CLI/config-plane deps never imported from source.
 ignoreDependencies = ["@ast-grep/cli", "markdownlint-cli2", "oxlint", "typescript", "@vitest/coverage-v8", "@types/node"]
