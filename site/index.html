@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PlumbBob — establish plumb before you build</title>
+<meta name="description" content="An attention-first build loop for Claude Code: settle the plan on paper, build one small step at a time, and stop at a pause you advance. Vibe to execute, never vibe to decide.">
+<script src="./support.js"></script>
+<script src="./stars.js" defer></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  html,body{margin:0;padding:0;background:#ECEAF4;}
+  ::selection{background:#5A32C8;color:#ECEAF4;}
+  a{color:inherit;text-decoration:none;}
+  .pb-btn{transform:translate(-6px,-6px); box-shadow:1px 1px 0 #181231,2px 2px 0 #181231,3px 3px 0 #181231,4px 4px 0 #181231,5px 5px 0 #181231,6px 6px 0 #181231; transition:transform .09s ease, box-shadow .09s ease;}
+  .pb-btn:hover{transform:translate(0,0); box-shadow:none;}
+  .pb-btn:active{transform:translate(0,0); box-shadow:inset 1px 1px 0 #181231,inset 2px 2px 0 #181231,inset 3px 3px 0 #181231,inset 4px 4px 0 #181231,inset 5px 5px 0 #181231,inset 6px 6px 0 #181231;}
+  .pb-btn-label{display:inline-block; transition:transform .09s ease;}
+  .pb-btn:active .pb-btn-label{transform:translate(8px,8px);}
+  .pb-bob{width:20px; height:20px; background:#5A32C8; border:2px solid #181231; transform:rotate(45deg);}
+</style>
+</helmet>
+
+<div style="position:relative; min-height:100vh; background:#ECEAF4; color:#181231; font-family:'Space Grotesk',sans-serif; overflow-x:hidden;">
+
+  <!-- grain overlay -->
+  <div style="position:fixed; inset:0; z-index:9999; pointer-events:none; opacity:0.06; mix-blend-mode:multiply; background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E&quot;);"></div>
+
+  <!-- ===================== NAV ===================== -->
+  <div style="position:sticky; top:0; z-index:100; display:flex; align-items:center; justify-content:space-between; padding:18px 40px; background:#ECEAF4; border-bottom:3px solid #181231;">
+    <a href="index.html" style="display:flex; align-items:center; gap:14px;">
+      <div class="pb-bob" style="width:22px; height:22px;"></div>
+      <div style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:19px; letter-spacing:2px;">PLUMBBOB</div>
+    </a>
+    <div style="display:flex; gap:28px; align-items:center; font-size:14px; font-weight:500;">
+      <a href="#why">Why</a>
+      <a href="#loop">The loop</a>
+      <a href="#edges">The edges</a>
+      <a href="#skills">Skills</a>
+      <a href="docs.html">Docs</a>
+      <a href="api.html">API</a>
+      <a id="gh-stars" href="https://github.com/robmclarty/plumbbob" style="background:#181231; color:#ECEAF4; padding:8px 16px; font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:1px; white-space:nowrap;">GITHUB</a>
+    </div>
+  </div>
+
+  <!-- ===================== HERO ===================== -->
+  <div style="position:relative; padding:84px 40px 96px; max-width:1320px; margin:0 auto;">
+    <div style="display:flex; gap:56px; align-items:flex-start;">
+      <div style="flex:1; min-width:0; padding-top:6px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:13px; letter-spacing:3px; text-transform:uppercase; color:#5A32C8; margin-bottom:26px;">Attention-first build loop · Claude Code</div>
+        <h1 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:80px; line-height:0.98; margin:0; letter-spacing:-0.5px;">Establish <span style="font-style:italic; color:#5A32C8;">plumb</span> before you build.</h1>
+        <p style="font-size:20px; line-height:1.55; color:#2E2A44; margin:30px 0 0; max-width:520px;">You and the model settle the plan in a file <em>before</em> any code. Then it builds one small step at a time and <strong>stops after each one</strong> — waiting for you to read the diff and approve before anything is committed. Its one law: <span style="font-family:'JetBrains Mono',monospace; font-size:16px; background:#181231; color:#ECEAF4; padding:2px 8px;">vibe to execute, never vibe to decide</span>.</p>
+
+        <div style="display:flex; gap:16px; margin-top:38px;">
+          <a href="docs.html" style="background:#5A32C8; color:#ECEAF4; font-weight:700; font-size:15px; padding:15px 28px; border:3px solid #181231;" class="pb-btn"><span class="pb-btn-label">Get started →</span></a>
+          <a href="#why" style="background:#ECEAF4; color:#181231; font-weight:700; font-size:15px; padding:15px 28px; border:3px solid #181231;" class="pb-btn"><span class="pb-btn-label">Why PlumbBob</span></a>
+        </div>
+
+        <div onClick="{{ copy }}" data-copy="/plugin marketplace add robmclarty/agent-tools
+/plugin install plumbbob@robmclarty" style="margin-top:34px; cursor:pointer; font-family:'JetBrains Mono',monospace; font-size:15.5px; background:#E1DCF0; border:2px dashed #5C5677; padding:12px 20px; max-width:480px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; font-size:11px; letter-spacing:2px; color:#5C5677; margin-bottom:9px;"><span>IN CLAUDE CODE</span><span data-icon="" style="font-size:22px; line-height:1;">⎘</span></div>
+          <div style="line-height:1.75;"><span style="color:#5A32C8;">/plugin</span> marketplace add robmclarty/agent-tools<br><span style="color:#5A32C8;">/plugin</span> install plumbbob@robmclarty</div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:12.5px; color:#5C5677; margin-top:12px;">Prefer a CLI, or not on Claude Code? <span style="color:#181231;">npm i -g plumbbob</span> — see <a href="docs.html" style="color:#5A32C8; font-weight:700; border-bottom:2px solid #5A32C8;">the docs</a>.</div>
+      </div>
+
+      <!-- interactive terminal card -->
+      <div style="flex:none; width:512px; max-width:46vw;">
+        <div style="background:#181231; border:3px solid #181231; box-shadow:1px 1px 0 #C1922E, 2px 2px 0 #C1922E, 3px 3px 0 #C1922E, 4px 4px 0 #C1922E, 5px 5px 0 #C1922E, 6px 6px 0 #C1922E, 7px 7px 0 #C1922E, 8px 8px 0 #C1922E, 9px 9px 0 #C1922E, 10px 10px 0 #C1922E;">
+          <div style="display:flex; align-items:center; gap:8px; padding:13px 16px; border-bottom:1px solid #3A315C;">
+            <div style="width:12px; height:12px; border-radius:50%; background:#C43B5B;"></div>
+            <div style="width:12px; height:12px; border-radius:50%; background:#C1922E;"></div>
+            <div style="width:12px; height:12px; border-radius:50%; background:#8A6BE8;"></div>
+            <div style="margin-left:10px; font-family:'JetBrains Mono',monospace; font-size:12px; color:#8B84A8;">{{ fileName }}</div>
+          </div>
+          <div style="padding:22px; font-family:'JetBrains Mono',monospace; font-size:13.5px; line-height:1.85; color:#DAD5EC; overflow-x:auto; min-height:300px;">
+            <sc-for list="{{ termLines }}" as="ln" hint-placeholder-count="14">
+              <div style="white-space:pre; min-height:1.85em;"><sc-for list="{{ ln.tokens }}" as="tk" hint-placeholder-count="4"><span style="color:{{ tk.color }};">{{ tk.t }}</span></sc-for></div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="margin-top:40px;">
+          <div style="margin-bottom:12px;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:2px; color:#5C5677;">TWELVE SKILLS · ONE LOOP · YOU ARE THE CLOCK</div>
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:8px; font-family:'JetBrains Mono',monospace; font-size:13px;">
+            <sc-for list="{{ skillChips }}" as="s" hint-placeholder-count="12">
+              <div onClick="{{ s.select }}" style="cursor:pointer; padding:7px 12px; border:2px solid #181231; background:{{ s.bg }}; color:{{ s.fg }}; transition:transform .06s;">{{ s.name }}</div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="margin-top:18px; font-family:'JetBrains Mono',monospace; font-size:12.5px; color:#5C5677;">{{ selectionNote }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="height:3px; background:#181231;"></div>
+
+  <!-- ===================== WHY ===================== -->
+  <div id="why" style="position:relative; padding:96px 40px; max-width:1320px; margin:0 auto;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:13px; letter-spacing:3px; color:#5A32C8; margin-bottom:18px;">01 · WHY PLUMBBOB</div>
+    <h2 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:54px; line-height:1; margin:0;">The model is a hand, <span style="font-style:italic;">not a head.</span></h2>
+    <p style="font-size:18px; line-height:1.6; color:#2E2A44; max-width:700px; margin:18px 0 56px;">Most AI-assisted work swings between two poles. <strong>Full autonomy</strong> takes you off the thinking — the artifact comes back and your job was to audit it. <strong>Vibing</strong> fuses deciding and executing, so the model converges on a shape before you chose it and you spend the day cleaning up behind the flood. Both destroy the scarce resource: <strong>your attention</strong>. PlumbBob is the third mode — you stay the author, the machine does the labor, and a boundary keeps the execution stream from overrunning your judgment.</p>
+
+    <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:24px;">
+      <div style="background:#E1DCF0; border:3px solid #181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231, 5px 5px 0 #181231, 6px 6px 0 #181231; padding:28px;">
+        <div style="font-family:'DM Serif Display',serif; font-size:34px; color:#5A32C8; line-height:1.02;">Decide before code</div>
+        <p style="font-size:15px; line-height:1.55; color:#2E2A44; margin:16px 0 0;">The whole goal is settled on paper first — the <span style="font-family:'JetBrains Mono',monospace; font-size:13px;">Frame</span>, the <span style="font-family:'JetBrains Mono',monospace; font-size:13px;">Decisions</span> (each with its <em>because</em>), and every numbered <span style="font-family:'JetBrains Mono',monospace; font-size:13px;">Step</span>. The unit of work is a decision resolved, not a diff generated.</p>
+      </div>
+      <div style="background:#E1DCF0; border:3px solid #181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231, 5px 5px 0 #181231, 6px 6px 0 #181231; padding:28px;">
+        <div style="font-family:'DM Serif Display',serif; font-size:34px; color:#C1922E; line-height:1.02;">A pause you advance</div>
+        <p style="font-size:15px; line-height:1.55; color:#2E2A44; margin:16px 0 0;">The loop does a step's labor, pulls up to the line, and waits. Nothing is locked and nothing refuses you — the boundary between deciding and executing is a <strong>pause you advance</strong>, not a wall that fights you. Re-firing <span style="font-family:'JetBrains Mono',monospace; font-size:13px;">/pb-build</span> is the clock tick.</p>
+      </div>
+      <div style="background:#E1DCF0; border:3px solid #181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231, 5px 5px 0 #181231, 6px 6px 0 #181231; padding:28px;">
+        <div style="font-family:'DM Serif Display',serif; font-size:34px; color:#C43B5B; line-height:1.02;">Capture, don't chase</div>
+        <p style="font-size:15px; line-height:1.55; color:#2E2A44; margin:16px 0 0;">A mid-build "ooh, what if…" never derails the step. <span style="font-family:'JetBrains Mono',monospace; font-size:13px;">/pb-park</span> captures it in one line; <span style="font-family:'JetBrains Mono',monospace; font-size:13px;">/pb-harvest</span> judges it cold at the next boundary. Most ideas are still good ten minutes later — the ones that weren't cost you nothing.</p>
+      </div>
+      <div style="background:#E1DCF0; border:3px solid #181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231, 5px 5px 0 #181231, 6px 6px 0 #181231; padding:28px;">
+        <div style="font-family:'DM Serif Display',serif; font-size:34px; color:#5C5677; line-height:1.02;">Size it to the work</div>
+        <p style="font-size:15px; line-height:1.55; color:#2E2A44; margin:16px 0 0;">A typo earns no session; just fix it. The loop pays for itself from "contained bug" up to "feature touching a few modules." Above that, reach for full autonomy. Ceremony destroys attention too — knowing how much process a task deserves <em>is</em> the skill.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:40px; border-left:6px solid #5A32C8; padding:6px 0 6px 24px;">
+      <div style="font-family:'DM Serif Display',serif; font-size:30px; line-height:1.2; color:#181231; max-width:900px;">You do not dam the river to a trickle. You give the flood <span style="font-style:italic; color:#5A32C8;">banks and a levee</span>, and the same force that scattered your plan now runs where you decided it would.</div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:13px; color:#5C5677; margin-top:16px;">The full argument → <a href="docs.html" style="color:#5A32C8; font-weight:700; border-bottom:2px solid #5A32C8;">attention-first development</a></div>
+    </div>
+  </div>
+
+  <!-- ===================== THE LOOP ===================== -->
+  <div id="loop" style="position:relative; background:#E1DCF0; border-top:3px solid #181231; border-bottom:3px solid #181231; padding:96px 40px;">
+    <div style="max-width:1320px; margin:0 auto;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:13px; letter-spacing:3px; color:#5A32C8; margin-bottom:18px;">02 · THE LOOP</div>
+      <h2 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:54px; line-height:1; margin:0;">One goal, walked <span style="font-style:italic; color:#5A32C8;">end to end.</span></h2>
+      <p style="font-size:18px; line-height:1.6; color:#2E2A44; max-width:700px; margin:18px 0 52px;">Everything the model must stay true to lives in one file — the build's <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">intent.md</span>, written before any code. Then each step is built, checked, self-reviewed against the plan, and committed as its own checkpoint only once you approve. A wrong turn costs one step, not the afternoon.</p>
+
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px;">
+        <sc-for list="{{ loopStages }}" as="st" hint-placeholder-count="4">
+          <div style="background:#ECEAF4; border:3px solid #181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231, 5px 5px 0 #181231; padding:24px 22px;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:2px; color:{{ st.accent }}; margin-bottom:12px;">{{ st.tag }}</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:16px; font-weight:700; color:#181231; margin-bottom:10px;">{{ st.cmd }}</div>
+            <div style="font-size:14px; line-height:1.55; color:#2E2A44;">{{ st.body }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="margin-top:28px; display:flex; gap:20px; align-items:stretch; flex-wrap:wrap;">
+        <div style="flex:1; min-width:340px; background:#181231; border:3px solid #181231; box-shadow:1px 1px 0 #5A32C8, 2px 2px 0 #5A32C8, 3px 3px 0 #5A32C8, 4px 4px 0 #5A32C8, 5px 5px 0 #5A32C8, 6px 6px 0 #5A32C8; padding:26px 28px;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:2px; color:#C1922E; margin-bottom:14px;">THE PAUSE</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:14px; line-height:1.9; color:#DAD5EC; white-space:pre-wrap;"><span style="color:#8A6BE8;">⏸ PAUSE</span> — read the diff as an editor.<br>Approve to checkpoint, or send fixes.</div>
+          <p style="font-size:14.5px; line-height:1.6; color:#B7B0D0; margin:18px 0 0;">On your OK it commits the step as a checkpoint, marks it done, and returns to the boundary. Fire <span style="font-family:'JetBrains Mono',monospace; font-size:13px; color:#ECEAF4;">/pb-build</span> again for the next step. <strong style="color:#ECEAF4;">You are the clock.</strong></p>
+        </div>
+        <div style="flex:1; min-width:340px; background:#ECEAF4; border:3px solid #181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231, 5px 5px 0 #181231, 6px 6px 0 #181231; padding:26px 28px;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:2px; color:#5A32C8; margin-bottom:14px;">SWAP THE EXECUTOR</div>
+          <div style="font-family:'DM Serif Display',serif; font-size:26px; color:#181231; line-height:1.08; margin-bottom:14px;">It reads the diff, not the author.</div>
+          <p style="font-size:14.5px; line-height:1.6; color:#2E2A44; margin:0;"><span style="font-family:'JetBrains Mono',monospace; font-size:13px;">/pb-build</span> is the default engine, not the only one. Implement a step by hand — or vibe it in another session, or in another harness entirely — and run <span style="font-family:'JetBrains Mono',monospace; font-size:13px;">/pb-verify</span> instead: same checks, same pause, same checkpoint.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== THE FIVE EDGES ===================== -->
+  <div id="edges" style="position:relative; background:#181231; color:#ECEAF4; border-bottom:3px solid #181231; padding:88px 40px;">
+    <div style="max-width:1320px; margin:0 auto;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:13px; letter-spacing:3px; color:#C1922E; margin-bottom:18px;">03 · THE MECHANICAL HALF</div>
+      <h2 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:52px; line-height:1.02; margin:0; max-width:900px;">A prompt can <span style="font-style:italic; color:#8A6BE8;">ask</span> a model to plan first and stop for review. It can't <span style="font-style:italic; color:#8A6BE8;">hold the line</span> when the model doesn't.</h2>
+      <p style="font-size:17px; line-height:1.6; color:#B7B0D0; margin:24px 0 52px; max-width:760px;">That mechanical half is what PlumbBob adds under the skills. Five deterministic edges, enforced by the CLI and git rather than by the model's goodwill. The planning surface is the on-ramp; these five are the floor under it.</p>
+
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:18px;">
+        <sc-for list="{{ edges }}" as="e" hint-placeholder-count="5">
+          <div style="border:3px solid {{ e.border }}; background:#1E1636; padding:24px 22px;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:2px; color:{{ e.accent }}; margin-bottom:12px;">{{ e.tag }}</div>
+            <div style="font-weight:700; font-size:18px; color:#ECEAF4; margin-bottom:10px; line-height:1.2;">{{ e.title }}</div>
+            <div style="font-size:14px; line-height:1.6; color:#B7B0D0;">{{ e.body }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="margin-top:44px; display:flex; gap:22px; align-items:flex-start; flex-wrap:wrap; border-top:1px solid #3A315C; padding-top:36px;">
+        <div style="flex:1; min-width:320px;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:2px; color:#C1922E; margin-bottom:14px;">MEASURED, NOT ASSERTED</div>
+          <div style="font-family:'DM Serif Display',serif; font-size:30px; color:#ECEAF4; line-height:1.1; margin-bottom:16px;">The latch's payoff is a receipt, not a claim.</div>
+          <p style="font-size:15px; line-height:1.65; color:#B7B0D0; margin:0;">A headless skill-eval harness sweeps the loop — prose-only baseline vs. the shipped latch, N=5 per contract, every assertion a mechanical read of git state — and commits each receipt to the repo. The route the latch owns: <em>no checkpoint over a red check, under adversarial pressure</em>.</p>
+        </div>
+        <div style="flex:none; width:360px; max-width:100%; background:#1E1636; border:3px solid #3A315C; padding:22px 24px;">
+          <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:18px;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8B84A8;">no checkpoint over a red check</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:16px;">
+            <div style="text-align:center;">
+              <div style="font-family:'DM Serif Display',serif; font-size:44px; color:#C43B5B; line-height:1;">2/5</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8B84A8; margin-top:4px;">PROSE-ONLY</div>
+            </div>
+            <div style="flex:1; text-align:center; font-family:'JetBrains Mono',monospace; font-size:22px; color:#C1922E;">→</div>
+            <div style="text-align:center;">
+              <div style="font-family:'DM Serif Display',serif; font-size:44px; color:#8A6BE8; line-height:1;">5/5</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8B84A8; margin-top:4px;">LATCHED</div>
+            </div>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#5C5677; margin-top:18px; line-height:1.5;">opus · 2026-07-11, reproduced 2026-07-18 @ 0.8.7</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== SKILLS ===================== -->
+  <div id="skills" style="position:relative; padding:96px 40px; max-width:1320px; margin:0 auto;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:13px; letter-spacing:3px; color:#5A32C8; margin-bottom:18px;">04 · THE SKILLS</div>
+    <h2 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:54px; line-height:1; margin:0;">Twelve <span style="font-style:italic; color:#C1922E;">/pb-*</span> skills you fire by hand.</h2>
+    <p style="font-size:18px; line-height:1.6; color:#2E2A44; max-width:720px; margin:18px 0 24px;">You drive the whole loop from your IDE — no step numbers to remember, no raw CLI to type. Every skill is <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">disable-model-invocation</span>, so <em>you</em> fire every move, and <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">/pb-status</span> always names your next one. Most sessions need only the four on the happy path.</p>
+
+    <div style="border:3px solid #181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231, 5px 5px 0 #181231, 6px 6px 0 #181231, 7px 7px 0 #181231, 8px 8px 0 #181231; overflow:hidden;">
+      <table style="width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:13.5px;">
+        <thead>
+          <tr style="background:#181231; color:#ECEAF4;">
+            <th style="text-align:left; padding:14px 18px; font-weight:700; letter-spacing:1px;">SKILL</th>
+            <th style="text-align:left; padding:14px 12px; font-weight:500;">group</th>
+            <th style="text-align:left; padding:14px 12px; font-weight:500; font-family:'Space Grotesk',sans-serif; font-size:14px;">does</th>
+          </tr>
+        </thead>
+        <tbody>
+          <sc-for list="{{ skillRows }}" as="row" hint-placeholder-count="12">
+            <tr style="border-top:2px solid #181231; background:{{ row.bg }};">
+              <td style="text-align:left; padding:12px 18px; font-weight:700; color:{{ row.accent }}; white-space:nowrap;">{{ row.name }}</td>
+              <td style="text-align:left; padding:12px 12px; font-size:12px; color:#5C5677;">{{ row.group }}</td>
+              <td style="text-align:left; padding:12px 12px; font-family:'Space Grotesk',sans-serif; font-size:14px; color:#2E2A44;">{{ row.does }}</td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#5C5677; margin-top:14px;">Under the skills: a lean <span style="color:#5A32C8;">plumbbob</span> CLI, one session-gated post-edit hook, and a <span style="color:#5A32C8;">.plumbbob/</span> sidecar you can open and edit by hand · full surface in the <a href="api.html" style="color:#5A32C8; font-weight:700; border-bottom:2px solid #5A32C8;">API reference</a></div>
+  </div>
+
+  <!-- ===================== BRING YOUR OWN AGENTS ===================== -->
+  <div style="position:relative; background:#E1DCF0; border-top:3px solid #181231; border-bottom:3px solid #181231; padding:88px 40px;">
+    <div style="max-width:1320px; margin:0 auto; display:flex; gap:64px; align-items:center; flex-wrap:wrap;">
+      <div style="flex:1; min-width:360px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:13px; letter-spacing:3px; color:#5A32C8; margin-bottom:18px;">05 · BRING YOUR OWN AGENTS</div>
+        <h2 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:48px; line-height:1.02; margin:0;">Because the executor is author-blind, you can plug your own in.</h2>
+        <p style="font-size:17px; line-height:1.6; color:#2E2A44; margin:24px 0 0;">A <strong>user-authored agent</strong> is anything executable that speaks one small JSON envelope — a twelve-line bash script is a complete agent. Drop it under <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">.plumbbob/agents/</span>, bind it to a step's <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">before</span> / <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">build</span> / <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">after</span> slot, and PlumbBob runs it through the same pause — with <strong>no way for it to advance the loop</strong>. The check gate still gates; you're still the clock.</p>
+        <a href="docs.html" style="display:inline-block; margin-top:28px; background:#5A32C8; color:#ECEAF4; font-weight:700; font-size:14px; padding:13px 24px; border:3px solid #181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231, 5px 5px 0 #181231;" class="pb-btn"><span class="pb-btn-label">The agent contract →</span></a>
+      </div>
+
+      <div style="flex:none; width:480px; max-width:100%;">
+        <div style="border:3px solid #181231; background:#181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231, 5px 5px 0 #181231, 6px 6px 0 #181231, 7px 7px 0 #181231, 8px 8px 0 #181231;">
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #3A315C;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8B84A8;">the output envelope — stdout</span>
+          </div>
+          <div style="white-space:pre; overflow-x:auto; padding:20px 22px; font-family:'JetBrains Mono',monospace; font-size:13px; line-height:1.9; color:#DAD5EC;">{<br>  <span style="color:#C1922E;">"contract"</span>: <span style="color:#C1922E;">1</span>,<br>  <span style="color:#C1922E;">"status"</span>: <span style="color:#8A6BE8;">"done"</span>,          <span style="color:#5C5677;">// done | blocked | drift</span><br>  <span style="color:#C1922E;">"summary"</span>: <span style="color:#8A6BE8;">"read RATE_LIMIT_MAX; default 5"</span>,<br>  <span style="color:#C1922E;">"parked"</span>: [<span style="color:#8A6BE8;">"429 body should be JSON"</span>],<br>  <span style="color:#C1922E;">"notes"</span>: <span style="color:#8A6BE8;">"needs FOO in the env"</span><br>}</div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#5C5677; margin-top:16px; text-align:center;">stdin: the StepContext · stderr: prose, streamed live · exit 0: the envelope is authoritative</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== CTA ===================== -->
+  <div style="position:relative; background:#5A32C8; border-bottom:3px solid #181231; padding:96px 40px; text-align:center; overflow:hidden;">
+    <div style="position:absolute; top:-40px; right:-30px; width:280px; height:280px; background-image:radial-gradient(#181231 3px, transparent 3.5px); background-size:18px 18px; opacity:0.25; transform:rotate(-8deg);"></div>
+    <div style="position:relative; max-width:780px; margin:0 auto;">
+      <h2 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:64px; line-height:1; margin:0; color:#ECEAF4;">Hang the line. Build to it.</h2>
+      <p style="font-size:19px; line-height:1.55; color:#E4DEF6; margin:22px 0 38px;">Add the marketplace, install the plugin, and the twelve <span style="font-family:'JetBrains Mono',monospace; font-size:16px;">/pb-*</span> skills are in your IDE — no npm, no CLI to learn. Then, inside any git repo with a clean tree, fire <span style="font-family:'JetBrains Mono',monospace; font-size:16px;">/pb-plan</span> and go.</p>
+      <div onClick="{{ copy }}" data-copy="/plugin marketplace add robmclarty/agent-tools
+/plugin install plumbbob@robmclarty" style="display:inline-block; text-align:left; cursor:pointer; font-family:'JetBrains Mono',monospace; font-size:16.5px; background:#ECEAF4; border:2px dashed #181231; padding:14px 26px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:24px; font-size:11px; letter-spacing:2px; color:#5C5677; margin-bottom:10px;"><span>IN CLAUDE CODE</span><span data-icon="" style="font-size:22px; line-height:1;">⎘</span></div>
+        <div style="line-height:1.8; color:#181231;"><span style="color:#5A32C8;">/plugin</span> marketplace add robmclarty/agent-tools<br><span style="color:#5A32C8;">/plugin</span> install plumbbob@robmclarty</div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:13px; color:#E4DEF6; margin-top:18px; opacity:0.85;">or <span style="color:#ECEAF4;">npm i -g plumbbob &amp;&amp; plumbbob init</span> for the CLI path</div>
+      <div style="margin-top:32px;">
+        <a href="docs.html" style="display:inline-block; background:#ECEAF4; color:#181231; font-weight:700; font-size:15px; padding:15px 30px; border:3px solid #181231;" class="pb-btn"><span class="pb-btn-label">Open the docs →</span></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== FOOTER ===================== -->
+  <div style="position:relative; background:#181231; color:#B7B0D0; padding:56px 40px 44px;">
+    <div style="max-width:1320px; margin:0 auto; display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:40px;">
+      <div style="max-width:360px;">
+        <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px;">
+          <div style="width:18px; height:18px; background:#5A32C8; border:2px solid #ECEAF4; transform:rotate(45deg);"></div>
+          <div style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:18px; letter-spacing:2px; color:#ECEAF4;">PLUMBBOB</div>
+        </div>
+        <p style="font-size:14px; line-height:1.6; margin:0;">An attention-first build loop for Claude Code. Guidance on the work, a latch on the record — the human owns every decision, the model owns the labor.</p>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#5C5677; margin-top:20px;">Apache-2.0 · © 2026</div>
+      </div>
+      <div style="display:flex; gap:64px; flex-wrap:wrap;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:2px; color:#C1922E; margin-bottom:14px;">DOCS</div>
+          <div style="display:flex; flex-direction:column; gap:10px; font-size:14px;">
+            <a href="docs.html">Getting started</a>
+            <a href="docs.html">The loop</a>
+            <a href="docs.html">Working with agents</a>
+            <a href="docs.html">Attention-first</a>
+            <a href="api.html">API reference</a>
+          </div>
+        </div>
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:2px; color:#C1922E; margin-bottom:14px;">SKILLS</div>
+          <div style="display:flex; flex-direction:column; gap:10px; font-family:'JetBrains Mono',monospace; font-size:13px;">
+            <span>/pb-plan</span>
+            <span>/pb-build</span>
+            <span>/pb-verify</span>
+            <span>/pb-park</span>
+            <span>/pb-finish</span>
+          </div>
+        </div>
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:2px; color:#C1922E; margin-bottom:14px;">PROJECT</div>
+          <div style="display:flex; flex-direction:column; gap:10px; font-size:14px;">
+            <a href="https://github.com/robmclarty/plumbbob">GitHub</a>
+            <a href="https://github.com/robmclarty/plumbbob/blob/main/LICENSE">License</a>
+            <a href="https://github.com/robmclarty/plumbbob/blob/main/CHANGELOG.md">Changelog</a>
+            <a href="https://github.com/robmclarty/ridgeline">Ridgeline</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<template id="__bundler_thumbnail" data-bg-color="#ECEAF4">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#ECEAF4"/>
+    <line x1="600" y1="150" x2="600" y2="470" stroke="#181231" stroke-width="8"/>
+    <rect x="548" y="470" width="104" height="104" fill="#5A32C8" stroke="#181231" stroke-width="12" transform="rotate(45 600 522)"/>
+    <text x="600" y="700" font-family="monospace" font-size="54" font-weight="700" fill="#181231" text-anchor="middle" letter-spacing="8">PLUMBBOB</text>
+  </svg>
+</template></x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { skill: null };
+
+  selectSkill(n) { this.setState(s => ({ skill: s.skill === n ? null : n })); }
+
+  copy(e) {
+    const t = e.currentTarget;
+    const text = t.getAttribute('data-copy') || '';
+    try { if (navigator.clipboard) navigator.clipboard.writeText(text); } catch (_) {}
+    const icon = t.querySelector('[data-icon]');
+    if (icon) {
+      const o = icon.getAttribute('data-glyph') || icon.textContent;
+      icon.setAttribute('data-glyph', o);
+      icon.textContent = '✓';
+      clearTimeout(t._t);
+      t._t = setTimeout(() => { icon.textContent = o; }, 1300);
+      return;
+    }
+    const orig = t.getAttribute('data-orig') || t.textContent;
+    t.setAttribute('data-orig', orig);
+    t.textContent = 'COPIED ✓';
+    clearTimeout(t._t);
+    t._t = setTimeout(() => { t.textContent = orig; }, 1300);
+  }
+
+  renderVals() {
+    const INK = '#DAD5EC', DIM = '#8B84A8', VIO = '#8A6BE8', BRASS = '#C1922E', RED = '#C43B5B', GRN = '#7BC49A';
+
+    // skill catalogue: [name, group, does]
+    const SKILLS = [
+      ['/pb-plan',    'happy path',    'open the session and author the whole plan — Frame, Decisions, Constraints, and all Steps.'],
+      ['/pb-build',   'happy path',    'implement the next planned step, then verify it to the pause. --auto chains to done; a range like 1-3 self-approves through step 3.'],
+      ['/pb-finish',  'happy path',    'write the report, make the final commit, and clear the slate for a fresh goal.'],
+      ['/pb-step',    'plan-shaping',  'revise or sharpen the next step just-in-time. Empty input auto-syncs it to reality.'],
+      ['/pb-refine',  'plan-shaping',  'attack the frame for holes as Open questions, or repair a plan that drifted from the code.'],
+      ['/pb-spike',   'plan-shaping',  'a throwaway worktree experiment for a fork the plan can\'t settle on paper. The deliverable is the verdict.'],
+      ['/pb-status',  'helper',        'orient — where you are, the next step\'s done-when and seam, and the single next move.'],
+      ['/pb-verify',  'helper',        'the tick, standalone — check, self-review, validate, PAUSE, checkpoint. For a diff /pb-build didn\'t write.'],
+      ['/pb-revert',  'helper',        'recover — git reset --hard to a recorded checkpoint SHA, keeping your plan and notes intact.'],
+      ['/pb-doctor',  'helper',        'check the install from inside a session — plugin link, skills, hook, check gate.'],
+      ['/pb-park',    'capture',       'capture a mid-build idea in one tagged line without chasing it. The step in flight stays protected.'],
+      ['/pb-harvest', 'capture',       'triage parked ideas at a boundary: blocker (fold in now), tangent (defer), or pivot signal (replan).'],
+    ];
+
+    const sel = this.state.skill;
+    const line = (parts) => ({ tokens: parts.map(([t, color]) => ({ t, color })) });
+    const blank = () => line([[' ', INK]]);
+    const wrap = (text) => {
+      const words = text.split(' ');
+      const out = [];
+      let cur = '';
+      for (const w of words) {
+        if ((cur + ' ' + w).trim().length > 44) { out.push(cur.trim()); cur = w; }
+        else { cur = (cur + ' ' + w).trim(); }
+      }
+      if (cur) out.push(cur);
+      return out.map(l => ({ tokens: [{ t: l, color: INK }] }));
+    };
+
+    let termLines, fileName;
+    if (!sel) {
+      fileName = 'the loop — one step';
+      termLines = [
+        line([['$ ', VIO], ['/pb-plan ', INK], ['rate-limit POST /login, 5/min/IP', DIM]]),
+        line([['  ✎ ', BRASS], ['intent.md written', INK], [' — frame · decisions · 4 steps', DIM]]),
+        line([['  ● ', VIO], ['plan committed', INK], ['  chore(login): plan', DIM]]),
+        blank(),
+        line([['$ ', VIO], ['/pb-build', INK]]),
+        line([['  → ', VIO], ['step 1/4  ', INK], ['add the token bucket', DIM]]),
+        line([['  ✓ ', GRN], ['check   ', INK], ['types · lint · test · dead   ', DIM], ['green', GRN]]),
+        line([['  ⏸ ', VIO], ['PAUSE', VIO], [' — read the diff as an editor.', INK]]),
+        blank(),
+        line([['(approve)', DIM]]),
+        line([['  ✓ ', GRN], ['checkpoint  ', INK], ['feat(login): add token bucket  ', DIM], ['#a1b2c3d', BRASS]]),
+        blank(),
+        line([['  You are the clock.', VIO]]),
+      ];
+    } else {
+      const s = SKILLS.find(x => x[0] === sel);
+      fileName = 'skills-reference · ' + s[0];
+      termLines = [
+        line([['// ', DIM], [s[1], DIM]]),
+        line([['$ ', VIO], [s[0], INK]]),
+        blank(),
+        ...wrap(s[2]),
+        blank(),
+        line([['fire it yourself — every skill is disable-model-invocation', DIM]]),
+      ];
+    }
+
+    const skillChips = SKILLS.map(([name]) => {
+      const on = name === sel;
+      const short = name.replace('/pb-', '');
+      return { name: short, select: () => this.selectSkill(name), bg: on ? '#5A32C8' : '#ECEAF4', fg: on ? '#ECEAF4' : '#181231' };
+    });
+
+    const selectionNote = sel
+      ? 'Showing ' + sel + '. Tap the chip again to see the loop run.'
+      : 'One step of the loop. Click a skill to see what it does — all twelve, fired by hand.';
+
+    // the loop stages
+    const loopStages = [
+      { tag: 'ONCE', cmd: '/pb-plan', accent: '#5A32C8', body: 'Decide everything on paper — frame, decisions, and all steps. No code is written yet.' },
+      { tag: 'PER STEP', cmd: '/pb-build', accent: '#C1922E', body: 'Implement the next step → run the check gate → self-review against the plan → PAUSE.' },
+      { tag: 'PER STEP', cmd: '(approve)', accent: '#C43B5B', body: 'On your OK the step commits as a checkpoint. Fire /pb-build again — that is the clock tick.' },
+      { tag: 'ONCE', cmd: '/pb-finish', accent: '#5C5677', body: 'Report what shipped and why, make the final commit, and clear for the next goal.' },
+    ];
+
+    // the five edges
+    const edges = [
+      { tag: 'THE GATE', border: '#3A315C', accent: '#8A6BE8', title: 'A gate that refuses red', body: 'checkpoint won\'t record a step while the check gate is red, and start refuses a dirty tree — the checkride run has to pass before a step lands.' },
+      { tag: 'THE LEDGER', border: '#3A315C', accent: '#8A6BE8', title: 'One SHA per verified step', body: 'Every approved step is its own git commit against a recorded baseline — a ledger of checkpoints, not one undifferentiated diff at the end.' },
+      { tag: 'RECOVERY', border: '#3A315C', accent: '#8A6BE8', title: 'A preservation-aware revert', body: '/pb-revert resets exactly to a recorded checkpoint SHA while keeping your plan and notes intact, and restores only SHAs the loop wrote.' },
+      { tag: 'THE RECORD', border: '#3A315C', accent: '#8A6BE8', title: 'A build record that rides the PR', body: 'The tracked builds/<slug>/ folder — intent, log, checkpoints, report — merges into main with the branch instead of dying with the worktree.' },
+      { tag: 'THE LATCH', border: '#C1922E', accent: '#C1922E', title: 'The approval latch', body: 'checkpoint refuses to land a step until the harness records a human turn since that step began — so the model can\'t self-commit past you. The refusal is the pause.' },
+    ];
+
+    // skills table
+    const groupAccent = { 'happy path': '#5A32C8', 'plan-shaping': '#C1922E', 'helper': '#5C5677', 'capture': '#C43B5B' };
+    const skillRows = SKILLS.map(([name, group, does], i) => ({
+      name, group, does,
+      accent: groupAccent[group] || '#5A32C8',
+      bg: i % 2 ? '#E1DCF0' : '#ECEAF4',
+    }));
+
+    return { termLines, fileName, skillChips, selectionNote, loopStages, edges, skillRows, copy: (e) => this.copy(e) };
+  }
+}
+</script>
+</body>
+</html>
