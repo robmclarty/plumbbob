@@ -4,6 +4,12 @@
   <img src="hero.svg" alt="A row of plumb bobs of varying shapes hanging from strings" width="600">
 </p>
 
+<p align="center">
+  <a href="https://robmclarty.github.io/plumbbob/">Website</a> ·
+  <a href="https://robmclarty.github.io/plumbbob/docs.html">Docs</a> ·
+  <a href="https://robmclarty.github.io/plumbbob/api.html">API reference</a>
+</p>
+
 PlumbBob is a Claude Code plugin — twelve `/pb-*` skills and a small CLI — that runs
 LLM-assisted coding as a loop you control. You and the model settle the plan in a file
 *before* any code; then the model builds one small step at a time and **stops after
