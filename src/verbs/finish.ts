@@ -107,9 +107,11 @@ function buildDefaultScope(root: string, slug: string | null): string | null {
 // `--body` reads the final-commit body from stdin (the single-quoted heredoc of
 // D34), so the pb-finish skill can compose a proportional close-out message. Returns
 // null when the flag is absent or stdin is empty — the commit then carries subject
-// only. A read error (no stdin attached) degrades to null rather than throwing.
+// only. Reading fd 0 blocks until EOF, which the heredoc supplies; a read error (no
+// stdin attached) degrades to null, and an interactive TTY — which would never send
+// EOF — skips the read instead of hanging (twin of checkpoint.ts's guard).
 function bodyArg(args: ReadonlyArray<string>): string | null {
-  if (!args.includes('--body')) {
+  if (!args.includes('--body') || process.stdin.isTTY === true) {
     return null
   }
   try {

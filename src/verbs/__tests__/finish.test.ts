@@ -90,6 +90,22 @@ describe('finish', () => {
     expect(code).toBe(1)
     expect(stderr).toContain('no active session')
   })
+
+  it('--body on an interactive TTY finishes subject-only instead of blocking', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Tty body', '--slug', 'tty-body']))
+    const stdin = process.stdin as unknown as { isTTY?: boolean }
+    const hadTty = stdin.isTTY
+    stdin.isTTY = true // a terminal never sends EOF — the read must be skipped, not hung
+    try {
+      const { code } = captureIo(() => finish(dir, ['--body']))
+      expect(code).toBe(0)
+    } finally {
+      stdin.isTTY = hadTty
+    }
+    const body = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%b'], { encoding: 'utf8' })
+    expect(body).toContain('plumbbob finish') // the marker still lands; no extra body, no hang
+  })
 })
 
 describe('finish — the Stats roll-up (research/07 2b)', () => {

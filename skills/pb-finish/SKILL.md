@@ -30,11 +30,24 @@ record.
    This is the "yeah, I did that" artifact. Write it by default; the human may edit it.
 2. **Finish.** Run `plumbbob finish`, which appends the checkpoint SHAs to the
    report and makes the final commit — subject `chore(<scope>): finish`, its body
-   led by a `plumbbob finish` marker plus an optional proportional `--body` (the
-   stdin heredoc) — then
+   led by a `plumbbob finish` marker plus an optional proportional `--body` — then
    clears the control state (the in-flight markers, then `STATE` last — one delete
    drops both the session sentinel and the active-build cursor it carries). The
    build folder stays in place, committed, and rides the branch into the PR.
+
+   `--body` reads the close-out message from **stdin via a single-quoted heredoc
+   redirect** — the same form the other verbs use:
+
+   ```
+   plumbbob finish --body <<'BODY'
+   …proportional close-out prose…
+   BODY
+   ```
+
+   Redirect the heredoc *into* the command (`--body <<'BODY'`). Do **not** pass it as
+   an argument value (`--body "$(cat <<'BODY'…)"`): `--body` ignores an argument and
+   reads stdin, so that form leaves stdin open with no EOF and the command hangs. Omit
+   `--body` entirely and the commit carries the `plumbbob finish` marker subject only.
 3. **Point at the next goal** — `/pb-plan` to frame the next one.
 
 ## The hard contracts
