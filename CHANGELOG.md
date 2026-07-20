@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.18] - 2026-07-19
+
+- **Fixed:** `plumbbob finish --body` could hang indefinitely when invoked as
+  `--body "$(cat <<'BODY' ... BODY)"` — that form passes the body as an ignored
+  argument while leaving the process's own stdin open with no EOF, so the
+  blocking `readFileSync(0)` read never returned. `finish.ts` now shares the
+  same interactive-TTY guard as `checkpoint.ts`'s `--body`, degrading to a
+  subject-only commit instead of hanging when stdin will never send EOF. The
+  `pb-finish` skill now shows the correct `--body <<'BODY' ... BODY` heredoc
+  redirect explicitly, matching `pb-verify`/`pb-build`/`pb-plan`, and warns
+  against the broken argument form.
+- **Changed:** the `package.json` `homepage` field now points at the live
+  GitHub Pages site instead of the README anchor, and the README links to the
+  new website, docs guide, and API reference so they're discoverable from npm
+  and GitHub.
+
 ## [0.8.17] - 2026-07-19
 
 - **Fixed:** the static marketing site under `site/` no longer breaks CI. Its `<script>`-loaded
