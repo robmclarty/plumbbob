@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.17] - 2026-07-19
+
+- **Fixed:** the static marketing site under `site/` no longer breaks CI. Its `<script>`-loaded
+  JS (`support.js`, `stars.js`) was tripping the `lint` and `dead` checks — oxlint flagged the
+  bundled `support.js` for unused expressions, and fallow reported both files as unused because
+  its detection only follows the JS/TS module graph, not HTML `<script src>` references. Both
+  checks now exclude `site/**`, mirroring the existing `examples/**` exclusion for non-source
+  assets.
+
 ## [0.8.16] - 2026-07-19
 
 - **Added:** a public marketing and documentation site under `site/` — a landing page, a
