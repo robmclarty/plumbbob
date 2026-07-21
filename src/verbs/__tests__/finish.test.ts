@@ -21,10 +21,10 @@ describe('finish', () => {
     const { code, stdout } = captureIo(() => finish(dir))
     expect(code).toBe(0)
     expect(hasSession(dir)).toBe(false)
-    // the folder IS the archive (D8) — intent.md stays, and no archive/ is created.
+    // the tracked build folder itself is the archive — intent.md stays, and no archive/ is created.
     expect(existsSync(intentPath(dir))).toBe(true)
     expect(existsSync(join(sidecarDir(dir), 'archive'))).toBe(false)
-    expect(subject(dir)).toBe('chore(finishing-up): finish') // Conventional; `plumbbob finish` moves to the body (D68)
+    expect(subject(dir)).toBe('chore(finishing-up): finish') // Conventional Commits subject; the `plumbbob finish` marker rides in the body
     const body = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%b'], { encoding: 'utf8' })
     expect(body).toContain('plumbbob finish')
     // Short SHA (exactly 9 hex), the archive pointer, and the next-goal nudge.
@@ -36,8 +36,8 @@ describe('finish', () => {
     const dir = makeTempRepo()
     await captureIoAsync(() => start(dir, ['Cursor gone']))
     captureIo(() => finish(dir))
-    // Cursor and session share STATE now, so one delete both closes the session and
-    // clears the cursor — no separate settings.local.json write to undo.
+    // Cursor and session share the STATE file, so one delete both closes the session
+    // and clears the cursor — there is no separate settings.local.json write to undo.
     expect(hasSession(dir)).toBe(false)
     expect(existsSync(join(sidecarDir(dir), 'STATE'))).toBe(false)
     expect(execFileSync('git', ['-C', dir, 'status', '--porcelain'], { encoding: 'utf8' }).trim()).toBe('')

@@ -43,7 +43,7 @@ async function startedBuild(): Promise<string> {
 }
 
 // Drop a bash fixture agent under .plumbbob/agents/<name>/ — a run.sh speaking the
-// envelope and an agent.json pointing `command` at it via PLUMBBOB_AGENT_DIR (D49),
+// envelope and an agent.json pointing `command` at it via PLUMBBOB_AGENT_DIR,
 // so the run proves the env var and the repo-root cwd at once.
 function makeAgent(
   root: string,
@@ -86,17 +86,19 @@ describe('agent run — happy path', () => {
     const { code, stdout, stderr } = await captureIoAsync(() => agent(dir, ['run', 'doer', '--step', '1']))
     expect(code).toBe(0)
 
-    // stdout carries the validated envelope and NOTHING else (D46/D47 stream discipline).
+    // stdout carries the validated envelope and NOTHING else (stream discipline:
+    // stdout is the structured result, prose rides stderr).
     const envelope = envelopeFromStdout(stdout)
     expect(envelope).toMatchObject({ contract: 1, status: 'done', summary: 'did the thing' })
     // the human summary rides stderr, not stdout.
     expect(stderr).toContain('agent "doer" (build) — done: did the thing')
 
-    // the child ran at the repo root (D49) with PLUMBBOB_AGENT_DIR pointing at its own dir.
+    // the child ran at the repo root with PLUMBBOB_AGENT_DIR pointing at its own dir.
     const agentDir = join(dir, '.plumbbob', 'agents', 'doer')
     expect(realpathSync(readFileSync(join(agentDir, 'cwd.txt'), 'utf8').trim())).toBe(realpathSync(dir))
 
-    // the composed StepContext reached the child on stdin (D59/D61).
+    // the composed StepContext — inline context plus the scraped Decisions/Constraints —
+    // reached the child on stdin.
     const input = JSON.parse(readFileSync(join(agentDir, 'last-input.json'), 'utf8'))
     expect(input).toMatchObject({
       contract: 1,
@@ -277,7 +279,7 @@ describe('agent run — side effects (D44/D47)', () => {
     expect(ledger[0]).toMatchObject({ agent: 'doer', mode: 'build', step: 1 })
     expect(ledger[0].envelope).toMatchObject({ status: 'done', summary: 'did the thing' })
 
-    // the ledger is step-scoped: checkpointing the step clears it (D47).
+    // the ledger is step-scoped: checkpointing the step clears it.
     await captureIoAsync(() => checkpoint(dir, ['1']))
     expect(existsSync(handoffPath(dir))).toBe(false)
   })

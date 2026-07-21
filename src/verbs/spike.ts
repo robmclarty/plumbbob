@@ -1,10 +1,16 @@
-// `plumbbob spike` (D18) — the spike lifecycle for a genuine fork the design
-// phase couldn't settle. `spike "<slug>" [opt…]` creates a sibling git worktree +
-// `spike/<slug>-<opt>` branch per option OUTSIDE the repo root (default opts a/b)
-// and drops the SPIKE marker; the main tree stays put while you experiment in the
-// worktrees, which are hook-dormant by construction — the untracked sidecar (D17)
-// doesn't exist in a fresh checkout, so the hooks find no STATE there.
-// `spike done` removes every spike worktree + branch and clears the marker.
+// `plumbbob spike` — the spike lifecycle for a genuine fork the design phase
+// couldn't settle. `spike "<slug>" [opt…]` creates a sibling git worktree and a
+// `spike/<slug>-<opt>` branch per option OUTSIDE the repo root (default options
+// a/b) and drops the SPIKE marker — one of the untracked per-build control files
+// under `.plumbbob/` that record what's in flight. The main tree stays put while
+// you experiment in the worktrees, which are hook-dormant by construction: the
+// untracked control files don't exist in a fresh checkout, so the hooks find no
+// STATE (the session sentinel) there. `spike done` removes every spike worktree
+// and branch and clears the marker.
+//
+// Every spike also leaves a durable report — `spike-NN-<slug>.md` beside
+// intent.md in the tracked `builds/<slug>/` folder — so the verdict rides the
+// branch into the PR instead of evaporating with the throwaway worktrees.
 //
 // Worktree git calls run directly here rather than via lib/git.ts (which holds the
 // shared additive read/commit helpers): worktree management is spike-local, and
@@ -27,12 +33,21 @@ import {
 } from '../lib/sidecar.ts'
 import { readTemplate, stampTemplate } from '../lib/templates.ts'
 
+// Worktree/branch names when the caller lists none — a fork defaults to two arms.
 const DEFAULT_OPTIONS: ReadonlyArray<string> = ['a', 'b']
 
-// The verbatim Verdict placeholder from templates/spike-report.md — its presence means
-// the spike's call was never recorded, which `spike done` nudges on (D70).
+/**
+ * The verbatim Verdict placeholder from templates/spike-report.md — its presence
+ * means the spike's call was never recorded, which `spike done` nudges on.
+ */
 const VERDICT_PLACEHOLDER = '*(viable | not viable | partial'
 
+/**
+ * Entry point for `plumbbob spike` — dispatches to open, `report`, or `done`.
+ *
+ * Requires an active session (the STATE sentinel) and resolves which build the
+ * spike belongs to before dispatching.
+ */
 export function spike(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
@@ -50,11 +65,14 @@ export function spike(cwd: string, args: ReadonlyArray<string>): number {
   return spikeStart(root, buildSlug, positionals)
 }
 
-// `spike report "<slug>"` (D70) — scaffold a spike report WITHOUT worktrees, for the
-// spike-as-step case (a planned step titled `spike: …`, where the increment itself is
-// the experiment). No boundary requirement and no SPIKE marker: a step in flight is
-// exactly when this runs. Provenance is `step <n>` when a STEP is in flight, else
-// `/pb-spike`.
+/**
+ * `spike report "<slug>"` — scaffold a spike report WITHOUT worktrees.
+ *
+ * Serves the spike-as-step case: a planned step titled `spike: …`, where the
+ * increment itself is the experiment. No boundary requirement and no SPIKE
+ * marker — a step in flight is exactly when this runs. Provenance is stamped
+ * `step <n>` when a step is in flight, else `/pb-spike`.
+ */
 function spikeReport(root: string, buildSlug: string | null, positionals: ReadonlyArray<string>): number {
   const slug = sanitize(positionals[0] ?? '')
   if (slug.length === 0) {
@@ -71,9 +89,14 @@ function spikeReport(root: string, buildSlug: string | null, positionals: Readon
   return 0
 }
 
-// Write a fresh spike report from the template at the next free `spike-NN-<slug>.md`
-// in the build folder, and return its path. Shared by the explicit `/pb-spike` open
-// and the spike-as-step `spike report` — one artifact, two entry points (D70).
+/**
+ * Write a fresh spike report from the template at the next free
+ * `spike-NN-<slug>.md` in the build folder, and return its path.
+ *
+ * Shared by the worktree-opening spike and the spike-as-step `spike report` —
+ * one artifact, two entry points. The CLI owns the numbering; the human never
+ * creates or numbers a report.
+ */
 function scaffoldSpikeReport(root: string, buildSlug: string | null, spikeSlug: string, via: string): string {
   const path = nextSpikeReportPath(root, buildSlug, spikeSlug)
   const date = new Date().toISOString().slice(0, 10)
@@ -81,8 +104,12 @@ function scaffoldSpikeReport(root: string, buildSlug: string | null, spikeSlug: 
   return path
 }
 
-// The in-flight STEP number for the build, or null — reads the STEP marker `build`
-// writes. Used to stamp a spike-as-step report's provenance.
+/**
+ * The build's in-flight step number, or null — reads the STEP marker `build`
+ * writes.
+ *
+ * Used to stamp a spike-as-step report's provenance as `step <n>`.
+ */
 function readInFlightStep(root: string, buildSlug: string | null): number | null {
   try {
     const raw = readFileSync(stepPath(root, buildSlug), 'utf8').trim()
@@ -92,6 +119,14 @@ function readInFlightStep(root: string, buildSlug: string | null): number | null
   }
 }
 
+/**
+ * Open a spike: one throwaway worktree + `spike/<slug>-<opt>` branch per option.
+ *
+ * Refuses when a spike is already open or a step is in flight — a spike is a
+ * deliberate fork from a settled boundary, so the current step must checkpoint
+ * or revert first. Marks the SPIKE control file and scaffolds the report before
+ * returning.
+ */
 function spikeStart(root: string, buildSlug: string | null, positionals: ReadonlyArray<string>): number {
   if (inSpike(root, buildSlug)) {
     process.stderr.write('plumbbob: already in a spike. Run `plumbbob spike done` to close it first.\n')
@@ -124,7 +159,7 @@ function spikeStart(root: string, buildSlug: string | null, positionals: Readonl
   }
 
   markSpike(root, buildSlug)
-  // Scaffold the report NOW, while the worktrees live (D70): findings accrue during the
+  // Scaffold the report NOW, while the worktrees live: findings accrue during the
   // experiment, not from memory after the teardown. Provenance names the worktrees.
   const report = scaffoldSpikeReport(root, buildSlug, slug, `/pb-spike — worktrees (${options.join(', ')})`)
   process.stdout.write(
@@ -137,12 +172,18 @@ function spikeStart(root: string, buildSlug: string | null, positionals: Readonl
   return 0
 }
 
+/**
+ * Close the spike: remove every spike worktree and branch, clear the marker.
+ *
+ * Nudges — but never refuses — when a report's Verdict is still the template
+ * placeholder: guidance, not a gate.
+ */
 function spikeDone(root: string, buildSlug: string | null): number {
   if (!inSpike(root, buildSlug)) {
     process.stderr.write('plumbbob: no active spike to close.\n')
     return 1
   }
-  // Check for an unrecorded verdict BEFORE teardown (D70). The reports live in the
+  // Check for an unrecorded verdict BEFORE teardown. The reports live in the
   // build folder, not the spike worktrees, so they survive the removal — but the
   // learning that fills them does not, so this is the moment to nudge.
   const unfilled = spikeReportsMissingVerdict(root, buildSlug)
@@ -156,8 +197,8 @@ function spikeDone(root: string, buildSlug: string | null): number {
   }
   clearSpike(root, buildSlug)
 
-  // Guidance, not a gate (the enforce→guide pivot): a missing verdict is a nudge, and
-  // the spike still closes. Name the reports so the human knows where to write it.
+  // Guidance, not a gate: a missing verdict is a nudge, and the spike still
+  // closes. Name the reports so the human knows where to write it.
   if (unfilled.length > 0) {
     process.stderr.write(
       `plumbbob: heads-up — no verdict recorded in ${unfilled.join(', ')}. ` +
@@ -173,9 +214,13 @@ function spikeDone(root: string, buildSlug: string | null): number {
   return 0
 }
 
-// The spike-report filenames in the build folder whose Verdict is still the template
-// placeholder — the ones `spike done` nudges on. Best-effort per file: an unreadable
-// report is skipped rather than blocking the close.
+/**
+ * The spike-report filenames in the build folder whose Verdict is still the
+ * template placeholder — the ones `spike done` nudges on.
+ *
+ * Best-effort per file: an unreadable report is skipped rather than blocking
+ * the close.
+ */
 function spikeReportsMissingVerdict(root: string, buildSlug: string | null): ReadonlyArray<string> {
   const dir = buildFolder(root, buildSlug)
   return listSpikeReports(root, buildSlug).filter((name) => {
@@ -187,8 +232,11 @@ function spikeReportsMissingVerdict(root: string, buildSlug: string | null): Rea
   })
 }
 
-// Worktree paths whose checked-out branch is under spike/ — parsed from the
-// porcelain output (blank-line-separated `worktree <path>` / `branch <ref>` blocks).
+/**
+ * Worktree paths whose checked-out branch is under spike/ — parsed from the
+ * porcelain output (blank-line-separated `worktree <path>` / `branch <ref>`
+ * blocks).
+ */
 function spikeWorktrees(root: string): ReadonlyArray<string> {
   const out = git(root, ['worktree', 'list', '--porcelain'])
   const paths: string[] = []
@@ -203,11 +251,17 @@ function spikeWorktrees(root: string): ReadonlyArray<string> {
   return paths
 }
 
+/**
+ * List the local `spike/<slug>` branch names.
+ */
 function spikeBranches(root: string): ReadonlyArray<string> {
   const out = git(root, ['for-each-ref', '--format=%(refname:short)', 'refs/heads/spike/'])
   return out.length === 0 ? [] : out.split('\n').filter((b) => b.length > 0)
 }
 
+/**
+ * Slugify a raw spike name — lowercase, non-alphanumerics collapsed to dashes.
+ */
 function sanitize(raw: string): string {
   return raw
     .toLowerCase()
@@ -215,6 +269,11 @@ function sanitize(raw: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
+/**
+ * Run a git command at `root` and return its trimmed stdout.
+ *
+ * Stderr passes through to the terminal; a non-zero exit throws.
+ */
 function git(root: string, args: ReadonlyArray<string>): string {
   return execFileSync('git', ['-C', root, ...args], {
     encoding: 'utf8',

@@ -75,7 +75,7 @@ describe('start', () => {
   it('warns at plan time when the gate sees no code checks, with the exact fix (research/07 Build 2a)', async () => {
     const dir = makeTempRepo() // bare: no tsconfig, no test runner — only always-on repo checks
     const { code, stderr } = await captureIoAsync(() => start(dir, ['Bare Repo']))
-    expect(code).toBe(0) // guidance, never the exit code (C1)
+    expect(code).toBe(0) // the warning is guidance, never the exit code
     expect(stderr).toContain('the check gate sees no code checks')
     expect(stderr).toContain('add {"check": "npm test"} to .plumbbob/settings.json')
   })

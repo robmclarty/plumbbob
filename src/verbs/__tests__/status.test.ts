@@ -10,8 +10,9 @@ import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
 afterAll(cleanupTempRepos)
 
-// A started build carrying a harness.json (D48). `harness` is written verbatim so
-// tests can exercise valid bindings and a broken file alike.
+// A started build carrying a harness.json — status reports the active build's
+// harness bindings. `harness` is written verbatim so tests can exercise valid
+// bindings and a broken file alike.
 const HARNESS_SLUG = 'harness-status'
 
 async function startedWithHarness(harness: string): Promise<string> {

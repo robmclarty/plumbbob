@@ -1,12 +1,14 @@
-// `plumbbob checkpoint [<n>] [-m <msg>]` — the executor-agnostic commit tick (D3).
-// It does NOT require a STEP file: the step is whatever you pass,
-// else the in-flight STEP, else the next undone step in intent. It gates on a green
-// check, then commits any pending work (or records the existing HEAD when the tree
-// is already clean — the human's commit skill may have committed first), records the
-// SHA, flips the intent checkbox to `[x]`, and clears any STEP/SEAM (which returns
-// the dashboard to the DESIGN boundary). The diff's author is irrelevant:
-// `/pb-build`, your hands, a vibe session, or another harness all checkpoint
-// the same way.
+// `plumbbob checkpoint [<n>] [-m <msg>]` — the commit tick that lands a step.
+// Executor-agnostic and author-blind: it reads the diff, not who wrote it, so a
+// `/pb-build` run, your own hands, a vibe session, or another harness all
+// checkpoint identically. It does NOT require a STEP marker (the flat control
+// file recording the step in flight): the step is whatever you pass, else the
+// in-flight STEP, else the next undone step in intent.md. It evaluates the
+// approval latch, gates on a green check, commits any pending work (or records
+// the existing HEAD when the tree is already clean — the human's commit skill
+// may have committed first), records the SHA, flips the intent checkbox to
+// `[x]`, and clears the STEP/SEAM markers — returning the dashboard to the
+// DESIGN boundary.
 
 import { appendFileSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { commit, findRepoRoot, headSha, isDirty, stageAll, stagePath, stagedPaths, stagedStat } from '../lib/git.ts'
@@ -34,6 +36,12 @@ import { conventionalSubject, subjectFromTitle, withMarker } from '../lib/commit
 import { appendToSection, checkpointLogLine } from '../lib/buildlog.ts'
 import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
 
+/**
+ * Land a step: latch, check gate, commit, record, return to the boundary.
+ *
+ * Exit 1 on any refusal — no session, no resolvable step, a latched tick, or a
+ * red/broken check; each refusal says what unblocks it.
+ */
 export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Promise<number> {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
@@ -51,8 +59,9 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
     return 1
   }
 
-  // The approval latch (D64) precedes the check gate (C4): the tick may not land
-  // without a human turn since entry, a grant, or a dormant ledger. The refusal
+  // The approval latch runs before the check gate — cheap first. The tick may
+  // not land without a human turn since the step was entered, a one-turn grant
+  // the human typed, or a dormant ledger. A refusal is not an error: the
   // message is the pause affordance — exit 1 and hand the turn back.
   const latch = checkLatch(root, step)
   if (!latch.allow) {
@@ -63,8 +72,9 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   const gate = await runCheck(root)
   if (gate !== 0) {
     if (gate === 1) {
-      // The dogfood receipt (research/07 Build 2b): red attempts before green
-      // are a per-step count. Harness breakage (2) is not a red check.
+      // Red attempts before green accrue as a per-step stat, surfaced in the
+      // build-log receipt and the finish report. Harness breakage (exit 2) is
+      // not a red check.
       bumpStepStat(root, undefined, step, 'redChecks')
     }
     process.stderr.write(
@@ -89,30 +99,35 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   flipIntent(root, step)
   stampStepStat(root, undefined, step, 'landedAt', new Date().toISOString())
   logCheckpoint(root, step, sha)
-  // The step landed: the build-log's mirror flips to ☑ and Current step returns to
-  // the boundary (D69), re-read from the intent.md `flipIntent` just wrote. The
-  // artifact-plane whitelist keeps this build-log write from ever reading as drift.
+  // The step landed: the build-log's ☐/☑ mirror flips and its Current-step line
+  // returns to the boundary, re-read from the intent.md `flipIntent` just wrote.
+  // The artifact-plane whitelist keeps this build-log write from ever reading as
+  // scope drift.
   syncBuildLogState(root, activeBuild(root), AT_BOUNDARY)
   rmSync(seamPath(root), { force: true })
   rmSync(stepPath(root), { force: true })
-  clearHandoff(root) // the agent-run ledger is step-scoped (D47) — clear it with the markers.
-  clearTick(root) // the entry stamp (D64) is spent — the next `build <n>` re-stamps.
+  clearHandoff(root) // the agent-run handoff ledger is step-scoped — clear it with the markers.
+  clearTick(root) // the step's entry stamp is spent — the next `build <n>` re-stamps.
 
   process.stdout.write(`plumbbob: step ${step} checkpointed — ${sha.slice(0, 9)}. Back at the boundary.\n`)
   return 0
 }
 
-// The plan-approval commit (D36): stage only the active build's artifact folder and
-// commit it as `chore(<scope>): plan` (D68), then record a `plan <sha>` line. Giving
-// the plan its own commit keeps the first step's diff from absorbing the scaffold, so
-// `git log` reads baseline → plan → steps. No check gate (there is no code work to
-// verify yet), no intent flip, no step markers — the plan lives entirely in DESIGN.
-// An optional `--body` (stdin heredoc, D68) rides after the `plumbbob plan` marker;
-// the folder is whitelisted artifact plane, so there is no scope-drift to warn about.
+/**
+ * The plan-approval commit: stage only the build's artifact folder, commit it as
+ * `chore(<scope>): plan`, and record a `plan <sha>` line.
+ *
+ * Giving the plan its own commit keeps the first step's diff from absorbing the
+ * scaffold, so `git log` reads baseline → plan → steps. No check gate (there is
+ * no code work to verify yet), no intent flip, no step markers — the plan lives
+ * entirely in DESIGN. An optional `--body` (stdin heredoc) rides after the
+ * `plumbbob plan` marker line; the folder is whitelisted artifact plane, so
+ * there is no scope drift to warn about.
+ */
 function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
-  // The latch (D64) covers the plan commit too, keyed on the TICK that `start`
-  // stamped: the plan pause is a pause. No step number — a range grant does not
-  // speak to a plan.
+  // The latch covers the plan commit too, keyed on the TICK that `start`
+  // stamped: the plan pause is a real pause. No step number — a step-range
+  // grant does not speak to a plan.
   const latch = checkLatch(root, null)
   if (!latch.allow) {
     process.stderr.write(latch.message)
@@ -122,24 +137,31 @@ function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
   stagePath(root, buildFolder(root))
   const sha = commit(root, planSubject(root), withMarker('plumbbob plan', bodyArg(args) ?? undefined))
   appendFileSync(checkpointsPath(root), `plan ${sha}\n`)
-  // The plan landing consumes `start`'s entry stamp (D64): a later hand-built diff
+  // Landing the plan consumes `start`'s entry stamp: a later hand-built diff
   // (no `build <n>`) must find no stale TICK and stay guidance-governed.
   clearTick(root)
   process.stdout.write(`plumbbob: plan committed — ${sha.slice(0, 9)}. Baseline → plan → steps.\n`)
   return 0
 }
 
-// The plan commit's CLI-owned subject (D68): `chore(<scope>): plan`, the scope
-// resolved through the build-default fallback chain (a bare `chore: plan` when
-// none resolves). The `plumbbob plan` identifier rides the body marker, not the
-// subject.
+/**
+ * Compose the plan commit's CLI-owned subject: `chore(<scope>): plan`.
+ *
+ * The scope resolves through the build-default fallback chain — a bare
+ * `chore: plan` when none resolves. The `plumbbob plan` identifier rides the
+ * body marker line, never the subject.
+ */
 function planSubject(root: string): string {
   return conventionalSubject({ type: 'chore', scope: buildDefaultScope(root), description: 'plan' })
 }
 
-// Step resolution (D3): explicit arg > in-flight STEP file > first undone step in
-// intent.md. Returns null when none can be determined. A `-m` value is a message,
-// never a step — `checkpoint -m "2"` must not read as step 2.
+/**
+ * Resolve the step being checkpointed, or null when none can be determined.
+ *
+ * Explicit arg > in-flight STEP file > first undone step in intent.md. A `-m`
+ * value is a message, never a step — `checkpoint -m "2"` must not read as
+ * step 2.
+ */
 function resolveStep(root: string, args: ReadonlyArray<string>): number | null {
   const explicit = args.filter((_, i) => args[i - 1] !== '-m').find((a) => /^\d+$/.test(a))
   if (explicit !== undefined) {
@@ -156,16 +178,21 @@ function resolveStep(root: string, args: ReadonlyArray<string>): number | null {
   }
 }
 
-// Guidance, not a gate (the enforce→guide pivot): warn when the staged tree reaches
-// beyond the step's seam, then commit anyway. The seam comes from the in-flight SEAM
-// file when a build is live, else the step's declared seam in intent.md. Plumbbob's
-// own artifact plane is whitelisted (`scopeDrift`), so the `[x]` flip and build-log
-// line this very checkpoint stages never read as drift. No seam ⇒ no warning.
+/**
+ * Warn — never refuse — when the staged tree reaches beyond the step's seam.
+ *
+ * Guidance, not a gate: the checkpoint captures the drift and says so. The seam
+ * (the step's edit grant — exact paths or `dir/` prefixes) comes from the
+ * in-flight SEAM file when a build is live, else the step's declared seam in
+ * intent.md. Plumbbob's own artifact plane is whitelisted inside `scopeDrift`,
+ * so the `[x]` flip and build-log line this very checkpoint stages never read
+ * as drift. No seam means no warning.
+ */
 function warnScopeDrift(root: string, step: number): void {
   const seam = seamTokens(root, step)
   const outside = scopeDrift(stagedPaths(root), seam)
   if (outside.length > 0) {
-    bumpStepStat(root, undefined, step, 'driftWarnings') // the dogfood receipt (research/07 2b)
+    bumpStepStat(root, undefined, step, 'driftWarnings') // accrues into the build-log's stats receipt
     process.stderr.write(
       `plumbbob: heads-up — staged paths outside step ${step}'s seam: ${outside.join(', ')}. ` +
         `The checkpoint captures them; if that's real scope drift, the plan may need a \`/pb-step\` revision.\n`,
@@ -173,10 +200,14 @@ function warnScopeDrift(root: string, step: number): void {
   }
 }
 
-// The seam tokens for the in-flight step: the normalized SEAM file `build` wrote
-// (authoritative while a build is live), falling back to the step's declared seam
-// parsed from intent.md. Empty when neither resolves — the caller then skips the
-// warning rather than flagging the whole tree.
+/**
+ * The seam tokens governing the in-flight step.
+ *
+ * The normalized SEAM file `build` wrote is authoritative while a build is
+ * live; fall back to the step's declared seam parsed from intent.md. Empty when
+ * neither resolves — the caller then skips the drift warning rather than
+ * flagging the whole tree.
+ */
 function seamTokens(root: string, step: number): ReadonlyArray<string> {
   try {
     const fromFile = readFileSync(seamPath(root), 'utf8')
@@ -192,12 +223,17 @@ function seamTokens(root: string, step: number): ReadonlyArray<string> {
   return seamForStep(root, step)
 }
 
+/**
+ * Flip the step's checkbox in intent.md to `[x]`.
+ *
+ * Best-effort bookkeeping — the checkpoint SHA is the source of truth — but the
+ * dashboard reads intent.md, so a swallowed failure here would make orientation
+ * lie; the catch warns and asks for a hand flip instead.
+ */
 function flipIntent(root: string, step: number): void {
   try {
     writeFileSync(intentPath(root), markStepDone(readFileSync(intentPath(root), 'utf8'), step))
   } catch {
-    // Best-effort bookkeeping — the checkpoint SHA is the source of truth — but the
-    // dashboard reads intent.md, so a swallowed failure here makes orientation lie.
     process.stderr.write(
       `plumbbob: heads-up — could not flip step ${step} to [x] in intent.md; ` +
         `the checkpoint is recorded, but the dashboard will still show step ${step} as next. Flip it by hand.\n`,
@@ -205,10 +241,14 @@ function flipIntent(root: string, step: number): void {
   }
 }
 
-// Append a dated line to the build-log's `## Log` so the build's history accrues at
-// each checkpoint instead of being reconstructed at finish. The step's title is lifted
-// from intent.md when still present. Best-effort: a missing/odd build-log never blocks
-// a checkpoint — the `checkpoints` SHA is the source of truth.
+/**
+ * Append a dated line to the build-log's `## Log` section.
+ *
+ * The build's history accrues at each checkpoint instead of being reconstructed
+ * at finish; the step's title is lifted from intent.md when still present.
+ * Best-effort: a missing or odd build-log never blocks a checkpoint — the
+ * `checkpoints` SHA is the source of truth.
+ */
 function logCheckpoint(root: string, step: number, sha: string): void {
   try {
     const path = buildLogPath(root)
@@ -223,9 +263,13 @@ function logCheckpoint(root: string, step: number, sha: string): void {
   }
 }
 
-// The compact receipt riding the Log line (research/07 Build 2b): only what
-// accrued — a clean first-try step gets no suffix at all. Wall-clock needs both
-// stamps (a hand-built step never ran `build <n>`, so it has no startedAt).
+/**
+ * The compact stats receipt riding the Log line, or null when nothing accrued.
+ *
+ * Only what happened is shown — a clean first-try step gets no suffix at all.
+ * Wall-clock needs both stamps: a hand-built step never ran `build <n>`, so it
+ * has no startedAt.
+ */
 function statsSuffix(root: string, step: number): string | null {
   const stats = readStats(root)[String(step)]
   if (stats === undefined) return null
@@ -240,14 +284,17 @@ function statsSuffix(root: string, step: number): string | null {
   return parts.length > 0 ? parts.join(', ') : null
 }
 
-// The CLI-owned, deterministic commit subject (D68): a Conventional `type(scope):
-// description`. The type and wording come from the step's title — an author-written
-// prefix (`fix(parser): …`) is honoured verbatim, a bare title defaults to `feat`.
-// The scope falls back through the chain (D3): the title's own `(scope)` wins
-// (handled inside `subjectFromTitle`), else `buildDefaultScope`. A titleless step
-// falls back to `chore(<scope>): checkpoint`. The `plumbbob`/`step N` identifiers
-// ride the body marker, not the subject; a `-m` override or `--body` prose is a
-// separate concern.
+/**
+ * Compose the step's CLI-owned, deterministic Conventional Commit subject.
+ *
+ * The type and wording come from the step's title: an author-written prefix
+ * (`fix(parser): …`) is honoured verbatim, a bare prose title defaults to
+ * `feat`. The title's own `(scope)` wins (handled inside `subjectFromTitle`),
+ * else the build-default scope. A titleless step falls back to
+ * `chore(<scope>): checkpoint`. The `plumbbob`/`step N` identifiers ride the
+ * body marker line, not the subject; a `-m` override or `--body` prose is a
+ * separate concern.
+ */
 function subjectForStep(root: string, step: number): string {
   const scope = buildDefaultScope(root)
   const title = titleForStep(root, step)
@@ -256,10 +303,13 @@ function subjectForStep(root: string, step: number): string {
     : conventionalSubject({ type: 'chore', scope, description: 'checkpoint' })
 }
 
-// The build-default Conventional scope (D3/D4): the `**Scope:**` header field in
-// intent.md when authored and filled, else the build slug (D68's original rung,
-// now the penultimate one), else null — a bare subject (C2 back-compat: a build
-// with neither field behaves exactly as before D4).
+/**
+ * The build-default Conventional scope, or null for a bare subject.
+ *
+ * The `**Scope:**` header field in intent.md wins when authored and filled;
+ * else the build slug with its date prefix stripped; else null — a build with
+ * neither field keeps producing bare subjects.
+ */
 function buildDefaultScope(root: string): string | null {
   try {
     const fromHeader = parseBuildScope(readFileSync(intentPath(root), 'utf8'))
@@ -272,6 +322,9 @@ function buildDefaultScope(root: string): string | null {
   return buildScope(activeBuild(root))
 }
 
+/**
+ * The step's title from intent.md, or null when absent or unreadable.
+ */
 function titleForStep(root: string, step: number): string | null {
   try {
     return parseSteps(readFileSync(intentPath(root), 'utf8')).find((s) => s.n === step)?.title ?? null
@@ -280,17 +333,23 @@ function titleForStep(root: string, step: number): string | null {
   }
 }
 
+/**
+ * The `-m <msg>` subject override, or null when the flag is absent.
+ */
 function messageArg(args: ReadonlyArray<string>): string | null {
   const i = args.indexOf('-m')
   return i !== -1 && i + 1 < args.length ? (args[i + 1] ?? null) : null
 }
 
-// `--body` reads the commit body from stdin (the single-quoted heredoc of D34),
-// so the skill can compose proportional prose the CLI never could. Returns null
-// when the flag is absent or stdin is empty — either way the deterministic
-// fallback body takes over. Reading fd 0 blocks until EOF, which the heredoc
-// supplies; a read error (no stdin attached) degrades to the fallback, and an
-// interactive TTY — which would never send EOF — skips the read instead of hanging.
+/**
+ * Read the `--body` commit body from stdin, or null when absent or empty.
+ *
+ * The stdin heredoc lets a skill compose proportional prose the CLI never
+ * could; null either way hands over to the deterministic fallback body. Reading
+ * fd 0 blocks until EOF, which the heredoc supplies; a read error (no stdin
+ * attached) degrades to the fallback, and an interactive TTY — which would
+ * never send EOF — skips the read instead of hanging.
+ */
 function bodyArg(args: ReadonlyArray<string>): string | null {
   if (!args.includes('--body') || process.stdin.isTTY === true) {
     return null
@@ -303,10 +362,14 @@ function bodyArg(args: ReadonlyArray<string>): string | null {
   }
 }
 
-// The deterministic checkpoint body (D35): the step's done-when, its seam, and the
-// staged diffstat — so a hand-built or vibed checkpoint still gets informative
-// history without a model turn. Each part is best-effort; a missing piece is
-// simply omitted, and an empty result leaves the commit body blank.
+/**
+ * The deterministic fallback commit body: the step's done-when, its seam, and
+ * the staged diffstat.
+ *
+ * A hand-built or vibed checkpoint still gets informative history without a
+ * model turn. Each part is best-effort; a missing piece is simply omitted, and
+ * an empty result leaves the commit body blank.
+ */
 function fallbackBody(root: string, step: number): string | undefined {
   const parts: string[] = []
   const doneWhen = doneWhenForStep(root, step)
@@ -324,6 +387,9 @@ function fallbackBody(root: string, step: number): string | undefined {
   return parts.length > 0 ? parts.join('\n\n') : undefined
 }
 
+/**
+ * The step's done-when line from intent.md, or null when absent or unreadable.
+ */
 function doneWhenForStep(root: string, step: number): string | null {
   try {
     return parseSteps(readFileSync(intentPath(root), 'utf8')).find((s) => s.n === step)?.doneWhen ?? null
@@ -332,6 +398,9 @@ function doneWhenForStep(root: string, step: number): string | null {
   }
 }
 
+/**
+ * The step's declared seam from intent.md, or empty when missing or malformed.
+ */
 function seamForStep(root: string, step: number): ReadonlyArray<string> {
   try {
     const parsed = parseStepSeam(readFileSync(intentPath(root), 'utf8'), step)
@@ -341,6 +410,9 @@ function seamForStep(root: string, step: number): ReadonlyArray<string> {
   }
 }
 
+/**
+ * The staged diffstat, or '' when git refuses.
+ */
 function safeStagedStat(root: string): string {
   try {
     return stagedStat(root)
@@ -349,6 +421,9 @@ function safeStagedStat(root: string): string {
   }
 }
 
+/**
+ * The in-flight step number from the STEP file, or null when absent or garbled.
+ */
 function readStep(root: string): number | null {
   try {
     const raw = readFileSync(stepPath(root), 'utf8').trim()

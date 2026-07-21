@@ -39,7 +39,7 @@ describe('marketplacePlumbbob', () => {
   })
 
   it('returns [] when the plugins key is missing or null', () => {
-    // Both degenerate shapes mean "none installed", not a crash (C1/C2).
+    // Both degenerate shapes mean "none installed", not a crash.
     const missing = makeTempDir()
     mkdirSync(join(missing, '.claude', 'plugins'), { recursive: true })
     writeFileSync(join(missing, '.claude', 'plugins', 'installed_plugins.json'), '{}')

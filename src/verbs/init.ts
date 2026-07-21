@@ -2,10 +2,10 @@
 // in-place skills-directory plugin. It symlinks the installed package into
 // ~/.claude/skills/plumbbob, where Claude Code discovers it as `plumbbob@skills-dir`
 // — the skills load namespaced (`/plumbbob:*`) and the post-edit hook auto-registers
-// from hooks/hooks.json. This is the deliberate non-marketplace install path — kept
-// first-class, not deprecated: it serves an `npm i -g` global, local dev, and clients
-// predating plugins, and keeps plumbbob usable as a standalone CLI (and, later, under
-// other agents) rather than Claude-marketplace-only. The marketplace plugin is the
+// from hooks/hooks.json. This non-marketplace install path is first-class by design:
+// it serves an `npm i -g` global, local dev, and clients predating plugins, and it
+// keeps plumbbob usable as a standalone CLI outside any one host rather than
+// Claude-marketplace-only. The marketplace plugin is the
 // co-equal self-contained alternative (it ships skills AND the `plumbbob` CLI on PATH
 // via bin/, so it needs neither `npm i -g` nor `init`). The two are mutually
 // exclusive: both register a plugin named `plumbbob`, and a double-install collides
@@ -21,19 +21,30 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { marketplacePlumbbob } from '../lib/plugins.ts'
 
-// The installed package root (parent of .claude-plugin/, skills/, hooks/, dist/),
-// off this module's URL — the global install when run as the published bin, the
-// checkout in dev. No trailing slash, so it compares clean against a readlink.
+/**
+ * The installed package root — parent of .claude-plugin/, skills/, hooks/, dist/.
+ *
+ * Derived from this module's URL: the global install when run as the published
+ * bin, the checkout in dev. No trailing slash, so it compares clean against a
+ * readlink.
+ */
 function packageRoot(): string {
   return fileURLToPath(new URL('../../', import.meta.url)).replace(/\/+$/, '')
 }
 
+/**
+ * The symlink location Claude Code scans for skills-directory plugins.
+ */
 function linkPath(home: string): string {
   return join(home, '.claude', 'skills', 'plumbbob')
 }
 
-// lstat-based existence: true even for a broken symlink (existsSync follows the
-// link and would miss one whose target moved).
+/**
+ * Whether anything exists at `path`, including a broken symlink.
+ *
+ * lstat-based: existsSync follows the link and would miss one whose target
+ * moved.
+ */
 function present(path: string): boolean {
   try {
     lstatSync(path)
@@ -43,7 +54,9 @@ function present(path: string): boolean {
   }
 }
 
-// The symlink's target (no trailing slash), or null if `path` is not a symlink.
+/**
+ * The symlink's target (no trailing slash), or null if `path` is not a symlink.
+ */
 function symlinkTarget(path: string): string | null {
   try {
     return lstatSync(path).isSymbolicLink() ? readlinkSync(path).replace(/\/+$/, '') : null
@@ -52,6 +65,14 @@ function symlinkTarget(path: string): string | null {
   }
 }
 
+/**
+ * Link the installed package into ~/.claude/skills/plumbbob, or `--uninstall` it.
+ *
+ * Refuses when a marketplace plumbbob plugin is already installed — two plugins
+ * named `plumbbob` collide over the /plumbbob:* namespace — unless `--force`.
+ * Repoints a stale link from an earlier install location; already-linked is a
+ * clean exit 0.
+ */
 export function init(args: ReadonlyArray<string>): number {
   const home = process.env.HOME ?? homedir()
   const link = linkPath(home)
@@ -98,6 +119,10 @@ export function init(args: ReadonlyArray<string>): number {
   return 0
 }
 
+/**
+ * Remove the skills-directory link, leaving anything that is not a plumbbob
+ * symlink untouched.
+ */
 function uninstall(link: string): number {
   if (!present(link)) {
     process.stdout.write(`plumbbob: nothing to uninstall — no link at ${link}.\n`)

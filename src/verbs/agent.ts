@@ -1,12 +1,17 @@
-// `plumbbob agent <subcommand>` — the doorway to user-authored agents (D39/D41).
-// `agent list` walks the two tiers and prints each resolvable agent. `agent run
-// <name> [--step N] [--mode before|build|after]` (D60) composes the StepContext,
+// `plumbbob agent <subcommand>` — the doorway to user-authored agents: anything
+// executable that speaks the JSON envelope contract (JSON in on stdin, JSON out
+// on stdout, prose streamed on stderr). `agent list` walks the two agent tiers —
+// the repo's tracked `.plumbbob/agents/<name>/`, then the personal
+// `~/.plumbbob/agents/<name>/` — and prints each resolvable agent. `agent run
+// <name> [--step N] [--mode before|build|after]` composes the StepContext,
 // spawns the manifest command, streams its stderr live, captures and validates
 // the child's envelope, re-emits it on this verb's own stdout (machine) with the
-// human summary on stderr (D46/D47), lands `parked[]` through the build-log (D44),
-// and appends the envelope to the step-scoped handoff ledger (D47). There is no
-// code path here to checkpoint, flip a step, or chain agents — the identity
-// invariant (C6) holds by construction. A thin read-write shell: resolution,
+// human summary on stderr, lands `parked[]` through the build-log, and appends
+// the envelope to the handoff ledger (`builds/<slug>/handoff.json` — untracked,
+// step-scoped, cleared at checkpoint) so later runs can thread it back in.
+// There is deliberately no code path here to checkpoint, flip a step, or chain
+// agents — the subprocess boundary keeps the human as the clock by
+// construction, not by policy. A thin read-write shell: resolution,
 // composition, and spawn mechanics live in lib/agents.ts.
 
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -32,6 +37,9 @@ import { appendToSection } from '../lib/buildlog.ts'
 import { resolveBoolean, resolveNumber, resolveRecord } from '../lib/settings.ts'
 import { appendHandoff, buildFolder, buildLogPath, hasSession, intentPath, resolveBuild, stepPath } from '../lib/sidecar.ts'
 
+/**
+ * Dispatch `plumbbob agent list|run`, refusing an unknown subcommand with a hint.
+ */
 export async function agent(cwd: string, args: ReadonlyArray<string> = []): Promise<number> {
   const [sub, ...rest] = args
   if (sub === 'list') return list(cwd, rest)
@@ -43,6 +51,9 @@ export async function agent(cwd: string, args: ReadonlyArray<string> = []): Prom
   return 1
 }
 
+/**
+ * Print every resolvable agent across the project and personal tiers.
+ */
 function list(cwd: string, _args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
   if (root === null) {
@@ -53,10 +64,15 @@ function list(cwd: string, _args: ReadonlyArray<string>): number {
   return 0
 }
 
-// `agent run`: with a name (or `--agent` flag) run exactly that agent, failing
-// loud on a miss (D54); with no name run the step's harness-bound agents for the
-// requested slot (D42). Either way this composes the StepContext, spawns, and
-// applies side effects — never advancing the loop.
+/**
+ * Run one named agent, or a slot's harness-bound agents, against the step in flight.
+ *
+ * With a name (or `--agent` flag) it runs exactly that agent, failing loud on a
+ * miss — the user who typed the name asked for it specifically. With no name it
+ * runs whatever the build's harness.json binds to the requested slot. Either
+ * way it composes the StepContext, spawns, and applies side effects — never
+ * advancing the loop.
+ */
 async function run(cwd: string, args: ReadonlyArray<string>): Promise<number> {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
@@ -84,8 +100,8 @@ async function run(cwd: string, args: ReadonlyArray<string>): Promise<number> {
     return 1
   }
 
-  // Explicit ask (a name, above the bindings — D57): run exactly it, fail loud on
-  // a miss. No name: resolve the harness bindings for the slot and run them.
+  // An explicit name outranks every binding: run exactly it, fail loud on a
+  // miss. No name: resolve the harness bindings for the slot and run them.
   if (parsed.name !== undefined) {
     return runOne(root, slug, step, {
       name: parsed.name,
@@ -97,12 +113,11 @@ async function run(cwd: string, args: ReadonlyArray<string>): Promise<number> {
   return runBound(root, slug, step, parsed.mode)
 }
 
-// One agent's full run: resolve it, pick its slot, compose the StepContext, spawn,
-// and report. `ambient` marks a harness-bound run (D42) whose resolution or slot
-// mismatch degrades to a warning (D54/D54) so a batch keeps going; an explicit
-// ask (`ambient: false`) fails loud on the same miss. A run that actually starts
-// and fails (non-zero exit, timeout, …) is a hard failure either way — D54 softens
-// a *missing* agent, not a broken one.
+/**
+ * One run's inputs: the agent name, an optional `--agent` directory override,
+ * the requested slot, and whether the run is ambient (harness-bound) or an
+ * explicit ask.
+ */
 type RunSpec = {
   readonly name: string
   readonly flagPath: string | undefined
@@ -110,6 +125,16 @@ type RunSpec = {
   readonly ambient: boolean
 }
 
+/**
+ * One agent's full run: resolve it, pick its slot, compose the StepContext, spawn, report.
+ *
+ * `ambient` marks a harness-bound run whose resolution or slot mismatch
+ * degrades to a warning so a batch keeps going — a binding is ambient
+ * configuration the loop must survive without; an explicit ask
+ * (`ambient: false`) fails loud on the same miss. A run that actually starts
+ * and fails (non-zero exit, timeout, …) is a hard failure either way — the
+ * softening covers a *missing* agent, never a broken one.
+ */
 async function runOne(root: string, slug: string | null, step: number, spec: RunSpec): Promise<number> {
   const resolution = resolveAgent(root, spec.name, spec.flagPath !== undefined ? { flagPath: spec.flagPath } : {})
   if (!resolution.ok) {
@@ -145,15 +170,18 @@ async function runOne(root: string, slug: string | null, step: number, spec: Run
     step,
     mode,
     settings: {
-      // The frozen envelope still reports settings `auto` to agents (doorway freeze —
-      // no envelope changes). Note it is no longer a checkpoint grant (D67): the latch
-      // stopped reading it, so a `true` here informs an agent, it does not self-approve.
+      // The envelope reports the `auto` setting to agents as information only.
+      // The checkpoint latch never reads it — a model can write a settings
+      // file, so a standing `auto` cannot be a self-approval grant; approval
+      // comes only from what the human literally typed. A `true` here informs
+      // an agent, it does not self-approve.
       auto: resolveBoolean(root, 'auto', false),
       agentTimeout: resolveNumber(root, 'agentTimeout', 0),
-      // Hand this agent its own config block over the frozen envelope `settings`
-      // field (D5/D6): settings.json → agentConfig[name], with the local overlay
-      // shadowing the project rung whole (D7 — no deep merge), and {} when neither
-      // defines it. No new envelope field, no new verb — the config just rides here.
+      // Hand this agent its own config block over the envelope's existing
+      // `settings` field — no new envelope field, no new verb; the config just
+      // rides here. Resolution: settings.json's agentConfig[name], with the
+      // untracked personal overlay (settings.local.json) replacing the project
+      // entry whole — no deep merge — and {} when neither defines it.
       agent: resolveRecord(root, 'agentConfig')[spec.name] ?? {},
     },
   })
@@ -176,11 +204,16 @@ async function runOne(root: string, slug: string | null, step: number, spec: Run
   return report(root, slug, spec.name, mode, step, result)
 }
 
-// No name given: run the harness-bound agents for the requested slot (D42). The
-// bindings merge the ladder — per-step over harness defaults over settings-level
-// defaults (D57). A missing bound agent degrades to a warning (D54); an absent
-// harness, or one that binds nothing to this slot, is a clean no-op. Each bound
-// agent runs in turn; the batch exits 1 if any agent that actually ran failed.
+/**
+ * No name given: run the agents the build's harness.json binds to the requested slot.
+ *
+ * Bindings merge as a ladder — the per-step harness entry beats the harness
+ * `defaults`, which beat the settings-level `agents` key; the first level that
+ * names the slot wins, replace not append. A missing bound agent degrades to a
+ * warning; an absent harness, or one that binds nothing to this slot, is a
+ * clean no-op. Each bound agent runs in turn; the batch exits 1 if any agent
+ * that actually ran failed.
+ */
 async function runBound(root: string, slug: string | null, step: number, modeFlag: string | undefined): Promise<number> {
   if (modeFlag === undefined) {
     process.stderr.write('plumbbob: agent run needs an agent name, or --mode <slot> to run the step\'s bound agents.\n')
@@ -216,15 +249,19 @@ async function runBound(root: string, slug: string | null, step: number, modeFla
   return worst
 }
 
-// Emit the loud error or the soft warning by whether this run was an explicit ask
-// (name/flag) or an ambient harness binding (D54/D54), and return the matching
-// code — a hard miss stops with 1, a degraded one warns and returns 0 so a batch
-// of bound agents carries on.
+/**
+ * Emit the loud error or the soft warning by whether this run was an explicit
+ * ask (name/flag) or an ambient harness binding, and return the matching code.
+ *
+ * A hard miss stops with 1; a degraded one warns and returns 0 so a batch of
+ * bound agents carries on.
+ */
 function degrade(ambient: boolean, hard: string, soft: string): number {
   process.stderr.write(`${ambient ? soft : hard}\n`)
   return ambient ? 0 : 1
 }
 
+/** The parsed shape of `agent run`'s argv: the agent name plus its value flags. */
 type RunArgs = {
   readonly name: string | undefined
   readonly step: number | undefined
@@ -232,10 +269,14 @@ type RunArgs = {
   readonly flagPath: string | undefined
 }
 
-// Split `run`'s argv (with `--build` already stripped by resolveBuild) into the
-// agent name and the value flags. A value flag missing its value, or `--step`
-// given a non-number, is a loud error (returned as a string) rather than a silent
-// default. Unknown `--flags` are ignored — the point is the named agent.
+/**
+ * Split `run`'s argv (with `--build` already stripped by resolveBuild) into the
+ * agent name and the value flags.
+ *
+ * A value flag missing its value, or `--step` given a non-number, is a loud
+ * error (returned as a string) rather than a silent default. Unknown `--flags`
+ * are ignored — the point is the named agent.
+ */
 function parseRunArgs(args: ReadonlyArray<string>): RunArgs | string {
   const positionals: string[] = []
   let step: number | undefined
@@ -264,11 +305,15 @@ function parseRunArgs(args: ReadonlyArray<string>): RunArgs | string {
   return { name: positionals[0], step, mode, flagPath }
 }
 
-// Resolve the slot the agent runs in. An explicit `--mode` must name a real slot
-// AND one the manifest declares — an undeclared slot is refused loud (D54). With
-// no `--mode`, a single-slot agent uses its only slot; a multi-slot agent must be
-// told which one (step 5's harness bindings pick the slot from the lifecycle
-// point; a bare `run` cannot guess).
+/**
+ * Resolve the slot the agent runs in.
+ *
+ * An explicit `--mode` must name a real slot AND one the manifest declares —
+ * an undeclared slot is refused loud, because the user asked for that exact
+ * run. With no `--mode`, a single-slot agent uses its only slot; a multi-slot
+ * agent must be told which one (harness bindings pick the slot from the
+ * lifecycle point; a bare `run` cannot guess).
+ */
 function resolveMode(flag: string | undefined, manifest: AgentManifest): { ok: true; mode: Slot } | { ok: false; error: string } {
   if (flag !== undefined) {
     if (!isSlot(flag)) return { ok: false, error: `plumbbob: unknown --mode '${flag}' — slots are ${SLOTS.join(', ')}.` }
@@ -287,13 +332,16 @@ function resolveMode(flag: string | undefined, manifest: AgentManifest): { ok: t
   }
 }
 
-// Map the run outcome to reporting and side effects (D46). A failed run — non-zero
-// exit, out-of-contract stdout, timeout, interrupt, or a shell that never
-// started — reports on stderr and stops with NO side effects (the envelope of a
-// failed child is not authoritative). A clean run lands `parked[]` (D44), records
-// the envelope in the handoff ledger (D47), prints the human summary on stderr,
-// and re-emits the machine envelope on stdout — nothing else, ever (the stream
-// discipline: stdout carries the envelope alone).
+/**
+ * Map the run outcome to reporting and side effects.
+ *
+ * A failed run — non-zero exit, out-of-contract stdout, timeout, interrupt, or a
+ * shell that never started — reports on stderr and stops with NO side effects:
+ * the envelope of a failed child is not authoritative. A clean run lands
+ * `parked[]`, records the envelope in the handoff ledger, prints the human
+ * summary on stderr, and re-emits the machine envelope on stdout — nothing else,
+ * ever (the stream discipline: stdout carries the envelope alone).
+ */
 function report(
   root: string,
   slug: string | null,
@@ -314,6 +362,9 @@ function report(
   return 0
 }
 
+/**
+ * One stderr line naming exactly how a failed run failed.
+ */
 function failureLine(name: string, result: Exclude<AgentRunResult, { ok: true }>): string {
   switch (result.reason) {
     case 'exit':
@@ -329,9 +380,13 @@ function failureLine(name: string, result: Exclude<AgentRunResult, { ok: true }>
   }
 }
 
-// Land each parked concern through the build-log's Park list (D44 — the agent
-// never writes .plumbbob/ itself). A build-log with no "## Park list" section, or
-// no build-log at all, warns once rather than losing the lines silently.
+/**
+ * Land each parked concern through the build-log's Park list.
+ *
+ * The agent never writes .plumbbob/ itself — parked lines only reach the
+ * build-log through this verb. A build-log with no "## Park list" section, or no
+ * build-log at all, warns once rather than losing the lines silently.
+ */
 function applyParked(root: string, slug: string | null, parked: ReadonlyArray<string>): void {
   if (parked.length === 0) return
   const path = buildLogPath(root, slug)
@@ -354,10 +409,13 @@ function applyParked(root: string, slug: string | null, parked: ReadonlyArray<st
   writeFileSync(path, content)
 }
 
-// The human-facing summary on stderr (D47): a headline plus, for a halt, the
-// route the skills name (D52) — `blocked` unblocks and re-runs, `drift` sends the
-// plan to /pb-refine. The machine envelope on stdout carries the same status for
-// the calling skill; this is the terminal read.
+/**
+ * The human-facing summary printed on stderr.
+ *
+ * A headline plus, for a halt, the route out — `blocked` unblocks and re-runs,
+ * `drift` sends the plan to /pb-refine. The machine envelope on stdout carries
+ * the same status for the calling skill; this stderr copy is the terminal read.
+ */
 function humanSummary(name: string, mode: Slot, envelope: AgentEnvelope): string {
   const head = `plumbbob: agent "${name}" (${mode}) — ${envelope.status}: ${envelope.summary}\n`
   const notes = envelope.notes.length > 0 ? `  notes: ${envelope.notes}\n` : ''
@@ -370,8 +428,11 @@ function humanSummary(name: string, mode: Slot, envelope: AgentEnvelope): string
   return head
 }
 
-// The in-flight step for this build (the STEP marker `build` wrote), or null when
-// none is set — the caller then requires an explicit `--step`.
+/**
+ * The in-flight step for this build (the STEP marker `build` wrote), or null.
+ *
+ * With no marker set, the caller requires an explicit `--step`.
+ */
 function readStep(root: string, slug: string | null): number | null {
   try {
     const raw = readFileSync(stepPath(root, slug), 'utf8').trim()

@@ -1,17 +1,26 @@
-// `plumbbob handoff` — print the standardized build hand-off block (D67): the
+// `plumbbob handoff` — print the standardized build hand-off block: the
 // "state / choice / what's next" the human sees at each step boundary. Read-only,
 // no state change. It derives the moment from the session — a step in flight ⇒ the
 // pause block (built → looks-good/needs-work → next), none ⇒ the post-checkpoint
 // boundary block — and renders the next undone step plus its advisory `- model:`
-// recommendation straight from intent.md. This block lived as prose in pb-build's
-// SKILL.md; owning it here keeps the skill from drifting out of sync with `status`,
-// which renders the same next-step detail (both read `parseSteps`).
+// recommendation straight from intent.md, the build's plan document. Owning the
+// block here, rather than as prose in the pb-build skill, keeps the skill from
+// drifting out of sync with `status`, which renders the same next-step detail
+// (both read `parseSteps`).
 
 import { readFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { checkpointsPath, hasSession, intentPath, resolveBuild, stepPath } from '../lib/sidecar.ts'
 import { type Step, parseLastCheckpoint, parseSteps } from '../lib/orient.ts'
 
+/**
+ * Print the hand-off block for the resolved build; return the exit code.
+ *
+ * Requires an active session (the STATE sentinel under `.plumbbob/`). Which
+ * moment to render is derived, not passed: a step in flight yields the pause
+ * block, none yields the boundary block, and a fresh session with nothing to
+ * report yields only the forward pointer.
+ */
 export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
@@ -48,9 +57,12 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   return 0
 }
 
-// The pause block: the step is built and awaiting approval. The opener is neutral
-// (the CLI cannot vouch for the diff), pointing at the diff and self-review the
-// skill shows above it.
+/**
+ * The pause block: the step is built and awaiting approval.
+ *
+ * The opener is neutral (the CLI cannot vouch for the diff), pointing at the
+ * diff and self-review the skill shows above it.
+ */
 function pauseBlock(step: number, title: string | null, nextUp: Step | undefined): string {
   return [
     `Step ${step}${paren(title)} is built. Review the diff and self-review above, then:`,
@@ -61,16 +73,22 @@ function pauseBlock(step: number, title: string | null, nextUp: Step | undefined
   ].join('\n')
 }
 
-// The boundary block: the checkpoint has landed and the loop is back at the
-// step boundary, pointing at what to build next.
+/**
+ * The boundary block: the checkpoint has landed and the loop is back at the
+ * step boundary, pointing at what to build next.
+ */
 function boundaryBlock(step: number, title: string | null, nextUp: Step | undefined): string {
   return [`Step ${step}${paren(title)} checkpointed — back at the boundary.`, '', nextUpLine(nextUp)].join('\n')
 }
 
-// The forward pointer, shared by both blocks: the next undone step, its title, and
-// its advisory `- model:` recommendation (as just the model token for the `/model`
-// call — the full rationale lives on the `status` dashboard). No next step ⇒ the
-// finish/step nudge instead.
+/**
+ * The forward pointer, shared by both blocks: the next undone step, its title,
+ * and its advisory `- model:` recommendation.
+ *
+ * The recommendation renders as just the model token for the `/model` call —
+ * the full rationale lives on the `status` dashboard. No next step ⇒ the
+ * finish/step nudge instead.
+ */
 function nextUpLine(nextUp: Step | undefined): string {
   if (nextUp === undefined) {
     return 'No planned steps remain — /pb-step to add an increment, or /pb-finish.'
@@ -80,24 +98,37 @@ function nextUpLine(nextUp: Step | undefined): string {
   return token === null ? `${head} — /pb-build to start it.` : `${head} · model: ${token} — /model ${token} then /pb-build.`
 }
 
-// A step's title in parentheses, or nothing when the title is empty.
+/**
+ * A step's title in parentheses, or nothing when the title is empty.
+ */
 function paren(title: string | null): string {
   return title !== null && title.length > 0 ? ` (${title})` : ''
 }
 
+/**
+ * The title of step `n` from the parsed steps, or null when the step is
+ * unknown or untitled.
+ */
 function titleOf(steps: ReadonlyArray<Step>, n: number): string | null {
   return steps.find((s) => s.n === n)?.title ?? null
 }
 
-// The model token from a `- model:` recommendation — the first word, so a
-// `model: opus — <rationale>` line yields `opus` for the `/model` call. Null when
-// there is no recommendation, or it degraded to whitespace (folding the null model
-// into the same guard keeps both branches live).
+/**
+ * The model token from a `- model:` recommendation — the first word, so a
+ * `model: opus — <rationale>` line yields `opus` for the `/model` call.
+ *
+ * Null when there is no recommendation, or it degraded to whitespace (folding
+ * the null model into the same guard keeps both branches live).
+ */
 function modelToken(model: string | null): string | null {
   const first = model?.trim().split(/\s+/)[0]
   return first !== undefined && first.length > 0 ? first : null
 }
 
+/**
+ * Read a file as UTF-8, or return '' when it is missing or unreadable — an
+ * absent sidecar file reads as empty rather than throwing.
+ */
 function readOr(path: string): string {
   try {
     return readFileSync(path, 'utf8')
@@ -106,6 +137,11 @@ function readOr(path: string): string {
   }
 }
 
+/**
+ * The in-flight step number from the STEP marker — the flat one-line file in
+ * the build folder that records which step is open. Null when no step is in
+ * flight or the file holds anything but a bare number.
+ */
 function readStep(path: string): number | null {
   try {
     const raw = readFileSync(path, 'utf8').trim()

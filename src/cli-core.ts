@@ -1,8 +1,14 @@
 // plumbbob CLI core — argv dispatch and the help table, separated from the bin
 // entry (cli.ts) so the routing/help logic is unit-testable in-process without
-// the top-level process.exit. Node builtins plus the deliberate few (D1/C2 —
-// currently checkride alone, via check.ts). Functional/procedural: no classes,
-// no `this`, no default export (C1).
+// the top-level process.exit. Node builtins plus a deliberate few dependencies
+// (currently checkride alone, via check.ts). Functional/procedural: no classes,
+// no `this`, no default export.
+//
+// The deciding/executing boundary is a pause, not a lock, so there is nothing
+// to defend in the dispatcher — every verb runs the same whether a human or the
+// model triggers it. There is no human-only `mode` escape hatch and no
+// CLAUDECODE in-session refusal; what keeps the human the decider is the pause
+// at the step boundary (the skills), not a refusal here.
 
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -27,6 +33,7 @@ type Verb = {
   readonly summary: string
 }
 
+/** One help-table row per verb, in the order the table prints. */
 const VERBS: ReadonlyArray<Verb> = [
   { name: 'start', summary: 'scaffold .plumbbob/; open the session; record the baseline commit' },
   { name: 'status', summary: 'print the orientation dashboard, or NO ACTIVE SESSION' },
@@ -45,12 +52,9 @@ const VERBS: ReadonlyArray<Verb> = [
   { name: 'turn', summary: 'turn: UserPromptSubmit hook machinery — tick the turn ledger from stdin (not a user verb)' },
 ]
 
-// PlumbBob (D1/D10/D13): the deciding/executing boundary is a pause, not a lock,
-// so there is nothing to defend — every verb runs the same whether a human or the
-// model triggers it. There is no human-only `mode` escape hatch and no CLAUDECODE
-// in-session refusal; what keeps the human the decider is the pause at
-// the step boundary (the skills), not a refusal here.
-
+/**
+ * Render the verb table for `plumbbob help`.
+ */
 export function formatHelp(): string {
   const width = Math.max(...VERBS.map((v) => v.name.length))
   const rows = VERBS.map((v) => `  ${v.name.padEnd(width)}  ${v.summary}`)
@@ -59,10 +63,14 @@ export function formatHelp(): string {
   )
 }
 
-// The package version, read from the package.json that ships one level above the
-// compiled CLI (dist/cli-core.js → ../package.json; in tests src/cli-core.ts →
-// ../package.json, the repo root). Builtins only (C2); an absent or malformed
-// manifest degrades to 'unknown' rather than throwing, so `--version` never errors.
+/**
+ * The package version, or 'unknown'.
+ *
+ * Read from the package.json one level above this module (dist/cli-core.js →
+ * ../package.json; in tests src/cli-core.ts → ../package.json, the repo root).
+ * An absent or malformed manifest degrades to 'unknown' rather than throwing,
+ * so `--version` never errors.
+ */
 export function readVersion(): string {
   try {
     const raw = readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8')
@@ -72,9 +80,13 @@ export function readVersion(): string {
   }
 }
 
-// Async because checkride is: `check` and `checkpoint` await the gate (D32),
-// `start` awaits the plan-time detection probe (research/07 2a); every other
-// verb returns synchronously through the same Promise-typed seam.
+/**
+ * Route a verb to its implementation, or report the unknown verb and exit 1.
+ *
+ * Async because checkride is: `check` and `checkpoint` await the gate, `start`
+ * awaits the plan-time detection probe; every other verb returns synchronously
+ * through the same Promise-typed seam.
+ */
 async function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): Promise<number> {
   switch (verb) {
     case 'start':
@@ -113,6 +125,13 @@ async function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>):
   }
 }
 
+/**
+ * The CLI entrypoint minus the exit: parse argv, dispatch, return the exit code.
+ *
+ * `help` and `version` short-circuit before dispatch; any thrown error becomes
+ * a one-line stderr report and exit 1, so the bin entry only ever exits with
+ * the code returned here.
+ */
 export async function run(argv: ReadonlyArray<string>): Promise<number> {
   const verb = argv[0] ?? 'help'
   const rest = argv.slice(1)

@@ -135,7 +135,7 @@ describe('revert', () => {
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('note made after the checkpoint')
   })
 
-  // Q7 / D10: the artifact plane is tracked now, so revert must snapshot + restore
+  // The build's artifact plane is tracked in git, so revert must snapshot + restore
   // the whole build folder across the reset — both when reverting to a step (the
   // folder exists at the target SHA but with older content) and to the baseline
   // (the folder does not exist at the target SHA at all).
@@ -150,7 +150,7 @@ describe('revert', () => {
     expect(readFileSync(join(dir, 'feature.txt'), 'utf8')).toBe('v1\n') // code rewound
     expect(existsSync(buildDir(dir, 'revert-test'))).toBe(true) // folder intact
     expect(existsSync(intentPath(dir))).toBe(true)
-    expect(readFileSync(buildLogPath(dir), 'utf8')).toContain('survive the step revert') // park line kept (C4)
+    expect(readFileSync(buildLogPath(dir), 'utf8')).toContain('survive the step revert') // park line kept — a revert may never destroy park lines
   })
 
   it('revert-to-baseline: the build folder survives even when it does not exist at the baseline SHA (Q7)', async () => {

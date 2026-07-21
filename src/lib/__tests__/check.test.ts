@@ -11,7 +11,7 @@ import { captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
 afterAll(cleanupTempRepos)
 
-// Point the check at a shell stub. A real gate would recurse into vitest (D14),
+// Point the check at a shell stub. A real gate would recurse into vitest,
 // so these cover the spawn-override path; the checkride path below uses custom
 // checks (a bare `node -e` command) so no real tool ever runs.
 function writeSettings(root: string, check: string): void {
@@ -26,7 +26,7 @@ function writeLocalSettings(root: string, check: string): void {
 
 // A checkride.config.json whose only active check is a custom `node -e` stub —
 // built-in slots all skip (no tools in a bare tmp dir), so the stub alone
-// decides green/red without spawning any real adapter (D14).
+// decides green/red without spawning any real adapter.
 function writeCheckrideStub(root: string, exitCode: number): void {
   const config = {
     checks: { stub: { command: 'node', args: ['-e', `process.exit(${exitCode})`] } },

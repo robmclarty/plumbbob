@@ -171,9 +171,10 @@ describe('orient parsers', () => {
   })
 
   it('parseOpenQuestions drops an opener whose *resolved:* marker lands on the opener line, sub-lines and all', () => {
-    // D5 (resolved-on-opener): the marker must be on the opener for the count to
-    // drop — pinning that the still-present *plain:*/*lean:* scaffolding doesn't
-    // prevent it, and that a genuinely open neighbor still counts.
+    // Resolution is read from the opener line: the *resolved:* marker must be on
+    // the opener for the count to drop — pinning that the still-present
+    // *plain:*/*lean:* scaffolding doesn't prevent it, and that a genuinely open
+    // neighbor still counts.
     const intent = [
       '## Open questions',
       '',
@@ -227,8 +228,7 @@ describe('orient parsers', () => {
 
   it('the real templates/intent.md parses to an open-question count of 0 (D7 placeholder-uncounted)', () => {
     // The scaffolded Q1 placeholder must never read as an open question — a fresh
-    // build showing "open questions 1" would be shipped noise. This pin lands
-    // before step 2 touches the template, per D7.
+    // build showing "open questions 1" would be shipped noise.
     expect(parseOpenQuestions(readTemplate('intent.md'))).toBe(0)
   })
 

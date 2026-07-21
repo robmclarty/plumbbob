@@ -1,8 +1,10 @@
 // `plumbbob doctor` — all three sections, in-process. The sidecar tests build a
-// pre-restructure LEGACY flat sidecar in a throwaway repo (D14) and assert the
-// move into the tracked builds/ layout: archive + active session become build
+// LEGACY flat sidecar (the pre-builds/ layout) in a throwaway repo and assert
+// the move into the tracked builds/ layout: archive + active session become build
 // folders, config becomes settings.json, and the result is STAGED but never
-// committed (Q8), losing nothing on the way (C4). The plugin-link tests pin
+// committed (the human owns that commit), losing nothing on the way (the
+// never-destroy rule: park lines, intent edits, and build folders all survive).
+// The plugin-link tests pin
 // process.env.HOME to a fixture home (the subprocess suite in
 // test/integration/doctor.test.ts drives the same checks through the real CLI).
 
@@ -243,7 +245,7 @@ describe('doctor — migration', () => {
     ])
   })
 
-  // The legacy config was hand-edited ini-style: the check line may be indented and
+  // A legacy config is hand-edited ini-style: the check line may be indented and
   // spaced around `=`, and near-miss keys (`xcheck=`) must not match.
   it('parses a whitespace-y check line and ignores near-miss keys', () => {
     const dir = partialLegacyRepo((sc) => writeFileSync(join(sc, 'config'), 'xcheck=bogus\n  check = pnpm run check\n'))
@@ -283,7 +285,7 @@ describe('doctor — migration', () => {
     ])
   })
 
-  // `start` refuses collisions (D38); migration instead suffixes -2, -3, … because
+  // `start` refuses a colliding slug outright; migration instead suffixes -2, -3, … because
   // the folders it is moving already exist and aborting mid-move would destroy state.
   it('disambiguates colliding slugs with -2, -3 … suffixes', () => {
     const dir = partialLegacyRepo((sc) => {
@@ -364,7 +366,8 @@ describe('doctor — the verb', () => {
     expect(stdout).not.toContain('legacy flat sidecar')
   })
 
-  // D32 — the check-gate section.
+  // The check-gate section: checkride is the gate by default, and a configured
+  // `check` setting overrides it.
   it('names a configured `check` setting as the gate and asks nothing more', async () => {
     const dir = makeTempRepo()
     mkdirSync(join(dir, '.plumbbob'), { recursive: true })
@@ -434,7 +437,7 @@ describe('doctor — the verb', () => {
   })
 })
 
-// The agent-validation section (D48). overrideRepo + a seeded marketplace make the
+// The agent-validation section. overrideRepo + a seeded marketplace make the
 // plugin and gate sections pass, so a test's problem count comes from the agents
 // alone; HOME is pinned so the personal tier is the throwaway home, not the dev's.
 type AgentOpts = {
@@ -646,7 +649,7 @@ describe('doctor — plugin link (HOME pinned)', () => {
   })
 })
 
-// The approval-latch health probe (D64). overrideRepo + a seeded marketplace keep the
+// The approval-latch health probe. overrideRepo + a seeded marketplace keep the
 // plugin and gate sections passing, so the probe's own line is what a test reads; the
 // probe never fails (dormant is legitimate), so the exit code stays 0 either way.
 describe('doctor — approval latch (D64)', () => {

@@ -49,8 +49,8 @@ describe('path helpers', () => {
     expect(checkpointsPath(root)).toBe('/tmp/x/.plumbbob/checkpoints')
     expect(intentPath(root)).toBe('/tmp/x/.plumbbob/intent.md')
     expect(buildLogPath(root)).toBe('/tmp/x/.plumbbob/build-log.md')
-    // The turn ledger (D64) is per-worktree, so TURN/GRANT stay flat even when a
-    // build is active; TICK is per-build and follows the artifact folder.
+    // The approval latch's turn ledger is per-worktree, so TURN/GRANT stay flat
+    // even when a build is active; TICK is per-build and follows the artifact folder.
     expect(turnPath(root)).toBe('/tmp/x/.plumbbob/TURN')
     expect(grantPath(root)).toBe('/tmp/x/.plumbbob/GRANT')
     expect(tickPath(root)).toBe('/tmp/x/.plumbbob/TICK')
@@ -237,13 +237,13 @@ describe('excludeControl', () => {
     for (const pattern of [
       '.plumbbob/STATE',
       '.plumbbob/settings.local.json',
-      '.plumbbob/TURN', // the turn ledger and its grant (D64/D65) — per-worktree control
+      '.plumbbob/TURN', // the approval latch's turn ledger and its one-turn grant — per-worktree control
       '.plumbbob/GRANT',
       '.plumbbob/builds/*/STEP',
       '.plumbbob/builds/*/SEAM',
       '.plumbbob/builds/*/SPIKE',
-      '.plumbbob/builds/*/TICK', // the entry stamp (D64) — never swept in by stageAll
-      '.check/', // the checkride gate's raw output (D32) — never swept into a step commit
+      '.plumbbob/builds/*/TICK', // the latch's step-entry stamp — never swept in by stageAll
+      '.check/', // the checkride gate's raw output — never swept into a step commit
     ]) {
       expect(lines.filter((line) => line.trim() === pattern).length).toBe(1)
     }
@@ -270,7 +270,7 @@ describe('excludeSidecar', () => {
     excludeSidecar(wt)
 
     // Lands in the common gitdir's exclude — the only file git reads — not the
-    // per-worktree gitdir, whose missing info/ was the ENOENT crash this fixes.
+    // per-worktree gitdir, which has no info/ (writing there would ENOENT).
     const commonExclude = readFileSync(join(realpathSync(main), '.git', 'info', 'exclude'), 'utf8')
     expect(commonExclude.split('\n')).toContain('.plumbbob/')
   })

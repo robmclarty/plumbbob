@@ -1,10 +1,14 @@
-// `plumbbob check` — run the heavy gate (D16/D24/D32) and report, with NO state
-// change. The read-only half of the verify tick: `/pb-verify` runs this before the
-// pause so the human approves on a known-green check. Exits with the check's own
-// code (0 = green, 1 = red, 2 = the gate itself broke).
+// `plumbbob check` — run the heavy gate and report, with NO state change. This
+// is the read-only half of the verify tick: `/pb-verify` runs it before the
+// pause so the human approves on a known-green check. The gate itself lives in
+// lib/check.ts: checkride (our sibling check-runner package) by default, or a
+// spawn command named by the `check` setting — resolved through the settings
+// ladder (flag → local overlay → tracked settings.json → default) — for repos
+// that gate through something else. Exits with the check's own code (0 = green,
+// 1 = red, 2 = the gate itself broke).
 //
 // Narrowing flags for the iteration loop (`check --bail --only types,lint`) map
-// straight onto checkride's RunFlags (D32). Only this verb takes them — the
+// straight onto checkride's run flags. Only this verb takes them — the
 // checkpoint gate is always full-fat.
 
 import { findRepoRoot } from '../lib/git.ts'
@@ -12,6 +16,12 @@ import { hasSession } from '../lib/sidecar.ts'
 import { runCheck } from '../lib/check.ts'
 import type { CheckFlags } from '../lib/check.ts'
 
+/**
+ * Run the heavy check gate for the active session and print the verdict line.
+ *
+ * Refuses without a session; otherwise returns the gate's own exit code so a
+ * caller can branch on green (0), red (1), or a broken gate (2) directly.
+ */
 export async function check(cwd: string, args: ReadonlyArray<string> = []): Promise<number> {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
@@ -23,8 +33,12 @@ export async function check(cwd: string, args: ReadonlyArray<string> = []): Prom
   return code
 }
 
-// argv → CheckFlags: bare booleans plus comma-separated slot lists. Unknown
-// args are ignored rather than refused — the gate itself is the point.
+/**
+ * Map argv onto checkride's flags: bare booleans plus comma-separated slot lists.
+ *
+ * Unknown args are ignored rather than refused — running the gate is the point,
+ * not flag hygiene.
+ */
 function parseFlags(args: ReadonlyArray<string>): CheckFlags {
   return {
     ...(args.includes('--bail') ? { bail: true } : {}),
@@ -36,6 +50,12 @@ function parseFlags(args: ReadonlyArray<string>): CheckFlags {
   }
 }
 
+/**
+ * Read one `--only a,b`-style flag into its slot-list entry.
+ *
+ * Returns {} when the flag is absent, valueless, or followed by another flag,
+ * so the spread in parseFlags simply contributes nothing.
+ */
 function slotList(args: ReadonlyArray<string>, flag: string): Partial<CheckFlags> {
   const i = args.indexOf(flag)
   const value = i >= 0 ? args[i + 1] : undefined
@@ -47,6 +67,12 @@ function slotList(args: ReadonlyArray<string>, flag: string): Partial<CheckFlags
   return names.length > 0 ? { [flag.slice(2)]: names } : {}
 }
 
+/**
+ * The one-line human verdict for a check exit code.
+ *
+ * A broken gate (exit 2) reports distinctly from red — a misconfigured harness
+ * must never read as broken code, though both block a checkpoint.
+ */
 function verdictLine(code: number): string {
   if (code === 0) return '\nplumbbob: check green.\n'
   if (code === 2) return '\nplumbbob: check ERROR — the gate itself broke; fix the harness before trusting green or red.\n'

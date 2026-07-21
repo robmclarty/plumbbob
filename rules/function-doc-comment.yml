@@ -1,0 +1,47 @@
+id: function-doc-comment
+language: typescript
+severity: error
+message: 'Every top-level function needs a `/** ... */` doc comment directly above it: a one-line description, then (optionally) a blank line and expanded details. Inline `//` comments belong inside function bodies, not as function docs.'
+files:
+  - 'src/**/*.ts'
+ignores:
+  - 'src/**/__tests__/**'
+rule:
+  all:
+    - any:
+        # A bare top-level function: `function f() {}` or `const f = () => {}`.
+        - all:
+            - any:
+                - kind: function_declaration
+                - all:
+                    - kind: lexical_declaration
+                    - has:
+                        kind: variable_declarator
+                        has:
+                          field: value
+                          any:
+                            - kind: arrow_function
+                            - kind: function_expression
+            - inside:
+                kind: program
+        # The exported form: the doc comment sits above the `export` keyword.
+        - all:
+            - kind: export_statement
+            - has:
+                any:
+                  - kind: function_declaration
+                  - all:
+                      - kind: lexical_declaration
+                      - has:
+                          kind: variable_declarator
+                          has:
+                            field: value
+                            any:
+                              - kind: arrow_function
+                              - kind: function_expression
+            - inside:
+                kind: program
+    - not:
+        follows:
+          kind: comment
+          regex: '^/\*\*'

@@ -1,15 +1,14 @@
 # Decisions and constraints — the D and C key
 
-The PlumbBob source is annotated with shorthand tags — `D3`, `C1`, `D17`, and so on —
-that point back to settled design decisions (`D`) and hard constraints (`C`). They keep
-the code comments terse without losing the *why*. This page is the key: it reconstructs
-each tag from where it is referenced in the code, so a reader who hits "`D17`" in a comment
-can look up what it means.
+PlumbBob's design history is recorded as numbered decisions (`D`) and hard constraints
+(`C`) — `D3`, `C1`, `D17`, and so on. The code comments state each rule's *why* in plain
+language and do not cite these tags; the tags still appear in a few places a reader can
+hit — some CLI output lines (e.g. the latch's settings-`auto` note), some test titles,
+and the research notes under `research/`. This page is the key: a reader who hits
+"`D17`" anywhere can look up what it means.
 
-The list covers the tags **present in the code**. Some numbers (e.g. `D2`, `D5`, `D11`,
-`D12`, `D21`) belonged to superseded decisions and are no longer referenced; a few
-entries below are earlier decisions kept only because a comment still cites them, and
-they are marked as such. (A build's *own* `intent.md` numbers its decisions from `D1`
+Some numbers (e.g. `D2`, `D5`, `D11`, `D12`, `D21`) belonged to superseded decisions
+and are no longer referenced. (A build's *own* `intent.md` numbers its decisions from `D1`
 locally — comments citing a build-local number are renumbered to this key when the work
 lands; [**D33**](#d33)–[**D38**](#d38) below came in that way from the July 2026 worktree restructure.)
 

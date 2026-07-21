@@ -22,7 +22,7 @@ const INTENT = `# Checkpoint test
 `
 
 // A started session with one planned step and a green stub gate. In the tracked
-// layout the build folder rides the tree (D2), so overwriting intent/settings
+// layout the build folder rides the tree, so overwriting intent/settings
 // dirties it — checkpoint stages that alongside the step's work.
 async function startedGreen(): Promise<string> {
   const dir = makeTempRepo()
@@ -74,7 +74,7 @@ describe('checkpoint', () => {
     writeFileSync(join(dir, 'work.txt'), 'pending\n')
     await captureIoAsync(() => checkpoint(dir, ['1']))
     const body = execFileSync('git', ['log', '-1', '--format=%b'], { cwd: dir, encoding: 'utf8' })
-    expect(body.startsWith('plumbbob step 1')).toBe(true) // the marker leads the body (D68)
+    expect(body.startsWith('plumbbob step 1')).toBe(true) // the marker leads the body
     expect(body).toContain('done when: a works.')
     expect(body).toContain('seam: src/a.ts')
     expect(body).toContain('work.txt') // the staged diffstat names the changed file
@@ -89,9 +89,10 @@ describe('checkpoint', () => {
     expect(subject).toBe('chore(checkpoint-test): checkpoint')
   })
 
-  // Step 1 — the scope fallback chain (D3): title-scope → build-default `**Scope:**`
+  // The scope fallback chain: title-scope → build-default `**Scope:**`
   // → build slug → bare. The slug rung is already pinned by the tests above (no
-  // `**Scope:**` field, C2 back-compat); these pin the other rungs.
+  // `**Scope:**` field — an intent without the header keeps the slug-scope
+  // behavior); these pin the other rungs.
   describe('the scope fallback chain (D3)', () => {
     it("a step's own `(scope)` prefix wins over the build-default `**Scope:**` header", async () => {
       const dir = await startedGreen()
@@ -343,8 +344,8 @@ describe('checkpoint', () => {
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x]')
   })
 
-  // Step 8 — the plan-approval commit (D11): its own commit, before any step,
-  // carrying only the build's scaffold so the first step's diff stays clean.
+  // The plan-approval commit: its own commit, before any step, carrying only
+  // the build's scaffold so the first step's diff stays clean.
   describe('--plan', () => {
     it('commits as `chore(scope): plan` with a `plumbbob plan` body marker and records a `plan <sha>` line', async () => {
       const dir = await startedGreen()
@@ -354,7 +355,7 @@ describe('checkpoint', () => {
       const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
       expect(subject).toBe('chore(checkpoint-test): plan')
       const body = execFileSync('git', ['log', '-1', '--format=%b'], { cwd: dir, encoding: 'utf8' })
-      expect(body).toContain('plumbbob plan') // identifier lives in the body now (D68)
+      expect(body).toContain('plumbbob plan') // the identifier rides the body, not the subject
       expect(readFileSync(checkpointsPath(dir), 'utf8')).toMatch(/plan [0-9a-f]{40}/)
     })
 
@@ -381,14 +382,14 @@ describe('checkpoint', () => {
       expect(existsSync(tickPath(dir))).toBe(false)
     })
     // `--body` reads fd 0, which an in-process unit test can't feed — the subprocess
-    // integration test (verify.test.ts) covers the plan commit's `--body` path (C6).
+    // integration test (verify.test.ts) covers the plan commit's `--body` path.
   })
 })
 
-// Step 3 — the approval latch (D64), driven through the real CLI so each matrix
-// row is proven at the process boundary: a runCli child gets a piped (non-TTY)
-// stdin, and the tests write TURN/TICK/GRANT directly, standing in for the hook
-// tick and the entry stamp. Row 1 (a real TTY) is the in-process test above.
+// The approval latch, driven through the real CLI so each matrix row is proven
+// at the process boundary: a runCli child gets a piped (non-TTY) stdin, and the
+// tests write TURN/TICK/GRANT directly, standing in for the hook tick and the
+// entry stamp. Row 1 (a real TTY) is the in-process test above.
 describe('checkpoint — the approval latch (subprocess, D64)', () => {
   const LATCH_INTENT = `# Latch test
 
@@ -457,7 +458,7 @@ describe('checkpoint — the approval latch (subprocess, D64)', () => {
 
   it('D67: a standing `auto: true` in settings is ignored — checkpoint still refuses', async () => {
     const dir = latchedRepo()
-    setLocalSetting(dir, 'auto', true) // a model can write this file, so it is no longer a grant
+    setLocalSetting(dir, 'auto', true) // a model can write this file, so the latch does not honor it as a grant
     const { status, stderr } = runCli(dir, ['checkpoint', '1'])
     expect(status).toBe(1)
     expect(stderr).toContain('no longer a grant (D67)')

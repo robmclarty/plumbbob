@@ -1,22 +1,25 @@
-// Orientation model for `status` (D8/D15): parse a live session into the
-// dashboard the human reads to know where they are and what to do next. Pure and
-// best-effort — it takes raw file contents (no fs), and a malformed doc degrades
-// to fewer fields rather than throwing. Functional/procedural, no classes, no
-// default export (C1).
+// The orientation model behind `status`: parse a live build session into the
+// where-am-I dashboard — title, phase, step list, last checkpoint, counts, and
+// one suggested next move. Pure and best-effort by design: it takes raw file
+// contents (no fs), and a malformed document degrades to fewer fields rather
+// than throwing.
 
 import { parseStepSeam } from './intent.ts'
 
+/** One numbered step under intent.md's `## Steps`. */
 export type Step = {
   readonly n: number
   readonly done: boolean
   readonly title: string
   readonly planned: boolean // carries a `done when:` criterion
   readonly doneWhen: string | null // the criterion text, for the dashboard
-  readonly model: string | null // the advisory `- model:` recommendation, verbatim (D62)
+  readonly model: string | null // the optional `- model:` recommendation, verbatim — advisory, never a gate
 }
 
+/** One landed step from the checkpoints ledger: its number and commit SHA. */
 export type Checkpoint = { readonly n: number; readonly sha: string }
 
+/** The parsed where-am-I view that `status` renders. */
 export type Orientation = {
   readonly title: string | null
   // The phase word shown in the dashboard — derived, not stored: SPIKE when a
@@ -31,31 +34,38 @@ export type Orientation = {
   // the human can review (and `/pb-step`-revise) before `/pb-build`.
   readonly nextDoneWhen: string | null
   readonly nextSeam: ReadonlyArray<string>
-  // The next step's advisory model recommendation (D62) — orientation for the
-  // human choosing where to spend attention and tokens, never a gate.
+  // The next step's advisory model recommendation — the smallest model the plan
+  // says can carry the step. Orientation for the human choosing where to spend
+  // attention and tokens, never a gate.
   readonly nextModel: string | null
-  // Commits on HEAD since the last checkpoint that landed outside plumbbob's ledger
-  // (D66): surfaced as one neutral reconciliation line, never blocked — the human
-  // commits freely (repo D3/C5). 0 renders nothing.
+  // Commits on HEAD since the last checkpoint that landed outside plumbbob's
+  // checkpoints ledger (the per-build file recording baseline, plan, and step
+  // SHAs): surfaced as one neutral reconciliation line, never blocked — the
+  // human commits freely. 0 renders nothing.
   readonly outOfBand: number
 }
 
+/** The raw material `orient` parses — file contents and marker state, no fs. */
 export type OrientInput = {
   readonly intent: string
   readonly buildLog: string
   readonly checkpoints: string
-  // The in-flight step number from the STEP file (null when none) — this is what
-  // makes the phase "BUILD". `spiking` is the SPIKE marker's presence.
+  // The in-flight step number from the STEP marker (an untracked control file
+  // naming the step being built; null when none) — this is what makes the phase
+  // "BUILD". `spiking` is the SPIKE marker's presence.
   readonly inFlight: number | null
   readonly spiking: boolean
-  // The out-of-band commit count (D66): commits since the last checkpoint's SHA,
-  // which only `status` can measure (it needs git) — orient stays pure/fs-free, so
-  // the caller computes it and passes it in. 0 when there is no checkpoint to
-  // reconcile against, or the tree is clean at the last checkpoint.
+  // The out-of-band commit count: commits since the last checkpoint's SHA that
+  // the ledger didn't record. Only `status` can measure it (it needs git) —
+  // orient stays pure/fs-free, so the caller computes it and passes it in. 0
+  // when there is no checkpoint to reconcile against, or the tree is clean at
+  // the last checkpoint.
   readonly outOfBand: number
 }
 
-// The lines of a named `## Section`, from its heading to the next `## ` (or EOF).
+/**
+ * The lines of a named `## Section`, from its heading to the next `## ` (or EOF).
+ */
 function sectionLines(content: string, heading: string): string[] {
   const lines = content.split('\n')
   const start = lines.findIndex((l) => l.trim() === heading)
@@ -69,6 +79,9 @@ function sectionLines(content: string, heading: string): string[] {
   return lines.slice(start + 1, end)
 }
 
+/**
+ * The build title — the first `# ` heading in intent.md, or null when absent.
+ */
 export function parseTitle(intent: string): string | null {
   for (const line of intent.split('\n')) {
     const m = /^#\s+(.+?)\s*$/.exec(line)
@@ -79,9 +92,14 @@ export function parseTitle(intent: string): string | null {
   return null
 }
 
-// Steps under `## Steps`: `N. [ |x] Title — **done when:** ...`. The title is the
-// text up to the first em dash; `planned` is true when the step's block carries a
-// `done when` criterion. Roadmap prose lives in its own section, never here (D6).
+/**
+ * Parse the steps under `## Steps`: `N. [ |x] Title — **done when:** ...`.
+ *
+ * The title is the text up to the first em dash; `planned` is true when the
+ * step's block carries a `done when` criterion. Only `## Steps` is machine-read
+ * as the build plan — narrative roadmap prose lives in its own section and
+ * never lands here.
+ */
 export function parseSteps(intent: string): Step[] {
   const lines = sectionLines(intent, '## Steps')
   const starts: Array<{ readonly n: number; readonly done: boolean; readonly title: string; readonly idx: number }> = []
@@ -108,9 +126,12 @@ export function parseSteps(intent: string): Step[] {
   })
 }
 
-// Flip step N's `[ ]` checkbox to `[x]` within the `## Steps` section — mechanical
-// bookkeeping for `checkpoint` so `status` reflects a checkpointed step. A no-op if
-// the step is absent or already done.
+/**
+ * Flip step N's `[ ]` checkbox to `[x]` within the `## Steps` section.
+ *
+ * Mechanical bookkeeping for `checkpoint`, so `status` reflects a checkpointed
+ * step. A no-op if the step is absent or already done.
+ */
 export function markStepDone(intent: string, n: number): string {
   let inSteps = false
   return intent
@@ -128,22 +149,35 @@ export function markStepDone(intent: string, n: number): string {
     .join('\n')
 }
 
-// Open questions still open: `- Q\d+:` openers that do not say "resolved". The
-// opener may carry a slug-at-birth gloss — `- Q2 (some-slug): ...` (D3) — which
-// the count reads through; sub-lines (`*plain:*`/`*lean:*`) never match.
+/**
+ * Count the questions still open: `- Q\d+:` openers under `## Open questions`
+ * that do not say "resolved".
+ *
+ * The opener may carry a slug-at-birth gloss — `- Q2 (some-slug): ...` — which
+ * the count reads through; sub-lines (`*plain:*`/`*lean:*`) never match.
+ */
 export function parseOpenQuestions(intent: string): number {
   return sectionLines(intent, '## Open questions').filter(
     (l) => /^- Q\d+(?: \([^)]+\))?:/.test(l.trim()) && !/resolved/i.test(l),
   ).length
 }
 
-// Open parked items: `- [ ]` lines under `## Park list` (the `park` verb's format).
-// A harvested item is flipped to `- [x]` by `/pb-harvest` and no longer counts; the
-// `(none yet)` placeholder and the blockquote instructions never match.
+/**
+ * Count the open parked items: `- [ ]` lines under `## Park list`.
+ *
+ * A parked item is a mid-build idea the `park` verb appends as a flat checklist
+ * line for later triage; `/pb-harvest` flips a triaged one to `- [x]` and it
+ * stops counting. The `(none yet)` placeholder and the blockquote instructions
+ * never match.
+ */
 export function parseParked(buildLog: string): number {
   return sectionLines(buildLog, '## Park list').filter((l) => /^-\s+\[ \]\s+\S/.test(l.trim())).length
 }
 
+/**
+ * The last `step N <sha>` line in the checkpoints ledger, or null when no step
+ * has landed yet.
+ */
 export function parseLastCheckpoint(checkpoints: string): Checkpoint | null {
   let last: Checkpoint | null = null
   for (const line of checkpoints.split('\n')) {
@@ -155,12 +189,15 @@ export function parseLastCheckpoint(checkpoints: string): Checkpoint | null {
   return last
 }
 
-// The SHA of the last ledger line of ANY kind — baseline, plan, or step. This is
-// the reconciliation anchor for the out-of-band count (D66): a commit that lands
-// after the plan but before the first step checkpoint is exactly the window the
-// receipt exists for, so anchoring on step lines alone would leave it invisible.
-// `parseLastCheckpoint` stays step-only — it feeds the "last checkpoint step N"
-// display, where baseline/plan would be noise.
+/**
+ * The SHA of the last ledger line of ANY kind — baseline, plan, or step.
+ *
+ * This is the reconciliation anchor for the out-of-band commit count: a commit
+ * that lands after the plan but before the first step checkpoint is exactly the
+ * window the reconciliation line exists for, so anchoring on step lines alone
+ * would leave it invisible. `parseLastCheckpoint` stays step-only — it feeds
+ * the "last checkpoint step N" display, where baseline/plan would be noise.
+ */
 export function lastLedgerSha(checkpoints: string): string | null {
   let last: string | null = null
   for (const line of checkpoints.split('\n')) {
@@ -172,10 +209,14 @@ export function lastLedgerSha(checkpoints: string): string | null {
   return last
 }
 
-// The single primary next move (D15). It suggests; the dashboard prints the full
-// list + counts so the human can always override. The phase is derived: a spike
-// in progress and an in-flight step each have one obvious next move; otherwise you
-// are at the boundary and the move follows from the steps.
+/**
+ * The single primary next move the dashboard suggests.
+ *
+ * It suggests; the dashboard prints the full list + counts so the human can
+ * always override. The phase is derived: a spike in progress and an in-flight
+ * step each have one obvious next move; otherwise you are at the boundary and
+ * the move follows from the steps.
+ */
 function nextMove(spiking: boolean, steps: ReadonlyArray<Step>, inFlight: number | null, parked: number): string {
   if (spiking) {
     return 'close the spike — `plumbbob spike done`'
@@ -199,6 +240,9 @@ function nextMove(spiking: boolean, steps: ReadonlyArray<Step>, inFlight: number
     : `plan step ${nextUndone.n} — \`/pb-step\``
 }
 
+/**
+ * Assemble the full orientation from a build's raw documents and marker state.
+ */
 export function orient(input: OrientInput): Orientation {
   const steps = parseSteps(input.intent)
   const parked = parseParked(input.buildLog)
@@ -220,6 +264,9 @@ export function orient(input: OrientInput): Orientation {
   }
 }
 
+/**
+ * Render an Orientation as the plain-text dashboard `status` prints.
+ */
 export function formatOrientation(o: Orientation): string {
   const doneCount = o.steps.filter((s) => s.done).length
   const nextUndone = o.steps.find((s) => !s.done)
@@ -250,9 +297,9 @@ export function formatOrientation(o: Orientation): string {
   const cp = o.lastCheckpoint
   const cpLine = cp === null ? 'last checkpoint  none yet' : `last checkpoint  step ${cp.n} · ${cp.sha.slice(0, 7)}`
 
-  // A neutral reconciliation note (D66), only when there is something to reconcile:
-  // commits landed since the last checkpoint that plumbbob's ledger didn't record.
-  // Informational — the human commits freely (repo D3/C5), so this never gates.
+  // A neutral reconciliation note, only when there is something to reconcile:
+  // commits landed since the last checkpoint that plumbbob's ledger didn't
+  // record. Informational — the human commits freely, so this never gates.
   const receipts =
     o.outOfBand > 0
       ? [`${o.outOfBand} commit${o.outOfBand === 1 ? '' : 's'} since the last checkpoint landed outside plumbbob's ledger.`]

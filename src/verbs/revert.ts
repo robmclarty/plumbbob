@@ -1,12 +1,14 @@
 // `plumbbob revert [--to n]` — git reset --hard to a checkpoint SHA (the most
 // recent step, or `--to n`, with the baseline as fallback), then remove untracked
-// files under the SEAM only. The artifact plane (`.plumbbob/builds/<slug>/`) is now
-// TRACKED (D26), so a bare reset WOULD discard park lines and intent edits — or, when
-// reverting to a baseline that predates the build folder, delete the folder wholesale.
-// So revert snapshots the sidecar to temp and restores it as uncommitted changes
-// after the reset (D26), keeping C4/never-destroy intact across both cases. The
-// untracked cleanup additionally whitelists the artifact plane, so no seam pattern
-// can ever sweep away a build's own files.
+// files under the SEAM only (the seam is the in-flight step's flat list of
+// granted edit paths). The artifact plane — the tracked `.plumbbob/builds/<slug>/`
+// folder holding intent, build-log, checkpoints, and park lines — would not
+// survive a bare reset: it would discard park lines and intent edits, or, when
+// reverting to a baseline that predates the build folder, delete the folder
+// wholesale. So revert snapshots the sidecar to temp and restores it as
+// uncommitted changes after the reset — a rewind must never destroy recorded
+// work, in either case. The untracked cleanup additionally whitelists the
+// artifact plane, so no seam pattern can ever sweep away a build's own files.
 //
 // Plumbbob also installs its driver skills INTO the repo (.claude/skills/<driver>/
 // for a self-contained install), so a blunt reset would discard an out-of-seam
@@ -23,6 +25,15 @@ import { bumpStepStat, checkpointsPath, hasSession, resolveBuild, seamPath, side
 import { isArtifactPath, matchesSeam } from '../lib/intent.ts'
 import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
 
+/**
+ * Rewind to a recorded checkpoint and return the build to the boundary.
+ *
+ * Requires an active session (the `.plumbbob/STATE` sentinel). Resolves the
+ * target SHA from the checkpoints ledger (latest step, `--to n`, or the
+ * baseline), resets hard while preserving plumbbob-owned paths, removes
+ * untracked files inside the seam, clears the in-flight STEP/SEAM markers, and
+ * re-renders the build-log. Exit 1 with a hint on any refusal.
+ */
 export function revert(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
@@ -58,9 +69,9 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
   // ignored files alone, so they must be removed explicitly afterward).
   const seam = readSeamTokens(root, slug)
   const toRemove = untrackedPaths(root).filter((p) => matchesSeam(p, seam) && !isArtifactPath(p))
-  // The dogfood receipt (research/07 2b): a revert against an in-flight step is a
-  // datapoint — read the marker before it goes, bump after the reset (the sidecar
-  // is preserved through it, so the write survives).
+  // A revert against an in-flight step is a datapoint the finish report's stats
+  // table wants — read the STEP marker before it goes, bump the counter after
+  // the reset (the sidecar is preserved through it, so the write survives).
   const inFlight = readInFlightStep(root, slug)
 
   resetPreserving(root, sha, plumbbobOwnedPaths(root))
@@ -72,9 +83,10 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
   if (inFlight !== null) {
     bumpStepStat(root, slug, inFlight, 'reverts')
   }
-  // The step is abandoned: the build-log returns to the boundary and its mirror
-  // re-renders from the preserved intent.md (D69) — revert keeps intent edits (D26),
-  // so intent's checkboxes stay the truth to reflect. Best-effort, like the rest.
+  // The step is abandoned: the build-log's Current-step line returns to the
+  // boundary and its Steps mirror re-renders from the preserved intent.md —
+  // revert keeps intent edits, so intent's checkboxes stay the truth to reflect.
+  // Best-effort, like every build-log write.
   syncBuildLogState(root, slug, AT_BOUNDARY)
 
   process.stdout.write(
@@ -83,12 +95,15 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
   return 0
 }
 
-// The repo paths that belong to plumbbob, not to the work being reverted: the
-// sidecar (already git-excluded, listed so revert is robust even where `.plumbbob/`
-// was tracked by mistake) and each installed driver skill under .claude/skills/.
-// Skill names come from plumbbob's own bundled `skills/` dir — the same source
-// `setup` copies from — so only plumbbob's own skills are protected, never the
-// user's. Only paths that currently exist are returned.
+/**
+ * The repo paths that belong to plumbbob, not to the work being reverted.
+ *
+ * They are the sidecar (already git-excluded, listed so revert is robust even
+ * where `.plumbbob/` was tracked by mistake) and each installed driver skill
+ * under .claude/skills/. Skill names come from plumbbob's own bundled `skills/`
+ * dir — the same source `setup` copies from — so only plumbbob's own skills are
+ * protected, never the user's. Only paths that currently exist are returned.
+ */
 function plumbbobOwnedPaths(root: string): ReadonlyArray<string> {
   const paths = [sidecarDir(root)]
   try {
@@ -101,9 +116,13 @@ function plumbbobOwnedPaths(root: string): ReadonlyArray<string> {
   return paths.filter((p) => existsSync(p))
 }
 
-// `git reset --hard <sha>` is repo-wide, so paths that must survive it are copied
-// to a temp snapshot first, then copied back over whatever the reset produced.
-// Restoring on top (no pre-delete) keeps the live sidecar safe if a copy throws.
+/**
+ * `git reset --hard <sha>` with the given paths carried across it.
+ *
+ * The reset is repo-wide, so paths that must survive it are copied to a temp
+ * snapshot first, then copied back over whatever the reset produced. Restoring
+ * on top (no pre-delete) keeps the live sidecar safe if a copy throws.
+ */
 function resetPreserving(root: string, sha: string, preserve: ReadonlyArray<string>): void {
   const snap = mkdtempSync(join(tmpdir(), 'plumbbob-revert-'))
   try {
@@ -115,6 +134,10 @@ function resetPreserving(root: string, sha: string, preserve: ReadonlyArray<stri
   }
 }
 
+/**
+ * Parse `--to <n>`: the step number, null when the flag is absent, or
+ * 'invalid' when the flag lacks a numeric argument.
+ */
 function parseTo(args: ReadonlyArray<string>): number | null | 'invalid' {
   const idx = args.indexOf('--to')
   if (idx === -1) {
@@ -132,6 +155,12 @@ type Checkpoints = {
   readonly steps: ReadonlyArray<{ readonly n: number; readonly sha: string }>
 }
 
+/**
+ * Parse the build's CHECKPOINTS record into a baseline sha and per-step shas.
+ *
+ * A missing or unreadable file yields an empty record — the caller then refuses
+ * with its own message rather than crashing here.
+ */
 function readCheckpoints(root: string, slug: string | null): Checkpoints {
   let content = ''
   try {
@@ -155,6 +184,11 @@ function readCheckpoints(root: string, slug: string | null): Checkpoints {
   return { baseline, steps }
 }
 
+/**
+ * Read the in-flight step's seam — its edit-grant paths, one per line.
+ *
+ * A missing or unreadable SEAM contributes nothing: no tokens, never an error.
+ */
 function readSeamTokens(root: string, slug: string | null): ReadonlyArray<string> {
   try {
     return readFileSync(seamPath(root, slug), 'utf8')
@@ -166,8 +200,11 @@ function readSeamTokens(root: string, slug: string | null): ReadonlyArray<string
   }
 }
 
-// The in-flight STEP number, or null when none — read for the revert receipt
-// before the marker is cleared.
+/**
+ * The in-flight STEP number, or null when none.
+ *
+ * Read for the revert receipt before the marker is cleared.
+ */
 function readInFlightStep(root: string, slug: string | null): number | null {
   try {
     const raw = readFileSync(stepPath(root, slug), 'utf8').trim()

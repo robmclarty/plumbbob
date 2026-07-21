@@ -17,8 +17,9 @@ async function startedWithCheck(command: string): Promise<string> {
   return dir
 }
 
-// A session with NO `check` setting: the gate is checkride (D32), pointed at a
-// custom `node -e` stub so no real adapter runs (D14).
+// A session with NO `check` setting: the gate is checkride (absence of the
+// setting means checkride runs), pointed at a custom `node -e` stub so no real
+// adapter runs inside the test.
 async function startedWithCheckride(exitCode: number): Promise<string> {
   const dir = makeTempRepo()
   await captureIoAsync(() => start(dir, ['Checking']))
@@ -76,7 +77,7 @@ describe('check', () => {
     expect(stderr).toContain('no active session')
   })
 
-  // D32 — the narrowing flags map onto checkride's RunFlags end-to-end: a red
+  // The narrowing flags map onto checkride's RunFlags end-to-end: a red
   // custom check disappears from the run under `--only <the green one>`.
   it('narrows the checkride run with --only', async () => {
     const dir = makeTempRepo()

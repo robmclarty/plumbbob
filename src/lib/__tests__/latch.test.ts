@@ -9,7 +9,7 @@ import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.
 afterAll(cleanupTempRepos)
 
 // The strictest baseline: every row's allow condition false, so evaluation falls
-// through to row 6. Each test flips exactly the input its row reads.
+// through to the final refusal row. Each test flips exactly the input its row reads.
 const LATCHED: LatchInput = { isTTY: false, turn: 2, tick: 2, grant: null, step: 1, settingsAuto: false }
 
 describe('evaluateLatch — the five-row matrix, first hit wins', () => {

@@ -1,6 +1,9 @@
-// `plumbbob build <n>` — read step n's seam from intent.md, write the normalized
-// SEAM + STEP. The STEP file is the in-flight signal (the dashboard derives the
-// BUILD phase from it); it never checkpoints (only `checkpoint` commits).
+// `plumbbob build <n>` — enter a step: read step n's seam from intent.md and
+// write the normalized SEAM + STEP control files (flat, untracked, per-build).
+// The seam is the step's edit grant — the exact paths and `dir/` prefixes the
+// step expects to touch, for orientation, never a lock. The STEP file is the
+// in-flight signal (the dashboard derives the BUILD phase from it); this verb
+// never checkpoints — only `checkpoint` commits.
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
@@ -9,6 +12,14 @@ import { parseStepSeam } from '../lib/intent.ts'
 import { parseSteps } from '../lib/orient.ts'
 import { stepLabel, syncBuildLogState } from '../lib/buildlogsync.ts'
 
+/**
+ * Enter step n — or the next undone step — and write its SEAM/STEP markers.
+ *
+ * Refuses a missing session, a malformed step argument, an `N-M` range (a
+ * `/pb-build` skill feature, not a CLI one), and a seam that fails to parse.
+ * On entry it stamps the turn ledger and the step's start time, and re-renders
+ * the build-log's Current step line.
+ */
 export function build(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
@@ -62,12 +73,16 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
 
   writeFileSync(seamPath(root, slug), `${parsed.seam.join('\n')}\n`)
   writeFileSync(stepPath(root, slug), `${step}\n`)
-  stampTick(root, slug) // the entry stamp (D64): TICK = TURN; skipped when the ledger is dormant.
-  // The wall-clock receipt starts here (research/07 Build 2b): checkpoint stamps
-  // landedAt, and the pair becomes the step's duration in the finish report.
+  // Stamp the turn ledger on entry (TICK = TURN): the checkpoint latch demands
+  // a human turn after this point before the step may land. Skipped when the
+  // ledger is dormant — a host with no hooks grows no TURN/TICK files.
+  stampTick(root, slug)
+  // The wall-clock receipt starts here: checkpoint stamps landedAt, and the
+  // pair becomes the step's duration in the finish report.
   stampStepStat(root, slug, step, 'startedAt', new Date().toISOString())
-  // The build-log's top half now shows this step in flight (D69): Current step +
-  // the ☐/☑ mirror, re-rendered from intent.md. Best-effort — never blocks the build.
+  // The build-log's top half is CLI-owned so it never lies: show this step in
+  // flight — Current step plus the ☐/☑ mirror, re-rendered from intent.md.
+  // Best-effort — a missing or hand-edited build-log never blocks the build.
   const title = parseSteps(intent).find((s) => s.n === step)?.title ?? null
   syncBuildLogState(root, slug, stepLabel(step, title))
 
