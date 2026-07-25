@@ -4,16 +4,16 @@
 rate-limiting a login endpoint. This folder holds the **artifacts that session leaves
 behind**: the build's tracked folder, exactly as it would sit at
 `.plumbbob/builds/rate-limit-the-login-endpoint/` on the feature branch after
-`/pb-finish`, ready to ride into the PR.
+`/finish`, ready to ride into the PR.
 
 Read them in the order they were written:
 
 | File | Written by | When |
 |------|-----------|------|
-| [`intent.md`](rate-limit-the-login-endpoint/intent.md) | you + `/pb-plan` | before any code — the Frame, Decisions, Constraints, and all Steps |
+| [`intent.md`](rate-limit-the-login-endpoint/intent.md) | you + `/plan` | before any code — the Frame, Decisions, Constraints, and all Steps |
 | [`build-log.md`](rate-limit-the-login-endpoint/build-log.md) | the loop, as it runs | park lines mid-step, harvest calls and checkpoint lines at each boundary |
 | [`checkpoints`](rate-limit-the-login-endpoint/checkpoints) | the CLI | one SHA per recorded state — baseline, plan, each verified step |
-| [`report.md`](rate-limit-the-login-endpoint/report.md) | `/pb-finish` | at close-out — what shipped, why, and what was deferred |
+| [`report.md`](rate-limit-the-login-endpoint/report.md) | `/finish` | at close-out — what shipped, why, and what was deferred |
 
 ## The commit log it produced
 

@@ -1,5 +1,5 @@
 ---
-name: pb-plan
+name: plan
 description: "Frame a fresh goal and author the whole plan — Frame, Decisions, Constraints, and all Steps — before any code. Three input modes: no arg interviews you; a file path (or @-mention) absorbs a spec; any other text expands your inline intent."
 argument-hint: "[spec-path | intent]"
 disable-model-invocation: true
@@ -10,10 +10,10 @@ allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob start:*
 
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not on PATH in this session. Marketplace install: confirm the plugin is enabled in /plugin, then /reload-plugins. Skills-dir/global install: npm i -g plumbbob && plumbbob init."`
 
-`/pb-plan` is the **whole-goal** move — it opens a session and gets the deciding out
+`/plan` is the **whole-goal** move — it opens a session and gets the deciding out
 of your head and onto `intent.md` *before* any code. By default it authors the
 **complete plan, including all the Steps**, so the happy path afterward is just
-`/pb-build` until done. (Revising a single increment later is the separate `/pb-step`
+`/build` until done. (Revising a single increment later is the separate `/step`
 move; do not confuse the two.)
 
 A model note: this skill **inherits the session model** — nothing pins or switches
@@ -42,7 +42,7 @@ Look at the argument the human gave and pick the mode yourself:
    genuinely ambiguous.
 
 All three modes converge on the **same artifact**: a complete, standalone `intent.md`
-an agent can follow with `/pb-build`. The argument only seeds how you get there.
+an agent can follow with `/build`. The argument only seeds how you get there.
 
 ## What this skill does
 
@@ -79,9 +79,9 @@ an agent can follow with `/pb-build`. The argument only seeds how you get there.
       - model: <optional — smallest that can carry it, with the one-phrase why>
    ```
 
-   Every step needs a **done-when** `/pb-verify` can check and a **seam** (the exact
+   Every step needs a **done-when** `/verify` can check and a **seam** (the exact
    paths it touches). Later steps may be fuzzier than the first — that's fine; they get
-   sharpened just-in-time when you reach them with `/pb-step`. Keep each small enough to
+   sharpened just-in-time when you reach them with `/step`. Keep each small enough to
    verify in one review pass.
 
    **The title *is* the commit subject — author it as one** *(D1)*: write each
@@ -96,7 +96,7 @@ an agent can follow with `/pb-build`. The argument only seeds how you get there.
    **Set the build's default scope, then let steps override it** *(D8)*: fill the
    `**Scope:**` header once with a short feature-level name — the catch-all every step
    inherits — and give a step its own `(scope)` when it touches a distinct code area
-   (`pb-plan`, `commitmsg`, `docs`). A step's `(scope)` names the *code area*; the header
+   (`plan`, `commitmsg`, `docs`). A step's `(scope)` names the *code area*; the header
    names the *feature*, so scopes stay consistent and greppable across builds. Scope
    resolves title-scope → `**Scope:**` default → build slug → bare, and type resolves
    title-type → `feat`, so a scopeless plain title still yields a clean
@@ -108,7 +108,7 @@ an agent can follow with `/pb-build`. The argument only seeds how you get there.
    `model: sonnet — mechanical, fully specified by the done-when` for rote edits;
    `model: opus — strong-assertion test authoring` where the tests do the thinking;
    `model: fable — subtle cross-cutting design` for judgment-heavy or creative work.
-   It is advisory metadata for the human — `/pb-status` surfaces it before each build —
+   It is advisory metadata for the human — `/status` surfaces it before each build —
    never a gate, and nothing switches models automatically. Write it plain (no
    backticks) and omit it when any model would do.
 5. **Offer harness bindings** *(optional)*. If the build will lean on
@@ -153,7 +153,7 @@ an agent can follow with `/pb-build`. The argument only seeds how you get there.
      see the plan and build record in review. In the same breath, offer the way out:
      a repo that won't track a tool folder can restart with `plumbbob start --local`
      (a fully untracked sidecar) before any steps are built.
-7. **Offer to stress-test it.** Suggest `/pb-refine` to attack the frame for holes (or
+7. **Offer to stress-test it.** Suggest `/refine` to attack the frame for holes (or
    to repair the plan as it drifts). Optional, the human's call.
 
 ## The interview (mode 1)
@@ -166,11 +166,11 @@ Make it easy and non-intrusive:
   without typing** ("done-when: the 6th request in 60s returns 429 — good?"), while
   taking arbitrary detail when they want to give it, including pointers to other files.
 - **Let them double back.** They will revise as the picture sharpens; that's expected.
-  They can also edit `intent.md` by hand at any time, or call `/pb-refine` to repair it.
+  They can also edit `intent.md` by hand at any time, or call `/refine` to repair it.
 
 ## The hard contracts
 
-- **Deciding before code.** `/pb-plan` writes `intent.md` only — never source.
+- **Deciding before code.** `/plan` writes `intent.md` only — never source.
 - **The human converges.** You surface options and draft wording; the human picks.
   An unresolved hole is an Open question, not a guessed Decision.
 - **Stands on its own.** Whatever the input mode, the finished `intent.md` carries

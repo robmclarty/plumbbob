@@ -238,7 +238,7 @@ export function buildLogPath(root: string, slug?: string | null): string {
 /**
  * report.md — the close-out report, beside intent.md / build-log.md.
  *
- * The pb-finish skill writes it and `finish` commits it with the folder; the
+ * The finish skill writes it and `finish` commits it with the folder; the
  * tracked build folder is the archive, so the report rides the branch into the
  * PR rather than living in some local-only copy.
  */
@@ -247,7 +247,7 @@ export function reportPath(root: string, slug?: string | null): string {
 }
 
 // --- Spike reports: `spike-NN-<slug>.md` files in the build folder, beside
-// report.md. One per spike — an explicit `/pb-spike` or a planned `spike:` step —
+// report.md. One per spike — an explicit `/spike` or a planned `spike:` step —
 // so a build with several forks tells its decision history through the folder
 // listing. NN is CLI-allocated (the human never numbers them), zero-padded for a
 // stable sort. ---

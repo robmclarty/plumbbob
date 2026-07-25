@@ -10,7 +10,7 @@
   <a href="https://robmclarty.github.io/plumbbob/api.html">API reference</a>
 </p>
 
-PlumbBob is a Claude Code plugin — twelve `/pb-*` skills and a small CLI — that runs
+PlumbBob is a Claude Code plugin — twelve skills and a small CLI — that runs
 LLM-assisted coding as a loop you control. You and the model settle the plan in a file
 *before* any code; then the model builds one small step at a time and **stops after
 each one**, waiting for you to read the diff and approve it before anything is
@@ -41,7 +41,7 @@ model's goodwill:
   run (types, lint, tests, dead code, docs) has to pass before a step lands.
 - **One SHA per verified step.** Every approved step is its own git commit against a
   recorded baseline — a ledger of checkpoints, not one undifferentiated diff at the end.
-- **A preservation-aware revert.** `/pb-revert` resets exactly to a recorded checkpoint
+- **A preservation-aware revert.** `/revert` resets exactly to a recorded checkpoint
   SHA while keeping your plan and notes intact, and restores *only* SHAs the loop wrote.
 - **A build record that rides the PR.** The tracked `builds/<slug>/` folder — intent, log,
   checkpoints, report — merges into `main` with the branch instead of dying with the
@@ -57,7 +57,7 @@ work, a latch on the record.**
 ## The loop in one picture
 
 <p align="center">
-  <img src="demo.svg" alt="An animated terminal session: /pb-plan writes the plan, /pb-build implements step 1 and stops at the PAUSE, the human approves, the step is checkpointed" width="760">
+  <img src="demo.svg" alt="An animated terminal session: /plan writes the plan, /build implements step 1 and stops at the PAUSE, the human approves, the step is checkpointed" width="760">
 </p>
 
 Everything the model must stay true to lives in one file, the build's `intent.md`
@@ -68,11 +68,11 @@ with its *because*), and the **Steps** — a numbered list where every step carr
 expected to touch).
 
 ```text
-/pb-plan       decide everything on paper — frame, decisions, all steps    (once)
+/plan       decide everything on paper — frame, decisions, all steps    (once)
   per step:
-    /pb-build      implement the next step → run checks → self-review → PAUSE
-    (approve)      → the step is committed as a checkpoint; fire /pb-build again
-/pb-finish     report what shipped and why, final commit, clear            (once)
+    /build      implement the next step → run checks → self-review → PAUSE
+    (approve)      → the step is committed as a checkpoint; fire /build again
+/finish     report what shipped and why, final commit, clear            (once)
 ```
 
 Nothing is locked and nothing refuses you — the loop does a step's labor, pulls up to
@@ -101,7 +101,7 @@ plumbbob init          # link it into Claude Code; --uninstall to undo
 ```
 
 Restart Claude Code (or `/reload-plugins`) to activate, then run `plumbbob doctor`
-(or `/pb-doctor` in-session) to confirm the wiring. The full guide — namespacing,
+(or `/doctor` in-session) to confirm the wiring. The full guide — namespacing,
 per-project sessions, the agent-neutral roadmap — is in
 [`docs/install.md`](docs/install.md).
 
@@ -109,11 +109,11 @@ per-project sessions, the agent-neutral roadmap — is in
 
 In Claude Code, inside any git repo with a clean tree:
 
-1. **Plan.** Fire `/pb-plan` and give it whatever you have — nothing (it interviews
-   you), a rough line (`/pb-plan rate-limit POST /login, 5/min/IP, return 429`), or a
+1. **Plan.** Fire `/plan` and give it whatever you have — nothing (it interviews
+   you), a rough line (`/plan rate-limit POST /login, 5/min/IP, return 429`), or a
    path to a spec file. Together you fill the build's `intent.md`. No code is written
    yet.
-2. **Build.** Fire `/pb-build`. It implements the next undone step, runs the
+2. **Build.** Fire `/build`. It implements the next undone step, runs the
    heavy check gate, reviews its own diff against the plan, and stops:
 
    ```text
@@ -125,16 +125,16 @@ In Claude Code, inside any git repo with a clean tree:
    code, docs. To gate through your own command instead, set the `"check"` key in
    `.plumbbob/settings.json`, e.g. `"check": "npm test"`.)
 3. **Approve** — or send fixes. On your OK it commits the step as a checkpoint, marks
-   it done, and returns to the boundary. Fire `/pb-build` again for the next step —
-   re-firing it *is* the clock tick. Whenever you lose the thread, `/pb-status` shows
+   it done, and returns to the boundary. Fire `/build` again for the next step —
+   re-firing it *is* the clock tick. Whenever you lose the thread, `/status` shows
    where you are and names the next move.
-4. **Finish.** When the last step is done, `/pb-finish` writes a report of what shipped
+4. **Finish.** When the last step is done, `/finish` writes a report of what shipped
    and why into the build's tracked folder, makes the final commit, and clears the slate
    for the next goal. The folder rides the branch into the PR — the build's record merges
    into `main` instead of dying with the worktree.
 
-A mid-build "ooh, what if…" never derails the step: `/pb-park` captures it to a list
-in one line, and `/pb-harvest` triages the list between steps. One goal walked end to
+A mid-build "ooh, what if…" never derails the step: `/park` captures it to a list
+in one line, and `/harvest` triages the list between steps. One goal walked end to
 end, with the real output at every stage, is in
 [`docs/happy-path.md`](docs/happy-path.md).
 
@@ -142,42 +142,42 @@ end, with the real output at every stage, is in
 
 You drive the whole loop from your IDE with `/plumbbob:*` skills — no step numbers to
 remember, no raw CLI to type. Every skill is `disable-model-invocation`, so *you* fire
-every move, and `/pb-status` always names your next one. (Claude Code namespaces them
-under the plugin — the real command is `/plumbbob:pb-plan`; for readability these docs
-write the short form `/pb-plan`.)
+every move, and `/status` always names your next one. (Claude Code namespaces them
+under the plugin — the real command is `/plumbbob:plan`; for readability these docs
+write the short form `/plan`.)
 
 **The happy path** — the three moves every session makes; many sessions need
 nothing else:
 
 | Skill <img alt="" width="110" height="1"> | Does |
 |------------------------------------|------|
-| `/pb-plan` | plan the whole goal — open the session and author intent's Frame, Decisions, Constraints, **and all Steps** |
-| `/pb-build` | implement the next planned step, then verify it to the pause — `--auto` self-approves and chains to done; a range like `1-3` self-approves through step 3, then pauses |
-| `/pb-finish` | finish up — write the report, make the final commit, clear for a fresh goal |
+| `/plan` | plan the whole goal — open the session and author intent's Frame, Decisions, Constraints, **and all Steps** |
+| `/build` | implement the next planned step, then verify it to the pause — `--auto` self-approves and chains to done; a range like `1-3` self-approves through step 3, then pauses |
+| `/finish` | finish up — write the report, make the final commit, clear for a fresh goal |
 
 **Plan-shaping moves** — optional, for when the plan needs work mid-flight:
 
 | Skill <img alt="" width="110" height="1"> | Does |
 |------------------------------------|------|
-| `/pb-step` | revise/sharpen the next step (empty input auto-syncs it to reality) |
-| `/pb-refine` | attack the frame for holes, or repair a drifted plan |
-| `/pb-spike` | throwaway worktree experiment for a fork the plan can't settle |
+| `/step` | revise/sharpen the next step (empty input auto-syncs it to reality) |
+| `/refine` | attack the frame for holes, or repair a drifted plan |
+| `/spike` | throwaway worktree experiment for a fork the plan can't settle |
 
 **Helpers** — orient, verify, recover, diagnose:
 
 | Skill <img alt="" width="110" height="1"> | Does |
 |------------------------------------|------|
-| `/pb-status` | orient — where you are, the next step's done-when and seam, and the next move |
-| `/pb-verify` | the tick, standalone — check → self-review → validate → **PAUSE** → checkpoint, for a diff `/pb-build` didn't write |
-| `/pb-revert` | recover — `git reset --hard` to a recorded checkpoint |
-| `/pb-doctor` | check the install from inside a session |
+| `/status` | orient — where you are, the next step's done-when and seam, and the next move |
+| `/verify` | the tick, standalone — check → self-review → validate → **PAUSE** → checkpoint, for a diff `/build` didn't write |
+| `/revert` | recover — `git reset --hard` to a recorded checkpoint |
+| `/doctor` | check the install from inside a session |
 
 **Capture** — the park/harvest loop for mid-build ideas:
 
 | Skill <img alt="" width="110" height="1"> | Does |
 |------------------------------------|------|
-| `/pb-park` | capture a mid-build idea without chasing it |
-| `/pb-harvest` | triage parked ideas between steps (blocker / tangent / pivot) |
+| `/park` | capture a mid-build idea without chasing it |
+| `/harvest` | triage parked ideas between steps (blocker / tangent / pivot) |
 
 All twelve, with inputs and effects, are in
 [`docs/skills-reference.md`](docs/skills-reference.md).
@@ -189,9 +189,9 @@ flow), and a `.plumbbob/` sidecar you can open and edit by hand at any time — 
 that rides the branch into the PR, plus an untracked control plane (`settings.local.json`,
 the session sentinel, the in-flight markers).
 
-**`/pb-build` is the default engine, not the only one.** It's one executor — the
+**`/build` is the default engine, not the only one.** It's one executor — the
 loop doesn't care who writes the code. Implement a step by hand — or vibe it in
-another session, or in another harness entirely — and run `/pb-verify` instead:
+another session, or in another harness entirely — and run `/verify` instead:
 same checks, same pause, same checkpoint. It reads the *diff, not the author*.
 
 **Bring your own agents.** Because the executor is author-blind, you can plug your
@@ -223,7 +223,7 @@ against the plan, and committed as its own checkpoint, so a wrong turn costs one
 step, not the afternoon; and records the *whys* alongside the decisions, so the
 archive can still answer "what did we decide, and why" long after the session is
 gone. The two compose fine: plan mode — or anything else — can produce a step's
-diff, and `/pb-verify` reads it like any other.
+diff, and `/verify` reads it like any other.
 
 **…use git and a TODO file?** That's the honest skeleton, and if your discipline
 holds by willpower alone, it may be all you need. What the CLI adds is the
@@ -281,7 +281,7 @@ Each doc answers one question — in rough reading order for a new user:
 - *Show me the artifacts it leaves behind.* → [`examples/`](examples/) — that same session's finished build folder, file by file.
 - *Should I / can I / what about…?* → [`docs/faq.md`](docs/faq.md) — the adoption questions, answered straight.
 - *What is each method for?* → [`docs/techniques.md`](docs/techniques.md) — steps, seams, the pause, park/harvest, spikes.
-- *What does each skill do?* → [`docs/skills-reference.md`](docs/skills-reference.md) — all twelve `/pb-*` skills: inputs, effects, when to reach for each.
+- *What does each skill do?* → [`docs/skills-reference.md`](docs/skills-reference.md) — all twelve skills: inputs, effects, when to reach for each.
 - *How do I plug in my own agent?* → [`docs/agents.md`](docs/agents.md) — the subprocess envelope, the manifest, `harness.json`, and working examples (including a local-model reviewer via Ollama).
 - *How do I get a local model reviewing my steps?* → [`docs/local-model-review.md`](docs/local-model-review.md) — the ollama-reviewer example walked end to end, install to every-pause review.
 - *How do I install it, exactly?* → [`docs/install.md`](docs/install.md) — the full guide and the agent-neutral roadmap.

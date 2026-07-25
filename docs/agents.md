@@ -1,7 +1,7 @@
 # User-authored agents — the doorway
 
-PlumbBob's executor is **author-blind** ([**D3**](decisions.md#d3)): `/pb-verify` and `checkpoint` read *the
-diff, not who wrote it*, so a step's code can come from you, from `/pb-build`, from a vibe
+PlumbBob's executor is **author-blind** ([**D3**](decisions.md#d3)): `/verify` and `checkpoint` read *the
+diff, not who wrote it*, so a step's code can come from you, from `/build`, from a vibe
 session, or from another harness entirely. This page is the contract for that last case —
 the **doorway** a user-authored agent speaks to plug into the loop. An agent here is
 **anything executable** that speaks one versioned JSON envelope: a program on disk, a
@@ -9,7 +9,7 @@ manifest that names it, and a plan artifact that binds it to a step. There is no
 import and no language to adopt — a twelve-line bash script is a complete agent.
 
 The rest of the docs are for driving PlumbBob. This one is for *extending* it. If you only
-want to run the loop, you never need this page; the [`/pb-*` skills](skills-reference.md)
+want to run the loop, you never need this page; the [skills](skills-reference.md)
 work with no agents at all.
 
 ## The three invariants
@@ -116,7 +116,7 @@ A single JSON object. Two fields are required; the rest default to empty:
 |-----------|---------|---------------------|
 | `done`    | Finished. | Read the summary; continue the loop. |
 | `blocked` | Couldn't finish — missing input, failed precondition. | Read `notes`, unblock, **re-run** the agent. |
-| `drift`   | Finished, but the plan no longer matches reality. | Repair the plan with `/pb-refine` before continuing. |
+| `drift`   | Finished, but the plan no longer matches reality. | Repair the plan with `/refine` before continuing. |
 
 `parked[]` is how an agent captures a mid-run "ooh, what if" without acting on it — each
 string becomes a park line the CLI lands through the park verb ([**D44**](decisions.md#d44)). Unknown fields are
@@ -180,13 +180,13 @@ Because the project tier is tracked, an agent you commit rides the branch into t
 teammate gets it for free. An agent only in your **personal** tier is yours alone: if the
 build's `harness.json` binds it and a teammate lacks it, the binding **downgrades to a
 warning** and the loop runs without it ([**D54**](decisions.md#d54)) — the same never-required contract as
-`/pb-build` itself. (An agent you name *explicitly* is different — see "Fail loud vs degrade
+`/build` itself. (An agent you name *explicitly* is different — see "Fail loud vs degrade
 soft.")
 
 ## Binding agents to steps — `harness.json`
 
 You plan *which* agent runs at *which* lifecycle point in a build's `harness.json`, a sibling
-of `intent.md` under `builds/<slug>/`, authored at `/pb-plan` time ([**D42**](decisions.md#d42)). Three slots,
+of `intent.md` under `builds/<slug>/`, authored at `/plan` time ([**D42**](decisions.md#d42)). Three slots,
 and only three ([**D43**](decisions.md#d43)):
 
 - **`before`** — runs before you write the step's code; its envelope is **context in**
@@ -330,7 +330,7 @@ plumbbob agent run echo-reviewer --step 1 # runs it against step 1, streams its 
 It's a bash script and a four-line manifest — the whole contract, with nothing to install.
 
 The step up — the same contract wrapping a real framework and a real local model
-(fascicle + Ollama), plus a demo spec `/pb-plan` can absorb to bind it into a build —
+(fascicle + Ollama), plus a demo spec `/plan` can absorb to bind it into a build —
 ships beside it under
 [`examples/agents/ollama-reviewer/`](../examples/agents/ollama-reviewer/).
 
@@ -344,8 +344,8 @@ matrix.
 
 ## See also
 
-- [`skills-reference.md`](skills-reference.md#the-harness-slots) — how `/pb-plan`, `/pb-step`,
-  `/pb-build`, and `/pb-verify` drive the slots for you.
+- [`skills-reference.md`](skills-reference.md#the-harness-slots) — how `/plan`, `/step`,
+  `/build`, and `/verify` drive the slots for you.
 - [`cli-reference.md`](cli-reference.md#agent) — `agent list` / `agent run`, the `agentTimeout`
   setting, and the sidecar layout.
 - [`decisions.md`](decisions.md) — the `D#` / `C#` design-decision key the tags above cite.

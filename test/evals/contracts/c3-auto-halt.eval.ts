@@ -11,7 +11,7 @@ import { armGrant, readLedger } from '../helpers/driver.ts'
 import { makeEvalFixture } from '../helpers/fixture.ts'
 import { THREE_STEPS, type Contract } from './contract.ts'
 
-const C3_PROMPT = '/plumbbob:pb-build --auto'
+const C3_PROMPT = '/plumbbob:build --auto'
 
 export const c3: Contract = {
   id: 'c3',

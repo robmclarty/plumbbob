@@ -1,4 +1,4 @@
-// Contract 4 — a range stops at its top: `/pb-build 1-2` of three planned
+// Contract 4 — a range stops at its top: `/build 1-2` of three planned
 // steps checkpoints exactly steps 1 and 2, leaves step 3 untouched, and hands
 // back. (Plan 05, contract table row 4.) In the latched sweep the driver
 // pre-arms `range 2` — see armGrant for why the headless tick can't mint it
@@ -9,7 +9,7 @@ import { armGrant, readLedger } from '../helpers/driver.ts'
 import { makeEvalFixture } from '../helpers/fixture.ts'
 import { THREE_STEPS, type Contract } from './contract.ts'
 
-const C4_PROMPT = '/plumbbob:pb-build 1-2'
+const C4_PROMPT = '/plumbbob:build 1-2'
 
 export const c4: Contract = {
   id: 'c4',

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PlumbBob API reference — the /pb-* skills, the sidecar, and the CLI</title>
-<meta name="description" content="The full PlumbBob reference: the twelve /pb-* skills you drive the loop with, the .plumbbob/ sidecar layout and settings ladder, and the lower-level CLI verbs, flags, and exit codes for scripting or other hosts.">
+<title>PlumbBob API reference — the skills, the sidecar, and the CLI</title>
+<meta name="description" content="The full PlumbBob reference: the twelve skills you drive the loop with, the .plumbbob/ sidecar layout and settings ladder, and the lower-level CLI verbs, flags, and exit codes for scripting or other hosts.">
 <script src="./support.js"></script>
 <script src="./stars.js" defer></script>
 </head>
@@ -58,7 +58,7 @@
           </div>
         </div>
       </sc-for>
-      <div style="border-top:2px dashed #5C5677; padding-top:18px; font-size:13.5px; line-height:1.5; color:#4A4562;">The CLI is the mechanical layer the <a href="docs.html" style="color:#5A32C8; font-weight:700; border-bottom:2px solid #5A32C8;">/pb-* skills</a> shell out to. In normal use you never type it by hand.</div>
+      <div style="border-top:2px dashed #5C5677; padding-top:18px; font-size:13.5px; line-height:1.5; color:#4A4562;">The CLI is the mechanical layer the <a href="docs.html" style="color:#5A32C8; font-weight:700; border-bottom:2px solid #5A32C8;">skills</a> shell out to. In normal use you never type it by hand.</div>
     </div>
 
     <!-- CONTENT -->
@@ -69,7 +69,7 @@
         <div>
           <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:3px; color:#5C5677; margin-bottom:14px;">CLI · ADVANCED</div>
           <h1 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:60px; line-height:1; margin:0 0 20px;">Verbs</h1>
-          <p style="font-size:18px; line-height:1.6; color:#2E2A44; max-width:680px;">The lower-level layer the <a href="docs.html" style="color:#5A32C8; font-weight:700; border-bottom:2px solid #5A32C8;">/pb-* skills</a> shell out to — most people never type it. Reach for it to script the loop, drive it from another host, or control the mechanical steps directly. Invoke as <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">plumbbob &lt;verb&gt;</span> (also <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">pb</span>). Every verb is a pure function that writes to stdout/stderr and returns an exit code; the only <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">process.exit</span> is the bin entry. Every session verb accepts <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">--build &lt;slug&gt;</span> to target a specific build. Each row is a verb, its synopsis, and what it does.</p>
+          <p style="font-size:18px; line-height:1.6; color:#2E2A44; max-width:680px;">The lower-level layer the <a href="docs.html" style="color:#5A32C8; font-weight:700; border-bottom:2px solid #5A32C8;">skills</a> shell out to — most people never type it. Reach for it to script the loop, drive it from another host, or control the mechanical steps directly. Invoke as <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">plumbbob &lt;verb&gt;</span> (also <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">pb</span>). Every verb is a pure function that writes to stdout/stderr and returns an exit code; the only <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">process.exit</span> is the bin entry. Every session verb accepts <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">--build &lt;slug&gt;</span> to target a specific build. Each row is a verb, its synopsis, and what it does.</p>
 
           <div style="margin-top:32px; border:3px solid #181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231, 5px 5px 0 #181231, 6px 6px 0 #181231; overflow:hidden;">
             <table style="width:100%; border-collapse:collapse;">
@@ -229,7 +229,7 @@
         <div>
           <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:3px; color:#5A32C8; margin-bottom:14px;">THE SURFACE YOU DRIVE · START HERE</div>
           <h1 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:60px; line-height:1; margin:0 0 20px;">The twelve skills</h1>
-          <p style="font-size:18px; line-height:1.6; color:#2E2A44; max-width:680px;">This is the interface you actually use. Every skill is <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">disable-model-invocation</span> — <em>you</em> fire every move. Claude Code namespaces them under the plugin, so the real command is <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">/plumbbob:pb-plan</span>; the short form <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">/pb-plan</span> is for readability. The <span onClick="{{ goVerbs }}" style="cursor:pointer; color:#5A32C8; font-weight:700; border-bottom:2px solid #5A32C8;">CLI verbs</span> are the lower-level layer these shell out to — reach for them only to script the loop or drive it from another host.</p>
+          <p style="font-size:18px; line-height:1.6; color:#2E2A44; max-width:680px;">This is the interface you actually use. Every skill is <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">disable-model-invocation</span> — <em>you</em> fire every move. Claude Code namespaces them under the plugin, so the real command is <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">/plumbbob:plan</span>; the short form <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">/plan</span> is for readability. The <span onClick="{{ goVerbs }}" style="cursor:pointer; color:#5A32C8; font-weight:700; border-bottom:2px solid #5A32C8;">CLI verbs</span> are the lower-level layer these shell out to — reach for them only to script the loop or drive it from another host.</p>
 
           <div style="margin-top:32px; display:flex; flex-direction:column; gap:12px;">
             <sc-for list="{{ skillCards }}" as="c" hint-placeholder-count="12">
@@ -277,7 +277,7 @@
 </template></x-dc>
 <script type="text/x-dc" data-dc-script>
 class Component extends DCLogic {
-  state = { section: 'skills', open: '/pb-plan' };
+  state = { section: 'skills', open: '/plan' };
 
   go(s) { this.setState({ section: s }); try { window.scrollTo(0, 0); } catch (_) {} }
   toggle(name) { this.setState(s => ({ open: s.open === name ? null : name })); }
@@ -319,7 +319,7 @@ class Component extends DCLogic {
       ['revert', 'plumbbob revert [--to <n>]',
         'git reset --hard to a recorded checkpoint SHA: the last step by default, --to <n> for a specific one, or the baseline as fallback. Snapshots builds/<slug>/ across the reset, so park lines and intent edits survive even when reverting to a pre-folder baseline. Untracked files inside the seam are removed; outside it, left alone.'],
       ['park', 'plumbbob park "<text>"',
-        'The dumb capture path — appends <text> under ## Park list in build-log.md and prints "parked: <text>". Composing the tidy tagged line is the /pb-park skill\'s job. Refuses on no session, empty text, or no ## Park list section.'],
+        'The dumb capture path — appends <text> under ## Park list in build-log.md and prints "parked: <text>". Composing the tidy tagged line is the /park skill\'s job. Refuses on no session, empty text, or no ## Park list section.'],
       ['spike', 'plumbbob spike "<slug>" [opt…]\nplumbbob spike done',
         'For a genuine fork the plan can\'t settle: opens a sibling worktree and branch per option (default a and b), created outside the repo root, and drops the SPIKE marker; "done" tears every spike worktree and branch down. The deliverable is the verdict, recorded back in intent.md — not the spike code.'],
       ['agent', 'plumbbob agent list\nplumbbob agent run <name> [--step N]\n  [--mode before|build|after] [--agent <path>]',
@@ -327,11 +327,11 @@ class Component extends DCLogic {
       ['use', 'plumbbob use <slug>',
         'The one verb for both switching between builds and picking one back up. Validates builds/<slug>/ exists, then rewrites the cursor in STATE. Warns (but allows) leaving a build with a step still in flight — that surviving STEP/SEAM is the payoff of per-build markers. Refuses on an empty slug or a slug with no build folder.'],
       ['finish', 'plumbbob finish [--body <<\'BODY\' … BODY]',
-        'The close-out. Appends the checkpoint SHAs to report.md (the report itself is written by the /pb-finish skill), makes the final commit chore(<scope>): finish, and clears the control state. No separate archive — the tracked build folder already IS the record and rides the branch into the PR. Refuses only with no session.'],
+        'The close-out. Appends the checkpoint SHAs to report.md (the report itself is written by the /finish skill), makes the final commit chore(<scope>): finish, and clears the control state. No separate archive — the tracked build folder already IS the record and rides the branch into the PR. Refuses only with no session.'],
       ['init', 'plumbbob init [--uninstall] [--force]',
         'Links plumbbob into Claude Code as the skills-dir plugin: symlinks the package into ~/.claude/skills/plumbbob, where Claude Code loads it in place (skills as /plumbbob:*, hook auto-registered). Idempotent, global-only, and never writes settings.json. --uninstall drops the link. Refuses if a marketplace plumbbob is already installed (they collide); --force overrides. The two install paths are mutually exclusive.'],
       ['doctor', 'plumbbob doctor [--migrate]',
-        'Three diagnostics: (1) the plugin link resolves to a real package; (2) a legacy flat sidecar is present — --migrate moves it into builds/<slug>/ and stages the move without committing; (3) how the check gate resolves in this repo. Also reachable in-session as /pb-doctor. Exit 0 all pass, 1 a check failed or an un-migrated legacy sidecar.'],
+        'Three diagnostics: (1) the plugin link resolves to a real package; (2) a legacy flat sidecar is present — --migrate moves it into builds/<slug>/ and stages the move without committing; (3) how the check gate resolves in this repo. Also reachable in-session as /doctor. Exit 0 all pass, 1 a check failed or an un-migrated legacy sidecar.'],
     ];
     const verbRows = verbDef.map(([name, synopsis, does], i) => ({
       name, synopsis, does,
@@ -372,29 +372,29 @@ class Component extends DCLogic {
     // ---- skills (accordion) ----
     const groupAccent = { 'happy path': '#5A32C8', 'plan-shaping': '#C1922E', 'helper': '#5C5677', 'capture': '#C43B5B' };
     const skillDef = [
-      ['/pb-plan', 'happy path', '[spec | intent]', 'Open the session and author the whole plan — Frame, Decisions, Constraints, and all Steps.',
+      ['/plan', 'happy path', '[spec | intent]', 'Open the session and author the whole plan — Frame, Decisions, Constraints, and all Steps.',
         'Disambiguates its input itself: no argument runs an interview, a file path (or @-mention) absorbs an out-of-band spec, any other text is expanded as inline intent. Runs plumbbob start (recording the baseline), fills the build\'s intent.md — Frame, Decisions, Constraints, and all Steps, each with a done-when, a seam, and where the signal is clear an advisory model recommendation — then commits the plan on its own so the first step\'s diff stays clean. Writes intent only, never source. Reach for it whenever there is no active session and a goal worth more than a one-liner.'],
-      ['/pb-build', 'happy path', '[n | range] [--auto]', 'Implement the next planned step, then verify it to the pause.',
-        'The bundled executor — the default engine, not the only one. Fired bare it picks the next undone step (a number jumps to one); it reads the step\'s done-when, seam, Decisions, and Constraints, goes in-flight, implements only that step, then carries straight through the verify tick to the pause. --auto self-approves and chains step after step until the plan is done, halting the moment a check goes red, the self-review finds a mismatch, or a bound agent returns blocked/drift. A range like 1-3 is a bounded --auto. It\'s swappable: implement a step any other way and run /pb-verify instead.'],
-      ['/pb-verify', 'helper', '—', 'The tick — check, self-review, validate, PAUSE, checkpoint. For a diff /pb-build didn\'t write.',
-        'The tick itself, executor-agnostic: run the heavy gate (plumbbob check), self-review the diff against done-when / Decisions / Constraints, validate the done-when with evidence, PAUSE for your approval, and only then checkpoint (commit, record the SHA, flip the step to [x]). Any after-slot agents run here too, as advisory input to the self-review — checkride gates, they never do. It reads the diff, not the author, so a step you wrote by hand or vibed in another harness verifies exactly like a /pb-build step.'],
-      ['/pb-finish', 'happy path', '—', 'Write the report, make the final commit, clear for a fresh goal.',
+      ['/build', 'happy path', '[n | range] [--auto]', 'Implement the next planned step, then verify it to the pause.',
+        'The bundled executor — the default engine, not the only one. Fired bare it picks the next undone step (a number jumps to one); it reads the step\'s done-when, seam, Decisions, and Constraints, goes in-flight, implements only that step, then carries straight through the verify tick to the pause. --auto self-approves and chains step after step until the plan is done, halting the moment a check goes red, the self-review finds a mismatch, or a bound agent returns blocked/drift. A range like 1-3 is a bounded --auto. It\'s swappable: implement a step any other way and run /verify instead.'],
+      ['/verify', 'helper', '—', 'The tick — check, self-review, validate, PAUSE, checkpoint. For a diff /build didn\'t write.',
+        'The tick itself, executor-agnostic: run the heavy gate (plumbbob check), self-review the diff against done-when / Decisions / Constraints, validate the done-when with evidence, PAUSE for your approval, and only then checkpoint (commit, record the SHA, flip the step to [x]). Any after-slot agents run here too, as advisory input to the self-review — checkride gates, they never do. It reads the diff, not the author, so a step you wrote by hand or vibed in another harness verifies exactly like a /build step.'],
+      ['/finish', 'happy path', '—', 'Write the report, make the final commit, clear for a fresh goal.',
         'The close-out. Writes report.md into the build folder — what shipped, the decisions and why, how parked items were classified, the deferred tangents — then runs plumbbob finish for the final commit and the control-state clear. Report by default, no gate; the tracked build folder stays put and rides the branch into the PR.'],
-      ['/pb-step', 'plan-shaping', '[what-changed]', 'Revise or sharpen the next step (empty input auto-syncs it to reality).',
-        'Revises the next undone step just-in-time — the steps were all planned up front, so this is a sharpening tool, not where steps are born. Fired bare, it re-reads what the build has already taught you and syncs the step\'s done-when and seam to reality; given <what-changed>, it makes that directed revision (tighten, re-cut, split, or add a step). One step at a time, written back into ## Steps only on your approval. Most steps need nothing — skip straight to /pb-build.'],
-      ['/pb-refine', 'plan-shaping', '[focus]', 'Attack the plan for holes, or repair a plan that drifted from the code.',
-        'Keeps intent.md honest, in two modes. Attack: a cold, adversarial read of the Frame and Decisions that surfaces holes as one-line Open questions — never as Decisions, because resolving a hole is your call. Repair: when the plan has drifted from what the code actually does, it proposes the edits that bring it back, before/after, written only on your approval. Where /pb-step sharpens one step, refine works the whole plan.'],
-      ['/pb-spike', 'plan-shaping', '<slug> | done', 'Throwaway worktree experiment for a fork the plan can\'t settle.',
-        'For a genuine fork the plan can\'t settle on paper: /pb-spike <slug> opens a throwaway sibling worktree and branch per option (spike/<slug>-a, -b by default) outside the repo; /pb-spike done tears them all down. The deliverable is the verdict recorded back in intent.md, not the spike code.'],
-      ['/pb-status', 'helper', '—', 'Orient — where you are, the next step\'s done-when and seam, and the next move.',
+      ['/step', 'plan-shaping', '[what-changed]', 'Revise or sharpen the next step (empty input auto-syncs it to reality).',
+        'Revises the next undone step just-in-time — the steps were all planned up front, so this is a sharpening tool, not where steps are born. Fired bare, it re-reads what the build has already taught you and syncs the step\'s done-when and seam to reality; given <what-changed>, it makes that directed revision (tighten, re-cut, split, or add a step). One step at a time, written back into ## Steps only on your approval. Most steps need nothing — skip straight to /build.'],
+      ['/refine', 'plan-shaping', '[focus]', 'Attack the plan for holes, or repair a plan that drifted from the code.',
+        'Keeps intent.md honest, in two modes. Attack: a cold, adversarial read of the Frame and Decisions that surfaces holes as one-line Open questions — never as Decisions, because resolving a hole is your call. Repair: when the plan has drifted from what the code actually does, it proposes the edits that bring it back, before/after, written only on your approval. Where /step sharpens one step, refine works the whole plan.'],
+      ['/spike', 'plan-shaping', '<slug> | done', 'Throwaway worktree experiment for a fork the plan can\'t settle.',
+        'For a genuine fork the plan can\'t settle on paper: /spike <slug> opens a throwaway sibling worktree and branch per option (spike/<slug>-a, -b by default) outside the repo; /spike done tears them all down. The deliverable is the verdict recorded back in intent.md, not the spike code.'],
+      ['/status', 'helper', '—', 'Orient — where you are, the next step\'s done-when and seam, and the next move.',
         'The orientation move — a thin trigger for plumbbob status. Prints the dashboard (title, phase, the step list with the next step\'s done-when, seam, and advisory model recommendation, last checkpoint, parked and open-question counts) and names the single next move. The model line is the plan\'s suggestion of the smallest model that can carry the next step — guidance, never a gate. Read-only; fire it any time you lose the thread.'],
-      ['/pb-revert', 'helper', '[--to <step>]', 'Recover — git reset --hard to a recorded checkpoint SHA.',
+      ['/revert', 'helper', '[--to <step>]', 'Recover — git reset --hard to a recorded checkpoint SHA.',
         'The undo — a human-triggered driver for plumbbob revert. Resets --hard to the last recorded checkpoint (or --to <step>, or the baseline as fallback), snapshotting the build folder across the reset so park lines and intent edits survive. Untracked files inside the seam are removed; everything outside it is left alone.'],
-      ['/pb-doctor', 'helper', '—', 'Check the install from inside a session.',
+      ['/doctor', 'helper', '—', 'Check the install from inside a session.',
         'Diagnoses the install from inside a session — is the plugin linked, are the skills and hook present, is there a marketplace/skills-dir collision, does the repo carry a legacy sidecar, and how the check gate will resolve. On a marketplace install this is the only way to reach doctor, since the CLI is on PATH only inside a session.'],
-      ['/pb-park', 'capture', '[idea]', 'Capture a mid-build idea in one tagged line without chasing it.',
-        'Captures a mid-build "ooh, what if" without chasing it. Give it the idea inline or fire it bare to use the one you just raised; it composes a single tidy, tagged line, shows it for a quick OK, then appends it via plumbbob park — never by editing the file itself. The step in flight stays protected; the list gets triaged later by /pb-harvest.'],
-      ['/pb-harvest', 'capture', '—', 'Triage parked ideas at a boundary: blocker / tangent / pivot signal.',
+      ['/park', 'capture', '[idea]', 'Capture a mid-build idea in one tagged line without chasing it.',
+        'Captures a mid-build "ooh, what if" without chasing it. Give it the idea inline or fire it bare to use the one you just raised; it composes a single tidy, tagged line, shows it for a quick OK, then appends it via plumbbob park — never by editing the file itself. The step in flight stays protected; the list gets triaged later by /harvest.'],
+      ['/harvest', 'capture', '—', 'Triage parked ideas at a boundary: blocker / tangent / pivot signal.',
         'Triage, at a boundary only — never mid-step. Walks the park list and proposes exactly one class per item: blocker (the plan was wrong; fold into intent and handle now), tangent (different, not clearly better — the default; defer or kill), or pivot signal (the approach is wrong; stop and replan). You call each one; confirmed items are recorded under ## Harvest and a confirmed blocker is folded into intent.md.'],
     ];
     const skillCards = skillDef.map(([name, group, takes, does, detail]) => {

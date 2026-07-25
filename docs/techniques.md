@@ -89,9 +89,9 @@ Under `## Steps`, the plan is a numbered list where **every step carries two thi
   a test or check result (`done when: the 6th request in 60s returns 429`).
 - The **seam** is the exact set of paths the step will touch.
 
-`/pb-plan` authors the **whole** list up front, so the happy path is to plan once and
+`/plan` authors the **whole** list up front, so the happy path is to plan once and
 build per step. Only **one step is in flight at a time.** Later steps may be fuzzier than
-the first — that is fine; you sharpen the next one just-in-time with `/pb-step` (empty
+the first — that is fine; you sharpen the next one just-in-time with `/step` (empty
 input auto-syncs it to what the build has already taught you) right before you build it.
 
 ### The seam is awareness, not a lock
@@ -119,19 +119,19 @@ The **scope** — the `(scope)` in `type(scope): description` — resolves throu
 fallback chain, most specific first: a scope named in the title itself, then the
 build's own default (a `**Scope:**` header authored once in `intent.md` at plan time),
 then the build's slug, then no scope at all. A step's own `(scope)` should name the
-code area it touches (`pb-plan`, `commitmsg`); the build-default names the feature as
+code area it touches (`plan`, `commitmsg`); the build-default names the feature as
 the catch-all. A build that sets neither behaves exactly as it always has — slug-derived
 scope, `feat` default.
 
-If the diff drifts from the planned title before the verify pause, `/pb-build` and
-`/pb-verify` present a reconciled subject for your explicit approval rather than
+If the diff drifts from the planned title before the verify pause, `/build` and
+`/verify` present a reconciled subject for your explicit approval rather than
 silently swapping it in; with nothing presented, the deterministic title-derived
 subject lands.
 
 ## The build loop and the verify tick
 
 Plan once, then repeat one tick per step until the list is done. The tick — whether
-`/pb-build` runs it or you run `/pb-verify` over your own edits — is always the
+`/build` runs it or you run `/verify` over your own edits — is always the
 same five beats:
 
 ```text
@@ -157,18 +157,18 @@ pause — and idles there until you approve. **Pull, not block.** You stay the d
 because a wall refuses you, but because the system stops and waits for you to be the clock.
 Re-firing the next build *is* the clock tick.
 
-> **Unattended option — `--auto`.** `/pb-build --auto` lets the agent self-review and
+> **Unattended option — `--auto`.** `/build --auto` lets the agent self-review and
 > approve in your place, then chain to the next step until done. It halts the moment the
-> check goes red or the self-review finds a mismatch. A step range like `/pb-build 1-3`
+> check goes red or the self-review finds a mismatch. A step range like `/build 1-3`
 > is a bounded `--auto` — it self-approves through step 3, then pauses. These are the only
 > paths that checkpoint without a human pause, and only because you asked for it by name.
 
 ### The pluggable executor reads the diff, not the author
 
-`/pb-build` is the default way to turn a planned step into code, but it is
+`/build` is the default way to turn a planned step into code, but it is
 **swappable**.
 Implement a step by hand, in a vibe session, or with another harness, and run
-`/pb-verify` instead — it runs the identical tick and **reads the diff, not who wrote
+`/verify` instead — it runs the identical tick and **reads the diff, not who wrote
 it.** PlumbBob is the harness-agnostic spine; how the diff appears is a slot you fill
 however you like.
 
@@ -180,7 +180,7 @@ git footprint is **additive only**: cheap Conventional-Commit markers (`<type>(<
 <description>`, with a `plumbbob step N` line in the body) on your feature branch that your
 normal squash-merge collapses at PR time. PlumbBob never rewrites pushed history.
 
-**Revert** is the undo. `/pb-revert` does a `git reset --hard` to the last checkpoint
+**Revert** is the undo. `/revert` does a `git reset --hard` to the last checkpoint
 (or `--to <n>` for a specific step, with the baseline as the fallback), discarding the
 half-done step. It is careful about two things:
 
@@ -196,11 +196,11 @@ half-done step. It is careful about two things:
 Attention has momentum, and breaking focus to chase a new idea costs far more than the idea
 is worth in the moment. So mid-step ideas are **captured, not acted on.**
 
-- **Park** (`/pb-park <idea>`, or bare to use the idea you just raised) composes one tidy,
+- **Park** (`/park <idea>`, or bare to use the idea you just raised) composes one tidy,
   tagged line, shows it to you for a quick OK, then appends it to the Park list in
   `build-log.md` — then you go straight back to the step. Capture is the only thing that
   happens; the idea is out of your head and the step in flight stays protected.
-- **Harvest** (`/pb-harvest`) runs at a **step boundary** — back in DESIGN, never
+- **Harvest** (`/harvest`) runs at a **step boundary** — back in DESIGN, never
   mid-step — and triages the list. Each item gets exactly one class:
 
 | Class | Meaning | Action |
@@ -215,16 +215,16 @@ a tangent — require a failed assumption, not a shinier idea, before you pivot.
 ## Spikes — when the design will not settle
 
 Some forks cannot be decided on paper. A **spike** is a throwaway experiment for exactly
-that. `/pb-spike <slug>` creates a sibling git worktree and branch per option
+that. `/spike <slug>` creates a sibling git worktree and branch per option
 (`spike/<slug>-a`, `spike/<slug>-b` by default) *outside* the repo, where you try each fork
-in isolation while the main tree stays put; `/pb-spike done` removes every spike
+in isolation while the main tree stays put; `/spike done` removes every spike
 worktree and branch and returns you to DESIGN. The point is not the code you write in there
 — it is the **verdict**: which option won and why, recorded back in `intent.md` before you
 build for real.
 
 ## Refine — keep intent true
 
-`intent.md` is only useful while it is honest. `/pb-refine` keeps it that way, in two
+`intent.md` is only useful while it is honest. `/refine` keeps it that way, in two
 modes:
 
 - **Attack** — give the Frame and Decisions a cold, adversarial read and surface holes:
@@ -234,7 +234,7 @@ modes:
 - **Repair** — when the plan has drifted from what the code actually does, propose the edits
   that bring it back in line, shown before/after and written only on your approval.
 
-Where `/pb-step` sharpens the *next step*, `refine` works the *whole plan*. Reach for
+Where `/step` sharpens the *next step*, `refine` works the *whole plan*. Reach for
 it right after planning to stress-test a fresh frame, or mid-build when a blocker rewrites
 the design.
 
@@ -247,7 +247,7 @@ on disk:
 - **BUILD** — a `STEP` file is present, so a step is in flight.
 - **SPIKE** — the `SPIKE` marker is present: experimenting in throwaway worktrees.
 
-The phase **gates nothing.** It is computed by `/pb-status` to tell you where you
+The phase **gates nothing.** It is computed by `/status` to tell you where you
 are and what to do next; it is a position on a map, not a locked door. `.plumbbob/STATE`
 itself is just the session sentinel — its presence means a session is live. `status` is the
 move you fire any time you are unsure — it prints the dashboard (the intent, the step list,
@@ -282,7 +282,7 @@ much a task deserves is itself the skill; when in doubt, smaller.
 
 ## Finish — close out without ceremony
 
-When the goal is done, `/pb-finish` ends the build. It writes a `report.md` **by
+When the goal is done, `/finish` ends the build. It writes a `report.md` **by
 default** — what shipped, the decisions and why, what was parked and how it was classified,
 the final status, and the deferred tangents that become future work — but there is **no
 refuse-without-report gate**; guidance offers the artifact, it does not wall the exit. Then
@@ -295,22 +295,22 @@ branch and rides into the PR (the local-only `.plumbbob/archive/` retired).
 
 Every method maps to a skill you fire, the mechanical verb it shells (if any), and the
 artifact it reads or writes. The skills are all `disable-model-invocation`, so *you* fire
-every move and `/pb-status` always names the next one.
+every move and `/status` always names the next one.
 
 | Technique | Skill | CLI verb | Artifact / state |
 |-----------|-------|----------|------------------|
-| Frame and plan the goal | `/pb-plan` | `plumbbob start` | `intent.md`, session opened |
-| Sharpen the next step | `/pb-step` | — (edits markdown) | `intent.md` `## Steps` |
-| Stress-test or repair the plan | `/pb-refine` | — (edits markdown) | `intent.md` |
-| Build a step | `/pb-build` | `plumbbob build` | `SEAM`, `STEP` (in-flight) |
-| Verify and checkpoint | `/pb-verify` | `plumbbob check`, `plumbbob checkpoint` | `checkpoints` |
-| Orient | `/pb-status` | `plumbbob status` | reads everything |
-| Capture an idea | `/pb-park` | `plumbbob park` | `build-log.md` Park list |
-| Triage parked ideas | `/pb-harvest` | — (edits markdown) | `build-log.md` Harvest |
-| Experiment on a fork | `/pb-spike` | `plumbbob spike` | worktrees, `SPIKE` marker |
-| Undo a step | `/pb-revert` | `plumbbob revert` | `git reset`, `checkpoints` |
+| Frame and plan the goal | `/plan` | `plumbbob start` | `intent.md`, session opened |
+| Sharpen the next step | `/step` | — (edits markdown) | `intent.md` `## Steps` |
+| Stress-test or repair the plan | `/refine` | — (edits markdown) | `intent.md` |
+| Build a step | `/build` | `plumbbob build` | `SEAM`, `STEP` (in-flight) |
+| Verify and checkpoint | `/verify` | `plumbbob check`, `plumbbob checkpoint` | `checkpoints` |
+| Orient | `/status` | `plumbbob status` | reads everything |
+| Capture an idea | `/park` | `plumbbob park` | `build-log.md` Park list |
+| Triage parked ideas | `/harvest` | — (edits markdown) | `build-log.md` Harvest |
+| Experiment on a fork | `/spike` | `plumbbob spike` | worktrees, `SPIKE` marker |
+| Undo a step | `/revert` | `plumbbob revert` | `git reset`, `checkpoints` |
 | Switch or resume a build | — (CLI verb) | `plumbbob use` | `STATE` cursor |
-| Close out the goal | `/pb-finish` | `plumbbob finish` | `builds/<slug>/report.md` |
+| Close out the goal | `/finish` | `plumbbob finish` | `builds/<slug>/report.md` |
 
 ---
 

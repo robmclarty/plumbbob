@@ -31,7 +31,7 @@ describe('evaluateLatch — the five-row matrix, first hit wins', () => {
     if (!decision.allow) {
       expect(decision.reason).toBe('no-turn')
       expect(decision.message).toContain('`auto` is set in settings but is no longer a grant (D67)')
-      expect(decision.message).toContain('re-fire `/pb-build --auto`')
+      expect(decision.message).toContain('re-fire `/build --auto`')
     }
   })
 
@@ -89,8 +89,8 @@ describe('evaluateLatch — the five-row matrix, first hit wins', () => {
       expect(decision.message).toContain('no human turn since this step began')
       expect(decision.message).toContain('This is the')
       expect(decision.message).toContain("The human's approval on")
-      expect(decision.message).toContain('`/pb-build` only starts the next step')
-      expect(decision.message).toContain('`/pb-build --auto`')
+      expect(decision.message).toContain('`/build` only starts the next step')
+      expect(decision.message).toContain('`/build --auto`')
       expect(decision.message).toContain('is the only self-approval')
     }
   })

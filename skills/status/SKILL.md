@@ -1,5 +1,5 @@
 ---
-name: pb-status
+name: status
 description: Show the orientation dashboard — where you are, what's done, what's parked, and the next move. A thin trigger for `plumbbob status`.
 disable-model-invocation: true
 model: haiku
@@ -21,6 +21,6 @@ skill carries **no Edit and no Write tool**: the CLI is the source of truth, so
 1. Surface the injected `status` output — the dashboard and its suggested next move.
 2. If the next step's detail carries a `model:` line, point it out: it is the
    plan's recommendation of the smallest model that can carry that step, so the human
-   can switch (e.g. `/model sonnet`) before firing `/pb-build` — or ignore it. Guidance,
+   can switch (e.g. `/model sonnet`) before firing `/build` — or ignore it. Guidance,
    never a gate.
-3. If it reads `NO ACTIVE SESSION`, tell the human to `/pb-plan` to frame a goal.
+3. If it reads `NO ACTIVE SESSION`, tell the human to `/plan` to frame a goal.

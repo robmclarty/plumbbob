@@ -106,7 +106,7 @@ describe('spike reports (D70)', () => {
       expect(stdout).toContain('spike-01-auth.md')
       const body = reportBody(dir, 'spike-01-auth.md')
       expect(body).toContain('# Spike — auth')
-      expect(body).toContain('**Via:** /pb-spike — worktrees (a, b)')
+      expect(body).toContain('**Via:** /spike — worktrees (a, b)')
       expect(body).toContain('*(viable | not viable | partial') // the unfilled verdict placeholder
     } finally {
       captureIo(() => spike(dir, ['done']))
@@ -124,10 +124,10 @@ describe('spike reports (D70)', () => {
     expect(reportBody(dir, 'spike-01-auth-store.md')).toContain('**Via:** step 3')
   })
 
-  it('`spike report` falls back to `/pb-spike` provenance with no step in flight', async () => {
+  it('`spike report` falls back to `/spike` provenance with no step in flight', async () => {
     const dir = await started()
     captureIo(() => spike(dir, ['report', 'redis']))
-    expect(reportBody(dir, 'spike-01-redis.md')).toContain('**Via:** /pb-spike')
+    expect(reportBody(dir, 'spike-01-redis.md')).toContain('**Via:** /spike')
   })
 
   it('allocates the next zero-padded index per report (gap-free increment)', async () => {

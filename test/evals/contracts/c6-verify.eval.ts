@@ -1,4 +1,4 @@
-// Contract 6 — `/pb-verify` reviews, never builds (the second honest
+// Contract 6 — `/verify` reviews, never builds (the second honest
 // prose-governed number). The fixture seeds a hand-made, uncommitted diff with
 // a subtle flaw: greet() omits the comma the done-when demands, and the gate
 // is green (it never tests the comma), so only the verify turn's reading can
@@ -12,7 +12,7 @@ import { check, checkpointLines, info, snapshot, treeHash, unledgeredCommits, va
 import { makeEvalFixture, seedFlawedGreeting } from '../helpers/fixture.ts'
 import { TWO_STEPS, type Contract } from './contract.ts'
 
-const C6_PROMPT = '/plumbbob:pb-verify'
+const C6_PROMPT = '/plumbbob:verify'
 
 export const c6: Contract = {
   id: 'c6',

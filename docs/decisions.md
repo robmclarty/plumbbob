@@ -35,7 +35,7 @@ the rest are upheld by review and the design of the code.
   grows an `if`, a `retry`, or a `loop`, the doorway has failed its own spec. Control flow
   lives in *agents* (as code) and in *prose* (read by the host model), never in config
   (GitHub Actions' YAML-grown-a-language is the cautionary tale). *Tagged in* `agents.ts`,
-  the `pb-plan`/`pb-step` skills, `docs/agents.md`.
+  the `plan`/`step` skills, `docs/agents.md`.
 - <a id="c4"></a>**C4 — Never destroy.** No step, revert, or migration path may lose park lines, intent
   edits, or a recorded build folder. `revert` snapshots the tracked build folder and
   restores it after a `reset --hard` ([**D26**](#d26)); `doctor --migrate` moves the legacy sidecar
@@ -74,7 +74,7 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   a hand-rolled `plumbbob` CLI built on node builtins (plus the deliberate few of [**C2**](#c2)),
   and a deciding/executing boundary held by a pause rather than enforced by a file lock.
   *Tagged in* `cli-core.ts`.
-- <a id="d3"></a>**D3 — The pluggable, author-blind executor.** `/pb-build` is swappable, never required; `verify`
+- <a id="d3"></a>**D3 — The pluggable, author-blind executor.** `/build` is swappable, never required; `verify`
   and `checkpoint` read *the diff, not who wrote it*, so a hand-built, vibed, or
   other-harness diff checkpoints identically. *Tagged in* `checkpoint.ts`, the `build` and
   `verify` skills.
@@ -92,7 +92,7 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
 - <a id="d9"></a>**D9 — `finish` is the close-out: report by default, no gate.** A single verb does the
   whole close-out — it writes `report.md` into the build folder, makes the final commit, and
   clears the control state — but never refuses the exit without a report. Renamed from `wrap`
-  ([**D29**](#d29)). *Tagged in* `finish.ts`, the `pb-finish` skill. (Supersedes [**D19**](#d19).)
+  ([**D29**](#d29)). *Tagged in* `finish.ts`, the `finish` skill. (Supersedes [**D19**](#d19).)
 - <a id="d10"></a>**D10 — The boundary is a pause, not a lock.** Nothing blocks edits; the loop pulls up
   to the verify pause and waits. *Scope note ([**D64**](#d64)):* this holds on the **work** plane — no
   edit is ever blocked — but the checkpoint *tick* is now latched to the harness's record of a human
@@ -197,14 +197,14 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   a `--body` stdin heredoc. The subject *shape* — originally one greppable
   `plumbbob: plan/step N/finish — <title>` family — is now Conventional ([**D68**](#d68)); this
   decision's ownership principle is unchanged. *Tagged in* `git.ts`, `checkpoint.ts`, `finish.ts`, the
-  `pb-finish` skill.
+  `finish` skill.
 - <a id="d35"></a>**D35 — The deterministic fallback body.** Without `--body`, a checkpoint's commit body
   is derived, not generated: the step's done-when, its seam, and the staged diffstat — all following the
   `plumbbob step N` marker line ([**D68**](#d68)). *Tagged in* `git.ts`, `checkpoint.ts`.
 - <a id="d36"></a>**D36 — Plan approval gets its own commit.** `checkpoint --plan` commits only the
   build's artifact folder as `chore(<scope>): plan` ([**D68**](#d68)) and records a `plan <sha>` line,
   so the scaffold never pollutes the first step's diff and history reads baseline → plan →
-  steps → finish. *Tagged in* `checkpoint.ts`, `git.ts`, `sidecar.ts`, the `pb-plan`
+  steps → finish. *Tagged in* `checkpoint.ts`, `git.ts`, `sidecar.ts`, the `plan`
   skill.
 - <a id="d37"></a>**D37 — Checkpoint sweeps its own bookkeeping; `finish` absorbs the tail.** A step's
   commit carries the intent `[x]` flip and the build-log line along with the work
@@ -227,7 +227,7 @@ below.)
   *anything executable* that speaks JSON-on-stdin / JSON-on-stdout / prose-on-stderr —
   runtime-agnosticism is the doorway (Terraform's `external` has run this exact contract since
   2017; checkride's stream discipline is already house style). *Tagged in* `agents.ts`,
-  `agent.ts`, the `pb-*` skills, `docs/agents.md`. (See [**C6**](#c6) for the identity invariant that
+  `agent.ts`, the skills, `docs/agents.md`. (See [**C6**](#c6) for the identity invariant that
   bounds it.)
 - <a id="d40"></a>**D40 — One verb, `agent run`, with no way to advance the loop.** Deterministic mechanics
   only — compose the context, spawn, validate, apply side effects — and no checkpoint, step
@@ -238,9 +238,9 @@ below.)
   (personal), first hit wins, project shadowing personal — the settings ladder's shape
   ([**D27**](#d27)) and Claude Code's two-level `.claude/agents/` convention. *Tagged in* `agents.ts`.
 - <a id="d42"></a>**D42 — Planned bindings live in `builds/<slug>/harness.json`.** A sibling of `intent.md`
-  authored at `/pb-plan` time, not inside the executor-agnostic intent ([**D3**](#d3)) — the plan
+  authored at `/plan` time, not inside the executor-agnostic intent ([**D3**](#d3)) — the plan
   says *what/why*, the harness says *with-what*. *Tagged in* `agents.ts`, `sidecar.ts`, the
-  `pb-plan`/`pb-step` skills.
+  `plan`/`step` skills.
 - <a id="d43"></a>**D43 — Exactly three slots: `before`, `build`, `after`.** Context-in, the diff, advisory
   review — and no fourth, because no declarative format can name "a salient point in the
   middle"; that judgment is prose the host model reads (a manifest `when`, a step `note`).
@@ -250,7 +250,7 @@ below.)
   contract — the sidecar keeps a single writer. *Tagged in* `agent.ts`.
 - <a id="d45"></a>**D45 — `after` output is advisory; checkride gates; the human advances.** An after-agent
   informs the verify pause and can never fail a step — a gate an agent can trip is the lock
-  returning in autonomy's costume. *Tagged in* `agent.ts`, the `pb-verify` skill.
+  returning in autonomy's costume. *Tagged in* `agent.ts`, the `verify` skill.
 - <a id="d46"></a>**D46 — Stream discipline and exit-code semantics.** stdout carries the envelope alone,
   stderr streams the child's prose live to the terminal, exit 0 makes the envelope
   authoritative and any non-zero is a failed run (reported, not trusted); a contract
@@ -282,7 +282,7 @@ below.)
   *Tagged in* `agents.ts`, `settings.ts`.
 - <a id="d52"></a>**D52 — `blocked` and `drift` route differently at the pause.** `blocked` = the agent
   couldn't finish (surface its `notes`, unblock, re-run); `drift` = it finished but found the
-  plan no longer matches reality (repair with `/pb-refine` before continuing) — the two halts
+  plan no longer matches reality (repair with `/refine` before continuing) — the two halts
   need different medicine. *Tagged in* `agent.ts`, the loop skills.
 - <a id="d53"></a>**D53 — Keys, model choice, and sandboxing are the agent's business.** The `settings`
   block in the StepContext carries plumbbob's own relevant settings and nothing else —
@@ -294,21 +294,21 @@ below.)
   declare slot X **refuses** — the user who typed the name asked for that agent
   specifically. Only a harness-*bound* agent a teammate lacks downgrades to a warning and
   is skipped, because a binding is ambient configuration the loop must survive without
-  (the same never-required contract as `/pb-build` itself). A run that actually starts and
+  (the same never-required contract as `/build` itself). A run that actually starts and
   fails is a hard failure either way — this softens a *missing* agent, never a broken one.
-  *Tagged in* `agent.ts`, `agents.ts`, `status.ts`, the `pb-plan` skill.
+  *Tagged in* `agent.ts`, `agents.ts`, `status.ts`, the `plan` skill.
 - <a id="d55"></a>**D55 — The manifest speaks to two audiences.** `command` is for the deterministic CLI;
   `description` and `when` are prose for the **host model** (the role a subagent's
   frontmatter description plays) — `when` is the cue the model reads to fire an agent
   mid-build, because each half of when/how feeds the layer that can actually use it.
-  *Tagged in* `agents.ts`, the `pb-build` skill.
+  *Tagged in* `agents.ts`, the `build` skill.
 - <a id="d56"></a>**D56 — `--auto` composes with zero new machinery.** Bound `before`-agents → implement
   (or the bound `build`-agent) → bound `after`-agents → check → self-review →
   checkpoint-if-clean → next; the `after` output feeds the *existing* self-review halt
   condition, so the default path — everything lands at the pause — stays unchanged. A
   step range `N-M` rides the same seam: it is `--auto` with one more halt of the same
   kind (stop before any step past M), re-imposing the pause at the top of the range —
-  still zero new machinery. *Tagged in* the `pb-build` skill.
+  still zero new machinery. *Tagged in* the `build` skill.
 - <a id="d57"></a>**D57 — The bindings merge ladder.** For one step and slot: an explicit name or `--agent`
   flag beats the per-step harness entry, which beats the harness `defaults`, which beat the
   settings-level `agents` key — the first level that names the slot wins, **replace, not
@@ -319,7 +319,7 @@ below.)
   *Tagged in* `agents.ts`.
 - <a id="d59"></a>**D59 — Before-slot outputs travel inline as `context[]`.** Inline in the input JSON is
   the simplest transport until size proves otherwise; revisit only on evidence.
-  *Tagged in* `agents.ts`, the `pb-build` skill.
+  *Tagged in* `agents.ts`, the `build` skill.
 - <a id="d60"></a>**D60 — Async `spawn`, not `spawnSync`.** A live parent can interrupt gracefully
   (message + cleanup) where a blocked one just dies with the child; `dispatch` is already
   Promise-typed, so it costs no plumbing. Enforced by `rules/no-sync-spawn-in-agent-path.yml`.
@@ -337,18 +337,18 @@ below.)
   ([**D61**](#d61)) and surfaced by `status` in the next step's detail; orientation for the human
   choosing where to spend attention and tokens, **never a gate** — nothing reads it to switch a
   model or refuse a build. Plain text, no backticks, so it can never be mistaken for a seam token.
-  *Tagged in* `orient.ts`, `intent.ts`, the intent template, the `pb-plan`/`pb-step`/`pb-status`
+  *Tagged in* `orient.ts`, `intent.ts`, the intent template, the `plan`/`step`/`status`
   skills.
 - <a id="d63"></a>**D63 — Judgment skills inherit the session model; only the clerks pin.** The
-  judgment moves (`pb-plan`, `pb-step`, `pb-build`, `pb-verify`, `pb-refine`, `pb-harvest`,
-  `pb-finish`) carry no `model:` frontmatter — a pin is a ceiling as much as a floor (it silently
+  judgment moves (`plan`, `step`, `build`, `verify`, `refine`, `harvest`,
+  `finish`) carry no `model:` frontmatter — a pin is a ceiling as much as a floor (it silently
   downgrades a frontier session), it overrides the very choice [**D62**](#d62) asks the human to
   make, and prompt caches are model-scoped, so every pinned hop re-reads the whole conversation
-  uncached at full input price. The mechanical clerks (`pb-status`, `pb-park`, `pb-spike`,
-  `pb-revert`, `pb-doctor`) stay pinned to `haiku`: model quality is irrelevant to a verbatim
+  uncached at full input price. The mechanical clerks (`status`, `park`, `spike`,
+  `revert`, `doctor`) stay pinned to `haiku`: model quality is irrelevant to a verbatim
   reporter, and small-model economics beat the switch toll there. The human steers with `/model`,
-  informed by the per-step recommendation ([**D62**](#d62)) — prose in `pb-plan`/`pb-build`
-  nudges, never forces. *Expressed in* the `pb-*` skill frontmatters.
+  informed by the per-step recommendation ([**D62**](#d62)) — prose in `plan`/`build`
+  nudges, never forces. *Expressed in* the skill frontmatters.
 
 The **approval latch** (July 2026, `.plumbbob/builds/2026-07-09-the-approval-latch/`, from
 `research/06-approval-latch.md`) added [**D64**](#d64)–[**D66**](#d66): ledger-plane
@@ -370,7 +370,7 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10*
   dormant rather than wedging. *Tagged in* `latch.ts`, `checkpoint.ts`, `sidecar.ts`, `build.ts`,
   `start.ts`, `turn.ts`, `doctor.ts`.
 - <a id="d65"></a>**D65 — Grants come from the human's literal prompt.** One-turn self-approval is minted
-  only from strings the model cannot type — `pb-build` is `disable-model-invocation`, so a `--auto`
+  only from strings the model cannot type — `build` is `disable-model-invocation`, so a `--auto`
   flag or an `N-M` range reaches the `turn` hook only because the human typed it — *because* a grant the
   model can forge is no grant. The `GRANT` file is scoped (`auto` | `range M`) and rewritten on **every**
   tick (minted on a match, cleared otherwise), so its lifetime is **one turn** by construction; a typed
@@ -392,14 +392,14 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10*
   was the one self-approval it could **forge** (measured: the eval tier's adversarial-pressure contract had
   models minting `auto: true` under pressure, a legal side door the latch honored), and [**D65**](#d65)'s
   own rule already says a grant the model can forge is no grant. Self-approval now comes *only* from the
-  human's literal `/pb-build --auto` or `N-M` range through the `GRANT` file (D65) — the routes a model
-  cannot type, since `pb-build` is `disable-model-invocation`. This is **guidance-first — it removes a
+  human's literal `/build --auto` or `N-M` range through the `GRANT` file (D65) — the routes a model
+  cannot type, since `build` is `disable-model-invocation`. This is **guidance-first — it removes a
   mechanical honor, it adds no lock**: TTY (row 1), hookless hosts (row 2, dormant), `--auto`, and ranges
   all still work; unattended autonomy is one typed `--auto` away. A set-but-ignored `auto` is **surfaced,
   not punished** — the refusal message names it and `doctor` prints an informational `○` line — so a human
   who relied on it isn't silently changed. Amends [**D64**](#d64) (five-row), [**D65**](#d65), and
-  [**D27**](#d27). *Tagged in* `latch.ts`, `settings.ts`, `doctor.ts`, `agent.ts`, `skills/pb-build`,
-  `skills/pb-verify`.
+  [**D27**](#d27). *Tagged in* `latch.ts`, `settings.ts`, `doctor.ts`, `agent.ts`, `skills/build`,
+  `skills/verify`.
 - <a id="d68"></a>**D68 — Commit subjects are Conventional Commits; `plumbbob`/`step N` move to the body.**
   *Amended* — every plumbbob commit subject reads as `type(scope): description`, so `git log` speaks the
   same grammar as the rest of the branch: `chore(<scope>): plan`, a per-step `<type>(<scope>): <description>`
@@ -419,7 +419,7 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10*
   the greppable-subject *shape* of [**D34**](#d34); D34's ownership principle — the CLI owns every subject,
   bodies arrive via `--body` — stands, as does [**D36**](#d36)'s plan-gets-its-own-commit. *Tagged in*
   `commitmsg.ts`, `intent.ts`, `sidecar.ts`, `checkpoint.ts`, `finish.ts`, the
-  `pb-plan`/`pb-step`/`pb-refine`/`pb-verify`/`pb-finish` skills.
+  `plan`/`step`/`refine`/`verify`/`finish` skills.
 
 - <a id="d69"></a>**D69 — The build-log's Steps mirror and Current step line are CLI-owned.**
   build-log.md's `## Steps` checklist and its `**Current step:**` line are now maintained by the
@@ -447,11 +447,11 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10*
   decides): `plumbbob spike "<slug>"` scaffolds it *at open* so findings accrue while the worktrees
   live; `plumbbob spike report "<slug>"` scaffolds it with no worktrees for a **spike-as-step** — a
   planned step titled `spike: …` where the increment itself is the experiment — stamping provenance as
-  `step <n>` when a step is in flight, else `/pb-spike`. `spike done` scans for the verbatim Verdict
+  `step <n>` when a step is in flight, else `/spike`. `spike done` scans for the verbatim Verdict
   placeholder and **nudges** when it is unfilled, but still closes (guidance, not a gate — the
   enforce→guide pivot). `spike` is not a Conventional-Commit type ([**D68**](#d68)), so a `Spike:`
   step title falls through to the `feat` default with no special-casing. *Tagged in* `spike.ts`,
-  `sidecar.ts`, `templates/spike-report.md`, `templates.ts`, `cli-core.ts`, the `pb-spike`/`pb-build`
+  `sidecar.ts`, `templates/spike-report.md`, `templates.ts`, `cli-core.ts`, the `spike`/`build`
   skills.
 
 ### Superseded

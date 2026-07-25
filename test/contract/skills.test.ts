@@ -35,14 +35,14 @@ function parseSkill(dir: string): { data: Record<string, string>; body: string }
   return { data, body: lines.slice(end + 1).join('\n') }
 }
 
-const ALL = ['pb-refine', 'pb-park', 'pb-harvest'] as const
+const ALL = ['refine', 'park', 'harvest'] as const
 
 // The model policy (D63): mechanical clerks pin haiku; the judgment moves carry
 // no pin and inherit the session model — a pin is a ceiling as much as a floor.
 const MODEL_PINS: Record<string, string | undefined> = {
-  'pb-refine': undefined,
-  'pb-park': 'haiku',
-  'pb-harvest': undefined,
+  'refine': undefined,
+  'park': 'haiku',
+  'harvest': undefined,
 }
 
 describe('every skill (the three reinforcing layers)', () => {
@@ -84,9 +84,9 @@ describe('every skill (the three reinforcing layers)', () => {
 // revert and spike. build is the default engine (own contract); the superseded
 // start/review/done drivers were removed in step 8.
 const DRIVER_VERB: Record<string, string> = {
-  'pb-status': 'status',
-  'pb-revert': 'revert',
-  'pb-spike': 'spike',
+  'status': 'status',
+  'revert': 'revert',
+  'spike': 'spike',
 }
 
 describe('driver skills — the human fires the transition from the chat', () => {
@@ -128,10 +128,10 @@ describe('driver skills — the human fires the transition from the chat', () =>
 })
 
 describe('finish — the close-out: report by default, final commit, clear (D9/D15)', () => {
-  const { data, body } = parseSkill('pb-finish')
+  const { data, body } = parseSkill('finish')
 
   it('names itself, disables model invocation, inherits the session model (D63)', () => {
-    expect(data.name).toBe('pb-finish')
+    expect(data.name).toBe('finish')
     expect(data['disable-model-invocation']).toBe('true')
     expect(data.model).toBeUndefined()
   })
@@ -163,10 +163,10 @@ describe('finish — the close-out: report by default, final commit, clear (D9/D
 })
 
 describe('plan — the whole-goal move: scaffold + frame, no code', () => {
-  const { data, body } = parseSkill('pb-plan')
+  const { data, body } = parseSkill('plan')
 
   it('names itself, disables model invocation, inherits the session model (D63)', () => {
-    expect(data.name).toBe('pb-plan')
+    expect(data.name).toBe('plan')
     expect(data['disable-model-invocation']).toBe('true')
     expect(data.model).toBeUndefined()
   })
@@ -195,8 +195,8 @@ describe('plan — the whole-goal move: scaffold + frame, no code', () => {
     expect(body).toMatch(/inline|free-form|expand/i)
   })
 
-  it('offers /pb-refine to stress-test the frame', () => {
-    expect(body).toMatch(/\/pb-refine/)
+  it('offers /refine to stress-test the frame', () => {
+    expect(body).toMatch(/\/refine/)
   })
 
   it('keeps the human the converger — holes are Open questions, not guesses', () => {
@@ -237,10 +237,10 @@ describe('plan — the whole-goal move: scaffold + frame, no code', () => {
 })
 
 describe('step — the single-increment move: one verifiable step', () => {
-  const { data, body } = parseSkill('pb-step')
+  const { data, body } = parseSkill('step')
 
   it('names itself, disables model invocation, inherits the session model (D63)', () => {
-    expect(data.name).toBe('pb-step')
+    expect(data.name).toBe('step')
     expect(data['disable-model-invocation']).toBe('true')
     expect(data.model).toBeUndefined()
   })
@@ -279,10 +279,10 @@ describe('step — the single-increment move: one verifiable step', () => {
 })
 
 describe('build — the default engine: implement the planned step, then verify', () => {
-  const { data, body } = parseSkill('pb-build')
+  const { data, body } = parseSkill('build')
 
   it('names itself after its directory and disables model invocation', () => {
-    expect(data.name).toBe('pb-build')
+    expect(data.name).toBe('build')
     expect(data['disable-model-invocation']).toBe('true')
   })
 
@@ -337,7 +337,7 @@ describe('build — the default engine: implement the planned step, then verify'
 
   it('forbids self-minting a settings `auto` grant — a grant you mint is no grant (D67)', () => {
     expect(body).toMatch(/a grant you mint is no grant/i)
-    expect(body).toMatch(/re-fire `?\/pb-build --auto`?/i) // the sanctioned route instead
+    expect(body).toMatch(/re-fire `?\/build --auto`?/i) // the sanctioned route instead
   })
 
   it('lifts slot mechanics into a gated "Running bound agents" section, keeping the default path slim (3b)', () => {
@@ -362,10 +362,10 @@ describe('build — the default engine: implement the planned step, then verify'
 })
 
 describe('verify — the tick: check, self-review, validate, PAUSE, checkpoint', () => {
-  const { data, body } = parseSkill('pb-verify')
+  const { data, body } = parseSkill('verify')
 
   it('names itself after its directory and disables model invocation', () => {
-    expect(data.name).toBe('pb-verify')
+    expect(data.name).toBe('verify')
     expect(data['disable-model-invocation']).toBe('true')
   })
 
@@ -417,7 +417,7 @@ describe('verify — the tick: check, self-review, validate, PAUSE, checkpoint',
 })
 
 describe('refine — keep intent.md true: attack for holes + repair drift', () => {
-  const { data, body } = parseSkill('pb-refine')
+  const { data, body } = parseSkill('refine')
 
   it('inherits the session model, with Read + Edit and no Write', () => {
     expect(data.model).toBeUndefined()
@@ -455,7 +455,7 @@ describe('refine — keep intent.md true: attack for holes + repair drift', () =
 })
 
 describe('park — capture via the dumb CLI, never an edit', () => {
-  const { data, body } = parseSkill('pb-park')
+  const { data, body } = parseSkill('park')
 
   it('is pinned to haiku (transcription, not judgment)', () => {
     expect(data.model).toBe('haiku')
@@ -488,7 +488,7 @@ describe('park — capture via the dumb CLI, never an edit', () => {
 })
 
 describe('harvest — propose, the human confirms', () => {
-  const { data, body } = parseSkill('pb-harvest')
+  const { data, body } = parseSkill('harvest')
 
   it('inherits the session model and is DESIGN-only', () => {
     expect(data.model).toBeUndefined()
@@ -510,12 +510,12 @@ describe('harvest — propose, the human confirms', () => {
 })
 
 describe('doctor — a headless-safe thin driver for `plumbbob doctor`', () => {
-  const { data, body } = parseSkill('pb-doctor')
+  const { data, body } = parseSkill('doctor')
 
   it('injects a single granted command so the report survives headless `-p`', () => {
     // The old compound `if command -v plumbbob …; then … fi` led with `command -v`,
     // which is not in allowed-tools, so `-p`'s permission-gate dropped the whole
-    // injection silently. Lead with the granted verb (like pb-status) instead.
+    // injection silently. Lead with the granted verb (like status) instead.
     expect(body).toContain('!`plumbbob doctor')
     expect(body).not.toContain('command -v') // the un-granted guard that died in -p
     expect(body).not.toContain('!`if ') // no compound if…fi injection
@@ -528,6 +528,6 @@ describe('doctor — a headless-safe thin driver for `plumbbob doctor`', () => {
   })
 })
 
-// plumbbob-report and plumbbob-docs were folded into /plumbbob:pb-finish (D9) and removed.
-// plumbbob-interrogate was renamed /plumbbob:pb-refine and broadened (attack + repair);
+// plumbbob-report and plumbbob-docs were folded into /plumbbob:finish (D9) and removed.
+// plumbbob-interrogate was renamed /plumbbob:refine and broadened (attack + repair);
 // report/docs do not survive.

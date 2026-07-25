@@ -5,7 +5,7 @@ folder into the PR beside intent.md / report.md. Fill it while the experiment is
 — the worktrees and their learnings are torn down at `spike done`, but this stays.
 
 Two ways a spike is born, both landing here:
-  - `/pb-spike <slug>` — an explicit mid-build fork with throwaway worktrees.
+  - `/spike <slug>` — an explicit mid-build fork with throwaway worktrees.
   - a planned step titled `spike: …` — the increment IS the experiment.
 Record the Verdict before you close the spike (or check off the step).
 -->

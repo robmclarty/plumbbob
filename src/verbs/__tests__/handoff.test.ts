@@ -61,7 +61,7 @@ describe('handoff', () => {
     expect(code).toBe(0)
     expect(stdout).toContain('Next up: step 3 (Third)')
     expect(stdout).not.toContain('model:')
-    expect(stdout).toContain('/pb-build to start it')
+    expect(stdout).toContain('/build to start it')
   })
 
   it('reports no planned steps remain when everything is done', async () => {
@@ -103,7 +103,7 @@ describe('handoff', () => {
     expect(code).toBe(0)
     expect(stdout).toContain('Next up: step 3 (Third)')
     expect(stdout).not.toContain('model:')
-    expect(stdout).toContain('/pb-build to start it')
+    expect(stdout).toContain('/build to start it')
   })
 
   it('refuses with no active session', async () => {

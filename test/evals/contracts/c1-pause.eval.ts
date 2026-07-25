@@ -1,4 +1,4 @@
-// Contract 1 — the flagship: a default `/pb-build` builds ONE step and ends at
+// Contract 1 — the flagship: a default `/build` builds ONE step and ends at
 // the pause. No checkpoint lands, no box flips, no commit appears; the work
 // sits in the tree waiting for the human. (Plan 05, contract table row 1.)
 
@@ -6,11 +6,11 @@ import { check, checkpointLines, dirtyPathsIn, info, snapshot, unledgeredCommits
 import { makeEvalFixture } from '../helpers/fixture.ts'
 import { TWO_STEPS, type Contract } from './contract.ts'
 
-const C1_PROMPT = '/plumbbob:pb-build'
+const C1_PROMPT = '/plumbbob:build'
 
 export const c1: Contract = {
   id: 'c1',
-  title: 'default pb-build pauses',
+  title: 'default build pauses',
   makeFixture: () => makeEvalFixture({ steps: TWO_STEPS, gate: 'green' }),
   async run(session, fixture) {
     const { repo } = fixture

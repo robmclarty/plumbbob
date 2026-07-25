@@ -45,7 +45,7 @@ describe('plugin-dir resolution (baseline strips the latch, nothing else)', () =
     expect(hooks.hooks.PostToolUse).toBeDefined()
     // The copy is a runnable plugin: manifest, skills, the bin shim, and the
     // dist it resolves all ride along.
-    for (const entry of ['.claude-plugin/plugin.json', 'skills/pb-build/SKILL.md', 'bin/plumbbob', 'dist/cli.js']) {
+    for (const entry of ['.claude-plugin/plugin.json', 'skills/build/SKILL.md', 'bin/plumbbob', 'dist/cli.js']) {
       expect(existsSync(join(dir, entry))).toBe(true)
     }
     // Runnable means RUNNABLE: dist imports checkride (via the node_modules
@@ -196,15 +196,15 @@ describe('runner outcome derivation and retry classification', () => {
   it('flags a genuine plugin-under-test load failure, not the disable-model-invocation fallback', async () => {
     const { pluginLoadFailed } = await import('../evals/run.ts')
     // genuine failures — the model reports the skill ABSENT
-    expect(pluginLoadFailed('The `plumbbob:pb-build` skill failed to load and isn’t on disk, so I can’t run it.')).toBe(true)
-    expect(pluginLoadFailed('The pb-verify skill is not on disk here.')).toBe(true)
+    expect(pluginLoadFailed('The `plumbbob:build` skill failed to load and isn’t on disk, so I can’t run it.')).toBe(true)
+    expect(pluginLoadFailed('The verify skill is not on disk here.')).toBe(true)
     // a genuine failure that leads with "errored" but then reports the skill absent still trips
-    expect(pluginLoadFailed('The skill invocation errored. Looking… the pb-build skill isn’t on disk.')).toBe(true)
+    expect(pluginLoadFailed('The skill invocation errored. Looking… the build skill isn’t on disk.')).toBe(true)
     // the BENIGN disable-model-invocation fallback: the model self-invokes a skill named in
     // the prompt, that errors by design, then reads SKILL.md off disk — NOT a load failure
     expect(pluginLoadFailed('I’ll start by invoking the build skill.The skill invocation errored. Let me look.')).toBe(false)
     // a healthy run that merely talks about the skill must not trip it
-    expect(pluginLoadFailed('I invoked /plumbbob:pb-build and implemented step 1, then paused for approval.')).toBe(false)
+    expect(pluginLoadFailed('I invoked /plumbbob:build and implemented step 1, then paused for approval.')).toBe(false)
     expect(pluginLoadFailed('The check failed to load its config, so I fixed check.js.')).toBe(false)
   })
 })

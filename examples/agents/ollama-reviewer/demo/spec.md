@@ -1,8 +1,8 @@
 # wordwrap — a text-wrapping utility
 
-A demo spec for the `ollama-reviewer` example agent. Feed it to `/pb-plan` (it is a
-spec file, so pb-plan absorbs it into `intent.md`) from a scratch repo that has this
-agent installed, then run `/pb-build` and watch a local model review every step at the
+A demo spec for the `ollama-reviewer` example agent. Feed it to `/plan` (it is a
+spec file, so plan absorbs it into `intent.md`) from a scratch repo that has this
+agent installed, then run `/build` and watch a local model review every step at the
 verify pause. The task itself is deliberately small: three steps, plain JavaScript,
 zero dependencies — the point is the loop, not the wrapping.
 

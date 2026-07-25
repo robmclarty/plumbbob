@@ -42,7 +42,7 @@ export type Slot = (typeof SLOTS)[number]
  *
  * `done` = finished. `blocked` = it couldn't finish, so the human unblocks and
  * re-runs. `drift` = it finished but found the plan no longer matches reality,
- * so the route is /pb-refine repair. The two halts need different medicine,
+ * so the route is /refine repair. The two halts need different medicine,
  * which is why they are distinct statuses.
  */
 export const ENVELOPE_STATUSES = ['done', 'blocked', 'drift'] as const
@@ -601,7 +601,7 @@ export type StepBinding = {
 /**
  * harness.json — the planned per-step agent bindings for one build.
  *
- * Authored at /pb-plan time as a sibling of intent.md in the build's tracked
+ * Authored at /plan time as a sibling of intent.md in the build's tracked
  * `builds/<slug>/` folder: the plan says what/why, the harness says with-what.
  * Contract-gated like the manifest and envelope. `defaults` bind agents to
  * every step; a per-step entry under `steps.<n>` overrides the defaults for

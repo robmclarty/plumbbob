@@ -109,13 +109,13 @@ describe('revert', () => {
     // The skill was committed after the baseline, so a bare reset --hard would
     // delete it with the work; revert protects plumbbob's own machinery.
     const dir = await startedGreen()
-    const skill = join(dir, '.claude', 'skills', 'pb-verify')
+    const skill = join(dir, '.claude', 'skills', 'verify')
     mkdirSync(skill, { recursive: true })
-    writeFileSync(join(skill, 'SKILL.md'), '# pb-verify\n')
+    writeFileSync(join(skill, 'SKILL.md'), '# verify\n')
     git(dir, ['add', '-A'])
     git(dir, ['commit', '-q', '-m', 'work + installed skill, past baseline'])
     expect(captureIo(() => revert(dir, [])).code).toBe(0)
-    expect(readFileSync(join(skill, 'SKILL.md'), 'utf8')).toBe('# pb-verify\n')
+    expect(readFileSync(join(skill, 'SKILL.md'), 'utf8')).toBe('# verify\n')
   })
 
   it('refuses when the ledger records no baseline at all', async () => {

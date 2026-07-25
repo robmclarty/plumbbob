@@ -177,7 +177,7 @@ async function runCheckride(root: string, flags: CheckFlags): Promise<number> {
 
 /**
  * Name the failing slots and where their raw diagnostics landed, so the agent
- * (pb-verify) reads the tool's own JSON instead of scraping scrollback.
+ * (verify) reads the tool's own JSON instead of scraping scrollback.
  *
  * The summary is the canonical pointer — `output_file` is the adapter's
  * preferred name, but non-JSON output falls back to `.check/<slot>.stdout.txt`.

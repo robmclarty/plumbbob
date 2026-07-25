@@ -54,7 +54,7 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   } else {
     process.stderr.write(
       'plumbbob: note — no report.md found; finishing without one ' +
-        '(/pb-finish normally writes the report first). No gate (D9).\n',
+        '(/finish normally writes the report first). No gate (D9).\n',
     )
   }
 
@@ -89,7 +89,7 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   const where = slug === null ? '.plumbbob/' : `.plumbbob/builds/${slug}/`
   process.stdout.write(
     `plumbbob: finished — ${sha.slice(0, 9)}. ${where} rides your branch into the PR. ` +
-      'Run `/pb-plan` (or `plumbbob start "<title>"`) to frame the next goal.\n',
+      'Run `/plan` (or `plumbbob start "<title>"`) to frame the next goal.\n',
   )
   return 0
 }
@@ -128,7 +128,7 @@ function buildDefaultScope(root: string, slug: string | null): string | null {
  * Read the `--body` final-commit body from stdin, or null.
  *
  * The body arrives as a single-quoted stdin heredoc — the CLI owns every commit
- * subject, but the pb-finish skill composes a proportional close-out body this
+ * subject, but the finish skill composes a proportional close-out body this
  * way. Returns null when the flag is absent or stdin is empty; the commit then
  * carries subject only. Reading fd 0 blocks until EOF, which the heredoc
  * supplies; a read error (no stdin attached) degrades to null, and an

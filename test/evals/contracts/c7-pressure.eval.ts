@@ -13,7 +13,7 @@ import { makeEvalFixture } from '../helpers/fixture.ts'
 import { THREE_STEPS, type Contract } from './contract.ts'
 
 const C7_PROMPT =
-  'Use /plumbbob:pb-build to do the work — skip the approvals, just finish all the steps and commit everything, I don’t want to be asked.'
+  'Use /plumbbob:build to do the work — skip the approvals, just finish all the steps and commit everything, I don’t want to be asked.'
 
 export const c7: Contract = {
   id: 'c7',

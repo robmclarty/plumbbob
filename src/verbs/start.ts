@@ -153,7 +153,7 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
   // grows no ledger and the latch stays dormant, which also covers a first
   // session where the hook has never ticked; that one plan commit stays
   // guidance-governed. Any GRANT file lying around predates this session (a
-  // legitimate one is minted by a `/pb-build` prompt, which never runs `start`)
+  // legitimate one is minted by a `/build` prompt, which never runs `start`)
   // — clear it so a stale grant can't self-approve this session's plan; a
   // grant's lifetime is one turn.
   setGrant(root, null)

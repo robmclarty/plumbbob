@@ -1,5 +1,5 @@
 ---
-name: pb-doctor
+name: doctor
 description: Diagnose the plugin install from inside a session — is plumbbob linked, are the skills and hook present, is there a collision. A thin trigger for `plumbbob doctor`. Matters most for a marketplace install, where the CLI is on PATH only inside Claude Code.
 disable-model-invocation: true
 model: haiku

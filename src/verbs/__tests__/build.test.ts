@@ -78,14 +78,14 @@ describe('build', () => {
     expect(stderr).toContain('`build 12` again')
   })
 
-  it('rejects a step range, naming it a /pb-build feature (not the generic usage)', async () => {
+  it('rejects a step range, naming it a /build feature (not the generic usage)', async () => {
     // `1-3` looks like a step arg but is a skill-level affordance; the CLI records
     // one in-flight step at a time, so it points back at the skill and a single step.
     const dir = await startedWithSteps()
     const { code, stderr } = captureIo(() => build(dir, ['1-3']))
     expect(code).toBe(1)
     expect(stderr).not.toContain('build needs a step number')
-    expect(stderr).toContain('step ranges are a `/pb-build` feature')
+    expect(stderr).toContain('step ranges are a `/build` feature')
     expect(stderr).toContain('plumbbob build 1')
   })
 

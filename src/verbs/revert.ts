@@ -100,9 +100,12 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
  *
  * They are the sidecar (already git-excluded, listed so revert is robust even
  * where `.plumbbob/` was tracked by mistake) and each installed driver skill
- * under .claude/skills/. Skill names come from plumbbob's own bundled `skills/`
- * dir — the same source `setup` copies from — so only plumbbob's own skills are
- * protected, never the user's. Only paths that currently exist are returned.
+ * under .claude/skills/, named from plumbbob's own bundled `skills/` dir.
+ *
+ * The match is by name alone, and since the skills dropped their `pb-` prefix
+ * those names are ordinary words — a user's own `.claude/skills/plan/` is
+ * carried across the reset too. That errs toward keeping work (C4), so it is
+ * the safe direction to be wrong in. Only paths that currently exist are returned.
  */
 function plumbbobOwnedPaths(root: string): ReadonlyArray<string> {
   const paths = [sidecarDir(root)]

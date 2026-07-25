@@ -1,37 +1,37 @@
 # The happy path — one complete cycle
 
 This is the workflow end to end: from planning a fresh goal **all at once**, through
-driving the automated `/pb-build` step after step until done, to finishing up and
+driving the automated `/build` step after step until done, to finishing up and
 starting the next task. It's a worked example, not reference docs — every command,
 dashboard, and CLI line below is what you actually see.
 
-The loop in one breath: **`/pb-plan` once to author the whole plan, then fire
-`/pb-build` per step — each builds the next step and stops at the verify pause for
-your approval — parking strays and harvesting them at the boundary, then `/pb-finish`
+The loop in one breath: **`/plan` once to author the whole plan, then fire
+`/build` per step — each builds the next step and stops at the verify pause for
+your approval — parking strays and harvesting them at the boundary, then `/finish`
 once.** In the loop you never type the `plumbbob` CLI by hand; the skills shell out to
 it (only install — `plumbbob init` and `doctor` — is manual; even `plumbbob start` is
-run for you by `/pb-plan`), and
-`/pb-status` always names your next move.
+run for you by `/plan`), and
+`/status` always names your next move.
 
 > The example goal: **rate-limit the login endpoint** — a small feature touching a
 > couple of modules, big enough to show the full cycle.
 
 ---
 
-## 0. Plan the whole goal — `/pb-plan`
+## 0. Plan the whole goal — `/plan`
 
-The deciding happens *before* any code, on a surface outside the chat. `/pb-plan`
+The deciding happens *before* any code, on a surface outside the chat. `/plan`
 scaffolds the session and authors the **complete** `intent.md` — Frame, Decisions,
-Constraints, **and all the Steps** — so the build afterward is just `/pb-build` until
+Constraints, **and all the Steps** — so the build afterward is just `/build` until
 done. It writes intent only, never source.
 
 It takes whatever seed you give it and disambiguates the mode itself (no quotes
 required):
 
 ```text
-/pb-plan                                  # interview: Q&A draws the plan out of your head
-/pb-plan docs/rate-limit-spec.md          # absorb an out-of-band spec into intent.md
-/pb-plan rate-limit POST /login, in-memory bucket, 5/min/IP, 429   # expand inline intent
+/plan                                  # interview: Q&A draws the plan out of your head
+/plan docs/rate-limit-spec.md          # absorb an out-of-band spec into intent.md
+/plan rate-limit POST /login, in-memory bucket, 5/min/IP, 429   # expand inline intent
 ```
 
 Under the hood it runs `plumbbob start`, which records a baseline and drops you in
@@ -77,14 +77,14 @@ seam**:
 
 > **Plan as far as you can see clearly.** Later steps may be fuzzier than the first —
 > that's fine; they get sharpened just-in-time when you reach them. Before building,
-> you can hand the frame to `/pb-refine` to attack it for holes (or repair the plan
+> you can hand the frame to `/refine` to attack it for holes (or repair the plan
 > later if a build contradicts it).
 
 ---
 
-## 1. Review the plan — `/pb-status`
+## 1. Review the plan — `/status`
 
-Before building, glance at what's next. `/pb-status` is read-only; it prints the
+Before building, glance at what's next. `/status` is read-only; it prints the
 dashboard, surfaces the **next step's done-when, seam, and model recommendation** so
 you can sanity-check it (and switch models before building, if you agree with the
 recommendation), and names the single next move:
@@ -103,38 +103,38 @@ PlumbBob — Rate-limit the login endpoint   [DESIGN]
 last checkpoint  none yet
 parked 0 · open questions 0
 
-next → build step 1 — `/plumbbob:pb-build` (or `/plumbbob:pb-step` to revise it first)
+next → build step 1 — `/plumbbob:build` (or `/plumbbob:step` to revise it first)
 ```
 
 ---
 
-## 2. Sharpen the next step (optional) — `/pb-step`
+## 2. Sharpen the next step (optional) — `/step`
 
-The steps were planned up front, so `/pb-step` is now a *revision* tool, not the way
+The steps were planned up front, so `/step` is now a *revision* tool, not the way
 steps are born. If the next step still looks right, skip it. If something changed,
 fire it:
 
-- **`/pb-step` (no input)** auto-sharpens the next step — it re-reads what you've
+- **`/step` (no input)** auto-sharpens the next step — it re-reads what you've
   already built, the Decisions, and the Constraints, and syncs the step's done-when and
   seam to reality. The zero-effort "keep my next step honest" move.
-- **`/pb-step <what changed>`** makes a directed revision — tighten the done-when,
+- **`/step <what changed>`** makes a directed revision — tighten the done-when,
   adjust the seam, or split the step.
 
 You approve the change; it's written back into `## Steps`. Most steps need nothing —
-straight to `/pb-build`.
+straight to `/build`.
 
 ---
 
-## 3. Build each step — `/pb-build`, fired until done
+## 3. Build each step — `/build`, fired until done
 
-`/pb-build` is the bundled executor. Called bare, **it picks the next undone step
-automatically** (pass a number only to jump, e.g. `/pb-build 3`; a range like
-`/pb-build 1-3` auto-approves through step 3, then pauses). It reads the step's
+`/build` is the bundled executor. Called bare, **it picks the next undone step
+automatically** (pass a number only to jump, e.g. `/build 3`; a range like
+`/build 1-3` auto-approves through step 3, then pauses). It reads the step's
 done-when, seam, Decisions, and Constraints, implements *only that step*, then carries
 straight through the verify tick to the pause.
 
 ```text
-/pb-build
+/build
 ```
 
 It goes in-flight, recording the seam for orientation (not a lock):
@@ -170,7 +170,7 @@ PAUSE — read the diff as an editor. Approve to checkpoint, or send fixes.
 > **cannot** self-checkpoint past you. That refusal *is* this pause — the agent presents
 > the diff and ends its turn, and **your next message is the tick** that lets the
 > checkpoint land. You don't have to trust the agent to stop; the ledger stops it. (Say
-> the word by name — `/pb-build --auto` or a range like `1-3` — and you grant it
+> the word by name — `/build --auto` or a range like `1-3` — and you grant it
 > self-approval for that run; that grant can only come from a prompt *you* typed. See
 > [D64–D66](decisions.md#d64).)
 
@@ -186,8 +186,8 @@ completed and the next undone step — and **names that next step's recommended 
 the plan set one, so if you open a fresh context window you know which `/model` to select
 before continuing (a new window inherits the session's model, not the plan's suggestion).
 
-Now **fire `/pb-build` again** for step 2, and again for step 3. Each run builds the
-next step and pulls up to its own pause — *re-firing `/pb-build` is itself the clock
+Now **fire `/build` again** for step 2, and again for step 3. Each run builds the
+next step and pulls up to its own pause — *re-firing `/build` is itself the clock
 tick*. The dashboard tracks the march:
 
 ```text
@@ -199,27 +199,27 @@ tick*. The dashboard tracks the march:
     3  Make the limit configurable via env
 ```
 
-> **Unattended option — `/pb-build --auto`.** When you'd rather not approve each step
-> by hand, `/pb-build --auto` lets the agent self-review and approve in your place,
+> **Unattended option — `/build --auto`.** When you'd rather not approve each step
+> by hand, `/build --auto` lets the agent self-review and approve in your place,
 > then chain straight to the next step until the plan is done. It **halts** the moment
 > the check goes red or the self-review finds a mismatch, and hands back to you. A step
-> range like `/pb-build 1-3` bounds this — it self-approves through step 3, then pauses.
+> range like `/build 1-3` bounds this — it self-approves through step 3, then pauses.
 > The default — no flag — always waits at the pause.
 
 ---
 
-## 4. Park strays mid-build — `/pb-park`
+## 4. Park strays mid-build — `/park`
 
 The moment an "ooh, what if" arrives mid-step, you **capture it, you don't chase it**.
 Say while building step 2 you think *"should password reset be throttled too?"* — hand it
-to `/pb-park`, inline or bare:
+to `/park`, inline or bare:
 
 ```text
-/pb-park should /password-reset get the same throttle?   # pass the idea inline
-/pb-park                                                  # or fire it bare — it uses the idea you just raised
+/park should /password-reset get the same throttle?   # pass the idea inline
+/park                                                  # or fire it bare — it uses the idea you just raised
 ```
 
-`/pb-park` never writes the line blind: it **composes one tidy, tagged line and shows it to
+`/park` never writes the line blind: it **composes one tidy, tagged line and shows it to
 you for a quick OK** — confirm it as-is or tweak the wording — then captures it by shelling
 `plumbbob park` under the hood:
 
@@ -236,23 +236,23 @@ parked 1 · open questions 0
 
 ---
 
-## 5. Harvest at the boundary — `/pb-harvest`
+## 5. Harvest at the boundary — `/harvest`
 
 Once the last step is checkpointed, the dashboard surfaces the parked item — triage
 happens **at a boundary**, back in `DESIGN`, never mid-step:
 
 ```text
-next → harvest 1 parked idea — `/plumbbob:pb-harvest`; then finish up —
-       `/plumbbob:pb-finish` (or `/plumbbob:pb-step` to add another increment)
+next → harvest 1 parked idea — `/plumbbob:harvest`; then finish up —
+       `/plumbbob:finish` (or `/plumbbob:step` to add another increment)
 ```
 
-`/pb-harvest` walks the list and proposes one class per item — **blocker** (plan was
+`/harvest` walks the list and proposes one class per item — **blocker** (plan was
 wrong; fold into intent and handle now), **tangent** (different, not clearly better —
 the default; defer or kill), or **pivot signal** (the whole approach is wrong; stop and
 replan). You call each one:
 
 ```text
-/pb-harvest
+/harvest
 ```
 
 ```text
@@ -270,14 +270,14 @@ and stops counting — it'll resurface in the finish report as deferred work.
 
 ---
 
-## 6. Finish up — `/pb-finish` (report + final commit + clear)
+## 6. Finish up — `/finish` (report + final commit + clear)
 
-When the goal is done — every step checkpointed, the park list harvested — `/pb-finish`
+When the goal is done — every step checkpointed, the park list harvested — `/finish`
 closes the build. It writes the report **by default** (there's no refuse-without-report
 gate), makes the final commit, and clears the control state.
 
 ```text
-/pb-finish
+/finish
 ```
 
 First it writes `report.md` **into the build folder** — what shipped, the decisions and
@@ -312,7 +312,7 @@ the record now, so it merges into `main` with the branch:
 
 ```text
 plumbbob: finished — f3e9a1b2c. .plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/ rides your
-branch into the PR. Run `/plumbbob:pb-plan` (or `plumbbob start "<title>"`) to frame the
+branch into the PR. Run `/plumbbob:plan` (or `plumbbob start "<title>"`) to frame the
 next goal.
 ```
 
@@ -331,13 +331,13 @@ squash-merge collapses the markers at PR time while the folder lands in `main`.
 
 ---
 
-## 7. Start the next task — `/pb-plan`
+## 7. Start the next task — `/plan`
 
-The sidecar is clear and there's no active session. `/pb-status` now reads
+The sidecar is clear and there's no active session. `/status` now reads
 `NO ACTIVE SESSION`, and the cycle begins again with a fresh plan:
 
 ```text
-/pb-plan
+/plan
 ```
 
 ```text
@@ -348,20 +348,20 @@ And you're back at step 0 with a clean head and the previous goal safely on the 
 
 ---
 
-## The pluggable executor — `/pb-build` is the default engine, not the only one
+## The pluggable executor — `/build` is the default engine, not the only one
 
-The happy path above used `/pb-build` to write every step, but it's just *one* way to
+The happy path above used `/build` to write every step, but it's just *one* way to
 turn a planned step into code. Implement the step by hand, in a vibe session, or with
-another harness, and run `/pb-verify` instead — it runs the same tick
+another harness, and run `/verify` instead — it runs the same tick
 (`check → self-review → validate → PAUSE → checkpoint`) and **reads the diff, not the
 author**. PlumbBob is the harness-agnostic spine; how the diff appears is a slot you
 fill however you like.
 
 ```text
-/pb-build      # automated: pick the next step, implement, verify to the pause
+/build      # automated: pick the next step, implement, verify to the pause
    — or —
 (your edits)   # hand-built / vibed / another harness
-/pb-verify     # same pause, same checkpoint — author-blind
+/verify     # same pause, same checkpoint — author-blind
 ```
 
 ---
@@ -369,18 +369,18 @@ fill however you like.
 ## The cycle, at a glance
 
 ```text
-/pb-plan                      author the whole plan (incl. all steps)   (once)
+/plan                      author the whole plan (incl. all steps)   (once)
   └ per step:
-       /pb-status             review the next step (done-when + seam)
-       /pb-step   (optional)  sharpen/revise it first if needed
-       /pb-build  (or DIY)    implement it → verify → PAUSE → checkpoint
-       /pb-park               capture strays mid-build
-       /pb-harvest            triage them at the boundary
-  /pb-finish                  report + final commit + clear             (once)
-  /pb-plan                    plan the next goal                        (cycle repeats)
+       /status             review the next step (done-when + seam)
+       /step   (optional)  sharpen/revise it first if needed
+       /build  (or DIY)    implement it → verify → PAUSE → checkpoint
+       /park               capture strays mid-build
+       /harvest            triage them at the boundary
+  /finish                  report + final commit + clear             (once)
+  /plan                    plan the next goal                        (cycle repeats)
 ```
 
-The human owns convergence; `/pb-build` does the labor and **stops at the pause**;
+The human owns convergence; `/build` does the labor and **stops at the pause**;
 you're the clock that advances it — one keystroke per step. See the root
 [`README`](../README.md) for the philosophy and install,
 [`techniques.md`](techniques.md) for each method on its own, and

@@ -1,5 +1,5 @@
 ---
-name: pb-finish
+name: finish
 description: Finish the build — write the report (what shipped, decisions, parked/harvested items, deferred tangents), then make the final commit that closes the session. The build folder rides the branch into the PR — no separate archive. Report by default, no gate.
 disable-model-invocation: true
 allowed-tools: Read, Write, Bash(plumbbob status:*), Bash(plumbbob finish:*)
@@ -9,7 +9,7 @@ allowed-tools: Read, Write, Bash(plumbbob status:*), Bash(plumbbob finish:*)
 
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not on PATH in this session. Marketplace install: confirm the plugin is enabled in /plugin, then /reload-plugins. Skills-dir/global install: npm i -g plumbbob && plumbbob init."`
 
-`/pb-finish` ends the build: it captures what happened, then makes the final commit
+`/finish` ends the build: it captures what happened, then makes the final commit
 that closes the session. **Report by default** — no refuse-without-report gate,
 and no separate docs phase. The build folder is tracked: it merges with the
 branch and shows up in the PR, so there is nothing to archive — the folder *is* the
@@ -48,7 +48,7 @@ record.
    an argument value (`--body "$(cat <<'BODY'…)"`): `--body` ignores an argument and
    reads stdin, so that form leaves stdin open with no EOF and the command hangs. Omit
    `--body` entirely and the commit carries the `plumbbob finish` marker subject only.
-3. **Point at the next goal** — `/pb-plan` to frame the next one.
+3. **Point at the next goal** — `/plan` to frame the next one.
 
 ## The hard contracts
 

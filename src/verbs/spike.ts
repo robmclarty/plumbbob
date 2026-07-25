@@ -71,7 +71,7 @@ export function spike(cwd: string, args: ReadonlyArray<string>): number {
  * Serves the spike-as-step case: a planned step titled `spike: …`, where the
  * increment itself is the experiment. No boundary requirement and no SPIKE
  * marker — a step in flight is exactly when this runs. Provenance is stamped
- * `step <n>` when a step is in flight, else `/pb-spike`.
+ * `step <n>` when a step is in flight, else `/spike`.
  */
 function spikeReport(root: string, buildSlug: string | null, positionals: ReadonlyArray<string>): number {
   const slug = sanitize(positionals[0] ?? '')
@@ -80,7 +80,7 @@ function spikeReport(root: string, buildSlug: string | null, positionals: Readon
     return 1
   }
   const inFlight = readInFlightStep(root, buildSlug)
-  const via = inFlight !== null ? `step ${inFlight}` : '/pb-spike'
+  const via = inFlight !== null ? `step ${inFlight}` : '/spike'
   const path = scaffoldSpikeReport(root, buildSlug, slug, via)
   process.stdout.write(
     `plumbbob: spike report scaffolded — ${relative(root, path)}. Fill Findings and the Verdict as you go; ` +
@@ -161,7 +161,7 @@ function spikeStart(root: string, buildSlug: string | null, positionals: Readonl
   markSpike(root, buildSlug)
   // Scaffold the report NOW, while the worktrees live: findings accrue during the
   // experiment, not from memory after the teardown. Provenance names the worktrees.
-  const report = scaffoldSpikeReport(root, buildSlug, slug, `/pb-spike — worktrees (${options.join(', ')})`)
+  const report = scaffoldSpikeReport(root, buildSlug, slug, `/spike — worktrees (${options.join(', ')})`)
   process.stdout.write(
     `plumbbob: spiking — the main tree stays put. Experiment in the throwaway worktrees:\n${created
       .map((p) => `  ${p}`)

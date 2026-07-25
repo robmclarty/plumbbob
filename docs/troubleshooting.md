@@ -16,7 +16,7 @@ both are present, and prints the exact `→ fix` for anything broken. Run it fir
 **Where to run it.** A terminal `plumbbob doctor` works only for the **global / skills-dir**
 install (`npm i -g plumbbob`). A **marketplace** plugin puts the CLI on PATH *only inside a
 Claude Code session* (via its `bin/` shims), so there is no terminal `plumbbob` — run
-**`/pb-doctor`** in-session instead (or just ask Claude to run `plumbbob doctor`). If
+**`/doctor`** in-session instead (or just ask Claude to run `plumbbob doctor`). If
 no `/plumbbob:*` skill loads at all, that is a plugin-not-loaded problem `doctor` cannot
 reach: check the `/plugin` UI and `/reload-plugins`.
 
@@ -48,7 +48,7 @@ Confirm with `which plumbbob`.
 
 **Cause.** A marketplace plumbbob plugin already provides the skills and the CLI, so linking
 the skills-dir plugin too would register a *second* plugin named `plumbbob`; the two fight
-over the `/plumbbob:*` namespace and skills can drop to flat names like `/pb-status`. **Fix.**
+over the `/plumbbob:*` namespace and skills can drop to flat names like `/status`. **Fix.**
 Keep one. Stay on the marketplace plugin (it needs no `init`), or remove it
 (`/plugin uninstall plumbbob@robmclarty`) and re-run `plumbbob init`. `--force` overrides
 the guard if you truly want both. `plumbbob doctor` reports the same collision when both are
@@ -84,7 +84,7 @@ the commit yourself.
 ### `status` shows `NO ACTIVE SESSION`
 
 **Cause.** There is no `.plumbbob/STATE` in this repo — install scope is not session scope.
-**Fix.** Start a session here: `/pb-plan` (or `plumbbob start "<goal>"`). Sessions are
+**Fix.** Start a session here: `/plan` (or `plumbbob start "<goal>"`). Sessions are
 **per-project** — each repo gets its own `.plumbbob/` sidecar.
 
 ### `start` refuses with "the working tree is dirty"
@@ -101,13 +101,13 @@ baseline — but a later revert-to-baseline will then discard the uncommitted wo
 ### `start` refuses with "a session is already active here"
 
 **Cause.** A `.plumbbob/` session already exists in this repo. **Fix.** Close it with
-`/pb-finish` before starting another, or continue the existing one (`/pb-status`).
+`/finish` before starting another, or continue the existing one (`/status`).
 
-### `/pb-park` or `/pb-harvest` refuses
+### `/park` or `/harvest` refuses
 
 **Cause.** Both need an active session, and `harvest` runs only at a **boundary**. **Fix.**
 Park works any time the session is live — start a session first if there is none. Harvest
-refuses mid-step (a step in flight): finish the step with `/pb-verify` first, then
+refuses mid-step (a step in flight): finish the step with `/verify` first, then
 harvest from the boundary.
 
 ## The build loop and checks
@@ -147,7 +147,7 @@ a shell.
 
 **Cause.** `build <n>` could not find step `n`, or the step's seam is unparseable. **Fix.**
 Make sure `## Steps` has the step in the standard format with a `- seam:` line of exact
-paths or `dir/` grants — never a glob ([**D23**](decisions.md#d23)). Sharpen it with `/pb-step`, then
+paths or `dir/` grants — never a glob ([**D23**](decisions.md#d23)). Sharpen it with `/step`, then
 build again.
 
 ## The post-edit hook (light feedback)
@@ -189,7 +189,7 @@ If a worktree path "already exists," remove it or run `spike done`.
 
 **Cause.** Nothing was checkpointed for that step. **Fix.** Run `plumbbob revert` with no
 `--to` to go to the last checkpoint, or `--to <n>` for a step that actually has one;
-`/pb-status` lists the last checkpoint. With no step checkpoints at all, revert falls
+`/status` lists the last checkpoint. With no step checkpoints at all, revert falls
 back to the baseline.
 
 ---

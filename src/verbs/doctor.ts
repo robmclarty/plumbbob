@@ -5,7 +5,7 @@
 //    Code loads it in place as a plugin (skills `/plumbbob:*`, the post-edit hook from
 //    hooks.json). doctor verifies the link resolves to a package carrying the manifest,
 //    the skills, and the hook — and names the fix for anything missing. The failure
-//    class it exists for is SILENT (a `/pb-status` that opens an empty dashboard
+//    class it exists for is SILENT (a `/status` that opens an empty dashboard
 //    because the plugin never linked).
 //
 // 2. The repo sidecar layout. plumbbob keeps its per-repo state in a `.plumbbob/`
@@ -559,10 +559,10 @@ function latchReport(cwd: string): { readonly lines: string[]; readonly failed: 
   const lines = ['', 'plumbbob doctor — approval latch (D64)', line]
   // The latch ignores a settings `auto`: a model can write that file, and a grant
   // the model can forge is no grant — self-approval comes only from the human's
-  // typed `/pb-build --auto`. Surface a set value so a human relying on it isn't
+  // typed `/build --auto`. Surface a set value so a human relying on it isn't
   // silently changed — informational, never a problem.
   if (resolveBoolean(root, 'auto', false)) {
-    lines.push('  ○ auto: set in settings but not a grant since D67 — self-approve per run with `/pb-build --auto`')
+    lines.push('  ○ auto: set in settings but not a grant since D67 — self-approve per run with `/build --auto`')
   }
   return { lines, failed: 0 }
 }
@@ -602,7 +602,7 @@ export async function doctor(cwd: string, args: ReadonlyArray<string> = [], env?
       : `plumbbob: ${failed} problem(s) — apply the → fixes, then restart Claude Code.`,
   )
   out.push(
-    'plumbbob: skills shell a bare `plumbbob`. The marketplace plugin puts it on PATH only inside a Claude Code session (via bin/) — there is no terminal `plumbbob`; for one (or the skills-dir install) run `npm i -g plumbbob`. In-session you can also run this as `/pb-doctor`. Sessions are per-project via `plumbbob start`.',
+    'plumbbob: skills shell a bare `plumbbob`. The marketplace plugin puts it on PATH only inside a Claude Code session (via bin/) — there is no terminal `plumbbob`; for one (or the skills-dir install) run `npm i -g plumbbob`. In-session you can also run this as `/doctor`. Sessions are per-project via `plumbbob start`.',
   )
 
   process.stdout.write(`${out.join('\n')}\n`)

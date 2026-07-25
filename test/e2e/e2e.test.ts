@@ -1,6 +1,6 @@
 // End-to-end dogfood drive: a full PlumbBob session in a fixture repo,
 // start → build → checkpoint → park → finish. The report is written here as the
-// /plumbbob:pb-finish skill would; the CLI path under test is everything around it.
+// /plumbbob:finish skill would; the CLI path under test is everything around it.
 // The build folder IS the archive now (D8): finish commits it in place so it rides
 // the branch into the PR — no `archive/` copy. Stub check per D14.
 
@@ -66,7 +66,7 @@ describe('e2e: a full PlumbBob session end to end', () => {
     expect(runCli(dir, ['park', 'a deferred idea for later']).status).toBe(0)
     expect(readSidecar(dir, 'build-log.md')).toContain('a deferred idea for later')
 
-    // close out: write the report (as /plumbbob:pb-finish would), then finish →
+    // close out: write the report (as /plumbbob:finish would), then finish →
     // final commit, no archive copy.
     writeSidecar(dir, 'report.md', '# Report — E2E demo\n\n## What shipped\n\nThe widget.\n')
     expect(runCli(dir, ['finish']).status).toBe(0)

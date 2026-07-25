@@ -117,11 +117,11 @@
       </div>
       <div style="background:#E1DCF0; border:3px solid #181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231, 5px 5px 0 #181231, 6px 6px 0 #181231; padding:28px;">
         <div style="font-family:'DM Serif Display',serif; font-size:34px; color:#C1922E; line-height:1.02;">A pause you advance</div>
-        <p style="font-size:15px; line-height:1.55; color:#2E2A44; margin:16px 0 0;">The loop does a step's labor, pulls up to the line, and waits. Nothing is locked and nothing refuses you — the boundary between deciding and executing is a <strong>pause you advance</strong>, not a wall that fights you. Re-firing <span style="font-family:'JetBrains Mono',monospace; font-size:13px;">/pb-build</span> is the clock tick.</p>
+        <p style="font-size:15px; line-height:1.55; color:#2E2A44; margin:16px 0 0;">The loop does a step's labor, pulls up to the line, and waits. Nothing is locked and nothing refuses you — the boundary between deciding and executing is a <strong>pause you advance</strong>, not a wall that fights you. Re-firing <span style="font-family:'JetBrains Mono',monospace; font-size:13px;">/build</span> is the clock tick.</p>
       </div>
       <div style="background:#E1DCF0; border:3px solid #181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231, 5px 5px 0 #181231, 6px 6px 0 #181231; padding:28px;">
         <div style="font-family:'DM Serif Display',serif; font-size:34px; color:#C43B5B; line-height:1.02;">Capture, don't chase</div>
-        <p style="font-size:15px; line-height:1.55; color:#2E2A44; margin:16px 0 0;">A mid-build "ooh, what if…" never derails the step. <span style="font-family:'JetBrains Mono',monospace; font-size:13px;">/pb-park</span> captures it in one line; <span style="font-family:'JetBrains Mono',monospace; font-size:13px;">/pb-harvest</span> judges it cold at the next boundary. Most ideas are still good ten minutes later — the ones that weren't cost you nothing.</p>
+        <p style="font-size:15px; line-height:1.55; color:#2E2A44; margin:16px 0 0;">A mid-build "ooh, what if…" never derails the step. <span style="font-family:'JetBrains Mono',monospace; font-size:13px;">/park</span> captures it in one line; <span style="font-family:'JetBrains Mono',monospace; font-size:13px;">/harvest</span> judges it cold at the next boundary. Most ideas are still good ten minutes later — the ones that weren't cost you nothing.</p>
       </div>
       <div style="background:#E1DCF0; border:3px solid #181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231, 5px 5px 0 #181231, 6px 6px 0 #181231; padding:28px;">
         <div style="font-family:'DM Serif Display',serif; font-size:34px; color:#5C5677; line-height:1.02;">Size it to the work</div>
@@ -156,12 +156,12 @@
         <div style="flex:1; min-width:340px; background:#181231; border:3px solid #181231; box-shadow:1px 1px 0 #5A32C8, 2px 2px 0 #5A32C8, 3px 3px 0 #5A32C8, 4px 4px 0 #5A32C8, 5px 5px 0 #5A32C8, 6px 6px 0 #5A32C8; padding:26px 28px;">
           <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:2px; color:#C1922E; margin-bottom:14px;">THE PAUSE</div>
           <div style="font-family:'JetBrains Mono',monospace; font-size:14px; line-height:1.9; color:#DAD5EC; white-space:pre-wrap;"><span style="color:#8A6BE8;">⏸ PAUSE</span> — read the diff as an editor.<br>Approve to checkpoint, or send fixes.</div>
-          <p style="font-size:14.5px; line-height:1.6; color:#B7B0D0; margin:18px 0 0;">On your OK it commits the step as a checkpoint, marks it done, and returns to the boundary. Fire <span style="font-family:'JetBrains Mono',monospace; font-size:13px; color:#ECEAF4;">/pb-build</span> again for the next step. <strong style="color:#ECEAF4;">You are the clock.</strong></p>
+          <p style="font-size:14.5px; line-height:1.6; color:#B7B0D0; margin:18px 0 0;">On your OK it commits the step as a checkpoint, marks it done, and returns to the boundary. Fire <span style="font-family:'JetBrains Mono',monospace; font-size:13px; color:#ECEAF4;">/build</span> again for the next step. <strong style="color:#ECEAF4;">You are the clock.</strong></p>
         </div>
         <div style="flex:1; min-width:340px; background:#ECEAF4; border:3px solid #181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231, 5px 5px 0 #181231, 6px 6px 0 #181231; padding:26px 28px;">
           <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:2px; color:#5A32C8; margin-bottom:14px;">SWAP THE EXECUTOR</div>
           <div style="font-family:'DM Serif Display',serif; font-size:26px; color:#181231; line-height:1.08; margin-bottom:14px;">It reads the diff, not the author.</div>
-          <p style="font-size:14.5px; line-height:1.6; color:#2E2A44; margin:0;"><span style="font-family:'JetBrains Mono',monospace; font-size:13px;">/pb-build</span> is the default engine, not the only one. Implement a step by hand — or vibe it in another session, or in another harness entirely — and run <span style="font-family:'JetBrains Mono',monospace; font-size:13px;">/pb-verify</span> instead: same checks, same pause, same checkpoint.</p>
+          <p style="font-size:14.5px; line-height:1.6; color:#2E2A44; margin:0;"><span style="font-family:'JetBrains Mono',monospace; font-size:13px;">/build</span> is the default engine, not the only one. Implement a step by hand — or vibe it in another session, or in another harness entirely — and run <span style="font-family:'JetBrains Mono',monospace; font-size:13px;">/verify</span> instead: same checks, same pause, same checkpoint.</p>
         </div>
       </div>
     </div>
@@ -214,8 +214,8 @@
   <!-- ===================== SKILLS ===================== -->
   <div id="skills" style="position:relative; padding:96px 40px; max-width:1320px; margin:0 auto;">
     <div style="font-family:'JetBrains Mono',monospace; font-size:13px; letter-spacing:3px; color:#5A32C8; margin-bottom:18px;">04 · THE SKILLS</div>
-    <h2 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:54px; line-height:1; margin:0;">Twelve <span style="font-style:italic; color:#C1922E;">/pb-*</span> skills you fire by hand.</h2>
-    <p style="font-size:18px; line-height:1.6; color:#2E2A44; max-width:720px; margin:18px 0 24px;">You drive the whole loop from your IDE — no step numbers to remember, no raw CLI to type. Every skill is <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">disable-model-invocation</span>, so <em>you</em> fire every move, and <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">/pb-status</span> always names your next one. Most sessions need only the four on the happy path.</p>
+    <h2 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:54px; line-height:1; margin:0;">Twelve <span style="font-style:italic; color:#C1922E;">skills</span> you fire by hand.</h2>
+    <p style="font-size:18px; line-height:1.6; color:#2E2A44; max-width:720px; margin:18px 0 24px;">You drive the whole loop from your IDE — no step numbers to remember, no raw CLI to type. Every skill is <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">disable-model-invocation</span>, so <em>you</em> fire every move, and <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">/status</span> always names your next one. Most sessions need only the four on the happy path.</p>
 
     <div style="border:3px solid #181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231, 5px 5px 0 #181231, 6px 6px 0 #181231, 7px 7px 0 #181231, 8px 8px 0 #181231; overflow:hidden;">
       <table style="width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:13.5px;">
@@ -267,7 +267,7 @@
     <div style="position:absolute; top:-40px; right:-30px; width:280px; height:280px; background-image:radial-gradient(#181231 3px, transparent 3.5px); background-size:18px 18px; opacity:0.25; transform:rotate(-8deg);"></div>
     <div style="position:relative; max-width:780px; margin:0 auto;">
       <h2 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:64px; line-height:1; margin:0; color:#ECEAF4;">Hang the line. Build to it.</h2>
-      <p style="font-size:19px; line-height:1.55; color:#E4DEF6; margin:22px 0 38px;">Add the marketplace, install the plugin, and the twelve <span style="font-family:'JetBrains Mono',monospace; font-size:16px;">/pb-*</span> skills are in your IDE — no npm, no CLI to learn. Then, inside any git repo with a clean tree, fire <span style="font-family:'JetBrains Mono',monospace; font-size:16px;">/pb-plan</span> and go.</p>
+      <p style="font-size:19px; line-height:1.55; color:#E4DEF6; margin:22px 0 38px;">Add the marketplace, install the plugin, and the twelve skills are in your IDE — no npm, no CLI to learn. Then, inside any git repo with a clean tree, fire <span style="font-family:'JetBrains Mono',monospace; font-size:16px;">/plan</span> and go.</p>
       <div onClick="{{ copy }}" data-copy="/plugin marketplace add robmclarty/agent-tools
 /plugin install plumbbob@robmclarty" style="display:inline-block; text-align:left; cursor:pointer; font-family:'JetBrains Mono',monospace; font-size:16.5px; background:#ECEAF4; border:2px dashed #181231; padding:14px 26px;">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:24px; font-size:11px; letter-spacing:2px; color:#5C5677; margin-bottom:10px;"><span>IN CLAUDE CODE</span><span data-icon="" style="font-size:22px; line-height:1;">⎘</span></div>
@@ -305,11 +305,11 @@
         <div>
           <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:2px; color:#C1922E; margin-bottom:14px;">SKILLS</div>
           <div style="display:flex; flex-direction:column; gap:10px; font-family:'JetBrains Mono',monospace; font-size:13px;">
-            <span>/pb-plan</span>
-            <span>/pb-build</span>
-            <span>/pb-verify</span>
-            <span>/pb-park</span>
-            <span>/pb-finish</span>
+            <span>/plan</span>
+            <span>/build</span>
+            <span>/verify</span>
+            <span>/park</span>
+            <span>/finish</span>
           </div>
         </div>
         <div>
@@ -366,18 +366,18 @@ class Component extends DCLogic {
 
     // skill catalogue: [name, group, does]
     const SKILLS = [
-      ['/pb-plan',    'happy path',    'open the session and author the whole plan — Frame, Decisions, Constraints, and all Steps.'],
-      ['/pb-build',   'happy path',    'implement the next planned step, then verify it to the pause. --auto chains to done; a range like 1-3 self-approves through step 3.'],
-      ['/pb-finish',  'happy path',    'write the report, make the final commit, and clear the slate for a fresh goal.'],
-      ['/pb-step',    'plan-shaping',  'revise or sharpen the next step just-in-time. Empty input auto-syncs it to reality.'],
-      ['/pb-refine',  'plan-shaping',  'attack the frame for holes as Open questions, or repair a plan that drifted from the code.'],
-      ['/pb-spike',   'plan-shaping',  'a throwaway worktree experiment for a fork the plan can\'t settle on paper. The deliverable is the verdict.'],
-      ['/pb-status',  'helper',        'orient — where you are, the next step\'s done-when and seam, and the single next move.'],
-      ['/pb-verify',  'helper',        'the tick, standalone — check, self-review, validate, PAUSE, checkpoint. For a diff /pb-build didn\'t write.'],
-      ['/pb-revert',  'helper',        'recover — git reset --hard to a recorded checkpoint SHA, keeping your plan and notes intact.'],
-      ['/pb-doctor',  'helper',        'check the install from inside a session — plugin link, skills, hook, check gate.'],
-      ['/pb-park',    'capture',       'capture a mid-build idea in one tagged line without chasing it. The step in flight stays protected.'],
-      ['/pb-harvest', 'capture',       'triage parked ideas at a boundary: blocker (fold in now), tangent (defer), or pivot signal (replan).'],
+      ['/plan',    'happy path',    'open the session and author the whole plan — Frame, Decisions, Constraints, and all Steps.'],
+      ['/build',   'happy path',    'implement the next planned step, then verify it to the pause. --auto chains to done; a range like 1-3 self-approves through step 3.'],
+      ['/finish',  'happy path',    'write the report, make the final commit, and clear the slate for a fresh goal.'],
+      ['/step',    'plan-shaping',  'revise or sharpen the next step just-in-time. Empty input auto-syncs it to reality.'],
+      ['/refine',  'plan-shaping',  'attack the frame for holes as Open questions, or repair a plan that drifted from the code.'],
+      ['/spike',   'plan-shaping',  'a throwaway worktree experiment for a fork the plan can\'t settle on paper. The deliverable is the verdict.'],
+      ['/status',  'helper',        'orient — where you are, the next step\'s done-when and seam, and the single next move.'],
+      ['/verify',  'helper',        'the tick, standalone — check, self-review, validate, PAUSE, checkpoint. For a diff /build didn\'t write.'],
+      ['/revert',  'helper',        'recover — git reset --hard to a recorded checkpoint SHA, keeping your plan and notes intact.'],
+      ['/doctor',  'helper',        'check the install from inside a session — plugin link, skills, hook, check gate.'],
+      ['/park',    'capture',       'capture a mid-build idea in one tagged line without chasing it. The step in flight stays protected.'],
+      ['/harvest', 'capture',       'triage parked ideas at a boundary: blocker (fold in now), tangent (defer), or pivot signal (replan).'],
     ];
 
     const sel = this.state.skill;
@@ -399,11 +399,11 @@ class Component extends DCLogic {
     if (!sel) {
       fileName = 'the loop — one step';
       termLines = [
-        line([['$ ', VIO], ['/pb-plan ', INK], ['rate-limit POST /login, 5/min/IP', DIM]]),
+        line([['$ ', VIO], ['/plan ', INK], ['rate-limit POST /login, 5/min/IP', DIM]]),
         line([['  ✎ ', BRASS], ['intent.md written', INK], [' — frame · decisions · 4 steps', DIM]]),
         line([['  ● ', VIO], ['plan committed', INK], ['  chore(login): plan', DIM]]),
         blank(),
-        line([['$ ', VIO], ['/pb-build', INK]]),
+        line([['$ ', VIO], ['/build', INK]]),
         line([['  → ', VIO], ['step 1/4  ', INK], ['add the token bucket', DIM]]),
         line([['  ✓ ', GRN], ['check   ', INK], ['types · lint · test · dead   ', DIM], ['green', GRN]]),
         line([['  ⏸ ', VIO], ['PAUSE', VIO], [' — read the diff as an editor.', INK]]),
@@ -428,7 +428,7 @@ class Component extends DCLogic {
 
     const skillChips = SKILLS.map(([name]) => {
       const on = name === sel;
-      const short = name.replace('/pb-', '');
+      const short = name.slice(1);
       return { name: short, select: () => this.selectSkill(name), bg: on ? '#5A32C8' : '#ECEAF4', fg: on ? '#ECEAF4' : '#181231' };
     });
 
@@ -438,17 +438,17 @@ class Component extends DCLogic {
 
     // the loop stages
     const loopStages = [
-      { tag: 'ONCE', cmd: '/pb-plan', accent: '#5A32C8', body: 'Decide everything on paper — frame, decisions, and all steps. No code is written yet.' },
-      { tag: 'PER STEP', cmd: '/pb-build', accent: '#C1922E', body: 'Implement the next step → run the check gate → self-review against the plan → PAUSE.' },
-      { tag: 'PER STEP', cmd: '(approve)', accent: '#C43B5B', body: 'On your OK the step commits as a checkpoint. Fire /pb-build again — that is the clock tick.' },
-      { tag: 'ONCE', cmd: '/pb-finish', accent: '#5C5677', body: 'Report what shipped and why, make the final commit, and clear for the next goal.' },
+      { tag: 'ONCE', cmd: '/plan', accent: '#5A32C8', body: 'Decide everything on paper — frame, decisions, and all steps. No code is written yet.' },
+      { tag: 'PER STEP', cmd: '/build', accent: '#C1922E', body: 'Implement the next step → run the check gate → self-review against the plan → PAUSE.' },
+      { tag: 'PER STEP', cmd: '(approve)', accent: '#C43B5B', body: 'On your OK the step commits as a checkpoint. Fire /build again — that is the clock tick.' },
+      { tag: 'ONCE', cmd: '/finish', accent: '#5C5677', body: 'Report what shipped and why, make the final commit, and clear for the next goal.' },
     ];
 
     // the five edges
     const edges = [
       { tag: 'THE GATE', border: '#3A315C', accent: '#8A6BE8', title: 'A gate that refuses red', body: 'checkpoint won\'t record a step while the check gate is red, and start refuses a dirty tree — the checkride run has to pass before a step lands.' },
       { tag: 'THE LEDGER', border: '#3A315C', accent: '#8A6BE8', title: 'One SHA per verified step', body: 'Every approved step is its own git commit against a recorded baseline — a ledger of checkpoints, not one undifferentiated diff at the end.' },
-      { tag: 'RECOVERY', border: '#3A315C', accent: '#8A6BE8', title: 'A preservation-aware revert', body: '/pb-revert resets exactly to a recorded checkpoint SHA while keeping your plan and notes intact, and restores only SHAs the loop wrote.' },
+      { tag: 'RECOVERY', border: '#3A315C', accent: '#8A6BE8', title: 'A preservation-aware revert', body: '/revert resets exactly to a recorded checkpoint SHA while keeping your plan and notes intact, and restores only SHAs the loop wrote.' },
       { tag: 'THE RECORD', border: '#3A315C', accent: '#8A6BE8', title: 'A build record that rides the PR', body: 'The tracked builds/<slug>/ folder — intent, log, checkpoints, report — merges into main with the branch instead of dying with the worktree.' },
       { tag: 'THE LATCH', border: '#C1922E', accent: '#C1922E', title: 'The approval latch', body: 'checkpoint refuses to land a step until the harness records a human turn since that step began — so the model can\'t self-commit past you. The refusal is the pause.' },
     ];

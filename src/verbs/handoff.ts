@@ -4,7 +4,7 @@
 // pause block (built → looks-good/needs-work → next), none ⇒ the post-checkpoint
 // boundary block — and renders the next undone step plus its advisory `- model:`
 // recommendation straight from intent.md, the build's plan document. Owning the
-// block here, rather than as prose in the pb-build skill, keeps the skill from
+// block here, rather than as prose in the build skill, keeps the skill from
 // drifting out of sync with `status`, which renders the same next-step detail
 // (both read `parseSteps`).
 
@@ -91,11 +91,11 @@ function boundaryBlock(step: number, title: string | null, nextUp: Step | undefi
  */
 function nextUpLine(nextUp: Step | undefined): string {
   if (nextUp === undefined) {
-    return 'No planned steps remain — /pb-step to add an increment, or /pb-finish.'
+    return 'No planned steps remain — /step to add an increment, or /finish.'
   }
   const head = `Next up: step ${nextUp.n}${paren(nextUp.title)}`
   const token = modelToken(nextUp.model)
-  return token === null ? `${head} — /pb-build to start it.` : `${head} · model: ${token} — /model ${token} then /pb-build.`
+  return token === null ? `${head} — /build to start it.` : `${head} · model: ${token} — /model ${token} then /build.`
 }
 
 /**

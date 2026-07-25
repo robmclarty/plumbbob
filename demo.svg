@@ -27,7 +27,7 @@
   <text x="380" y="29" text-anchor="middle" fill="#8b949e" font-size="12">plumbbob — one step of the loop</text>
 
   <g class="r t1">
-    <text x="28" y="70"><tspan fill="#7ee787">❯</tspan><tspan x="46" fill="#e6edf3">/pb-plan rate-limit POST /login, 5/min/IP, 429</tspan></text>
+    <text x="28" y="70"><tspan fill="#7ee787">❯</tspan><tspan x="46" fill="#e6edf3">/plan rate-limit POST /login, 5/min/IP, 429</tspan></text>
   </g>
 
   <g class="r t2">
@@ -36,7 +36,7 @@
   </g>
 
   <g class="r t3">
-    <text x="28" y="152"><tspan fill="#7ee787">❯</tspan><tspan x="46" fill="#e6edf3">/pb-build</tspan></text>
+    <text x="28" y="152"><tspan fill="#7ee787">❯</tspan><tspan x="46" fill="#e6edf3">/build</tspan></text>
   </g>
 
   <g class="r t4">
@@ -65,7 +65,7 @@
   </g>
 
   <g class="r t11">
-    <text x="28" y="372"><tspan fill="#7ee787">❯</tspan><tspan x="70" fill="#8b949e" font-style="italic">fire /pb-build again — you are the clock</tspan></text>
+    <text x="28" y="372"><tspan fill="#7ee787">❯</tspan><tspan x="70" fill="#8b949e" font-style="italic">fire /build again — you are the clock</tspan></text>
   </g>
   <rect class="cursor" x="46" y="360" width="8" height="15" fill="#e6edf3"/>
 </svg>

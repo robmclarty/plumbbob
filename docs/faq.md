@@ -5,17 +5,17 @@ rather than unclear, [`troubleshooting.md`](troubleshooting.md) is the page you 
 you're asking "why not just use X instead," the [README](../README.md#why-not-just)
 answers the skeptic's versions straight.
 
-## Do I have to use `/pb-build`?
+## Do I have to use `/build`?
 
-No. `/pb-build` is one executor, not the loop. Write a step by hand, vibe it in another
-session, or produce it with another harness entirely, then run `/pb-verify` — same check,
+No. `/build` is one executor, not the loop. Write a step by hand, vibe it in another
+session, or produce it with another harness entirely, then run `/verify` — same check,
 same pause, same checkpoint. The tick reads the *diff, not the author*.
 
 ## Can I adopt it mid-project?
 
 Yes — that's the normal case. PlumbBob needs a git repo with at least one commit and a
 clean tree, nothing more; there is no project-wide setup or migration. Sessions are
-per-goal: fire `/pb-plan` for the next feature or bug, and the rest of the repo never
+per-goal: fire `/plan` for the next feature or bug, and the rest of the repo never
 knows PlumbBob was there.
 
 ## What ends up in my git history?
@@ -37,7 +37,7 @@ the PR (including the build folder) with no tooling. The per-worktree control fi
 
 ## What if my team won't track a tool folder in the repo?
 
-Start with `plumbbob start --local` (or ask `/pb-plan` for a local session): the whole
+Start with `plumbbob start --local` (or ask `/plan` for a local session): the whole
 `.plumbbob/` sidecar stays untracked and the artifacts live at its root, at the cost of
 the build record dying with the worktree instead of riding into the PR.
 
@@ -77,10 +77,10 @@ is on the roadmap ([`install.md`](install.md#other-agents-roadmap)).
 
 ## Twelve skills — which ones do I actually use day to day?
 
-Four: `/pb-plan` once, `/pb-build` (or `/pb-verify`) per step, `/pb-status` whenever you
-lose the thread, `/pb-finish` once. `/pb-park` joins the moment a stray idea shows up
-mid-step. The rest are situational — `/pb-step`/`/pb-refine` when the plan needs work,
-`/pb-harvest` at boundaries, `/pb-revert`/`/pb-spike` for recovery and forks, `/pb-doctor`
+Four: `/plan` once, `/build` (or `/verify`) per step, `/status` whenever you
+lose the thread, `/finish` once. `/park` joins the moment a stray idea shows up
+mid-step. The rest are situational — `/step`/`/refine` when the plan needs work,
+`/harvest` at boundaries, `/revert`/`/spike` for recovery and forks, `/doctor`
 when the install misbehaves.
 
 ## Is every task worth a session?

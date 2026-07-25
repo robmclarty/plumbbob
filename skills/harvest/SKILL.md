@@ -1,5 +1,5 @@
 ---
-name: pb-harvest
+name: harvest
 description: Triage the park list at a step boundary — propose one class (blocker/tangent/pivot) per parked item, write only after the human confirms each, record under ## Harvest, and fold a confirmed blocker into intent.
 disable-model-invocation: true
 allowed-tools: Read, Edit, Bash(plumbbob status:*)
@@ -9,7 +9,7 @@ allowed-tools: Read, Edit, Bash(plumbbob status:*)
 
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not on PATH in this session. Marketplace install: confirm the plugin is enabled in /plugin, then /reload-plugins. Skills-dir/global install: npm i -g plumbbob && plumbbob init."`
 
-`/pb-harvest` is the complement of `/pb-park`: you parked ideas as seeds during a
+`/harvest` is the complement of `/park`: you parked ideas as seeds during a
 build; now, at a boundary, you harvest them — decide what each one is.
 
 ## When to run it — boundary only
@@ -19,7 +19,7 @@ DESIGN boundary, not mid-step. Read the dashboard injected above:
 
 - `NO ACTIVE SESSION` — **refuse**; tell the human to `plumbbob start "<title>"` first.
 - A step in flight (the dashboard reads `[BUILD]`, and `next →` points at finishing the
-  step) — **refuse** and suggest finishing it with `/pb-verify` before harvesting.
+  step) — **refuse** and suggest finishing it with `/verify` before harvesting.
   Chasing parked items mid-step is the disease parking prevents.
 - At the boundary (the dashboard reads `[DESIGN]`) — go ahead.
 
@@ -40,7 +40,7 @@ one line of reasoning, then **wait for the human to confirm or override**. Write
 **only after** per-item confirmation:
 
 - Record each confirmed class in `build-log.md`'s `## Harvest` section.
-- **Flip the harvested item** from `- [ ]` to `- [x]` in the Park list, so `/pb-status`
+- **Flip the harvested item** from `- [ ]` to `- [x]` in the Park list, so `/status`
   stops counting it as open.
 - A confirmed **blocker** also folds its decision into `intent.md`.
 - Never reclassify or resolve an item the human hasn't confirmed, and default every

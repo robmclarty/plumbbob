@@ -38,7 +38,7 @@ reads them once, to decide, and that legibility buys back a chat round-trip.
 ## Decisions
 
 *(One line each — settled, not re-litigated in the chat. Grows as you resolve the
-holes `/pb-refine` surfaces, and as blockers fold in during BUILD. Mint a two- or
+holes `/refine` surfaces, and as blockers fold in during BUILD. Mint a two- or
 three-word slug where each item is born — `D1 (slug-here)` — and copy that slug at
 every reference site, so a later `D4 (default-waves)` never decays into a bare `D4`
 a cold reader has to hunt down.)*
@@ -47,28 +47,28 @@ a cold reader has to hunt down.)*
 
 ## Constraints
 
-*(Hard rules the build must honor. `/pb-verify` and `/pb-refine` read against these.
+*(Hard rules the build must honor. `/verify` and `/refine` read against these.
 Slug and gloss them at birth too — `C1 (no-new-deps)` — same one line, same rule.)*
 
 - C1 (no-new-deps): <e.g. functional/procedural only; no new dependencies>
 
 ## Steps
 
-*(The build plan. `/pb-plan` authors the **whole list up front** — each step a small,
+*(The build plan. `/plan` authors the **whole list up front** — each step a small,
 verifiable increment with its own **done-when** and **seam** (the paths it will touch,
-which `/pb-build` records in the build folder's `SEAM` for orientation — awareness, not a lock).
+which `/build` records in the build folder's `SEAM` for orientation — awareness, not a lock).
 An optional **model** line recommends the smallest model that can carry the step —
 mechanical work runs fine on a small model; subtle or creative work earns a frontier
 one. Advisory for the human, never a gate; write it plain, no backticks (D62).
 The step title *is* the checkpoint's commit subject: write it as one plain line,
 `type(scope): description` — load-bearing paths live in `seam`, never jammed into the
 title (D2) — aiming for ≤72 characters (GitHub's subject convention: soft, no gate, D9).
-The `(scope)` names the primary code area the step touches (`pb-plan`, `commitmsg`); the
+The `(scope)` names the primary code area the step touches (`plan`, `commitmsg`); the
 build's `**Scope:**` header is the feature-level catch-all a step overrides (D8). Scope
 resolves title-scope → `**Scope:**` default → build slug → bare, and type resolves
-title-type → `feat` (D3/D68). Then drive `/pb-build` until done. Later steps may be
-fuzzier than the first; sharpen the next one just-in-time with `/pb-step` (empty input
-auto-syncs it), and use `/pb-refine` to repair the whole plan when a blocker rewrites it.)*
+title-type → `feat` (D3/D68). Then drive `/build` until done. Later steps may be
+fuzzier than the first; sharpen the next one just-in-time with `/step` (empty input
+auto-syncs it), and use `/refine` to repair the whole plan when a blocker rewrites it.)*
 
 1. [ ] feat: <step> — **done when:** <criterion, ideally a test or check result>
    - seam: `<file>`, `<file>`

@@ -11,7 +11,7 @@ PlumbBob splits judgment from mechanics from state, and the boundary between the
 layers is the product:
 
 ```
-  /pb-* skills          judgment — compose, propose, pause; the model reads and writes
+  plumbbob skills        judgment — compose, propose, pause; the model reads and writes
        │                 prose, and every convergence waits for the human
        ▼  (shell out)
   plumbbob CLI           mechanics — deterministic verbs: parse, refuse, commit,
@@ -73,7 +73,7 @@ mutually exclusive; `doctor` arbitrates. See [`install.md`](install.md).
 
 ## In progress *(research)*
 
-- **User agent plugins** — a pluggable-executor contract beyond "run `/pb-verify`
+- **User agent plugins** — a pluggable-executor contract beyond "run `/verify`
   yourself": executors as subprocesses speaking a JSON envelope, discovered under
   `.plumbbob/agents/<name>/`, with per-build wiring (before/build/after slots) in the
   build folder. The full analysis is

@@ -29,7 +29,7 @@ describe('finish', () => {
     expect(body).toContain('plumbbob finish')
     // Short SHA (exactly 9 hex), the archive pointer, and the next-goal nudge.
     expect(stdout).toMatch(/finished — [0-9a-f]{9}\. \.plumbbob\/builds\/finishing-up\/ rides your branch/)
-    expect(stdout).toContain('pb-plan')
+    expect(stdout).toContain('plan')
   })
 
   it('clears the cursor by removing STATE and leaves a clean tree', async () => {

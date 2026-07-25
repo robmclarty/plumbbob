@@ -99,7 +99,7 @@ function isMirrorLine(line: string): boolean {
  * The Log line `checkpoint` writes for a landed step: dated, names the step
  * (its title when intent.md still carries it), and carries the short SHA.
  *
- * One line of the build's history — `/pb-finish` reads these instead of
+ * One line of the build's history — `/finish` reads these instead of
  * re-narrating the build. `stats` is the optional compact receipt of what the
  * step cost (e.g. `2 red, 34m`) — null when nothing accrued, so a clean
  * first-try step reads as a bare line.

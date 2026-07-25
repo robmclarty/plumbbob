@@ -12,7 +12,7 @@
 // belongs in settings.local.json). `auto` is NOT a checkpoint grant: the approval
 // latch never reads it to allow a land — a model can write this file, and a grant
 // it can forge is no grant — only to name it at the pause when set; self-approval
-// comes solely from the human's literal `/pb-build --auto` or a typed step range.
+// comes solely from the human's literal `/build --auto` or a typed step range.
 // The per-worktree active-build cursor is NOT here — it lives in the STATE file
 // (see sidecar.ts), which keeps this overlay a human-authored file rather than
 // tool-managed state.

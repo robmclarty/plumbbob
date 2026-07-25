@@ -11,8 +11,8 @@ step boundaries. The antidote to "my plan got lost in the noise."
 ## Steps
 
 *(Mirror of intent.md's Steps, with live status. Only ONE step is in flight. A step
-is done only after a checkpoint — check green + checkpoint taken, via `/pb-verify` or
-`/pb-build`.)*
+is done only after a checkpoint — check green + checkpoint taken, via `/verify` or
+`/build`.)*
 
 - ☒ 1. Add a token-bucket limiter
 - ☒ 2. Wire the limiter into POST /login
@@ -22,18 +22,18 @@ is done only after a checkpoint — check green + checkpoint taken, via `/pb-ver
 
 > Mid-step, every new problem / idea / "ooh what if" lands HERE, untouched, and you
 > go straight back to the step. Acting the instant an idea arrives is the disease.
-> Capture is one line (`/pb-park` composes it). Harvest happens only at the boundary.
+> Capture is one line (`/park` composes it). Harvest happens only at the boundary.
 
 - [x] tangent: should /password-reset get the same throttle?
 
-## Harvest  *(run `/pb-harvest` at each step boundary, after green)*
+## Harvest  *(run `/harvest` at each step boundary, after green)*
 
 Classify each parked item as exactly ONE. Naming it before acting is what keeps you
 from sprawling across branches.
 
 | Class            | Meaning                                   | Action                          |
 |------------------|-------------------------------------------|---------------------------------|
-| **blocker**      | Plan was wrong/incomplete; can't proceed  | `/pb-revert`, fold into intent  |
+| **blocker**      | Plan was wrong/incomplete; can't proceed  | `/revert`, fold into intent  |
 | **tangent**      | A different path, not clearly better      | Defer or kill. Default here.    |
 | **pivot signal** | Evidence the whole approach is wrong      | Stop. Replan deliberately.      |
 
@@ -48,10 +48,10 @@ Harvest results this boundary:
 ## Log
 
 *(The build's history, oldest first. `plumbbob checkpoint` appends a dated line here
-every time a step lands — via `/pb-build` or `/pb-verify` — so this
+every time a step lands — via `/build` or `/verify` — so this
 fills in as you go, not at the end. Add your own decision/event lines too: this is what
 you point at to say "I did that — the LLM helped, but those were my calls."
-`/pb-finish` reads this for the report; `plumbbob finish` commits it with the build
+`/finish` reads this for the report; `plumbbob finish` commits it with the build
 folder, so it rides the branch into the PR.)*
 
 - 2026-07-03 — step 1 checkpointed · a1b2c3d4e — Add a token-bucket limiter

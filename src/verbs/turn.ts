@@ -4,9 +4,9 @@
 // `TURN`, the monotonic count of human turns the checkpoint latch compares
 // against a step's entry stamp to know a human turn intervened since the step
 // began, and it rewrites `GRANT` from the literal prompt — minting a one-turn
-// self-approval only when the human typed `/pb-build --auto` or an `N-M` step
+// self-approval only when the human typed `/build --auto` or an `N-M` step
 // range, clearing it otherwise (those strings can only come from a human
-// keystroke, because `pb-build` is disable-model-invocation — a grant the model
+// keystroke, because `build` is disable-model-invocation — a grant the model
 // could forge would be no grant). When a step is in flight it also emits ONE
 // `UserPromptSubmit` additionalContext line so a fresh session (post-compaction,
 // or a scripted `-p` turn where no skill prose is in context) still knows the
@@ -40,7 +40,7 @@ export function turn(cwd: string, _args: ReadonlyArray<string>): number {
  * A step is in flight when a STEP marker (the flat control file recording the
  * step between `build` and `checkpoint`) is present. Guidance only: it reminds a
  * fresh session that a tangent is a park (not an edit) and how the step lands,
- * since the pb-build prose may not be in context after compaction or on a
+ * since the build prose may not be in context after compaction or on a
  * scripted turn. Exported because an in-process test cannot read the hook's
  * real stdout.
  */
@@ -89,24 +89,28 @@ export function applyTurn(cwd: string, raw: string): number {
 /**
  * Derive the GRANT content from the human's prompt, or null to clear it.
  *
- * A grant is minted only from a literal `pb-build` invocation the human typed:
- * `pb-build` is disable-model-invocation, so this string can only come from a
+ * A grant is minted only from a literal `build` invocation the human typed:
+ * `build` is disable-model-invocation, so this string can only come from a
  * human keystroke, never model-authored pressure — a grant the model can forge
  * is no grant. A bounded range beats `--auto` (bounded wins); a bare
- * `/pb-build`, or any non-invocation prompt, mints nothing. The namespaced
- * `/plumbbob:pb-build` form is honored alongside the bare one.
+ * `/build`, or any non-invocation prompt, mints nothing. The namespaced
+ * `/plumbbob:build` form is honored alongside the bare one.
+ *
+ * The invocation must *start* a token: a slash preceded by a word character,
+ * `/`, `.`, `-`, or `~` is a path segment (`src/build`, `./build`), not a
+ * command the human fired, so it mints nothing.
  *
  * Only the invocation's own arguments can mint: the tokens that follow it on
  * its line, up to the first token that isn't a sanctioned argument (`--auto`, a
  * step number, or a range — the argument-hint sanctions nothing else). An
- * unrecognized flag ends the scan, so `/pb-build --wip 2020-2024` mints
+ * unrecognized flag ends the scan, so `/build --wip 2020-2024` mints
  * nothing — the `2020-2024` is never reached. An incidental range elsewhere in
  * the prompt — an issue number, a pasted `2020-2024` — is prose, not a grant.
- * Trailing sentence punctuation on an argument (`/pb-build 1-3.`) is still the
+ * Trailing sentence punctuation on an argument (`/build 1-3.`) is still the
  * argument the human typed.
  */
 export function grantFromPrompt(prompt: string): string | null {
-  const invocation = /\/(?:plumbbob:)?pb-build\b/.exec(prompt)
+  const invocation = /(?<![\w/.~-])\/(?:plumbbob:)?build\b/.exec(prompt)
   if (invocation === null) return null
   const line = prompt.slice(invocation.index + invocation[0].length).split('\n', 1)[0] ?? ''
   let auto = false

@@ -1,7 +1,7 @@
 // Detect a marketplace-installed plumbbob plugin from Claude Code's plugin state.
 // Keeps the skills-dir install (`plumbbob init`) from colliding with a marketplace
 // install: two plugins both named `plumbbob` fight over the `/plumbbob:*` namespace
-// and the skills can drop to flat names (`/pb-status`). Read-only, node builtins
+// and the skills can drop to flat names (`/status`). Read-only, node builtins
 // only: a missing, unreadable, or malformed file means "none installed".
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
