@@ -5,6 +5,40 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-07-27
+
+- **Changed (breaking):** the twelve skills dropped their `pb-` prefix and are now
+  single words — `build`, `plan`, `step`, `verify`, `park`, `status`, `harvest`,
+  `finish`, `refine`, `revert`, `spike`, `doctor` — invoked as `/plumbbob:<verb>`.
+  Every `/pb-*` command is gone; update any muscle memory, scripts, or notes that
+  name one. The prefix existed to work around a Claude Code bug: before v2.1.216 a
+  plugin skill's frontmatter `name` replaced the *whole* command, so
+  `/plumbbob:pb-build` never autocompleted and only the bare `/pb-build` appeared in
+  the menu — with no namespace reaching the UI, `pb-` was the only thing keeping
+  twelve generic verbs out of every other plugin's way. Claude Code 2.1.216 made
+  `name` set just the last segment, the namespace came back, and the prefix stopped
+  earning its keep.
+- **Changed:** every example slash command in the README, docs, templates, examples,
+  skill bodies, and the website now reads in its namespaced form (`/plumbbob:build`
+  rather than `/build`), and so does every command the CLI itself names in its
+  output. This is not cosmetic: a plugin skill's bare short name reaches the skill
+  only where nothing else already owns that name, and four of the twelve — `plan`,
+  `status`, `verify`, `doctor` — share one with a Claude Code built-in, which wins.
+  `plumbbob status` was ending a run with ``next → finish step 2 — `/verify` ``, an
+  instruction that ran Claude Code's command instead of plumbbob's.
+- **Changed:** source comments no longer cite decision and constraint tags (`D3`,
+  `C1`, and the like) inline — they state the rule's *why* in plain language
+  instead. The tags still live in `docs/decisions.md` and the research notes; the
+  code just stops pointing at them by number. A new ast-grep rule
+  (`rules/function-doc-comment.yml`) requires a `/** */` doc comment above every
+  top-level function going forward.
+- **Fixed:** the approval latch's one-turn grant could be minted by a path that
+  merely ended in `/build`. `/pb-build` was distinctive enough that no prompt hit it
+  by accident, but `/build` is an ordinary path segment, and a prompt like
+  `rerun src/build --auto` would have minted a self-approval nobody typed. The
+  invocation must now start a token — a slash preceded by a word character, `/`,
+  `.`, `-`, or `~` is read as a path, not a command.
+
 ## [0.8.18] - 2026-07-19
 
 - **Fixed:** `plumbbob finish --body` could hang indefinitely when invoked as
