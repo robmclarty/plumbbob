@@ -2,17 +2,22 @@
 // stamped with everything needed to reproduce it (model, versions, SHA); the
 // markdown report is derived, never the source. The bulky JSONL ledgers live
 // under reports/evals/ (git-ignored, local raw truth); the derived receipt is
-// committed under research/evals/ so it rides the repo (plan 05's exit
-// criterion) without dragging the megabyte-scale run logs along with it.
+// committed under docs/evals/ so it rides the repo (plan 05's exit criterion)
+// without dragging the megabyte-scale run logs along with it.
+//
+// The receipt directory has to be one git actually tracks — it has now been
+// moved twice for that reason (out of reports/, then out of research/ when that
+// was ignored too), each time after a sweep's receipt was written and silently
+// never committed. docs/ is published, so a receipt landing there is visible.
 
 import { execFileSync } from 'node:child_process'
 import { appendFileSync, mkdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { REPO_ROOT } from './plugin.ts'
 
-// JSONL ledgers: git-ignored raw truth. Derived receipts: tracked, in research/.
+// JSONL ledgers: git-ignored raw truth. Derived receipts: tracked, in docs/.
 export const REPORTS_DIR = join(REPO_ROOT, 'reports', 'evals')
-export const RECEIPTS_DIR = join(REPO_ROOT, 'research', 'evals')
+export const RECEIPTS_DIR = join(REPO_ROOT, 'docs', 'evals')
 
 export type Stamps = {
   readonly plumbbob: { readonly version: string; readonly sha: string }

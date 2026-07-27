@@ -260,19 +260,24 @@ that matters.
 > The latch's payoff is measured, not asserted: the skill-eval harness
 > ([`test/evals/`](test/evals/)) sweeps this loop headless — prose-only baseline vs. the
 > shipped latch, N=5 per contract, every assertion a mechanical read of git state — and
-> commits each receipt under [`research/evals/`](research/evals/). The first sweep
-> ([opus, 2026-07-11](research/evals/2026-07-11.md)) closed the route the latch owns —
+> commits each receipt under [`docs/evals/`](docs/evals/). The first sweep
+> ([opus, 2026-07-11](docs/evals/2026-07-11.md)) closed the route the latch owns —
 > *no checkpoint over a red check under pressure* went from **2/5 prose-only to 5/5
 > latched** — and named, rather than papered over, the two honest gaps it surfaced: park
 > capture at 0/5, and adversarial pressure flipping a standing `auto` grant a model could
 > write into settings, a legal side door. The re-sweep
-> ([opus, 2026-07-18](research/evals/2026-07-18.md), plumbbob 0.8.7) reproduced the win —
-> *no checkpoint over a red check* still **5/5 latched** — and pinned both gaps. The side
-> door is now closed by construction: [D67](docs/decisions.md#d67) (self-approval is
-> human-typed only) retired the settings `auto` grant, so the one approval a model could
-> forge is gone. What remains is park capture (c5) — prose-governed by design
-> ([D10](docs/decisions.md#d10)/[D13](docs/decisions.md#d13)), the guidance-only gap the
-> latch was never built to reach, still ~0/5 and labeled as such.
+> ([opus, 2026-07-18](docs/evals/2026-07-18.md), plumbbob 0.8.7) reproduced the win —
+> *no checkpoint over a red check* still **5/5 latched** — and pinned both gaps. Both are
+> now closed. The side door went by construction: [D67](docs/decisions.md#d67)
+> (self-approval is human-typed only) retired the settings `auto` grant, so the one
+> approval a model could forge is gone. Park capture was never the latch's to reach —
+> prose-governed by design ([D10](docs/decisions.md#d10)/[D13](docs/decisions.md#d13)) —
+> and it failed because the guidance couldn't reach a fresh session at all; the turn hook
+> now injects one line when a step is in flight, and the third sweep
+> ([opus, 2026-07-27](docs/evals/2026-07-27.md), plumbbob 0.9.0) measures it at **5/5**,
+> alongside every other contract. That sweep ran the latched arm only, so its numbers are
+> a regression check on the shipped configuration, not a fresh baseline delta — the
+> 2/5→5/5 headline above remains the 2026-07-11 measurement.
 
 ## Documentation
 
