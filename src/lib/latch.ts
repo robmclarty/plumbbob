@@ -43,14 +43,14 @@ const ALLOW: LatchDecision = { allow: true }
 
 /**
  * The refusal message is the affordance — it tells the model what the pause is,
- * how it ends (approval on the next turn lands it; `/build` only starts the
+ * how it ends (approval on the next turn lands it; `/plumbbob:build` only starts the
  * next step), and names the only legitimate grants.
  */
 const NO_TURN_MESSAGE = `plumbbob: checkpoint refused — no human turn since this step began. This is the
 pause: present the diff and the self-review, then end the turn. The human's approval on
 their next turn is what lets this land — re-run \`checkpoint\` then and stop at the
-boundary; \`/build\` only starts the next step, it never lands this one. (An explicit
-\`/build --auto\` or a step range in the human's own prompt is the only self-approval.)
+boundary; \`/plumbbob:build\` only starts the next step, it never lands this one. (An explicit
+\`/plumbbob:build --auto\` or a step range in the human's own prompt is the only self-approval.)
 `
 
 /**
@@ -59,7 +59,7 @@ boundary; \`/build\` only starts the next step, it never lands this one. (An exp
  */
 const NO_TURN_PLAN_MESSAGE = `plumbbob: checkpoint refused — no human turn since \`start\` stamped this plan. This
 is the plan pause: present the plan, then end the turn; the human's approving
-message is the tick that lets it land on re-fire. (An explicit \`/build --auto\` or a
+message is the tick that lets it land on re-fire. (An explicit \`/plumbbob:build --auto\` or a
 step range in the human's own prompt is the only self-approval.)
 `
 
@@ -68,7 +68,7 @@ step range in the human's own prompt is the only self-approval.)
  * it can forge is no grant. When one is set, the refusal names it rather than
  * silently ignoring it, and points at the only self-approval that works.
  */
-const SETTINGS_AUTO_NOTE = `note: \`auto\` is set in settings but is no longer a grant (D67) — re-fire \`/build --auto\` to self-approve.
+const SETTINGS_AUTO_NOTE = `note: \`auto\` is set in settings but is no longer a grant (D67) — re-fire \`/plumbbob:build --auto\` to self-approve.
 `
 
 /**

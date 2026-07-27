@@ -315,43 +315,43 @@ describe('markStepDone', () => {
 })
 
 describe('orient next-move inference (D15)', () => {
-  it('DESIGN with the next step planned → /build that step, with a revise hint', () => {
+  it('DESIGN with the next step planned → /plumbbob:build that step, with a revise hint', () => {
     const next = orient({ ...base }).next
-    expect(next).toContain('/build')
+    expect(next).toContain('/plumbbob:build')
     expect(next).toContain('step 2')
-    expect(next).toContain('/step') // ...or revise it first
+    expect(next).toContain('/plumbbob:step') // ...or revise it first
   })
 
-  it('DESIGN with the next step unplanned → /step', () => {
+  it('DESIGN with the next step unplanned → /plumbbob:step', () => {
     const intent = '# T\n\n## Steps\n\n1. [x] done one — **done**\n2. [ ] just a rough idea\n'
-    expect(orient({ ...base, intent }).next).toContain('/step')
+    expect(orient({ ...base, intent }).next).toContain('/plumbbob:step')
   })
 
-  it('an in-flight step (BUILD) → finish it with /verify', () => {
-    expect(orient({ ...base, inFlight: 2 }).next).toContain('/verify')
+  it('an in-flight step (BUILD) → finish it with /plumbbob:verify', () => {
+    expect(orient({ ...base, inFlight: 2 }).next).toContain('/plumbbob:verify')
   })
 
   it('all planned steps done, nothing parked → offers plan-next AND finish-up', () => {
     const intent = '# T\n\n## Steps\n\n1. [x] a — **done**\n'
     const buildLog = '## Park list\n- (none yet)\n## Harvest\n'
     const next = orient({ ...base, intent, buildLog }).next
-    expect(next).toContain('/step') // just-in-time: plan the next step
-    expect(next).toContain('/finish') // ...or finish up if truly done
+    expect(next).toContain('/plumbbob:step') // just-in-time: plan the next step
+    expect(next).toContain('/plumbbob:finish') // ...or finish up if truly done
     // With nothing parked there is no harvest preamble — the move leads with
     // finishing up, not with an empty harvest.
     expect(next).toMatch(/^finish up/)
   })
 
-  it('all planned steps done with parked items → leads with /harvest', () => {
+  it('all planned steps done with parked items → leads with /plumbbob:harvest', () => {
     const intent = '# T\n\n## Steps\n\n1. [x] a — **done**\n2. [x] b — **done**\n'
     // The count and plural read back to the human, so pin the exact phrasing.
-    expect(orient({ ...base, intent }).next).toContain('harvest 2 parked ideas — `/harvest`; then ')
+    expect(orient({ ...base, intent }).next).toContain('harvest 2 parked ideas — `/plumbbob:harvest`; then ')
   })
 
   it('a single parked item reads singular', () => {
     const intent = '# T\n\n## Steps\n\n1. [x] a — **done**\n'
     const buildLog = '## Park list\n- [ ] one idea\n## Harvest\n'
-    expect(orient({ ...base, intent, buildLog }).next).toContain('harvest 1 parked idea — `/harvest`; then ')
+    expect(orient({ ...base, intent, buildLog }).next).toContain('harvest 1 parked idea — `/plumbbob:harvest`; then ')
   })
 
   it('no steps at all → plan the first step', () => {
@@ -416,7 +416,7 @@ describe('formatOrientation', () => {
         'last checkpoint  step 1 · abc1234',
         'parked 2 · open questions 2',
         '',
-        'next → build step 2 — `/build` (or `/step` to revise it first)',
+        'next → build step 2 — `/plumbbob:build` (or `/plumbbob:step` to revise it first)',
       ].join('\n')
     )
   })

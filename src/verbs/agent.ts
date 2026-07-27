@@ -413,7 +413,7 @@ function applyParked(root: string, slug: string | null, parked: ReadonlyArray<st
  * The human-facing summary printed on stderr.
  *
  * A headline plus, for a halt, the route out — `blocked` unblocks and re-runs,
- * `drift` sends the plan to /refine. The machine envelope on stdout carries
+ * `drift` sends the plan to /plumbbob:refine. The machine envelope on stdout carries
  * the same status for the calling skill; this stderr copy is the terminal read.
  */
 function humanSummary(name: string, mode: Slot, envelope: AgentEnvelope): string {
@@ -423,7 +423,7 @@ function humanSummary(name: string, mode: Slot, envelope: AgentEnvelope): string
     return `${head}  blocked — the agent couldn't finish; unblock and re-run.\n${notes}`
   }
   if (envelope.status === 'drift') {
-    return `${head}  drift — the plan no longer matches reality; /refine before continuing.\n${notes}`
+    return `${head}  drift — the plan no longer matches reality; /plumbbob:refine before continuing.\n${notes}`
   }
   return head
 }

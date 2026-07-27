@@ -1,5 +1,5 @@
 // `plumbbob check` — run the heavy gate and report, with NO state change. This
-// is the read-only half of the verify tick: `/verify` runs it before the
+// is the read-only half of the verify tick: `/plumbbob:verify` runs it before the
 // pause so the human approves on a known-green check. The gate itself lives in
 // lib/check.ts: checkride (our sibling check-runner package) by default, or a
 // spawn command named by the `check` setting — resolved through the settings

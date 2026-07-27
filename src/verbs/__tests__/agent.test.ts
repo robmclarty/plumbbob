@@ -169,7 +169,7 @@ describe('agent run — status routing (D52)', () => {
     expect(stderr).toContain('notes: missing FOO')
   })
 
-  it('routes a drift run to /refine on stderr', async () => {
+  it('routes a drift run to /plumbbob:refine on stderr', async () => {
     const dir = await startedBuild()
     makeAgent(dir, 'drifter', {
       slots: ['build'],
@@ -178,7 +178,7 @@ describe('agent run — status routing (D52)', () => {
     const { code, stdout, stderr } = await captureIoAsync(() => agent(dir, ['run', 'drifter', '--step', '1']))
     expect(code).toBe(0)
     expect(envelopeFromStdout(stdout).status).toBe('drift')
-    expect(stderr).toContain('/refine')
+    expect(stderr).toContain('/plumbbob:refine')
   })
 })
 

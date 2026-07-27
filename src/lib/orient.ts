@@ -31,7 +31,7 @@ export type Orientation = {
   readonly openQuestions: number
   readonly next: string
   // The next undone step's detail, so `status` shows what's about to be built and
-  // the human can review (and `/step`-revise) before `/build`.
+  // the human can review (and `/plumbbob:step`-revise) before `/plumbbob:build`.
   readonly nextDoneWhen: string | null
   readonly nextSeam: ReadonlyArray<string>
   // The next step's advisory model recommendation — the smallest model the plan
@@ -166,7 +166,7 @@ export function parseOpenQuestions(intent: string): number {
  * Count the open parked items: `- [ ]` lines under `## Park list`.
  *
  * A parked item is a mid-build idea the `park` verb appends as a flat checklist
- * line for later triage; `/harvest` flips a triaged one to `- [x]` and it
+ * line for later triage; `/plumbbob:harvest` flips a triaged one to `- [x]` and it
  * stops counting. The `(none yet)` placeholder and the blockquote instructions
  * never match.
  */
@@ -222,22 +222,22 @@ function nextMove(spiking: boolean, steps: ReadonlyArray<Step>, inFlight: number
     return 'close the spike — `plumbbob spike done`'
   }
   if (inFlight !== null) {
-    return `finish step ${inFlight} — \`/verify\` (or keep editing, then \`/verify\`)`
+    return `finish step ${inFlight} — \`/plumbbob:verify\` (or keep editing, then \`/plumbbob:verify\`)`
   }
   // At the boundary (DESIGN): the move follows from the steps.
   const nextUndone = steps.find((s) => !s.done)
   if (nextUndone === undefined) {
     if (steps.length === 0) {
-      return 'plan the first step — `/step`'
+      return 'plan the first step — `/plumbbob:step`'
     }
     // Batch-default: the steps were planned up front, so finishing them usually
-    // means "finish up" — but `/step` can still add an increment if reality grew.
-    const harvest = parked > 0 ? `harvest ${parked} parked idea${parked === 1 ? '' : 's'} — \`/harvest\`; then ` : ''
-    return `${harvest}finish up — \`/finish\` (or \`/step\` to add another increment)`
+    // means "finish up" — but `/plumbbob:step` can still add an increment if reality grew.
+    const harvest = parked > 0 ? `harvest ${parked} parked idea${parked === 1 ? '' : 's'} — \`/plumbbob:harvest\`; then ` : ''
+    return `${harvest}finish up — \`/plumbbob:finish\` (or \`/plumbbob:step\` to add another increment)`
   }
   return nextUndone.planned
-    ? `build step ${nextUndone.n} — \`/build\` (or \`/step\` to revise it first)`
-    : `plan step ${nextUndone.n} — \`/step\``
+    ? `build step ${nextUndone.n} — \`/plumbbob:build\` (or \`/plumbbob:step\` to revise it first)`
+    : `plan step ${nextUndone.n} — \`/plumbbob:step\``
 }
 
 /**
@@ -277,7 +277,7 @@ export function formatOrientation(o: Orientation): string {
     if (s !== nextUndone) {
       return head
     }
-    // Surface the next step's detail so the human can review it (and `/step`-
+    // Surface the next step's detail so the human can review it (and `/plumbbob:step`-
     // revise) before building. Only what's present — a rough step shows neither.
     const detail: string[] = []
     if (o.nextDoneWhen !== null) {

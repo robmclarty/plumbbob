@@ -247,7 +247,7 @@ export function reportPath(root: string, slug?: string | null): string {
 }
 
 // --- Spike reports: `spike-NN-<slug>.md` files in the build folder, beside
-// report.md. One per spike — an explicit `/spike` or a planned `spike:` step —
+// report.md. One per spike — an explicit `/plumbbob:spike` or a planned `spike:` step —
 // so a build with several forks tells its decision history through the folder
 // listing. NN is CLI-allocated (the human never numbers them), zero-padded for a
 // stable sort. ---

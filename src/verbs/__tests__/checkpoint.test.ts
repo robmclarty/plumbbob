@@ -418,7 +418,7 @@ describe('checkpoint — the approval latch (subprocess, D64)', () => {
     expect(status).toBe(1)
     expect(stderr).toContain('checkpoint refused — no human turn since this step began')
     expect(stderr).toContain('present the diff and the self-review')
-    expect(stderr).toContain('`/build --auto`')
+    expect(stderr).toContain('`/plumbbob:build --auto`')
     // Nothing landed: the step is still open.
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [ ]')
   })

@@ -1,6 +1,6 @@
 // `plumbbob checkpoint [<n>] [-m <msg>]` — the commit tick that lands a step.
 // Executor-agnostic and author-blind: it reads the diff, not who wrote it, so a
-// `/build` run, your own hands, a vibe session, or another harness all
+// `/plumbbob:build` run, your own hands, a vibe session, or another harness all
 // checkpoint identically. It does NOT require a STEP marker (the flat control
 // file recording the step in flight): the step is whatever you pass, else the
 // in-flight STEP, else the next undone step in intent.md. It evaluates the
@@ -195,7 +195,7 @@ function warnScopeDrift(root: string, step: number): void {
     bumpStepStat(root, undefined, step, 'driftWarnings') // accrues into the build-log's stats receipt
     process.stderr.write(
       `plumbbob: heads-up — staged paths outside step ${step}'s seam: ${outside.join(', ')}. ` +
-        `The checkpoint captures them; if that's real scope drift, the plan may need a \`/step\` revision.\n`,
+        `The checkpoint captures them; if that's real scope drift, the plan may need a \`/plumbbob:step\` revision.\n`,
     )
   }
 }

@@ -91,11 +91,11 @@ function boundaryBlock(step: number, title: string | null, nextUp: Step | undefi
  */
 function nextUpLine(nextUp: Step | undefined): string {
   if (nextUp === undefined) {
-    return 'No planned steps remain — /step to add an increment, or /finish.'
+    return 'No planned steps remain — /plumbbob:step to add an increment, or /plumbbob:finish.'
   }
   const head = `Next up: step ${nextUp.n}${paren(nextUp.title)}`
   const token = modelToken(nextUp.model)
-  return token === null ? `${head} — /build to start it.` : `${head} · model: ${token} — /model ${token} then /build.`
+  return token === null ? `${head} — /plumbbob:build to start it.` : `${head} · model: ${token} — /model ${token} then /plumbbob:build.`
 }
 
 /**

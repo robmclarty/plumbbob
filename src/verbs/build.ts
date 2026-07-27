@@ -16,7 +16,7 @@ import { stepLabel, syncBuildLogState } from '../lib/buildlogsync.ts'
  * Enter step n — or the next undone step — and write its SEAM/STEP markers.
  *
  * Refuses a missing session, a malformed step argument, an `N-M` range (a
- * `/build` skill feature, not a CLI one), and a seam that fails to parse.
+ * `/plumbbob:build` skill feature, not a CLI one), and a seam that fails to parse.
  * On entry it stamps the turn ledger and the step's start time, and re-renders
  * the build-log's Current step line.
  */
@@ -29,12 +29,12 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
 
   const { build: slug, rest } = resolveBuild(root, args)
   const raw = rest.find((a) => !a.startsWith('--'))
-  // A step range like `1-3` is a `/build` skill affordance (auto-approve
+  // A step range like `1-3` is a `/plumbbob:build` skill affordance (auto-approve
   // through the range, then pause), not a CLI capability — the CLI records one
   // in-flight step at a time. Name it rather than bounce off the generic usage.
   if (raw !== undefined && /^\d+-\d*$/.test(raw)) {
     process.stderr.write(
-      `plumbbob: build takes one step number; \`${raw}\` step ranges are a \`/build\` feature (auto-approve through the range, then pause). Try \`plumbbob build ${raw.split('-')[0]}\`.\n`,
+      `plumbbob: build takes one step number; \`${raw}\` step ranges are a \`/plumbbob:build\` feature (auto-approve through the range, then pause). Try \`plumbbob build ${raw.split('-')[0]}\`.\n`,
     )
     return 1
   }
@@ -49,14 +49,14 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
 
   // No argument ⇒ enter the next undone step in intent.md (the same idiom
   // `checkpoint` uses), so a bare `plumbbob build` advances the loop without the
-  // skill re-deriving the step in prose. Every step checkpointed ⇒ a `/step`
+  // skill re-deriving the step in prose. Every step checkpointed ⇒ a `/plumbbob:step`
   // nudge, not a silent no-op.
   let step: number
   if (raw === undefined) {
     const nextUndone = parseSteps(intent).find((s) => !s.done)
     if (nextUndone === undefined) {
       process.stderr.write(
-        'plumbbob: no undone step to build — every planned step is checkpointed. `/step` to add an increment, or `/finish`.\n',
+        'plumbbob: no undone step to build — every planned step is checkpointed. `/plumbbob:step` to add an increment, or `/plumbbob:finish`.\n',
       )
       return 1
     }
