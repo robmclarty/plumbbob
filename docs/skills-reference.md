@@ -8,26 +8,29 @@ writes, and when to reach for it.
 Two ground rules apply to all of them:
 
 - **You fire every move.** Every skill is `disable-model-invocation` — the model never
-  invokes one on its own, and `/status` always names your next one.
-- **Short form.** Claude Code namespaces the skills under the plugin, so the real command
-  is `/plumbbob:plan`; these docs write `/plan` for readability.
+  invokes one on its own, and `/plumbbob:status` always names your next one.
+- **Namespaced.** Claude Code namespaces the skills under the plugin, so the command is
+  `/plumbbob:plan` and these docs write it in full. The bare `/plan` also reaches a
+  plugin skill *unless another command already owns that name* — and four of these
+  (`plan`, `status`, `verify`, `doctor`) share a name with a Claude Code built-in, which
+  wins. Type the verb and pick plumbbob's from the menu, or write the full form.
 
 ## At a glance
 
 | Skill <img alt="" width="110" height="1"> | Takes <img alt="" width="150" height="1"> | Does |
 |------------------------------------|--------------------------------------|------|
-| [`/plan`](#plan) | `[spec-path \| intent]` | open the session and author the whole plan — Frame, Decisions, Constraints, all Steps |
-| [`/step`](#step) | `[what-changed]` | revise/sharpen the next step (empty input auto-syncs it to reality) |
-| [`/build`](#build) | `[step-number \| step-range] [--auto]` | implement the next planned step, then verify it to the pause |
-| [`/verify`](#verify) | — | the tick — check → self-review → validate → **PAUSE** → checkpoint |
-| [`/park`](#park) | `[idea]` | capture a mid-build idea without chasing it |
-| [`/status`](#status) | — | orient — where you are, the next step, the next move |
-| [`/harvest`](#harvest) | — | triage parked ideas at a boundary (blocker / tangent / pivot) |
-| [`/finish`](#finish) | — | write the report, make the final commit, clear for a fresh goal |
-| [`/refine`](#refine) | `[focus]` | attack the plan for holes, or repair a drifted one |
-| [`/revert`](#revert) | `[--to <step>]` | recover — `git reset --hard` to a recorded checkpoint |
-| [`/spike`](#spike) | `<slug> \| done` | throwaway worktree experiment for a fork the plan can't settle |
-| [`/doctor`](#doctor) | — | check the install from inside a session |
+| [`/plumbbob:plan`](#plan) | `[spec-path \| intent]` | open the session and author the whole plan — Frame, Decisions, Constraints, all Steps |
+| [`/plumbbob:step`](#step) | `[what-changed]` | revise/sharpen the next step (empty input auto-syncs it to reality) |
+| [`/plumbbob:build`](#build) | `[step-number \| step-range] [--auto]` | implement the next planned step, then verify it to the pause |
+| [`/plumbbob:verify`](#verify) | — | the tick — check → self-review → validate → **PAUSE** → checkpoint |
+| [`/plumbbob:park`](#park) | `[idea]` | capture a mid-build idea without chasing it |
+| [`/plumbbob:status`](#status) | — | orient — where you are, the next step, the next move |
+| [`/plumbbob:harvest`](#harvest) | — | triage parked ideas at a boundary (blocker / tangent / pivot) |
+| [`/plumbbob:finish`](#finish) | — | write the report, make the final commit, clear for a fresh goal |
+| [`/plumbbob:refine`](#refine) | `[focus]` | attack the plan for holes, or repair a drifted one |
+| [`/plumbbob:revert`](#revert) | `[--to <step>]` | recover — `git reset --hard` to a recorded checkpoint |
+| [`/plumbbob:spike`](#spike) | `<slug> \| done` | throwaway worktree experiment for a fork the plan can't settle |
+| [`/plumbbob:doctor`](#doctor) | — | check the install from inside a session |
 
 ## The loop skills
 
@@ -46,10 +49,10 @@ author `harness.json` beside `intent.md` — the per-step [slot bindings](#the-h
 reviewed at the same plan pause. Reach for it whenever there is no active session and a
 goal worth more than a one-liner.
 
-> **Passing a spec:** a plain path is the surest form (`/plan specs/foo.md`). An
-> `@`-mention works too, but only with leading text (`/plan absorb @specs/foo.md`) —
+> **Passing a spec:** a plain path is the surest form (`/plumbbob:plan specs/foo.md`). An
+> `@`-mention works too, but only with leading text (`/plumbbob:plan absorb @specs/foo.md`) —
 > Claude Code doesn't recognize a slash command whose *sole* argument is an `@`-mention,
-> so `/plan @specs/foo.md` silently drops to a plain message. Prefer the path.
+> so `/plumbbob:plan @specs/foo.md` silently drops to a plain message. Prefer the path.
 
 ### step
 
@@ -59,12 +62,12 @@ build has already taught you and syncs the step's done-when and seam to reality;
 `<what-changed>`, it makes that directed revision (tighten, re-cut, split, or add a step).
 One step at a time, written back into `## Steps` only on your approval. It can also sharpen
 that step's [harness bindings](#the-harness-slots) just-in-time when the agents it wants
-have drifted. Most steps need nothing — skip straight to `/build`.
+have drifted. Most steps need nothing — skip straight to `/plumbbob:build`.
 
 ### build
 
 The bundled executor — the default engine, not the only one. It's **swappable**:
-implement a step any other way and run `/verify` instead. Fired bare it picks the next undone step (a number jumps); it reads
+implement a step any other way and run `/plumbbob:verify` instead. Fired bare it picks the next undone step (a number jumps); it reads
 the step's done-when, seam, Decisions, and Constraints, goes in-flight
 (`plumbbob build <n>`), implements *only that step*, then carries straight through the
 verify tick to the pause. When the step is [bound to agents](#the-harness-slots) it runs
@@ -83,14 +86,14 @@ diff against done-when / Decisions / Constraints, validate the done-when with ev
 record the SHA, flip the step to `[x]`). Any `after`-slot [agents](#the-harness-slots)
 run here too, as **advisory input** to the self-review — checkride gates, they never do.
 It reads the *diff, not the author* — a step you wrote by hand or vibed in another harness
-verifies exactly like a `/build` step.
+verifies exactly like a `/plumbbob:build` step.
 
 ### park
 
 Captures a mid-build "ooh, what if" without chasing it. Give it the idea inline or fire it
 bare to use the one you just raised; it composes a single tidy, tagged line, shows it for
 a quick OK, then appends it via `plumbbob park` — never by editing the file itself. The
-step in flight stays protected; the list gets triaged later by `/harvest`.
+step in flight stays protected; the list gets triaged later by `/plumbbob:harvest`.
 
 ### status
 
@@ -127,13 +130,13 @@ beside its `intent.md`, binding agents to a step's three lifecycle slots:
 - **`build`** — authors the step's diff in your place (still verified the same way, [D3](decisions.md#d3)).
 - **`after`** — runs at the verify pause as *advisory* review; it informs, it never gates.
 
-`/plan` authors the bindings at plan time and `/step` sharpens them just-in-time —
+`/plumbbob:plan` authors the bindings at plan time and `/plumbbob:step` sharpens them just-in-time —
 both keep the file **bindings + prose only, never a conditional** ([C3](decisions.md#c3)). The file says
 *which* agent; *when* to fire one mid-build is judgment the host model makes by reading
-each manifest's `when` prose and a step's `note`. `/build` runs the `before`/`build`
-slots and `/verify` runs `after`; either surfaces a non-`done` envelope by its status —
+each manifest's `when` prose and a step's `note`. `/plumbbob:build` runs the `before`/`build`
+slots and `/plumbbob:verify` runs `after`; either surfaces a non-`done` envelope by its status —
 `blocked` (the agent couldn't finish: surface its notes, unblock, re-run) or `drift` (the
-plan no longer matches reality: repair it with `/refine` first). No agent can advance
+plan no longer matches reality: repair it with `/plumbbob:refine` first). No agent can advance
 the loop — checkride gates and the human is the clock, by construction. The full contract
 for authors lives in `docs/agents.md`; `plumbbob status` lists a build's bindings.
 
@@ -145,7 +148,7 @@ Keeps `intent.md` honest, in two modes. **Attack**: a cold, adversarial read of 
 and Decisions that surfaces holes as one-line **Open questions** — never as Decisions,
 because resolving a hole is your call. **Repair**: when the plan has drifted from what the
 code actually does, it proposes the edits that bring it back, before/after, written only
-on your approval. Where `/step` sharpens one step, refine works the whole plan.
+on your approval. Where `/plumbbob:step` sharpens one step, refine works the whole plan.
 
 ### revert
 
@@ -156,9 +159,9 @@ inside the seam are removed; everything outside it is left alone.
 
 ### spike
 
-For a genuine fork the plan can't settle on paper: `/spike <slug>` opens a throwaway
+For a genuine fork the plan can't settle on paper: `/plumbbob:spike <slug>` opens a throwaway
 sibling worktree and branch per option (`spike/<slug>-a`, `-b` by default) outside the
-repo; `/spike done` tears them all down. The deliverable is the **verdict** recorded
+repo; `/plumbbob:spike done` tears them all down. The deliverable is the **verdict** recorded
 back in `intent.md`, not the spike code.
 
 ## Install

@@ -148,7 +148,7 @@ plumbbob park "<text>"
 
 Appends `<text>` as a raw line under `## Park list` in `build-log.md` and prints
 `parked: <text>` ([**D7**](decisions.md#d7)). This is the dumb capture path — composing the tidy tagged line
-is the `/park` skill's job. Refuses (exit 1) with no session, empty text, or no
+is the `/plumbbob:park` skill's job. Refuses (exit 1) with no session, empty text, or no
 `## Park list` section.
 
 ### spike
@@ -229,7 +229,7 @@ plumbbob finish [--body <<'BODY' … BODY]
 ```
 
 The close-out ([**D9**](decisions.md#d9)/[**D29**](decisions.md#d29)). Appends the checkpoint SHAs to the build's `report.md`
-(the report itself is written by the `/finish` skill; a missing one is noted, never a
+(the report itself is written by the `/plumbbob:finish` skill; a missing one is noted, never a
 refusal), makes the final
 commit (subject `chore(<scope>): finish`, mirroring the step-checkpoint Conventional shape; body
 leads with a `plumbbob finish` marker, then an optional `--body` heredoc), and clears
@@ -257,7 +257,7 @@ the post-edit hook auto-registered from `hooks/hooks.json`). Idempotent, global-
 **never writes `settings.json`**. `--uninstall` drops the link. Refuses (exit 1) if the path
 exists and is not a plumbbob link, **or** if a marketplace plumbbob plugin is already
 installed — the two register the same plugin name and collide over the `/plumbbob:*`
-namespace (skills can drop to flat names like `/status`); `--force` overrides that guard
+namespace (skills can drop to flat names like `/plumbbob:status`); `--force` overrides that guard
 (the dev-install path uses it). Restart Claude Code (or `/reload-plugins`) to activate.
 
 ### doctor
@@ -272,7 +272,7 @@ Three diagnostics under one verb.
 resolves to a package carrying the manifest, the skills, and the hook; it also recognizes a
 **marketplace-only** install as a valid, passing state, and flags the double-install
 **collision** when both are present, printing the exact fix for anything missing. Run it first
-if a `/plumbbob:*` skill opens an empty dashboard. Also available in-session as `/doctor` —
+if a `/plumbbob:*` skill opens an empty dashboard. Also available in-session as `/plumbbob:doctor` —
 the only way to reach it on a **marketplace** install, where the CLI is on PATH only inside a
 Claude Code session.
 

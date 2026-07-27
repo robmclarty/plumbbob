@@ -196,7 +196,7 @@ describe('plan — the whole-goal move: scaffold + frame, no code', () => {
   })
 
   it('offers /refine to stress-test the frame', () => {
-    expect(body).toMatch(/\/refine/)
+    expect(body).toMatch(/\/(?:plumbbob:)?refine/) // namespaced or bare — the handoff is what matters
   })
 
   it('keeps the human the converger — holes are Open questions, not guesses', () => {
@@ -337,7 +337,7 @@ describe('build — the default engine: implement the planned step, then verify'
 
   it('forbids self-minting a settings `auto` grant — a grant you mint is no grant (D67)', () => {
     expect(body).toMatch(/a grant you mint is no grant/i)
-    expect(body).toMatch(/re-fire `?\/build --auto`?/i) // the sanctioned route instead
+    expect(body).toMatch(/re-fire `?\/(?:plumbbob:)?build --auto`?/i) // the sanctioned route instead
   })
 
   it('lifts slot mechanics into a gated "Running bound agents" section, keeping the default path slim (3b)', () => {

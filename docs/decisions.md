@@ -74,7 +74,7 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   a hand-rolled `plumbbob` CLI built on node builtins (plus the deliberate few of [**C2**](#c2)),
   and a deciding/executing boundary held by a pause rather than enforced by a file lock.
   *Tagged in* `cli-core.ts`.
-- <a id="d3"></a>**D3 — The pluggable, author-blind executor.** `/build` is swappable, never required; `verify`
+- <a id="d3"></a>**D3 — The pluggable, author-blind executor.** `/plumbbob:build` is swappable, never required; `verify`
   and `checkpoint` read *the diff, not who wrote it*, so a hand-built, vibed, or
   other-harness diff checkpoints identically. *Tagged in* `checkpoint.ts`, the `build` and
   `verify` skills.
@@ -238,7 +238,7 @@ below.)
   (personal), first hit wins, project shadowing personal — the settings ladder's shape
   ([**D27**](#d27)) and Claude Code's two-level `.claude/agents/` convention. *Tagged in* `agents.ts`.
 - <a id="d42"></a>**D42 — Planned bindings live in `builds/<slug>/harness.json`.** A sibling of `intent.md`
-  authored at `/plan` time, not inside the executor-agnostic intent ([**D3**](#d3)) — the plan
+  authored at `/plumbbob:plan` time, not inside the executor-agnostic intent ([**D3**](#d3)) — the plan
   says *what/why*, the harness says *with-what*. *Tagged in* `agents.ts`, `sidecar.ts`, the
   `plan`/`step` skills.
 - <a id="d43"></a>**D43 — Exactly three slots: `before`, `build`, `after`.** Context-in, the diff, advisory
@@ -282,7 +282,7 @@ below.)
   *Tagged in* `agents.ts`, `settings.ts`.
 - <a id="d52"></a>**D52 — `blocked` and `drift` route differently at the pause.** `blocked` = the agent
   couldn't finish (surface its `notes`, unblock, re-run); `drift` = it finished but found the
-  plan no longer matches reality (repair with `/refine` before continuing) — the two halts
+  plan no longer matches reality (repair with `/plumbbob:refine` before continuing) — the two halts
   need different medicine. *Tagged in* `agent.ts`, the loop skills.
 - <a id="d53"></a>**D53 — Keys, model choice, and sandboxing are the agent's business.** The `settings`
   block in the StepContext carries plumbbob's own relevant settings and nothing else —
@@ -294,7 +294,7 @@ below.)
   declare slot X **refuses** — the user who typed the name asked for that agent
   specifically. Only a harness-*bound* agent a teammate lacks downgrades to a warning and
   is skipped, because a binding is ambient configuration the loop must survive without
-  (the same never-required contract as `/build` itself). A run that actually starts and
+  (the same never-required contract as `/plumbbob:build` itself). A run that actually starts and
   fails is a hard failure either way — this softens a *missing* agent, never a broken one.
   *Tagged in* `agent.ts`, `agents.ts`, `status.ts`, the `plan` skill.
 - <a id="d55"></a>**D55 — The manifest speaks to two audiences.** `command` is for the deterministic CLI;
@@ -392,7 +392,7 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10*
   was the one self-approval it could **forge** (measured: the eval tier's adversarial-pressure contract had
   models minting `auto: true` under pressure, a legal side door the latch honored), and [**D65**](#d65)'s
   own rule already says a grant the model can forge is no grant. Self-approval now comes *only* from the
-  human's literal `/build --auto` or `N-M` range through the `GRANT` file (D65) — the routes a model
+  human's literal `/plumbbob:build --auto` or `N-M` range through the `GRANT` file (D65) — the routes a model
   cannot type, since `build` is `disable-model-invocation`. This is **guidance-first — it removes a
   mechanical honor, it adds no lock**: TTY (row 1), hookless hosts (row 2, dormant), `--auto`, and ranges
   all still work; unattended autonomy is one typed `--auto` away. A set-but-ignored `auto` is **surfaced,
@@ -447,7 +447,7 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10*
   decides): `plumbbob spike "<slug>"` scaffolds it *at open* so findings accrue while the worktrees
   live; `plumbbob spike report "<slug>"` scaffolds it with no worktrees for a **spike-as-step** — a
   planned step titled `spike: …` where the increment itself is the experiment — stamping provenance as
-  `step <n>` when a step is in flight, else `/spike`. `spike done` scans for the verbatim Verdict
+  `step <n>` when a step is in flight, else `/plumbbob:spike`. `spike done` scans for the verbatim Verdict
   placeholder and **nudges** when it is unfilled, but still closes (guidance, not a gate — the
   enforce→guide pivot). `spike` is not a Conventional-Commit type ([**D68**](#d68)), so a `Spike:`
   step title falls through to the `feat` default with no special-casing. *Tagged in* `spike.ts`,

@@ -10,10 +10,10 @@ allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob start:*
 
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not on PATH in this session. Marketplace install: confirm the plugin is enabled in /plugin, then /reload-plugins. Skills-dir/global install: npm i -g plumbbob && plumbbob init."`
 
-`/plan` is the **whole-goal** move — it opens a session and gets the deciding out
+`/plumbbob:plan` is the **whole-goal** move — it opens a session and gets the deciding out
 of your head and onto `intent.md` *before* any code. By default it authors the
 **complete plan, including all the Steps**, so the happy path afterward is just
-`/build` until done. (Revising a single increment later is the separate `/step`
+`/plumbbob:build` until done. (Revising a single increment later is the separate `/plumbbob:step`
 move; do not confuse the two.)
 
 A model note: this skill **inherits the session model** — nothing pins or switches
@@ -42,7 +42,7 @@ Look at the argument the human gave and pick the mode yourself:
    genuinely ambiguous.
 
 All three modes converge on the **same artifact**: a complete, standalone `intent.md`
-an agent can follow with `/build`. The argument only seeds how you get there.
+an agent can follow with `/plumbbob:build`. The argument only seeds how you get there.
 
 ## What this skill does
 
@@ -79,9 +79,9 @@ an agent can follow with `/build`. The argument only seeds how you get there.
       - model: <optional — smallest that can carry it, with the one-phrase why>
    ```
 
-   Every step needs a **done-when** `/verify` can check and a **seam** (the exact
+   Every step needs a **done-when** `/plumbbob:verify` can check and a **seam** (the exact
    paths it touches). Later steps may be fuzzier than the first — that's fine; they get
-   sharpened just-in-time when you reach them with `/step`. Keep each small enough to
+   sharpened just-in-time when you reach them with `/plumbbob:step`. Keep each small enough to
    verify in one review pass.
 
    **The title *is* the commit subject — author it as one** *(D1)*: write each
@@ -108,7 +108,7 @@ an agent can follow with `/build`. The argument only seeds how you get there.
    `model: sonnet — mechanical, fully specified by the done-when` for rote edits;
    `model: opus — strong-assertion test authoring` where the tests do the thinking;
    `model: fable — subtle cross-cutting design` for judgment-heavy or creative work.
-   It is advisory metadata for the human — `/status` surfaces it before each build —
+   It is advisory metadata for the human — `/plumbbob:status` surfaces it before each build —
    never a gate, and nothing switches models automatically. Write it plain (no
    backticks) and omit it when any model would do.
 5. **Offer harness bindings** *(optional)*. If the build will lean on
@@ -153,7 +153,7 @@ an agent can follow with `/build`. The argument only seeds how you get there.
      see the plan and build record in review. In the same breath, offer the way out:
      a repo that won't track a tool folder can restart with `plumbbob start --local`
      (a fully untracked sidecar) before any steps are built.
-7. **Offer to stress-test it.** Suggest `/refine` to attack the frame for holes (or
+7. **Offer to stress-test it.** Suggest `/plumbbob:refine` to attack the frame for holes (or
    to repair the plan as it drifts). Optional, the human's call.
 
 ## The interview (mode 1)
@@ -166,11 +166,11 @@ Make it easy and non-intrusive:
   without typing** ("done-when: the 6th request in 60s returns 429 — good?"), while
   taking arbitrary detail when they want to give it, including pointers to other files.
 - **Let them double back.** They will revise as the picture sharpens; that's expected.
-  They can also edit `intent.md` by hand at any time, or call `/refine` to repair it.
+  They can also edit `intent.md` by hand at any time, or call `/plumbbob:refine` to repair it.
 
 ## The hard contracts
 
-- **Deciding before code.** `/plan` writes `intent.md` only — never source.
+- **Deciding before code.** `/plumbbob:plan` writes `intent.md` only — never source.
 - **The human converges.** You surface options and draft wording; the human picks.
   An unresolved hole is an Open question, not a guessed Decision.
 - **Stands on its own.** Whatever the input mode, the finished `intent.md` carries

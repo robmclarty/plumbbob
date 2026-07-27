@@ -37,7 +37,7 @@ session* (for a plain terminal `plumbbob`, use the npm route below), and all thr
 hooks — the post-edit lint, the `git commit` ask-hook, and the `UserPromptSubmit`
 turn-ledger hook that powers the approval latch — auto-register from `hooks.json`, so
 the latch is live out of the box, no manual step. Confirm it in the session with
-**`/doctor`**.
+**`/plumbbob:doctor`**.
 
 ## npm global + `init`
 
@@ -60,8 +60,10 @@ the collision (`--force` overrides), and `plumbbob doctor` flags a double-instal
 ## Namespacing
 
 Either way, Claude Code namespaces the skills under the `plumbbob` plugin, so the
-real commands are `/plumbbob:plan`, `/plumbbob:status`, and the rest. **For
-readability these docs write the short form — `/plan` means `/plumbbob:plan`.**
+commands are `/plumbbob:plan`, `/plumbbob:status`, and the rest. **The bare form
+(`/plan`) reaches the skill only where nothing else owns that name — `plan`, `status`,
+`verify`, and `doctor` are Claude Code built-ins, which win — so these docs write the
+full form.**
 Nothing else under `~` is touched and `settings.json` is left alone — restart Claude
 Code (or `/reload-plugins`) to activate.
 
@@ -88,5 +90,5 @@ that the skills-dir link resolves to the plugin manifest, the skills, and the ho
 flagging a double-install collision — and prints the exact fix for anything broken.
 The terminal command above is for the **global / skills-dir** install; a
 **marketplace** plugin puts the CLI on PATH only *inside a Claude Code session*, so
-run **`/doctor`** there instead. Run it first if a `/plumbbob:*` skill ever opens
+run **`/plumbbob:doctor`** there instead. Run it first if a `/plumbbob:*` skill ever opens
 with an empty dashboard; [`troubleshooting.md`](troubleshooting.md) covers the rest.

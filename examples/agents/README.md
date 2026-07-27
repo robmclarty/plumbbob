@@ -57,7 +57,7 @@ The step up from the reference agent: the same contract wrapped around
 advisory reviewer for every step's diff, no API key, nothing leaving your machine. It's the
 worked answer to `docs/agents.md` § "The fascicle trap" — fascicle's `run_stdio` (>= 0.8.11)
 enforces the stream discipline for it — and it ships [`demo/spec.md`](ollama-reviewer/demo/spec.md) —
-a complete spec `/plan` can absorb to set up a build with the agent bound to every step's
+a complete spec `/plumbbob:plan` can absorb to set up a build with the agent bound to every step's
 after slot.
 
 | File | What it is |

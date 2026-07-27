@@ -91,10 +91,10 @@ cp -r /path/to/plumbbob/examples/agents/ollama-reviewer .plumbbob/agents/
 
 Then, in Claude Code:
 
-1. `/plan .plumbbob/agents/ollama-reviewer/demo/spec.md` — plan absorbs the spec
+1. `/plumbbob:plan .plumbbob/agents/ollama-reviewer/demo/spec.md` — plan absorbs the spec
    into `intent.md` and (per the spec's `## Harness` section) writes `harness.json`
    binding `ollama-reviewer` to every step's after slot. Inspect both at the plan pause.
-2. `/build` — at each step's verify pause the CLI runs the bound agent: the local
+2. `/plumbbob:build` — at each step's verify pause the CLI runs the bound agent: the local
    model's narration streams by, its envelope folds into self-review as **advisory
    input** (it informs, never gates), and any `later`-severity concerns land as park
    lines in `build-log.md`.

@@ -1,8 +1,8 @@
 # wordwrap — a text-wrapping utility
 
-A demo spec for the `ollama-reviewer` example agent. Feed it to `/plan` (it is a
+A demo spec for the `ollama-reviewer` example agent. Feed it to `/plumbbob:plan` (it is a
 spec file, so plan absorbs it into `intent.md`) from a scratch repo that has this
-agent installed, then run `/build` and watch a local model review every step at the
+agent installed, then run `/plumbbob:build` and watch a local model review every step at the
 verify pause. The task itself is deliberately small: three steps, plain JavaScript,
 zero dependencies — the point is the loop, not the wrapping.
 

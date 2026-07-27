@@ -10,7 +10,7 @@ allowed-tools: Read, Bash(plumbbob status:*), Bash(plumbbob handoff:*), Bash(plu
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not on PATH in this session. Marketplace install: confirm the plugin is enabled in /plugin, then /reload-plugins. Skills-dir/global install: npm i -g plumbbob && plumbbob init."`
 
 This is the **tick** — the one beat where the human is the clock. Whatever produced
-the current diff — `/build`, your own hands, a vibe session, another harness —
+the current diff — `/plumbbob:build`, your own hands, a vibe session, another harness —
 this skill verifies it the same way: **it reads the diff, not the author**.
 
 ## What this skill does, in order
@@ -31,7 +31,7 @@ this skill verifies it the same way: **it reads the diff, not the author**.
    `summary`/`body` into the review below; route a non-`done` one by its status: a
    `blocked` agent couldn't finish — surface its `notes`, let the human unblock, re-run;
    a `drift` agent found the plan no longer matches reality — stop and send the human to
-   `/refine` to repair the plan before checkpointing. No binding, or no harness, is a
+   `/plumbbob:refine` to repair the plan before checkpointing. No binding, or no harness, is a
    clean no-op.
 3. **Self-review** *(a single structured read)*. Read `git diff` and
    `.plumbbob/intent.md`, then in one pass check the diff against:
@@ -79,7 +79,7 @@ this skill verifies it the same way: **it reads the diff, not the author**.
    step gone from in-flight it renders `step N checkpointed — back at the boundary` and
    points at the **next undone step**, carrying that step's `- model:` recommendation (the
    plan's smallest-model-that-fits call) so the human knows which `/model` to select before
-   firing `/build` again. This matters most across a context boundary: a fresh window
+   firing `/plumbbob:build` again. This matters most across a context boundary: a fresh window
    inherits the *session's* model, not the plan's suggestion, so this line is what carries
    the recommendation over. The CLI owns the block, so it can't drift from what `plumbbob
    status` reports; no `- model:` line means any model will do. Guidance, never a gate.
@@ -94,24 +94,24 @@ the self-review, **end the turn**, and the human's next message is the tick that
 the checkpoint land when you re-fire. **Never reach for a raw `git commit` to force the
 land** — that forges the very record the latch exists to keep honest, and the
 commit-ask hook asks the human about it anyway. The refusal is a healthy latch doing its
-job on the *record* while the *work* plane stays free; a `/build --auto` or
+job on the *record* while the *work* plane stays free; a `/plumbbob:build --auto` or
 a typed step range in the human's own prompt is the only self-approval — **never write
 `auto` into a settings file to unlock the land; the latch ignores a model-minted grant
-(D67), so ask the human to re-fire `/build --auto` instead.**
+(D67), so ask the human to re-fire `/plumbbob:build --auto` instead.**
 
 ## The hard contracts
 
 - **Never skip the pause.** Check → self-review → validate, then wait. Approval is
   the only thing that triggers the checkpoint.
 - **Read the diff, not the author**. Verify identically whether the code was
-  built by `/build`, by hand, vibed, or by another harness.
+  built by `/plumbbob:build`, by hand, vibed, or by another harness.
 - **Red means stop, not pause.** A failing check is not an approval decision; report
   it and end your turn.
 - **You review; you do not build.** If the self-review finds a problem, surface it
   and stop — fixing is a new build beat, not part of verify.
 - **`after`-agents advise; they never gate**. Their output feeds the
   self-review — checkride gates, the human approves. `blocked` → unblock and re-run;
-  `drift` → `/refine` before checkpointing. No code path makes them blocking.
+  `drift` → `/plumbbob:refine` before checkpointing. No code path makes them blocking.
 - **A refused checkpoint is the pause, never a workaround.** Under the turn
   hook a same-turn checkpoint is refused *by design* — present the diff, **end the
   turn**, and let the human's next message re-tick it. Never route around it with a raw

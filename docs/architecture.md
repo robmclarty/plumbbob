@@ -73,7 +73,7 @@ mutually exclusive; `doctor` arbitrates. See [`install.md`](install.md).
 
 ## In progress *(research)*
 
-- **User agent plugins** — a pluggable-executor contract beyond "run `/verify`
+- **User agent plugins** — a pluggable-executor contract beyond "run `/plumbbob:verify`
   yourself": executors as subprocesses speaking a JSON envelope, discovered under
   `.plumbbob/agents/<name>/`, with per-build wiring (before/build/after slots) in the
   build folder. The full analysis is

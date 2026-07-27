@@ -10,16 +10,16 @@ allowed-tools: Read, Edit, Bash(plumbbob status:*)
 
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not on PATH in this session. Marketplace install: confirm the plugin is enabled in /plugin, then /reload-plugins. Skills-dir/global install: npm i -g plumbbob && plumbbob init."`
 
-`/refine` keeps `intent.md` honest. Use it at **any point** — right after `/plan`
+`/plumbbob:refine` keeps `intent.md` honest. Use it at **any point** — right after `/plumbbob:plan`
 to stress-test a fresh frame, or mid-build to repair a plan that drifted from what the
-code is actually doing. It is the document-level complement to `/step` (which only
-sharpens the *next* step): `/refine` works the *whole* plan.
+code is actually doing. It is the document-level complement to `/plumbbob:step` (which only
+sharpens the *next* step): `/plumbbob:refine` works the *whole* plan.
 
 ## No-session refusal
 
 This skill refines an existing plan, so it needs one. Read the state injected above: if
 it is `NO ACTIVE SESSION`, **refuse** in one line and tell the human to run
-`plumbbob start "<title>"` (or `/plan`) first, and edit nothing. Every active state
+`plumbbob start "<title>"` (or `/plumbbob:plan`) first, and edit nothing. Every active state
 is fine — refining is always available.
 
 ## Two modes
@@ -56,5 +56,5 @@ is fine — refining is always available.
   approves every change to `intent.md`. Never guess a hole into a Decision.
 - **Open questions for holes, edits for drift.** New uncertainty goes to
   `## Open questions`; settled drift gets repaired in place once the human OKs it.
-- **Refine the plan, not the code.** `/refine` touches `intent.md` only — turning a
-  decision into a diff is `/build` or your own hands, never this skill.
+- **Refine the plan, not the code.** `/plumbbob:refine` touches `intent.md` only — turning a
+  decision into a diff is `/plumbbob:build` or your own hands, never this skill.

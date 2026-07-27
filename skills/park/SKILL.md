@@ -11,7 +11,7 @@ allowed-tools: Bash(plumbbob status:*), Bash(plumbbob park:*)
 
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not on PATH in this session. Marketplace install: confirm the plugin is enabled in /plugin, then /reload-plugins. Skills-dir/global install: npm i -g plumbbob && plumbbob init."`
 
-`/park` is the **capture** half of the loop; `/harvest` is where parked items
+`/plumbbob:park` is the **capture** half of the loop; `/plumbbob:harvest` is where parked items
 get triaged later. Capturing the instant an idea arrives — instead of acting on
 it — is the whole point: it protects the step in flight.
 

@@ -15,7 +15,7 @@ This is a **driver skill** — a chat-side trigger for the mechanical `plumbbob 
 
 ## What it does
 
-1. Read the spike target from the way you were invoked: a slug to open one (e.g. `/spike redis-cache`), `report <slug>` to scaffold a report without worktrees (`/spike report auth-store`), or the literal `done` to tear the current spike down (`/spike done`). If none is present, ask which and run nothing.
+1. Read the spike target from the way you were invoked: a slug to open one (e.g. `/plumbbob:spike redis-cache`), `report <slug>` to scaffold a report without worktrees (`/plumbbob:spike report auth-store`), or the literal `done` to tear the current spike down (`/plumbbob:spike done`). If none is present, ask which and run nothing.
 2. Run `plumbbob spike "<slug>"`, `plumbbob spike report "<slug>"`, or `plumbbob spike done` via Bash.
 3. Report the verb's output verbatim — the worktree it created or removed, the spike report it scaffolded, or any refusal. When the verb names a `spike-NN-<slug>.md` report, point the human at it; when `spike done` nudges that a verdict is unrecorded, relay that nudge verbatim.
 
@@ -23,7 +23,7 @@ This is a **driver skill** — a chat-side trigger for the mechanical `plumbbob 
 
 Every spike leaves a durable `spike-NN-<slug>.md` in the build folder, beside `intent.md`/`report.md`, so the fork's verdict rides the branch into the PR instead of evaporating. The CLI scaffolds it from a template and numbers it — you never create or number the file:
 
-- **`/spike <slug>`** scaffolds the report *at open*, so findings accrue while the throwaway worktrees are still live. Fill its **Findings** and **Verdict** before `/spike done`.
-- **`/spike report <slug>`** is for a *spike-as-step* — a planned step titled `spike: …`, where the increment itself is the experiment and there are no worktrees. It stamps the report's provenance as `step <n>` when a step is in flight.
+- **`/plumbbob:spike <slug>`** scaffolds the report *at open*, so findings accrue while the throwaway worktrees are still live. Fill its **Findings** and **Verdict** before `/plumbbob:spike done`.
+- **`/plumbbob:spike report <slug>`** is for a *spike-as-step* — a planned step titled `spike: …`, where the increment itself is the experiment and there are no worktrees. It stamps the report's provenance as `step <n>` when a step is in flight.
 
 This skill stays Write-less: the CLI owns the file. Your job is to run the verb and, between runs, help the human fill the report's prose — but the edits land through the normal build flow, not this driver.

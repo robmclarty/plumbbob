@@ -65,22 +65,22 @@ in the build folder:
 { "contract": 1, "defaults": { "after": ["ollama-reviewer"] } }
 ```
 
-Now `/build` runs it at **every step's verify pause** without you asking — its review
+Now `/plumbbob:build` runs it at **every step's verify pause** without you asking — its review
 folds into self-review as advisory input (it informs, never gates). Use
 `"steps": {"3": {"after": ["ollama-reviewer"]}}` instead of `defaults` to bind only specific
-steps. Normally you don't write this file by hand: `/plan` offers to author it at the
+steps. Normally you don't write this file by hand: `/plumbbob:plan` offers to author it at the
 plan pause.
 
 **6. The whole loop in one demo.** The agent ships its own spec that sets all of this up.
 In a scratch repo with the agent installed (steps 1–2), run:
 
 ```text
-/plan .plumbbob/agents/ollama-reviewer/demo/spec.md
+/plumbbob:plan .plumbbob/agents/ollama-reviewer/demo/spec.md
 ```
 
 plan absorbs the spec into `intent.md` (a three-step wordwrap utility) and — per the
 spec's `## Harness` section — writes the `harness.json` binding for you. Approve the plan,
-then `/build`. At each verify pause you'll see the local model review the diff live:
+then `/plumbbob:build`. At each verify pause you'll see the local model review the diff live:
 `now`-severity concerns appear in the envelope body for you to read at the pause, `later`
 ones land as park lines to harvest afterward.
 
@@ -97,4 +97,4 @@ It reviews whatever `git diff HEAD` shows and prints the envelope. Watch the spl
 narration is stderr, the one JSON object is stdout.
 
 That's the whole surface: install once, `agent run` when you want an opinion, `harness.json`
-(via `/plan`) when you want it on every pause.
+(via `/plumbbob:plan`) when you want it on every pause.
