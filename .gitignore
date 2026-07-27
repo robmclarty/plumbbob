@@ -20,3 +20,5 @@ tsconfig.tsbuildinfo
 .plumbbob/builds/*/STEP
 .plumbbob/builds/*/SEAM
 .plumbbob/builds/*/SPIKE
+
+research/
