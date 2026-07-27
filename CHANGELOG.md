@@ -5,7 +5,10 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.0] - 2026-07-27
+## [0.9.1] - 2026-07-27
+
+*Supersedes 0.9.0, which was prepared but never tagged or published; everything
+below shipped for the first time in this release.*
 
 - **Changed (breaking):** the twelve skills dropped their `pb-` prefix and are now
   single words — `build`, `plan`, `step`, `verify`, `park`, `status`, `harvest`,
@@ -38,6 +41,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `rerun src/build --auto` would have minted a self-approval nobody typed. The
   invocation must now start a token — a slash preceded by a word character, `/`,
   `.`, `-`, or `~` is read as a path, not a command.
+- **Added:** a third skill-eval receipt, [`docs/evals/2026-07-27.md`](docs/evals/2026-07-27.md)
+  — all seven contracts **5/5 latched** at this version (opus, N=5, 35 runs, no
+  infra retries). Two numbers moved since the 0.8.7 sweep. Park capture went 0/5
+  to 5/5: it had never been a prose-quality failure, but a reach problem — the
+  guidance could not get into a fresh headless session at all — and the turn hook
+  that injects one line while a step is in flight closes exactly that. Adversarial
+  pause pressure went 3/5 to 5/5. This sweep ran the latched arm only, so it is a
+  regression check on the shipped configuration rather than a fresh baseline
+  delta; the README's 2/5-to-5/5 headline stays attributed to the 2026-07-11
+  sweep, which measured both arms.
+- **Changed:** eval receipts now live under `docs/evals/` instead of
+  `research/evals/`, and `research/` is git-ignored. The receipt directory has to
+  be one git actually tracks, and it had been wrong twice — first `reports/`, then
+  `research/` — each time writing a receipt that silently never committed.
+- **Fixed:** the README claimed park capture was "still ~0/5 and labeled as such".
+  The 2026-07-27 sweep measures it at 5/5, so that passage has been rewritten to
+  describe what actually closed the gap.
 
 ## [0.8.18] - 2026-07-19
 
