@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.2] - 2026-07-28
+
+- **Added:** a new page, `docs/state-and-git.md`, on the files PlumbBob keeps outside
+  your commits — written for anyone put off by a tool writing inside `.git`. It covers
+  what each control-plane file holds and why it has to live on disk at all, how the
+  `info/exclude` write works and which verbs perform it, and the objections answered
+  straight: why not `.gitignore`, why not a nested `.plumbbob/.gitignore`, why not
+  `~/.plumbbob`, and the complete list of everything else the tool does to git. It ends
+  with the three commands that remove every trace. Linked from the README index and the
+  FAQ; the CLI reference's sidecar section also gains the `TURN`, `GRANT`, and `TICK`
+  files its layout tree never listed.
+- **Fixed:** `checkpoint` and `finish` now re-apply the control-plane git excludes on
+  their way into staging, so upgrading PlumbBob mid-build can no longer sweep a control
+  file into a step commit. Both verbs stage with `git add -A` and depend entirely on the
+  repo's `info/exclude` to hold the control plane back — but that list is written once,
+  when `start` opens the session. A version installed between `start` and `checkpoint`
+  can introduce a control file the running session's exclude never learned about (`TICK`,
+  `GRANT`, and `handoff.json` each arrived that way in earlier releases), and the file
+  would ride the commit into the PR. The re-application is idempotent, adding only the
+  patterns that are missing, and it leaves a `--local` sidecar untouched since its
+  blanket `.plumbbob/` line already covers everything.
+
 ## [0.9.1] - 2026-07-27
 
 *Supersedes 0.9.0, which was prepared but never tagged or published; everything
