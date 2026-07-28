@@ -34,6 +34,7 @@ No. Everything it writes is plain markdown and ordinary git commits — a teamma
 the PR (including the build folder) with no tooling. The per-worktree control files
 (`STATE`, `settings.local.json`, the in-flight markers) are excluded via your repo's local
 `info/exclude`, not `.gitignore`, so nothing PlumbBob-specific is imposed on the repo.
+[`state-and-git.md`](state-and-git.md) walks through exactly what that writes and why.
 
 ## What if my team won't track a tool folder in the repo?
 

@@ -327,6 +327,11 @@ root, the whole `.plumbbob/` excluded — for repos that will not track tool fol
 A repo scaffolded by a pre-restructure plumbbob keeps that legacy flat layout until
 `plumbbob doctor --migrate` moves it here ([**D31**](decisions.md#d31)).
 
+The control plane also carries the latch's flat files at the sidecar root — `TURN` (the
+human-turn counter) and `GRANT` (a one-turn self-approval) — plus each build's `TICK` entry
+stamp. What every one of them holds, how they are git-excluded, and why they are not in
+`.gitignore` or your home directory: [`state-and-git.md`](state-and-git.md).
+
 ## Settings
 
 Settings resolve through a four-rung ladder ([**D27**](decisions.md#d27)): a CLI flag → `settings.local.json`

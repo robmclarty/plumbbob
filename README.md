@@ -292,6 +292,7 @@ Each doc answers one question — in rough reading order for a new user:
 - *How do I get a local model reviewing my steps?* → [`docs/local-model-review.md`](docs/local-model-review.md) — the ollama-reviewer example walked end to end, install to every-pause review.
 - *How do I install it, exactly?* → [`docs/install.md`](docs/install.md) — the full guide and the agent-neutral roadmap.
 - *What does the CLI underneath do?* → [`docs/cli-reference.md`](docs/cli-reference.md) — every verb, flag, exit code, and the `.plumbbob/` sidecar.
+- *What are these untracked files, and why is it touching my `.git`?* → [`docs/state-and-git.md`](docs/state-and-git.md) — the state files, the `info/exclude` mechanism, and the objections answered.
 - *Something's broken.* → [`docs/troubleshooting.md`](docs/troubleshooting.md) — fixes for the common snags.
 - *Why is it built this way?* → [`docs/decisions.md`](docs/decisions.md) — the `D#` / `C#` design-decision key the source cites.
 - *How does it hang together inside?* → [`docs/architecture.md`](docs/architecture.md) — the layers and planes, for contributors (in progress).
