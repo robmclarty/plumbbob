@@ -24,6 +24,7 @@ import {
   hasSession,
   intentPath,
   readStats,
+  refreshExcludes,
   seamPath,
   stampStepStat,
   stepPath,
@@ -48,6 +49,11 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
     process.stderr.write('plumbbob: no active session. Run `plumbbob start "<title>"` first.\n')
     return 1
   }
+
+  // Before either staging path — `-A` below, and the plan commit's folder-scoped
+  // add, which also leans on the excludes to skip the in-flight markers inside
+  // the build folder.
+  refreshExcludes(root)
 
   if (args.includes('--plan')) {
     return checkpointPlan(root, args)

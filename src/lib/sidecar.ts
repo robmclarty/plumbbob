@@ -668,3 +668,39 @@ export function excludeControl(root: string): void {
 export function excludeSidecar(root: string): void {
   addExcludes(root, [`${DIRNAME}/`, '.check/'])
 }
+
+/**
+ * Whether info/exclude already carries `pattern` verbatim.
+ *
+ * Absent or unreadable reads as "no" — the caller's job is to write it, not to
+ * fail on a repo that has never been excluded.
+ */
+function hasExclude(root: string, pattern: string): boolean {
+  try {
+    return readFileSync(gitPath(root, 'info/exclude'), 'utf8')
+      .split('\n')
+      .some((line) => line.trim() === pattern)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Re-apply the control-plane excludes on the way into a `git add -A`.
+ *
+ * `start` writes them once, but a plumbbob upgraded mid-build can add a control
+ * file the running session's exclude never learned — TICK, GRANT and
+ * handoff.json all arrived that way — and checkpoint/finish stage with `-A`,
+ * which would sweep the unexcluded file into the commit and ride it into the PR.
+ * Idempotent, so the common path is one read and no write.
+ *
+ * A fully-untracked sidecar is already covered by its blanket `.plumbbob/` line;
+ * layering the narrow patterns underneath would only add noise, so skip it. That
+ * check reads info/exclude rather than the cursor because a null cursor means
+ * "`--local` OR no build named" — and calling excludeSidecar on the tracked
+ * layout would untrack the whole artifact plane.
+ */
+export function refreshExcludes(root: string): void {
+  if (hasExclude(root, `${DIRNAME}/`)) return
+  excludeControl(root)
+}

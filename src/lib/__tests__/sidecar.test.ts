@@ -23,6 +23,7 @@ import {
   markSpike,
   nextSpikeReportPath,
   readStats,
+  refreshExcludes,
   seamPath,
   setActiveBuild,
   sidecarDir,
@@ -273,6 +274,47 @@ describe('excludeSidecar', () => {
     // per-worktree gitdir, which has no info/ (writing there would ENOENT).
     const commonExclude = readFileSync(join(realpathSync(main), '.git', 'info', 'exclude'), 'utf8')
     expect(commonExclude.split('\n')).toContain('.plumbbob/')
+  })
+})
+
+describe('refreshExcludes', () => {
+  it('re-applies a control pattern a stale exclude is missing', () => {
+    const dir = makeTempRepo()
+    excludeControl(dir)
+    // Simulate the upgrade window: a session started by an older plumbbob whose
+    // exclude never learned handoff.json, still live when checkpoint runs.
+    const exclude = join(realpathSync(dir), '.git', 'info', 'exclude')
+    const stale = readFileSync(exclude, 'utf8')
+      .split('\n')
+      .filter((line) => line.trim() !== '.plumbbob/builds/*/handoff.json')
+    writeFileSync(exclude, stale.join('\n'))
+
+    refreshExcludes(dir)
+
+    const lines = readFileSync(exclude, 'utf8').split('\n')
+    expect(lines.filter((line) => line.trim() === '.plumbbob/builds/*/handoff.json').length).toBe(1)
+    // The patterns that were already there are not duplicated.
+    expect(lines.filter((line) => line.trim() === '.plumbbob/STATE').length).toBe(1)
+  })
+
+  it('leaves a --local sidecar alone — the blanket line already covers every control file', () => {
+    const dir = makeTempRepo()
+    excludeSidecar(dir)
+
+    refreshExcludes(dir)
+
+    const lines = readFileSync(join(realpathSync(dir), '.git', 'info', 'exclude'), 'utf8').split('\n')
+    expect(lines).toContain('.plumbbob/')
+    // No narrow patterns layered underneath the blanket one.
+    expect(lines).not.toContain('.plumbbob/STATE')
+  })
+
+  it('writes the control patterns in a repo that has never been excluded', () => {
+    const dir = makeTempRepo()
+    refreshExcludes(dir)
+    const lines = readFileSync(join(realpathSync(dir), '.git', 'info', 'exclude'), 'utf8').split('\n')
+    expect(lines).toContain('.plumbbob/STATE')
+    expect(lines).not.toContain('.plumbbob/')
   })
 })
 

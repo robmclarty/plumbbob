@@ -19,6 +19,7 @@ import {
   hasSession,
   intentPath,
   readStats,
+  refreshExcludes,
   reportPath,
   resolveBuild,
   seamPath,
@@ -64,6 +65,7 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   // commit under the `finish` subject. `--allow-empty` (via `commit`) still marks
   // the narrative endpoint when the tree is already clean, or under `--local`,
   // where the whole sidecar is git-excluded and there is nothing tracked to stage.
+  refreshExcludes(root)
   if (isDirty(root)) {
     stageAll(root)
   }

@@ -4,7 +4,8 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { checkpoint } from '../checkpoint.ts'
 import { start } from '../start.ts'
-import { buildLogPath, checkpointsPath, grantPath, hasSession, intentPath, readStats, stampStepStat, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
+import { buildLogPath, checkpointsPath, grantPath, handoffPath, hasSession, intentPath, readStats, stampStepStat, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
+import { gitPath } from '../../lib/git.ts'
 import { setLocalSetting, settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { cleanupFixtures, makeFixtureRepo, runCli } from '../../../test/helpers/fixture-repo.ts'
@@ -44,6 +45,27 @@ describe('checkpoint', () => {
     // The SHA is shortened to exactly 9 hex chars — a full 40-char SHA here
     // would mean the slice was dropped.
     expect(stdout).toMatch(/step 1 checkpointed — [0-9a-f]{9}\. Back at the boundary/)
+  })
+
+  it('refreshes a stale info/exclude so an in-flight control file never rides the step commit (D33)', async () => {
+    const dir = await startedGreen()
+    // A session started by an older plumbbob, upgraded mid-build: its exclude
+    // predates the control file the new version writes.
+    const exclude = gitPath(dir, 'info/exclude')
+    const stale = readFileSync(exclude, 'utf8')
+      .split('\n')
+      .filter((line) => line.trim() !== '.plumbbob/builds/*/handoff.json')
+    writeFileSync(exclude, stale.join('\n'))
+    writeFileSync(handoffPath(dir), '{}\n')
+    writeFileSync(join(dir, 'work.txt'), 'pending\n')
+
+    const { code } = await captureIoAsync(() => checkpoint(dir, ['1']))
+
+    expect(code).toBe(0)
+    // stageAll's `-A` would have swept the handoff ledger into the commit.
+    const tracked = execFileSync('git', ['ls-files'], { cwd: dir, encoding: 'utf8' })
+    expect(tracked).not.toContain('handoff.json')
+    expect(tracked).toContain('work.txt') // the step's actual work still landed
   })
 
   it('flips the build-log mirror to ☑ and returns Current step to the boundary (D69)', async () => {

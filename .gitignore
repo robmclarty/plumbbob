@@ -13,12 +13,8 @@ coverage/
 tsconfig.tsbuildinfo
 .env
 
-# Plumbbob control plane: per-worktree ephemera stay untracked (D2/D3);
-# builds/<slug>/ artifacts are tracked and ride the branch into the PR.
-.plumbbob/STATE
-.plumbbob/settings.local.json
-.plumbbob/builds/*/STEP
-.plumbbob/builds/*/SEAM
-.plumbbob/builds/*/SPIKE
+# NOTE: the plumbbob control plane is NOT ignored here. Per D33 those patterns
+# live in the shared gitdir's info/exclude, written by `start`/`doctor` — see
+# docs/decisions.md#d33. Nothing plumbbob-specific belongs in this tracked file.
 
 research/
