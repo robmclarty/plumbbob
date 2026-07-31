@@ -36,8 +36,12 @@ export async function check(cwd: string, args: ReadonlyArray<string> = []): Prom
 /**
  * Map argv onto checkride's flags: bare booleans plus comma-separated slot lists.
  *
- * Unknown args are ignored rather than refused — running the gate is the point,
- * not flag hygiene.
+ * Only the declared flags are read here; an undeclared one never reaches this
+ * function, because `run` screens argv against the verb spec in cli-core.ts and
+ * refuses before dispatch. This used to tolerate unknown args on the grounds
+ * that running the gate mattered more than flag hygiene — but the same tolerance
+ * on the mutating verbs let `checkpoint --help` commit, so the screen is now
+ * central and uniform.
  */
 function parseFlags(args: ReadonlyArray<string>): CheckFlags {
   return {

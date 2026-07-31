@@ -20,23 +20,34 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 | Verb | Synopsis | Effect |
 |------|----------|--------|
 | `start` | `start <title> [--slug <name>] [--local] [--allow-dirty]` | scaffold `builds/<slug>/`, record baseline, open the session |
-| `status` | `status` | print the orientation dashboard (or `NO ACTIVE SESSION`) |
-| `build` | `build <n>` | write step `n`'s seam + `STEP` (goes in-flight) |
+| `status` | `status [--build <slug>]` | print the orientation dashboard (or `NO ACTIVE SESSION`) |
+| `build` | `build [<n>] [--build <slug>]` | write step `n`'s seam + `STEP` (goes in-flight) |
+| `handoff` | `handoff [<n>] [--build <slug>]` | print the standardized hand-off block; read-only |
 | `check` | `check [--bail] [--changed] [--all] [--only a,b] [--skip a,b] [--include a,b]` | run the heavy gate; no state change |
 | `checkpoint` | `checkpoint [<n>] [--plan] [-m <msg>] [--body <<'BODY'…]` | gate on green, commit, record SHA, mark step done |
-| `revert` | `revert [--to <n>]` | `git reset --hard` to a checkpoint SHA |
+| `revert` | `revert [--to <n>] [--build <slug>]` | `git reset --hard` to a checkpoint SHA |
 | `park` | `park <text>` | append a line to the park list |
-| `spike` | `spike <slug> [opt…]` \| `spike done` | throwaway worktree experiment |
-| `agent` | `agent list` \| `agent run <name> [--step N] [--mode …] [--agent <path>]` | list user-authored agents, or run one through the doorway |
+| `spike` | `spike <slug> [opt…] [--build <slug>]` \| `spike report <slug>` \| `spike done` | throwaway worktree experiment |
+| `agent` | `agent list` \| `agent run <name> [--step N] [--mode …] [--agent <path>] [--build <slug>]` | list user-authored agents, or run one through the doorway |
 | `use` | `use <slug>` | re-point the active-build cursor and resume that build |
-| `finish` | `finish [--body <<'BODY'…]` | append checkpoints to the report, make the final commit, close the session |
+| `finish` | `finish [--body <<'BODY'…] [--build <slug>]` | append checkpoints to the report, make the final commit, close the session |
 | `init` | `init [--uninstall] [--force]` | link plumbbob into Claude Code as the skills-dir plugin |
 | `doctor` | `doctor [--migrate]` | diagnose the plugin link; migrate a legacy flat sidecar |
-| `help` | `help` \| `--help` \| `-h` | print the verb table |
+| `turn` | `turn` | `UserPromptSubmit` hook machinery; not a user verb |
+| `help` | `help [<verb>]` \| `--help` \| `-h` | print the verb table, or one verb's flags |
 | `version` | `version` \| `--version` \| `-v` | print the CLI version |
 
-Every session verb accepts `--build <slug>` to target a specific build; without it, the verb
-resolves the active build from the cursor ([**D28**](decisions.md#d28), see [the layout](#the-plumbbob-sidecar)).
+`status`, `build`, `handoff`, `revert`, `spike`, `finish`, and `agent` accept `--build <slug>`
+to target a specific build; without it, the verb resolves the active build from the cursor
+([**D28**](decisions.md#d28), see [the layout](#the-plumbbob-sidecar)). The other verbs act on
+the cursor's build only.
+
+Every verb answers `--help` (or `-h`) with its own synopsis, arguments, and flags —
+`plumbbob checkpoint --help`, or equivalently `plumbbob help checkpoint`. The flags a verb
+declares are the only ones it accepts: an unrecognized flag is a refusal (exit 1), never a
+silently-ignored token, so a typo cannot fall through into a commit. `turn` and `park` are the
+two exceptions to the refusal — `turn` is a hook that must never wedge a prompt, and `park`'s
+argument is free text.
 
 ## Session verbs
 
@@ -50,8 +61,10 @@ Scaffolds the sidecar, records the baseline `HEAD`, and opens the session. By de
 plants a tracked build folder at `.plumbbob/builds/<slug>/` — the slug derived from the title
 as `YYYY-MM-DD-<title-slug>`, date-prefixed so `builds/` lists chronologically (`--slug`
 overrides it verbatim, no prefix) — holding `intent.md`, `build-log.md`, and `checkpoints`
-(`baseline <sha>`); it writes the tracked `settings.json` (`{"auto": false}` — no `check`
-key, because absence means checkride is the gate, [**D24**](decisions.md#d24)/[**D32**](decisions.md#d32)) and the untracked
+(`baseline <sha>`); it writes the tracked `settings.json` — seeded empty as `{}`, which is
+exactly "all defaults", since absent `check` already means checkride is the gate and absent
+`auto` already means false ([**D24**](decisions.md#d24)/[**D32**](decisions.md#d32)); the file is
+yours once it exists, so a re-start never touches it — and the untracked
 `STATE` sentinel — whose content is the active-build cursor, pointed at the new build ([**D28**](decisions.md#d28)) — and narrows the
 repo's `info/exclude` to the control-plane patterns ([**D17**](decisions.md#d17)/[**D26**](decisions.md#d26)). `--local` opts out into
 the old fully-untracked flat layout — everything under `.plumbbob/` excluded ([**D26**](decisions.md#d26)).
@@ -63,7 +76,7 @@ baseline ([**D22**](decisions.md#d22)).
 ### status
 
 ```text
-plumbbob status
+plumbbob status [--build <slug>]
 ```
 
 Prints the orientation dashboard — title, the derived phase, the step list with the next
@@ -74,7 +87,7 @@ exits 0 when there is no session.
 ### build
 
 ```text
-plumbbob build <n>
+plumbbob build [<n>] [--build <slug>]
 ```
 
 Reads step `n`'s seam from `intent.md` and writes `SEAM` (the path list) and `STEP` (the
@@ -82,6 +95,20 @@ number) — the `STEP` file is what makes the dashboard read `BUILD`. The seam i
 orientation, not a lock. Refuses (exit 1)
 with no session, a non-numeric or `< 1` step, or a seam it cannot parse (seams are exact
 paths or `dir/` grants, never globs — [**D23**](decisions.md#d23)).
+
+### handoff
+
+```text
+plumbbob handoff [<n>] [--build <slug>]
+```
+
+Prints the standardized hand-off block — the "state / choice / what's next" the human sees at
+each step boundary. Read-only, no state change. The moment is derived, not passed: a step in
+flight yields the pause block, none yields the post-checkpoint boundary block. An explicit
+`<n>` overrides which step it reports on; otherwise it uses the in-flight step, else the last
+checkpointed one. Owning the block here rather than as prose in the build skill keeps the
+skill from drifting out of sync with `status`, which renders the same next-step detail.
+Refuses (exit 1) only with no session.
 
 ### check
 
@@ -129,7 +156,7 @@ no resolvable step, or a red check.
 ### revert
 
 ```text
-plumbbob revert [--to <n>]
+plumbbob revert [--to <n>] [--build <slug>]
 ```
 
 `git reset --hard` to a recorded checkpoint SHA: the last step by default, `--to <n>` for a
@@ -154,8 +181,9 @@ is the `/plumbbob:park` skill's job. Refuses (exit 1) with no session, empty tex
 ### spike
 
 ```text
-plumbbob spike "<slug>" [opt…]      # open
-plumbbob spike done                 # close
+plumbbob spike "<slug>" [opt…] [--build <slug>]   # open
+plumbbob spike report "<slug>"                    # scaffold a report, no worktrees
+plumbbob spike done                               # close
 ```
 
 Opens a throwaway experiment for a genuine fork ([**D18**](decisions.md#d18)): a sibling git worktree and
@@ -168,7 +196,7 @@ empty slug, or a worktree path that already exists; `done` refuses when no spike
 
 ```text
 plumbbob agent list
-plumbbob agent run <name> [--step N] [--mode before|build|after] [--agent <path>]
+plumbbob agent run <name> [--step N] [--mode before|build|after] [--agent <path>] [--build <slug>]
 plumbbob agent run        --mode before|build|after [--step N]
 ```
 
@@ -225,7 +253,7 @@ folder; `status` with no cursor lists the available builds instead of refusing.
 ### finish
 
 ```text
-plumbbob finish [--body <<'BODY' … BODY]
+plumbbob finish [--body <<'BODY' … BODY] [--build <slug>]
 ```
 
 The close-out ([**D9**](decisions.md#d9)/[**D29**](decisions.md#d29)). Appends the checkpoint SHAs to the build's `report.md`
@@ -237,6 +265,18 @@ the control state (`STATE`, the cursor, the in-flight markers). No separate arch
 tracked build folder already *is* the record and merges into `main` with the branch, so it
 rides into the PR ([**D26**](decisions.md#d26)). There is **no** refuse-without-report gate. Refuses (exit 1) only
 with no session.
+
+### turn
+
+```text
+plumbbob turn
+```
+
+Hook machinery, not a user verb. Registered as the `UserPromptSubmit` hook, it reads the hook
+payload from **stdin** — it takes no arguments — ticks the human-turn ledger that the
+checkpoint latch reads, and emits any nudge as `additionalContext` JSON on stdout. It always
+exits 0 and never refuses an unrecognized flag: a hook that failed would wedge every prompt in
+the session.
 
 ## Install verbs
 

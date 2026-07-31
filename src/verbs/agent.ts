@@ -274,8 +274,9 @@ type RunArgs = {
  * agent name and the value flags.
  *
  * A value flag missing its value, or `--step` given a non-number, is a loud
- * error (returned as a string) rather than a silent default. Unknown `--flags`
- * are ignored — the point is the named agent.
+ * error (returned as a string) rather than a silent default. An undeclared
+ * `--flag` never arrives here — `run` screens argv against the verb spec in
+ * cli-core.ts and refuses before dispatch.
  */
 function parseRunArgs(args: ReadonlyArray<string>): RunArgs | string {
   const positionals: string[] = []
