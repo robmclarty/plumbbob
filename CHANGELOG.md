@@ -5,6 +5,35 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.3] - 2026-07-30
+
+- **Added:** every verb now answers `--help` (or `-h`) with its own synopsis, arguments,
+  and flags — `plumbbob checkpoint --help`, or equivalently `plumbbob help checkpoint`.
+  Only the top-level verb table existed before, so `--help` after a verb fell through into
+  that verb's own argument parsing and was silently discarded. On a verb that changes
+  state this was destructive rather than merely unhelpful: `plumbbob checkpoint --help`
+  ran a real checkpoint — gating, committing, and flipping the step to done. The verb
+  table in `cli-core.ts` grew into a full spec that now drives the top-level table,
+  per-verb help, and flag validation from one place.
+- **Changed:** an unrecognized flag is now a refusal (exit 1) naming the flag and pointing
+  at that verb's help, instead of a silently ignored token. This is the same hole the help
+  footgun came through — `checkpoint --typo` also ran a real checkpoint — so the screen
+  happens centrally, before any verb is dispatched, and a mutating verb can no longer be
+  reached by an argument list it does not understand. Flags that take a value are declared
+  as such, so `checkpoint -m "--help"` still reads the token as the commit subject. Two
+  verbs opt out of the refusal and answer `--help` as normal: `park`, whose argument is
+  free text, and `turn`, the prompt hook, where a refusal would wedge every prompt.
+  Concretely, `checkpoint --build <slug>` now exits 1 where it previously ran against the
+  active build, because `checkpoint` never accepted `--build`.
+- **Fixed:** the CLI documentation had drifted from the CLI in several places, all of them
+  now corrected and pinned by a contract test that compares the documented flags against
+  the ones the CLI declares. `docs/cli-reference.md` was missing the `handoff` and `turn`
+  verbs entirely and the API page on the site was missing those two plus `help` and
+  `version`; both claimed every session verb accepts `--build <slug>` when `checkpoint`,
+  `park`, `use`, and `check` do not, and they now name the seven that do; and the `start`
+  section described `settings.json` as seeded with `{"auto": false}` when the verb has
+  written an empty `{}` since 0.7.x.
+
 ## [0.9.2] - 2026-07-28
 
 - **Added:** a new page, `docs/state-and-git.md`, on the files PlumbBob keeps outside
