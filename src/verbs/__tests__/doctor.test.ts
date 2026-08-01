@@ -78,6 +78,10 @@ const gateEnv: GateEnv = {
   which: (cmd) => Promise.resolve(GATE_TOOLS.has(cmd) ? `/usr/bin/${cmd}` : null),
   version: (cmd) =>
     Promise.resolve(cmd === 'node' ? process.versions.node : cmd === 'pnpm' ? '11.1.2' : cmd === 'git' ? '2.40.0' : null),
+  // checkride 0.10.2 asks the package manager to resolve a tool under Yarn PnP,
+  // which has no node_modules/.bin to stat. These repos are pnpm, so the probe
+  // is never reached — it is here to satisfy the injected env's shape.
+  binPath: () => Promise.resolve(null),
   exists: existsSync,
   canWrite: () => Promise.resolve(true),
   readEngines: () => ({}),
@@ -423,6 +427,20 @@ describe('doctor — the verb', () => {
     expect(stdout).toContain('○ gate: no code checks detected')
     expect(stdout).toContain('set {"check": "npm test"} in .plumbbob/settings.json')
     expect(stdout).toContain('\n\nplumbbob: 1 problem(s)') // install is the only required failure
+  })
+
+  // checkride 0.10.2's `build` slot resolves off `scripts.build` alone, so a
+  // package with a build script and no tool config at all now fills a slot the
+  // gate can see. It still checks nothing about the code — the slot is opt-in,
+  // so no default run selects it — and the callout must survive it.
+  it('a build script alone is not a code check — the no-code-checks callout still fires', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = makeTempRepo()
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'x', version: '1.0.0', scripts: { build: 'tsc' } }))
+    const { stdout } = await doctorWithHome(home, dir, [], gateEnv)
+    expect(stdout).toContain('  ✓ build ← build') // the adapter really did resolve
+    expect(stdout).toContain('○ gate: no code checks detected')
   })
 
   it('flags a detected-but-missing tool with its hint (the D32 footgun)', async () => {

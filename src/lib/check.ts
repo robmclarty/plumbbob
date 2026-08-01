@@ -56,17 +56,33 @@ export async function detectGate(root: string): Promise<GateDetection> {
 }
 
 /**
- * Checkride's always-on repo checks: the adapters its doctor reports even for
- * an EMPTY directory — the built-in `links` slot, the pnpm-audit security
- * scan, the publint/attw package-shape probes, and the built-in
- * pack/smoke/snippets publish-bundle slots, which resolve on any package with
- * no tool config of their own. They exercise the repo's plumbing or its
- * shipped artifact, not its code — a gate made only of these green-lights
- * every checkpoint while the human believes their work is being checked.
- * Coupled to checkride's built-in set by construction; the check.test.ts and
+ * Checkride's always-on repo checks: the adapters that resolve with no tool
+ * config of their own — the built-in `links` slot, the pnpm-audit security
+ * scan, the publint/attw package-shape probes, and the pack/smoke/snippets
+ * publish-bundle slots. Several are named for their shape rather than because
+ * a bare directory reports them: `publint`/`attw` resolve off a devDependency,
+ * `build` off a `scripts.build` entry — which says the package can be built,
+ * not that checkride can see the code that goes into it — and `snippets`
+ * carries two adapters since checkride 0.10.2, so the dist-facing
+ * `snippets-dist` is named beside it (this list matches ADAPTER names, not
+ * slot names). Every one of them but `links` is an opt-in slot, so a default
+ * run selects none of them: they exercise the repo's plumbing or its shipped
+ * artifact, never its code. A gate made only of these green-lights every
+ * checkpoint while the human believes their work is being checked. Coupled to
+ * checkride's built-in set by construction; the check.test.ts and
  * doctor.test.ts probes pin the coupling.
  */
-const ALWAYS_ON_ADAPTERS: ReadonlyArray<string> = ['links', 'pnpm-audit', 'publint', 'attw', 'pack', 'smoke', 'snippets']
+const ALWAYS_ON_ADAPTERS: ReadonlyArray<string> = [
+  'links',
+  'pnpm-audit',
+  'publint',
+  'attw',
+  'build',
+  'pack',
+  'smoke',
+  'snippets',
+  'snippets-dist',
+]
 
 /**
  * The detection rule, shared by `start`'s probe and doctor's callout: some
@@ -154,6 +170,14 @@ async function runCheckride(root: string, flags: CheckFlags): Promise<number> {
       only: flags.only !== undefined ? [...flags.only] : null,
       skip: flags.skip !== undefined ? [...flags.skip] : null,
       include: flags.include !== undefined ? [...flags.include] : null,
+      // Checkride's own vacuous-green refusal (0.10.2): zero checks executed is
+      // an error, not a pass. It overlaps the refusal below and never reaches
+      // the human — our predicate is the broader one (it also catches a
+      // links-only run, where a check DID execute) and fires first, so
+      // plumbbob's message and its exit 1 are what a reader sees. Kept anyway:
+      // it is the contract checkride asks a gate to run under, so a future
+      // summary shape our predicate misreads still refuses.
+      strict: true,
     })
     summary = result.summary
     exitCode = result.exitCode

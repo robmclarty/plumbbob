@@ -213,7 +213,7 @@ describe('runCheck (checkride seam, mocked runChecks)', () => {
     const { runCheck: run, calls } = await loadWithRunChecksReturning(greenResult())
     expect(await run(dir)).toBe(0)
     expect(calls).toEqual([
-      { cwd: dir, bail: false, changed: false, all: false, only: null, skip: null, include: null },
+      { cwd: dir, bail: false, changed: false, all: false, only: null, skip: null, include: null, strict: true },
     ])
   })
 
@@ -230,8 +230,17 @@ describe('runCheck (checkride seam, mocked runChecks)', () => {
     }
     expect(await run(dir, flags)).toBe(0)
     expect(calls).toEqual([
-      { cwd: dir, bail: true, changed: true, all: true, only: ['types'], skip: ['lint'], include: ['docs'] },
+      { cwd: dir, bail: true, changed: true, all: true, only: ['types'], skip: ['lint'], include: ['docs'], strict: true },
     ])
+  })
+
+  // `strict` is not a CheckFlag — it is plumbbob's standing posture on the
+  // gate, so no flag combination may turn it off.
+  it('always runs strict — the vacuous green is refused however the run was narrowed', async () => {
+    const dir = makeTempDir()
+    const { runCheck: run, calls } = await loadWithRunChecksReturning(greenResult())
+    expect(await run(dir, { skip: ['test'] })).toBe(0)
+    expect(calls[0]?.strict).toBe(true)
   })
 
   it('reports only the failing slots, with adapter names and raw-output pointers', async () => {
@@ -275,9 +284,13 @@ describe('detectGate (the plan-time probe, research/07 Build 2a)', () => {
         row({ name: 'pnpm-audit (security)', adapter: 'pnpm-audit' }),
         row({ name: 'publint (publint)', adapter: 'publint' }),
         row({ name: 'attw (attw)', adapter: 'attw' }),
+        // checkride 0.10.2's additions: `build` resolves off scripts.build, and
+        // the snippets slot gained a second adapter an explicit `use` can pick.
+        row({ name: 'build (build)', adapter: 'build' }),
         row({ name: 'pack (pack)', adapter: 'pack' }),
         row({ name: 'smoke (smoke)', adapter: 'smoke' }),
         row({ name: 'snippets (snippets)', adapter: 'snippets' }),
+        row({ name: 'snippets (snippets-dist)', adapter: 'snippets-dist' }),
       ]),
     ).toBe(false)
     expect(gateDetectsTools([row({ name: 'types', adapter: null })])).toBe(false)

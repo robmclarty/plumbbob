@@ -96,6 +96,18 @@ describe('check', () => {
     expect(stdout).toContain('check green')
   })
 
+  // checkride 0.9.3 made an empty slot selection a usage error — `runChecks({only:
+  // []})` throws rather than filtering every check out and exiting 0. A value that
+  // trims to nothing must therefore never reach it as a list: parseFlags drops the
+  // flag entirely, so the run stays full-fat and reports the code, not the harness.
+  it.each([',', ' ', ''])('drops an empty --only %j rather than selecting nothing', async (value) => {
+    const dir = await startedWithCheckride(1)
+    const { code, stdout } = await captureIoAsync(() => check(dir, ['--only', value]))
+    expect(code).toBe(1) // the full run's red — not 2, which is what the throw would render
+    expect(stdout).toContain('check RED')
+    expect(stdout).not.toContain('check ERROR')
+  })
+
   it('warns and ignores narrowing flags on the spawn-override path', async () => {
     const dir = await startedWithCheck('true')
     const { code, stderr } = await captureIoAsync(() => check(dir, ['--bail', '--only', 'types']))

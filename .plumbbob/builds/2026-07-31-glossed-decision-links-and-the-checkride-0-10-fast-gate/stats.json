@@ -2,6 +2,10 @@
   "1": {
     "startedAt": "2026-08-01T14:57:45.293Z",
     "driftWarnings": 1,
-    "redChecks": 2
+    "redChecks": 2,
+    "landedAt": "2026-08-01T15:18:18.908Z"
+  },
+  "2": {
+    "startedAt": "2026-08-01T15:51:47.304Z"
   }
 }

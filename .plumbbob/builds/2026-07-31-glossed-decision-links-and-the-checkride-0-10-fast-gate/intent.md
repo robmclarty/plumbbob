@@ -95,7 +95,7 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
 
 *(The build plan. Drive `/plumbbob:build` until done.)*
 
-1. [ ] fix(cli): run the in-process CLI tests against a fixture repo — **done when:** a full `pnpm test` leaves the developer's own `git log` and build folder untouched, `checkpoint -m --help` refuses for want of a session rather than for want of a latch tick, and a gate invoked from inside a gate refuses with exit 2 instead of recursing
+1. [x] fix(cli): run the in-process CLI tests against a fixture repo — **done when:** a full `pnpm test` leaves the developer's own `git log` and build folder untouched, `checkpoint -m --help` refuses for want of a session rather than for want of a latch tick, and a gate invoked from inside a gate refuses with exit 2 instead of recursing
    - seam: `src/cli-core.ts`, `src/cli.ts`, `src/__tests__/cli-core.test.ts`, `src/lib/check.ts`, `src/lib/reentry.ts`, `src/lib/__tests__/reentry.test.ts`
    - model: opus — the isolation is mechanical, but the re-entrancy guard is a new invariant across both gate paths
    - notes: `run()` (`cli-core.ts:396`) dispatches with `process.cwd()` (line 438) and takes no root, so `run(['checkpoint', '-m', '--help'])` (`cli-core.test.ts:100`) checkpoints the *developer's* repo — the reflog holds four `--help` commits from it. `--help` there is the deliberate value of `-m`, so unknown-flag refusal ([b624e9b](https://github.com/robmclarty/plumbbob/commit/b624e9b)) never sees it and cannot help. `dispatch` already takes a root: give `run` an optional one (`src/cli.ts:10` is the only production caller) and point the mutating call sites at a temp repo, which restores the intent the test's own comment already states. Audit the other three (`--typo`, `--build x`, `park --not-a-flag`) — they refuse before dispatch today but sit on the same footing.
@@ -167,3 +167,6 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
 ## Verdicts
 
 *(Filled in as spikes and forks resolve — the audit trail of "these were my calls.")*
+
+- 2026-08-01 — [Q6 (nested-plugin-manifest)](#open-questions) closed as far as this machine can show. checkride 0.7.0 is installed as a plugin and carries a nested `node_modules/.pnpm/fallow@3.5.0/node_modules/fallow/skills` directory; none of fallow's skills are offered in a session. Nested plugin *content* is not discovered, so bundling stays ([D14 — bundle-stays-bundled](#d14)). The residual: no installed plugin currently ships a nested `.claude-plugin/plugin.json`, which is the exact artifact checkride 0.10.2 adds — the evidence covers `skills/`, and discovery is driven by marketplace registration pointing at a plugin *root*, so a manifest deeper in the tree has nothing pointing at it. Re-check on the first packed install after release rather than treating this as proven.
+- 2026-08-01 — the flat re-entrancy flag was rejected by this repo's own gate before it landed, and the marker is scoped by root instead. Recursion is a repo re-entering *its own* gate; the suite gating a fixture repo is ordinary nested work. Both cases are pinned by tests in `reentry.test.ts`.
