@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { formatHelp, formatVerbHelp, readVersion, run, verbNames, verbSpec } from '../cli-core.ts'
 import { captureIoAsync } from '../../test/helpers/capture-io.ts'
+import { makeTempDir } from '../../test/helpers/temp-repo.ts'
+
+// Every `run(...)` below that can reach a MUTATING verb names this directory
+// instead of inheriting `process.cwd()`. Under vitest the process cwd is THIS
+// repo, which carries a live plumbbob session — so `run(['checkpoint', …])`
+// checkpointed the developer's own branch, and (because this repo's `check`
+// setting is its own full pipeline) spawned a checkride run whose test suite
+// re-entered this file. A session-less temp dir makes the verbs refuse for the
+// reason these tests have always claimed they refuse: there is nothing here.
+const NOWHERE = makeTempDir()
 
 function declaredFlags(name: string): ReadonlyArray<string> {
   return (verbSpec(name)?.flags ?? []).map((f) => f.name)
@@ -82,34 +92,37 @@ describe('per-verb help', () => {
 
 describe('unknown flags', () => {
   it('refuses an undeclared flag before the verb runs', async () => {
-    const { code, stderr } = await captureIoAsync(() => run(['checkpoint', '--typo']))
+    const { code, stderr } = await captureIoAsync(() => run(['checkpoint', '--typo'], NOWHERE))
     expect(code).toBe(1)
     expect(stderr).toContain("unknown flag '--typo'")
     expect(stderr).toContain("plumbbob checkpoint --help")
   })
 
   it('refuses --build on a verb that does not resolve a build', async () => {
-    const { code, stderr } = await captureIoAsync(() => run(['checkpoint', '--build', 'x']))
+    const { code, stderr } = await captureIoAsync(() => run(['checkpoint', '--build', 'x'], NOWHERE))
     expect(code).toBe(1)
     expect(stderr).toContain("unknown flag '--build'")
   })
 
   it("reads a value flag's value as a value, never as help", async () => {
     // `checkpoint -m "--help"` must not print help — the token is the commit
-    // subject. It reaches the verb, which refuses for want of a session.
-    const { code, stdout } = await captureIoAsync(() => run(['checkpoint', '-m', '--help']))
+    // subject, so it reaches the verb. Against NOWHERE the verb refuses for want
+    // of a session, which is what this assertion has always meant to pin; against
+    // the process cwd it used to CHECKPOINT, and the four `--help` commits in this
+    // repo's reflog are what that looked like.
+    const { code, stdout } = await captureIoAsync(() => run(['checkpoint', '-m', '--help'], NOWHERE))
     expect(stdout).not.toContain('See: docs/cli-reference.md')
     expect(code).toBe(1)
   })
 
   it('never refuses for turn — a wedged hook would block every prompt', async () => {
-    const { code } = await captureIoAsync(() => run(['turn', '--anything']))
+    const { code } = await captureIoAsync(() => run(['turn', '--anything'], NOWHERE))
     expect(code).toBe(0)
   })
 
   it('does not refuse free text for park', async () => {
     // park's text is the human's content; only the missing session refuses.
-    const { code, stderr } = await captureIoAsync(() => run(['park', '--not-a-flag']))
+    const { code, stderr } = await captureIoAsync(() => run(['park', '--not-a-flag'], NOWHERE))
     expect(stderr).not.toContain('unknown flag')
     expect(code).toBe(1)
   })

@@ -392,8 +392,15 @@ async function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>):
  * used to commit a real checkpoint. Any thrown error becomes a one-line stderr
  * report and exit 1, so the bin entry only ever exits with the code returned
  * here.
+ *
+ * `cwd` is the repo the verbs act on. It defaults to the process's — the only
+ * thing the bin entry ever wants — and is a parameter solely so a test can name
+ * a fixture. Screening argv does not help when the argv is *valid*: `checkpoint
+ * -m --help` reads `--help` as the subject, exactly as it should, and then
+ * commits. Whose repo it commits is decided here, and a default is not a choice
+ * a test should inherit silently.
  */
-export async function run(argv: ReadonlyArray<string>): Promise<number> {
+export async function run(argv: ReadonlyArray<string>, cwd: string = process.cwd()): Promise<number> {
   const verb = argv[0] ?? 'help'
   const rest = argv.slice(1)
 
@@ -435,7 +442,7 @@ export async function run(argv: ReadonlyArray<string>): Promise<number> {
   }
 
   try {
-    return await dispatch(verb, process.cwd(), rest)
+    return await dispatch(verb, cwd, rest)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     process.stderr.write(`plumbbob: ${verb} failed: ${message}\n`)

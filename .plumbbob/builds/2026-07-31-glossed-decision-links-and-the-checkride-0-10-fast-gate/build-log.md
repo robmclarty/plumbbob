@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — glossed decision links and the checkride 0.10 fast gate
 
-**Current step:** none (at the boundary)
+**Current step:** 1 — fix(cli): run the in-process CLI tests against a fixture repo
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -23,13 +23,25 @@ step boundaries. The antidote to "my plan got lost in the noise."
 line above. Only ONE step is in flight; a step is done only after a checkpoint —
 check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
-- ☐ 1. <step>
+- ☐ 1. fix(cli): run the in-process CLI tests against a fixture repo
+- ☐ 2. chore(deps): upgrade checkride to 0.10.2
+- ☐ 3. chore(gate): run a test-less checkride profile on every turn
+- ☐ 4. feat(refs): flag a citation that is bare, mislinked, or unglossed
+- ☐ 5. docs(refs): gloss every decision citation in the docs
+- ☐ 6. docs(decisions): promote the commit-subject decisions into the repo key
+- ☐ 7. docs(skills): point the skills' citations at the published decisions
+- ☐ 8. feat(intent): anchor and gloss the build-local citations
+- ☐ 9. docs(cli): gloss the D-tags in the CLI's own output
+- ☐ 10. chore(gate): wire the citation check into checkride and the fast profile
+- ☐ 11. docs(decisions): record the citation convention and the gate profile
 
 ## Park list
 
 > Mid-step, every new problem / idea / "ooh what if" lands HERE, untouched, and you
 > go straight back to the step. Acting the instant an idea arrives is the disease.
 > Capture is one line (`/plumbbob:park` composes it). Harvest happens only at the boundary.
+- [ ] cli-core.test.ts runs `checkpoint -m --help` in-process against the developer's OWN repo — it landed 4 real commits here today; only the approval latch usually stops it
+- [ ] checkride's links slot scans INSIDE fenced blocks and code spans — every illustrative citation the docs/skills/template sweeps write must either resolve or not be link-shaped (it failed this build's own intent.md)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 

@@ -17,6 +17,7 @@
 import { spawnSync } from 'node:child_process'
 import { runChecks, runDoctor } from 'checkride'
 import type { DoctorCheck, Summary } from 'checkride'
+import { gateIsRunningFor, withGateMarker } from './reentry.ts'
 import { resolveString } from './settings.ts'
 
 /**
@@ -105,11 +106,21 @@ export type CheckFlags = {
  * ladder; a resolved command means the spawn path, no setting means checkride.
  */
 export async function runCheck(root: string, flags: CheckFlags = {}, commandFlag?: string): Promise<number> {
-  const command = resolveString(root, 'check', '', commandFlag)
-  if (command.length > 0) {
-    return runCommand(root, command, flags)
+  if (gateIsRunningFor(root)) {
+    // This repo re-entering its OWN gate is never a slow gate — it is a
+    // recursion whose next generation forks wider than this one. Exit 2 (the
+    // harness broke), not 1: nothing has been learned about the code. A gate on
+    // a DIFFERENT root is ordinary nested work (the test suite gating its
+    // fixtures) and never reaches here.
+    process.stderr.write(
+      `plumbbob: refusing to run the check gate for ${root} inside its own gate — this would recurse.\n` +
+        '  If a test reached here, it is driving a mutating verb against a real repo;\n' +
+        '  point it at a fixture instead.\n',
+    )
+    return 2
   }
-  return runCheckride(root, flags)
+  const command = resolveString(root, 'check', '', commandFlag)
+  return withGateMarker(root, () => (command.length > 0 ? runCommand(root, command, flags) : runCheckride(root, flags)))
 }
 
 /**
