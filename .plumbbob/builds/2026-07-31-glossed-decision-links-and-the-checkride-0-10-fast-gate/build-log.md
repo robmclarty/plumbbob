@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — glossed decision links and the checkride 0.10 fast gate
 
-**Current step:** 2 — chore(deps): upgrade checkride to 0.10.2
+**Current step:** none (at the boundary)
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -24,7 +24,7 @@ line above. Only ONE step is in flight; a step is done only after a checkpoint �
 check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
 - ☑ 1. fix(cli): run the in-process CLI tests against a fixture repo
-- ☐ 2. chore(deps): upgrade checkride to 0.10.2
+- ☑ 2. chore(deps): upgrade checkride to 0.10.2
 - ☐ 3. chore(gate): run a test-less checkride profile on every turn
 - ☐ 4. feat(refs): flag a citation that is bare, mislinked, or unglossed
 - ☐ 5. docs(refs): gloss every decision citation in the docs
@@ -70,3 +70,4 @@ you point at to say "I did that — the LLM helped, but those were my calls."
 `/plumbbob:finish` reads this for the report; `plumbbob finish` commits it with the build
 folder, so it rides the branch into the PR.)*
 - 2026-08-01 — step 1 checkpointed · ead5b60b7 — fix(cli): run the in-process CLI tests against a fixture repo (2 red, 1 drift, 21m)
+- 2026-08-01 — step 2 checkpointed · 0581298be — chore(deps): upgrade checkride to 0.10.2 (1 drift, 19m)
