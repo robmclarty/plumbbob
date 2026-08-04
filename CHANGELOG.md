@@ -5,6 +5,36 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.4] - 2026-08-04
+
+- **Added:** a check gate now refuses to run inside another check gate on the same repo,
+  exiting 2 with the harness named rather than spawning anything. The failure this closes
+  is not a slow suite but a fork bomb: a test that reached a mutating verb against the
+  developer's own repo ran a real checkpoint, which ran that repo's full `check`, which
+  ran the suite, which reached the same test again — each generation forking wider than
+  the last, ended only by a per-check timeout killing one of them from outside. The marker
+  rides the environment rather than a module variable, because the recursion crosses
+  process boundaries that a variable in one heap is invisible to. It is scoped by repo
+  root, so a gate legitimately run against a fixture or another checkout is ordinary
+  nested work and passes through untouched; only a repo re-entering its own gate is
+  refused.
+- **Changed:** the bundled checkride moves from 0.5.2 to 0.10.2. The visible effect is a
+  faster per-turn stop gate — checkride's new `gate` key narrows what runs on every turn
+  without touching what runs at a checkpoint, so a repo can skip its slowest check between
+  turns while PlumbBob's own checkpoint still runs the full pipeline. Bundled weight roughly
+  doubles (880K to 1.9M unpacked); checkride stays bundled, since determinism is the reason
+  it is bundled at all.
+- **Fixed:** `doctor` no longer reports that a repo has code checks when it has none. The
+  probe asks checkride which adapters resolve without configuration and discounts them,
+  and 0.10.x added a `build` adapter that resolves in any repo with a `build` script —
+  which says the package can be built, not that any tool is reading the code going into it.
+  A second adapter, `snippets-dist`, arrived the same way. Both are now discounted, so the
+  no-code-checks callout fires as intended on a repo carrying only a build script.
+- **Fixed:** `--only` with an empty or whitespace value no longer aborts the run. checkride
+  0.9.3 made an empty selection a usage error rather than a silent no-op, so a value that
+  trimmed to nothing would have surfaced as a harness failure (exit 2) instead of a normal
+  red or green; the flag is now dropped before it can reach that call.
+
 ## [0.9.3] - 2026-07-30
 
 - **Added:** every verb now answers `--help` (or `-h`) with its own synopsis, arguments,
