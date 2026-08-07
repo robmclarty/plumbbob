@@ -23,7 +23,9 @@ record.
    wrote a dated line for every step as it landed. **Read it as the spine; do not
    re-narrate it.** The report adds only what the log does not already carry:
    - **What shipped** — summarize from the `## Log` timeline; don't rebuild it step by step.
-   - **Decisions and why** — the settled calls that shaped the build (the *why* behind the log).
+   - **Decisions and why** — the settled calls that shaped the build (the *why* behind
+     the log). Copy each one's `D# (slug)` from `intent.md` — never a bare `D#` — so
+     the report reads without flipping back to the intent.
    - **Parked & harvested** — what was captured and how each was classified.
    - **Final status** — done or partial, and what is left.
    - **Deferred tangents** — the harvested items that become future work.

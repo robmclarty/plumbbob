@@ -145,8 +145,13 @@ export function renderReport(date: string): string {
     '- The driver pins PATH so sessions resolve this checkout\'s CLI — a',
     '  marketplace plumbbob install otherwise shadows the plugin under test',
     '  (verified live); a version guard aborts any run that resolves elsewhere.',
-    '- Contracts 5 and 6 are prose-governed by design (D10/D13): their numbers',
-    '  are the honest guidance-only rates. The latch does not reach them.',
+    '- Contracts 5 and 6 are prose-governed by design — D10 (pause-not-lock) and',
+    '  D13 (no-edit-guards): their numbers are the honest guidance-only rates.',
+    '  The latch does not reach them.',
+    '- Contract 8 is prose-governed the same way: the glossed-reference style',
+    '  (`D1 (in-memory-bucket):`) ships only in templates/intent.md and the plan',
+    '  skill, so nothing enforces it and baseline should track latched. Its',
+    '  number measures whether that guidance actually lands in authored intent.',
     '',
   ]
   return lines.join('\n')

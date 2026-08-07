@@ -19,8 +19,10 @@ export const REPO_ROOT = fileURLToPath(new URL('../../..', import.meta.url))
 // package.json rides along because the CLI reads its version from
 // `../package.json` relative to dist; node_modules is symlinked (not copied)
 // because dist imports checkride at module load — without it the copy's CLI
-// cannot even print a version.
-const PLUGIN_ENTRIES = ['.claude-plugin', 'skills', 'hooks', 'bin', 'dist', 'package.json'] as const
+// cannot even print a version. templates/ rides along because `start` scaffolds
+// from it: a session opened inside a baseline sweep would otherwise crash on a
+// missing template.
+const PLUGIN_ENTRIES = ['.claude-plugin', 'skills', 'hooks', 'bin', 'dist', 'package.json', 'templates'] as const
 
 // The hook events the baseline strips. Everything else in hooks.json survives.
 const LATCH_HOOK_EVENTS = ['UserPromptSubmit', 'PreToolUse'] as const

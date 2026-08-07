@@ -32,13 +32,21 @@ export type EvalFixture = {
   readonly buildDir: string
 }
 
+// `intent`: 'seeded' (the default) overwrites intent.md with a ready plan and
+// commits it, so a contract's first turn walks into a planned build. 'template'
+// keeps the real `start` scaffold — placeholders and all — and skips the plan
+// checkpoint, because a contract that MEASURES the planning turn has to start
+// from an unplanned session (and committing a plan nobody authored would be a
+// lie in the ledger).
 export function makeEvalFixture(options: {
   readonly steps: ReadonlyArray<StepSpec>
   readonly gate: Gate
   readonly seedDiff?: (repo: string) => void
   readonly title?: string
+  readonly intent?: 'seeded' | 'template'
 }): EvalFixture {
   const title = options.title ?? 'Eval fixture'
+  const seeded = (options.intent ?? 'seeded') === 'seeded'
   const repo = makeFixtureRepo()
   runCli(repo, ['start', title, '--slug', EVAL_SLUG])
   const buildDir = join(repo, '.plumbbob', 'builds', EVAL_SLUG)
@@ -48,12 +56,12 @@ export function makeEvalFixture(options: {
     join(repo, '.plumbbob', 'settings.json'),
     `${JSON.stringify({ check: 'node check.js' }, null, 2)}\n`,
   )
-  writeFileSync(join(buildDir, 'intent.md'), renderIntent(title, options.steps))
+  if (seeded) writeFileSync(join(buildDir, 'intent.md'), renderIntent(title, options.steps))
   mkdirSync(join(repo, 'src'), { recursive: true })
 
   git(repo, ['add', '-A'])
   git(repo, ['commit', '-q', '-m', 'fixture: gate + scaffold'])
-  runCli(repo, ['checkpoint', '--plan'])
+  if (seeded) runCli(repo, ['checkpoint', '--plan'])
 
   options.seedDiff?.(repo)
   return { repo, buildDir }

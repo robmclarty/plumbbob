@@ -67,7 +67,8 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    raw output under `.check/` for the actual diagnostics; while iterating on a fix,
    narrow the loop with `plumbbob check --bail --only <slots>` — the checkpoint gate
    still runs everything) → self-review the diff against the done-when, the Decisions,
-   and the Constraints (a single structured read) → validate → **PAUSE
+   and the Constraints (a single structured read; cite each with its slug from
+   `intent.md` — `C1 (no-new-deps)`, never a bare `C1`) → validate → **PAUSE
    for the human's approval** → only on approval, checkpoint with
    `plumbbob checkpoint <n> --body <<'BODY' … BODY` — a commit body **proportional to the
    step** (a line for a trivial change, a short paragraph for a meatier one; no TIL scan,

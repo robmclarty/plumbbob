@@ -40,7 +40,9 @@ this skill verifies it the same way: **it reads the diff, not the author** — D
    - the **Decisions** — does anything contradict a settled call?
    - the **Constraints** — are any violated?
    - any **`after`-agent findings** from step 2 — advisory, weigh them, don't defer to them.
-   Surface every mismatch plainly. You are reviewing, not building — do not fix anything.
+   Surface every mismatch plainly, and when you cite a Decision or Constraint, carry its
+   slug from `intent.md` — `C1 (no-new-deps)`, never a bare `C1` — so each finding reads
+   on its own. You are reviewing, not building — do not fix anything.
 4. **Validate.** State, yes or no, whether the step's done-when is met, with the evidence.
 5. **PAUSE.** Present the check result, the self-review (with any `after`-agent
    findings), and the validation, then

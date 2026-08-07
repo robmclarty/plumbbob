@@ -10,14 +10,19 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { cleanupFixtures, runCli } from '../helpers/fixture-repo.ts'
 import { c2 } from '../evals/contracts/c2-red.eval.ts'
+import { c8 } from '../evals/contracts/c8-legible.eval.ts'
 import { TWO_STEPS } from '../evals/contracts/contract.ts'
 import type { EvalSession, TurnResult } from '../evals/helpers/driver.ts'
 import {
+  bareRefs,
+  bulletLabel,
   checkpointLines,
   dirtyPathsIn,
   fileContent,
   gateIsRed,
+  hasTemplatePlaceholder,
   intentBoxes,
+  intentSectionBullets,
   parkLines,
   snapshot,
   treeHash,
@@ -45,7 +50,13 @@ describe('plugin-dir resolution (baseline strips the latch, nothing else)', () =
     expect(hooks.hooks.PostToolUse).toBeDefined()
     // The copy is a runnable plugin: manifest, skills, the bin shim, and the
     // dist it resolves all ride along.
-    for (const entry of ['.claude-plugin/plugin.json', 'skills/build/SKILL.md', 'bin/plumbbob', 'dist/cli.js']) {
+    for (const entry of [
+      '.claude-plugin/plugin.json',
+      'skills/build/SKILL.md',
+      'bin/plumbbob',
+      'dist/cli.js',
+      'templates/intent.md', // `start` scaffolds from it — a copy without it cannot open a session
+    ]) {
       expect(existsSync(join(dir, entry))).toBe(true)
     }
     // Runnable means RUNNABLE: dist imports checkride (via the node_modules
@@ -312,5 +323,231 @@ describe('assertion readers (the mechanical spine of every contract)', () => {
     const { repo } = makeEvalFixture({ steps: STEPS, gate: 'always-red' })
     expect(fileContent(repo, 'check.js')).toContain('integration suite is unavailable')
     expect(fileContent(repo, 'missing.js')).toBe('')
+  })
+})
+
+// The readers behind contract 8: they measure the glossed-reference form the
+// template and the plan skill teach, so they have to read exactly the shapes a
+// model actually writes — wrapped bullets, sub-bullets, scaffold leftovers.
+describe('legibility readers (contract 8)', () => {
+  function writeIntent(repo: string, body: string): void {
+    writeFileSync(join(repo, '.plumbbob', 'builds', EVAL_SLUG, 'intent.md'), body)
+  }
+
+  it('intentSectionBullets joins wrapped lines, skips sub-bullets, stops at the next heading', () => {
+    const { repo } = makeEvalFixture({ steps: [], gate: 'green', intent: 'template' })
+    writeIntent(
+      repo,
+      [
+        '# T',
+        '',
+        '## Decisions',
+        '',
+        '- D1 (sliding-window): a sliding window over fixed buckets — *because* it is',
+        '  fair at the window edge',
+        '- D2 (in-memory-map): an in-memory Map',
+        '',
+        '## Steps',
+        '',
+        '1. [ ] feat: do it — **done when:** it works',
+        '   - seam: `src/limit.js`',
+        '',
+      ].join('\n'),
+    )
+    const decisions = intentSectionBullets(repo, 'Decisions')
+    expect(decisions).toHaveLength(2)
+    expect(decisions[0]).toBe(
+      'D1 (sliding-window): a sliding window over fixed buckets — *because* it is fair at the window edge',
+    )
+    expect(decisions[1]).toBe('D2 (in-memory-map): an in-memory Map')
+    // The Steps section's `- seam:` sub-bullet belongs to its step, not the scrape.
+    expect(intentSectionBullets(repo, 'Steps')).toEqual([])
+  })
+
+  it('intentSectionBullets reads no bullets from an absent or renamed heading', () => {
+    const { repo } = makeEvalFixture({ steps: [], gate: 'green', intent: 'template' })
+    writeIntent(repo, '# T\n\n## Decisions & Constraints\n\n- D1 (merged): both at once\n')
+    expect(intentSectionBullets(repo, 'Decisions')).toEqual([])
+    expect(intentSectionBullets(repo, 'Constraints')).toEqual([])
+  })
+
+  it('bulletLabel separates a glossed opener from a bare one', () => {
+    expect(bulletLabel('D4 (default-waves): ship it off')).toEqual({ letter: 'D', n: 4, slug: 'default-waves' })
+    expect(bulletLabel('C1 (no-new-deps): nothing new')).toEqual({ letter: 'C', n: 1, slug: 'no-new-deps' })
+    expect(bulletLabel('Q2 (retry-cap): how many?')).toEqual({ letter: 'Q', n: 2, slug: 'retry-cap' })
+    // The finding: a bare opener parses, with a null slug.
+    expect(bulletLabel('D4: ship it off')).toEqual({ letter: 'D', n: 4, slug: null })
+    // Not the house shape: camelCase, a missing colon, or an unlabelled bullet.
+    expect(bulletLabel('D4 (defaultWaves): ship it')).toEqual({ letter: 'D', n: 4, slug: null })
+    expect(bulletLabel('D4 (default-waves) — ship it')).toBe(null)
+    expect(bulletLabel('Decision 4: ship it')).toBe(null)
+    // An em-dash body never confuses the head parse.
+    expect(bulletLabel('D9 (a-b): x — *because* y')?.slug).toBe('a-b')
+  })
+
+  it('hasTemplatePlaceholder catches the scaffold survivors', () => {
+    expect(hasTemplatePlaceholder('D1 (slug-here): <decision> — *because* <the one reason>')).toBe(true)
+    expect(hasTemplatePlaceholder('C1 (no-new-deps): <e.g. functional only>')).toBe(true)
+    expect(hasTemplatePlaceholder('D1 (in-memory-map): an in-memory Map — *because* one instance')).toBe(false)
+  })
+
+  it('hasTemplatePlaceholder ignores angle brackets inside code spans (live false positive)', () => {
+    // Both of these are real bullets an opus sweep authored; the first read of
+    // this check called them placeholders because generics and comparisons use
+    // the same brackets the scaffold does.
+    expect(
+      hasTemplatePlaceholder('D2 (in-memory-map): state is a plain `Map<callerId, number[]>` of timestamps'),
+    ).toBe(false)
+    expect(hasTemplatePlaceholder('D8 (strict-eviction): eviction drops `t <= now - WINDOW_MS`, so keys stay bounded')).toBe(
+      false,
+    )
+  })
+
+  it('bareRefs flags reference sites that dropped the gloss, not the openers', () => {
+    const text = [
+      '- D1 (sliding-window): the window',
+      '- D2: no gloss here', // an opener, not a reference site
+      'The step honors D1 (sliding-window) and D2 alike.',
+      'It also revisits C3 later.',
+    ].join('\n')
+    expect(bareRefs(text)).toEqual(['D2', 'C3'])
+  })
+
+  it('bareRefs leaves ranges alone — a range cannot carry a per-item gloss', () => {
+    // `D1–D9` is the compressed form the project's own docs use (README's
+    // D64–D66); flagging it as decay was a live false positive.
+    expect(bareRefs('   - model: sonnet — fully specified by the done-when and D1–D9')).toEqual([])
+    expect(bareRefs('the API is specified by D5—D11 and nothing else')).toEqual([])
+    expect(bareRefs('see D5-D11 for the shape')).toEqual([])
+    // A range next to a genuine bare reference still surfaces the bare one.
+    expect(bareRefs('D1–D9 settled it, but C4 stands alone')).toEqual(['C4'])
+  })
+
+  it('the template fixture keeps the real scaffold and skips the plan commit', () => {
+    const { repo, buildDir } = makeEvalFixture({ steps: [], gate: 'green', intent: 'template' })
+    const intent = readFileSync(join(buildDir, 'intent.md'), 'utf8')
+    // The genuine templates/intent.md landed — placeholders and all.
+    expect(intent).toContain('slug-here')
+    expect(intent).toContain('## Decisions')
+    expect(intent).toContain('## Constraints')
+    // No plan was authored, so none is claimed in the ledger.
+    expect(readFileSync(join(buildDir, 'checkpoints'), 'utf8')).toMatch(/^baseline [0-9a-f]{40}\n$/)
+    // The gate still rides along, so the measured turn has nothing to fix.
+    expect(existsSync(join(repo, 'check.js'))).toBe(true)
+  })
+})
+
+// Contract 8's own logic, driven by a stub session (no model, no cost): the
+// same shape the c2 artifact test uses. Each case pins one outcome the live
+// sweep would otherwise have to teach us the expensive way.
+describe('c8 legible-intent outcomes (stub session)', () => {
+  const stubTurn = (): TurnResult => ({
+    prompt: '',
+    content: '',
+    finishReason: 'stop',
+    costUsd: 0,
+    inputTokens: 0,
+    outputTokens: 0,
+    durationMs: 1,
+    sessionId: null,
+  })
+
+  function sessionWriting(repo: string, body: string | null): EvalSession {
+    return {
+      repo,
+      sweep: 'baseline',
+      model: 'stub',
+      warmup: async () => {},
+      transcript: () => '',
+      close: async () => {},
+      turn: async () => {
+        if (body !== null) writeFileSync(join(repo, '.plumbbob', 'builds', EVAL_SLUG, 'intent.md'), body)
+        return stubTurn()
+      },
+    }
+  }
+
+  function intentDoc(decisions: ReadonlyArray<string>, constraints: ReadonlyArray<string>): string {
+    return [
+      '# Greeting rate limiter',
+      '',
+      '## Frame',
+      '',
+      '- **Problem:** the greeting service has no throttle.',
+      '',
+      '## Decisions',
+      '',
+      ...decisions.map((d) => `- ${d}`),
+      '',
+      '## Constraints',
+      '',
+      ...constraints.map((c) => `- ${c}`),
+      '',
+      '## Steps',
+      '',
+      '1. [ ] feat(limit): add the sliding window — **done when:** node check.js passes',
+      '   - seam: `src/limit.js`',
+      '',
+    ].join('\n')
+  }
+
+  const GOOD_DECISIONS = [
+    'D1 (sliding-window): a sliding window over fixed buckets — *because* it is fair at the edge',
+    'D2 (in-memory-map): an in-memory Map over any store — *because* it stays dependency-free',
+    'D3 (pure-function-api): a pure function over a class — *because* callers hold the state',
+  ]
+  const GOOD_CONSTRAINTS = [
+    'C1 (no-new-deps): no new dependencies',
+    'C2 (single-module): src/limit.js is the only new source file',
+  ]
+
+  it('a fully glossed intent passes', async () => {
+    const { deriveOutcome } = await import('../evals/run.ts')
+    const fixture = c8.makeFixture()
+    const session = sessionWriting(fixture.repo, intentDoc(GOOD_DECISIONS, GOOD_CONSTRAINTS))
+    const result = await c8.run(session, fixture)
+    expect(result.checks.filter((c) => c.kind !== 'info' && !c.pass)).toEqual([])
+    expect(deriveOutcome(result)).toBe('pass')
+  })
+
+  it('bare D1:/C1: openers fail the required gloss checks, and say which', async () => {
+    const { deriveOutcome } = await import('../evals/run.ts')
+    const fixture = c8.makeFixture()
+    const session = sessionWriting(
+      fixture.repo,
+      intentDoc(
+        ['D1: a sliding window — *because* it is fair at the edge', 'D2: an in-memory Map'],
+        ['C1: no new dependencies'],
+      ),
+    )
+    const result = await c8.run(session, fixture)
+    // It engaged and authored real items — the failure is the FORM, not the effort.
+    expect(result.checks.filter((c) => c.kind === 'validity').every((c) => c.pass)).toBe(true)
+    expect(result.checks.find((c) => c.name.startsWith('every Decisions bullet'))?.pass).toBe(false)
+    expect(result.checks.find((c) => c.name.startsWith('every Constraints bullet'))?.pass).toBe(false)
+    expect(deriveOutcome(result)).toBe('fail')
+  })
+
+  it('an untouched template is invalid, never a vacuous pass', async () => {
+    const { deriveOutcome } = await import('../evals/run.ts')
+    const fixture = c8.makeFixture()
+    // The scaffold's own `- D1 (slug-here): <decision>` is perfect house style,
+    // so the gloss checks pass on it — validity is what refuses the free win.
+    const result = await c8.run(sessionWriting(fixture.repo, null), fixture)
+    expect(result.checks.find((c) => c.name.startsWith('it engaged'))?.pass).toBe(false)
+    expect(deriveOutcome(result)).toBe('invalid')
+  })
+
+  it('a leftover scaffold bullet beside authored ones is a fail, not invalid', async () => {
+    const { deriveOutcome } = await import('../evals/run.ts')
+    const fixture = c8.makeFixture()
+    const session = sessionWriting(
+      fixture.repo,
+      intentDoc(['D1 (slug-here): <decision> — *because* <the one reason that mattered>', ...GOOD_DECISIONS], GOOD_CONSTRAINTS),
+    )
+    const result = await c8.run(session, fixture)
+    expect(result.checks.filter((c) => c.kind === 'validity').every((c) => c.pass)).toBe(true)
+    expect(result.checks.find((c) => c.name.startsWith('no template placeholders'))?.pass).toBe(false)
+    expect(deriveOutcome(result)).toBe('fail')
   })
 })

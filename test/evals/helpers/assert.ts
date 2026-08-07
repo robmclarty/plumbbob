@@ -150,6 +150,105 @@ export function parkLines(repo: string): ReadonlyArray<string> {
   return lines
 }
 
+// Top-level `- ` bullets under intent's `## <section>`, the shape the glossed
+// reference style is authored in. Wrapped continuation lines join with a space
+// (a Decision may run past one line); indented sub-bullets (`- seam:`,
+// `*plain:*`) belong to their parent and are skipped; a blank line ends the
+// current bullet; the next `## ` heading ends the section.
+//
+// The heading must match exactly — the same rule the product's own scrape
+// follows, so a merged `## Decisions & Constraints` reads as neither section
+// and the run lands on validity (nothing authored where the loop looks) rather
+// than passing on a heading plumbbob itself would not have found.
+export function intentSectionBullets(repo: string, section: string): ReadonlyArray<string> {
+  const bullets: string[] = []
+  let inSection = false
+  let current: string | null = null
+  const flush = (): void => {
+    if (current !== null) bullets.push(current.trim())
+    current = null
+  }
+  for (const raw of readOr(buildPath(repo, 'intent.md')).split('\n')) {
+    if (raw.trim() === `## ${section}`) {
+      inSection = true
+      continue
+    }
+    if (!inSection) continue
+    if (/^##\s/.test(raw)) break
+    if (raw.trim().length === 0) {
+      flush()
+      continue
+    }
+    const bullet = /^-\s+(.*)$/.exec(raw)
+    if (bullet !== null) {
+      flush()
+      current = bullet[1] ?? ''
+      continue
+    }
+    if (current !== null && /^\s+\S/.test(raw) && !/^\s+-\s/.test(raw)) current = `${current} ${raw.trim()}`
+    else flush()
+  }
+  flush()
+  return bullets
+}
+
+// The head of one authored bullet: `D1 (in-memory-bucket): …` parses with its
+// slug, a bare `D1: …` parses with `slug: null` (that null IS the finding), and
+// an unlabelled bullet parses as null. Kebab means lowercase words joined by
+// hyphens — the shape templates/intent.md models.
+export type BulletLabel = {
+  readonly letter: 'D' | 'C' | 'Q'
+  readonly n: number
+  readonly slug: string | null
+}
+
+// Labelling and gloss are parsed separately on purpose: the opener match takes
+// ANY parenthetical, then the kebab test decides whether it counts as a slug.
+// Folding the shape into one regex would make `D4 (defaultWaves):` read as an
+// unlabelled bullet — losing the distinction between "not a decision" and
+// "a decision glossed the wrong way", which is the finding worth reporting.
+const BULLET_LABEL = /^([DCQ])(\d+)(?:\s*\(([^)]*)\))?:\s/
+const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+
+export function bulletLabel(bullet: string): BulletLabel | null {
+  const m = BULLET_LABEL.exec(bullet.trim())
+  if (m === null) return null
+  const gloss = m[3]
+  return {
+    letter: m[1] as 'D' | 'C' | 'Q',
+    n: Number(m[2]),
+    slug: gloss !== undefined && KEBAB.test(gloss) ? gloss : null,
+  }
+}
+
+// Scaffold survivors from templates/intent.md: the literal `slug-here` example
+// or a `<…>` angle-bracket placeholder. A bullet carrying one was never
+// authored, so it must not count as house style.
+//
+// Code spans are stripped before the angle-bracket test, because authored prose
+// legitimately writes `Map<string, number[]>` and `t <= now` inside backticks —
+// a live sweep flagged exactly that as a false placeholder. A placeholder is
+// prose the human was meant to replace, never code.
+export function hasTemplatePlaceholder(bullet: string): boolean {
+  const prose = bullet.replace(/`[^`]*`/g, '')
+  return bullet.includes('slug-here') || /<[^>`]+>/.test(prose)
+}
+
+// The decay probe: `D4`/`C6`/`Q2` tokens that are NOT followed by their gloss,
+// anywhere in the text — a reference site where the slug was dropped. Two
+// deliberate exclusions: bullet openers (`D1 (slug): …` and bare `D1: …` alike,
+// which the required checks already judge), and RANGES like `D1–D9`, where a
+// per-item gloss is impossible and the compressed form is the house style.
+export function bareRefs(text: string): ReadonlyArray<string> {
+  const found: string[] = []
+  for (const raw of text.split('\n')) {
+    const line = raw.trim().replace(/[DCQ]\d+\s*[–—-]\s*[DCQ]?\d+/g, '')
+    if (/^-\s*[DCQ]\d+\b/.test(line)) continue
+    for (const m of line.matchAll(/\b([DCQ]\d+)\b(?!\s*\()/g)) found.push(m[1] ?? '')
+  }
+  return found
+}
+
 // Commits on HEAD since `sinceSha` whose SHA the checkpoints ledger does not
 // record — the raw-commit detector every contract carries.
 export function unledgeredCommits(repo: string, sinceSha: string): ReadonlyArray<string> {
