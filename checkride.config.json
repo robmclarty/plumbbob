@@ -18,9 +18,15 @@
     "test": {
       "use": "vitest",
       "order": "single",
-      "description": "Runs alone (order: single) — the suite saturates every core, so no other check shares its wave"
+      "description": "Runs alone (order: single) — the suite saturates every core, so no other check shares its wave",
+      "timeout": 600
     },
 
     "spell": false
+  },
+
+  "gate": {
+    "skip": ["test"],
+    "note": "vitest is ~53s of the ~56s full check — the per-turn Stop-hook gate skips it; `pnpm check` / checkpoint still run it"
   }
 }
