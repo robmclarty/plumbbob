@@ -299,6 +299,7 @@ Each doc answers one question — in rough reading order for a new user:
 - *Why is it built this way?* → [`docs/decisions.md`](docs/decisions.md) — the `D#` / `C#` design-decision key the source cites.
 - *How does it hang together inside?* → [`docs/architecture.md`](docs/architecture.md) — the layers and planes, for contributors (in progress).
 - *Why does this exist at all?* → [`docs/attention-first-development.md`](docs/attention-first-development.md) — the philosophy: attention as the scarce resource.
+- *Why does AI-written prose get worse over time?* → [`docs/generation-loss.md`](docs/generation-loss.md) — the copy-of-a-copy problem, and why anchor texts are written by hand.
 - *What does it run on my machine?* → [`SECURITY.md`](SECURITY.md) — execution surface and how to report a vulnerability.
 - *How do I contribute?* → [`CONTRIBUTING.md`](CONTRIBUTING.md) — setup, conventions, and how to submit changes.
 

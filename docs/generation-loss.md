@@ -247,7 +247,9 @@ register a thousand future sessions will match. These few files repay craft
 like nothing else in a repository, because everything downstream is a copy of
 them. Seed them with slop and the slop compounds. Seed them with your voice
 and the machine copies *you* — first-generation copies of a human original
-instead of Nth-generation copies of its own.
+instead of Nth-generation copies of its own. This repository keeps its own
+plumb line for prose in [`voice/`](voice/voice.md): hand-owned register
+exemplars, read by every writing session and edited by none of them.
 
 **You are the fresh data.** The one reliable mitigation in the collapse
 literature is real data in every generation — accumulated alongside the

@@ -82,6 +82,10 @@ const gateEnv: GateEnv = {
   // which has no node_modules/.bin to stat. These repos are pnpm, so the probe
   // is never reached — it is here to satisfy the injected env's shape.
   binPath: () => Promise.resolve(null),
+  // checkride 0.12.0 reads the committed baseline for doctor's workspace row.
+  // The row is gated on the file existing and these temp repos never write one,
+  // so this probe is shape-only too; `exists` stays real and answers null first.
+  readText: () => null,
   exists: existsSync,
   canWrite: () => Promise.resolve(true),
   readEngines: () => ({}),
