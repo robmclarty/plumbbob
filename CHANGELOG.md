@@ -5,6 +5,41 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.5] - 2026-08-06
+
+- **Added:** `plumbbob recover`, and the `/plumbbob:recover` skill that drives it, reconcile
+  the control plane — the small untracked marker files that record where a session is.
+  Nothing read them as a set before: `doctor` checks the install and the gate, and `status`
+  reports what the markers claim without questioning them, so a session that crashed, lost
+  its context window, or was switched away mid-step could sit in a state no verb detected.
+  The quietest of those is a `STATE` cursor naming a build folder that is gone — every read
+  comes back empty, so `status` rendered a plausible fresh-and-untouched dashboard instead of
+  refusing. It also finds a step marked in flight that the plan no longer contains, a spike
+  and a step marked at once, an orphaned `handoff.json` that would thread a finished step's
+  agent output into the next one, a `TICK` stranded at the boundary by a revert, and a
+  `GRANT` with no turn ledger left to clear it. Diagnosis is free and repair is asked for by
+  name: `--fix` writes only the untracked control files, never a tracked artifact, never git
+  history, and never the loop. Spike worktrees orphaned when their marker went — which
+  `spike done` refuses to touch — are named with their exact removal commands and never
+  deleted, since they sit outside the repo and may hold the only copy of what the spike
+  learned.
+- **Added:** a new eval contract, c8 (legible intent), measures whether the glossed-reference
+  style actually lands in authored intent rather than only being asked for. It drives one
+  real `/plumbbob:plan` turn against an unplanned session and reads the resulting `intent.md`
+  off disk. In the first sweep, seven of seven valid runs per arm authored every Decisions
+  and Constraints bullet fully glossed, with no scaffold placeholders surviving. Its
+  informational probes carry the first measurement of where the style frays: cross-references
+  decay in most runs, and single-word slugs are common.
+- **Changed:** every `D#` / `C#` reference now carries its canonical slug — `D67
+  (auto-not-a-grant)` rather than a bare `D67` — everywhere a reader can hit one: the
+  refusals and `doctor` lines the CLI prints, the check-failure messages in `rules/`, the
+  intent template, the skills, and the decision key itself, where every entry gained a slug.
+  A bare number forced a trip to `docs/decisions.md` mid-thought; the slug reads in place.
+- **Changed:** the skills that cite decisions outside `plan` and `refine` — `verify`,
+  `build`, `finish`, and `harvest` — now teach the slug rule at their own point of use.
+  Skills never see each other's prose, so a fresh `/plumbbob:verify` session had no way to
+  learn a convention stated only in `plan`.
+
 ## [0.9.4] - 2026-08-04
 
 - **Added:** a check gate now refuses to run inside another check gate on the same repo,
