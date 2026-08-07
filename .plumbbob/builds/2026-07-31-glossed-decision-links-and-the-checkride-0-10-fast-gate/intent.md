@@ -81,6 +81,7 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
 - <a id="d13"></a>**D13 — code-spans-are-mentions**: a tag inside a code span is a mention, never a citation, and the scanner skips it — *because* the retired-number prose, the teach-by-bad-example line, and the template's `D1 (slug-here)` placeholder all need an escape, and they are already backticked ([Q5](#open-questions), resolved 2026-07-31).
 - <a id="d14"></a>**D14 — bundle-stays-bundled**: checkride stays a `bundleDependencies` entry through the upgrade, megabyte and nested plugin manifest included, with the manifest verified inert — *because* determinism is why it is bundled, and a surprise is only a problem once it is real ([Q6](#open-questions), resolved 2026-07-31).
 - <a id="d15"></a>**D15 — two-planes-two-gates**: checkride's blocking Stop gate and plumbbob's non-blocking pause coexist, and the seam is stated rather than smoothed over — *because* checkride gates *the code* while plumbbob latches *the record*, and plumbbob's refusal to enforce never meant no other tool may ([Q7](#open-questions), resolved 2026-07-31).
+- <a id="d16"></a>**D16 — voice-exemplars-are-hand-owned**: voice exemplars live as files under `docs/voice/`, seeded once by selection from prose that already survived a human pass (quoted, then re-punctuated to the voice's own rules), never model-edited unprompted afterward, and out of every seam beyond their own seeding step — *because* an exemplar the model can rewrite is the copy-of-a-copy loop with extra steps ([generation loss](../../../docs/generation-loss.md)).
 
 ## Constraints
 
@@ -138,6 +139,10 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
    - seam: `docs/decisions.md`, `docs/cli-reference.md`, `CONTRIBUTING.md`
    - model: opus — the wording is the deliverable
    - notes: the two-gate entry states the seam rather than smoothing it ([D15 — two-planes-two-gates](#d15)): checkride's Stop hook blocks a red turn on the *code* plane; [D10 — the boundary is a pause](../../../docs/decisions.md#d10) and [D13 — no edit-blocking guards](../../../docs/decisions.md#d13) still hold on plumbbob's, where the latch governs the *record*.
+12. [ ] docs(voice): seed the hand-owned voice exemplar folder — **done when:** `docs/voice/voice.md` exists carrying the hand-owned contract in its header, every exemplar passage in it is quoted from prose already in the repo with its source named (re-punctuated only where the voice's rules have moved past the source's), and the refs scanner stays green over the new folder
+    - seam: `docs/voice/voice.md`
+    - model: opus — selection is a taste call, not a sweep
+    - notes: selection, not generation ([D16 — voice-exemplars-are-hand-owned](#d16)): the file quotes the strongest existing passages, one per register, and invents no new prose of its own. Any tag inside a quoted passage rides in a code span or fence, so the scanner reads it as a mention ([D13 — code-spans-are-mentions](#d13)). The wiring that makes the folder load-bearing — the turn-hook injecting an exemplar as a pre-turn anchor, checkride's new `prose` slot (vale) as the gate behind it, and vale reject rules grown from the file's "never does" list — is deliberately a follow-up build; this step only plants the anchor. The seeding is provisional until Rob's pen has been through it, and after this step the folder leaves every seam.
 
 ## Open questions
 
