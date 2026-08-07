@@ -236,8 +236,12 @@ function spikeReportsMissingVerdict(root: string, buildSlug: string | null): Rea
  * Worktree paths whose checked-out branch is under spike/ — parsed from the
  * porcelain output (blank-line-separated `worktree <path>` / `branch <ref>`
  * blocks).
+ *
+ * Exported for `recover`, which reports the ones this verb can no longer reach
+ * (a spike interrupted before `spike done` strands them). Sharing the reader
+ * keeps one definition of what counts as a spike worktree.
  */
-function spikeWorktrees(root: string): ReadonlyArray<string> {
+export function spikeWorktrees(root: string): ReadonlyArray<string> {
   const out = git(root, ['worktree', 'list', '--porcelain'])
   const paths: string[] = []
   let current: string | null = null
@@ -253,8 +257,10 @@ function spikeWorktrees(root: string): ReadonlyArray<string> {
 
 /**
  * List the local `spike/<slug>` branch names.
+ *
+ * Exported alongside spikeWorktrees, for the same reason.
  */
-function spikeBranches(root: string): ReadonlyArray<string> {
+export function spikeBranches(root: string): ReadonlyArray<string> {
   const out = git(root, ['for-each-ref', '--format=%(refname:short)', 'refs/heads/spike/'])
   return out.length === 0 ? [] : out.split('\n').filter((b) => b.length > 0)
 }

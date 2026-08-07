@@ -25,6 +25,7 @@ import { use } from './verbs/use.ts'
 import { finish } from './verbs/finish.ts'
 import { init } from './verbs/init.ts'
 import { doctor } from './verbs/doctor.ts'
+import { recover } from './verbs/recover.ts'
 import { agent } from './verbs/agent.ts'
 import { turn } from './verbs/turn.ts'
 
@@ -197,6 +198,14 @@ const VERBS: ReadonlyArray<Verb> = [
     synopsis: ['doctor [--migrate]'],
     flags: [{ name: '--migrate', gloss: 'move a legacy flat sidecar into builds/ (staged, not committed)' }],
     notes: 'Exits 0 when everything passes, 1 when a check fails or an un-migrated legacy sidecar is present.',
+  },
+  {
+    name: 'recover',
+    description: 'reconcile the control plane: stale markers, a cursor pointing nowhere, spike leftovers',
+    synopsis: ['recover [--fix]'],
+    flags: [{ name: '--fix', gloss: 'repair the stale untracked control files it can repair on its own' }],
+    notes:
+      'Exits 0 when the control plane is consistent, 1 while any problem stands. --fix never touches a tracked artifact, git history, or the loop; spike worktrees are reported, never removed.',
   },
   {
     name: 'agent',
@@ -372,6 +381,8 @@ async function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>):
       return init(rest)
     case 'doctor':
       return doctor(cwd, rest)
+    case 'recover':
+      return recover(cwd, rest)
     case 'agent':
       return agent(cwd, rest)
     case 'turn':

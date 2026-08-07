@@ -1,6 +1,6 @@
 # Skills reference
 
-The twelve skills are the surface you actually drive — the CLI underneath
+The thirteen skills are the surface you actually drive — the CLI underneath
 ([`cli-reference.md`](cli-reference.md)) is what they shell out to. This page is the
 reference for that surface: what each skill is for, what it takes, what it reads and
 writes, and when to reach for it.
@@ -28,8 +28,9 @@ Two ground rules apply to all of them:
 | [`/plumbbob:harvest`](#harvest) | — | triage parked ideas at a boundary (blocker / tangent / pivot) |
 | [`/plumbbob:finish`](#finish) | — | write the report, make the final commit, clear for a fresh goal |
 | [`/plumbbob:refine`](#refine) | `[focus]` | attack the plan for holes, or repair a drifted one |
-| [`/plumbbob:revert`](#revert) | `[--to <step>]` | recover — `git reset --hard` to a recorded checkpoint |
+| [`/plumbbob:revert`](#revert) | `[--to <step>]` | rewind — `git reset --hard` to a recorded checkpoint |
 | [`/plumbbob:spike`](#spike) | `<slug> \| done` | throwaway worktree experiment for a fork the plan can't settle |
+| [`/plumbbob:recover`](#recover) | `[--fix]` | reconcile the session's own state when the dashboard looks wrong |
 | [`/plumbbob:doctor`](#doctor) | — | check the install from inside a session |
 
 ## The loop skills
@@ -163,6 +164,24 @@ For a genuine fork the plan can't settle on paper: `/plumbbob:spike <slug>` open
 sibling worktree and branch per option (`spike/<slug>-a`, `-b` by default) outside the
 repo; `/plumbbob:spike done` tears them all down. The deliverable is the **verdict** recorded
 back in `intent.md`, not the spike code.
+
+### recover
+
+For when the dashboard and reality disagree — a driver for `plumbbob recover`. It reads the
+session's own state as a set and says whether it is telling the truth: does the active-build
+cursor still point at a build that exists (one that doesn't makes `status` render an *empty
+dashboard* rather than refuse), is the phase readable (a spike and a step both in flight, or
+a step number the plan no longer contains), and is anything left over from a step that never
+finished (an orphaned agent handoff ledger, a stranded latch stamp, a self-approval grant
+nothing will clear). Those are what a crash, a lost context window, or a build switched away
+mid-step leave behind.
+
+It reports by default and repairs only when you ask: `/plumbbob:recover --fix` rewrites the
+stale untracked control files and nothing else — no intent, no build log, no checkpoints, no
+git. Leftover spike worktrees are named with their removal commands but never deleted, since
+they sit outside the repo and may hold the only copy of what the spike learned. Recovering
+reconciles bookkeeping; it never restores lost work — that is [`revert`](#revert), and it is
+destructive by design.
 
 ## Install
 

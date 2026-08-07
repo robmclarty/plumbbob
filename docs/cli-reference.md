@@ -33,6 +33,7 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 | `finish` | `finish [--body <<'BODY'…] [--build <slug>]` | append checkpoints to the report, make the final commit, close the session |
 | `init` | `init [--uninstall] [--force]` | link plumbbob into Claude Code as the skills-dir plugin |
 | `doctor` | `doctor [--migrate]` | diagnose the plugin link; migrate a legacy flat sidecar |
+| `recover` | `recover [--fix]` | reconcile the control plane: stale markers, a cursor pointing nowhere, spike leftovers |
 | `turn` | `turn` | `UserPromptSubmit` hook machinery; not a user verb |
 | `help` | `help [<verb>]` \| `--help` \| `-h` | print the verb table, or one verb's flags |
 | `version` | `version` \| `--version` \| `-v` | print the CLI version |
@@ -331,6 +332,41 @@ actually covers before trusting it.
 
 Exits 0 when everything passes, 1 when a check fails or an un-migrated legacy
 sidecar is present.
+
+### recover
+
+```text
+plumbbob recover [--fix]
+```
+
+Reads the control plane as a set and reports whether it is telling the truth. `doctor`
+answers "is plumbbob installed correctly"; `recover` answers "is *this session's* state
+consistent" — the question that matters after a crash, a lost context window, or a build
+switched away mid-step. What it checks:
+
+- **The cursor resolves.** A `STATE` cursor naming a build that is gone is the quiet one:
+  every read comes back empty, so `status` renders a plausible *empty dashboard* instead of
+  refusing. With exactly one build left, `--fix` re-points at it; with several, it names
+  them and leaves the choice to you.
+- **The phase is readable.** A spike and a step both marked in flight means `status` shows
+  the spike and hides the step. A `STEP` the plan no longer contains means a `refine`
+  rewrote `## Steps` underneath it. Both are reported, never auto-resolved — which one is
+  real is a judgment call.
+- **Nothing is left over.** An orphaned `handoff.json` would thread a finished step's agent
+  output into the next step's context; a `TICK` stranded at the boundary arms the approval
+  latch against a pause that already closed; a `GRANT` with no turn ledger to clear it
+  reads as standing self-approval. `--fix` clears all three.
+- **Spike leftovers.** Worktrees and `spike/*` branches with no open spike — which
+  `spike done` refuses to touch, since it requires the marker. **Reported with the exact
+  removal commands and never removed:** those worktrees sit outside the repo and may hold
+  the only copy of what the spike learned.
+
+Diagnosis is free; repair is asked for by name. `--fix` writes only the untracked control
+files plumbbob owns — it never touches a tracked artifact (intent, build log, checkpoints,
+report), never touches git history, and never lands or advances a step. Recovering is not a
+rewind: it reconciles bookkeeping and never restores lost work (that is
+[`revert`](#revert), and it is destructive by design). Exits 0 when the control plane is
+consistent, 1 while any problem stands.
 
 ## The `.plumbbob/` sidecar
 

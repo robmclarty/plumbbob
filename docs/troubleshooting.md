@@ -102,6 +102,28 @@ baseline — but a later revert-to-baseline will then discard the uncommitted wo
 
 **Cause.** A `.plumbbob/` session already exists in this repo. **Fix.** Close it with
 `/plumbbob:finish` before starting another, or continue the existing one (`/plumbbob:status`).
+If `status` shows a build you do not recognize — or an empty one you know you filled in —
+the cursor may be pointing at a build folder that is gone; run `plumbbob recover` (below).
+
+### `status` shows an empty dashboard for a build you know you wrote
+
+**Cause.** The active-build cursor in `.plumbbob/STATE` names a build folder that no longer
+exists — deleted, renamed, or left behind on another branch. Every read comes back empty, so
+the dashboard renders as a fresh untitled build instead of refusing. **Fix.** Run
+`plumbbob recover` (or `/plumbbob:recover`): it names the dangling cursor and, when exactly
+one build survives, `plumbbob recover --fix` re-points at it. With several, pick the one you
+meant with `plumbbob use <slug>`.
+
+### The session state looks wrong after a crash, a context loss, or a build switch
+
+**Cause.** The control plane is a set of small untracked marker files, and a session that
+ended abruptly can leave them disagreeing: a step marked in flight that the plan no longer
+contains (a `/plumbbob:refine` rewrote `## Steps` underneath it), a spike and a step both
+marked at once, an agent handoff ledger left over from a step that never landed, or a latch
+stamp stranded at the boundary by a `revert`. **Fix.** `plumbbob recover` reports each one
+with its consequence; `plumbbob recover --fix` repairs the ones that need no judgment. It
+touches only untracked control files — never intent, the build log, the checkpoints ledger,
+or git — and it is not a rewind: discarding a half-done step is still `/plumbbob:revert`.
 
 ### `/plumbbob:park` or `/plumbbob:harvest` refuses
 
@@ -184,6 +206,17 @@ unaffected — `npm i -g plumbbob` ignores `devEngines` (it is dev-scoped to thi
 **Fix.** If a step is in flight, finish or revert it first. "Already in a spike" → run
 `plumbbob spike done` to close the current one.
 If a worktree path "already exists," remove it or run `spike done`.
+
+### `spike done` says "no active spike to close" but the worktrees are still there
+
+**Cause.** `spike done` needs the `SPIKE` marker, and several things clear it while the
+worktrees live on: `finish` deletes it, `use <other-build>` moves the cursor away from the
+build that owns it, and a spike whose second worktree failed to open never wrote it at all.
+The worktrees and `spike/*` branches are then unreachable by any verb. **Fix.** Run
+`plumbbob recover` — it finds them and prints the exact `git worktree remove` /
+`git branch -D` commands. It deliberately does **not** run them: those directories sit
+outside the repo and may hold the only copy of what the spike learned, so salvage first,
+then remove by hand.
 
 ### `revert` says "no checkpoint recorded for step n"
 

@@ -88,6 +88,7 @@ const DRIVER_VERB: Record<string, string> = {
   'status': 'status',
   'revert': 'revert',
   'spike': 'spike',
+  'recover': 'recover',
 }
 
 describe('driver skills — the human fires the transition from the chat', () => {
@@ -160,6 +161,11 @@ describe('finish — the close-out: report by default, final commit, clear — D
     expect(body).toMatch(/what shipped/i)
     expect(body).toMatch(/decisions/i)
     expect(body).toMatch(/final status/i)
+  })
+
+  it('copies each Decision slug into the report — never a bare D#', () => {
+    expect(body).toMatch(/never a bare/i)
+    expect(body).toMatch(/D# \(slug\)/) // the copy-the-slug instruction
   })
 })
 
@@ -308,6 +314,11 @@ describe('build — the default engine: implement the planned step, then verify'
     expect(body).toMatch(/by hand|vibed|another harness/i)
   })
 
+  it('cites Decisions/Constraints with their slugs in the self-review — never a bare ref', () => {
+    expect(body).toMatch(/never a bare/i)
+    expect(body).toMatch(/C1 \(no-new-deps\)/) // the modeled slugged cite
+  })
+
   it('builds the decided step and captures new ideas by shelling park, not merely deferring', () => {
     expect(body).toMatch(/done.?when/i)
     expect(body).toMatch(/plumbbob park "/) // the actual capture invocation, not a promise
@@ -393,6 +404,11 @@ describe('verify — the tick: check, self-review, validate, PAUSE, checkpoint',
 
   it('reads the diff, not the author — D3 (author-blind-executor)', () => {
     expect(body).toMatch(/diff, not the author/i)
+  })
+
+  it('cites Decisions/Constraints with their slugs in the self-review — never a bare ref', () => {
+    expect(body).toMatch(/never a bare/i)
+    expect(body).toMatch(/C1 \(no-new-deps\)/) // the modeled slugged cite
   })
 
   it('leaves version bumps to the human (no auto /version)', () => {
@@ -507,6 +523,36 @@ describe('harvest — propose, the human confirms', () => {
     expect(body).toMatch(/propose/i)
     expect(body).toMatch(/confirm/i)
     expect(body).toMatch(/only after/i)
+  })
+
+  it('folds a blocker into intent slugged at birth — never a bare ref', () => {
+    expect(body).toMatch(/slugged at birth/i)
+    expect(body).toMatch(/never a bare/i)
+  })
+})
+
+describe('recover — reconcile the control plane, report before repair', () => {
+  const { data, body } = parseSkill('recover')
+
+  it('offers --fix as an argument the human types, never a default', () => {
+    expect(data['argument-hint']).toContain('--fix')
+    expect(body).toMatch(/only if the human asks/i)
+  })
+
+  it('separates itself from doctor (install) and revert (destructive rewind)', () => {
+    expect(body).toMatch(/doctor/)
+    expect(body).toMatch(/\/(?:plumbbob:)?revert/)
+    expect(body).toMatch(/never restores lost work|not a rewind/i)
+  })
+
+  it('keeps spike leftovers report-only — the model must not run the removals', () => {
+    expect(body).toMatch(/reported, never removed/i)
+    expect(body).toMatch(/do not run them yourself/i)
+  })
+
+  it('pins what --fix may not touch, so the boundary is stated where it is read', () => {
+    expect(body).toMatch(/never touches intent\.md/i)
+    expect(body).toMatch(/git history/)
   })
 })
 

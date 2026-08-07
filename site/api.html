@@ -4,17 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PlumbBob API reference — the skills, the sidecar, and the CLI</title>
-<meta name="description" content="The full PlumbBob reference: the twelve skills you drive the loop with, the .plumbbob/ sidecar layout and settings ladder, and the lower-level CLI verbs, flags, and exit codes for scripting or other hosts.">
+<meta name="description" content="The full PlumbBob reference: the thirteen skills you drive the loop with, the .plumbbob/ sidecar layout and settings ladder, and the lower-level CLI verbs, flags, and exit codes for scripting or other hosts.">
 <link rel="canonical" href="https://robmclarty.github.io/plumbbob/api.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="PlumbBob">
 <meta property="og:locale" content="en_US">
 <meta property="og:url" content="https://robmclarty.github.io/plumbbob/api.html">
 <meta property="og:title" content="PlumbBob API reference — the skills, the sidecar, and the CLI">
-<meta property="og:description" content="The full PlumbBob reference: the twelve skills you drive the loop with, the .plumbbob/ sidecar layout and settings ladder, and the lower-level CLI verbs, flags, and exit codes for scripting or other hosts.">
+<meta property="og:description" content="The full PlumbBob reference: the thirteen skills you drive the loop with, the .plumbbob/ sidecar layout and settings ladder, and the lower-level CLI verbs, flags, and exit codes for scripting or other hosts.">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="PlumbBob API reference — the skills, the sidecar, and the CLI">
-<meta name="twitter:description" content="The full PlumbBob reference: the twelve skills you drive the loop with, the .plumbbob/ sidecar layout and settings ladder, and the lower-level CLI verbs, flags, and exit codes for scripting or other hosts.">
+<meta name="twitter:description" content="The full PlumbBob reference: the thirteen skills you drive the loop with, the .plumbbob/ sidecar layout and settings ladder, and the lower-level CLI verbs, flags, and exit codes for scripting or other hosts.">
 <script src="https://cdn.usefathom.com/script.js" data-site="NXYISAXY" defer></script>
 <script src="./support.js"></script>
 <script src="./stars.js" defer></script>
@@ -239,7 +239,7 @@
       <sc-if value="{{ isSkills }}" hint-placeholder-val="{{ true }}">
         <div>
           <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:3px; color:#5A32C8; margin-bottom:14px;">THE SURFACE YOU DRIVE · START HERE</div>
-          <h1 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:60px; line-height:1; margin:0 0 20px;">The twelve skills</h1>
+          <h1 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:60px; line-height:1; margin:0 0 20px;">The thirteen skills</h1>
           <p style="font-size:18px; line-height:1.6; color:#2E2A44; max-width:680px;">This is the interface you actually use. Every skill is <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">disable-model-invocation</span> — <em>you</em> fire every move. Claude Code namespaces them under the plugin, so the command is <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">/plumbbob:plan</span>; the bare <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">/plan</span> reaches it only where nothing else owns that name. The <span onClick="{{ goVerbs }}" style="cursor:pointer; color:#5A32C8; font-weight:700; border-bottom:2px solid #5A32C8;">CLI verbs</span> are the lower-level layer these shell out to — reach for them only to script the loop or drive it from another host.</p>
 
           <div style="margin-top:32px; display:flex; flex-direction:column; gap:12px;">
@@ -296,7 +296,7 @@ class Component extends DCLogic {
   renderVals() {
     const sec = this.state.section;
     const navDef = [
-      { title: 'SKILLS · START HERE', items: [['skills', 'The twelve skills']] },
+      { title: 'SKILLS · START HERE', items: [['skills', 'The thirteen skills']] },
       { title: 'THE SIDECAR', items: [['sidecar', 'The .plumbbob/ layout'], ['settings', 'Settings']] },
       { title: 'CLI · ADVANCED', items: [['commands', 'Verbs'], ['flags', 'Flags'], ['exit-codes', 'Exit codes']] },
     ];
@@ -345,6 +345,8 @@ class Component extends DCLogic {
         'Links plumbbob into Claude Code as the skills-dir plugin: symlinks the package into ~/.claude/skills/plumbbob, where Claude Code loads it in place (skills as /plumbbob:*, hook auto-registered). Idempotent, global-only, and never writes settings.json. --uninstall drops the link. Refuses if a marketplace plumbbob is already installed (they collide); --force overrides. The two install paths are mutually exclusive.'],
       ['doctor', 'plumbbob doctor [--migrate]',
         'Three diagnostics: (1) the plugin link resolves to a real package; (2) a legacy flat sidecar is present — --migrate moves it into builds/<slug>/ and stages the move without committing; (3) how the check gate resolves in this repo. Also reachable in-session as /plumbbob:doctor. Exit 0 all pass, 1 a check failed or an un-migrated legacy sidecar.'],
+      ['recover', 'plumbbob recover [--fix]',
+        'Reads the control plane as a set and reports whether it is telling the truth: does the active-build cursor resolve (a cursor naming a deleted build makes status render an empty dashboard instead of refusing), is the phase readable (a spike and a step both in flight, or a STEP the plan no longer contains), and is anything left over (an orphaned handoff ledger, a TICK stranded at the boundary, a GRANT with no turn ledger to clear it). --fix repairs only the stale untracked control files — never a tracked artifact, never git history, never the loop. Spike worktrees are reported with their removal commands, never removed. Exit 0 consistent, 1 while any problem stands.'],
       ['turn', 'plumbbob turn',
         'Hook machinery, not a user verb. Registered as the UserPromptSubmit hook, it reads the hook payload from stdin — it takes no arguments — ticks the human-turn ledger the checkpoint latch reads, and emits any nudge as additionalContext JSON on stdout. Always exits 0: a hook that failed would wedge every prompt in the session.'],
       ['help', 'plumbbob help [<verb>]\nplumbbob <verb> --help',
@@ -378,6 +380,7 @@ class Component extends DCLogic {
       ['--body <<…', 'checkpoint / finish', 'A heredoc on stdin for the commit body (skill-composed, proportional).'],
       ['--to <n>', 'revert', 'Reset to step n\'s recorded checkpoint SHA instead of the last one.'],
       ['--migrate', 'doctor', 'Move a legacy flat sidecar into tracked builds/<slug>/ folders and stage the move.'],
+      ['--fix', 'recover', 'Repair the stale untracked control files recover can put right on its own.'],
       ['--build <slug>', 'status / build / handoff / revert / spike / finish / agent', 'Target a specific build instead of resolving from the cursor.'],
     ].map(([flag, verb, effect], i) => ({ flag, verb, effect, bg: i % 2 ? '#E1DCF0' : '#ECEAF4' }));
 
@@ -407,8 +410,10 @@ class Component extends DCLogic {
         'For a genuine fork the plan can\'t settle on paper: /plumbbob:spike <slug> opens a throwaway sibling worktree and branch per option (spike/<slug>-a, -b by default) outside the repo; /plumbbob:spike done tears them all down. The deliverable is the verdict recorded back in intent.md, not the spike code.'],
       ['/plumbbob:status', 'helper', '—', 'Orient — where you are, the next step\'s done-when and seam, and the next move.',
         'The orientation move — a thin trigger for plumbbob status. Prints the dashboard (title, phase, the step list with the next step\'s done-when, seam, and advisory model recommendation, last checkpoint, parked and open-question counts) and names the single next move. The model line is the plan\'s suggestion of the smallest model that can carry the next step — guidance, never a gate. Read-only; fire it any time you lose the thread.'],
-      ['/plumbbob:revert', 'helper', '[--to <step>]', 'Recover — git reset --hard to a recorded checkpoint SHA.',
+      ['/plumbbob:revert', 'helper', '[--to <step>]', 'Rewind — git reset --hard to a recorded checkpoint SHA.',
         'The undo — a human-triggered driver for plumbbob revert. Resets --hard to the last recorded checkpoint (or --to <step>, or the baseline as fallback), snapshotting the build folder across the reset so park lines and intent edits survive. Untracked files inside the seam are removed; everything outside it is left alone.'],
+      ['/plumbbob:recover', 'helper', '[--fix]', 'Reconcile the session\'s own state when the dashboard looks wrong.',
+        'For when the dashboard and reality disagree — a driver for plumbbob recover. Reads the session\'s state as a set and says whether it is telling the truth: does the active-build cursor still point at a build that exists (one that doesn\'t makes status render an empty dashboard rather than refuse), is the phase readable (a spike and a step both in flight, or a step number the plan no longer contains), and is anything left over from a step that never finished (an orphaned agent handoff ledger, a stranded latch stamp, a self-approval grant nothing will clear). Reports by default; --fix rewrites only the stale untracked control files — never intent, the build log, the checkpoints ledger, or git. Leftover spike worktrees are named with their removal commands but never deleted. It reconciles bookkeeping; it never restores lost work — that is /plumbbob:revert.'],
       ['/plumbbob:doctor', 'helper', '—', 'Check the install from inside a session.',
         'Diagnoses the install from inside a session — is the plugin linked, are the skills and hook present, is there a marketplace/skills-dir collision, does the repo carry a legacy sidecar, and how the check gate will resolve. On a marketplace install this is the only way to reach doctor, since the CLI is on PATH only inside a session.'],
       ['/plumbbob:park', 'capture', '[idea]', 'Capture a mid-build idea in one tagged line without chasing it.',
