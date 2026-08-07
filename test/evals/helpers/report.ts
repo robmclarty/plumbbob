@@ -65,6 +65,7 @@ type LedgerRun = {
   readonly costUsd: number
   readonly durationMs: number
   readonly infraRetries: number
+  readonly error?: string
 }
 
 function readLedger(date: string, sweep: string): ReadonlyArray<LedgerRun> {
@@ -165,6 +166,9 @@ function renderNonPasses(all: ReadonlyArray<LedgerRun>): string[] {
       .filter((c) => !c.pass && c.kind !== 'info')
       .map((c) => c.name)
       .join('; ')
-    return `- ${r.contract} (${r.sweep}) — ${r.outcome}${failed.length > 0 ? `: ${failed}` : ''}`
+    // A run that died before any check ran carries only its error — name it, so
+    // five bare "invalid" lines don't read as five unexplained model failures.
+    const cause = (failed.length > 0 ? failed : (r.error ?? '').split('\n')[0]?.slice(0, 120) ?? '').replace(/[\s:]+$/, '')
+    return `- ${r.contract} (${r.sweep}) — ${r.outcome}${cause.length > 0 ? `: ${cause}` : ''}`
   })
 }
