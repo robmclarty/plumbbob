@@ -84,23 +84,24 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
    sharpened just-in-time when you reach them with `/plumbbob:step`. Keep each small enough to
    verify in one review pass.
 
-   **The title *is* the commit subject — author it as one** *(D1)*: write each
+   **The title *is* the commit subject — author it as one**
+   ([D68 (conventional-subjects)](../../docs/decisions.md#d68)): write each
    `<title>` as a plain, single-line Conventional-Commit subject,
    `type(scope): description`, and it lands in `git log` verbatim (its breaking `!`
    honored) — this is how each step lands a *real* `feat`/`fix`/`chore` in the history.
    Keep load-bearing detail — file paths, module names — in `seam` and `done-when`; it is
-   **never jammed into the title** (D2), which has to read as plain English and as a clean
+   **never jammed into the title**, which has to read as plain English and as a clean
    subject at once. Aim for **≤72 characters** (GitHub's subject convention) — soft
-   guidance you eyeball at plan time, no lint, no gate (D9).
+   guidance you eyeball at plan time, no lint, no gate.
 
-   **Set the build's default scope, then let steps override it** *(D8)*: fill the
+   **Set the build's default scope, then let steps override it**: fill the
    `**Scope:**` header once with a short feature-level name — the catch-all every step
    inherits — and give a step its own `(scope)` when it touches a distinct code area
    (`plan`, `commitmsg`, `docs`). A step's `(scope)` names the *code area*; the header
    names the *feature*, so scopes stay consistent and greppable across builds. Scope
    resolves title-scope → `**Scope:**` default → build slug → bare, and type resolves
    title-type → `feat`, so a scopeless plain title still yields a clean
-   `feat(<slug>): <title>` unchanged ([D68](../../docs/decisions.md#d68), D3).
+   `feat(<slug>): <title>` unchanged.
 
    **Recommend a model per step where the signal is clear** *(optional)*: the
    `- model:` sub-line names the **smallest model that can carry the step**, with the
@@ -129,7 +130,7 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
 
    Keep it **bindings + prose only, never a conditional**: the file says *which*
    agent, not *when* — the host model reads each manifest's `when` prose and a step's
-   `note` and decides when to fire one mid-build. Skip the file entirely when no step
+   `note` and decides when to run one mid-build. Skip the file entirely when no step
    uses an agent — the loop runs identically without it. The plan commit picks it
    up automatically (it lives in the build folder).
 6. **Commit the plan.** Once the human approves the frame and steps, run
@@ -143,7 +144,7 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
    - **The plan commit is latched too.** Once the turn ledger exists, `checkpoint
      --plan` refuses to land in the same turn `start` stamped it: present the plan,
      **end the turn**, and the human's approving message is the tick that lets it
-     commit on re-fire — the refusal *is* the plan pause. Never route around it with a
+     commit on the next run — the refusal *is* the plan pause. Never route around it with a
      raw `git commit`. (One documented seam: the very first plan of a brand-new
      session runs `start` *before* the turn hook has ever ticked, so that single
      commit predates the ledger and stays guidance-governed — it lands without a

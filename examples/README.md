@@ -17,7 +17,7 @@ Read them in the order they were written:
 
 ## The commit log it produced
 
-Every commit subject is CLI-owned and greppable (D34), so the branch history reads as
+Every commit subject is CLI-owned and greppable — D34 (cli-owns-subjects), so the branch history reads as
 the build's spine:
 
 ```text
@@ -42,7 +42,7 @@ this: four plain files anyone can read with no tooling.
 ## The real thing
 
 These artifacts are a worked example, curated for readability. For unedited, real
-records, this repository dogfoods its own loop — every build that shipped PlumbBob
+records, this repository builds PlumbBob with PlumbBob's own loop — every build that shipped PlumbBob
 lives under [`.plumbbob/builds/`](../.plumbbob/builds/), messy parts included.
 
 ## A user-authored agent

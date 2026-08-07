@@ -1,7 +1,7 @@
 id: agent-no-advance
 language: typescript
 severity: error
-message: "C6/D40: the agent path has no verb to advance the loop — no commit, stage, reset, or checkpoint machinery may reach agent.ts/agents.ts. Agent side effects land through the park verb and the handoff ledger only."
+message: "C6 (no-advance-verb)/D40 (agent-run-verb): the agent path has no verb to advance the loop — no commit, stage, reset, or checkpoint machinery may reach agent.ts/agents.ts. Agent side effects land through the park verb and the handoff ledger only."
 files:
   - 'src/verbs/agent.ts'
   - 'src/lib/agents.ts'

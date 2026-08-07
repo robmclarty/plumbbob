@@ -141,7 +141,7 @@ async function runOne(root: string, slug: string | null, step: number, spec: Run
     return degrade(
       spec.ambient,
       `plumbbob: ${resolution.error}`,
-      `plumbbob: bound agent "${spec.name}" did not resolve — ${resolution.error} Skipping (D54 — the loop works without it).`,
+      `plumbbob: bound agent "${spec.name}" did not resolve — ${resolution.error} Skipping — D54 (bindings-degrade-soft): the loop works without it.`,
     )
   }
   const { manifest, dir } = resolution.agent
@@ -151,7 +151,7 @@ async function runOne(root: string, slug: string | null, step: number, spec: Run
     return degrade(
       spec.ambient,
       resolved.error,
-      `plumbbob: bound agent "${spec.name}" — ${resolved.error.replace(/^plumbbob:\s*/, '')} Skipping (D54).`,
+      `plumbbob: bound agent "${spec.name}" — ${resolved.error.replace(/^plumbbob:\s*/, '')} Skipping — D54 (bindings-degrade-soft).`,
     )
   }
   const mode = resolved.mode

@@ -95,7 +95,7 @@ describe('spike', () => {
   })
 })
 
-describe('spike reports (D70)', () => {
+describe('spike reports — D70 (spike-reports)', () => {
   const reportBody = (dir: string, name: string): string => readFileSync(join(buildFolder(dir), name), 'utf8')
 
   it('scaffolds spike-01-<slug>.md at open, naming it and the worktree provenance', async () => {

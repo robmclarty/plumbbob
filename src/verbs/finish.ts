@@ -55,7 +55,7 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   } else {
     process.stderr.write(
       'plumbbob: note — no report.md found; finishing without one ' +
-        '(/plumbbob:finish normally writes the report first). No gate (D9).\n',
+        '(/plumbbob:finish normally writes the report first). No gate — D9 (finish-no-gate).\n',
     )
   }
 

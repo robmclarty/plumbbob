@@ -16,7 +16,7 @@ describe('plumbbob status', () => {
     expect(result.stdout).toContain('NO ACTIVE SESSION')
   })
 
-  it('prints the orientation dashboard when a session is active (D8/D15)', () => {
+  it('prints the orientation dashboard when a session is active — D8 (status-dashboard)/D15 (one-next-move)', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Statey'])
     const out = runCli(dir, ['status']).stdout

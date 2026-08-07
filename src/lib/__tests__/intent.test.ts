@@ -24,7 +24,7 @@ describe('parseStepSeam', () => {
     expect(r.ok && r.seam).toEqual(['a.ts', 'b.ts', 'c.ts', 'd.ts'])
   })
 
-  it('a following sub-bullet is not a seam continuation, even when it carries backticks (D62)', () => {
+  it('a following sub-bullet is not a seam continuation, even when it carries backticks — D62 (model-recommendation)', () => {
     // A `- model:` line written with backticks (against the convention) must end
     // the seam declaration, never leak its content in as seam tokens.
     const intent = intentWith(
@@ -194,16 +194,16 @@ describe('parseBuildScope', () => {
     )
   })
 
-  it('parses an angle-bracket placeholder as absent (D7)', () => {
+  it('parses an angle-bracket placeholder as absent — D68 (conventional-subjects)', () => {
     expect(parseBuildScope('**Scope:** <scope>\n')).toBeNull()
   })
 
-  it('parses an empty value as absent (D7)', () => {
+  it('parses an empty value as absent — D68 (conventional-subjects)', () => {
     expect(parseBuildScope('**Scope:**\n')).toBeNull()
     expect(parseBuildScope('**Scope:**   \n')).toBeNull()
   })
 
-  it('is absent when the header is missing entirely (C2 back-compat)', () => {
+  it('is absent when the header is missing entirely — back-compat, D68 (conventional-subjects)', () => {
     expect(parseBuildScope('# Title\n\n## Frame\n\nno scope header here\n')).toBeNull()
   })
 })

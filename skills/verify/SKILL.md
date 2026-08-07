@@ -11,7 +11,8 @@ Current session state (injected when this skill runs): !`plumbbob status 2>/dev/
 
 This is the **tick** — the one beat where the human is the clock. Whatever produced
 the current diff — `/plumbbob:build`, your own hands, a vibe session, another harness —
-this skill verifies it the same way: **it reads the diff, not the author**.
+this skill verifies it the same way: **it reads the diff, not the author** — D3
+(author-blind-executor).
 
 ## What this skill does, in order
 
@@ -27,7 +28,7 @@ this skill verifies it the same way: **it reads the diff, not the author**.
    binds agents to this step's `after` slot, run `plumbbob agent run --step <n> --mode
    after`. Their envelopes are **advisory input to the self-review, never a gate** —
    `plumbbob check` already gated in step 1, and an `after`-agent that could fail a step
-   is the lock returning in autonomy's costume. Fold a `done` envelope's
+   would be the old lock back in another form. Fold a `done` envelope's
    `summary`/`body` into the review below; route a non-`done` one by its status: a
    `blocked` agent couldn't finish — surface its `notes`, let the human unblock, re-run;
    a `drift` agent found the plan no longer matches reality — stop and send the human to
@@ -45,14 +46,15 @@ this skill verifies it the same way: **it reads the diff, not the author**.
    findings), and the validation, then
    **stop and wait for the human's explicit approval.** This is the convergence beat;
    the human is the clock. Never checkpoint without it.
-   - **Reconcile a drifted subject here, in the open (D5).** The planned title *is* the
-     checkpoint subject (D1). If the diff drifted from it — the step landed something the
-     title no longer describes — the body pass may propose a corrected subject, but it
-     **presents** it at this pause for explicit approval: show `planned title → proposed
-     subject`, one line, as part of what the human OKs. This is the exception, not the
-     default (D6): with **nothing presented**, the deterministic title-derived subject
-     lands untouched. A silent `-m` swap is exactly the agent-authored subject D68 refuses
-     — so a reconcile is *only ever* the visible, approved kind.
+   - **Reconcile a drifted subject here, in the open.** The planned title *is* the
+     checkpoint subject — D68 (conventional-subjects). If the diff drifted from it — the
+     step landed something the title no longer describes — the body pass may propose a
+     corrected subject, but it **presents** it at this pause for explicit approval: show
+     `planned title → proposed subject`, one line, as part of what the human OKs. This is
+     the exception, not the default: with **nothing presented**, the deterministic
+     title-derived subject lands untouched. A silent `-m` swap is exactly the
+     agent-authored subject D68 (conventional-subjects) refuses — so a reconcile is
+     *only ever* the visible, approved kind.
 6. **Checkpoint** *(only after approval)*. Run `plumbbob checkpoint`: it makes the WIP
    commit, records the SHA, flips the step to done, appends the step to the build-log's
    `## Log`, and returns to DESIGN. The CLI owns the commit **subject** — a Conventional
@@ -79,7 +81,7 @@ this skill verifies it the same way: **it reads the diff, not the author**.
    step gone from in-flight it renders `step N checkpointed — back at the boundary` and
    points at the **next undone step**, carrying that step's `- model:` recommendation (the
    plan's smallest-model-that-fits call) so the human knows which `/model` to select before
-   firing `/plumbbob:build` again. This matters most across a context boundary: a fresh window
+   running `/plumbbob:build` again. This matters most across a context boundary: a fresh window
    inherits the *session's* model, not the plan's suggestion, so this line is what carries
    the recommendation over. The CLI owns the block, so it can't drift from what `plumbbob
    status` reports; no `- model:` line means any model will do. Guidance, never a gate.
@@ -91,13 +93,14 @@ land a step in the same turn it was entered** — and that refusal **is** this p
 an error to route around. If the checkpoint prints *"checkpoint refused — no human turn
 since this step began,"* you have reached the pause the hard way: present the diff and
 the self-review, **end the turn**, and the human's next message is the tick that lets
-the checkpoint land when you re-fire. **Never reach for a raw `git commit` to force the
+the checkpoint land when you run it again. **Never reach for a raw `git commit` to force the
 land** — that forges the very record the latch exists to keep honest, and the
 commit-ask hook asks the human about it anyway. The refusal is a healthy latch doing its
 job on the *record* while the *work* plane stays free; a `/plumbbob:build --auto` or
 a typed step range in the human's own prompt is the only self-approval — **never write
 `auto` into a settings file to unlock the land; the latch ignores a model-minted grant
-(D67), so ask the human to re-fire `/plumbbob:build --auto` instead.**
+— D67 (auto-not-a-grant) — so ask the human to type `/plumbbob:build --auto` again
+instead.**
 
 ## The hard contracts
 

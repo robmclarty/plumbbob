@@ -27,7 +27,7 @@ resource — is in [`docs/attention-first-development.md`](docs/attention-first-
 PlumbBob is the layer below [Ridgeline](https://github.com/robmclarty/ridgeline): where
 Ridgeline runs large, settled work autonomously without you, PlumbBob keeps you in the
 driver's seat for the work your judgment has to steer. This repository was built using
-PlumbBob, dogfooded on its own loop.
+PlumbBob itself, running its own loop.
 
 ## What a prompt can't replicate
 
@@ -47,8 +47,9 @@ model's goodwill:
   checkpoints, report — merges into `main` with the branch instead of dying with the
   worktree; the archive never destroys.
 - **The approval latch.** `checkpoint` refuses to land a step until the harness records a
-  human turn since that step began ([D64–D66](docs/decisions.md#d64), the ledger-plane
-  enforcement), so the model can't self-commit past you — the refusal *is* the pause.
+  human turn since that step began ([D64–D66](docs/decisions.md#d64), the approval-latch
+  family — the ledger-plane enforcement), so the model can't self-commit past you — the
+  refusal *is* the pause.
 
 The planning surface is the on-ramp; these five are the floor under it. And the latch's
 payoff is [measured, not asserted](#why-not-just), not just claimed. **Guidance on the
@@ -245,11 +246,11 @@ time, capture instead of chase. That transfers to whatever tool wins. If
 something better ships, you walk away with your archives and your habits intact.
 
 **…admit the pause is unenforceable?** On the **work** plane, yes — on purpose
-([D10](docs/decisions.md#d10)/[D13](docs/decisions.md#d13) in
+([D10 (pause-not-lock)](docs/decisions.md#d10)/[D13 (no-edit-guards)](docs/decisions.md#d13) in
 [`docs/decisions.md`](docs/decisions.md)): a hard lock on every edit buys ritual, not
 control, because a determined model routes around it and a denial mid-thought leaves no
 legal move. But the **record** is a different plane, and there the tick *is* latched
-([D64–D66](docs/decisions.md#d64)): `checkpoint` refuses to land a step until the harness
+([D64–D66](docs/decisions.md#d64), the approval-latch family): `checkpoint` refuses to land a step until the harness
 records a human turn since that step began, so the agent cannot self-commit past you —
 the refusal simply *is* the pause. It extends the [deterministic edges above](#what-a-prompt-cant-replicate)
 to the one boundary the product is named after, while leaving human what must be human:
@@ -268,10 +269,10 @@ that matters.
 > write into settings, a legal side door. The re-sweep
 > ([opus, 2026-07-18](docs/evals/2026-07-18.md), plumbbob 0.8.7) reproduced the win —
 > *no checkpoint over a red check* still **5/5 latched** — and pinned both gaps. Both are
-> now closed. The side door went by construction: [D67](docs/decisions.md#d67)
+> now closed. The side door went by construction: [D67 (auto-not-a-grant)](docs/decisions.md#d67)
 > (self-approval is human-typed only) retired the settings `auto` grant, so the one
 > approval a model could forge is gone. Park capture was never the latch's to reach —
-> prose-governed by design ([D10](docs/decisions.md#d10)/[D13](docs/decisions.md#d13)) —
+> prose-governed by design ([D10 (pause-not-lock)](docs/decisions.md#d10)/[D13 (no-edit-guards)](docs/decisions.md#d13)) —
 > and it failed because the guidance couldn't reach a fresh session at all; the turn hook
 > now injects one line when a step is in flight, and the third sweep
 > ([opus, 2026-07-27](docs/evals/2026-07-27.md), plumbbob 0.9.0) measures it at **5/5**,

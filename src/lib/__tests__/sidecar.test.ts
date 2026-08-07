@@ -127,7 +127,7 @@ describe('slugify', () => {
   })
 })
 
-describe('buildScope (D68 — the Conventional-Commit scope)', () => {
+describe('buildScope — the Conventional-Commit scope, D68 (conventional-subjects)', () => {
   it('strips the YYYY-MM-DD- date prefix start prepends', () => {
     expect(buildScope('2026-07-18-escape-hatch')).toBe('escape-hatch')
   })
@@ -148,7 +148,7 @@ describe('buildDir', () => {
   })
 })
 
-describe('spike reports (D70)', () => {
+describe('spike reports — D70 (spike-reports)', () => {
   it('lists only spike-NN-*.md files, sorted', () => {
     const dir = makeTempRepo()
     const b = buildDir(dir, 'b')
@@ -263,7 +263,7 @@ describe('excludeSidecar', () => {
     expect(hits).toBe(1)
   })
 
-  it('from a linked worktree, writes to the common gitdir exclude git actually reads (D1)', () => {
+  it('from a linked worktree, writes to the common gitdir exclude git actually reads — D33 (info-exclude)', () => {
     const main = makeTempRepo()
     const wt = join(makeTempDir(), 'wt')
     execFileSync('git', ['-C', main, 'worktree', 'add', '-q', wt, '-b', 'wt-sidecar'])
@@ -348,7 +348,7 @@ describe('per-build stats (research/07 Build 2b)', () => {
     expect(step?.landedAt).toBe('2026-07-11T10:34:00Z')
   })
 
-  it('tolerates a corrupt file by starting fresh — never wedges the caller (D27)', () => {
+  it('tolerates a corrupt file by starting fresh — never wedges the caller — D27 (settings-ladder)', () => {
     const dir = statsRepo()
     writeFileSync(statsPath(dir, 'stats-build'), '{corrupt')
     expect(readStats(dir, 'stats-build')).toEqual({})

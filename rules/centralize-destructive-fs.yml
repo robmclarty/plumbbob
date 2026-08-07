@@ -1,7 +1,7 @@
 id: centralize-destructive-fs
 language: typescript
 severity: error
-message: "C4: never destroy — deletions live only in the files that legitimately clear control state, snapshots, or legacy layouts (sidecar, checkpoint, finish, revert, doctor, init). A new deleter is a reviewed decision, not a convenience."
+message: "C4 (never-destroy): never destroy — deletions live only in the files that legitimately clear control state, snapshots, or legacy layouts (sidecar, checkpoint, finish, revert, doctor, init). A new deleter is a reviewed decision, not a convenience."
 files:
   - 'src/**/*.ts'
 ignores:

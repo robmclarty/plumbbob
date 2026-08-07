@@ -20,8 +20,8 @@ code the verdict. The § "The fascicle trap" discipline, enforced instead of han
 ## Prerequisites
 
 - **Node >= 24** — fascicle's floor. This is higher than PlumbBob's own (>= 22.18) and
-  applies only to *this agent's subprocess*: the agent's runtime is its own business
-  (D53), PlumbBob just spawns the command.
+  applies only to *this agent's subprocess*: the agent's runtime is its own business —
+  D53 (agents-own-keys) — PlumbBob just spawns the command.
 - **Ollama** installed and running (`ollama serve`), with a model pulled.
 
 | Model | Size | Notes |
@@ -62,7 +62,7 @@ node review.mjs < demo/stepcontext.json
 Watch the split as it runs: the `ollama-reviewer: …` lines and the model's spans are
 **stderr** (live narration); the single JSON object at the end is **stdout** (the one
 envelope PlumbBob consumes). With Ollama stopped you get a `blocked` envelope telling
-you to start it — that's the intended loop (D52), not a failure.
+you to start it — that's the intended loop — D52 (blocked-vs-drift) — not a failure.
 
 Through PlumbBob — inside an active session (`plumbbob agent run` needs one, plus a
 current step):

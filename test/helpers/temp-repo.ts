@@ -1,7 +1,7 @@
 // Local scaffolding for the lib unit tests: throwaway git repos in tmp. Kept
 // separate from tests/helpers/fixture-repo.ts (which also wires the CLI
 // subprocess) so the src/ tree never imports across into tests/. Node builtins
-// only, functional/procedural (C1/C2).
+// only, functional/procedural — C1 (functional-only)/C2 (few-deliberate-deps).
 
 import { execFileSync } from 'node:child_process'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'

@@ -39,7 +39,7 @@ describe('plumbbob start', () => {
     expect(slug).toMatch(/^\d{4}-\d{2}-\d{2}-my-change$/)
     expect(existsSync(join(dir, '.plumbbob', 'builds', slug, 'intent.md'))).toBe(true)
     expect(readSidecar(dir, 'checkpoints').split('\n')[0]).toBe(`baseline ${headSha(dir)}`)
-    expect(JSON.parse(readSidecar(dir, 'settings.json'))).toEqual({}) // empty scaffold — the human owns this file; absence means checkride/auto-false (D32)
+    expect(JSON.parse(readSidecar(dir, 'settings.json'))).toEqual({}) // empty scaffold — the human owns this file; absence means checkride/auto-false — D32 (checkride-gate)
 
     const intent = readSidecar(dir, 'intent.md')
     expect(intent).toContain('# My change')
@@ -47,7 +47,7 @@ describe('plumbbob start', () => {
     expect(readSidecar(dir, 'build-log.md')).toContain('Build log — My change')
   })
 
-  it('narrows the git exclude to the control plane, leaving the artifact plane tracked (D2/D18)', () => {
+  it('narrows the git exclude to the control plane, leaving the artifact plane tracked — D17 (two-planes)', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Excluded'])
 
@@ -57,8 +57,9 @@ describe('plumbbob start', () => {
     expect(exclude).not.toContain('.plumbbob/') // the whole-directory exclude is gone
 
     // The per-worktree control files are git-ignored; the tracked artifact plane
-    // is not — it rides the branch into the PR (D2), showing as ordinary
-    // uncommitted work until the plan/step commits land it (D18's dirty window).
+    // is not — it rides the branch into the PR per D17 (two-planes), showing as
+    // ordinary uncommitted work until the plan/step commits land it — the
+    // accepted dirty window D36 (plan-commit) closes.
     expect(isIgnored(dir, '.plumbbob/settings.local.json')).toBe(true)
     expect(isIgnored(dir, '.plumbbob/STATE')).toBe(true)
     expect(isIgnored(dir, '.plumbbob/builds/excluded/SEAM')).toBe(true)
@@ -66,7 +67,7 @@ describe('plumbbob start', () => {
     expect(isIgnored(dir, '.plumbbob/settings.json')).toBe(false)
   })
 
-  it('runs inside a linked worktree: writes the exclude to the common gitdir (D1)', () => {
+  it('runs inside a linked worktree: writes the exclude to the common gitdir — D33 (info-exclude)', () => {
     const main = makeFixtureRepo()
     const wt = join(main, 'wt')
     execFileSync('git', ['-C', main, 'worktree', 'add', '-q', wt, '-b', 'wt-branch'])
@@ -100,7 +101,7 @@ describe('plumbbob start', () => {
     expect(phase(dir)).toBe('DESIGN')
   })
 
-  it('uses an explicit --slug verbatim — no date prefix (D38)', () => {
+  it('uses an explicit --slug verbatim — no date prefix, D38 (cli-owns-slugs)', () => {
     const dir = makeFixtureRepo()
     const result = runCli(dir, ['start', 'Some title', '--slug', 'chosen-name'])
     expect(result.status).toBe(0)
@@ -130,8 +131,8 @@ describe('plumbbob start', () => {
     expect(result.stderr).toContain('title')
   })
 
-  it('seeds no check setting and no warning — checkride is the default gate (D24/D32)', () => {
-    const dir = makeFixtureRepo() // no package.json — the old D24 warning trigger
+  it('seeds no check setting and no warning — checkride is the default gate, D24 (configurable-check)/D32 (checkride-gate)', () => {
+    const dir = makeFixtureRepo() // no package.json — the old D24 (configurable-check) warning trigger
     const result = runCli(dir, ['start', 'No check'])
     expect(result.status).toBe(0)
     expect(result.stderr).not.toContain('WARNING')
@@ -142,9 +143,10 @@ describe('plumbbob start', () => {
     const dir = makeFixtureRepo()
     expect(runCli(dir, ['start', 'Round one', '--slug', 'round-one']).status).toBe(0)
 
-    // Simulate a finish: the build folder IS the archive now (D8), so round-one's
-    // report lands in its own folder and is committed there (as `finish` would leave
-    // it, clearing D18's dirty window); then the session sentinel is cleared.
+    // Simulate a finish: the build folder IS the archive now, per
+    // D29 (finish-replaces-wrap) — so round-one's report lands in its own folder
+    // and is committed there (as `finish` would leave it, with the artifact plane
+    // fully committed); then the session sentinel is cleared.
     writeSidecar(dir, 'report.md', 'preserved\n')
     const roundOneReport = join(dir, '.plumbbob', 'builds', 'round-one', 'report.md')
     commitAll(dir, 'commit round one scaffold + report')

@@ -13,10 +13,11 @@ function makeExecutable(dir: string, rel: string, script: string): void {
   chmodSync(path, 0o755)
 }
 
-// PlumbBob has no muzzle, no seam-guard, and no bash-guard (D1/D13). The
-// only edit-time hook is the PostToolUse light feedback: it never blocks and
-// exists solely to give the model the diagnostics it cannot otherwise see (D25).
-describe('post-edit light feedback (D25 — the only edit-time hook)', () => {
+// PlumbBob has no muzzle, no seam-guard, and no bash-guard — D1 (lean-cli)/
+// D13 (no-edit-guards). The only edit-time hook is the PostToolUse light
+// feedback: it never blocks and exists solely to give the model the diagnostics
+// it cannot otherwise see — D25 (light-then-heavy).
+describe('post-edit light feedback — D25 (light-then-heavy), the only edit-time hook', () => {
   it('no-ops (exit 0, no context) when the tools are absent', () => {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Lint'])
@@ -71,10 +72,11 @@ describe('post-edit light feedback (D25 — the only edit-time hook)', () => {
   })
 })
 
-// The git-commit ask-hook (D66): a raw `git commit` mid-step becomes a permission
-// *question*, never a wall. checkpoint owns the landing; this only nudges the human
-// to route through it. Always exits 0, never `deny`s — C5 stays intact.
-describe('git-commit ask-hook (D66 — checkpoint owns the landing)', () => {
+// The git-commit ask-hook — D66 (oob-commits-surfaced): a raw `git commit` mid-step
+// becomes a permission *question*, never a wall. checkpoint owns the landing; this
+// only nudges the human to route through it. Always exits 0, never `deny`s —
+// D13 (no-edit-guards) stays intact.
+describe('git-commit ask-hook — D66 (oob-commits-surfaced), checkpoint owns the landing', () => {
   // Put a step in flight: `start` mints the STATE cursor + build folder, then
   // a STEP file (what `build <n>` would write) is the "in flight" signal the hook reads.
   function withStepInFlight(): string {

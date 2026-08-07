@@ -1,4 +1,5 @@
-// Drive the POSIX-sh hooks with synthetic stdin JSON (D14). Paths are resolved
+// Drive the POSIX-sh hooks with synthetic stdin JSON — D14 (throwaway-repo-tests).
+// Paths are resolved
 // against the repo's physical path so macOS /var -> /private/var symlinks do not
 // break the hook's `pwd -P` prefix matching.
 

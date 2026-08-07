@@ -42,7 +42,7 @@ describe('grantFromPrompt', () => {
     expect(grantFromPrompt('/build 2')).toBeNull()
   })
 
-  it('mints nothing when the flag/range rides a non-invocation prompt (D65)', async () => {
+  it('mints nothing when the flag/range rides a non-invocation prompt — D65 (human-typed-grants)', async () => {
     expect(grantFromPrompt('please run it with --auto and steps 1-3')).toBeNull()
     expect(grantFromPrompt('just a normal message')).toBeNull()
   })
@@ -57,7 +57,7 @@ describe('grantFromPrompt', () => {
     expect(grantFromPrompt('when the check is green, /build --auto')).toBe('auto')
   })
 
-  it('ignores an incidental range in prose after the invocation (D65 — arguments only)', async () => {
+  it('ignores an incidental range in prose after the invocation — D65 (human-typed-grants), arguments only', async () => {
     expect(grantFromPrompt('/build the 1-5 endpoints')).toBeNull()
     expect(grantFromPrompt('/build fix the issues from 2020-2024')).toBeNull()
     // …but prose never retro-cancels a flag the human led with: arguments are the
@@ -125,7 +125,7 @@ describe('applyTurn', () => {
   })
 })
 
-describe('stepInFlightContext — the park nudge (D64 amended: guidance, not silence)', () => {
+describe('stepInFlightContext — the park nudge, D64 (approval-latch) amended: guidance, not silence', () => {
   it('is null when no step is in flight (session started, none entered)', async () => {
     const dir = await startedSession()
     expect(stepInFlightContext(dir)).toBeNull()
@@ -161,7 +161,7 @@ describe('stepInFlightContext — the park nudge (D64 amended: guidance, not sil
 })
 
 describe('turn (the verb)', () => {
-  it('exits 0 and skips the fd-0 read on an interactive TTY (never wedges a prompt, C3)', async () => {
+  it('exits 0 and skips the fd-0 read on an interactive TTY (never wedges a prompt)', async () => {
     const dir = await startedSession()
     const stdin = process.stdin as unknown as { isTTY?: boolean }
     const had = stdin.isTTY

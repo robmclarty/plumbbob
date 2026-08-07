@@ -1,7 +1,7 @@
 id: no-sync-spawn-in-agent-path
 language: typescript
 severity: error
-message: "D60: the agent path spawns async — a live parent can interrupt gracefully (SIGINT forwarding, D58) where a spawnSync-blocked one just dies with the child."
+message: "D60 (async-spawn): the agent path spawns async — a live parent can interrupt gracefully (SIGINT forwarding — D58 (sigint-forwarded)) where a spawnSync-blocked one just dies with the child."
 files:
   - 'src/lib/agents.ts'
   - 'src/verbs/agent.ts'

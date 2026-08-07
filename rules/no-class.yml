@@ -1,7 +1,7 @@
 id: no-class
 language: typescript
 severity: error
-message: 'C1: functional/procedural only — no classes, no `this`. Use plain functions and modules.'
+message: 'C1 (functional-only): functional/procedural only — no classes, no `this`. Use plain functions and modules.'
 files:
   - 'src/**/*.ts'
   - 'test/**/*.ts'

@@ -454,7 +454,7 @@ function agentReport(cwd: string): { readonly lines: string[]; readonly failed: 
   const listings = listAgents(root)
   if (listings.length === 0) return { lines: [], failed: 0 }
 
-  const lines = ['', 'plumbbob doctor — agents (D48)']
+  const lines = ['', 'plumbbob doctor — agents — D48 (doctor-validates-agents)']
   let failed = 0
   for (const listing of listings) {
     const problem = agentProblem(listing, root)
@@ -482,7 +482,7 @@ async function gateReport(cwd: string, env?: GateEnv): Promise<{ readonly lines:
   const root = findRepoRoot(cwd)
   if (root === null) return { lines: [], failed: 0 }
 
-  const lines = ['', 'plumbbob doctor — check gate (D32)']
+  const lines = ['', 'plumbbob doctor — check gate — D32 (checkride-gate)']
   const command = resolveString(root, 'check', '')
   if (command.length > 0) {
     lines.push(`  ✓ gate: '${command}' — the "check" setting overrides checkride`)
@@ -556,13 +556,13 @@ function latchReport(cwd: string): { readonly lines: string[]; readonly failed: 
     turn === null
       ? '  ○ latch: dormant — guidance only (no turn ledger yet; it ticks on your first prompt when the UserPromptSubmit hook is wired — re-run after one to confirm)'
       : `  ✓ latch: live (turn ${turn})`
-  const lines = ['', 'plumbbob doctor — approval latch (D64)', line]
+  const lines = ['', 'plumbbob doctor — approval latch — D64 (approval-latch)', line]
   // The latch ignores a settings `auto`: a model can write that file, and a grant
   // the model can forge is no grant — self-approval comes only from the human's
   // typed `/build --auto`. Surface a set value so a human relying on it isn't
   // silently changed — informational, never a problem.
   if (resolveBoolean(root, 'auto', false)) {
-    lines.push('  ○ auto: set in settings but not a grant since D67 — self-approve per run with `/plumbbob:build --auto`')
+    lines.push('  ○ auto: set in settings but not a grant since D67 (auto-not-a-grant) — self-approve per run with `/plumbbob:build --auto`')
   }
   return { lines, failed: 0 }
 }

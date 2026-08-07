@@ -50,7 +50,7 @@ describe('revert', () => {
     expect(stdout).toMatch(/reverted to [0-9a-f]{9} — back at the boundary/) // short SHA, not the full 40
   })
 
-  it('returns the build-log Current step to the boundary after abandoning a step (D69)', async () => {
+  it('returns the build-log Current step to the boundary after abandoning a step — D69 (cli-owned-buildlog)', async () => {
     const dir = await startedGreen()
     captureIo(() => build(dir, ['1'])) // go in-flight: Current step → `1 — First`
     expect(readFileSync(buildLogPath(dir), 'utf8')).toContain('**Current step:** 1 — First')
@@ -126,7 +126,7 @@ describe('revert', () => {
     expect(stderr).toContain('no baseline recorded')
   })
 
-  it('preserves sidecar edits (intent/park) across the reset (C4)', async () => {
+  it('preserves sidecar edits (intent/park) across the reset — C4 (never-destroy)', async () => {
     const dir = await startedGreen()
     writeFileSync(join(dir, 'feature.txt'), 'v1\n')
     await captureIoAsync(() => checkpoint(dir, ['1']))

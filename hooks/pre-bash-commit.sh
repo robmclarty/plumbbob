@@ -1,9 +1,9 @@
 #!/bin/sh
-# pre-bash-commit.sh — the git-commit ask-hook (D66). PreToolUse on Bash: when a
+# pre-bash-commit.sh — the git-commit ask-hook — D66 (oob-commits-surfaced). PreToolUse on Bash: when a
 # step is in flight and the model reaches for a raw `git commit`, turn that commit
 # into a permission *question*, never a wall. checkpoint owns the landing (the latch
 # lives there); this only nudges the human to route through it. ALWAYS exits 0 and
-# never `deny`s — the human decides, C5 stays intact (D66). `plumbbob checkpoint`'s
+# never `deny`s — the human decides, C5 (additive-git) stays intact — D66 (oob-commits-surfaced). `plumbbob checkpoint`'s
 # own internal `git commit` spawn never passes through hooks, so nothing self-trips.
 
 # The repo root is the nearest ancestor with an active session — `.plumbbob/STATE`,
@@ -27,7 +27,7 @@ root=$(find_root) || exit 0 # no active session here: nothing to guard
 
 # The in-flight signal is STEP (cleared when the step checkpoints): inside the
 # active build's folder when STATE names one, else the flat sidecar STEP of the
-# `--local` layout. STATE's content IS the cursor (D28) — read the first line, trim
+# `--local` layout. STATE's content IS the cursor — D28 (state-cursor) — read the first line, trim
 # whitespace, and treat the legacy `active` sentinel (pre-STATE-cursor) as no cursor.
 slug=$(head -n1 "$root/.plumbbob/STATE" 2>/dev/null | tr -d '[:space:]')
 [ "$slug" = "active" ] && slug=""

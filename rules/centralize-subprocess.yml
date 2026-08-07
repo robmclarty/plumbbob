@@ -1,7 +1,7 @@
 id: centralize-subprocess
 language: typescript
 severity: error
-message: 'C2/C5: spawn subprocesses only in lib/git.ts, lib/check.ts, lib/agents.ts, or verbs/spike.ts — keep the exec/git surface small and auditable.'
+message: 'C2 (few-deliberate-deps)/C5 (additive-git): spawn subprocesses only in lib/git.ts, lib/check.ts, lib/agents.ts, or verbs/spike.ts — keep the exec/git surface small and auditable.'
 files:
   - 'src/**/*.ts'
 ignores:

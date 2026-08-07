@@ -16,7 +16,7 @@ reads them once, to decide, and that legibility buys back a chat round-trip.
 
 **Phase** (your own bookkeeping while framing): frame
 **Size:** tiny | small | medium
-**Scope:** <short-scope>  <!-- the build's default commit scope (D4): a short feature-level name each step's own `(scope)` overrides. Leave the `<…>` placeholder (or blank) and it parses as absent — commits fall through to the build slug (D7). -->
+**Scope:** <short-scope>  <!-- the build's default commit scope — D68 (conventional-subjects): a short feature-level name each step's own `(scope)` overrides. Leave the `<…>` placeholder (or blank) and it parses as absent — commits fall through to the build slug. -->
 
 ## Frame
 
@@ -59,14 +59,15 @@ verifiable increment with its own **done-when** and **seam** (the paths it will 
 which `/plumbbob:build` records in the build folder's `SEAM` for orientation — awareness, not a lock).
 An optional **model** line recommends the smallest model that can carry the step —
 mechanical work runs fine on a small model; subtle or creative work earns a frontier
-one. Advisory for the human, never a gate; write it plain, no backticks (D62).
-The step title *is* the checkpoint's commit subject: write it as one plain line,
-`type(scope): description` — load-bearing paths live in `seam`, never jammed into the
-title (D2) — aiming for ≤72 characters (GitHub's subject convention: soft, no gate, D9).
+one. Advisory for the human, never a gate; write it plain, no backticks — D62
+(model-recommendation). The step title *is* the checkpoint's commit subject — D68
+(conventional-subjects): write it as one plain line, `type(scope): description` —
+load-bearing paths live in `seam`, never jammed into the title — aiming for ≤72
+characters (GitHub's subject convention: soft, no gate).
 The `(scope)` names the primary code area the step touches (`plan`, `commitmsg`); the
-build's `**Scope:**` header is the feature-level catch-all a step overrides (D8). Scope
+build's `**Scope:**` header is the feature-level catch-all a step overrides. Scope
 resolves title-scope → `**Scope:**` default → build slug → bare, and type resolves
-title-type → `feat` (D3/D68). Then drive `/plumbbob:build` until done. Later steps may be
+title-type → `feat`. Then drive `/plumbbob:build` until done. Later steps may be
 fuzzier than the first; sharpen the next one just-in-time with `/plumbbob:step` (empty input
 auto-syncs it), and use `/plumbbob:refine` to repair the whole plan when a blocker rewrites it.)*
 

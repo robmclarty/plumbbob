@@ -16,14 +16,14 @@ another harness and go straight to `/plumbbob:verify` instead — plumbbob does 
 the diff appeared. When you do run it, it reads the plan, writes the step, and
 carries straight through to the verify pause.
 
-Since `/plumbbob:plan` lays down the whole step list up front, the happy path is to fire
+Since `/plumbbob:plan` lays down the whole step list up front, the happy path is to run
 `/plumbbob:build` once per step until done — each run builds the next undone step and stops
-at the pause for your approval. **Re-firing `/plumbbob:build` is itself the clock tick.**
+at the pause for your approval. **Running `/plumbbob:build` again is itself the clock tick.**
 
 A model note: this skill **inherits the session model** — nothing pins or switches
 it. If the step you're about to build carries a `- model:` recommendation that
 differs from the model you're running as, say so before implementing — the human can
-`/model` and re-fire to honor it, or wave you on. Advisory, never a gate.
+switch with `/model` and rerun to honor it, or wave you on. Advisory, never a gate.
 
 ## What this skill does, in order
 
@@ -42,7 +42,8 @@ differs from the model you're running as, say so before implementing — the hum
      `spike-NN-<slug>.md` in the build folder, stamped `via: step <n>`), then work the
      experiment and record your **Findings** and **Verdict** there. A recorded verdict is
      what the step's done-when should check — the report, not just the code, is the
-     deliverable. This is the same artifact `/plumbbob:spike` produces for a mid-build fork (D70).
+     deliverable. This is the same artifact `/plumbbob:spike` produces for a mid-build fork
+     — D70 (spike-reports).
 3. **Read the plan.** Read the step's **done-when**, its **seam**, and the
    **Decisions** and **Constraints** in `intent.md`. Build to *that* — the deciding
    already happened, off the chat.
@@ -74,13 +75,14 @@ differs from the model you're running as, say so before implementing — the hum
    build-log's `## Log`, so the history writes itself — you only supply the body (or omit
    `--body` for the deterministic done-when + seam + diffstat fallback). Do **not** bump
    the version or changelog — that is the human's `/version` call.
-   - **A drifted subject is reconciled at the pause, never silently (D5/D6).** The planned
-     title *is* the checkpoint subject (D1). If the diff drifted from it, **present** a
-     corrected subject at the pause — `planned title → proposed subject`, one line — for
-     explicit approval, and only on approval land it by adding `-m "<subject>"` to the
-     checkpoint. Present nothing and the deterministic title-derived subject lands
-     untouched: the reconcile is the human-approved exception, not a quiet `-m` swap (which
-     is the agent-authored subject D68 refuses).
+   - **A drifted subject is reconciled at the pause, never silently.** The planned
+     title *is* the checkpoint subject — D68 (conventional-subjects). If the diff drifted
+     from it, **present** a corrected subject at the pause — `planned title → proposed
+     subject`, one line — for explicit approval, and only on approval land it by adding
+     `-m "<subject>"` to the checkpoint. Present nothing and the deterministic
+     title-derived subject lands untouched: the reconcile is the human-approved exception,
+     not a quiet `-m` swap (which is the agent-authored subject D68 (conventional-subjects)
+     refuses).
    - **If `plumbbob status` shows a `harness bindings:` block**, fold any bound
      `after`-agents into that self-review as advisory input — see **§ Running bound
      agents**.
@@ -110,7 +112,7 @@ differs from the model you're running as, say so before implementing — the hum
    run `plumbbob handoff` again and relay its boundary block — with the step gone from
    in-flight it renders "step N checkpointed" and points at the next undone step, carrying
    that step's `- model:` recommendation (the plan's smallest-model-that-fits call) so the
-   human knows which `/model` to select before firing `/plumbbob:build` again. It is what
+   human knows which `/model` to select before running `/plumbbob:build` again. It is what
    carries the plan's suggestion across a fresh context window, which inherits the session
    model, not the plan's. No `- model:` line means any model will do. Guidance, never a
    gate.
@@ -131,10 +133,10 @@ harness *is* bound, this is what each affected step gains, in lifecycle order.
   `plumbbob agent run --step <n> --mode build` and let that agent author the step's code
   instead of writing it yourself; its envelope reports what it did. You still own the verify
   tick — the diff is reviewed the same way whoever wrote it.
-- **A manifest's `when` prose is your cue to fire an agent mid-build (step 4).** The three
+- **A manifest's `when` prose is your cue to run an agent mid-build (step 4).** The three
   slots are the only *declarative* lifecycle points; there is no config for "a salient
   moment in the middle." That is judgment, and you are the frontier model in the room: when
-  the work reaches the situation a bound agent's `when` (or a step `note`) describes, fire
+  the work reaches the situation a bound agent's `when` (or a step `note`) describes, run
   `plumbbob agent run <name> --step <n>` yourself. Prose is the orchestration language; you
   are the workflow engine.
 - **Route a non-`done` envelope by its status (step 4).** An agent that returns `blocked`
@@ -146,8 +148,8 @@ harness *is* bound, this is what each affected step gains, in lifecycle order.
 - **`after` — advisory input to the verify tick (step 5).** After `plumbbob check`, run any
   bound `after`-agents (`plumbbob agent run --step <n> --mode after`) and fold their
   envelopes into the self-review as **advisory input** — they inform, they never gate
-  (checkride gates, the human is the clock; an `after`-agent that could fail a step is the
-  lock in autonomy's costume).
+  (checkride gates, the human is the clock; an `after`-agent that could fail a step would
+  be the old lock back in another form).
 
 ## `--auto` — let the agent be the clock (opt-in)
 
@@ -220,8 +222,9 @@ just the one more entry already in the halt list above.
   Never route around it with a raw `git commit`. An explicit `/plumbbob:build --auto` or a typed
   step range in the human's own prompt are the only self-approvals — **never write `auto`
   into a settings file yourself to unlock a checkpoint. A grant you mint is no grant (the
-  latch ignores it since D67); ask the human to re-fire `/plumbbob:build --auto` instead.**
+  latch ignores it — D67 (auto-not-a-grant)); ask the human to type
+  `/plumbbob:build --auto` again instead.**
 - **Close with the next model.** When a step lands, run `plumbbob handoff` and relay its
   block — it cites the completed step and the next undone step, and names that next step's
   `- model:` recommendation if it has one, which is what a fresh context window needs to
-  pick the right `/model` before re-firing. Guidance, never a gate.
+  pick the right `/model` before the next run. Guidance, never a gate.

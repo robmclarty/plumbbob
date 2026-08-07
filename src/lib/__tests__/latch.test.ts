@@ -25,13 +25,13 @@ describe('evaluateLatch — the five-row matrix, first hit wins', () => {
     expect(evaluateLatch({ ...LATCHED, tick: null }).allow).toBe(true)
   })
 
-  it('D67: a settings `auto` no longer allows — it refuses with the migration note', () => {
+  it('D67 (auto-not-a-grant): a settings `auto` no longer allows — it refuses with the migration note', () => {
     const decision = evaluateLatch({ ...LATCHED, settingsAuto: true })
     expect(decision.allow).toBe(false)
     if (!decision.allow) {
       expect(decision.reason).toBe('no-turn')
-      expect(decision.message).toContain('`auto` is set in settings but is no longer a grant (D67)')
-      expect(decision.message).toContain('re-fire `/plumbbob:build --auto`')
+      expect(decision.message).toContain('`auto` is set in settings but is no longer a grant — D67 (auto-not-a-grant)')
+      expect(decision.message).toContain('Type `/plumbbob:build --auto` yourself to self-approve')
     }
   })
 
@@ -41,7 +41,7 @@ describe('evaluateLatch — the five-row matrix, first hit wins', () => {
     if (!decision.allow) expect(decision.message).not.toContain('no longer a grant')
   })
 
-  it('row 3: a one-turn `auto` grant allows (D65)', () => {
+  it('row 3: a one-turn `auto` grant allows — D65 (human-typed-grants)', () => {
     expect(evaluateLatch({ ...LATCHED, grant: { kind: 'auto' } }).allow).toBe(true)
   })
 
@@ -57,7 +57,7 @@ describe('evaluateLatch — the five-row matrix, first hit wins', () => {
     if (!decision.allow) {
       expect(decision.reason).toBe('ceiling')
       expect(decision.message).toContain('the range you granted ends at step 3')
-      expect(decision.message).toContain('re-fire to continue')
+      expect(decision.message).toContain('run it again to continue')
     }
   })
 
@@ -122,7 +122,7 @@ describe('parseGrant', () => {
     expect(parseGrant('range 12')).toEqual({ kind: 'range', ceiling: 12 })
   })
 
-  it('malformed content contributes nothing (D27) — no grant, never an error', () => {
+  it('malformed content contributes nothing — D27 (settings-ladder) — no grant, never an error', () => {
     expect(parseGrant('')).toBeNull()
     expect(parseGrant('yes')).toBeNull()
     expect(parseGrant('range')).toBeNull()
@@ -171,11 +171,11 @@ describe('checkLatch — gathering from the worktree', () => {
     expect(withoutTty(() => checkLatch(dir, 1)).allow).toBe(true)
   })
 
-  it('reads a settings `auto` only to note it — it no longer allows (D67)', () => {
+  it('reads a settings `auto` only to note it — it no longer allows — D67 (auto-not-a-grant)', () => {
     const dir = latchedRepo()
     setLocalSetting(dir, 'auto', true)
     const decision = withoutTty(() => checkLatch(dir, 1))
     expect(decision.allow).toBe(false)
-    if (!decision.allow) expect(decision.message).toContain('no longer a grant (D67)')
+    if (!decision.allow) expect(decision.message).toContain('no longer a grant — D67 (auto-not-a-grant)')
   })
 })

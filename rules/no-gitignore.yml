@@ -1,7 +1,7 @@
 id: no-gitignore
 language: typescript
 severity: error
-message: "D33: excludes are personal machinery — write them to the shared gitdir's info/exclude (gitPath(root, 'info/exclude')), never to .gitignore, so nothing is imposed on the repo."
+message: "D33 (info-exclude): excludes are personal machinery — write them to the shared gitdir's info/exclude (gitPath(root, 'info/exclude')), never to .gitignore, so nothing is imposed on the repo."
 files:
   - 'src/**/*.ts'
 ignores:

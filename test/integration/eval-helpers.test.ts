@@ -1,4 +1,4 @@
-// Model-free coverage for the eval tier's deterministic halves (intent C2):
+// Model-free coverage for the eval tier's deterministic halves:
 // the baseline plugin strip, the fixture gate variants, and (from step 3 on)
 // the assertion readers. Everything here runs in the default suite — no model,
 // no cost. The eval contracts themselves live in test/evals/ and are excluded

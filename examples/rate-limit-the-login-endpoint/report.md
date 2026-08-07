@@ -17,9 +17,9 @@ policy, overridable by env.
 
 ## Decisions and why
 
-- **D1: in-memory token bucket** — single instance today; Redis stays a deferred
+- **D1 (in-memory-bucket): in-memory token bucket** — single instance today; Redis stays a deferred
   decision, not a silent dependency.
-- **D2: 5 attempts / 60s / IP** — matches the existing account-lockout policy, so the
+- **D2 (five-per-minute): 5 attempts / 60s / IP** — matches the existing account-lockout policy, so the
   two throttles tell one story.
 
 ## Parked and how it was classified

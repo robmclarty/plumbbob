@@ -31,7 +31,7 @@ cp -r /path/to/plumbbob/examples/agents/ollama-reviewer .plumbbob/agents/
 Commit it — the project tier is tracked and rides the PR (the shipped `.gitignore` keeps
 `node_modules/` out). Alternatively, copy to `~/.plumbbob/agents/` once and it's available
 in every repo (the personal tier), without your teammates needing it — a missing
-personal-tier agent degrades to a warning, not a failure ([**D54**](decisions.md#d54)).
+personal-tier agent degrades to a warning, not a failure ([**D54 (bindings-degrade-soft)**](decisions.md#d54)).
 
 **2. Have Ollama ready.** `ollama serve` running, and the model pulled — `ollama pull
 qwen3:8b` for the default. `OLLAMA_MODEL` / `OLLAMA_BASE_URL` override the defaults; the
@@ -56,7 +56,7 @@ plumbbob agent run ollama-reviewer --step 2
 Needs an active session. The model's narration streams on your terminal (stderr); the CLI
 validates the envelope, prints the summary, and lands any `parked[]` items as park lines in
 `build-log.md`. If it comes back `blocked` (Ollama down, model missing), the `notes` tell
-you the fix — fix and re-run ([**D52**](decisions.md#d52)).
+you the fix — fix and re-run ([**D52 (blocked-vs-drift)**](decisions.md#d52)).
 
 **5. Bound to a build, so it fires automatically.** Put a `harness.json` beside `intent.md`
 in the build folder:

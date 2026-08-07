@@ -39,7 +39,7 @@ and exits. Between two invocations — usually between two *human turns*, someti
 context compaction, a new terminal, or a reboot — every fact about the session has to be
 sitting on disk somewhere or it is gone. That somewhere is `.plumbbob/`.
 
-The sidecar splits by **lifetime**, not by importance ([D17](decisions.md#d17)/[D26](decisions.md#d26)
+The sidecar splits by **lifetime**, not by importance ([D17 (two-planes)](decisions.md#d17)/[D26 (build-folders)](decisions.md#d26)
 — the sidecar has a tracked artifact plane and an excluded control plane):
 
 - The **artifact plane** is *tracked on purpose*. `intent.md`, `build-log.md`,
@@ -57,7 +57,7 @@ branch.
 
 | File | What it holds | Written by | Cleared |
 | --- | --- | --- | --- |
-| `.plumbbob/STATE` | Session sentinel — its *presence* means a session is live — and its content is the active-build cursor ([D28](decisions.md#d28): the cursor lives in STATE, not settings) | `start` | `finish` |
+| `.plumbbob/STATE` | Session sentinel — its *presence* means a session is live — and its content is the active-build cursor ([D28 (state-cursor)](decisions.md#d28): the cursor lives in STATE, not settings) | `start` | `finish` |
 | `.plumbbob/TURN` | Monotonic count of human turns in this repo | the `UserPromptSubmit` hook | never (it's a counter) |
 | `.plumbbob/GRANT` | A one-turn self-approval, minted only when *you* typed `/build --auto` or a step range | the same hook | the next turn |
 | `.plumbbob/settings.local.json` | Your personal settings overlay (e.g. `{"auto": true}`) | you, by hand | you |
@@ -65,11 +65,11 @@ branch.
 | `builds/<slug>/SEAM` | The step's declared paths, one per line (awareness, not a lock) | `build` | `checkpoint` |
 | `builds/<slug>/SPIKE` | Marker: a spike fork is open | `spike` | `spike done` |
 | `builds/<slug>/TICK` | The `TURN` value at the moment the step was entered | `build` | `checkpoint` |
-| `builds/<slug>/handoff.json` | Ledger of agent runs for this step, so a later call can thread earlier results ([D47](decisions.md#d47)) | `agent run` | `checkpoint` |
+| `builds/<slug>/handoff.json` | Ledger of agent runs for this step, so a later call can thread earlier results ([D47 (handoff-ledger)](decisions.md#d47)) | `agent run` | `checkpoint` |
 | `.check/` | The check gate's raw tool output | checkride | overwritten each run |
 
 `TURN` and `TICK` are the least obvious pair, and they justify the whole mechanism. The
-approval latch ([D64](decisions.md#d64) — the checkpoint tick refuses until a human turn
+approval latch ([D64 (approval-latch)](decisions.md#d64) — the checkpoint tick refuses until a human turn
 lands) needs to know one thing: *has a human taken a turn since this step began?* That is a
 fact about a conversation, and a conversation leaves no other durable trace. A counter file
 and a stamp file are the entire implementation. Delete them and the latch reads "ledger
@@ -88,7 +88,7 @@ Git reads ignore patterns from three places, in this order of specificity:
    documented home for "patterns you want, that don't belong to the project."
 3. **`core.excludesFile`** — your personal global ignores, across every repo on the machine.
 
-PlumbBob uses the middle one ([D33](decisions.md#d33) — excludes are personal machinery,
+PlumbBob uses the middle one ([D33 (info-exclude)](decisions.md#d33) — excludes are personal machinery,
 never the repo's tracked ignore file). The rule is enforced in the codebase, not just
 documented: `rules/no-gitignore.yml` fails the build if the string `.gitignore` so much as
 appears in `src/`.
@@ -209,7 +209,7 @@ and `revert` runs **`reset --hard`** — only ever to a SHA it recorded in that 
 `checkpoints` file.
 
 It never rewrites pushed history: no `push`, no `rebase`, no `--amend`. That's
-[C5](decisions.md#c5) (an additive git footprint), and like the `.gitignore` rule it's
+[C5 (additive-git)](decisions.md#c5) (an additive git footprint), and like the `.gitignore` rule it's
 machine-enforced — `rules/additive-git-only.yml` fails the build if a history-rewriting git
 token appears in the source at all, and `resetHard` is importable by exactly one file.
 

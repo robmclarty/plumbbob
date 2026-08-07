@@ -126,7 +126,7 @@ describe('build', () => {
     expect(existsSync(tickPath(dir))).toBe(false)
   })
 
-  it('stamps TICK = TURN at entry — the span the checkpoint latch measures (D64)', async () => {
+  it('stamps TICK = TURN at entry — the span the checkpoint latch measures — D64 (approval-latch)', async () => {
     const dir = await startedWithSteps()
     writeFileSync(turnPath(dir), '5\n')
     const { code } = captureIo(() => build(dir, ['2']))
@@ -142,7 +142,7 @@ describe('build', () => {
   })
 })
 
-describe('build — the build-log mirror (D69)', () => {
+describe('build — the build-log mirror — D69 (cli-owned-buildlog)', () => {
   it('sets Current step to `<n> — <title>` and marks the mirror', async () => {
     const dir = await startedWithSteps()
     captureIo(() => build(dir, ['2']))

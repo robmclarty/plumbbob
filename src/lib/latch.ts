@@ -59,7 +59,7 @@ boundary; \`/plumbbob:build\` only starts the next step, it never lands this one
  */
 const NO_TURN_PLAN_MESSAGE = `plumbbob: checkpoint refused — no human turn since \`start\` stamped this plan. This
 is the plan pause: present the plan, then end the turn; the human's approving
-message is the tick that lets it land on re-fire. (An explicit \`/plumbbob:build --auto\` or a
+message is the tick that lets it land on the next run. (An explicit \`/plumbbob:build --auto\` or a
 step range in the human's own prompt is the only self-approval.)
 `
 
@@ -68,14 +68,14 @@ step range in the human's own prompt is the only self-approval.)
  * it can forge is no grant. When one is set, the refusal names it rather than
  * silently ignoring it, and points at the only self-approval that works.
  */
-const SETTINGS_AUTO_NOTE = `note: \`auto\` is set in settings but is no longer a grant (D67) — re-fire \`/plumbbob:build --auto\` to self-approve.
+const SETTINGS_AUTO_NOTE = `note: \`auto\` is set in settings but is no longer a grant — D67 (auto-not-a-grant). Type \`/plumbbob:build --auto\` yourself to self-approve.
 `
 
 /**
  * The refusal for a range grant whose ceiling the landing step exceeds.
  */
 function ceilingMessage(ceiling: number): string {
-  return `plumbbob: checkpoint refused — the range you granted ends at step ${ceiling} — pause here; re-fire to continue.\n`
+  return `plumbbob: checkpoint refused — the range you granted ends at step ${ceiling} — pause here; run it again to continue.\n`
 }
 
 /**

@@ -1,7 +1,7 @@
 id: node-builtins-only
 language: typescript
 severity: error
-message: 'C2: import node: builtins, relative paths, or an allowlisted dependency (checkride) only — new dependencies are a deliberate decision, not a casual install. (Test files may import devDeps like vitest; they are excluded.)'
+message: 'C2 (few-deliberate-deps): import node: builtins, relative paths, or an allowlisted dependency (checkride) only — new dependencies are a deliberate decision, not a casual install. (Test files may import devDeps like vitest; they are excluded.)'
 files:
   - 'src/**/*.ts'
 ignores:

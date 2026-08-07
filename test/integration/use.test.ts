@@ -1,5 +1,6 @@
-// D16/C6 — the `use` switch verb and the layout's per-worktree cursor, driven as
-// real subprocesses (D14), including one run inside a `git worktree add` linked
+// D30 (use-to-switch)/D28 (state-cursor) — the `use` switch verb and the layout's
+// per-worktree cursor, driven as real subprocesses per D14 (throwaway-repo-tests),
+// including one run inside a `git worktree add` linked
 // worktree so the per-worktree cursor + hook root-detection are exercised where
 // they broke before (the worktree-proofing this whole build is named for).
 
@@ -59,7 +60,7 @@ describe('plumbbob use', () => {
   })
 })
 
-describe('post-edit hook in a linked worktree (D1/D16 — the cursor is per-worktree)', () => {
+describe('post-edit hook in a linked worktree — D33 (info-exclude)/D28 (state-cursor), the cursor is per-worktree', () => {
   it('finds the root via the worktree-local STATE cursor', () => {
     const main = makeFixtureRepo()
     runCli(main, ['start', 'Feature', '--slug', 'feature'])

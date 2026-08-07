@@ -3,7 +3,7 @@
 // doctor verifies the link resolves to the manifest + skills + hook. The failure
 // class it exists for is silent (a never-linked plugin → an empty dashboard), so
 // these tests pin not-linked detection and a link that points at a non-package.
-// HOME is pinned per test; subprocess-driven (D14).
+// HOME is pinned per test; subprocess-driven per D14 (throwaway-repo-tests).
 
 import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'

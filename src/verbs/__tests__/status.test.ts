@@ -94,7 +94,7 @@ describe('status', () => {
   })
 })
 
-describe('status — out-of-band receipts (D66)', () => {
+describe('status — out-of-band receipts — D66 (oob-commits-surfaced)', () => {
   it('surfaces commits landed since the last checkpoint outside the ledger', async () => {
     const dir = makeTempRepo()
     await captureIoAsync(() => start(dir, ['Receipts']))
@@ -134,7 +134,7 @@ describe('status — out-of-band receipts (D66)', () => {
   })
 })
 
-describe('status — harness bindings (D48)', () => {
+describe('status — harness bindings — D48 (doctor-validates-agents)', () => {
   it('lists the active build\'s defaults and per-step bindings', async () => {
     const home = makeTempDir()
     const dir = await startedWithHarness(

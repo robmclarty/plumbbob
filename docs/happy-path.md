@@ -58,11 +58,11 @@ seam**:
 - **Explicitly NOT doing:** distributed/multi-instance limits; CAPTCHA.
 
 ## Decisions
-- D1: in-memory token bucket — *because* single instance today; defer Redis.
-- D2: 5 attempts / 60s / IP — *because* matches the existing lockout policy.
+- D1 (in-memory-bucket): in-memory token bucket — *because* single instance today; defer Redis.
+- D2 (five-per-minute): 5 attempts / 60s / IP — *because* matches the existing lockout policy.
 
 ## Constraints
-- C1: no new runtime dependencies.
+- C1 (no-new-deps): no new runtime dependencies.
 
 ## Steps
 1. [ ] Add a token-bucket limiter — **done when:** `test/limiter.test.ts` passes
@@ -154,8 +154,8 @@ plumbbob: check green.
 ── verify: step 1 — Add a token-bucket limiter ──
 check        green (checkride: types, lint, struct, dead, test, docs, links)
 done-when    met — test/limiter.test.ts: 4 passing
-decisions    D1 (in-memory), D2 (5/60s) honored
-constraints  C1 honored — no new deps
+decisions    D1 (in-memory-bucket), D2 (five-per-minute) honored
+constraints  C1 (no-new-deps) honored
 
 PAUSE — read the diff as an editor. Approve to checkpoint, or send fixes.
 ```
@@ -172,7 +172,7 @@ PAUSE — read the diff as an editor. Approve to checkpoint, or send fixes.
 > checkpoint land. You don't have to trust the agent to stop; the ledger stops it. (Say
 > the word by name — `/plumbbob:build --auto` or a range like `1-3` — and you grant it
 > self-approval for that run; that grant can only come from a prompt *you* typed. See
-> [D64–D66](decisions.md#d64).)
+> [D64–D66](decisions.md#d64), the approval-latch family.)
 
 You approve. Only then does it checkpoint — committing the work, recording the SHA,
 flipping the step to `[x]`, and returning to the `DESIGN` boundary, where it **stops**:
@@ -294,8 +294,8 @@ the tracked build folder it rides the branch into the PR:
 - Step 3: `RATE_LIMIT_MAX` overrides the default.
 
 ## Decisions and why
-- D1: in-memory bucket — single instance today; Redis deferred.
-- D2: 5/60s/IP — matches existing lockout policy.
+- D1 (in-memory-bucket): in-memory bucket — single instance today; Redis deferred.
+- D2 (five-per-minute): 5/60s/IP — matches existing lockout policy.
 
 ## Final status
 Done. All three steps checkpointed and green.

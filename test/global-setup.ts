@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url'
 
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url))
 
-// Named `setup` (not a default export) so it satisfies C1's no-default-exports
+// Named `setup` (not a default export) so it satisfies the C1 (functional-only) no-default-exports
 // rule; vitest's globalSetup honors a named setup export just as it would default.
 export function setup(): void {
   if (existsSync(join(REPO_ROOT, 'dist', 'cli.js'))) return

@@ -1,8 +1,9 @@
 // End-to-end dogfood drive: a full PlumbBob session in a fixture repo,
 // start → build → checkpoint → park → finish. The report is written here as the
 // /plumbbob:finish skill would; the CLI path under test is everything around it.
-// The build folder IS the archive now (D8): finish commits it in place so it rides
-// the branch into the PR — no `archive/` copy. Stub check per D14.
+// The build folder IS the archive now — D29 (finish-replaces-wrap): finish commits
+// it in place so it rides the branch into the PR — no `archive/` copy. Stub check
+// per D14 (throwaway-repo-tests).
 
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -59,7 +60,7 @@ describe('e2e: a full PlumbBob session end to end', () => {
     expect(phase(dir)).toBe('DESIGN')
     expect(readSidecar(dir, 'checkpoints')).toMatch(/step 1 [0-9a-f]{7,}/)
     expect(readSidecar(dir, 'intent.md')).toContain('1. [x] Build the widget') // box flipped
-    // Conventional step subject: type defaults to feat, scope is the slug (D68).
+    // Conventional step subject: type defaults to feat, scope is the slug — D68 (conventional-subjects).
     expect(headSubject(dir)).toBe('feat(e2e-demo): build the widget')
 
     // capture a tangent (the dumb CLI path).
@@ -71,14 +72,15 @@ describe('e2e: a full PlumbBob session end to end', () => {
     writeSidecar(dir, 'report.md', '# Report — E2E demo\n\n## What shipped\n\nThe widget.\n')
     expect(runCli(dir, ['finish']).status).toBe(0)
 
-    // the final commit lands under the Conventional `finish` subject (D68); its
+    // the final commit lands under the Conventional `finish` subject —
+    // D68 (conventional-subjects); its
     // `plumbbob finish` identifier keeps the body greppable.
     expect(headSubject(dir)).toBe('chore(e2e-demo): finish')
     expect(execFileSync('git', ['-C', dir, 'log', '-1', '--format=%b'], { encoding: 'utf8' })).toContain(
       'plumbbob finish',
     )
 
-    // the build folder IS the archive (D8): its artifacts stay in place, committed,
+    // the build folder IS the archive — D29 (finish-replaces-wrap): its artifacts stay in place, committed,
     // so they ride the branch into the PR. No `archive/` copy exists.
     const built = join(dir, '.plumbbob', 'builds', 'e2e-demo')
     expect(existsSync(join(dir, '.plumbbob', 'archive'))).toBe(false)

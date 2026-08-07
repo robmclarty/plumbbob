@@ -1,7 +1,8 @@
 // Static content-contract tests for the skills (step 7). These parse the
 // SKILL.md files directly — no fixture repos, no CLI subprocess — and assert the
-// enforced contracts: fixed names, disable-model-invocation, the D63 model
-// policy (clerks pin haiku; judgment skills inherit the session model),
+// enforced contracts: fixed names, disable-model-invocation, the D63
+// (no-model-pins) model policy (clerks pin haiku; judgment skills inherit the
+// session model),
 // status pre-injection, wrong-state refusal, /park is Bash-only, and the
 // refine/harvest propose-then-confirm handoffs.
 
@@ -37,7 +38,7 @@ function parseSkill(dir: string): { data: Record<string, string>; body: string }
 
 const ALL = ['refine', 'park', 'harvest'] as const
 
-// The model policy (D63): mechanical clerks pin haiku; the judgment moves carry
+// The model policy — D63 (no-model-pins): mechanical clerks pin haiku; the judgment moves carry
 // no pin and inherit the session model — a pin is a ceiling as much as a floor.
 const MODEL_PINS: Record<string, string | undefined> = {
   'refine': undefined,
@@ -50,7 +51,7 @@ describe('every skill (the three reinforcing layers)', () => {
     describe(dir, () => {
       const { data, body } = parseSkill(dir)
 
-      it('names itself after its directory (D12: command name = directory name)', () => {
+      it('names itself after its directory (command name = directory name)', () => {
         expect(data.name).toBe(dir)
       })
 
@@ -58,7 +59,7 @@ describe('every skill (the three reinforcing layers)', () => {
         expect(data['disable-model-invocation']).toBe('true')
       })
 
-      it('follows the model policy (D63): clerks pin haiku, judgment inherits', () => {
+      it('follows the model policy — D63 (no-model-pins): clerks pin haiku, judgment inherits', () => {
         expect(data.model).toBe(MODEL_PINS[dir])
       })
 
@@ -95,7 +96,7 @@ describe('driver skills — the human fires the transition from the chat', () =>
       const { data, body } = parseSkill(dir)
       const verb = DRIVER_VERB[dir]
 
-      it('names itself after its directory (D12)', () => {
+      it('names itself after its directory', () => {
         expect(data.name).toBe(dir)
       })
 
@@ -127,10 +128,10 @@ describe('driver skills — the human fires the transition from the chat', () =>
   }
 })
 
-describe('finish — the close-out: report by default, final commit, clear (D9/D15)', () => {
+describe('finish — the close-out: report by default, final commit, clear — D9 (finish-no-gate) / D29 (finish-replaces-wrap)', () => {
   const { data, body } = parseSkill('finish')
 
-  it('names itself, disables model invocation, inherits the session model (D63)', () => {
+  it('names itself, disables model invocation, inherits the session model — D63 (no-model-pins)', () => {
     expect(data.name).toBe('finish')
     expect(data['disable-model-invocation']).toBe('true')
     expect(data.model).toBeUndefined()
@@ -145,12 +146,12 @@ describe('finish — the close-out: report by default, final commit, clear (D9/D
     expect(data['allowed-tools']).toContain('plumbbob finish')
   })
 
-  it('writes the report by default, never a gate (D9)', () => {
+  it('writes the report by default, never a gate — D9 (finish-no-gate)', () => {
     expect(body).toMatch(/report by default/i)
     expect(body).toMatch(/gate/i)
   })
 
-  it('keeps the folder as the record, never destroys (C4/D8)', () => {
+  it('keeps the folder as the record, never destroys — C4 (never-destroy) / D29 (finish-replaces-wrap)', () => {
     expect(body).toMatch(/archive/i) // "the folder IS the archive" — the record survives
     expect(body).toMatch(/clear/i)
   })
@@ -165,7 +166,7 @@ describe('finish — the close-out: report by default, final commit, clear (D9/D
 describe('plan — the whole-goal move: scaffold + frame, no code', () => {
   const { data, body } = parseSkill('plan')
 
-  it('names itself, disables model invocation, inherits the session model (D63)', () => {
+  it('names itself, disables model invocation, inherits the session model — D63 (no-model-pins)', () => {
     expect(data.name).toBe('plan')
     expect(data['disable-model-invocation']).toBe('true')
     expect(data.model).toBeUndefined()
@@ -204,14 +205,14 @@ describe('plan — the whole-goal move: scaffold + frame, no code', () => {
     expect(body).toMatch(/human/i)
   })
 
-  it('carries the glossed-reference house style — slug at birth, never a bare ref, plain/lean holes (D3)', () => {
+  it('carries the glossed-reference house style — slug at birth, never a bare ref, plain/lean holes', () => {
     expect(body).toMatch(/slug .*at birth/i) // mint the slug where the item is born
     expect(body).toMatch(/never a bare/i) // no bare D4/C6/Q2 reference — always the gloss
     expect(body).toContain('*plain:*') // Open questions author the expanded form
     expect(body).toContain('*lean:*')
   })
 
-  it('names the latch on the plan commit, incl. the first-plan-of-session seam (D64)', () => {
+  it('names the latch on the plan commit, incl. the first-plan-of-session seam — D64 (approval-latch)', () => {
     expect(body).toMatch(/latch/i)
     expect(body).toMatch(/git commit/) // never route around it with a raw git commit
     expect(body).toMatch(/guidance-governed/i) // the documented first-plan-of-session seam
@@ -228,18 +229,18 @@ describe('plan — the whole-goal move: scaffold + frame, no code', () => {
     expect(body).toMatch(/"check": "npm test"/)
   })
 
-  it('authors the title as the commit subject — type(scope): desc, paths in seam, scope default + ≤72 (D1/D2/D8/D9)', () => {
-    expect(body).toMatch(/type\(scope\):\s+description/) // the title IS the subject shape (D1)
-    expect(body).toMatch(/never jammed into the title/i) // load-bearing paths leave the title (D2)
-    expect(body).toMatch(/\*\*Scope:\*\*/) // the build-default scope header a step overrides (D8)
-    expect(body).toMatch(/≤ ?72/) // the soft GitHub subject aim, no lint, no gate (D9)
+  it('authors the title as the commit subject — type(scope): desc, paths in seam, scope default + ≤72 — D68 (conventional-subjects)', () => {
+    expect(body).toMatch(/type\(scope\):\s+description/) // the title IS the subject shape
+    expect(body).toMatch(/never jammed into the title/i) // load-bearing paths leave the title
+    expect(body).toMatch(/\*\*Scope:\*\*/) // the build-default scope header a step overrides
+    expect(body).toMatch(/≤ ?72/) // the soft GitHub subject aim, no lint, no gate
   })
 })
 
 describe('step — the single-increment move: one verifiable step', () => {
   const { data, body } = parseSkill('step')
 
-  it('names itself, disables model invocation, inherits the session model (D63)', () => {
+  it('names itself, disables model invocation, inherits the session model — D63 (no-model-pins)', () => {
     expect(data.name).toBe('step')
     expect(data['disable-model-invocation']).toBe('true')
     expect(data.model).toBeUndefined()
@@ -270,11 +271,11 @@ describe('step — the single-increment move: one verifiable step', () => {
     expect(body).toMatch(/approv|decide/i)
   })
 
-  it('keeps the sharpened title a clean type(scope): subject — paths in seam, overrides the build scope (D1/D2/D8)', () => {
-    expect(body).toMatch(/type\(scope\):\s+description/) // the sharpened title stays the subject (D1)
-    expect(body).toMatch(/never jammed into the title/i) // load-bearing paths stay in seam (D2)
+  it('keeps the sharpened title a clean type(scope): subject — paths in seam, overrides the build scope — D68 (conventional-subjects)', () => {
+    expect(body).toMatch(/type\(scope\):\s+description/) // the sharpened title stays the subject
+    expect(body).toMatch(/never jammed into the title/i) // load-bearing paths stay in seam
     expect(body).toMatch(/overrides the build-default/i) // a step's own (scope) beats the default...
-    expect(body).toMatch(/\*\*Scope:\*\*/) // ...that build-default `**Scope:**` header (D8)
+    expect(body).toMatch(/\*\*Scope:\*\*/) // ...that build-default `**Scope:**` header
   })
 })
 
@@ -286,7 +287,7 @@ describe('build — the default engine: implement the planned step, then verify'
     expect(data['disable-model-invocation']).toBe('true')
   })
 
-  it('inherits the session model — the human steers with /model per the step rec (D62/D63)', () => {
+  it('inherits the session model — the human steers with /model per the step rec — D62 (model-recommendation) / D63 (no-model-pins)', () => {
     expect(data.model).toBeUndefined()
   })
 
@@ -302,7 +303,7 @@ describe('build — the default engine: implement the planned step, then verify'
     expect(data['allowed-tools']).toContain('plumbbob park') // capture a tangent without leaving the step
   })
 
-  it('declares itself swappable — the executor is pluggable (D3)', () => {
+  it('declares itself swappable — the executor is pluggable — D3 (author-blind-executor)', () => {
     expect(body).toMatch(/swappable/i)
     expect(body).toMatch(/by hand|vibed|another harness/i)
   })
@@ -328,16 +329,16 @@ describe('build — the default engine: implement the planned step, then verify'
     expect(body).toMatch(/range/i)
   })
 
-  it('names the approval latch — a refused same-turn checkpoint IS the pause, never a raw git commit (D64)', () => {
+  it('names the approval latch — a refused same-turn checkpoint IS the pause, never a raw git commit — D64 (approval-latch)', () => {
     expect(body).toMatch(/latch/i)
     expect(body).toMatch(/refus/i) // a refused checkpoint
     expect(body).toMatch(/end the turn/i) // present the diff and end the turn
     expect(body).toMatch(/git commit/) // never route around it with a raw git commit
   })
 
-  it('forbids self-minting a settings `auto` grant — a grant you mint is no grant (D67)', () => {
+  it('forbids self-minting a settings `auto` grant — a grant you mint is no grant — D67 (auto-not-a-grant)', () => {
     expect(body).toMatch(/a grant you mint is no grant/i)
-    expect(body).toMatch(/re-fire `?\/(?:plumbbob:)?build --auto`?/i) // the sanctioned route instead
+    expect(body).toMatch(/type\s+`?\/(?:plumbbob:)?build --auto`?\s+again/i) // the sanctioned route instead
   })
 
   it('lifts slot mechanics into a gated "Running bound agents" section, keeping the default path slim (3b)', () => {
@@ -354,10 +355,10 @@ describe('build — the default engine: implement the planned step, then verify'
     expect(defaultPath).not.toMatch(/--mode\b/)
   })
 
-  it('reconciles a drifted subject only at the pause — presented for approval, else the deterministic subject lands (D5/D6/Q5)', () => {
-    expect(body).toMatch(/planned title → proposed\s+subject/) // the presented reconcile shape (Q5)
-    expect(body).toMatch(/-m/) // landed via the existing -m subject override (D5)
-    expect(body).toMatch(/D68 refuses/) // determinism preserved — no silent agent-authored swap (D6)
+  it('reconciles a drifted subject only at the pause — presented for approval, else the deterministic subject lands — D68 (conventional-subjects)', () => {
+    expect(body).toMatch(/planned title → proposed\s+subject/) // the presented reconcile shape
+    expect(body).toMatch(/-m/) // landed via the existing -m subject override
+    expect(body).toMatch(/D68 \(conventional-subjects\)\s+refuses/) // determinism preserved — no silent agent-authored swap
   })
 })
 
@@ -369,7 +370,7 @@ describe('verify — the tick: check, self-review, validate, PAUSE, checkpoint',
     expect(data['disable-model-invocation']).toBe('true')
   })
 
-  it('inherits the session model (D63 — judgment runs on what the human chose)', () => {
+  it('inherits the session model — D63 (no-model-pins): judgment runs on what the human chose', () => {
     expect(data.model).toBeUndefined()
   })
 
@@ -390,7 +391,7 @@ describe('verify — the tick: check, self-review, validate, PAUSE, checkpoint',
     expect(body).toMatch(/approv/i)
   })
 
-  it('reads the diff, not the author (D3 executor-agnostic)', () => {
+  it('reads the diff, not the author — D3 (author-blind-executor)', () => {
     expect(body).toMatch(/diff, not the author/i)
   })
 
@@ -398,21 +399,21 @@ describe('verify — the tick: check, self-review, validate, PAUSE, checkpoint',
     expect(body).toMatch(/version/i)
   })
 
-  it('names the approval latch — the refusal is the pause, ended and re-ticked, never a raw git commit (D64)', () => {
+  it('names the approval latch — the refusal is the pause, ended and re-ticked, never a raw git commit — D64 (approval-latch)', () => {
     expect(body).toMatch(/latch/i)
     expect(body).toMatch(/refus/i)
     expect(body).toMatch(/end the turn/i)
     expect(body).toMatch(/git commit/)
   })
 
-  it('forbids self-minting a settings `auto` grant to force the land (D67)', () => {
+  it('forbids self-minting a settings `auto` grant to force the land — D67 (auto-not-a-grant)', () => {
     expect(body).toMatch(/latch ignores a model-minted grant/i)
   })
 
-  it('reconciles a drifted subject only at the pause — presented for approval, else the deterministic subject lands (D5/D6/Q5)', () => {
-    expect(body).toMatch(/planned title → proposed\s+subject/) // the presented reconcile shape (Q5)
-    expect(body).toMatch(/-m/) // landed via the existing -m subject override (D5)
-    expect(body).toMatch(/D68 refuses/) // determinism preserved — no silent agent-authored swap (D6)
+  it('reconciles a drifted subject only at the pause — presented for approval, else the deterministic subject lands — D68 (conventional-subjects)', () => {
+    expect(body).toMatch(/planned title → proposed\s+subject/) // the presented reconcile shape
+    expect(body).toMatch(/-m/) // landed via the existing -m subject override
+    expect(body).toMatch(/D68 \(conventional-subjects\)\s+refuses/) // determinism preserved — no silent agent-authored swap
   })
 })
 
@@ -442,12 +443,12 @@ describe('refine — keep intent.md true: attack for holes + repair drift', () =
     expect(body).toMatch(/approv/i)
   })
 
-  it('names the step title-subject among the drift repair re-syncs — a clean type(scope): subject (D5)', () => {
-    expect(body).toMatch(/type\(scope\):\s+description/) // the title IS the commit subject (D1)
-    expect(body).toMatch(/never jammed into the title/i) // load-bearing paths stay in seam (D2)
+  it('names the step title-subject among the drift repair re-syncs — a clean type(scope): subject — D68 (conventional-subjects)', () => {
+    expect(body).toMatch(/type\(scope\):\s+description/) // the title IS the commit subject
+    expect(body).toMatch(/never jammed into the title/i) // load-bearing paths stay in seam
   })
 
-  it('attack authors the expanded question form and walks it through in the chat (D2 plain-lean-format)', () => {
+  it('attack authors the expanded question form and walks it through in the chat (the plain/lean format)', () => {
     expect(body).toContain('*plain:*')
     expect(body).toContain('*lean:*')
     expect(body).toMatch(/per-question answers/i)
@@ -481,7 +482,7 @@ describe('park — capture via the dumb CLI, never an edit', () => {
     expect(body).toMatch(/don't ask again|capture it directly/i)
   })
 
-  it('composes a one-clause why into the park line so it reads cold at harvest (C3 legibility)', () => {
+  it('composes a one-clause why into the park line so it reads cold at harvest', () => {
     expect(body).toMatch(/one-clause why/i) // the compose guidance names the why explicitly
     expect(body).toMatch(/why it's worth revisiting/i) // what it is and why it matters later
   })
@@ -528,6 +529,6 @@ describe('doctor — a headless-safe thin driver for `plumbbob doctor`', () => {
   })
 })
 
-// plumbbob-report and plumbbob-docs were folded into /plumbbob:finish (D9) and removed.
+// plumbbob-report and plumbbob-docs were folded into /plumbbob:finish — D9 (finish-no-gate) — and removed.
 // plumbbob-interrogate was renamed /plumbbob:refine and broadened (attack + repair);
 // report/docs do not survive.

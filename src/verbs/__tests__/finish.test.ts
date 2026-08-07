@@ -43,7 +43,7 @@ describe('finish', () => {
     expect(execFileSync('git', ['-C', dir, 'status', '--porcelain'], { encoding: 'utf8' }).trim()).toBe('')
   })
 
-  it('clears the one-turn GRANT and the entry TICK with the session (D64/D65)', async () => {
+  it('clears the one-turn GRANT and the entry TICK with the session — D64 (approval-latch), D65 (human-typed-grants)', async () => {
     const dir = makeTempRepo()
     await captureIoAsync(() => start(dir, ['Latch state gone', '--slug', 'latch-state-gone']))
     // The session's last tick minted a grant and a build stamped its entry; neither
@@ -77,7 +77,7 @@ describe('finish', () => {
     expect(report).not.toMatch(/^- /m) // best-effort: no bullets, no crash, no junk
   })
 
-  it('notes a missing report but finishes anyway (D9)', async () => {
+  it('notes a missing report but finishes anyway — D9 (finish-no-gate)', async () => {
     const dir = makeTempRepo()
     await captureIoAsync(() => start(dir, ['No report']))
     const { code, stderr } = captureIo(() => finish(dir))

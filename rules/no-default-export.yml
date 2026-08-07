@@ -1,7 +1,7 @@
 id: no-default-export
 language: typescript
 severity: error
-message: 'C1: no default exports — use named exports so every symbol has a stable name.'
+message: 'C1 (functional-only): no default exports — use named exports so every symbol has a stable name.'
 files:
   - 'src/**/*.ts'
   - 'test/**/*.ts'

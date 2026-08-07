@@ -127,11 +127,11 @@ opts in by carrying a `harness.json`
 beside its `intent.md`, binding agents to a step's three lifecycle slots:
 
 - **`before`** — runs at build time before you write code; its envelope is *context in*.
-- **`build`** — authors the step's diff in your place (still verified the same way, [D3](decisions.md#d3)).
+- **`build`** — authors the step's diff in your place (still verified the same way, [D3 (author-blind-executor)](decisions.md#d3)).
 - **`after`** — runs at the verify pause as *advisory* review; it informs, it never gates.
 
 `/plumbbob:plan` authors the bindings at plan time and `/plumbbob:step` sharpens them just-in-time —
-both keep the file **bindings + prose only, never a conditional** ([C3](decisions.md#c3)). The file says
+both keep the file **bindings + prose only, never a conditional** ([C3 (bindings-not-logic)](decisions.md#c3)). The file says
 *which* agent; *when* to fire one mid-build is judgment the host model makes by reading
 each manifest's `when` prose and a step's `note`. `/plumbbob:build` runs the `before`/`build`
 slots and `/plumbbob:verify` runs `after`; either surfaces a non-`done` envelope by its status —

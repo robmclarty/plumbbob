@@ -53,7 +53,7 @@ rather than passing vacuously.
 
 ## Can't the model just blow through the pause?
 
-Yes — and that's a deliberate trade ([D10](decisions.md#d10)/[D13](decisions.md#d13) in [`decisions.md`](decisions.md)). A hard
+Yes — and that's a deliberate trade ([D10 (pause-not-lock)](decisions.md#d10)/[D13 (no-edit-guards)](decisions.md#d13) in [`decisions.md`](decisions.md)). A hard
 lock buys ritual, not control: a determined model routes around it. PlumbBob enforces
 deterministically where determinism works — `checkpoint` refuses on a red check, `revert`
 restores only recorded SHAs — and when guidance does get blown through, the checkpoint

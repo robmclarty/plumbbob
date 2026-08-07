@@ -29,13 +29,13 @@ request → [ limiter (per-IP token bucket) ] → login handler
 
 ## Decisions
 
-- D1: in-memory token bucket — *because* single instance today; Redis is a deferred
+- D1 (in-memory-bucket): in-memory token bucket — *because* single instance today; Redis is a deferred
   decision, not a requirement.
-- D2: 5 attempts / 60s / IP — *because* it matches the existing account-lockout policy.
+- D2 (five-per-minute): 5 attempts / 60s / IP — *because* it matches the existing account-lockout policy.
 
 ## Constraints
 
-- C1: no new runtime dependencies.
+- C1 (no-new-deps): no new runtime dependencies.
 
 ## Steps
 

@@ -1,4 +1,4 @@
-// Test scaffolding (D14): run real CLI verbs against throwaway git repos in tmp
+// Test scaffolding — D14 (throwaway-repo-tests): run real CLI verbs against throwaway git repos in tmp
 // dirs. Fixtures never use the real `pnpm check` — a recursive vitest hangs.
 
 import { execFileSync, spawnSync } from 'node:child_process'
@@ -78,11 +78,11 @@ export function runCli(
   return { stdout: result.stdout ?? '', stderr: result.stderr ?? '', status: result.status ?? 1 }
 }
 
-// The tracked artifact plane (D2) lives under `.plumbbob/builds/<slug>/`; the
+// The tracked artifact plane — D17 (two-planes) — lives under `.plumbbob/builds/<slug>/`; the
 // control plane (session sentinel, settings) stays flat at `.plumbbob/`. These
 // helpers mirror that split so a test can name a file without knowing which
 // plane it is on: build-plane names resolve under the active build folder (named
-// by STATE's content, the D28 cursor), everything else stays flat. report.md rides
+// by STATE's content — D28 (state-cursor)), everything else stays flat. report.md rides
 // with the build folder now: `finish` writes/commits it there so it merges into the
 // branch and shows up in the PR (the local-only `archive/` retired), so it resolves
 // under `builds/<slug>/` like the other artifacts.

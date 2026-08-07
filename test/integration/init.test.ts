@@ -2,7 +2,7 @@
 // ~/.claude/skills/plumbbob so Claude Code loads it as an in-place plugin. Global
 // only; idempotent + reversible; NEVER writes settings.json. HOME is pinned to a
 // throwaway dir per test so the real ~/.claude is never touched. Subprocess-driven
-// (D14); init ignores cwd, so a non-git dir is fine.
+// per D14 (throwaway-repo-tests); init ignores cwd, so a non-git dir is fine.
 
 import { existsSync, lstatSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'

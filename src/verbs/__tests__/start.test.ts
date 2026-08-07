@@ -28,7 +28,7 @@ describe('start', () => {
     expect(stdout).toContain(`.plumbbob/builds/${TODAY}-my-feature/intent.md`)
   })
 
-  it('points the STATE cursor at the new build (D3)', async () => {
+  it('points the STATE cursor at the new build — D28 (state-cursor)', async () => {
     const dir = makeTempRepo()
     await captureIoAsync(() => start(dir, ['My Feature']))
     expect(activeBuild(dir)).toBe(`${TODAY}-my-feature`)
@@ -43,7 +43,7 @@ describe('start', () => {
     expect(exclude).not.toContain('.plumbbob/')
   })
 
-  it('stamps the plan entry TICK from a surviving turn ledger (D64)', async () => {
+  it('stamps the plan entry TICK from a surviving turn ledger — D64 (approval-latch)', async () => {
     const dir = makeTempRepo()
     // A prior session left the ledger and its excludes behind — TURN is excluded
     // control, so it must not read as the dirty tree `start` refuses on.
@@ -61,7 +61,7 @@ describe('start', () => {
     expect(existsSync(tickPath(dir))).toBe(false)
   })
 
-  it('clears a stale GRANT left behind by an earlier session (D65 — one-turn lifetime)', async () => {
+  it('clears a stale GRANT left behind by an earlier session — D65 (human-typed-grants), one-turn lifetime', async () => {
     const dir = makeTempRepo()
     excludeControl(dir)
     mkdirSync(sidecarDir(dir), { recursive: true })
@@ -100,7 +100,7 @@ describe('start', () => {
     expect(stderr).not.toContain('no code checks')
   })
 
-  it('refuses when the derived slug collides with an existing build (D17)', async () => {
+  it('refuses when the derived slug collides with an existing build — D38 (cli-owns-slugs)', async () => {
     const dir = makeTempRepo()
     mkdirSync(buildDir(dir, `${TODAY}-my-feature`), { recursive: true }) // a prior build already owns the slug
     const { code, stderr } = await captureIoAsync(() => start(dir, ['My Feature']))
@@ -125,7 +125,7 @@ describe('start', () => {
     expect(hasSession(dir)).toBe(false)
   })
 
-  it('--local scaffolds the fully-untracked flat layout with no cursor (D13)', async () => {
+  it('--local scaffolds the fully-untracked flat layout with no cursor — D26 (build-folders)', async () => {
     const dir = makeTempRepo()
     const { code, stdout } = await captureIoAsync(() => start(dir, ['My Feature', '--local']))
     expect(code).toBe(0)
@@ -137,7 +137,7 @@ describe('start', () => {
     expect(exclude).toContain('.plumbbob/')
   })
 
-  it('scaffolds an empty settings.json — no check, no auto; absence is the default (D32)', async () => {
+  it('scaffolds an empty settings.json — no check, no auto; absence is the default — D32 (checkride-gate)', async () => {
     const dir = makeTempRepo()
     await captureIoAsync(() => start(dir, ['My Feature']))
     expect(existsSync(join(dir, '.plumbbob', 'config'))).toBe(false)

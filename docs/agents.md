@@ -1,6 +1,6 @@
 # User-authored agents — the doorway
 
-PlumbBob's executor is **author-blind** ([**D3**](decisions.md#d3)): `/plumbbob:verify` and `checkpoint` read *the
+PlumbBob's executor is **author-blind** ([**D3 (author-blind-executor)**](decisions.md#d3)): `/plumbbob:verify` and `checkpoint` read *the
 diff, not who wrote it*, so a step's code can come from you, from `/plumbbob:build`, from a vibe
 session, or from another harness entirely. This page is the contract for that last case —
 the **doorway** a user-authored agent speaks to plug into the loop. An agent here is
@@ -17,15 +17,15 @@ work with no agents at all.
 Everything below is downstream of three rules. When you author an agent, hold these; when
 you wonder why the contract refuses something, it's one of these:
 
-1. **The envelope has no verb to advance the loop** ([**C6**](decisions.md#c6) — the identity invariant).
+1. **The envelope has no verb to advance the loop** ([**C6 (no-advance-verb)**](decisions.md#c6) — the identity invariant).
    Nothing an agent returns can checkpoint, flip a step, or trigger another agent. The
    subprocess boundary enforces *human-as-clock by construction*, not by policy — an agent
    that could advance the loop would be autonomy wearing the loop's costume. This is the
    litmus for every field the envelope will ever grow.
-2. **The CLI owns every side effect** ([**D44**](decisions.md#d44)). An agent *returns* concerns; PlumbBob
+2. **The CLI owns every side effect** ([**D44 (cli-side-effects)**](decisions.md#d44)). An agent *returns* concerns; PlumbBob
    *applies* them — `parked[]` lands through the park verb, never by the agent writing
    `.plumbbob/` itself. The sidecar keeps a single writer.
-3. **Review is advisory; checkride gates; the human advances** ([**D45**](decisions.md#d45)). An
+3. **Review is advisory; checkride gates; the human advances** ([**D45 (advisory-review)**](decisions.md#d45)). An
    `after`-slot agent *informs* the verify pause. No code path lets it fail a step — a
    gate that an agent can trip is the lock returning in autonomy's costume.
 
@@ -54,7 +54,7 @@ stream discipline). Four streams, one shape:
   where narration, logs, and reasoning go.
 - **exit code** — `0` means the envelope on stdout is authoritative. **Any non-zero exit
   is a failed run**: PlumbBob reports it and stops, and does *not* trust the envelope of a
-  child that failed. This is the attention-first split ([**D46**](decisions.md#d46)): production narrates on
+  child that failed. This is the attention-first split ([**D46 (stream-discipline)**](decisions.md#d46)): production narrates on
   stderr, consumption stays structured on stdout, and the two never collide.
 
 ### Input: the StepContext (stdin)
@@ -73,10 +73,10 @@ picture of the step you're running against:
     "doneWhen": "the limit reads from RATE_LIMIT_MAX, defaulting to 5; test covers the default",
     "seam": ["src/limiter.ts", "src/__tests__/limiter.test.ts"]   // exact paths / dir/ grants
   },
-  "decisions":   ["D1: token bucket over sliding window — because …", "…"],  // verbatim intent bullets
-  "constraints": ["C1: no new runtime deps — because …", "…"],
-  "context":     ["<before-slot agent output threaded in as prose>", "…"],   // inline (D59)
-  "settings":    { "auto": false, "agentTimeout": 0 }              // plumbbob's own — never a provider key (D53)
+  "decisions":   ["D1 (token-bucket): token bucket over sliding window — because …", "…"],  // verbatim intent bullets
+  "constraints": ["C1 (no-new-deps): no new runtime deps — because …", "…"],
+  "context":     ["<before-slot agent output threaded in as prose>", "…"],   // inline — D59 (inline-context)
+  "settings":    { "auto": false, "agentTimeout": 0 }              // plumbbob's own — never a provider key — D53 (agents-own-keys)
 }
 ```
 
@@ -84,14 +84,14 @@ Notes that matter to an author:
 
 - `step.seam` is parsed **strictly** (it gates git behavior): exact paths or `dir/` grants,
   never globs. Everything else — title, done-when, decisions, constraints — is **best-effort
-  prose** scraped from `intent.md` ([**D61**](decisions.md#d61)): a formatting quirk warns on stderr and is
+  prose** scraped from `intent.md` ([**D61 (best-effort-scrape)**](decisions.md#d61)): a formatting quirk warns on stderr and is
   skipped, never wedges the run. `decisions`/`constraints` arrive verbatim, each intent
   bullet as one string with its *because* intact, so an agent sees the reasoning, not just
   the ruling.
-- `context[]` carries the output of `before`-slot agents, threaded in inline ([**D59**](decisions.md#d59)) — how
+- `context[]` carries the output of `before`-slot agents, threaded in inline ([**D59 (inline-context)**](decisions.md#d59)) — how
   a `build` agent sees what a `before` agent surfaced.
 - `settings` is *plumbbob's* relevant configuration only. Provider keys, model choice, and
-  sandboxing are **your** agent's business ([**D53**](decisions.md#d53)) — its env, its config; PlumbBob never
+  sandboxing are **your** agent's business ([**D53 (agents-own-keys)**](decisions.md#d53)) — its env, its config; PlumbBob never
   touches a key.
 
 ### Output: the envelope (stdout)
@@ -110,7 +110,7 @@ A single JSON object. Two fields are required; the rest default to empty:
 ```
 
 `status` is the routing signal, and the three values route differently at the pause
-([**D52**](decisions.md#d52)):
+([**D52 (blocked-vs-drift)**](decisions.md#d52)):
 
 | `status`  | Meaning | What the human does |
 |-----------|---------|---------------------|
@@ -119,8 +119,8 @@ A single JSON object. Two fields are required; the rest default to empty:
 | `drift`   | Finished, but the plan no longer matches reality. | Repair the plan with `/plumbbob:refine` before continuing. |
 
 `parked[]` is how an agent captures a mid-run "ooh, what if" without acting on it — each
-string becomes a park line the CLI lands through the park verb ([**D44**](decisions.md#d44)). Unknown fields are
-tolerated and dropped ([**C7**](decisions.md#c7), see Versioning); a malformed `parked` (non-strings,
+string becomes a park line the CLI lands through the park verb ([**D44 (cli-side-effects)**](decisions.md#d44)). Unknown fields are
+tolerated and dropped ([**C7 (minimal-envelope)**](decisions.md#c7), see Versioning); a malformed `parked` (non-strings,
 blanks) is refused rather than silently dropped, because losing a parked concern is quiet
 data loss.
 
@@ -141,7 +141,7 @@ command:
 }
 ```
 
-The manifest speaks to **two audiences** ([**D55**](decisions.md#d55)):
+The manifest speaks to **two audiences** ([**D55 (two-audiences)**](decisions.md#d55)):
 
 - `command` is for the **deterministic CLI** — the shell string PlumbBob runs.
 - `description` and `when` are prose for the **host model** — the same role a subagent's
@@ -150,7 +150,7 @@ The manifest speaks to **two audiences** ([**D55**](decisions.md#d55)):
   names *when* to run something (that's judgment, and there's always a frontier model in the
   room reading prose); the manifest's `when` is where that judgment gets its hint.
 
-### How the command runs ([**D49**](decisions.md#d49), POSIX only)
+### How the command runs ([**D49 (posix-sh)**](decisions.md#d49), POSIX only)
 
 - **Shell:** the `command` string is run through `sh -c`. It's a shell string, not an argv
   array — pipes, redirects, and `$VAR` all work. POSIX only (\*nix / macOS).
@@ -163,7 +163,7 @@ The manifest speaks to **two audiences** ([**D55**](decisions.md#d55)):
 
 ## Where agents live — resolution
 
-Two tiers, plus a flag, resolved first-hit-wins ([**D41**](decisions.md#d41) — the settings ladder's shape, and
+Two tiers, plus a flag, resolved first-hit-wins ([**D41 (agent-resolution)**](decisions.md#d41) — the settings ladder's shape, and
 the same two-level convention as Claude Code's `.claude/agents/`):
 
 ```text
@@ -179,23 +179,23 @@ skipped in favor of a different agent.
 Because the project tier is tracked, an agent you commit rides the branch into the PR — a
 teammate gets it for free. An agent only in your **personal** tier is yours alone: if the
 build's `harness.json` binds it and a teammate lacks it, the binding **downgrades to a
-warning** and the loop runs without it ([**D54**](decisions.md#d54)) — the same never-required contract as
+warning** and the loop runs without it ([**D54 (bindings-degrade-soft)**](decisions.md#d54)) — the same never-required contract as
 `/plumbbob:build` itself. (An agent you name *explicitly* is different — see "Fail loud vs degrade
 soft.")
 
 ## Binding agents to steps — `harness.json`
 
 You plan *which* agent runs at *which* lifecycle point in a build's `harness.json`, a sibling
-of `intent.md` under `builds/<slug>/`, authored at `/plumbbob:plan` time ([**D42**](decisions.md#d42)). Three slots,
-and only three ([**D43**](decisions.md#d43)):
+of `intent.md` under `builds/<slug>/`, authored at `/plumbbob:plan` time ([**D42 (harness-bindings)**](decisions.md#d42)). Three slots,
+and only three ([**D43 (three-slots)**](decisions.md#d43)):
 
 - **`before`** — runs before you write the step's code; its envelope is **context in**
   (threaded into the next agent's `context[]`).
-- **`build`** — authors the step's diff in your place (still verified the same way — [**D3**](decisions.md#d3)).
+- **`build`** — authors the step's diff in your place (still verified the same way — [**D3 (author-blind-executor)**](decisions.md#d3)).
 - **`after`** — runs at the verify pause as **advisory** review; it informs, never gates.
 
 There is deliberately no fourth slot — no declarative format can name "a salient point in the
-middle of the work" ([**D43**](decisions.md#d43)). That's judgment, and it's handled in *prose* (a manifest's
+middle of the work" ([**D43 (three-slots)**](decisions.md#d43)). That's judgment, and it's handled in *prose* (a manifest's
 `when`, a step's `note`) by the host model, not by config.
 
 ```jsonc
@@ -211,12 +211,12 @@ middle of the work" ([**D43**](decisions.md#d43)). That's judgment, and it's han
 }
 ```
 
-- **The merge ladder** ([**D57**](decisions.md#d57)): for a given step and slot, a `--agent` flag beats a per-step
+- **The merge ladder** ([**D57 (merge-ladder)**](decisions.md#d57)): for a given step and slot, a `--agent` flag beats a per-step
   entry, which beats `defaults`, which beats project-wide defaults in `settings.json`
   (`{"agents": {"after": ["reviewer"]}}`). First level that names the slot wins — **replace,
   not append**. A slot bound to `[]` is an explicit override to *nothing*.
 - **`note`** is prose the host model reads (like a manifest's `when`) — never mechanics.
-- **`harness.json` stays bindings + prose only** ([**C3**](decisions.md#c3)). The moment it grows an `if`, a
+- **`harness.json` stays bindings + prose only** ([**C3 (bindings-not-logic)**](decisions.md#c3)). The moment it grows an `if`, a
   `retry`, or a `loop`, the contract has failed its own spec. Control flow lives in *agents*
   (as code) and in *prose* (read by the model), never in config — GitHub Actions' YAML-grown-a-
   programming-language is the cautionary tale.
@@ -236,29 +236,29 @@ plumbbob agent run reviewer --agent ./r      # --agent points at an explicit dir
 `agent run` composes the `StepContext`, spawns the command, streams its stderr live, captures
 and validates the envelope on stdout, lands any `parked[]` through the park verb, and records
 the envelope in the step's **handoff ledger** (`builds/<slug>/handoff.json` — untracked,
-step-scoped, cleared when the step checkpoints, [**D47**](decisions.md#d47)) so a later `agent run` or a
+step-scoped, cleared when the step checkpoints, [**D47 (handoff-ledger)**](decisions.md#d47)) so a later `agent run` or a
 context-compacted session can thread earlier envelopes back into `context[]`. It re-emits the
 validated envelope on **its own stdout** (machine, for the calling skill) with the human
 summary on stderr. There is **no** code path here to checkpoint, flip a step, or chain agents
-([**C6**](decisions.md#c6)).
+([**C6 (no-advance-verb)**](decisions.md#c6)).
 
 ### Fail loud vs degrade soft
 
-The two ways an agent can go missing route differently ([**D54**](decisions.md#d54)):
+The two ways an agent can go missing route differently ([**D54 (bindings-degrade-soft)**](decisions.md#d54)):
 
 - **You named it** — `agent run reviewer` or `--mode after` against a manifest that doesn't
   declare `after`: **errors**. You asked for that agent specifically; a miss is loud.
 - **A harness binding names it** and a teammate lacks it (personal-tier only): **warns and
-  skips** ([**D54**](decisions.md#d54)). A binding is ambient configuration the loop must survive without.
+  skips** ([**D54 (bindings-degrade-soft)**](decisions.md#d54)). A binding is ambient configuration the loop must survive without.
 
 A run that actually *starts* and then fails — non-zero exit, a timeout, garbage on stdout —
-is a hard failure either way. [D54](decisions.md#d54) softens a *missing* agent, not a *broken* one.
+is a hard failure either way. [D54 (bindings-degrade-soft)](decisions.md#d54) softens a *missing* agent, not a *broken* one.
 
 ### Interrupts and timeouts
 
 - **Ctrl-C** is forwarded to the child and kills it, then reports — a present human's
-  interrupt never orphans the agent ([**D58**](decisions.md#d58)).
-- **Timeouts are off by default** ([**D51**](decisions.md#d51)). Set `agentTimeout` (seconds) in the settings
+  interrupt never orphans the agent ([**D58 (sigint-forwarded)**](decisions.md#d58)).
+- **Timeouts are off by default** ([**D51 (agent-timeout)**](decisions.md#d51)). Set `agentTimeout` (seconds) in the settings
   ladder to arm one; absent or `0` means no timeout. The human is present by default (Ctrl-C
   works), so enforcement is your explicit opt-in, not PlumbBob's guess. On expiry the child is
   killed and the run reported as failed.
@@ -266,12 +266,12 @@ is a hard failure either way. [D54](decisions.md#d54) softens a *missing* agent,
 ## Composing agents (nested invocation)
 
 An agent **may** shell `plumbbob agent run` to compose other agents — a build/review loop with
-a cutoff, say ([**D50**](decisions.md#d50)). This is allowed with no environment guard, because:
+a cutoff, say ([**D50 (nested-agents)**](decisions.md#d50)). This is allowed with no environment guard, because:
 
 - **Loops belong inside agents, as code.** A build-then-review-until-clean loop is legitimate
-  composition; its cutoff is *your* job as the author (config never grew a `retry` — [**C3**](decisions.md#c3)).
+  composition; its cutoff is *your* job as the author (config never grew a `retry` — [**C3 (bindings-not-logic)**](decisions.md#c3)).
 - **The identity invariant holds at every depth.** The envelope has no verb to advance
-  PlumbBob's loop ([**C6**](decisions.md#c6)), so no nesting depth can smuggle one in. A composed agent can drive
+  PlumbBob's loop ([**C6 (no-advance-verb)**](decisions.md#c6)), so no nesting depth can smuggle one in. A composed agent can drive
   *its* children all it likes; it still cannot checkpoint your build.
 
 The warning, not a wall: an uncapped nest is an infinite loop you wrote. Put the cutoff in.
@@ -311,9 +311,9 @@ whole trap, closed at the source. A worked, in-contract agent built on it ships 
 The envelope, manifest, and `harness.json` all carry a `contract` integer. This PlumbBob speaks
 **contract 1**. Within a major version the envelope only *gains* fields, so an older CLI can
 read a newer minor; a **major mismatch is refused** with an upgrade hint pointing at whichever
-side is behind ([**D46**](decisions.md#d46)), because across a major the shapes may genuinely disagree. Keep your
+side is behind ([**D46 (stream-discipline)**](decisions.md#d46)), because across a major the shapes may genuinely disagree. Keep your
 envelope **minimal** — resist field sprawl (SWE-agent's ACI lesson): additions are a minor
-bump, removals or renames are a major ([**C7**](decisions.md#c7)).
+bump, removals or renames are a major ([**C7 (minimal-envelope)**](decisions.md#c7)).
 
 ## A complete working example
 

@@ -25,15 +25,15 @@ words longer than the width, preserves existing newlines, and is covered by
 
 ## Decisions
 
-- D1: greedy line breaking over optimal (Knuth-Plass) — *because* it is what `fmt` and
+- D1 (greedy-breaking): greedy line breaking over optimal (Knuth-Plass) — *because* it is what `fmt` and
   `fold` do and the simplest thing that satisfies done-when.
-- D2: pure function first, CLI last — *because* the CLI is a thin shell once `wrap()`
+- D2 (function-first): pure function first, CLI last — *because* the CLI is a thin shell once `wrap()`
   is trustworthy.
 
 ## Constraints
 
-- C1: no runtime dependencies — *because* the demo must run anywhere Node runs.
-- C2: `node:test` only — *because* the point is the loop, not a test framework.
+- C1 (no-runtime-deps): no runtime dependencies — *because* the demo must run anywhere Node runs.
+- C2 (node-test-only): `node:test` only — *because* the point is the loop, not a test framework.
 
 ## Steps
 

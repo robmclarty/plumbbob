@@ -47,7 +47,7 @@ describe('checkpoint', () => {
     expect(stdout).toMatch(/step 1 checkpointed — [0-9a-f]{9}\. Back at the boundary/)
   })
 
-  it('refreshes a stale info/exclude so an in-flight control file never rides the step commit (D33)', async () => {
+  it('refreshes a stale info/exclude so an in-flight control file never rides the step commit — D33 (info-exclude)', async () => {
     const dir = await startedGreen()
     // A session started by an older plumbbob, upgraded mid-build: its exclude
     // predates the control file the new version writes.
@@ -68,7 +68,7 @@ describe('checkpoint', () => {
     expect(tracked).toContain('work.txt') // the step's actual work still landed
   })
 
-  it('flips the build-log mirror to ☑ and returns Current step to the boundary (D69)', async () => {
+  it('flips the build-log mirror to ☑ and returns Current step to the boundary — D69 (cli-owned-buildlog)', async () => {
     const dir = await startedGreen()
     writeFileSync(join(dir, 'work.txt'), 'pending\n')
     await captureIoAsync(() => checkpoint(dir, ['1']))
@@ -78,7 +78,7 @@ describe('checkpoint', () => {
     expect(log).not.toContain('- ☐ 1. <step>')
   })
 
-  it('titles the commit subject `type(scope): description` from intent.md, keeping plumbbob/step in the body (D68)', async () => {
+  it('titles the commit subject `type(scope): description` from intent.md, keeping plumbbob/step in the body — D68 (conventional-subjects)', async () => {
     const dir = await startedGreen()
     writeFileSync(join(dir, 'work.txt'), 'pending\n') // ensure a fresh commit is made
     await captureIoAsync(() => checkpoint(dir, ['1']))
@@ -115,7 +115,7 @@ describe('checkpoint', () => {
   // → build slug → bare. The slug rung is already pinned by the tests above (no
   // `**Scope:**` field — an intent without the header keeps the slug-scope
   // behavior); these pin the other rungs.
-  describe('the scope fallback chain (D3)', () => {
+  describe('the scope fallback chain — D68 (conventional-subjects)', () => {
     it("a step's own `(scope)` prefix wins over the build-default `**Scope:**` header", async () => {
       const dir = await startedGreen()
       writeFileSync(
@@ -140,7 +140,7 @@ describe('checkpoint', () => {
       expect(subject).toBe('feat(build-default): first')
     })
 
-    it('an unfilled `**Scope:**` placeholder parses as absent and falls to the slug rung (D7)', async () => {
+    it('an unfilled `**Scope:**` placeholder parses as absent and falls to the slug rung', async () => {
       const dir = await startedGreen()
       writeFileSync(
         intentPath(dir),
@@ -194,7 +194,7 @@ describe('checkpoint', () => {
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x]') // committed despite the drift
   })
 
-  it('clears the entry stamp alongside STEP/SEAM — the next build re-stamps (D64)', async () => {
+  it('clears the entry stamp alongside STEP/SEAM — the next build re-stamps — D64 (approval-latch)', async () => {
     const dir = await startedGreen()
     writeFileSync(tickPath(dir), '4\n') // as `build <n>` stamps when the ledger is live
     writeFileSync(join(dir, 'work.txt'), 'pending\n')
@@ -350,7 +350,7 @@ describe('checkpoint', () => {
   // Latch row 1 lives here rather than in the subprocess suite below: a child of
   // runCli always gets a piped stdin, so a real TTY row needs the in-process
   // patch (the same plumbing the `--body` TTY test uses).
-  it('latch row 1: a TTY stdin is its own approval — allows with no turn since entry (D64)', async () => {
+  it('latch row 1: a TTY stdin is its own approval — allows with no turn since entry — D64 (approval-latch)', async () => {
     const dir = await startedGreen()
     writeFileSync(turnPath(dir), '2\n')
     writeFileSync(tickPath(dir), '2\n')
@@ -396,7 +396,7 @@ describe('checkpoint', () => {
       expect(names).not.toContain('.plumbbob/settings.json')
       expect(readFileSync(intentPath(dir), 'utf8')).not.toContain('1. [x]') // no step marked done
     })
-    it("consumes start's entry stamp — a later hand-built diff finds no stale TICK (D64)", async () => {
+    it("consumes start's entry stamp — a later hand-built diff finds no stale TICK — D64 (approval-latch)", async () => {
       const dir = await startedGreen()
       writeFileSync(tickPath(dir), '2\n') // as `start` stamps when the ledger is live
       const { code } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
@@ -412,7 +412,7 @@ describe('checkpoint', () => {
 // at the process boundary: a runCli child gets a piped (non-TTY) stdin, and the
 // tests write TURN/TICK/GRANT directly, standing in for the hook tick and the
 // entry stamp. Row 1 (a real TTY) is the in-process test above.
-describe('checkpoint — the approval latch (subprocess, D64)', () => {
+describe('checkpoint (subprocess) — D64 (approval-latch)', () => {
   const LATCH_INTENT = `# Latch test
 
 ## Steps
@@ -423,7 +423,8 @@ describe('checkpoint — the approval latch (subprocess, D64)', () => {
 
   // A started fixture with the ledger live and no human turn since entry:
   // TURN == TICK, no grant — the strictest state, refused unless a row above
-  // row 6 speaks. Tests relax exactly the file their row reads.
+  // row 5 speaks (the five-row matrix of D64 (approval-latch), as amended by
+  // D67 (auto-not-a-grant)). Tests relax exactly the file their row reads.
   function latchedRepo(): string {
     const dir = makeFixtureRepo()
     runCli(dir, ['start', 'Latch test', '--slug', 'latch-test'])
@@ -434,7 +435,7 @@ describe('checkpoint — the approval latch (subprocess, D64)', () => {
     return dir
   }
 
-  it('row 6: refuses with exit 1 and the pause affordance when no human turn intervened', async () => {
+  it('row 5: refuses with exit 1 and the pause affordance when no human turn intervened', async () => {
     const dir = latchedRepo()
     const { status, stderr } = runCli(dir, ['checkpoint', '1'])
     expect(status).toBe(1)
@@ -445,7 +446,7 @@ describe('checkpoint — the approval latch (subprocess, D64)', () => {
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [ ]')
   })
 
-  it('the latch precedes the check gate (C4): a latched repo refuses as the pause, not as red', async () => {
+  it('the latch precedes the check gate — D64 (approval-latch): a latched repo refuses as the pause, not as red', async () => {
     const dir = latchedRepo()
     writeFileSync(settingsPath(dir), JSON.stringify({ check: 'false' })) // red gate
     const { status, stderr } = runCli(dir, ['checkpoint', '1'])
@@ -454,7 +455,7 @@ describe('checkpoint — the approval latch (subprocess, D64)', () => {
     expect(stderr).not.toContain('check failed')
   })
 
-  it('row 5: a human turn since entry allows the land', async () => {
+  it('row 4: a human turn since entry allows the land', async () => {
     const dir = latchedRepo()
     writeFileSync(turnPath(dir), '3\n') // the hook ticked after entry
     const { status } = runCli(dir, ['checkpoint', '1'])
@@ -478,39 +479,39 @@ describe('checkpoint — the approval latch (subprocess, D64)', () => {
     expect(status).toBe(0)
   })
 
-  it('D67: a standing `auto: true` in settings is ignored — checkpoint still refuses', async () => {
+  it('D67 (auto-not-a-grant): a standing `auto: true` in settings is ignored — checkpoint still refuses', async () => {
     const dir = latchedRepo()
     setLocalSetting(dir, 'auto', true) // a model can write this file, so the latch does not honor it as a grant
     const { status, stderr } = runCli(dir, ['checkpoint', '1'])
     expect(status).toBe(1)
-    expect(stderr).toContain('no longer a grant (D67)')
+    expect(stderr).toContain('no longer a grant — D67 (auto-not-a-grant)')
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [ ]') // nothing landed
   })
 
-  it('the model-forgeable route is closed but the human-typed one still lands: a one-turn `auto` grant allows (D65)', async () => {
+  it('the model-forgeable route is closed but the human-typed one still lands: a one-turn `auto` grant allows — D65 (human-typed-grants)', async () => {
     const dir = latchedRepo()
     writeFileSync(grantPath(dir), 'auto\n')
     const { status } = runCli(dir, ['checkpoint', '1'])
     expect(status).toBe(0)
   })
 
-  it('row 4: a range grant allows steps at or under its ceiling', async () => {
+  it('row 3: a range grant allows steps at or under its ceiling', async () => {
     const dir = latchedRepo()
     writeFileSync(grantPath(dir), 'range 2\n')
     const { status } = runCli(dir, ['checkpoint', '1'])
     expect(status).toBe(0)
   })
 
-  it('row 4: a range grant refuses past its ceiling with the top-of-range affordance', async () => {
+  it('row 3: a range grant refuses past its ceiling with the top-of-range affordance', async () => {
     const dir = latchedRepo()
     writeFileSync(grantPath(dir), 'range 1\n')
     const { status, stderr } = runCli(dir, ['checkpoint', '2'])
     expect(status).toBe(1)
     expect(stderr).toContain('the range you granted ends at step 1')
-    expect(stderr).toContain('re-fire to continue')
+    expect(stderr).toContain('run it again to continue')
   })
 
-  it('a malformed GRANT contributes nothing — the latch still refuses (D27)', async () => {
+  it('a malformed GRANT contributes nothing — the latch still refuses — D27 (settings-ladder)', async () => {
     const dir = latchedRepo()
     writeFileSync(grantPath(dir), 'garbage\n')
     const { status, stderr } = runCli(dir, ['checkpoint', '1'])
@@ -532,7 +533,7 @@ describe('checkpoint — the approval latch (subprocess, D64)', () => {
   })
 })
 
-describe('checkpoint — the dogfood receipt (research/07 2b)', () => {
+describe('checkpoint — the self-use stats receipt (research/07 2b)', () => {
   it('bumps redChecks on a red gate, not on harness breakage', async () => {
     const dir = await startedGreen()
     writeFileSync(settingsPath(dir), JSON.stringify({ check: 'false' }))

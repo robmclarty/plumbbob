@@ -230,7 +230,7 @@ describe('doctor — migration', () => {
     expect(files).not.toContain('.plumbbob/settings.local.json')
   })
 
-  it('preserves park lines through the move (C4 — never destroy)', () => {
+  it('preserves park lines through the move — C4 (never-destroy)', () => {
     const dir = legacyRepo()
     migrateSidecar(dir)
     expect(readFileSync(join(buildDir(dir, 'my-legacy-build'), 'build-log.md'), 'utf8')).toContain('keep me')
@@ -417,7 +417,7 @@ describe('doctor — the verb', () => {
     seedMarketplace(home, ['plumbbob@robmclarty'])
     const { code, stdout } = await doctorWithHome(home, makeTempRepo(), [], gateEnv)
     expect(code).toBe(1)
-    expect(stdout).toContain('\n\nplumbbob doctor — check gate (D32)\n')
+    expect(stdout).toContain('\n\nplumbbob doctor — check gate — D32 (checkride-gate)\n')
     expect(stdout).toContain('  ✗ install\n      → ') // a required failure carries its hint on the arrow line
     expect(stdout).not.toContain('✗ node') // passing env checks stay silent
     expect(stdout).toContain('  ✓ links ← links (built-in)') // an ok adapter row carries what was found
@@ -443,7 +443,7 @@ describe('doctor — the verb', () => {
     expect(stdout).toContain('○ gate: no code checks detected')
   })
 
-  it('flags a detected-but-missing tool with its hint (the D32 footgun)', async () => {
+  it('flags a detected-but-missing tool with its hint — the D32 (checkride-gate) footgun', async () => {
     const home = makeTempDir()
     seedMarketplace(home, ['plumbbob@robmclarty'])
     const dir = makeTempRepo()
@@ -483,7 +483,7 @@ function putAgent(agentsRoot: string, name: string, opts: AgentOpts): void {
   )
 }
 
-describe('doctor — agent validation (D48)', () => {
+describe('doctor — agent validation — D48 (doctor-validates-agents)', () => {
   it('validates a healthy agent with a ✓ and its declared slots', async () => {
     const home = makeTempDir()
     seedMarketplace(home, ['plumbbob@robmclarty'])
@@ -496,7 +496,7 @@ describe('doctor — agent validation (D48)', () => {
     })
     const { code, stdout } = await doctorWithHome(home, dir)
     expect(code).toBe(0)
-    expect(stdout).toContain('plumbbob doctor — agents (D48)')
+    expect(stdout).toContain('plumbbob doctor — agents — D48 (doctor-validates-agents)')
     expect(stdout).toContain('✓ good (project) [build, after]')
     expect(stdout).toContain('all checks passed')
   })
@@ -670,7 +670,7 @@ describe('doctor — plugin link (HOME pinned)', () => {
 // The approval-latch health probe. overrideRepo + a seeded marketplace keep the
 // plugin and gate sections passing, so the probe's own line is what a test reads; the
 // probe never fails (dormant is legitimate), so the exit code stays 0 either way.
-describe('doctor — approval latch (D64)', () => {
+describe('doctor — approval latch — D64 (approval-latch)', () => {
   it('reports the latch live with the turn count when the ledger exists', async () => {
     const home = makeTempDir()
     seedMarketplace(home, ['plumbbob@robmclarty'])
@@ -678,7 +678,7 @@ describe('doctor — approval latch (D64)', () => {
     writeFileSync(turnPath(dir), '42\n') // the UserPromptSubmit hook has ticked
     const { code, stdout } = await doctorWithHome(home, dir)
     expect(code).toBe(0)
-    expect(stdout).toContain('plumbbob doctor — approval latch (D64)')
+    expect(stdout).toContain('plumbbob doctor — approval latch — D64 (approval-latch)')
     expect(stdout).toContain('✓ latch: live (turn 42)')
   })
 
@@ -704,13 +704,13 @@ describe('doctor — approval latch (D64)', () => {
     expect(stdout).toContain('○ latch: dormant')
   })
 
-  it('surfaces a set settings `auto` as informational (D67) — no longer a grant, never a problem', async () => {
+  it('surfaces a set settings `auto` as informational — D67 (auto-not-a-grant), never a problem', async () => {
     const home = makeTempDir()
     seedMarketplace(home, ['plumbbob@robmclarty'])
     const dir = overrideRepo()
     setLocalSetting(dir, 'auto', true)
     const { code, stdout } = await doctorWithHome(home, dir)
     expect(code).toBe(0) // informational, not a failure
-    expect(stdout).toContain('○ auto: set in settings but not a grant since D67')
+    expect(stdout).toContain('○ auto: set in settings but not a grant since D67 (auto-not-a-grant)')
   })
 })

@@ -8,8 +8,8 @@
     "doneWhen": "wrap() breaks lines at the last space that fits; node --test passes",
     "seam": []
   },
-  "decisions": ["D1: greedy line breaking over optimal — because it is what fmt/fold do and the simplest thing that works"],
-  "constraints": ["C1: no runtime dependencies — because the demo must run anywhere Node runs", "C2: node:test only — because the point is the loop, not the test framework"],
+  "decisions": ["D1 (greedy-breaking): greedy line breaking over optimal — because it is what fmt/fold do and the simplest thing that works"],
+  "constraints": ["C1 (no-runtime-deps): no runtime dependencies — because the demo must run anywhere Node runs", "C2 (node-test-only): node:test only — because the point is the loop, not the test framework"],
   "context": [],
   "settings": { "auto": false, "agentTimeout": 0 }
 }

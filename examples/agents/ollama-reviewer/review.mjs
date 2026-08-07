@@ -11,7 +11,7 @@
  * discipline of docs/agents.md is the library's job here, not this file's.
  *
  * Anticipated obstacles (Ollama down, model not pulled, deps not installed)
- * are `blocked` envelopes on exit 0 — the fix-and-re-run loop (D52).
+ * are `blocked` envelopes on exit 0 — the fix-and-re-run loop, D52 (blocked-vs-drift).
  * Unexpected failures are run_stdio's non-zero exits: 1 = the flow failed,
  * 2 = the contract was violated (e.g. unparseable stdin), each with a
  * machine-readable failure as the last stderr line and nothing on stdout.
@@ -53,8 +53,8 @@ async function loadDeps() {
 }
 
 // Preflight before burning a model call: unreachable server and unpulled
-// model each get an actionable `blocked` envelope (the D52 loop — the human
-// reads notes, fixes, re-runs). Returns null when good to go.
+// model each get an actionable `blocked` envelope — the D52 (blocked-vs-drift) loop: the human
+// reads notes, fixes, re-runs. Returns null when good to go.
 async function preflight() {
   let tags
   try {
@@ -72,8 +72,8 @@ async function preflight() {
 }
 
 // The step's work at the verify pause is staged-or-unstaged but not yet
-// checkpointed (D56: after runs before checkpoint), so HEAD is the base —
-// plus a pseudo-diff per untracked file, since a step that creates files
+// checkpointed — D56 (auto-composes) runs `after` before checkpoint — so HEAD is
+// the base, plus a pseudo-diff per untracked file, since a step that creates files
 // (most step 1s) is invisible to `git diff HEAD` alone. seam entries are
 // exact paths or dir/ grants — safe to hand to git as pathspecs; an empty
 // seam falls back to the whole tree.
@@ -178,7 +178,7 @@ async function main() {
   const { z } = deps
 
   // Loose on purpose: everything except the contract gate is best-effort
-  // prose (D61) — a strict shape here would wedge on what the CLI won't.
+  // prose — D61 (best-effort-scrape) — a strict shape here would wedge on what the CLI won't.
   const stepContextSchema = z.looseObject({ contract: z.literal(CONTRACT) })
 
   const envelopeSchema = z.object({

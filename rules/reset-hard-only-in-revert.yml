@@ -1,7 +1,7 @@
 id: reset-hard-only-in-revert
 language: typescript
 severity: error
-message: "C5: resetHard has exactly one sanctioned caller — verbs/revert.ts, which snapshots the build folder before the reset (C4). Do not import it anywhere else."
+message: "C5 (additive-git): resetHard has exactly one sanctioned caller — verbs/revert.ts, which snapshots the build folder before the reset — C4 (never-destroy). Do not import it anywhere else."
 files:
   - 'src/**/*.ts'
 ignores:

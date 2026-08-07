@@ -67,7 +67,7 @@ describe('use', () => {
     expect(stderr).toContain('use needs a build slug')
   })
 
-  it('warns — but still switches — when the build being left has a step in flight (D4/D16)', async () => {
+  it('warns — but still switches — when the build being left has a step in flight — D30 (use-to-switch)', async () => {
     const dir = makeTempRepo()
     await captureIoAsync(() => start(dir, ['My Feature', '--slug', 'my-feature']))
     writeFileSync(stepPath(dir), '2\n') // my-feature has a step in flight

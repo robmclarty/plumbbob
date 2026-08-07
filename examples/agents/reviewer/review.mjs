@@ -3,7 +3,7 @@
  * by a model whose *provider* is switchable.
  *
  * The provider is resolved by precedence — settings first, an env override
- * under it, a code default as the floor (D4):
+ * under it, a code default as the floor:
  *
  *   ctx.settings.agent.provider  →  PB_REVIEWER_PROVIDER  →  'claude_cli'
  *
@@ -24,7 +24,7 @@
  * makes the exit code the verdict — so this file never touches stdout.
  *
  * Anticipated obstacles (provider unreachable, model not pulled, deps not
- * installed) are `blocked` envelopes on exit 0 — the fix-and-re-run loop (D52).
+ * installed) are `blocked` envelopes on exit 0 — the fix-and-re-run loop, D52 (blocked-vs-drift).
  * Unexpected failures are run_stdio's non-zero exits: 1 = the flow failed,
  * 2 = the contract was violated (e.g. unparseable stdin), each with a
  * machine-readable failure as the last stderr line and nothing on stdout.
@@ -44,7 +44,7 @@ function log(message) {
   process.stderr.write(`reviewer: ${message}\n`)
 }
 
-// --- read precedence: settings.agent.<key> → env → default (D4) --------------
+// --- read precedence: settings.agent.<key> → env → default ------------------
 //
 // The CLI forwards this agent's own config block as ctx.settings.agent (the
 // existing, frozen envelope `settings` field). Settings is the durable home;
@@ -83,15 +83,15 @@ function claudeCliProvider(ctx) {
     // 'claude_cli' is fascicle's external-agent kind: it spawns the `claude`
     // binary and drives it, so auth_mode 'oauth' inherits the full env and
     // piggybacks the logged-in Claude session — no API key, no local model to
-    // pull (D3). Structured output rides claude's real --json-schema constrained
+    // pull. Structured output rides claude's real --json-schema constrained
     // decode; needs fascicle >= 0.9.5, which strips the $schema/$id keys
-    // z.toJSONSchema stamps and the CLI rejects (D1).
+    // z.toJSONSchema stamps and the CLI rejects.
     engineProviders: { claude_cli: { auth_mode: 'oauth', binary } },
     call: { provider: 'claude_cli', model },
     // Preflight the one obstacle the adapter would otherwise surface as a raw
     // crash: no `claude` on PATH. `claude --version` is instant, auth-free, and
     // network-free — its presence is the whole check. ENOENT → an actionable
-    // blocked (the D52 loop); anything else (a broken or hung install) blocks
+    // blocked — the D52 (blocked-vs-drift) loop; anything else (a broken or hung install) blocks
     // with the real error rather than crashing. null = good to go.
     preflight: async () => {
       try {
@@ -117,13 +117,13 @@ function ollamaProvider(ctx) {
   return {
     label: `ollama · ${model} @ ${baseUrl}`,
     // transport 'native' is fascicle's depth-1 raw-HTTP adapter — it keeps the
-    // AI-SDK peers (ai, ai-sdk-ollama) out of this package's deps (D8); the
+    // AI-SDK peers (ai, ai-sdk-ollama) out of this package's deps; the
     // default 'ai_sdk' transport would demand ai-sdk-ollama as a peer.
     engineProviders: { ollama: { base_url: baseUrl, transport: 'native' } },
     call: { provider: 'ollama', model },
     // Preflight before burning a model call: an unreachable server and an
-    // unpulled model each get an actionable `blocked` (the D52 loop — the human
-    // reads notes, fixes, re-runs). null = good to go.
+    // unpulled model each get an actionable `blocked` — the D52 (blocked-vs-drift) loop: the human
+    // reads notes, fixes, re-runs. null = good to go.
     preflight: async () => {
       let tags
       try {
@@ -142,8 +142,8 @@ function ollamaProvider(ctx) {
   }
 }
 
-// One descriptor factory per provider, keyed by name (D4's switch). claude_cli
-// is the default (D3) — it piggybacks the logged-in Claude session, needing no
+// One descriptor factory per provider, keyed by name. claude_cli
+// is the default — it piggybacks the logged-in Claude session, needing no
 // key and no local pull; ollama is the local, private alternative whose diff
 // never leaves the machine. Adding a provider is one more entry here.
 const PROVIDERS = {
@@ -154,7 +154,7 @@ const PROVIDERS = {
 // --- diff collection ---------------------------------------------------------
 //
 // The step's work at the verify pause is staged-or-unstaged but not yet
-// checkpointed (D56: after runs before checkpoint), so HEAD is the base — plus
+// checkpointed — D56 (auto-composes) runs `after` before checkpoint — so HEAD is the base, plus
 // a pseudo-diff per untracked file, since a step that creates files (most step
 // 1s) is invisible to `git diff HEAD` alone. seam entries are exact paths or
 // dir/ grants — safe to hand to git as pathspecs; an empty seam falls back to
@@ -277,7 +277,7 @@ async function main() {
   const { z } = deps
 
   // Loose on purpose: everything except the contract gate is best-effort prose
-  // (D61) — a strict shape here would wedge on what the CLI won't send.
+  // — D61 (best-effort-scrape) — a strict shape here would wedge on what the CLI won't send.
   const stepContextSchema = z.looseObject({ contract: z.literal(CONTRACT) })
 
   const envelopeSchema = z.object({

@@ -44,10 +44,11 @@ is fine — refining is always available.
   by what you built, a Constraint changed, a Step no longer matches the seam, or a
   **step's title no longer describes what the diff actually does** — propose the edits
   that bring `intent.md` back in line with the truth. A step title *is* its checkpoint
-  commit subject (D1), so bringing a drifted one back in line means keeping it a plain,
-  single-line `type(scope): description` subject, with load-bearing detail (file paths,
-  module names) in `seam` and `done-when`, **never jammed into the title** (D2) — the
-  checkpoint body pass then reconciles and lands that subject at the verify pause (D5).
+  commit subject — D68 (conventional-subjects) — so bringing a drifted one back in line
+  means keeping it a plain, single-line `type(scope): description` subject, with
+  load-bearing detail (file paths, module names) in `seam` and `done-when`,
+  **never jammed into the title** — the checkpoint body pass then reconciles and lands
+  that subject at the verify pause.
   Show the before/after for each, and **write only what the human approves**.
 
 ## The hard contracts

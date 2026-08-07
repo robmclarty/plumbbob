@@ -1,7 +1,8 @@
 // Run a verb in-process and capture what it writes. Verbs are pure
 // `(cwd, args) => number` functions that write to process.stdout/stderr (the only
 // process.exit is in cli.ts), so a unit test just swaps the two write streams,
-// runs the verb, and inspects the buffers. Node builtins only, no deps (C2).
+// runs the verb, and inspects the buffers. Node builtins only, no deps —
+// C2 (few-deliberate-deps).
 
 type Captured = {
   readonly code: number
@@ -20,7 +21,7 @@ export function captureIo(fn: () => number): Captured {
 }
 
 // The async twin, for the verbs the checkride gate made async (`check`,
-// `checkpoint`, D32). The stream swap stays in place across the await — these
+// `checkpoint` — D32 (checkride-gate)). The stream swap stays in place across the await — these
 // tests run serially within a file, so nothing else writes meanwhile.
 export async function captureIoAsync(fn: () => Promise<number>): Promise<Captured> {
   const restore = swapStreams()

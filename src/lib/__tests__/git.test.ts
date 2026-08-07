@@ -37,7 +37,7 @@ describe('gitPath', () => {
     expect(gitPath(dir, 'info/exclude')).toBe(join(dir, '.git', 'info', 'exclude'))
   })
 
-  it('resolves common-dir entries to the shared gitdir from a linked worktree (D1)', () => {
+  it('resolves common-dir entries to the shared gitdir from a linked worktree — D33 (info-exclude)', () => {
     const main = makeTempRepo()
     const wt = join(makeTempDir(), 'wt')
     execFileSync('git', ['-C', main, 'worktree', 'add', '-q', wt, '-b', 'wt-branch'])

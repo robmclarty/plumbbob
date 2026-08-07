@@ -120,7 +120,7 @@ describe('agent run — happy path', () => {
   })
 })
 
-describe('agent run — per-agent config (D5/D6/D7)', () => {
+describe('agent run — per-agent config', () => {
   it('forwards settings.json → agentConfig[name] as ctx.settings.agent', async () => {
     const dir = await startedBuild()
     writeFileSync(settingsPath(dir), JSON.stringify({ agentConfig: { doer: { provider: 'ollama', model: 'qwen3:8b' } } }))
@@ -131,7 +131,7 @@ describe('agent run — per-agent config (D5/D6/D7)', () => {
     expect(recordedInput(dir, 'doer').settings.agent).toEqual({ provider: 'ollama', model: 'qwen3:8b' })
   })
 
-  it('lets settings.local.json shadow the project rung whole (D7 — no deep merge)', async () => {
+  it('lets settings.local.json shadow the project rung whole — D57 (merge-ladder), no deep merge', async () => {
     const dir = await startedBuild()
     writeFileSync(settingsPath(dir), JSON.stringify({ agentConfig: { doer: { provider: 'claude_cli', model: 'sonnet' } } }))
     writeFileSync(localSettingsPath(dir), JSON.stringify({ agentConfig: { doer: { provider: 'ollama' } } }))
@@ -155,7 +155,7 @@ describe('agent run — per-agent config (D5/D6/D7)', () => {
   })
 })
 
-describe('agent run — status routing (D52)', () => {
+describe('agent run — status routing — D52 (blocked-vs-drift)', () => {
   it('surfaces a blocked run and its notes on stderr, exits 0 (mechanics succeeded)', async () => {
     const dir = await startedBuild()
     makeAgent(dir, 'stuck', {
@@ -182,7 +182,7 @@ describe('agent run — status routing (D52)', () => {
   })
 })
 
-describe('agent run — failure modes (D46/D51)', () => {
+describe('agent run — failure modes — D46 (stream-discipline), D51 (agent-timeout)', () => {
   it('reports and stops on a non-zero exit, applying no side effects', async () => {
     const dir = await startedBuild()
     makeAgent(dir, 'boom', { slots: ['build'], script: `cat >/dev/null\necho oops >&2\nexit 3\n` })
@@ -227,7 +227,7 @@ describe('agent run — failure modes (D46/D51)', () => {
   }, 15000)
 })
 
-describe('agent run — fail-loud resolution (D54)', () => {
+describe('agent run — fail-loud resolution — D54 (bindings-degrade-soft)', () => {
   it('errors on an explicitly named agent that does not resolve', async () => {
     const dir = await startedBuild()
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', 'ghost', '--step', '1']))
@@ -252,7 +252,7 @@ describe('agent run — fail-loud resolution (D54)', () => {
   })
 })
 
-describe('agent run — side effects (D44/D47)', () => {
+describe('agent run — side effects — D44 (cli-side-effects), D47 (handoff-ledger)', () => {
   it('lands parked[] lines through the build-log Park list', async () => {
     const dir = await startedBuild()
     makeAgent(dir, 'noticer', {
@@ -294,7 +294,7 @@ function writeHarness(root: string, harness: Record<string, unknown>): void {
   writeFileSync(harnessPath(root), `${JSON.stringify(harness, null, 2)}\n`)
 }
 
-describe('agent run — harness bindings (D42/D57)', () => {
+describe('agent run — harness bindings — D42 (harness-bindings), D57 (merge-ladder)', () => {
   it('runs a step-bound agent when no name is given, overriding the harness defaults', async () => {
     const dir = await startedBuild()
     makeAgent(dir, 'stepper', { slots: ['build'], script: DONE_SCRIPT })
@@ -324,7 +324,7 @@ describe('agent run — harness bindings (D42/D57)', () => {
     expect(stderr).toContain('agent "defaulter" (after)')
   })
 
-  it('merges settings-level defaults under the harness — a settings default binds with no harness file (D57)', async () => {
+  it('merges settings-level defaults under the harness — a settings default binds with no harness file — D57 (merge-ladder)', async () => {
     const dir = await startedBuild()
     makeAgent(dir, 'settingsrev', { slots: ['after'], script: DONE_SCRIPT })
     writeFileSync(settingsPath(dir), JSON.stringify({ agents: { after: ['settingsrev'] } }))
@@ -354,7 +354,7 @@ describe('agent run — harness bindings (D42/D57)', () => {
     expect(existsSync(handoffPath(dir))).toBe(false)
   })
 
-  it('downgrades a missing bound agent to a warning and carries on (D54)', async () => {
+  it('downgrades a missing bound agent to a warning and carries on — D54 (bindings-degrade-soft)', async () => {
     const dir = await startedBuild()
     writeHarness(dir, { contract: 1, defaults: {}, steps: { 1: { after: ['ghostreviewer'] } } })
 
@@ -376,7 +376,7 @@ describe('agent run — harness bindings (D42/D57)', () => {
     expect(stderr).toContain('Skipping')
   })
 
-  it('lets an explicit name override the bindings (D57: a name sits above the harness)', async () => {
+  it('lets an explicit name override the bindings — D57 (merge-ladder): a name sits above the harness', async () => {
     const dir = await startedBuild()
     makeAgent(dir, 'named', { slots: ['build'], script: DONE_SCRIPT })
     makeAgent(dir, 'bound', { slots: ['build'], script: DONE_SCRIPT })
@@ -397,7 +397,7 @@ describe('agent run — harness bindings (D42/D57)', () => {
     expect(stderr).toContain('"steps" must be an object')
   })
 
-  it('refuses a harness contract major-version mismatch with an upgrade hint (D46)', async () => {
+  it('refuses a harness contract major-version mismatch with an upgrade hint — D46 (stream-discipline)', async () => {
     const dir = await startedBuild()
     writeFileSync(harnessPath(dir), JSON.stringify({ contract: 2, steps: {} }))
 

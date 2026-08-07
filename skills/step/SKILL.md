@@ -16,7 +16,7 @@ build has actually taught you, right before you `/plumbbob:build` it. (Framing t
 is the separate `/plumbbob:plan` move.) It can also add or re-cut a step when scope genuinely
 grew — but its everyday job is to sharpen, not to invent.
 
-## Two ways to fire it
+## Two ways to run it
 
 - **`/plumbbob:step` (no input) → automatic sharpen.** Re-examine the next undone step
   against the completed code, the Decisions, the Constraints, and the build-log, then
@@ -43,11 +43,11 @@ grew — but its everyday job is to sharpen, not to invent.
    sharpened `<title>` a plain, single-line Conventional-Commit subject,
    `type(scope): description` — it lands in `git log` verbatim, so as the step tightens
    keep load-bearing detail (file paths, module names) in `seam` and `done-when`,
-   **never jammed into the title** (D1/D2). A sharpened step carries its own `(scope)`
+   **never jammed into the title**. A sharpened step carries its own `(scope)`
    when it touches a distinct code area — one that **overrides the build-default**
    `**Scope:**` header; drop the scope and it falls back to that default → build slug →
-   bare, and the type to `feat` ([D68](../../docs/decisions.md#d68), D8). Aim for a soft
-   ≤72 chars, no gate (D9). Revise the existing step in place; only append when you are
+   bare, and the type to `feat` ([D68 (conventional-subjects)](../../docs/decisions.md#d68)). Aim for a soft
+   ≤72 chars, no gate. Revise the existing step in place; only append when you are
    genuinely adding an increment.
 4. **Revise the step's harness bindings if they drifted too** *(optional)*. If the
    build carries a `harness.json` (beside `intent.md`) and the reality that moved the

@@ -186,7 +186,7 @@ half-done step. It is careful about two things:
 
 - **Your plan survives.** The build folder is tracked now, so a bare `reset --hard` *would*
   discard it — `revert` snapshots `builds/<slug>/` to a temp dir before the reset and
-  restores it after ([**C4**](decisions.md#c4)), so park lines and intent edits made during the step are not
+  restores it after ([**C4 (never-destroy)**](decisions.md#c4)), so park lines and intent edits made during the step are not
   lost, even reverting to a baseline that predates the folder.
 - **Only the step's work is removed.** Untracked files *inside the seam* are cleaned up;
   files outside it are left alone.
@@ -262,7 +262,7 @@ The checks come in two tiers with different jobs:
   It never blocks an edit, and it exists because the model cannot see your editor's LSP — so
   the light tier *serves the model*. It is gated on an active build: a repo with an empty or
   absent `.plumbbob/STATE` (no active-build cursor) behaves like plain Claude Code.
-- **Heavy** — the full project check: checkride ([D32](decisions.md#d32) — in this repo: tsc, oxlint,
+- **Heavy** — the full project check: checkride ([D32 (checkride-gate)](decisions.md#d32) — in this repo: tsc, oxlint,
   ast-grep, fallow, vitest, markdownlint-cli2, links), overridable per repo via the
   `"check"` key in `.plumbbob/settings.json`. It is **not** a hook; it runs *inside* the verify tick, which
   refuses to checkpoint while it is red. The hard gate lives on the deliberate boundary, not

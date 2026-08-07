@@ -1,12 +1,12 @@
 #!/bin/sh
-# post-edit.sh — light feedback (D25). PostToolUse, non-blocking, ALWAYS exits 0.
+# post-edit.sh — light feedback — D25 (light-then-heavy). PostToolUse, non-blocking, ALWAYS exits 0.
 # Runs file-scoped oxlint + ast-grep on the changed file and injects any failures
-# into the model's context via additionalContext (verified API, D25). No-ops when
+# into the model's context via additionalContext (verified API — D25 (light-then-heavy)). No-ops when
 # the tools are absent or there is no session. tsc is deferred to the heavy tier
-# (D25): it has no true single-file mode and would tax every keystroke.
+# — D25 (light-then-heavy): it has no true single-file mode and would tax every keystroke.
 
 # The repo root is the nearest ancestor whose .plumbbob/STATE is NON-EMPTY — the
-# per-worktree signal that a tracked build is live here (D28). STATE's existence
+# per-worktree signal that a tracked build is live here — D28 (state-cursor). STATE's existence
 # means "a session is active"; its content is the active-build cursor, so a non-empty
 # STATE is exactly "a tracked build is live" (the `--local` layout leaves STATE empty,
 # and this file-scoped check is a tracked-build affordance). `-s` tests both existence

@@ -28,13 +28,13 @@ writes exactly one JSON object to **stdout**, and makes the exit code the verdic
 
 `claude_cli` is the default *because* PlumbBob is mostly a Claude plugin: the most valuable
 second opinion is the one that costs no extra key and no local GPU, piggybacking the session
-you're already in (D3). Switch to `ollama` when you want the review to run entirely on your own
+you're already in. Switch to `ollama` when you want the review to run entirely on your own
 hardware. Adding a third provider is one more descriptor in `review.mjs`'s `PROVIDERS` map —
 the switch is the whole shape.
 
 ### How a property is chosen — settings, then env, then the floor
 
-Every property resolves by the same precedence (D4): the agent's own config block from the
+Every property resolves by the same precedence: the agent's own config block from the
 settings ladder first, an environment variable as an ephemeral override *under* it, then the
 code default as the floor.
 
@@ -45,7 +45,7 @@ ctx.settings.agent.model      →   PB_REVIEWER_MODEL      →   per-provider de
 
 The CLI forwards each agent its own config block — `agentConfig.<name>` from the settings
 ladder — through the existing envelope `settings` field, so the reviewer reads
-`ctx.settings.agent` with no new contract (D5/D6). Set the tracked team default in
+`ctx.settings.agent` with no new contract. Set the tracked team default in
 `.plumbbob/settings.json`:
 
 ```jsonc
@@ -62,23 +62,24 @@ ladder — through the existing envelope `settings` field, so the reviewer reads
 
 The ladder returns the *first* rung that defines `agentConfig` whole — the local overlay
 shadows the project file, no deep merge — and the agent's per-field `?? default` softens a
-partial override (D7). With neither file set and no env var, the reviewer runs `claude_cli`
+partial override. With neither file set and no env var, the reviewer runs `claude_cli`
 against the logged-in session.
 
 ## Prerequisites
 
 - **Node >= 24** — fascicle's floor. Higher than PlumbBob's own (>= 22.18), and it applies only
-  to *this agent's subprocess*: the agent's runtime is its own business (D53).
+  to *this agent's subprocess*: the agent's runtime is its own business — D53
+  (agents-own-keys) in [`docs/decisions.md`](../../../docs/decisions.md#d53).
 - **The chosen provider's own prerequisite:**
   - `claude_cli` (default) — the `claude` CLI on PATH and logged in (run `claude` once,
     interactively). Nothing else to install; the reviewer drives that session. This provider
     **needs fascicle >= 0.9.5**, which strips the `$schema`/`$id` keys `z.toJSONSchema` stamps
-    and `claude --json-schema` rejects (D1).
+    and `claude --json-schema` rejects.
   - `ollama` — Ollama installed and running (`ollama serve`), with the model pulled
     (`ollama pull qwen3:8b` for the default).
 
 Dependencies are `fascicle` + `zod` only. The Ollama path uses fascicle's **native** transport,
-which keeps the AI-SDK peers (`ai`, `ai-sdk-ollama`) out of the package (D8); `claude_cli` is
+which keeps the AI-SDK peers (`ai`, `ai-sdk-ollama`) out of the package; `claude_cli` is
 fascicle's **external** kind, driving the `claude` binary's own `--json-schema` constrained
 decode. (`ollama-reviewer`, the single-provider sibling, takes the AI-SDK path instead.)
 
@@ -110,7 +111,7 @@ Watch the split as it runs: the `reviewer: …` lines and the model's streamed t
 **stderr** (live narration); the single JSON object at the end is **stdout** (the one envelope
 PlumbBob consumes). If the chosen provider isn't ready — no `claude` on PATH, Ollama down, a
 model not pulled — you get a `blocked` envelope with the fix in `notes`; that's the intended
-loop (D52), not a failure.
+loop — D52 (blocked-vs-drift) — not a failure.
 
 Through PlumbBob — inside an active session (`plumbbob agent run` needs one, plus a current
 step):
@@ -127,7 +128,7 @@ flag still wants the name, for the run label.)
 ## When it can't run
 
 Every *anticipated* obstacle is a `blocked` envelope with the fix in `notes`, exit 0 — fix and
-re-run (D52):
+re-run — D52 (blocked-vs-drift):
 
 - **deps not installed** → `run: npm install (in the agent's own directory …)`
 - **`claude` not on PATH** (claude_cli) → install Claude Code, or switch the reviewer to
@@ -153,7 +154,8 @@ for a ceiling.
   switch resolves `ctx.settings.agent.provider ?? PB_REVIEWER_PROVIDER ?? 'claude_cli'` and
   calls the matching factory. Adding a provider is one more entry.
 - **`run_stdio` owns the process contract** — stdin validated against a loose StepContext
-  schema (only the `contract` gate is strict; the rest is best-effort prose, D61), the result
+  schema (only the `contract` gate is strict; the rest is best-effort prose — D61
+  (best-effort-scrape)), the result
   validated against a zod schema *of the PlumbBob envelope itself*, exactly one JSON document
   emitted, exit code as the verdict. The agent never touches stdout.
 - **The engine is created after the provider resolves** — the per-provider config depends on

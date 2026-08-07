@@ -1,7 +1,7 @@
 id: additive-git-only
 language: typescript
 severity: error
-message: "C5: additive git footprint — stage, commit forward, reset --hard to a recorded SHA; never push, rebase, amend, or otherwise rewrite history."
+message: "C5 (additive-git): additive git footprint — stage, commit forward, reset --hard to a recorded SHA; never push, rebase, amend, or otherwise rewrite history."
 files:
   - 'src/**/*.ts'
 ignores:

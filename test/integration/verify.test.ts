@@ -15,7 +15,8 @@ import {
 afterAll(cleanupFixtures)
 
 // Scaffold a session, then overwrite settings (stub check) and intent so the
-// verbs run against a known step list and a controllable green/red gate (D14).
+// verbs run against a known step list and a controllable green/red gate —
+// D14 (throwaway-repo-tests).
 // settings.json stays flat (project plane); intent/STEP ride the build folder.
 function startWithSteps(dir: string, stepsBody: string, check = 'true'): void {
   runCli(dir, ['start', 'Verify test', '--slug', 'verify-test'])
@@ -46,7 +47,7 @@ describe('plumbbob check', () => {
   })
 })
 
-describe('plumbbob checkpoint — executor-agnostic (D3)', () => {
+describe('plumbbob checkpoint — executor-agnostic, D3 (author-blind-executor)', () => {
   it('checkpoints the inferred next-undone step with no in-flight STEP file', () => {
     const dir = makeFixtureRepo()
     startWithSteps(dir, '1. [ ] first — **done when:** ok\n2. [ ] second — **done when:** ok')
@@ -79,7 +80,7 @@ describe('plumbbob checkpoint — executor-agnostic (D3)', () => {
     expect(phase(dir)).toBe('DESIGN')
   })
 
-  it('reads a --body message body from stdin, keeping the CLI-owned subject (D5)', () => {
+  it('reads a --body message body from stdin, keeping the CLI-owned subject — D34 (cli-owns-subjects)', () => {
     const dir = makeFixtureRepo()
     startWithSteps(dir, '1. [ ] first — **done when:** ok')
     writeFileSync(join(dir, 'x.txt'), 'x\n')
@@ -87,13 +88,13 @@ describe('plumbbob checkpoint — executor-agnostic (D3)', () => {
     expect(res.status).toBe(0)
     const subject = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%s'], { encoding: 'utf8' }).trim()
     const body = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%b'], { encoding: 'utf8' })
-    expect(subject).toBe('feat(verify-test): first') // Conventional subject (D68)
+    expect(subject).toBe('feat(verify-test): first') // Conventional subject — D68 (conventional-subjects)
     expect(body).toContain('plumbbob step 1') // marker leads the body even with --body prose
     expect(body).toContain('Proportional prose.')
     expect(body).toContain('A second paragraph.')
   })
 
-  it('carries a deterministic body — marker, done-when, seam, diffstat — without --body (D6)', () => {
+  it('carries a deterministic body — marker, done-when, seam, diffstat — without --body, D35 (fallback-body)', () => {
     const dir = makeFixtureRepo()
     startWithSteps(dir, '1. [ ] first — **done when:** it works\n   - seam: `x.txt`')
     writeFileSync(join(dir, 'x.txt'), 'x\n')
@@ -108,9 +109,9 @@ describe('plumbbob checkpoint — executor-agnostic (D3)', () => {
   it('records HEAD without a new commit when the tree is already clean', () => {
     const dir = makeFixtureRepo()
     startWithSteps(dir, '1. [ ] a — **done when:** ok')
-    // The tracked artifact plane is uncommitted after start (D18's accepted
+    // The tracked artifact plane is uncommitted after start (the accepted dirty
     // window); commit it so the tree is genuinely clean, as the plan-approval
-    // commit or the human's own commit skill would have left it.
+    // commit — D36 (plan-commit) — or the human's own commit skill would have left it.
     execFileSync('git', ['-C', dir, 'add', '-A'])
     execFileSync('git', ['-C', dir, 'commit', '-q', '-m', 'commit the plan scaffold'])
     const before = commitCount(dir)
@@ -132,7 +133,7 @@ describe('plumbbob checkpoint — executor-agnostic (D3)', () => {
   })
 })
 
-describe('plumbbob checkpoint --plan — the plan-approval commit (D11)', () => {
+describe('plumbbob checkpoint --plan — the plan-approval commit, D36 (plan-commit)', () => {
   it('commits only the build folder as `chore(scope): plan` and records `plan <sha>`', () => {
     const dir = makeFixtureRepo()
     startWithSteps(dir, '1. [ ] first — **done when:** ok')
@@ -160,7 +161,7 @@ describe('plumbbob checkpoint --plan — the plan-approval commit (D11)', () => 
     const subject = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%s'], { encoding: 'utf8' }).trim()
     const body = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%b'], { encoding: 'utf8' })
     expect(subject).toBe('chore(verify-test): plan')
-    expect(body).toContain('plumbbob plan') // marker leads the plan body (D68)
+    expect(body).toContain('plumbbob plan') // marker leads the plan body — D68 (conventional-subjects)
     expect(body).toContain('Why this plan.')
     expect(body).toContain('Second paragraph.')
   })

@@ -118,7 +118,7 @@ export function parseStepSeam(content: string, step: number): SeamParse {
       return fail(`step ${step}'s seam has an empty token.`)
     }
     if (GLOB_CHARS.test(token)) {
-      return fail(`step ${step}'s seam token \`${raw}\` is a glob; seams are exact paths or \`dir/\` grants (D23).`)
+      return fail(`step ${step}'s seam token \`${raw}\` is a glob; seams are exact paths or \`dir/\` grants — D23 (no-glob-seams).`)
     }
     if (token.startsWith('/')) {
       return fail(`step ${step}'s seam token \`${raw}\` is absolute; seams are repo-relative.`)

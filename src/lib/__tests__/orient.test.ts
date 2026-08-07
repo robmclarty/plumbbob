@@ -123,7 +123,7 @@ describe('orient parsers', () => {
     expect(steps[2]).toMatchObject({ n: 3, done: false, title: 'Third step', planned: false })
   })
 
-  it('parseSteps scrapes the optional model recommendation verbatim, per step (D62)', () => {
+  it('parseSteps scrapes the optional model recommendation verbatim, per step — D62 (model-recommendation)', () => {
     // The recommendation is advisory prose echoed back to the human, so it must
     // come through verbatim — and only from the step's own block, never a neighbor's.
     const intent = [
@@ -156,7 +156,7 @@ describe('orient parsers', () => {
     expect(parseOpenQuestions(intent)).toBe(2) // Q10 + indented Q2
   })
 
-  it('parseOpenQuestions is unmoved by *plain:*/*lean:* sub-lines under an opener (D2/research/08 R1)', () => {
+  it('parseOpenQuestions is unmoved by *plain:*/*lean:* sub-lines under an opener (research/08 R1)', () => {
     // The expanded question form (opener + explanation + proposal) is parser-safe:
     // the counter matches opener lines only, so the sub-lines add zero to the count.
     const intent = [
@@ -200,7 +200,7 @@ describe('orient parsers', () => {
     expect(parseOpenQuestions(intent)).toBe(1)
   })
 
-  it('parseOpenQuestions counts a slugged opener `- Q2 (some-slug): ...` as open (D3 slug-at-birth)', () => {
+  it('parseOpenQuestions counts a slugged opener `- Q2 (some-slug): ...` as open (the slug-at-birth form)', () => {
     // The slug-at-birth gloss lands on the opener; the count reads through it so a
     // genuinely open slugged question still registers, sub-lines and all.
     const intent = [
@@ -213,7 +213,7 @@ describe('orient parsers', () => {
     expect(parseOpenQuestions(intent)).toBe(1)
   })
 
-  it('parseOpenQuestions drops a slugged opener when *resolved:* lands on that opener (D3 + D5)', () => {
+  it('parseOpenQuestions drops a slugged opener when *resolved:* lands on that opener', () => {
     // Slug on the opener must not shield it from resolution: a *resolved:* marker on
     // the slugged opener drops it, while a slugged open neighbor still counts.
     const intent = [
@@ -226,7 +226,7 @@ describe('orient parsers', () => {
     expect(parseOpenQuestions(intent)).toBe(1) // Q2 resolved, Q3 open
   })
 
-  it('the real templates/intent.md parses to an open-question count of 0 (D7 placeholder-uncounted)', () => {
+  it('the real templates/intent.md parses to an open-question count of 0 (the placeholder is uncounted)', () => {
     // The scaffolded Q1 placeholder must never read as an open question — a fresh
     // build showing "open questions 1" would be shipped noise.
     expect(parseOpenQuestions(readTemplate('intent.md'))).toBe(0)
@@ -268,7 +268,7 @@ describe('orient parsers', () => {
     expect(parseLastCheckpoint(checkpoints)).toEqual({ n: 12, sha: 'cafe3333' })
   })
 
-  it('lastLedgerSha anchors on the last line of ANY kind — baseline, plan, or step (D66)', () => {
+  it('lastLedgerSha anchors on the last line of ANY kind — baseline, plan, or step — D66 (oob-commits-surfaced)', () => {
     expect(lastLedgerSha('baseline aaa1111\n')).toBe('aaa1111')
     expect(lastLedgerSha('baseline aaa1111\nplan bbb2222\n')).toBe('bbb2222')
     expect(lastLedgerSha('baseline aaa1111\nplan bbb2222\nstep 1 ccc3333\n')).toBe('ccc3333')
@@ -314,7 +314,7 @@ describe('markStepDone', () => {
   })
 })
 
-describe('orient next-move inference (D15)', () => {
+describe('orient next-move inference — D15 (one-next-move)', () => {
   it('DESIGN with the next step planned → /plumbbob:build that step, with a revise hint', () => {
     const next = orient({ ...base }).next
     expect(next).toContain('/plumbbob:build')
@@ -435,7 +435,7 @@ describe('formatOrientation', () => {
     expect(formatOrientation(orient({ ...base, intent }))).toContain('seam: src/a.ts, src/b.ts')
   })
 
-  it('surfaces out-of-band commits as one neutral line, just under the checkpoint (D66)', () => {
+  it('surfaces out-of-band commits as one neutral line, just under the checkpoint — D66 (oob-commits-surfaced)', () => {
     // The count reads back to the human, so pin the phrasing and its placement —
     // the reconciliation note belongs with the ledger it reconciles.
     const out = formatOrientation(orient({ ...base, outOfBand: 3 }))

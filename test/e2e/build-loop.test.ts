@@ -87,7 +87,7 @@ describe('plumbbob revert', () => {
     expect(sidecarExists(dir, 'SEAM')).toBe(false)
   })
 
-  it('PINNED (C4): mid-step park lines survive a revert', () => {
+  it('PINNED — C4 (never-destroy): mid-step park lines survive a revert', () => {
     const dir = makeFixtureRepo()
     write(dir, 'src/thing.ts', 'export const thing = 0\n')
     git(dir, ['add', '-A'])

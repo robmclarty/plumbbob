@@ -34,7 +34,7 @@ function writeCheckrideStub(root: string, exitCode: number): void {
   writeFileSync(join(root, 'checkride.config.json'), JSON.stringify(config))
 }
 
-describe('runCheck (spawn override, D24)', () => {
+describe('runCheck (spawn override) — D24 (configurable-check)', () => {
   it('returns 0 when the settings check passes', async () => {
     const dir = makeTempDir()
     writeSettings(dir, 'true')
@@ -104,7 +104,7 @@ describe('runCheck (spawn override, D24)', () => {
   }
 })
 
-describe('runCheck (checkride, D32)', () => {
+describe('runCheck — D32 (checkride-gate)', () => {
   it('returns 0 when the checkride run is green — and reports no failing slots', async () => {
     const dir = makeTempDir()
     writeCheckrideStub(dir, 0)
