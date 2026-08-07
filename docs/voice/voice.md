@@ -51,8 +51,10 @@ What it never does:
   Deliberate coinage is the opposite of this, not an excuse for it.
 - Hype adjectives (seamless, robust, powerful, game-changing) or any
   sentence shaped like "it's not just X, it's Y."
-- Em-dashes in prose. An inner-sentence aside rides in brackets instead; a
-  pause and its trailing phrase take a semicolon.
+- Em-dashes in prose. An inner-sentence aside rides in brackets instead. A
+  pause and its trailing phrase take a semicolon when both halves stand alone,
+  a colon when the second half names or elaborates the first, and a plain
+  comma before a coordinating conjunction.
 - Bullet lists that do not shorten the reading.
 - A tricolon out of reflex. Three parallel clauses are a choice, made rarely.
 
@@ -62,7 +64,7 @@ What it never does:
 
 From `docs/attention-first-development.md`:
 
-> The model's output is water in flood; enormous power, but moving wherever
+> The model's output is water in flood: enormous power, but moving wherever
 > it wants, almost impossible to coordinate from inside the current. New code
 > arrives faster than you can absorb it, your plan washes downstream, and you
 > end the day tired and unsure what you built.
@@ -82,7 +84,7 @@ From `docs/attention-first-development.md`:
 From `README.md`:
 
 > A system prompt can *ask* a model to plan first and stop for review. What it
-> can't do is **hold the line when the model doesn't**; and that mechanical
+> can't do is **hold the line when the model doesn't**, and that mechanical
 > half is what PlumbBob adds under the skills.
 
 ### Instructional register
@@ -98,12 +100,14 @@ From `templates/intent.md`:
 ### Decision register
 
 From a build's intent (2026-07-31), shown as source because source is what
-the model writes; one line, the reason that mattered, the numbers plain. (The
-em-dashes inside are the citation notation's current rendering, not prose;
-that call belongs to the refs build, not this file.)
+the model writes; one line, the reason that mattered, the numbers plain. A
+citation carries its slug in parentheses, never behind a dash, and the slug is
+the definition's own, copied rather than reworded. (The `— *because*` is the
+decision format's own marker, not prose punctuation, and stands until that
+format is decided separately.)
 
 ```markdown
-**D7 — skip-test-profile**: the gate profile is `{"skip": ["test"]}`, not an
+**D7 (skip-test-profile)**: the gate profile is `{"skip": ["test"]}`, not an
 `only` list — *because* vitest is 52.7s of the 54.7s, and a skip-list stays
 correct as slots are added while an only-list silently stops covering them.
 ```

@@ -34,6 +34,10 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☐ 9. docs(cli): gloss the D-tags in the CLI's own output
 - ☐ 10. chore(gate): wire the citation check into checkride and the fast profile
 - ☐ 11. docs(decisions): record the citation convention and the gate profile
+- ☐ 12. docs(voice): seed the hand-owned voice exemplar folder
+- ☑ 13. chore(deps): upgrade checkride to 0.12.1
+- ☐ 14. chore(gate): install the prose slot and point its exemplars at the voice folder
+- ☐ 15. docs(prose): burn down the first prose run by hand
 
 ## Park list
 
@@ -71,3 +75,4 @@ you point at to say "I did that — the LLM helped, but those were my calls."
 folder, so it rides the branch into the PR.)*
 - 2026-08-01 — step 1 checkpointed · ead5b60b7 — fix(cli): run the in-process CLI tests against a fixture repo (2 red, 1 drift, 21m)
 - 2026-08-01 — step 2 checkpointed · 0581298be — chore(deps): upgrade checkride to 0.10.2 (1 drift, 19m)
+- 2026-08-07 — step 13 checkpointed · 14ef4333f — chore(deps): upgrade checkride to 0.12.1
