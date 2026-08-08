@@ -128,7 +128,7 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
    - seam: `skills/plan/SKILL.md`, `skills/build/SKILL.md`, `skills/verify/SKILL.md`, `skills/step/SKILL.md`, `skills/refine/SKILL.md`, `skills/spike/SKILL.md`, `templates/intent.md`, `templates/build-log.md`
    - model: sonnet — a sweep once step 6 has settled every referent
    - notes: each citation resolves to the number step 6 assigned it, not the one written today. `templates/intent.md` is copied into a *user's* repo, where plumbbob's own numbers collide with the user's build-local ones — mark those as plumbbob's, e.g. `[plumbbob D71 — 72-char subjects](https://…#d71)`.
-8. [ ] feat(intent): anchor and gloss the build-local citations — **done when:** a `Q` opener written in the anchored form still counts in `plumbbob status`, and `pnpm test` is green
+8. [x] feat(intent): anchor and gloss the build-local citations — **done when:** a `Q` opener written in the anchored form still counts in `plumbbob status`, and `pnpm test` is green
    - seam: `templates/intent.md`, `src/lib/orient.ts`, `src/lib/__tests__/orient.test.ts`, `skills/plan/SKILL.md`, `skills/step/SKILL.md`, `skills/refine/SKILL.md`
    - model: opus — one parser regex is load-bearing for the status counter
    - notes: definitions gain `<a id="d1"></a>`, citations become `[D1 (slug)](#d1)`. `parseOpenQuestions` (`orient.ts:160`) matches `/^- Q\d+(?: \([^)]+\))?:/` and would stop counting an anchored opener — widen it, with a regression test. `scrapeBullets` is format-agnostic and needs nothing.
