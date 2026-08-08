@@ -12,7 +12,8 @@ each tag and its slug.
 Some numbers (e.g. `D2`, `D5`, `D11`, `D12`, `D21`) belonged to superseded decisions
 and are no longer referenced. (A build's *own* `intent.md` numbers its decisions from `D1`
 locally — comments citing a build-local number are renumbered to this key when the work
-lands; [**D33 (info-exclude)**](#d33)–[**D38 (cli-owns-slugs)**](#d38) below came in that way from the July 2026 worktree restructure.)
+lands; [**D33 (info-exclude)**](#d33)–[**D38 (cli-owns-slugs)**](#d38) below came in that way from the July 2026 worktree restructure,
+and [**D71 (visible-reconcile)**](#d71)–[**D73 (subject-length-soft)**](#d73) from the July 2026 commit-subjects build.)
 
 ## Constraints (C)
 
@@ -414,12 +415,19 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   once in `intent.md` at plan time) → the build's slug with its `YYYY-MM-DD-` date prefix stripped
   (`2026-07-18-escape-hatch` → `escape-hatch`, this decision's original rung) → no scope at all (`--local` →
   a bare `chore: finish`) — so a build that predates the `**Scope:**` header, or never fills it, keeps
-  behaving exactly as it did before this amendment. The `plumbbob` and `step N` identifiers the old subject
+  behaving exactly as it did before this amendment — and an **unfilled header parses as absent**, blank or
+  still carrying its angle-bracket placeholder, so a scaffolded-but-unedited `**Scope:** <short-scope>` falls
+  through to the slug rung instead of landing commits literally scoped `(<short-scope>)`. The `plumbbob` and `step N` identifiers the old subject
   carried ride a **marker line at the head of the body** (`plumbbob step 1`, `plumbbob plan`,
   `plumbbob finish`), prepended whether the body is `--body` prose, the deterministic fallback
   ([**D35 (fallback-body)**](#d35)), or empty — so `git log --grep plumbbob` still finds every plumbbob commit. Supersedes
   the greppable-subject *shape* of [**D34 (cli-owns-subjects)**](#d34); its ownership principle — the CLI owns every subject,
-  bodies arrive via `--body` — stands, as does [**D36 (plan-commit)**](#d36)'s plan-gets-its-own-commit. *Tagged in*
+  bodies arrive via `--body` — stands, as does [**D36 (plan-commit)**](#d36)'s plan-gets-its-own-commit.
+  Of the 2026-07-19 commit-subjects build's nine local decisions, five landed here on promotion — its
+  `title-is-subject`, `paths-leave-the-title`, `scope-fallback-chain`, and `build-default-scope-header` in
+  the text above, and its `scope-placeholder-absent` in the unfilled-header clause; the remaining four became
+  [**D71 (visible-reconcile)**](#d71) (which merges two of them), [**D72 (scope-names-code-area)**](#d72),
+  and [**D73 (subject-length-soft)**](#d73). *Tagged in*
   `commitmsg.ts`, `intent.ts`, `sidecar.ts`, `checkpoint.ts`, `finish.ts`, the
   `plan`/`step`/`refine`/`verify`/`finish` skills.
 
@@ -455,6 +463,39 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   step title falls through to the `feat` default with no special-casing. *Tagged in* `spike.ts`,
   `sidecar.ts`, `templates/spike-report.md`, `templates.ts`, `cli-core.ts`, the `spike`/`build`
   skills.
+
+- <a id="d71"></a>**D71 (visible-reconcile) — The deterministic subject is the default; a drifted one is reconciled in
+  the open.** The subject is authored at plan time and the diff lands at build time, so the two can drift
+  apart, and both repairs happen where the human can see them. On the plan side, `/plumbbob:step` and
+  `/plumbbob:refine` keep a step's title a clean subject as it sharpens or as the plan is re-synced to
+  reality. On the diff side, the verify pause is the only place a subject changes: the body pass
+  **presents** `planned title → proposed subject`, one line, as part of what the human approves, and only
+  then lands it via `checkpoint -m`. Present nothing and [**D68 (conventional-subjects)**](#d68)'s
+  title-derived subject lands untouched — that determinism is the guarantee being kept, and `-m` is its
+  human-approved exception, never a quiet swap. A silent `-m` would be an agent-authored subject wearing an
+  override's clothes, which is exactly what [**D34 (cli-owns-subjects)**](#d34)'s ownership principle
+  refuses. Promoted from the 2026-07-19 commit-subjects build, merging its two locals
+  `subject-synced-on-drift` and `determinism-preserved` — halves of one rule, cited together at every site.
+  *Tagged in* `checkpoint.ts`, the `step`/`refine`/`verify`/`build` skills, `docs/techniques.md`.
+
+- <a id="d72"></a>**D72 (scope-names-code-area) — A step's `(scope)` names the code area; the build default names the
+  feature.** [**D68 (conventional-subjects)**](#d68)'s fallback chain says how a scope *resolves*; this says
+  what the two authored rungs should *say*. A step's own `(scope)` names the primary code area or module the
+  step touches (`plan`, `commitmsg`, `docs`), so the same area reads the same way across builds and stays
+  greppable years later. The build's `**Scope:**` header names the *feature* and is the catch-all a step
+  overrides, authored once at plan time. The split is what keeps scopes stable: a feature label re-applied
+  per step drifts with whoever wrote it, where a code area does not. Authoring guidance with nothing
+  enforcing it. Promoted from the 2026-07-19 commit-subjects build (local `scope-names-code-area`).
+  *Tagged in* the `plan`/`step` skills, `templates/intent.md`, `docs/techniques.md`.
+
+- <a id="d73"></a>**D73 (subject-length-soft) — The ≤72-character subject aim is soft: no lint, no gate.** Step titles
+  aim for GitHub's 72-character subject convention, and nothing enforces it — no checkride rule, no refusal
+  at checkpoint. The human authors the title at plan time and reads it again at the verify pause, which is
+  two deliberate human passes over a one-line string; a gate there would charge ceremony against a
+  convention that is already read twice. The guidance-over-enforcement posture that governs the loop
+  ([**D10 (pause-not-lock)**](#d10)) applies to plumbbob's own commit messages too. Promoted from the
+  2026-07-19 commit-subjects build (local `subject-length-soft`). *Tagged in* the `plan`/`step` skills,
+  `templates/intent.md`, `docs/techniques.md`.
 
 ### Superseded
 
