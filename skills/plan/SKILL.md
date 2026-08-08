@@ -58,18 +58,21 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
    **explicitly NOT doing**. This is the human's convergence — propose wording, but
    the human decides every line.
 3. **Decisions & Constraints.** Record the settled calls (one line each, with the
-   *because*) and the hard rules the build must honor. **Slug each at birth** — mint a
-   two- or three-word slug where the item is born (`D1 (default-waves): …`,
-   `C1 (no-new-deps): …`) and copy that slug at every reference site, so a later
-   mention reads `D4 (default-waves)` and stays legible: **never a bare `D4`/`C6`/`Q2`
-   reference — always carry its gloss**, so a cold reader never has to hunt the number
-   down. An unresolved hole goes to **Open questions**, never guessed into a Decision —
-   and it goes in the expanded form the template shows: a slugged opener (the hole as a
-   question), a `*plain:*` sub-line (what's at stake, in plain words, enough to judge it
-   cold), then a `*lean:*` sub-line (your proposed resolution — one answer to react to,
-   not a menu), so the human settles it in one pass without a round-trip. (A tiny,
-   obvious question may stay one bare line; the sub-lines earn their keep only when a
-   human decision genuinely waits on it.)
+   *because*) and the hard rules the build must honor. **Anchor and slug each at birth** —
+   mint a two- or three-word slug where the item is born and give it an anchor for
+   references to land on (`- <a id="d1"></a>**D1 (default-waves)**: …`,
+   `- <a id="c1"></a>**C1 (no-new-deps)**: …`), then cite it everywhere else in the file
+   as `[D4 (default-waves)](#d4)`, carrying that slug verbatim: **never a bare
+   `D4`/`C6`/`Q2` reference, and never a linkless one** — one link to the definition,
+   one glance at the gloss, so a cold reader never has to hunt the number down.
+   An unresolved hole goes to **Open questions**, never guessed into a Decision —
+   and it goes in the expanded form the template shows: an anchored, slugged opener
+   (the hole as a question, `- <a id="q1"></a>**Q1 (default-waves)**: …`, so
+   `[Q1 (default-waves)](#q1)` has somewhere to land), a `*plain:*` sub-line (what's at
+   stake, in plain words, enough to judge it cold), then a `*lean:*` sub-line (your
+   proposed resolution — one answer to react to, not a menu), so the human settles it in
+   one pass without a round-trip. (A tiny, obvious question may stay one bare line; the
+   sub-lines earn their keep only when a human decision genuinely waits on it.)
 4. **Author the Steps.** Write the **full build plan** under `## Steps` — each step a
    small, verifiable increment in the exact format the parser reads:
 

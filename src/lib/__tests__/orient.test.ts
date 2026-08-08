@@ -226,6 +226,37 @@ describe('orient parsers', () => {
     expect(parseOpenQuestions(intent)).toBe(1) // Q2 resolved, Q3 open
   })
 
+  it('parseOpenQuestions counts an anchored opener `- <a id="q2"></a>**Q2 (slug)**: ...` as open', () => {
+    // The citation convention gives every build-local number an anchor to link to, so
+    // an opener a `[Q2 (default-waves)](#q2)` reference points at is born carrying
+    // `<a id="q2"></a>` and bold markers. The counter must read straight through both
+    // — an anchored question that stopped counting would silently empty the dashboard.
+    const intent = [
+      '## Open questions',
+      '',
+      '- <a id="q2"></a>**Q2 (default-waves)**: should waves default on? — *resolve by:* decide',
+      '  - *plain:* the plan leaves the default unstated, so a fresh run guesses.',
+      '  - *lean:* default off; opt in per build.',
+    ].join('\n')
+    expect(parseOpenQuestions(intent)).toBe(1)
+  })
+
+  it('parseOpenQuestions reads an anchored opener in every partial form, and still drops a resolved one', () => {
+    // An intent is hand-edited mid-build, so the three renderings coexist and the
+    // anchor and the bold markers arrive independently. Every shape counts, and
+    // *resolved:* on the opener still drops it whichever shape it wears.
+    const intent = [
+      '## Open questions',
+      '',
+      '- <a id="q1"></a>**Q1 (anchored-and-bold)**: the full form — *resolve by:* decide',
+      '- <a id="q2"></a>Q2 (anchored-only): the anchor landed before the bold did',
+      '- **Q3 (bold-only)**: the bold landed before the anchor did',
+      '- <a id="q4"></a>**Q4 (unslugged)**: no gloss yet, still a hole',
+      '- <a id="q5"></a>**Q5 (settled)**: *resolved:* 2026-08-08, default off',
+    ].join('\n')
+    expect(parseOpenQuestions(intent)).toBe(4) // Q1–Q4 open; Q5 resolved
+  })
+
   it('the real templates/intent.md parses to an open-question count of 0 (the placeholder is uncounted)', () => {
     // The scaffolded Q1 placeholder must never read as an open question — a fresh
     // build showing "open questions 1" would be shipped noise.

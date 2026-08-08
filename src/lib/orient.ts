@@ -153,12 +153,16 @@ export function markStepDone(intent: string, n: number): string {
  * Count the questions still open: `- Q\d+:` openers under `## Open questions`
  * that do not say "resolved".
  *
- * The opener may carry a slug-at-birth gloss — `- Q2 (some-slug): ...` — which
- * the count reads through; sub-lines (`*plain:*`/`*lean:*`) never match.
+ * The opener may carry a slug-at-birth gloss — `- Q2 (some-slug): ...` — and the
+ * anchored form a citable question is born in:
+ * `- <a id="q2"></a>**Q2 (some-slug)**: ...`, which is what a `[Q2 (some-slug)](#q2)`
+ * reference site elsewhere in the file lands on. The count reads through both, and
+ * through any mix of them a hand-edited intent leaves mid-build; sub-lines
+ * (`*plain:*`/`*lean:*`) never match.
  */
 export function parseOpenQuestions(intent: string): number {
   return sectionLines(intent, '## Open questions').filter(
-    (l) => /^- Q\d+(?: \([^)]+\))?:/.test(l.trim()) && !/resolved/i.test(l),
+    (l) => /^-\s+(?:<a id="[^"]*"><\/a>\s*)?\*{0,2}Q\d+(?: \([^)]+\))?\*{0,2}:/.test(l.trim()) && !/resolved/i.test(l),
   ).length
 }
 

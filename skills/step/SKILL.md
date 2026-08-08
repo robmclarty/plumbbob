@@ -64,4 +64,9 @@ grew — but its everyday job is to sharpen, not to invent.
   and a seam small enough to review in one pass.
 - **Edit `## Steps` only**, in the standard format `status` and `build` parse — never
   the Roadmap, never loose prose. A done step (`[x]`) is history; do not rewrite it.
+- **Cite the plan's own numbers in the linked form.** A `D`/`C`/`Q` you write into a
+  step's done-when, seam, or notes reads `[D4 (default-waves)](#d4)` — the slug travels
+  with the number, and the link lands on the `<a id="d4">` anchor minted where the item
+  was born. Never a bare `D4`; if the item you want to cite has no anchor yet, that is a
+  `/plumbbob:refine` repair, not something to invent here.
 - **The human approves the revision** before it lands. You propose; they decide.

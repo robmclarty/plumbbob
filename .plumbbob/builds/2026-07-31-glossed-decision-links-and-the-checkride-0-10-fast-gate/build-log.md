@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — glossed decision links and the checkride 0.10 fast gate
 
-**Current step:** 7 — docs(skills): point the skills' citations at the published decisions
+**Current step:** 8 — feat(intent): anchor and gloss the build-local citations
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -29,7 +29,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 4. feat(refs): flag a citation that is bare, mislinked, or unglossed
 - ☑ 5. docs(refs): gloss every decision citation in the docs
 - ☑ 6. docs(decisions): promote the commit-subject decisions into the repo key
-- ☐ 7. docs(skills): point the skills' citations at the published decisions
+- ☑ 7. docs(skills): point the skills' citations at the published decisions
 - ☐ 8. feat(intent): anchor and gloss the build-local citations
 - ☐ 9. docs(cli): gloss the D-tags in the CLI's own output
 - ☐ 10. chore(gate): wire the citation check into checkride and the fast profile
@@ -49,6 +49,8 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [x] checkride's links slot scans INSIDE fenced blocks and code spans — every illustrative citation the docs/skills/template sweeps write must either resolve or not be link-shaped (it failed this build's own intent.md)
 - [x] harden --body's stdin read: bodyArg guards only isTTY, so under an agent harness (stdin = socket) readFileSync(0) blocks forever; gate on fstatSync(0).isFile()||isFIFO() instead, at checkpoint.ts:359 and finish.ts:140
 - [x] the --body anti-pattern warning exists ONLY in skills/finish/SKILL.md:49-52 (once per build); port it to skills/build/SKILL.md:73 and skills/verify/SKILL.md:68 — the two skills that actually run checkpoint --body, once per STEP
+- [ ] harvest/SKILL.md:45-46 still teaches the pre-anchor Decision form (`D5 (retry-cap)`) when it folds a blocker into intent.md — outside step 8's seam, so the one intent.md-writing skill the anchored form never reached
+- [ ] templates/intent.md's Q1 placeholder stays uncounted only because its body says "unresolved" and parseOpenQuestions filters on /resolved/i — an accident, not a design; guarded by a test but a confusing trap if the placeholder is ever reworded
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -99,3 +101,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-08-08 — step 4 checkpointed · 4b5abb31d — feat(refs): flag a citation that is bare, mislinked, or unglossed (46m)
 - 2026-08-08 — step 5 checkpointed · a89cdf9e2 — docs(refs): gloss every decision citation in the docs (1 drift, 13m)
 - 2026-08-08 — step 6 checkpointed · c03775e97 — docs(decisions): promote the commit-subject decisions into the repo key (12m)
+- 2026-08-08 — step 7 checkpointed · 31ea13ffc — docs(skills): point the skills' citations at the published decisions (1 drift, 47m)

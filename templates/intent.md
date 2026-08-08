@@ -38,19 +38,21 @@ reads them once, to decide, and that legibility buys back a chat round-trip.
 ## Decisions
 
 *(One line each — settled, not re-litigated in the chat. Grows as you resolve the
-holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD. Mint a two- or
-three-word slug where each item is born — `D1 (slug-here)` — and copy that slug at
-every reference site, so a later `D4 (default-waves)` never decays into a bare `D4`
-a cold reader has to hunt down.)*
+holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD. **Anchor and slug
+each item where it is born** — a two- or three-word slug, and an `<a id="…">` for
+references to land on — then cite it from anywhere else in this file as
+`[D1 (slug-here)](#d1)`, carrying that same slug verbatim. One link, one glance: a later
+`D4` never decays into a bare number a cold reader has to hunt down.)*
 
-- `D1 (slug-here)`: <decision> — *because* <the one reason that mattered>
+- <a id="d1"></a>**D1 (slug-here)**: <decision> — *because* <the one reason that mattered>
 
 ## Constraints
 
 *(Hard rules the build must honor. `/plumbbob:verify` and `/plumbbob:refine` read against these.
-Slug and gloss them at birth too — `C1 (no-new-deps)` — same one line, same rule.)*
+Anchor and slug them at birth too — cited as `[C1 (no-new-deps)](#c1)` — same one line,
+same rule.)*
 
-- `C1 (no-new-deps)`: <e.g. functional/procedural only; no new dependencies>
+- <a id="c1"></a>**C1 (no-new-deps)**: <e.g. functional/procedural only; no new dependencies>
 
 ## Steps
 
@@ -88,8 +90,9 @@ Write each open question so a cold reader could answer it without flipping back 
 the code or the chat — that cold-reader test is the whole point of expanding it.
 Three lines:
 
-  · the opener — the hole as a question, slugged at birth, tagged
-    *resolve by:* decide | spike | ask
+  · the opener — the hole as a question, anchored and slugged at birth the same way a
+    Decision is (`- <a id="q1"></a>**Q1 (slug-here)**: …`, so a `[Q1 (slug-here)](#q1)`
+    reference has somewhere to land), tagged *resolve by:* decide | spike | ask
   · *plain:* — what's at stake, in plain words: the context and the cost of getting
     it wrong, enough to judge it cold
   · *lean:* — the model's proposed resolution: one answer to react to, not a menu
@@ -100,7 +103,7 @@ pass, no round-trip.
 When a question resolves, swap *resolve by:* for *resolved:* <date, the call> ON THE
 OPENER LINE, e.g.
 
-  - Q3 (default-waves): *resolved:* 2026-07-18, default off
+  - <a id="q3"></a>**Q3 (default-waves)**: *resolved:* 2026-07-18, default off
 
 The status counter reads opener lines only, so a *resolved:* left on a *plain:* or
 *lean:* sub-line leaves the question still counted as open.
@@ -110,7 +113,7 @@ the *plain:*/*lean:* pair earns its keep only when a human decision genuinely wa
 on it.
 -->
 
-- Q1 (slug-here): <the unresolved hole, framed as a question> — *resolve by:* decide | spike | ask
+- <a id="q1"></a>**Q1 (slug-here)**: <the unresolved hole, framed as a question> — *resolve by:* decide | spike | ask
   - *plain:* <what's at stake, in plain words — enough to judge it cold>
   - *lean:* <the model's proposed resolution — the answer to react to>
 
