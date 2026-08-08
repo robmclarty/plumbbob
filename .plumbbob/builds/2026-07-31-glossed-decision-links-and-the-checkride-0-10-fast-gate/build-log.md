@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — glossed decision links and the checkride 0.10 fast gate
 
-**Current step:** 6 — docs(decisions): promote the commit-subject decisions into the repo key
+**Current step:** 7 — docs(skills): point the skills' citations at the published decisions
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -28,7 +28,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 3. chore(gate): run a test-less checkride profile on every turn
 - ☑ 4. feat(refs): flag a citation that is bare, mislinked, or unglossed
 - ☑ 5. docs(refs): gloss every decision citation in the docs
-- ☐ 6. docs(decisions): promote the commit-subject decisions into the repo key
+- ☑ 6. docs(decisions): promote the commit-subject decisions into the repo key
 - ☐ 7. docs(skills): point the skills' citations at the published decisions
 - ☐ 8. feat(intent): anchor and gloss the build-local citations
 - ☐ 9. docs(cli): gloss the D-tags in the CLI's own output
@@ -98,3 +98,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-08-07 — step 3 checkpointed · 91ca7d427 — chore(gate): run a test-less checkride profile on every turn (1 drift)
 - 2026-08-08 — step 4 checkpointed · 4b5abb31d — feat(refs): flag a citation that is bare, mislinked, or unglossed (46m)
 - 2026-08-08 — step 5 checkpointed · a89cdf9e2 — docs(refs): gloss every decision citation in the docs (1 drift, 13m)
+- 2026-08-08 — step 6 checkpointed · c03775e97 — docs(decisions): promote the commit-subject decisions into the repo key (12m)

@@ -43,7 +43,7 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
      experiment and record your **Findings** and **Verdict** there. A recorded verdict is
      what the step's done-when should check — the report, not just the code, is the
      deliverable. This is the same artifact `/plumbbob:spike` produces for a mid-build fork
-     — D70 (spike-reports).
+     ([D70 (spike-reports)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d70)).
 3. **Read the plan.** Read the step's **done-when**, its **seam**, and the
    **Decisions** and **Constraints** in `intent.md`. Build to *that* — the deciding
    already happened, off the chat.
@@ -77,12 +77,12 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    `--body` for the deterministic done-when + seam + diffstat fallback). Do **not** bump
    the version or changelog — that is the human's `/version` call.
    - **A drifted subject is reconciled at the pause, never silently.** The planned
-     title *is* the checkpoint subject — D68 (conventional-subjects). If the diff drifted
+     title *is* the checkpoint subject — [D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68). If the diff drifted
      from it, **present** a corrected subject at the pause — `planned title → proposed
      subject`, one line — for explicit approval, and only on approval land it by adding
      `-m "<subject>"` to the checkpoint. Present nothing and the deterministic
      title-derived subject lands untouched: the reconcile is the human-approved exception,
-     not a quiet `-m` swap (which is the agent-authored subject D68 (conventional-subjects)
+     not a quiet `-m` swap (which is the agent-authored subject [D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68)
      refuses).
    - **If `plumbbob status` shows a `harness bindings:` block**, fold any bound
      `after`-agents into that self-review as advisory input — see **§ Running bound
@@ -223,7 +223,7 @@ just the one more entry already in the halt list above.
   Never route around it with a raw `git commit`. An explicit `/plumbbob:build --auto` or a typed
   step range in the human's own prompt are the only self-approvals — **never write `auto`
   into a settings file yourself to unlock a checkpoint. A grant you mint is no grant (the
-  latch ignores it — D67 (auto-not-a-grant)); ask the human to type
+  latch ignores it — [D67 (auto-not-a-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d67)); ask the human to type
   `/plumbbob:build --auto` again instead.**
 - **Close with the next model.** When a step lands, run `plumbbob handoff` and relay its
   block — it cites the completed step and the next undone step, and names that next step's

@@ -85,7 +85,7 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
    verify in one review pass.
 
    **The title *is* the commit subject — author it as one**
-   ([D68 (conventional-subjects)](../../docs/decisions.md#d68)): write each
+   ([D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68)): write each
    `<title>` as a plain, single-line Conventional-Commit subject,
    `type(scope): description`, and it lands in `git log` verbatim (its breaking `!`
    honored) — this is how each step lands a *real* `feat`/`fix`/`chore` in the history.

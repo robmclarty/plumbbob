@@ -11,8 +11,8 @@ Current session state (injected when this skill runs): !`plumbbob status 2>/dev/
 
 This is the **tick** — the one beat where the human is the clock. Whatever produced
 the current diff — `/plumbbob:build`, your own hands, a vibe session, another harness —
-this skill verifies it the same way: **it reads the diff, not the author** — D3
-(author-blind-executor).
+this skill verifies it the same way: **it reads the diff, not the author** —
+[D3 (author-blind-executor)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d3).
 
 ## What this skill does, in order
 
@@ -49,13 +49,13 @@ this skill verifies it the same way: **it reads the diff, not the author** — D
    **stop and wait for the human's explicit approval.** This is the convergence beat;
    the human is the clock. Never checkpoint without it.
    - **Reconcile a drifted subject here, in the open.** The planned title *is* the
-     checkpoint subject — D68 (conventional-subjects). If the diff drifted from it — the
+     checkpoint subject — [D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68). If the diff drifted from it — the
      step landed something the title no longer describes — the body pass may propose a
      corrected subject, but it **presents** it at this pause for explicit approval: show
      `planned title → proposed subject`, one line, as part of what the human OKs. This is
      the exception, not the default: with **nothing presented**, the deterministic
      title-derived subject lands untouched. A silent `-m` swap is exactly the
-     agent-authored subject D68 (conventional-subjects) refuses — so a reconcile is
+     agent-authored subject [D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68) refuses — so a reconcile is
      *only ever* the visible, approved kind.
 6. **Checkpoint** *(only after approval)*. Run `plumbbob checkpoint`: it makes the WIP
    commit, records the SHA, flips the step to done, appends the step to the build-log's
@@ -101,7 +101,7 @@ commit-ask hook asks the human about it anyway. The refusal is a healthy latch d
 job on the *record* while the *work* plane stays free; a `/plumbbob:build --auto` or
 a typed step range in the human's own prompt is the only self-approval — **never write
 `auto` into a settings file to unlock the land; the latch ignores a model-minted grant
-— D67 (auto-not-a-grant) — so ask the human to type `/plumbbob:build --auto` again
+— [D67 (auto-not-a-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d67) — so ask the human to type `/plumbbob:build --auto` again
 instead.**
 
 ## The hard contracts

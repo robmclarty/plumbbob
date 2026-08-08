@@ -369,7 +369,7 @@ describe('build — the default engine: implement the planned step, then verify'
   it('reconciles a drifted subject only at the pause — presented for approval, else the deterministic subject lands — D68 (conventional-subjects)', () => {
     expect(body).toMatch(/planned title → proposed\s+subject/) // the presented reconcile shape
     expect(body).toMatch(/-m/) // landed via the existing -m subject override
-    expect(body).toMatch(/D68 \(conventional-subjects\)\s+refuses/) // determinism preserved — no silent agent-authored swap
+    expect(body).toMatch(/D68 \(conventional-subjects\)\]\([^)]+\)\s+refuses/) // determinism preserved — no silent agent-authored swap
   })
 })
 
@@ -429,7 +429,7 @@ describe('verify — the tick: check, self-review, validate, PAUSE, checkpoint',
   it('reconciles a drifted subject only at the pause — presented for approval, else the deterministic subject lands — D68 (conventional-subjects)', () => {
     expect(body).toMatch(/planned title → proposed\s+subject/) // the presented reconcile shape
     expect(body).toMatch(/-m/) // landed via the existing -m subject override
-    expect(body).toMatch(/D68 \(conventional-subjects\)\s+refuses/) // determinism preserved — no silent agent-authored swap
+    expect(body).toMatch(/D68 \(conventional-subjects\)\]\([^)]+\)\s+refuses/) // determinism preserved — no silent agent-authored swap
   })
 })
 

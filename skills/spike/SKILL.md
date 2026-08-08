@@ -19,7 +19,7 @@ This is a **driver skill** — a chat-side trigger for the mechanical `plumbbob 
 2. Run `plumbbob spike "<slug>"`, `plumbbob spike report "<slug>"`, or `plumbbob spike done` via Bash.
 3. Report the verb's output verbatim — the worktree it created or removed, the spike report it scaffolded, or any refusal. When the verb names a `spike-NN-<slug>.md` report, point the human at it; when `spike done` nudges that a verdict is unrecorded, relay that nudge verbatim.
 
-## The spike report — D70 (spike-reports)
+## The spike report — [D70 (spike-reports)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d70)
 
 Every spike leaves a durable `spike-NN-<slug>.md` in the build folder, beside `intent.md`/`report.md`, so the fork's verdict rides the branch into the PR instead of evaporating. The CLI scaffolds it from a template and numbers it — you never create or number the file:
 

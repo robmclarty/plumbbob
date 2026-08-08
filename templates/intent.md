@@ -16,7 +16,7 @@ reads them once, to decide, and that legibility buys back a chat round-trip.
 
 **Phase** (your own bookkeeping while framing): frame
 **Size:** tiny | small | medium
-**Scope:** <short-scope>  <!-- the build's default commit scope — D68 (conventional-subjects): a short feature-level name each step's own `(scope)` overrides. Leave the `<…>` placeholder (or blank) and it parses as absent — commits fall through to the build slug. -->
+**Scope:** <short-scope>  <!-- the build's default commit scope — plumbbob [D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68): a short feature-level name each step's own `(scope)` overrides. Leave the `<…>` placeholder (or blank) and it parses as absent — commits fall through to the build slug. -->
 
 ## Frame
 
@@ -43,14 +43,14 @@ three-word slug where each item is born — `D1 (slug-here)` — and copy that s
 every reference site, so a later `D4 (default-waves)` never decays into a bare `D4`
 a cold reader has to hunt down.)*
 
-- D1 (slug-here): <decision> — *because* <the one reason that mattered>
+- `D1 (slug-here)`: <decision> — *because* <the one reason that mattered>
 
 ## Constraints
 
 *(Hard rules the build must honor. `/plumbbob:verify` and `/plumbbob:refine` read against these.
 Slug and gloss them at birth too — `C1 (no-new-deps)` — same one line, same rule.)*
 
-- C1 (no-new-deps): <e.g. functional/procedural only; no new dependencies>
+- `C1 (no-new-deps)`: <e.g. functional/procedural only; no new dependencies>
 
 ## Steps
 
@@ -59,9 +59,9 @@ verifiable increment with its own **done-when** and **seam** (the paths it will 
 which `/plumbbob:build` records in the build folder's `SEAM` for orientation — awareness, not a lock).
 An optional **model** line recommends the smallest model that can carry the step —
 mechanical work runs fine on a small model; subtle or creative work earns a frontier
-one. Advisory for the human, never a gate; write it plain, no backticks — D62
-(model-recommendation). The step title *is* the checkpoint's commit subject — D68
-(conventional-subjects): write it as one plain line, `type(scope): description` —
+one. Advisory for the human, never a gate; write it plain, no backticks — plumbbob
+[D62 (model-recommendation)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d62). The step title *is* the checkpoint's commit subject —
+plumbbob [D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68): write it as one plain line, `type(scope): description` —
 load-bearing paths live in `seam`, never jammed into the title — aiming for ≤72
 characters (GitHub's subject convention: soft, no gate).
 The `(scope)` names the primary code area the step touches (`plan`, `commitmsg`); the

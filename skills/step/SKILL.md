@@ -46,7 +46,7 @@ grew — but its everyday job is to sharpen, not to invent.
    **never jammed into the title**. A sharpened step carries its own `(scope)`
    when it touches a distinct code area — one that **overrides the build-default**
    `**Scope:**` header; drop the scope and it falls back to that default → build slug →
-   bare, and the type to `feat` ([D68 (conventional-subjects)](../../docs/decisions.md#d68)). Aim for a soft
+   bare, and the type to `feat` ([D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68)). Aim for a soft
    ≤72 chars, no gate. Revise the existing step in place; only append when you are
    genuinely adding an increment.
 4. **Revise the step's harness bindings if they drifted too** *(optional)*. If the
