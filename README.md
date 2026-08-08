@@ -47,9 +47,9 @@ model's goodwill:
   checkpoints, report — merges into `main` with the branch instead of dying with the
   worktree; the archive never destroys.
 - **The approval latch.** `checkpoint` refuses to land a step until the harness records a
-  human turn since that step began ([D64–D66](docs/decisions.md#d64), the approval-latch
-  family — the ledger-plane enforcement), so the model can't self-commit past you — the
-  refusal *is* the pause.
+  human turn since that step began ([D64 (approval-latch)](docs/decisions.md#d64)–[D66
+  (oob-commits-surfaced)](docs/decisions.md#d66) — the ledger-plane enforcement), so the
+  model can't self-commit past you — the refusal *is* the pause.
 
 The planning surface is the on-ramp; these five are the floor under it. And the latch's
 payoff is [measured, not asserted](#why-not-just), not just claimed. **Guidance on the
@@ -251,7 +251,7 @@ something better ships, you walk away with your archives and your habits intact.
 [`docs/decisions.md`](docs/decisions.md)): a hard lock on every edit buys ritual, not
 control, because a determined model routes around it and a denial mid-thought leaves no
 legal move. But the **record** is a different plane, and there the tick *is* latched
-([D64–D66](docs/decisions.md#d64), the approval-latch family): `checkpoint` refuses to land a step until the harness
+([D64 (approval-latch)](docs/decisions.md#d64)–[D66 (oob-commits-surfaced)](docs/decisions.md#d66)): `checkpoint` refuses to land a step until the harness
 records a human turn since that step began, so the agent cannot self-commit past you —
 the refusal simply *is* the pause. It extends the [deterministic edges above](#what-a-prompt-cant-replicate)
 to the one boundary the product is named after, while leaving human what must be human:

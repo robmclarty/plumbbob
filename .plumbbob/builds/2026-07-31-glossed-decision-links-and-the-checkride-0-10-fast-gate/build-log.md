@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — glossed decision links and the checkride 0.10 fast gate
 
-**Current step:** 4 — feat(refs): flag a citation that is bare, mislinked, or unglossed
+**Current step:** 5 — docs(refs): gloss every decision citation in the docs
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -26,7 +26,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 1. fix(cli): run the in-process CLI tests against a fixture repo
 - ☑ 2. chore(deps): upgrade checkride to 0.10.2
 - ☑ 3. chore(gate): run a test-less checkride profile on every turn
-- ☐ 4. feat(refs): flag a citation that is bare, mislinked, or unglossed
+- ☑ 4. feat(refs): flag a citation that is bare, mislinked, or unglossed
 - ☐ 5. docs(refs): gloss every decision citation in the docs
 - ☐ 6. docs(decisions): promote the commit-subject decisions into the repo key
 - ☐ 7. docs(skills): point the skills' citations at the published decisions
@@ -38,14 +38,17 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 13. chore(deps): upgrade checkride to 0.12.1
 - ☐ 14. chore(gate): install the prose slot and point its exemplars at the voice folder
 - ☐ 15. docs(prose): burn down the first prose run by hand
+- ☐ 16. fix(cli): refuse --body when stdin cannot deliver one
 
 ## Park list
 
 > Mid-step, every new problem / idea / "ooh what if" lands HERE, untouched, and you
 > go straight back to the step. Acting the instant an idea arrives is the disease.
 > Capture is one line (`/plumbbob:park` composes it). Harvest happens only at the boundary.
-- [ ] cli-core.test.ts runs `checkpoint -m --help` in-process against the developer's OWN repo — it landed 4 real commits here today; only the approval latch usually stops it
-- [ ] checkride's links slot scans INSIDE fenced blocks and code spans — every illustrative citation the docs/skills/template sweeps write must either resolve or not be link-shaped (it failed this build's own intent.md)
+- [x] cli-core.test.ts runs `checkpoint -m --help` in-process against the developer's OWN repo — it landed 4 real commits here today; only the approval latch usually stops it
+- [x] checkride's links slot scans INSIDE fenced blocks and code spans — every illustrative citation the docs/skills/template sweeps write must either resolve or not be link-shaped (it failed this build's own intent.md)
+- [x] harden --body's stdin read: bodyArg guards only isTTY, so under an agent harness (stdin = socket) readFileSync(0) blocks forever; gate on fstatSync(0).isFile()||isFIFO() instead, at checkpoint.ts:359 and finish.ts:140
+- [x] the --body anti-pattern warning exists ONLY in skills/finish/SKILL.md:49-52 (once per build); port it to skills/build/SKILL.md:73 and skills/verify/SKILL.md:68 — the two skills that actually run checkpoint --body, once per STEP
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -63,7 +66,22 @@ from sprawling across branches.
 
 Harvest results this boundary:
 
-- (none yet)
+- 2026-08-08, at the step 4 boundary — four parked items, all four classified.
+- **blocker (resolved)** — `cli-core.test.ts` ran `checkpoint -m --help` against the
+  developer's own repo. It was the origin of step 1, which shipped it as `ead5b60b7`:
+  the call now passes an explicit root (`run([...], NOWHERE)`), so the suite no longer
+  touches the live branch. Recorded rather than dropped, because the four stray commits
+  in the reflog are only explicable with this line next to them. No action left.
+- **blocker (folded, no revert)** — checkride's `links` slot scans *inside* fenced blocks
+  and code spans, so an illustrative citation written into a fence still has to resolve.
+  It already failed this build's own `intent.md`, and steps 5, 7, and 11 are all sweeps
+  that write teaching examples. Folded into [C4 (links-must-resolve)](intent.md#c4) so
+  the three sweeps honor it up front instead of each discovering it on a red check.
+- **tangent (adopted)** — the two `--body` findings: the stdin read that blocks forever
+  under an agent harness, and the anti-pattern warning that lives only in the `finish`
+  skill. Both are product defects found incidentally, off this build's subject and
+  blocking nothing — ordinarily a defer. Promoted into the plan as step 16 by the human's
+  call instead, which is what the capture existed to make possible.
 
 ## Log
 
@@ -78,3 +96,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-08-07 — step 13 checkpointed · 14ef4333f — chore(deps): upgrade checkride to 0.12.1
 - 2026-08-07 — step 12 checkpointed · eb6fa00f7 — docs(voice): seed the hand-owned voice exemplar folder
 - 2026-08-07 — step 3 checkpointed · 91ca7d427 — chore(gate): run a test-less checkride profile on every turn (1 drift)
+- 2026-08-08 — step 4 checkpointed · 4b5abb31d — feat(refs): flag a citation that is bare, mislinked, or unglossed (46m)

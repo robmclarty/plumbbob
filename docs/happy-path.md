@@ -172,7 +172,7 @@ PAUSE — read the diff as an editor. Approve to checkpoint, or send fixes.
 > checkpoint land. You don't have to trust the agent to stop; the ledger stops it. (Say
 > the word by name — `/plumbbob:build --auto` or a range like `1-3` — and you grant it
 > self-approval for that run; that grant can only come from a prompt *you* typed. See
-> [D64–D66](decisions.md#d64), the approval-latch family.)
+> [D64 (approval-latch)](decisions.md#d64)–[D66 (oob-commits-surfaced)](decisions.md#d66).)
 
 You approve. Only then does it checkpoint — committing the work, recording the SHA,
 flipping the step to `[x]`, and returning to the `DESIGN` boundary, where it **stops**:

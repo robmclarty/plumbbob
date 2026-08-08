@@ -58,9 +58,8 @@ structured to force that order:
   The slug travels: everywhere the plan or the verify pass refers back, it copies the gloss
   (`D1 (in-memory-bucket)`), never a bare `D1` — so the reference reads on its own, without
   flipping back to look the number up.
-- **Constraints** — the hard rules the build must honor (`C1 (no-new-deps): no new
-  dependencies`), slugged and referenced the same way. `verify` and `refine` read the diff
-  against these.
+- **Constraints** — the hard rules the build must honor (`C1 (no-new-deps): no new dependencies`),
+  slugged and referenced the same way. `verify` and `refine` read the diff against these.
 - **Open questions** — holes you could *not* settle on paper. They are never guessed into a
   Decision; an unresolved fork becomes a spike instead. A real one expands in place: an
   opener plus a `*plain:*` sub-line (a cold-reader explanation, stakes included) and a

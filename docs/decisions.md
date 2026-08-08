@@ -222,7 +222,7 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
 The **user-authored-agent doorway** (July 2026, `docs/agents.md`) added [**D39 (subprocess-envelope)**](#d39)–[**D61 (best-effort-scrape)**](#d61) and
 [**C3 (bindings-not-logic)**](#c3)/[**C6 (no-advance-verb)**](#c6)/[**C7 (minimal-envelope)**](#c7). (The build's own `intent.md` —
 `.plumbbob/builds/2026-07-02-user-agent-plugins-…/` — numbered these decisions locally as
-D1–D24/C1–C7, per this page's convention; the code and docs cite the renumbered global tags
+`D1`–`D24`/`C1`–`C7`, per this page's convention; the code and docs cite the renumbered global tags
 below.)
 
 - <a id="d39"></a>**D39 (subprocess-envelope) — The agent doorway is one versioned subprocess envelope.** A user-authored agent is
@@ -418,7 +418,7 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   carried ride a **marker line at the head of the body** (`plumbbob step 1`, `plumbbob plan`,
   `plumbbob finish`), prepended whether the body is `--body` prose, the deterministic fallback
   ([**D35 (fallback-body)**](#d35)), or empty — so `git log --grep plumbbob` still finds every plumbbob commit. Supersedes
-  the greppable-subject *shape* of [**D34 (cli-owns-subjects)**](#d34); D34's ownership principle — the CLI owns every subject,
+  the greppable-subject *shape* of [**D34 (cli-owns-subjects)**](#d34); its ownership principle — the CLI owns every subject,
   bodies arrive via `--body` — stands, as does [**D36 (plan-commit)**](#d36)'s plan-gets-its-own-commit. *Tagged in*
   `commitmsg.ts`, `intent.ts`, `sidecar.ts`, `checkpoint.ts`, `finish.ts`, the
   `plan`/`step`/`refine`/`verify`/`finish` skills.
