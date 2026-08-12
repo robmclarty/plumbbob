@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — glossed decision links and the checkride 0.10 fast gate
 
-**Current step:** 9 — docs(cli): gloss the D-tags in the CLI's own output
+**Current step:** 10 — chore(gate): wire the citation check into checkride and the fast profile
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -31,7 +31,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 6. docs(decisions): promote the commit-subject decisions into the repo key
 - ☑ 7. docs(skills): point the skills' citations at the published decisions
 - ☑ 8. feat(intent): anchor and gloss the build-local citations
-- ☐ 9. docs(cli): gloss the D-tags in the CLI's own output
+- ☑ 9. docs(cli): gloss the D-tags in the CLI's own output
 - ☐ 10. chore(gate): wire the citation check into checkride and the fast profile
 - ☐ 11. docs(decisions): record the citation convention and the gate profile
 - ☑ 12. docs(voice): seed the hand-owned voice exemplar folder
@@ -103,3 +103,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-08-08 — step 6 checkpointed · c03775e97 — docs(decisions): promote the commit-subject decisions into the repo key (12m)
 - 2026-08-08 — step 7 checkpointed · 31ea13ffc — docs(skills): point the skills' citations at the published decisions (1 drift, 47m)
 - 2026-08-08 — step 8 checkpointed · 82be65b9f — feat(intent): anchor and gloss the build-local citations (37m)
+- 2026-08-08 — step 9 checkpointed · 90115ca06 — docs(cli): gloss the D-tags in the CLI's own output (6m)

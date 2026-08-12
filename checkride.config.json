@@ -11,6 +11,12 @@
     "struct": { "use": "ast-grep", "order": 1 },
     "dead": { "use": "fallow", "order": 1 },
     "links": { "use": "links", "order": 1 },
+    "refs": {
+      "command": "node",
+      "args": ["scripts/check-refs.ts"],
+      "description": "Citation scanner — flags a bare, mislinked, or unglossed D#/C# tag",
+      "order": 1
+    },
 
     "types": { "use": "tsc", "order": 2 },
     "docs": { "use": "markdownlint-cli2", "order": 2 },

@@ -132,7 +132,7 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
    - seam: `templates/intent.md`, `src/lib/orient.ts`, `src/lib/__tests__/orient.test.ts`, `skills/plan/SKILL.md`, `skills/step/SKILL.md`, `skills/refine/SKILL.md`
    - model: opus — one parser regex is load-bearing for the status counter
    - notes: definitions gain `<a id="d1"></a>`, citations become `[D1 (slug)](#d1)`. `parseOpenQuestions` (`orient.ts:160`) matches `/^- Q\d+(?: \([^)]+\))?:/` and would stop counting an anchored opener — widen it, with a regression test. `scrapeBullets` is format-agnostic and needs nothing.
-9. [ ] docs(cli): gloss the D-tags in the CLI's own output — **done when:** no bare tag survives in anything plumbbob prints, and the scanner's src rule is green
+9. [x] docs(cli): gloss the D-tags in the CLI's own output — **done when:** no bare tag survives in anything plumbbob prints, and the scanner's src rule is green
    - seam: `src/verbs/doctor.ts`, `src/lib/latch.ts`, `src/verbs/finish.ts`, `src/verbs/agent.ts`, `src/lib/intent.ts`, and the tests asserting those strings
    - model: sonnet — nine strings, each with a test to update
 10. [ ] chore(gate): wire the citation check into checkride and the fast profile — **done when:** `pnpm check` runs a green `refs` slot in wave 1, and the turn gate picks it up through [D7 (skip-test-profile)](#d7)
