@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — glossed decision links and the checkride 0.10 fast gate
 
-**Current step:** 14 — chore(gate): install the prose slot and point its exemplars at the voice folder
+**Current step:** 15 — docs(agents): bridge AGENTS.md into Claude Code with a CLAUDE.md import
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -36,10 +36,11 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 11. docs(decisions): record the citation convention and the gate profile
 - ☑ 12. docs(voice): seed the hand-owned voice exemplar folder
 - ☑ 13. chore(deps): upgrade checkride to 0.12.1
-- ☐ 14. chore(gate): install the prose slot and point its exemplars at the voice folder
-- ☐ 15. docs(prose): burn down the first prose run by hand
-- ☐ 16. fix(cli): refuse --body when stdin cannot deliver one
-- ☐ 17. fix(intent): count an open question by its resolution marker, not a substring
+- ☑ 14. chore(gate): install the prose slot and point its exemplars at the voice folder
+- ☐ 15. docs(agents): bridge AGENTS.md into Claude Code with a CLAUDE.md import
+- ☐ 16. docs(prose): burn down the first prose run by hand
+- ☐ 17. fix(cli): refuse --body when stdin cannot deliver one
+- ☐ 18. fix(intent): count an open question by its resolution marker, not a substring
 
 ## Park list
 
@@ -55,9 +56,9 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [x] scripts/check-refs.ts's header comment still says the scanner is 'Not yet wired into checkride.config.json' — step 10 wired it as the refs slot, so the file's own account of itself is stale
 - [x] scripts/check-refs.ts's comments cite this build's local D3/D5/D6/D10/D13, which name entirely different decisions in the repo key (repo D6 is parseable-steps, not records-stay) — scripts/ is outside the scanner's walk so nothing catches it; repoint them at D74 (glossed-citations) now that it is published
 - [x] plumbbob check --only <slots> is ignored on the checkride path — 'check --only types' runs all 8 slots (65s) where 'pnpm exec checkride --only types' runs one (1.5s), so the iteration loop every skill recommends silently costs a full run; cli-reference.md documents the flags as mapping straight onto checkride's own, which is the contract to restore
-- [ ] decide whether plumbbob's repo root wants a CLAUDE.md pointer at AGENTS.md — checkride init offers to write one; step 14 removed it as out of scope
-- [ ] quote the SKILL.md frontmatter descriptions so vale can parse them — all 13 carry an unquoted colon, which hard-errors E201 and aborts the whole prose run, so skills/ is out of the vale walk until then
-- [ ] step 15 must also drop `optIn: true` from the prose entry — its done-when only asks for a green `--only prose`, which passes while the slot still sits out of the default run and the fast turn gate
+- [x] decide whether plumbbob's repo root wants a CLAUDE.md pointer at AGENTS.md — checkride init offers to write one; step 14 removed it as out of scope
+- [x] quote the SKILL.md frontmatter descriptions so vale can parse them — all 13 carry an unquoted colon, which hard-errors E201 and aborts the whole prose run, so skills/ is out of the vale walk until then
+- [x] step 15 must also drop `optIn: true` from the prose entry — its done-when only asks for a green `--only prose`, which passes while the slot still sits out of the default run and the fast turn gate
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -130,6 +131,34 @@ Harvest results this boundary:
   `check` means this repo's daily dogfood never exercises plumbbob's own in-process checkride
   path ([D32 (checkride-gate)](../../../docs/decisions.md#d32)).
 
+- 2026-08-11, at the step 14 boundary — three parked items, all three classified.
+- **blocker (folded, no revert)** — the burn-down step's done-when asked only for a green
+  `--only prose`, which is satisfiable while `optIn: true` still holds the slot out of the
+  default run. The build could have reached "done" with the prose slot installed and never
+  running. Folded into the step's done-when and seam in
+  [intent.md](intent.md#steps), which now names the flag's removal explicitly. Worth naming
+  the shape rather than just the fix: step 14 introduced `optIn: true` deliberately, as the
+  [D3 (checker-authored-first-wired-last)](intent.md#d3) bargain applied to prose, and a
+  staging flag is exactly the kind of thing that becomes permanent by being nobody's job to
+  remove.
+- **blocker (fold + new step)** — the parked "does the repo root want a `CLAUDE.md`?"
+  question, proposed as a tangent and overturned by checking it. Anthropic's docs say plainly
+  that Claude Code reads `CLAUDE.md` and not `AGENTS.md`, and prescribe a root `CLAUDE.md`
+  carrying an `@AGENTS.md` import. So step 14's whole deliverable — the generated stanza
+  pointing a writing session at `docs/voice/` — was loading into nothing, and
+  [D19 (exemplars-are-config-not-prompt)](intent.md#d19) held in mechanism but not in
+  delivery. D19 amended, and the bridge inserted as the new step 15, ahead of the burn-down
+  rather than after it, so the anchor is live for the one step in this build that writes
+  prose by hand. The file `checkride init` offered and step 14 removed as out of scope turns
+  out to be the thing that makes step 14 real.
+- **tangent (deferred)** — all 13 `SKILL.md` frontmatter descriptions carry an unquoted
+  colon; vale parses frontmatter as YAML, and one `E201` aborts the entire run rather than
+  skipping the file, so `skills/` is out of the vale walk. Deferred: it blocks nothing, and
+  quoting 13 values touches the shipped plugin surface, which wants its own step and its own
+  check that the skills still load. The escalation is on the record, and the burn-down step
+  carries it too — `skills/` is among the most-read prose in the repo, so "prose is green"
+  will understate coverage until this lands.
+
 ## Log
 
 *(The build's history, oldest first. `plumbbob checkpoint` appends a dated line here
@@ -151,3 +180,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-08-08 — step 9 checkpointed · 90115ca06 — docs(cli): gloss the D-tags in the CLI's own output (6m)
 - 2026-08-12 — step 10 checkpointed · 4bed3f823 — chore(gate): wire the citation check into checkride and the fast profile (5m)
 - 2026-08-12 — step 11 checkpointed · bc39ce348 — docs(decisions): record the citation convention and the gate profile (41m)
+- 2026-08-12 — step 14 checkpointed · 50bd46c80 — chore(gate): install the prose slot and point its exemplars at the voice folder (1 drift, 21m)
