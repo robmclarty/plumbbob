@@ -1,0 +1,34 @@
+# The em-dash is out of the kit. `docs/voice/voice.md` bans it in prose and
+# writes down what takes its place: an inner-sentence aside rides in brackets,
+# and a pause with its trailing phrase takes a semicolon when both halves stand
+# alone, a colon when the second half names or elaborates the first, and a plain
+# comma before a coordinating conjunction. Those four cover nearly every site,
+# so the message below carries all four; a writer who trips the rule reads the
+# fix without leaving the terminal.
+#
+# U+2014 only. The en-dash in a numeric range (`steps 1–3`) and the ordinary
+# hyphen are different marks doing different jobs, and a rule that over-matches
+# is a rule people learn to skim past.
+#
+# The token is written as its hex escape rather than as the mark, so the one
+# file in the repo that forbids the em-dash contains none.
+#
+# What escapes and what does not. In markdown a code span, a fenced block, and
+# an indented block are all invisible here, the same way they are invisible to
+# the citation scanner: a mark inside a code sample is part of the sample. In a
+# `.ts` file (mapped to `js` in .vale.ini) vale reads comments and nothing else,
+# so a string literal or a test title never surfaces; but a markdown code span
+# written inside a doc comment is plain text to vale, and it does flag. Frontmatter
+# is prose too: a `description:` value in a SKILL.md is linted like any sentence.
+extends: existence
+message: "No em-dash in prose: brackets for an inner-sentence aside, a semicolon when both halves stand alone, a colon when the second half names the first, a comma before a coordinating conjunction."
+# Warning while the sweep runs. Only error-severity alerts fail the check, which
+# .vale.ini states as its own contract, so `warning` prints the whole queue on
+# every run without failing the checkpoints that burn it down. The last step of
+# the sweep raises this line to `error` and the ban goes live.
+level: warning
+# A dash is not a word character, so the default boundaries would wrap the token
+# into a pattern that can never match.
+nonword: true
+tokens:
+  - '\x{2014}'

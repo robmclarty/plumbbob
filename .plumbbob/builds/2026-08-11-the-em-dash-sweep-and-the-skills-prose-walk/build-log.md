@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — the em-dash sweep and the skills prose walk
 
-**Current step:** 3 — chore(gate): walk skills/ in the prose slot and burn down the findings
+**Current step:** 4 — feat(prose): author the em-dash rule at warning and print the queue
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -25,7 +25,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
 - ☑ 1. docs(skills): teach the harvest skill the anchored decision form
 - ☑ 2. fix(skills): quote every SKILL.md frontmatter description
-- ☐ 3. chore(gate): walk skills/ in the prose slot and burn down the findings
+- ☑ 3. chore(gate): walk skills/ in the prose slot and burn down the findings
 - ☐ 4. feat(prose): author the em-dash rule at warning and print the queue
 - ☐ 5. docs(decisions): sweep the key and settle both format markers
 - ☐ 6. docs(prose): sweep the guide docs
@@ -42,6 +42,8 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 > Mid-step, every new problem / idea / "ooh what if" lands HERE, untouched, and you
 > go straight back to the step. Acting the instant an idea arrives is the disease.
 > Capture is one line (`/plumbbob:park` composes it). Harvest happens only at the boundary.
+- [ ] docs/evals/ carries 68 EmDash findings and no step owns it: steps 5-12 never name the eval receipts, so step 13 cannot reach error-green as planned. Records under C3, or a sweep step of its own -> /plumbbob:refine
+- [ ] step 11 measures 543 findings (460 production comments, 83 in test files), past D4's 150-250 band by 2x: it needs splitting before it is built -> /plumbbob:refine
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -71,3 +73,4 @@ you point at to say "I did that — the LLM helped, but those were my calls."
 folder, so it rides the branch into the PR.)*
 - 2026-08-12 — step 1 checkpointed · 09f654835 — docs(skills): teach the harvest skill the anchored decision form (7m)
 - 2026-08-12 — step 2 checkpointed · e3b5af42c — fix(skills): quote every SKILL.md frontmatter description (6m)
+- 2026-08-12 — step 3 checkpointed · af0e781e3 — chore(gate): walk skills/ in the prose slot and burn down the findings (8m)
