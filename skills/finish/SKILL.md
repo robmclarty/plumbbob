@@ -1,6 +1,6 @@
 ---
 name: finish
-description: Finish the build — write the report (what shipped, decisions, parked/harvested items, deferred tangents), then make the final commit that closes the session. The build folder rides the branch into the PR — no separate archive. Report by default, no gate.
+description: "Finish the build — write the report (what shipped, decisions, parked/harvested items, deferred tangents), then make the final commit that closes the session. The build folder rides the branch into the PR — no separate archive. Report by default, no gate."
 disable-model-invocation: true
 allowed-tools: Read, Write, Bash(plumbbob status:*), Bash(plumbbob finish:*)
 ---

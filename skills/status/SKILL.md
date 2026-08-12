@@ -1,6 +1,6 @@
 ---
 name: status
-description: Show the orientation dashboard — where you are, what's done, what's parked, and the next move. A thin trigger for `plumbbob status`.
+description: "Show the orientation dashboard — where you are, what's done, what's parked, and the next move. A thin trigger for `plumbbob status`."
 disable-model-invocation: true
 model: haiku
 allowed-tools: Bash(plumbbob status:*)

@@ -1,6 +1,6 @@
 ---
 name: recover
-description: Human-triggered driver for `plumbbob recover` — reconcile the control plane when the session looks wrong: a cursor pointing at a build that is gone, a step marked in flight that the plan no longer has, leftovers from an interrupted spike. Reports by default; `--fix` repairs the stale files it can.
+description: "Human-triggered driver for `plumbbob recover` — reconcile the control plane when the session looks wrong: a cursor pointing at a build that is gone, a step marked in flight that the plan no longer has, leftovers from an interrupted spike. Reports by default; `--fix` repairs the stale files it can."
 argument-hint: "[--fix]"
 disable-model-invocation: true
 model: haiku

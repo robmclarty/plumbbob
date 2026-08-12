@@ -1,6 +1,6 @@
 ---
 name: spike
-description: Human-triggered driver for `plumbbob spike` — open a throwaway worktree experiment for a genuine fork, scaffold a spike report for a spike-as-step, or tear it down with `spike done`.
+description: "Human-triggered driver for `plumbbob spike` — open a throwaway worktree experiment for a genuine fork, scaffold a spike report for a spike-as-step, or tear it down with `spike done`."
 argument-hint: "<slug> | report <slug> | done"
 disable-model-invocation: true
 model: haiku

@@ -1,6 +1,6 @@
 ---
 name: step
-description: Revise the next increment just-in-time — sharpen the next undone step against what's now true, or (with input) re-cut, split, or add a step. Empty input runs an automatic sharpen. One at a time; the human approves.
+description: "Revise the next increment just-in-time — sharpen the next undone step against what's now true, or (with input) re-cut, split, or add a step. Empty input runs an automatic sharpen. One at a time; the human approves."
 argument-hint: "[what-changed]"
 disable-model-invocation: true
 allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob agent list:*)

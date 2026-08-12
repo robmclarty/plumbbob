@@ -1,6 +1,6 @@
 ---
 name: revert
-description: Human-triggered driver for `plumbbob revert` — git reset --hard to a checkpoint SHA (discarding the half-done step) and return to the boundary.
+description: "Human-triggered driver for `plumbbob revert` — git reset --hard to a checkpoint SHA (discarding the half-done step) and return to the boundary."
 argument-hint: "[--to <step>]"
 disable-model-invocation: true
 model: haiku

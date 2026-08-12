@@ -111,14 +111,14 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
 
 *(The build plan. Drive `/plumbbob:build` until done.)*
 
-1. [ ] docs(skills): teach the harvest skill the anchored decision form — **done when:** the fold-a-blocker passage in `skills/harvest/SKILL.md` shows the anchored, slugged form a Decision is born in, matching what the plan and refine skills teach, with no pre-anchor example left; `pnpm check` green
+1. [x] docs(skills): teach the harvest skill the anchored decision form — **done when:** the fold-a-blocker passage in `skills/harvest/SKILL.md` shows the anchored, slugged form a Decision is born in, matching what the plan and refine skills teach, with no pre-anchor example left; `pnpm check` green
    - seam: `skills/harvest/SKILL.md`
    - model: sonnet — a one-passage port from the sibling skills
 2. [ ] fix(skills): quote every SKILL.md frontmatter description — **done when:** all 13 descriptions are YAML-quoted (the 11 bare ones join `verify` and `plan`, already quoted), a vale run over `skills/` parses every file with no E201 abort, and the skills contract suite stays green
-   - seam: `skills/*/SKILL.md`, `test/contract/skills.test.ts` (read; likely untouched)
+   - seam: `skills/`, `test/contract/skills.test.ts` (read; likely untouched)
    - model: sonnet — mechanical quoting behind an existing contract test
 3. [ ] chore(gate): walk skills/ in the prose slot and burn down the findings — **done when:** `skills` is in the prose slot's path list, the config note no longer calls `skills/` the one left-out path, the shipped rules' findings over `skills/` are fixed under [D7 (model-holds-the-pen)](#d7) with nothing baselined, and `pnpm check` is green
-   - seam: `checkride.config.json`, `skills/*/SKILL.md`, `AGENTS.md`
+   - seam: `checkride.config.json`, `skills/`, `AGENTS.md`
    - model: fable — the fixes are wording calls in the most-read prose
    - notes: the finding count is unknown until the walk turns on; measure at step entry, and if it swamps the step, split by skill rather than reaching for the baseline ([C1 (no-baseline)](#c1)). While in the config: the generated AGENTS.md stanza's active-check list still omits `prose` (stale since the slot went default-on); regenerate it with checkride's own command rather than hand-editing the stanza ([C3 (records-stay)](#c3)).
 4. [ ] feat(prose): author the em-dash rule at warning and print the queue — **done when:** `.vale/styles/Repo/EmDash.yml` exists at `warning` severity flagging U+2014 in prose scope (code spans and fences escape it, the same way they escape the refs scanner), the full check stays green because warnings do not fail it ([D1 (warning-then-error)](#d1)), and one vale run prints the per-surface queue steps 5–12 burn down
@@ -141,10 +141,10 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
    - model: fable — the templates seed every future build's prose
    - notes: [Q2 (format-markers)](#q2) named two format em-dashes; the template carries more, unfenced: the step-line `<title> — **done when:**` separator (which `parseSteps` in `src/lib/orient.ts` reads; its doc comment states the shape) and the `- model:` sub-line's ` — ` before the why. Each must be fenced, exempted, or changed *with* its parser, sized at step entry; a format change here reaches `orient.ts` and its tests, which this seam does not carry, so surface it rather than sprawl. Landing the comma marker also makes `docs/voice/voice.md`'s provisional parenthetical ("stands until that format is decided separately") stale; flagging it for Rob's pen is part of this step ([C2 (voice-stays-shut)](#c2)).
 10. [ ] docs(skills): sweep the skills prose — **done when:** `skills/*/SKILL.md` carry zero em-dashes (267 today) and every reworded instruction still reads as an instruction
-    - seam: `skills/*/SKILL.md`
+    - seam: `skills/`
     - model: fable — instructions must survive the re-punctuation with their imperative force intact
 11. [ ] chore(prose): sweep the src and scripts doc comments — **done when:** vale reports zero EmDash findings over `src/` and `scripts/` (the comment share of 999 raw `src/` hits, sized by step 4's queue); runtime strings and test titles untouched
-    - seam: `src/**/*.ts` (comments only), `scripts/check-refs.ts`
+    - seam: `src/` (comments only), `scripts/check-refs.ts`
     - model: sonnet — comment asides are short and the mapping covers nearly all of them
 12. [ ] docs(prose): sweep or exempt the hand-written essays — **done when:** `docs/generation-loss.md` (60) and `docs/attention-first-development.md` (5) are each either swept by the human's own hand or carry a per-file `Repo.EmDash = NO` in `.vale.ini` with its one-line why ([D6 (exemption-over-forgery)](#d6)); nothing baselined
     - seam: `docs/generation-loss.md`, `docs/attention-first-development.md`, `.vale.ini`

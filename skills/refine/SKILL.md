@@ -1,6 +1,6 @@
 ---
 name: refine
-description: Keep intent.md true — attack the plan for holes (append as Open questions) and refine or repair the Frame, Decisions, Constraints, and Steps to match reality. Usable at any point; you propose, the human approves.
+description: "Keep intent.md true — attack the plan for holes (append as Open questions) and refine or repair the Frame, Decisions, Constraints, and Steps to match reality. Usable at any point; you propose, the human approves."
 argument-hint: "[focus]"
 disable-model-invocation: true
 allowed-tools: Read, Edit, Bash(plumbbob status:*)

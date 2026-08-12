@@ -1,6 +1,6 @@
 ---
 name: harvest
-description: Triage the park list at a step boundary — propose one class (blocker/tangent/pivot) per parked item, write only after the human confirms each, record under ## Harvest, and fold a confirmed blocker into intent.
+description: "Triage the park list at a step boundary — propose one class (blocker/tangent/pivot) per parked item, write only after the human confirms each, record under ## Harvest, and fold a confirmed blocker into intent."
 disable-model-invocation: true
 allowed-tools: Read, Edit, Bash(plumbbob status:*)
 ---

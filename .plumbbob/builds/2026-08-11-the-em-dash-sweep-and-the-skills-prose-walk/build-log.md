@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — the em-dash sweep and the skills prose walk
 
-**Current step:** 1 — docs(skills): teach the harvest skill the anchored decision form
+**Current step:** 2 — fix(skills): quote every SKILL.md frontmatter description
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -23,7 +23,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 line above. Only ONE step is in flight; a step is done only after a checkpoint —
 check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
-- ☐ 1. docs(skills): teach the harvest skill the anchored decision form
+- ☑ 1. docs(skills): teach the harvest skill the anchored decision form
 - ☐ 2. fix(skills): quote every SKILL.md frontmatter description
 - ☐ 3. chore(gate): walk skills/ in the prose slot and burn down the findings
 - ☐ 4. feat(prose): author the em-dash rule at warning and print the queue
@@ -69,3 +69,4 @@ fills in as you go, not at the end. Add your own decision/event lines too: this 
 you point at to say "I did that — the LLM helped, but those were my calls."
 `/plumbbob:finish` reads this for the report; `plumbbob finish` commits it with the build
 folder, so it rides the branch into the PR.)*
+- 2026-08-12 — step 1 checkpointed · 09f654835 — docs(skills): teach the harvest skill the anchored decision form (7m)
