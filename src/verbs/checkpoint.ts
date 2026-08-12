@@ -30,6 +30,7 @@ import {
   stepPath,
 } from '../lib/sidecar.ts'
 import { runCheck } from '../lib/check.ts'
+import { readCommitBody } from '../lib/commitbody.ts'
 import { checkLatch } from '../lib/latch.ts'
 import { markStepDone, parseSteps } from '../lib/orient.ts'
 import { parseBuildScope, parseStepSeam, scopeDrift } from '../lib/intent.ts'
@@ -65,6 +66,15 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
     return 1
   }
 
+  // Checked before the latch and the check gate: a socket stdin can never
+  // deliver the requested body, so there is no point latching or running a
+  // ~55s check only to discover that afterward.
+  const bodyResult = readCommitBody(args)
+  if (!bodyResult.ok) {
+    process.stderr.write(bodyResult.message)
+    return 1
+  }
+
   // The approval latch runs before the check gate — cheap first. The tick may
   // not land without a human turn since the step was entered, a one-turn grant
   // the human typed, or a dormant ledger. A refusal is not an error: the
@@ -95,7 +105,7 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   if (isDirty(root)) {
     stageAll(root)
     warnScopeDrift(root, step)
-    const body = withMarker(`plumbbob step ${step}`, bodyArg(args) ?? fallbackBody(root, step))
+    const body = withMarker(`plumbbob step ${step}`, bodyResult.body ?? fallbackBody(root, step))
     sha = commit(root, messageArg(args) ?? subjectForStep(root, step), body)
   } else {
     sha = headSha(root)
@@ -140,8 +150,14 @@ function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
     return 1
   }
 
+  const bodyResult = readCommitBody(args)
+  if (!bodyResult.ok) {
+    process.stderr.write(bodyResult.message)
+    return 1
+  }
+
   stagePath(root, buildFolder(root))
-  const sha = commit(root, planSubject(root), withMarker('plumbbob plan', bodyArg(args) ?? undefined))
+  const sha = commit(root, planSubject(root), withMarker('plumbbob plan', bodyResult.body ?? undefined))
   appendFileSync(checkpointsPath(root), `plan ${sha}\n`)
   // Landing the plan consumes `start`'s entry stamp: a later hand-built diff
   // (no `build <n>`) must find no stale TICK and stay guidance-governed.
@@ -345,27 +361,6 @@ function titleForStep(root: string, step: number): string | null {
 function messageArg(args: ReadonlyArray<string>): string | null {
   const i = args.indexOf('-m')
   return i !== -1 && i + 1 < args.length ? (args[i + 1] ?? null) : null
-}
-
-/**
- * Read the `--body` commit body from stdin, or null when absent or empty.
- *
- * The stdin heredoc lets a skill compose proportional prose the CLI never
- * could; null either way hands over to the deterministic fallback body. Reading
- * fd 0 blocks until EOF, which the heredoc supplies; a read error (no stdin
- * attached) degrades to the fallback, and an interactive TTY — which would
- * never send EOF — skips the read instead of hanging.
- */
-function bodyArg(args: ReadonlyArray<string>): string | null {
-  if (!args.includes('--body') || process.stdin.isTTY === true) {
-    return null
-  }
-  try {
-    const raw = readFileSync(0, 'utf8').trimEnd()
-    return raw.length > 0 ? raw : null
-  } catch {
-    return null
-  }
 }
 
 /**

@@ -12,6 +12,7 @@
 import { appendFileSync, existsSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { commit, findRepoRoot, isDirty, stageAll } from '../lib/git.ts'
+import { readCommitBody } from '../lib/commitbody.ts'
 import {
   buildScope,
   checkpointsPath,
@@ -47,6 +48,16 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
     return 1
   }
 
+  // Checked before any of finish's writes: appendCheckpointShas/appendStats
+  // are plain appends, not idempotent, so a refusal after they ran would
+  // duplicate those sections on retry. A socket stdin can never deliver the
+  // requested body, so there is nothing to do first.
+  const bodyResult = readCommitBody(args)
+  if (!bodyResult.ok) {
+    process.stderr.write(bodyResult.message)
+    return 1
+  }
+
   const { build: slug } = resolveBuild(root, args)
 
   if (existsSync(reportPath(root, slug))) {
@@ -69,7 +80,7 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   if (isDirty(root)) {
     stageAll(root)
   }
-  const sha = commit(root, subject(root, slug), withMarker('plumbbob finish', bodyArg(args) ?? undefined))
+  const sha = commit(root, subject(root, slug), withMarker('plumbbob finish', bodyResult.body ?? undefined))
 
   // Clear the control state: the in-flight markers first, then the session
   // sentinel last (so "no session" flips exactly at the end). Deleting STATE also
@@ -124,29 +135,6 @@ function buildDefaultScope(root: string, slug: string | null): string | null {
     // no intent.md — fall through to the slug rung.
   }
   return buildScope(slug)
-}
-
-/**
- * Read the `--body` final-commit body from stdin, or null.
- *
- * The body arrives as a single-quoted stdin heredoc — the CLI owns every commit
- * subject, but the finish skill composes a proportional close-out body this
- * way. Returns null when the flag is absent or stdin is empty; the commit then
- * carries subject only. Reading fd 0 blocks until EOF, which the heredoc
- * supplies; a read error (no stdin attached) degrades to null, and an
- * interactive TTY — which would never send EOF — skips the read instead of
- * hanging (twin of checkpoint.ts's guard).
- */
-function bodyArg(args: ReadonlyArray<string>): string | null {
-  if (!args.includes('--body') || process.stdin.isTTY === true) {
-    return null
-  }
-  try {
-    const raw = readFileSync(0, 'utf8').trimEnd()
-    return raw.length > 0 ? raw : null
-  } catch {
-    return null
-  }
 }
 
 /**

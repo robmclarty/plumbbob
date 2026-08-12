@@ -48,7 +48,8 @@ record.
 
    Redirect the heredoc *into* the command (`--body <<'BODY'`). Do **not** pass it as
    an argument value (`--body "$(cat <<'BODY'…)"`): `--body` ignores an argument and
-   reads stdin, so that form leaves stdin open with no EOF and the command hangs. Omit
+   always reads stdin. Under an agent harness that stdin is a socket, and `--body` now
+   refuses rather than blocking on one — the refusal names this exact heredoc form. Omit
    `--body` entirely and the commit carries the `plumbbob finish` marker subject only.
 3. **Point at the next goal** — `/plumbbob:plan` to frame the next one.
 

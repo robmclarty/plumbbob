@@ -76,6 +76,11 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    build-log's `## Log`, so the history writes itself — you only supply the body (or omit
    `--body` for the deterministic done-when + seam + diffstat fallback). Do **not** bump
    the version or changelog — that is the human's `/version` call.
+   - **`--body` reads stdin only.** Redirect the heredoc *into* the command (`--body
+     <<'BODY'`). Do **not** pass it as an argument value (`--body "$(cat <<'BODY'…)"`):
+     `--body` ignores an argument and always reads stdin. Under an agent harness that
+     stdin is a socket, and `--body` now refuses rather than blocking on one — the
+     refusal names this exact heredoc form.
    - **A drifted subject is reconciled at the pause, never silently.** The planned
      title *is* the checkpoint subject — [D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68). If the diff drifted
      from it, **present** a corrected subject at the pause — `planned title → proposed

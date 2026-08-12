@@ -71,6 +71,11 @@ this skill verifies it the same way: **it reads the diff, not the author** —
    BODY
    ```
 
+   Redirect the heredoc *into* the command (`--body <<'BODY'`). Do **not** pass it as
+   an argument value (`--body "$(cat <<'BODY'…)"`): `--body` ignores an argument and
+   always reads stdin. Under an agent harness that stdin is a socket, and `--body` now
+   refuses rather than blocking on one — the refusal names this exact heredoc form.
+
    Do **not** run a TIL scan or reach for a separate commit skill — the body is yours to
    write in one breath. Omit `--body` entirely and the CLI writes a deterministic body
    (done-when + seam + diffstat) on its own. Either way, do **not** bump the version or

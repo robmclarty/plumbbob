@@ -2,7 +2,7 @@
 // dirs. Fixtures never use the real `pnpm check` — a recursive vitest hangs.
 
 import { execFileSync, spawnSync } from 'node:child_process'
-import { mkdtempSync, writeFileSync, rmSync, readFileSync, existsSync } from 'node:fs'
+import { closeSync, existsSync, mkdtempSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -72,10 +72,28 @@ export function runCli(
     env[key] = value
   }
   // spawnSync (not execFileSync) so stderr is captured on success too — verbs
-  // emit warnings to stderr while still exiting 0. `input` becomes the child's
-  // stdin, standing in for a `--body <<'BODY'` heredoc.
-  const result = spawnSync('node', [CLI, ...args], { cwd: dir, encoding: 'utf8', env, input })
-  return { stdout: result.stdout ?? '', stderr: result.stderr ?? '', status: result.status ?? 1 }
+  // emit warnings to stderr while still exiting 0.
+  if (input === undefined) {
+    const result = spawnSync('node', [CLI, ...args], { cwd: dir, encoding: 'utf8', env })
+    return { stdout: result.stdout ?? '', stderr: result.stderr ?? '', status: result.status ?? 1 }
+  }
+  // `input` becomes the child's stdin, standing in for a `--body <<'BODY'`
+  // heredoc — as a real file, not spawnSync's own `input` plumbing. On POSIX,
+  // Node backs that with a unix-domain socket, the same fd-0 shape as an agent
+  // harness's own (never-closing) stdin, so commitbody.ts's socket guard would
+  // refuse it — a heredoc's actual shape is a regular file, which reads to EOF
+  // exactly like a real one.
+  const stdinDir = mkdtempSync(join(tmpdir(), 'plumbbob-stdin-'))
+  const stdinPath = join(stdinDir, 'body')
+  writeFileSync(stdinPath, input)
+  const fd = openSync(stdinPath, 'r')
+  try {
+    const result = spawnSync('node', [CLI, ...args], { cwd: dir, encoding: 'utf8', env, stdio: [fd, 'pipe', 'pipe'] })
+    return { stdout: result.stdout ?? '', stderr: result.stderr ?? '', status: result.status ?? 1 }
+  } finally {
+    closeSync(fd)
+    rmSync(stdinDir, { recursive: true, force: true })
+  }
 }
 
 // The tracked artifact plane — D17 (two-planes) — lives under `.plumbbob/builds/<slug>/`; the

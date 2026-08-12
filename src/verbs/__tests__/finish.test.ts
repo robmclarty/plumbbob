@@ -7,8 +7,11 @@ import { start } from '../start.ts'
 import { bumpStepStat, checkpointsPath, grantPath, hasSession, intentPath, reportPath, sidecarDir, stampStepStat, tickPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
+import { cleanupFixtures, makeFixtureRepo, runCli } from '../../../test/helpers/fixture-repo.ts'
+import { runCliWithSocketStdin } from '../../../test/helpers/socket-stdin.ts'
 
 afterAll(cleanupTempRepos)
+afterAll(cleanupFixtures)
 
 function subject(dir: string): string {
   return execFileSync('git', ['-C', dir, 'log', '-1', '--format=%s'], { encoding: 'utf8' }).trim()
@@ -105,6 +108,24 @@ describe('finish', () => {
     }
     const body = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%b'], { encoding: 'utf8' })
     expect(body).toContain('plumbbob finish') // the marker still lands; no extra body, no hang
+  })
+})
+
+// Twin of checkpoint.test.ts's socket-stdin suite: `finish --body` reads fd 0
+// through the same commitbody.ts guard, so it must refuse rather than block
+// on the same fd-0 shape an agent harness hands it.
+describe('finish (subprocess) — --body on a socket stdin', () => {
+  it('refuses before any write — no duplicated report sections on retry', async () => {
+    const dir = makeFixtureRepo()
+    runCli(dir, ['start', 'Socket body', '--slug', 'socket-body'])
+
+    const { status, stderr } = await runCliWithSocketStdin(dir, ['finish', '--body'])
+
+    expect(status).toBe(1)
+    expect(stderr).toContain('--body refuses')
+    expect(stderr).toContain("<<'BODY'")
+    // The session never closed: STATE (the session sentinel finish clears last) is still there.
+    expect(existsSync(join(sidecarDir(dir), 'STATE'))).toBe(true)
   })
 })
 

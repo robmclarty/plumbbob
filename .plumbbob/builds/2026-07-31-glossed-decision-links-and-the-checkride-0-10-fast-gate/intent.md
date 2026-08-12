@@ -161,7 +161,7 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
     - model: sonnet — two lines, and the deciding already happened
     - notes: Claude Code reads `CLAUDE.md` and not `AGENTS.md` ([its own docs](https://code.claude.com/docs/en/memory)), so step 14's stanza currently loads into nothing and [D19 (exemplars-are-config-not-prompt)](#d19)'s delivery half is unrealized in this repo. The `@AGENTS.md` import beats the `ln -s AGENTS.md CLAUDE.md` symlink twice over: it leaves room for Claude-specific lines beneath the import, and it needs no Administrator privileges on Windows. Keep the file to the import plus whatever is genuinely Claude-only — the contract itself stays in `AGENTS.md`, which checkride owns and regenerates.
     - notes: inserted at the step 14 boundary and placed *ahead* of the burn-down rather than after it, because step 16 is the one step in this build that writes prose by hand, so it is the step that most needs the voice anchor already loaded.
-16. [ ] docs(prose): burn down the first prose run by hand — **done when:** `pnpm exec checkride --only prose` is green, `optIn: true` is gone from the prose entry so a bare `pnpm check` and the fast turn gate both run the slot, and `checkride.baseline.json` has no `prose` entries at all
+16. [x] docs(prose): burn down the first prose run by hand — **done when:** `pnpm exec checkride --only prose` is green, `optIn: true` is gone from the prose entry so a bare `pnpm check` and the fast turn gate both run the slot, and `checkride.baseline.json` has no `prose` entries at all
     - seam: `docs/`, `README.md`, `CONTRIBUTING.md`, `templates/intent.md`, `src/`, `scripts/`, `checkride.config.json`
     - model: opus — every fix is a wording call, and the point is that a human makes it
     - notes: no grandfathering ([D18 (prose-is-fixed-not-grandfathered)](#d18)); if the count comes back large enough to swamp the build, split the tail into its own build rather than reaching for the baseline. Fixes are hand edits, never a model style pass over model prose: that is the rubber-stamp failure `docs/generation-loss.md` documents, and it is why the exemplars are read-only to the session. Expect the shipped rules to fire mostly on Latin abbreviations, hyphenated `-ly` adverbs, and doubled words; the em-dash is deliberately not in scope here ([Q10 (em-dash-rule-scope)](#open-questions)).
@@ -219,6 +219,17 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
 ## Verdicts
 
 *(Filled in as spikes and forks resolve — the audit trail of "these were my calls.")*
+
+- 2026-08-11 — step 17's "measured fd-0 shapes" note turned out incomplete: Node's own
+  `child_process` pipe stdio (`spawnSync`'s `input` option, and `spawn`'s `stdio:'pipe'`) is
+  a unix-domain socket on POSIX, not a FIFO — the same shape `fstatSync(0).isSocket()`
+  reports for an agent harness's own stdin, and indistinguishable from it by shape alone.
+  This collided with `test/integration/verify.test.ts`'s two `--body` tests, which feed the
+  body through `runCli`'s `input` parameter — itself `spawnSync`'s socket-backed mechanism —
+  and started refusing once the guard landed. A real shell heredoc or pipe is unaffected
+  (confirmed by hand: `regular file` and `FIFO` respectively), so the guard itself needed no
+  change. Fixed in the test helper instead: `runCli`'s `input` now feeds the child through an
+  actual temp file — the shape a heredoc really has — rather than `spawnSync`'s own plumbing.
 
 - 2026-08-07 — step 12's done-when was amended *before* it landed, in the open rather than quietly: its third clause required the `refs` scanner to be green over the new folder, but that scanner is step 4's artifact and steps 3–11 are still pending, so the clause was unrunnable rather than unmet. It is redundant besides, since step 5 already owns scanner-greenness under `docs/` and `docs/voice/` sits inside it. Replaced with the criterion that made the folder scanner-safe by construction: no `D`/`C` tag outside a code span ([D13 (code-spans-are-mentions)](#d13)). Recorded because rewording a done-when while its step waits to land is goalpost-moving unless it is visible.
 - 2026-08-07 — [Q9 (em-dash-out-of-prose)](#open-questions) → the citation renders as `[D26 (build-folders)](…#d26)`, and [D1 (slug-in-parens)](#d1)/[D2 (slug-is-the-gloss)](#d2) are amended to say so. The dash rendering was reversed before step 5 ran, which is the whole saving: the ~175 already-swept sites stay correct instead of being re-rendered twice. This build's own intent was swept to the new form in the same pass (26 citations, every definition header), so the plan obeys the rule it sets. The amendment also strengthens the scanner: a verbatim slug comparison catches the wrong-citation case [Q3 (gloss-source)](#open-questions) had to leave to review.

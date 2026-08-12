@@ -10,6 +10,7 @@ import { setLocalSetting, settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { cleanupFixtures, makeFixtureRepo, runCli } from '../../../test/helpers/fixture-repo.ts'
 import { captureIoAsync } from '../../../test/helpers/capture-io.ts'
+import { runCliWithSocketStdin } from '../../../test/helpers/socket-stdin.ts'
 
 afterAll(cleanupTempRepos)
 afterAll(cleanupFixtures)
@@ -530,6 +531,39 @@ describe('checkpoint (subprocess) — D64 (approval-latch)', () => {
     const landed = runCli(dir, ['checkpoint', '--plan'])
     expect(landed.status).toBe(0)
     expect(readFileSync(checkpointsPath(dir), 'utf8')).toMatch(/plan [0-9a-f]{40}/)
+  })
+})
+
+// The 2026-08-07 hang: an agent harness hands the CLI a socket for stdin, not
+// a TTY or a pipe. `readFileSync(0)` never sees EOF from one, so `--body`
+// used to block forever and silently drop the body. `runCliWithSocketStdin`
+// gives the child process a real socket so this is proven at the same fd-0
+// shape that actually hangs, not just in the pure fd-shape unit tests.
+describe('checkpoint (subprocess) — --body on a socket stdin', () => {
+  it('refuses instead of blocking, naming the heredoc form, and lands nothing', async () => {
+    const dir = makeFixtureRepo()
+    runCli(dir, ['start', 'Checkpoint test', '--slug', 'checkpoint-test'])
+    writeFileSync(intentPath(dir), INTENT)
+    writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true' }))
+    writeFileSync(join(dir, 'work.txt'), 'pending\n')
+
+    const { status, stderr } = await runCliWithSocketStdin(dir, ['checkpoint', '1', '--body'])
+
+    expect(status).toBe(1)
+    expect(stderr).toContain('--body refuses')
+    expect(stderr).toContain("<<'BODY'")
+    expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [ ]') // nothing landed
+  })
+
+  it('the plan commit refuses the same way', async () => {
+    const dir = makeFixtureRepo()
+    runCli(dir, ['start', 'Checkpoint test', '--slug', 'checkpoint-test'])
+
+    const { status, stderr } = await runCliWithSocketStdin(dir, ['checkpoint', '--plan', '--body'])
+
+    expect(status).toBe(1)
+    expect(stderr).toContain('--body refuses')
+    expect(stderr).toContain("<<'BODY'")
   })
 })
 
