@@ -5,6 +5,41 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.6] - 2026-08-12
+
+- **Added:** a `refs` check slot (`scripts/check-refs.ts`) flags a `D`/`C` decision citation
+  that is bare, mislinked, or unglossed, across `docs/`, `skills/`, `templates/`, and `src/`.
+  It compares a citation's slug against the definition's own, verbatim, so a *wrong* citation
+  is now caught mechanically rather than left to review; wired into checkride so it runs in
+  both the fast per-turn gate and the full check.
+- **Added:** a fast per-turn gate. checkride's Stop hook now runs a `{"skip": ["test"]}`
+  profile after every file-touching turn and returns in about two seconds, since vitest is
+  roughly 53 of the full check's 56 seconds. `pnpm check` and `checkpoint` are unchanged and
+  still run the whole thing, test included, and the hook's own "NOT the full check" verdict
+  is never suppressed.
+- **Added:** a hand-owned voice for prose. `docs/voice/` holds register exemplars seeded by
+  selection from prose that had already survived a human pass, never model-edited afterward.
+  checkride 0.12.1's `prose` slot (vale) is wired in with `exemplars` pointed at that folder,
+  and its first run's 59 findings across 22 files were fixed by hand with nothing
+  grandfathered.
+- **Added:** a root `CLAUDE.md` importing `AGENTS.md`, so a Claude Code session actually
+  reads the repo's instructions and the voice anchor above. Claude Code reads `CLAUDE.md`,
+  not `AGENTS.md`, and the generated stanza was loading into nothing without it.
+- **Changed:** every `D`/`C` citation across `docs/`, `README.md`, `CONTRIBUTING.md`,
+  `skills/`, `templates/`, and the CLI's own output now renders as a link carrying the
+  definition's canonical slug, `[D26 (build-folders)](docs/decisions.md#d26)`, so a reference
+  reads without a lookup. `skills/` and `templates/` cite by absolute GitHub URL rather than a
+  relative path, since `docs/` is not shipped in the installed package; the one relative
+  cross-package link the repo had was broken in every install.
+- **Fixed:** `checkpoint --body` and `finish --body` hung indefinitely under an agent
+  harness, whose stdin is a socket rather than a TTY, and silently dropped the commit body in
+  the process. Both now refuse immediately and name the `<<'BODY'` heredoc form.
+- **Fixed:** the status dashboard's open-questions count read a question's opener as resolved
+  whenever its prose contained the word "unresolved," a bare substring match, so a genuinely
+  open question could vanish from the count. It now matches "resolved" as a whole word, and a
+  template's unfilled `<...>` placeholder is uncounted by an explicit rule instead of by that
+  same accident.
+
 ## [0.9.5] - 2026-08-06
 
 - **Added:** `plumbbob recover`, and the `/plumbbob:recover` skill that drives it, reconcile
