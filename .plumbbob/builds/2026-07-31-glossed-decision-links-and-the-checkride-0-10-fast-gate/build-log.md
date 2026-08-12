@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — glossed decision links and the checkride 0.10 fast gate
 
-**Current step:** 18 — fix(intent): count an open question by its resolution marker, not a substring
+**Current step:** none (at the boundary)
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -40,7 +40,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 15. docs(agents): bridge AGENTS.md into Claude Code with a CLAUDE.md import
 - ☑ 16. docs(prose): burn down the first prose run by hand
 - ☑ 17. fix(cli): refuse --body when stdin cannot deliver one
-- ☐ 18. fix(intent): count an open question by its resolution marker, not a substring
+- ☑ 18. fix(intent): count an open question by its resolution marker, not a substring
 
 ## Park list
 
@@ -59,7 +59,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [x] decide whether plumbbob's repo root wants a CLAUDE.md pointer at AGENTS.md — checkride init offers to write one; step 14 removed it as out of scope
 - [x] quote the SKILL.md frontmatter descriptions so vale can parse them — all 13 carry an unquoted colon, which hard-errors E201 and aborts the whole prose run, so skills/ is out of the vale walk until then
 - [x] step 15 must also drop `optIn: true` from the prose entry — its done-when only asks for a green `--only prose`, which passes while the slot still sits out of the default run and the fast turn gate
-- [ ] prose slot cannot lint skills/ — vale parses SKILL.md frontmatter as YAML and one unquoted colon in a description aborts the whole run, so every skill's prose is unlinted
+- [x] prose slot cannot lint skills/ — vale parses SKILL.md frontmatter as YAML and one unquoted colon in a description aborts the whole run, so every skill's prose is unlinted
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -160,6 +160,19 @@ Harvest results this boundary:
   carries it too — `skills/` is among the most-read prose in the repo, so "prose is green"
   will understate coverage until this lands.
 
+- 2026-08-12, at the step 18 boundary — one parked item, classified.
+- **tangent (deferred)** — the `prose` slot cannot lint `skills/` at all: vale parses
+  SKILL.md frontmatter as YAML, and one unquoted colon in a description raises `E201`,
+  which aborts the whole run rather than skipping the file. This is the step 14 boundary's
+  third item read from the other end. That one named the fix (quote the 13 frontmatter
+  values), this one names the cost, and the call is unchanged: it blocks nothing, and
+  editing all 13 shipped `SKILL.md` files wants its own step with its own check that the
+  skills still load. What the second capture adds is the pairing. This build closes with
+  two deferred prose items, this one and [Q10 (em-dash-rule-scope)](intent.md#open-questions),
+  and together they are one coherent next build (extend the vale walk to `skills/`, then
+  sweep the em-dash) rather than two orphans. Until that lands, "prose is green" understates
+  its coverage by the most-read prose in the repo.
+
 ## Log
 
 *(The build's history, oldest first. `plumbbob checkpoint` appends a dated line here
@@ -185,3 +198,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-08-12 — step 15 checkpointed · 82c893389 — docs(agents): bridge AGENTS.md into Claude Code with a CLAUDE.md import (6m)
 - 2026-08-12 — step 16 checkpointed · 21b201d7d — docs(prose): burn down the first prose run by hand (22m)
 - 2026-08-12 — step 17 checkpointed · cb33b0e40 — fix(cli): refuse --body when stdin cannot deliver one (1 drift, 35m)
+- 2026-08-12 — step 18 checkpointed · ca24bacbf — fix(intent): count an open question by its resolution marker, not a substring (9m)
