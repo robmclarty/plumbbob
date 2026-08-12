@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — glossed decision links and the checkride 0.10 fast gate
 
-**Current step:** 15 — docs(agents): bridge AGENTS.md into Claude Code with a CLAUDE.md import
+**Current step:** 16 — docs(prose): burn down the first prose run by hand
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -37,7 +37,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 12. docs(voice): seed the hand-owned voice exemplar folder
 - ☑ 13. chore(deps): upgrade checkride to 0.12.1
 - ☑ 14. chore(gate): install the prose slot and point its exemplars at the voice folder
-- ☐ 15. docs(agents): bridge AGENTS.md into Claude Code with a CLAUDE.md import
+- ☑ 15. docs(agents): bridge AGENTS.md into Claude Code with a CLAUDE.md import
 - ☐ 16. docs(prose): burn down the first prose run by hand
 - ☐ 17. fix(cli): refuse --body when stdin cannot deliver one
 - ☐ 18. fix(intent): count an open question by its resolution marker, not a substring
@@ -59,6 +59,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [x] decide whether plumbbob's repo root wants a CLAUDE.md pointer at AGENTS.md — checkride init offers to write one; step 14 removed it as out of scope
 - [x] quote the SKILL.md frontmatter descriptions so vale can parse them — all 13 carry an unquoted colon, which hard-errors E201 and aborts the whole prose run, so skills/ is out of the vale walk until then
 - [x] step 15 must also drop `optIn: true` from the prose entry — its done-when only asks for a green `--only prose`, which passes while the slot still sits out of the default run and the fast turn gate
+- [ ] prose slot cannot lint skills/ — vale parses SKILL.md frontmatter as YAML and one unquoted colon in a description aborts the whole run, so every skill's prose is unlinted
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -181,3 +182,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-08-12 — step 10 checkpointed · 4bed3f823 — chore(gate): wire the citation check into checkride and the fast profile (5m)
 - 2026-08-12 — step 11 checkpointed · bc39ce348 — docs(decisions): record the citation convention and the gate profile (41m)
 - 2026-08-12 — step 14 checkpointed · 50bd46c80 — chore(gate): install the prose slot and point its exemplars at the voice folder (1 drift, 21m)
+- 2026-08-12 — step 15 checkpointed · 82c893389 — docs(agents): bridge AGENTS.md into Claude Code with a CLAUDE.md import (6m)

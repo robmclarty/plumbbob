@@ -124,7 +124,7 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
     writeFileSync(settingsPath(root), `${JSON.stringify({}, null, 2)}\n`)
   }
 
-  // `--local` keeps a fully-untracked flat layout (the whole `.plumbbob/`
+  // `--local` keeps a fully untracked flat layout (the whole `.plumbbob/`
   // git-excluded); the default plants a tracked `builds/<slug>/` folder — the
   // build's record (intent, build-log, checkpoints) rides its branch into the
   // PR — and git-excludes only the per-worktree control files. The slug is
@@ -197,7 +197,7 @@ function datedSlug(title: string): string {
 }
 
 /**
- * Read the value that follows a `--flag` in argv (e.g. `--slug my-build`), or
+ * Read the value that follows a `--flag` in argv (for example `--slug my-build`), or
  * undefined when the flag is absent or trails with no value.
  */
 function flagValue(args: ReadonlyArray<string>, flag: string): string | undefined {

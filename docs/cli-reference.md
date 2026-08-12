@@ -46,7 +46,7 @@ the cursor's build only.
 Every verb answers `--help` (or `-h`) with its own synopsis, arguments, and flags —
 `plumbbob checkpoint --help`, or equivalently `plumbbob help checkpoint`. The flags a verb
 declares are the only ones it accepts: an unrecognized flag is a refusal (exit 1), never a
-silently-ignored token, so a typo cannot fall through into a commit. `turn` and `park` are the
+silently ignored token, so a typo cannot fall through into a commit. `turn` and `park` are the
 two exceptions to the refusal — `turn` is a hook that must never wedge a prompt, and `park`'s
 argument is free text.
 
@@ -68,7 +68,7 @@ exactly "all defaults", since absent `check` already means checkride is the gate
 yours once it exists, so a re-start never touches it — and the untracked
 `STATE` sentinel — whose content is the active-build cursor, pointed at the new build ([**D28 (state-cursor)**](decisions.md#d28)) — and narrows the
 repo's `info/exclude` to the control-plane patterns ([**D17 (two-planes)**](decisions.md#d17)/[**D26 (build-folders)**](decisions.md#d26)). `--local` opts out into
-the old fully-untracked flat layout — everything under `.plumbbob/` excluded ([**D26 (build-folders)**](decisions.md#d26)).
+the old fully untracked flat layout — everything under `.plumbbob/` excluded ([**D26 (build-folders)**](decisions.md#d26)).
 Refuses (exit 1) on an empty title, a slug that collides with an existing build, a non-git
 directory, a repo with no commits, an already-active session, or a dirty tree —
 `--allow-dirty` overrides the dirty-tree refusal and records the current `HEAD` as the
@@ -138,7 +138,7 @@ both; [`../CONTRIBUTING.md`](../CONTRIBUTING.md) describes the pair.
 
 Exits with the check's code: **0** green, **1** red — including a run where every slot
 skipped, which refuses rather than passing vacuously — and **2** when the gate itself
-broke (e.g. a malformed `checkride.config.json`). Refuses (exit 1) with no session.
+broke (for example a malformed `checkride.config.json`). Refuses (exit 1) with no session.
 
 ### checkpoint
 
@@ -271,7 +271,7 @@ commit (subject `chore(<scope>): finish`, mirroring the step-checkpoint Conventi
 leads with a `plumbbob finish` marker, then an optional `--body` heredoc), and clears
 the control state (`STATE`, the cursor, the in-flight markers). No separate archive copy — the
 tracked build folder already *is* the record and merges into `main` with the branch, so it
-rides into the PR ([**D26 (build-folders)**](decisions.md#d26)). There is **no** refuse-without-report gate. Refuses (exit 1) only
+rides into the PR ([**D26 (build-folders)**](decisions.md#d26)). **No** refuse-without-report gate stands in the way. Refuses (exit 1) only
 with no session.
 
 ### turn
@@ -405,7 +405,7 @@ stays git-excluded; a session is live iff `STATE` is present.
 
 Which build a verb acts on resolves `--build <slug>` → the active-build cursor in `STATE` → the sole
 build in `builds/` → a refusal with a hint ([**D28 (state-cursor)**](decisions.md#d28)). `plumbbob start --local` opts back into
-the old fully-untracked flat layout — `intent.md`/`build-log.md`/`checkpoints` at the sidecar
+the old fully untracked flat layout — `intent.md`/`build-log.md`/`checkpoints` at the sidecar
 root, the whole `.plumbbob/` excluded — for repos that will not track tool folders ([**D26 (build-folders)**](decisions.md#d26)).
 A repo scaffolded by a pre-restructure plumbbob keeps that legacy flat layout until
 `plumbbob doctor --migrate` moves it here ([**D31 (doctor-migrate)**](decisions.md#d31)).
@@ -449,8 +449,8 @@ contributes nothing rather than wedging the tool.
 - **1** — a refusal or failure: a guard tripped (no session, a step in flight, bad
   argument), a red check, or an unknown verb. `check` propagates the underlying command's
   non-zero code.
-- **2** — the gate itself broke ([**D32 (checkride-gate)**](decisions.md#d32)): checkride couldn't run at all (e.g. a
-  malformed `checkride.config.json`). Fix the harness before trusting green or red.
+- **2** — the gate itself broke ([**D32 (checkride-gate)**](decisions.md#d32)): checkride couldn't run at all (for
+  example a malformed `checkride.config.json`). Fix the harness before trusting green or red.
 
 ## See also
 

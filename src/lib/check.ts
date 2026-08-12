@@ -86,7 +86,7 @@ const ALWAYS_ON_ADAPTERS: ReadonlyArray<string> = [
 
 /**
  * The detection rule, shared by `start`'s probe and doctor's callout: some
- * tool slot beyond the always-on family has an adapter — i.e. checkride can
+ * tool slot beyond the always-on family has an adapter — that is, checkride can
  * see the CODE (a tsconfig, a test runner, a linter…), not just the repo.
  */
 export function gateDetectsTools(checks: ReadonlyArray<DoctorCheck>): boolean {

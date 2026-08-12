@@ -101,7 +101,7 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
  *
  * The scope resolves through the same build-default fallback chain as the plan
  * and step subjects: the intent.md `**Scope:**` header field, else the build
- * slug, else bare (e.g. `--local`). The `plumbbob finish` identifier rides the
+ * slug, else bare (for example `--local`). The `plumbbob finish` identifier rides the
  * body marker, not the subject.
  */
 function subject(root: string, slug: string | null): string {

@@ -81,7 +81,7 @@ the line, and waits for you to advance it. **You are the clock.**
 
 ## Install
 
-PlumbBob installs **once, globally** — like `gh` or your dotfiles. There are two ways;
+PlumbBob installs **once, globally** — like `gh` or your dotfiles. Two ways work;
 pick one (both register a Claude Code plugin named `plumbbob`, so running both
 collides).
 
@@ -124,7 +124,7 @@ In Claude Code, inside any git repo with a clean tree:
    (The check gate is [checkride](https://www.npmjs.com/package/checkride) — one
    run across the tools your repo already configures: types, lint, tests, dead
    code, docs. To gate through your own command instead, set the `"check"` key in
-   `.plumbbob/settings.json`, e.g. `"check": "npm test"`.)
+   `.plumbbob/settings.json`, for example `"check": "npm test"`.)
 3. **Approve** — or send fixes. On your OK it commits the step as a checkpoint, marks
    it done, and returns to the boundary. Fire `/plumbbob:build` again for the next step —
    re-firing it *is* the clock tick. Whenever you lose the thread, `/plumbbob:status` shows

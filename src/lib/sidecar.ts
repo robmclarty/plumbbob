@@ -660,7 +660,7 @@ export function excludeControl(root: string): void {
 }
 
 /**
- * `start --local`: opt out of the tracked layout into a fully-untracked sidecar —
+ * `start --local`: opt out of the tracked layout into a fully untracked sidecar —
  * some team repos won't accept tool folders in-tree.
  *
  * Excludes the whole `.plumbbob/` directory.
@@ -694,7 +694,7 @@ function hasExclude(root: string, pattern: string): boolean {
  * which would sweep the unexcluded file into the commit and ride it into the PR.
  * Idempotent, so the common path is one read and no write.
  *
- * A fully-untracked sidecar is already covered by its blanket `.plumbbob/` line;
+ * A fully untracked sidecar is already covered by its blanket `.plumbbob/` line;
  * layering the narrow patterns underneath would only add noise, so skip it. That
  * check reads info/exclude rather than the cursor because a null cursor means
  * "`--local` OR no build named" — and calling excludeSidecar on the tracked

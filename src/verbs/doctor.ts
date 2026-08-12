@@ -60,7 +60,7 @@ export type GateEnv = NonNullable<Parameters<typeof runDoctor>[0]['env']>
 type Check = { readonly ok: boolean; readonly label: string; readonly fix?: string }
 
 /**
- * Resolve a directory shipped inside the plumbbob package (e.g. its skills/).
+ * Resolve a directory shipped inside the plumbbob package (for example its skills/).
  *
  * Resolved off this module's URL so it lands the same from src/ (dev) and
  * dist/ (published).
@@ -388,7 +388,7 @@ function commandTokens(command: string, agentDir: string): string[] {
 
 /**
  * Statically check a manifest `command` for the silent footguns: a script file that
- * does not exist, or a directly-invoked one missing its +x bit.
+ * does not exist, or a directly invoked one missing its +x bit.
  *
  * The command is a shell string spawned via `sh -c` with the repo root as cwd, so a
  * relative path resolves against `root` and PLUMBBOB_AGENT_DIR points at the agent's

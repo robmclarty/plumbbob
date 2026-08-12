@@ -128,7 +128,7 @@ straight to `/plumbbob:build`.
 ## 3. Build each step — `/plumbbob:build`, fired until done
 
 `/plumbbob:build` is the bundled executor. Called bare, **it picks the next undone step
-automatically** (pass a number only to jump, e.g. `/plumbbob:build 3`; a range like
+automatically** (pass a number only to jump, for example `/plumbbob:build 3`; a range like
 `/plumbbob:build 1-3` auto-approves through step 3, then pauses). It reads the step's
 done-when, seam, Decisions, and Constraints, implements *only that step*, then carries
 straight through the verify tick to the pause.
@@ -307,7 +307,7 @@ Done. All three steps checkpointed and green.
 Then `plumbbob finish` appends the checkpoint SHAs to the report, makes the final commit
 (subject `chore(rate-limit-the-login-endpoint): finish`, with a `plumbbob finish` body marker),
 and clears the control state (`STATE`, the cursor,
-the in-flight markers). There's no separate archive copy — the tracked build folder *is*
+the in-flight markers). It writes no separate archive copy — the tracked build folder *is*
 the record now, so it merges into `main` with the branch:
 
 ```text

@@ -9,9 +9,9 @@
 // human summary on stderr, lands `parked[]` through the build-log, and appends
 // the envelope to the handoff ledger (`builds/<slug>/handoff.json` — untracked,
 // step-scoped, cleared at checkpoint) so later runs can thread it back in.
-// There is deliberately no code path here to checkpoint, flip a step, or chain
-// agents — the subprocess boundary keeps the human as the clock by
-// construction, not by policy. A thin read-write shell: resolution,
+// No code path here can checkpoint, flip a step, or chain agents, and that
+// absence is deliberate — the subprocess boundary keeps the human as the clock
+// by construction, not by policy. A thin read-write shell: resolution,
 // composition, and spawn mechanics live in lib/agents.ts.
 
 import { readFileSync, writeFileSync } from 'node:fs'

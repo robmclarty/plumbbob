@@ -1,7 +1,7 @@
 # Install
 
-PlumbBob installs **once, globally** — like `gh` or your dotfiles. There are two
-co-equal, mutually-exclusive ways to do it (both register a Claude Code plugin named
+PlumbBob installs **once, globally** — like `gh` or your dotfiles. Two co-equal,
+mutually exclusive ways install it (both register a Claude Code plugin named
 `plumbbob`; running both collides over the `/plumbbob:*` namespace). The
 [README](../README.md#install) shows the quick form of each; this page is the full
 reference.

@@ -5,8 +5,8 @@ diff, not who wrote it*, so a step's code can come from you, from `/plumbbob:bui
 session, or from another harness entirely. This page is the contract for that last case —
 the **doorway** a user-authored agent speaks to plug into the loop. An agent here is
 **anything executable** that speaks one versioned JSON envelope: a program on disk, a
-manifest that names it, and a plan artifact that binds it to a step. There is no SDK to
-import and no language to adopt — a twelve-line bash script is a complete agent.
+manifest that names it, and a plan artifact that binds it to a step. The contract needs no
+SDK and no particular language — a twelve-line bash script is a complete agent.
 
 The rest of the docs are for driving PlumbBob. This one is for *extending* it. If you only
 want to run the loop, you never need this page; the [skills](skills-reference.md)
@@ -194,7 +194,7 @@ and only three ([**D43 (three-slots)**](decisions.md#d43)):
 - **`build`** — authors the step's diff in your place (still verified the same way — [**D3 (author-blind-executor)**](decisions.md#d3)).
 - **`after`** — runs at the verify pause as **advisory** review; it informs, never gates.
 
-There is deliberately no fourth slot — no declarative format can name "a salient point in the
+A fourth slot is deliberately absent — no declarative format can name "a salient point in the
 middle of the work" ([**D43 (three-slots)**](decisions.md#d43)). That's judgment, and it's handled in *prose* (a manifest's
 `when`, a step's `note`) by the host model, not by config.
 
@@ -239,7 +239,7 @@ the envelope in the step's **handoff ledger** (`builds/<slug>/handoff.json` — 
 step-scoped, cleared when the step checkpoints, [**D47 (handoff-ledger)**](decisions.md#d47)) so a later `agent run` or a
 context-compacted session can thread earlier envelopes back into `context[]`. It re-emits the
 validated envelope on **its own stdout** (machine, for the calling skill) with the human
-summary on stderr. There is **no** code path here to checkpoint, flip a step, or chain agents
+summary on stderr. **No** code path here can checkpoint, flip a step, or chain agents
 ([**C6 (no-advance-verb)**](decisions.md#c6)).
 
 ### Fail loud vs degrade soft

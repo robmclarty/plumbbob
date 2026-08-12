@@ -83,7 +83,7 @@ the commit yourself.
 
 ### `status` shows `NO ACTIVE SESSION`
 
-**Cause.** There is no `.plumbbob/STATE` in this repo — install scope is not session scope.
+**Cause.** This repo holds no `.plumbbob/STATE` — install scope is not session scope.
 **Fix.** Start a session here: `/plumbbob:plan` (or `plumbbob start "<goal>"`). Sessions are
 **per-project** — each repo gets its own `.plumbbob/` sidecar.
 
@@ -161,7 +161,7 @@ block. **Fix.** Repair the config (or set a `"check"` override) and re-run.
 
 **Cause.** A `"check"` key in the settings ladder overrides checkride and is spawned
 verbatim ([**D24 (configurable-check)**](decisions.md#d24)). **Fix.** Set the `"check"` key in `.plumbbob/settings.json` to your
-command (e.g. `"check": "npm test"`), remove it to gate through checkride, or override it
+command (for example `"check": "npm test"`), remove it to gate through checkride, or override it
 per-worktree in `settings.local.json` ([**D27 (settings-ladder)**](decisions.md#d27)). The command is run in the repo root via
 a shell.
 

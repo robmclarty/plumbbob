@@ -60,7 +60,7 @@ branch.
 | `.plumbbob/STATE` | Session sentinel — its *presence* means a session is live — and its content is the active-build cursor ([D28 (state-cursor)](decisions.md#d28): the cursor lives in STATE, not settings) | `start` | `finish` |
 | `.plumbbob/TURN` | Monotonic count of human turns in this repo | the `UserPromptSubmit` hook | never (it's a counter) |
 | `.plumbbob/GRANT` | A one-turn self-approval, minted only when *you* typed `/build --auto` or a step range | the same hook | the next turn |
-| `.plumbbob/settings.local.json` | Your personal settings overlay (e.g. `{"auto": true}`) | you, by hand | you |
+| `.plumbbob/settings.local.json` | Your personal settings overlay (for example `{"auto": true}`) | you, by hand | you |
 | `builds/<slug>/STEP` | The step number in flight — its presence *is* the BUILD phase | `build` | `checkpoint` |
 | `builds/<slug>/SEAM` | The step's declared paths, one per line (awareness, not a lock) | `build` | `checkpoint` |
 | `builds/<slug>/SPIKE` | Marker: a spike fork is open | `spike` | `spike done` |
@@ -76,7 +76,7 @@ and a stamp file are the entire implementation. Delete them and the latch reads 
 dormant" and stands down — it fails open, it never wedges.
 
 Phase is **derived, not stored**: SPIKE present ⇒ SPIKE, STEP present ⇒ BUILD, otherwise
-DESIGN. There is no status field to get out of sync with reality, which is why these are
+DESIGN. No status field exists to drift out of sync with reality, which is why these are
 mostly empty marker files rather than a state blob.
 
 ## How the ignoring works
@@ -137,7 +137,7 @@ machine. It's untracked by construction — git will not let you commit it — s
 no CI run, and no push is affected by what's in it.
 
 The write is append-only and idempotent. PlumbBob adds the patterns that are missing and
-leaves every other line alone, including yours. There is exactly one place it *removes* a
+leaves every other line alone, including yours. Exactly one place *removes* a
 line — `doctor --migrate`, dropping the legacy blanket `.plumbbob/` exclude from an old
 flat-layout repo so the build folders can become trackable — and it only ever removes its
 own line.

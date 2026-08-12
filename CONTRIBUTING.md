@@ -45,10 +45,10 @@ plumbbob's one runtime dependency), which runs the tools this repo configures, i
 Raw tool output lands in `.check/` (`summary.json` is the index). Narrow the loop while
 iterating: `pnpm check --bail`, `pnpm check --only types,lint`. An opt-in `mutation` slot
 (Stryker) audits test quality — `pnpm check --include mutation` — and is kept out of the
-default gate so the loop stays fast. There is no CI yet —
+default gate so the loop stays fast. This repo has no CI yet —
 **run `pnpm check` locally** before opening a pull request.
 
-**There is a second, faster gate, and it is not this one.** checkride's Stop hook runs at
+**A second gate runs faster, and it is not this one.** checkride's Stop hook runs at
 the end of every turn that touched a file, under the narrowed profile in
 `checkride.config.json`'s `gate` key — everything above except `test`, back in about two
 seconds. It catches a broken build while you are still in the conversation that broke it;
@@ -97,7 +97,7 @@ not reach, are [**D74 (glossed-citations)**](docs/decisions.md#d74).
 
 The layout encodes intent — match it when you add tests:
 
-- **Unit tests** sit in a `__tests__/` folder **next to the module they cover** (e.g.
+- **Unit tests** sit in a `__tests__/` folder **next to the module they cover** (for example
   `src/lib/__tests__/git.test.ts`). Verbs are pure `(cwd, args) => number` functions, so
   they unit-test in-process.
 - **Multi-module tests** live under `test/` in labeled folders: `test/integration/` (tests
@@ -122,9 +122,9 @@ naturally. If you change a verb's behavior or output, update
 ## Commits and releases
 
 - **Conventional commits.** Use `type(scope): summary` — `feat`, `fix`, `refactor`, `docs`,
-  `chore`, `test`, `build`, etc. Keep the summary in the imperative mood. The repo's history
-  is the style reference.
-- **TIL lines (optional).** This repo records genuine learnings as a `TIL:` line in the
+  `chore`, `test`, `build`, and so on. Keep the summary in the imperative mood. The repo's
+  history is the style reference.
+- **TIL lines (optional).** This repo records genuine lessons as a `TIL:` line in the
   commit body — use one when a change taught you something non-obvious, skip it otherwise.
 - **Releases.** Versioning follows semver with a Keep a Changelog `CHANGELOG.md`; the
   in-repo `/version` skill bumps `package.json` and adds the changelog entry. Don't bump the

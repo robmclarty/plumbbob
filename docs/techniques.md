@@ -239,7 +239,7 @@ the design.
 
 ## Position is derived, not stored
 
-There is no stored state machine. The phase the dashboard shows is *derived* from what is
+PlumbBob stores no state machine. The phase the dashboard shows is *derived* from what is
 on disk:
 
 - **DESIGN** — at a boundary: planning, reviewing, or between steps (no step in flight).
@@ -286,7 +286,7 @@ default** — what shipped, the decisions and why, what was parked and how it wa
 the final status, and the deferred tangents that become future work — but there is **no
 refuse-without-report gate**; guidance offers the artifact, it does not wall the exit. Then
 `plumbbob finish` appends the checkpoint SHAs to the report, makes the final commit (subject
-`chore(<scope>): finish`), and clears the control state. There is **no separate archive
+`chore(<scope>): finish`), and clears the control state. It writes **no separate archive
 copy** — the build's `builds/<slug>/` folder is tracked, so it merges into `main` with the
 branch and rides into the PR (the local-only `.plumbbob/archive/` retired).
 

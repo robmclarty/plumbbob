@@ -11,7 +11,7 @@ import type { Step } from './orient.ts'
 
 /**
  * Append `line` after the last non-blank line of the `## <heading>` section —
- * i.e. just before the next `## ` heading or EOF.
+ * that is, just before the next `## ` heading or EOF.
  *
  * Returns null when the section is absent so the caller can report rather than
  * silently corrupt the doc.
@@ -101,7 +101,7 @@ function isMirrorLine(line: string): boolean {
  *
  * One line of the build's history — `/plumbbob:finish` reads these instead of
  * re-narrating the build. `stats` is the optional compact receipt of what the
- * step cost (e.g. `2 red, 34m`) — null when nothing accrued, so a clean
+ * step cost (for example `2 red, 34m`) — null when nothing accrued, so a clean
  * first-try step reads as a bare line.
  */
 export function checkpointLogLine(

@@ -52,7 +52,7 @@ references to land on — then cite it from anywhere else in this file as
 Anchor and slug them at birth too — cited as `[C1 (no-new-deps)](#c1)` — same one line,
 same rule.)*
 
-- <a id="c1"></a>**C1 (no-new-deps)**: <e.g. functional/procedural only; no new dependencies>
+- <a id="c1"></a>**C1 (no-new-deps)**: <for example functional/procedural only; no new dependencies>
 
 ## Steps
 
@@ -75,7 +75,7 @@ auto-syncs it), and use `/plumbbob:refine` to repair the whole plan when a block
 
 1. [ ] feat: <step> — **done when:** <criterion, ideally a test or check result>
    - seam: `<file>`, `<file>`
-   - model: <smallest that can carry it, e.g. sonnet — mechanical, fully specified>
+   - model: <smallest that can carry it, for example sonnet — mechanical, fully specified>
 2. [ ] <step> — **done when:** <criterion>
    - seam: `<file>`
 

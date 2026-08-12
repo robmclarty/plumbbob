@@ -826,7 +826,7 @@ export function runAgent(params: {
       stdout += chunk.toString()
     })
 
-    // A shell that never launched (e.g. `sh` itself missing) — distinct from a
+    // A shell that never launched (for example `sh` itself missing) — distinct from a
     // command that ran and exited non-zero, which arrives on `close`.
     child.on('error', (err: Error) => {
       finish({ ok: false, reason: 'spawn', error: err.message })

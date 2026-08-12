@@ -67,7 +67,7 @@ function resolveSetting(root: string, key: string, flag: unknown): unknown {
 }
 
 /**
- * Resolve a string setting (e.g. `check`).
+ * Resolve a string setting (for example `check`).
  *
  * A missing rung, or one holding a non-string / blank value, yields the
  * caller's fallback rather than gating on garbage.
@@ -78,7 +78,7 @@ export function resolveString(root: string, key: string, fallback: string, flag?
 }
 
 /**
- * Resolve a boolean setting (e.g. `auto`). A missing or non-boolean rung
+ * Resolve a boolean setting (for example `auto`). A missing or non-boolean rung
  * yields the caller's fallback.
  */
 export function resolveBoolean(root: string, key: string, fallback: boolean, flag?: boolean): boolean {
@@ -87,7 +87,7 @@ export function resolveBoolean(root: string, key: string, fallback: boolean, fla
 }
 
 /**
- * Resolve a non-negative integer setting (e.g. `agentTimeout`).
+ * Resolve a non-negative integer setting (for example `agentTimeout`).
  *
  * A missing rung, or one holding a non-finite / negative / non-integer number,
  * yields the caller's fallback rather than a garbage timeout — 0 means "no
@@ -99,7 +99,7 @@ export function resolveNumber(root: string, key: string, fallback: number, flag?
 }
 
 /**
- * Resolve an object-valued setting (e.g. the `agents` slot-binding defaults)
+ * Resolve an object-valued setting (for example the `agents` slot-binding defaults)
  * across the same ladder.
  *
  * The first defined, object-typed rung wins; a missing rung, or one holding a

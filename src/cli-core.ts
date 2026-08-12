@@ -6,7 +6,7 @@
 //
 // The deciding/executing boundary is a pause, not a lock, so there is nothing
 // to defend in the dispatcher — every verb runs the same whether a human or the
-// model triggers it. There is no human-only `mode` escape hatch and no
+// model triggers it. No human-only `mode` escape hatch exists and no
 // CLAUDECODE in-session refusal; what keeps the human the decider is the pause
 // at the step boundary (the skills), not a refusal here.
 

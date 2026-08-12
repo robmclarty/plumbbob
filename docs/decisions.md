@@ -6,11 +6,11 @@ PlumbBob's design history is recorded as numbered decisions (`D`) and hard const
 its own instead of sending you hunting ([**D74 (glossed-citations)**](#d74), which records
 how the rendering changes by surface and which slot of the gate enforces it). The
 code comments state each rule's *why* in plain language and do not cite these tags; the
-tags still appear in a few places a reader can hit — some CLI output lines (e.g. the
+tags still appear in a few places a reader can hit — some CLI output lines (for example the
 latch's settings-`auto` note), some test titles, and the research notes under
 `research/`. This page is the key: it defines each tag and its slug.
 
-Some numbers (e.g. `D2`, `D5`, `D11`, `D12`, `D21`) belonged to superseded decisions
+Some numbers (`D2`, `D5`, `D11`, `D12`, `D21` among them) belonged to superseded decisions
 and are no longer referenced. (A build's *own* `intent.md` numbers its decisions from `D1`
 locally — comments citing a build-local number are renumbered to this key when the work
 lands; [**D33 (info-exclude)**](#d33)–[**D38 (cli-owns-slugs)**](#d38) below came in that way from the July 2026 worktree restructure,
@@ -103,7 +103,7 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   edit is ever blocked — but the checkpoint *tick* is now latched to the harness's record of a human
   turn, so a same-turn land is refused and the refusal *is* the pause. Guidance on the work, a latch on
   the record. *Tagged in* `cli-core.ts`, `latch.ts`.
-- <a id="d13"></a>**D13 (no-edit-guards) — No edit-blocking guards.** There is no pre-edit muzzle, seam-guard, or bash-guard,
+- <a id="d13"></a>**D13 (no-edit-guards) — No edit-blocking guards.** No pre-edit muzzle, seam-guard, or bash-guard stands anywhere,
   no human-only `mode` escape hatch, and no `CLAUDECODE` in-session refusal — guidance, not
   enforcement. `rules/no-session-detection.yml` is the tripwire: `process.env.CLAUDECODE`
   doesn't compile. *Tagged in* `cli-core.ts`.
@@ -146,7 +146,7 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   but stay excluded. `revert` snapshots the folder to a temp dir and restores it after the
   `reset --hard`, so a rewind never destroys tracked park lines even when reverting to a
   baseline that predates the folder ([**C4 (never-destroy)**](#c4)). `start --local` opts back into the old
-  fully-untracked flat layout for repos that will not track tool folders. *Tagged in*
+  fully untracked flat layout for repos that will not track tool folders. *Tagged in*
   `sidecar.ts`, `start.ts`, `revert.ts`.
 - <a id="d27"></a>**D27 (settings-ladder) — The settings ladder replaces `config`.** A setting resolves flag →
   `settings.local.json` (untracked personal overlay) → `settings.json` (tracked project
@@ -336,7 +336,7 @@ below.)
   precisely because seams gate git behavior ([**D23 (no-glob-seams)**](#d23)). *Tagged in* `intent.ts`, `agents.ts`.
 - <a id="d62"></a>**D62 (model-recommendation) — A step's model recommendation is advisory metadata.** An optional
   `- model:` sub-line beside the seam names the **smallest model that can carry the step**, with
-  the one-phrase why (mechanical, fully-specified work → a small model; strong-assertion test
+  the one-phrase why (mechanical, fully specified work → a small model; strong-assertion test
   authoring → a mid one; subtle, creative, or cross-cutting work → a frontier one) — the human
   buys capability only where the step needs it. Scraped best-effort like the other step meta
   ([**D61 (best-effort-scrape)**](#d61)) and surfaced by `status` in the next step's detail; orientation for the human
@@ -386,7 +386,7 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   ([**C5 (additive-git)**](#c5)); a raw `git commit` the model issues while a step is in flight becomes a permission
   *question* (a `PreToolUse` ask-hook that emits `ask`, never `deny` — [**D13 (no-edit-guards)**](#d13) intact), and
   `status` prints one neutral reconciliation line when commits landed since the last checkpoint outside
-  the ledger — *because* prevention where it's free (the ask-hook), detection where it isn't (the
+  the ledger — *because* prevention where it's free (the `ask`-hook), detection where it isn't (the
   receipts line). The latch is a ratchet against completion-drive, not a cage against a forger: every
   forge stays loud (transcript, `status`, the eval tier), so `doctor` also reports the latch
   live/dormant to make a missing turn hook visible. *Tagged in* `git.ts`, `orient.ts`, `status.ts`,

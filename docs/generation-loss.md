@@ -95,8 +95,8 @@ But a template is a prompt wearing a filename. Every intent.md inherited the
 voice. Every session that touched the package read that voice as the house
 style and matched it — then leaned a notch further, the way a copy leans into
 the previous copy's lean. Over months of the tool being used to build itself,
-the dialect thickened: verbs pressed into service as nouns ("the ask," "the
-build," "the lift"), nouns conscripted as verbs ("to action," "to solution"),
+the dialect thickened: verbs pressed into service as nouns (`the ask`, `the
+build`, `the lift`), nouns conscripted as verbs (`to action`, `to solution`),
 fresh nominalizations nobody has ever said aloud. It compounded until the
 tool's own output — plan prose, status lines, refreshed docs — was genuinely
 harder to parse: a caricature of startup English at generation forty, the Rock
@@ -142,10 +142,10 @@ Three bodies of it, from three directions, in agreement.
 - **Liang et al., ICML 2024** — an estimated
   [6.5–16.9% of peer-review text](https://arxiv.org/abs/2403.07183) at major
   ML conferences was substantially LLM-modified; in ICLR 2024 reviews,
-  "commendable," "meticulous," and "intricate" spiked 9.8×, 34.7×, and 11.2×.
+  `commendable`, `meticulous`, and `intricate` spiked 9.8×, 34.7×, and 11.2×.
 - **Kobak et al., *Science Advances*, 2025** — at least
   [13.5% of 2024 PubMed abstracts](https://arxiv.org/abs/2406.07016) show LLM
-  processing; "delves" ran at 28× its expected rate. The fingerprint is now in
+  processing; `delves` ran at 28× its expected rate. The fingerprint is now in
   the corpus the next models will train on.
 - **Juzek & Ward, COLING 2025** — the overused vocabulary is
   [best explained by human-feedback tuning](https://aclanthology.org/2025.coling-main.426/),
@@ -218,7 +218,7 @@ Three bodies of it, from three directions, in agreement.
   "the natural behaviour of AI models is to give you the median answer."
 - **The tells, catalogued by exasperation** —
   ["I'm tired of formulaic, 'LLM house style' Show HN submissions"](https://news.ycombinator.com/item?id=44780249):
-  the ubiquitous em-dash, "It's not just X — it's Y," bullet lists that don't
+  the ubiquitous em-dash, `It's not just X — it's Y`, bullet lists that don't
   reduce what you have to read. And
   [tropes.md](https://tropes.fyi/tropes-md), a crowd-maintained file of forty-plus
   LLM writing tropes — meant to be pasted into system prompts, so the fix for

@@ -36,9 +36,8 @@
         "templates"
       ],
       "exemplars": "docs/voice",
-      "optIn": true,
       "description": "Vale over the prose we own and can edit (docs, README, src doc comments); voice anchored to docs/voice/",
-      "note": "Two narrowings, both deliberate. (1) The path list replaces the adapter's bare `.`: vale reads no .gitignore and skips no hidden directory, so `.` would sweep node_modules/, dist/, and the two record surfaces nothing may rewrite, CHANGELOG.md and .plumbbob/builds/. `skills/` is the one owned path left out, and not by choice: vale parses markdown frontmatter as YAML, every SKILL.md description carries an unquoted colon, and one E201 abandons the entire run. Parked, not forgotten. (2) `optIn: true` holds the slot out of the default run until its first findings are burned down by hand, which is the next planned step. The findings are fixed, never baselined, and a red slot in the default run would refuse the very checkpoints that clean it up; the refs scanner above was staged the same way, authored first and wired last. Reach it meanwhile with `--only prose`.",
+      "note": "One narrowing, deliberate: the path list replaces the adapter's bare `.`, because vale reads no .gitignore and skips no hidden directory, so `.` would sweep node_modules/, dist/, and the two record surfaces nothing may rewrite, CHANGELOG.md and .plumbbob/builds/. `skills/` is the one owned path left out, and not by choice: vale parses markdown frontmatter as YAML, every SKILL.md description carries an unquoted colon, and one E201 abandons the entire run. Parked, not forgotten. The slot ran `optIn: true` until its first 59 findings were burned down by hand on 2026-08-11 (52 reworded; 7 were docs/generation-loss.md quoting the words these rules ban, now in code spans — a mention is not a use, and vale skips a code span the same way the refs scanner does). Nothing was baselined, and the slot now rides the default run and the fast turn gate like every other.",
       "order": 2
     },
 
