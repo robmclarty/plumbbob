@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — glossed decision links and the checkride 0.10 fast gate
 
-**Current step:** 17 — fix(cli): refuse --body when stdin cannot deliver one
+**Current step:** 18 — fix(intent): count an open question by its resolution marker, not a substring
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -39,7 +39,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 14. chore(gate): install the prose slot and point its exemplars at the voice folder
 - ☑ 15. docs(agents): bridge AGENTS.md into Claude Code with a CLAUDE.md import
 - ☑ 16. docs(prose): burn down the first prose run by hand
-- ☐ 17. fix(cli): refuse --body when stdin cannot deliver one
+- ☑ 17. fix(cli): refuse --body when stdin cannot deliver one
 - ☐ 18. fix(intent): count an open question by its resolution marker, not a substring
 
 ## Park list
@@ -184,3 +184,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-08-12 — step 14 checkpointed · 50bd46c80 — chore(gate): install the prose slot and point its exemplars at the voice folder (1 drift, 21m)
 - 2026-08-12 — step 15 checkpointed · 82c893389 — docs(agents): bridge AGENTS.md into Claude Code with a CLAUDE.md import (6m)
 - 2026-08-12 — step 16 checkpointed · 21b201d7d — docs(prose): burn down the first prose run by hand (22m)
+- 2026-08-12 — step 17 checkpointed · cb33b0e40 — fix(cli): refuse --body when stdin cannot deliver one (1 drift, 35m)

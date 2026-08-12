@@ -151,7 +151,7 @@ export function markStepDone(intent: string, n: number): string {
 
 /**
  * Count the questions still open: `- Q\d+:` openers under `## Open questions`
- * that do not say "resolved".
+ * that carry neither a resolution marker nor an unfilled scaffold body.
  *
  * The opener may carry a slug-at-birth gloss — `- Q2 (some-slug): ...` — and the
  * anchored form a citable question is born in:
@@ -159,11 +159,20 @@ export function markStepDone(intent: string, n: number): string {
  * reference site elsewhere in the file lands on. The count reads through both, and
  * through any mix of them a hand-edited intent leaves mid-build; sub-lines
  * (`*plain:*`/`*lean:*`) never match.
+ *
+ * Two rules settle the rest. "Resolved" counts as a marker only as a whole word, so
+ * a question whose opener still calls itself "unresolved" keeps counting; a bare
+ * substring read that as resolved and dropped a live hole off the dashboard. And an
+ * opener whose body has not been filled in yet, still opening on its `<...>`
+ * fill-in, is scaffold rather than a question, which is what makes a fresh build
+ * report zero rather than one.
  */
 export function parseOpenQuestions(intent: string): number {
-  return sectionLines(intent, '## Open questions').filter(
-    (l) => /^-\s+(?:<a id="[^"]*"><\/a>\s*)?\*{0,2}Q\d+(?: \([^)]+\))?\*{0,2}:/.test(l.trim()) && !/resolved/i.test(l),
-  ).length
+  const opener = /^-\s+(?:<a id="[^"]*"><\/a>\s*)?\*{0,2}Q\d+(?: \([^)]+\))?\*{0,2}:\s*(.*)$/
+  return sectionLines(intent, '## Open questions').filter((l) => {
+    const body = opener.exec(l.trim())?.[1]
+    return body !== undefined && !/\bresolved\b/i.test(l) && !/^<[^>]*>/.test(body)
+  }).length
 }
 
 /**

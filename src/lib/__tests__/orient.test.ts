@@ -257,6 +257,37 @@ describe('orient parsers', () => {
     expect(parseOpenQuestions(intent)).toBe(4) // Q1–Q4 open; Q5 resolved
   })
 
+  it('parseOpenQuestions counts an opener that calls itself "unresolved" (the marker is a whole word)', () => {
+    // The malign half of the substring test: a bare /resolved/ matches inside
+    // "unresolved", so a hole the human deliberately marked as still open read as
+    // settled and left the dashboard. The word boundary is what keeps it visible,
+    // and it still drops every shape a real marker wears.
+    const intent = [
+      '## Open questions',
+      '',
+      '- <a id="q1"></a>**Q1 (transport-default)**: still unresolved after the spike — *resolve by:* decide',
+      '- Q2: unresolved, and unslugged, and still a hole',
+      '- Q3: *resolved:* 2026-08-11, native',
+    ].join('\n')
+    expect(parseOpenQuestions(intent)).toBe(2) // Q1, Q2 open; Q3 resolved
+  })
+
+  it('parseOpenQuestions drops an opener whose body is still an unfilled `<...>` fill-in', () => {
+    // The scaffold rule, stated rather than inherited: a placeholder body counts as
+    // nothing because it is unfilled, not because the word "unresolved" happens to
+    // contain "resolved". Note that this fixture carries no "resolved" token at all,
+    // so it can only pass by the rule. The rule reads the START of the body, which is
+    // what leaves a real question free to mention angle brackets further along.
+    const intent = [
+      '## Open questions',
+      '',
+      '- <a id="q1"></a>**Q1 (slug-here)**: <the hole, framed as a question> — *resolve by:* decide',
+      '  - *plain:* <what is at stake, in plain words>',
+      '- Q2: does a bare `<name>` belong in the seam? — *resolve by:* decide',
+    ].join('\n')
+    expect(parseOpenQuestions(intent)).toBe(1) // Q1 is scaffold; Q2 is a real question
+  })
+
   it('the real templates/intent.md parses to an open-question count of 0 (the placeholder is uncounted)', () => {
     // The scaffolded Q1 placeholder must never read as an open question — a fresh
     // build showing "open questions 1" would be shipped noise.

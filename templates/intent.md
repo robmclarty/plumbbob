@@ -106,7 +106,14 @@ OPENER LINE, e.g.
   - <a id="q3"></a>**Q3 (default-waves)**: *resolved:* 2026-07-18, default off
 
 The status counter reads opener lines only, so a *resolved:* left on a *plain:* or
-*lean:* sub-line leaves the question still counted as open.
+*lean:* sub-line leaves the question still counted as open
+([D76 (resolved-on-opener)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d76)).
+It reads "resolved" as a whole word, so an opener that still calls itself
+"unresolved" keeps counting. The scaffolded Q1 below stays uncounted for as long as
+its body is unfilled, still opening on its `<...>` fill-in, which is how a fresh
+build reports zero open questions
+([D77 (placeholder-uncounted)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d77));
+fill it in and it counts.
 
 Size to the work: a tiny build's single, obvious question may stay one bare line —
 the *plain:*/*lean:* pair earns its keep only when a human decision genuinely waits

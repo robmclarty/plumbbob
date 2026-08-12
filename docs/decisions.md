@@ -15,7 +15,9 @@ and are no longer referenced. (A build's *own* `intent.md` numbers its decisions
 locally — comments citing a build-local number are renumbered to this key when the work
 lands; [**D33 (info-exclude)**](#d33)–[**D38 (cli-owns-slugs)**](#d38) below came in that way from the July 2026 worktree restructure,
 [**D71 (visible-reconcile)**](#d71)–[**D73 (subject-length-soft)**](#d73) from the July 2026 commit-subjects build,
-and [**D74 (glossed-citations)**](#d74)–[**D75 (two-gates)**](#d75) from the 2026-07-31 citations build.)
+[**D74 (glossed-citations)**](#d74)–[**D75 (two-gates)**](#d75) from the 2026-07-31 citations build, and
+[**D76 (resolved-on-opener)**](#d76)–[**D77 (placeholder-uncounted)**](#d77) from the 2026-07-18
+intent-legibility build.)
 
 ## Constraints (C)
 
@@ -544,6 +546,30 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   Promoted from the 2026-07-31 citations build, merging its locals `skip-test-profile`,
   `checkpoint-is-the-full-check`, `this-repo-takes-the-hook`, and `two-planes-two-gates`. *Tagged in*
   `checkride.config.json`, `.claude/settings.json`, `CONTRIBUTING.md`, `docs/cli-reference.md`.
+
+- <a id="d76"></a>**D76 (resolved-on-opener) — A question resolves on its opener line, and "resolved" is read as
+  a whole word.** Swapping *resolve by:* for *resolved:* is what drops a question out of the open count, and
+  the swap has to land on the opener, because `parseOpenQuestions` reads opener lines and nothing else. That
+  is deliberate rather than incidental: a `*plain:*` or `*lean:*` sub-line discusses what happens once the
+  question resolves, so a counter that read the sub-lines would retire a live hole for talking about its own
+  future. The marker is matched as a whole word for the mirror-image reason. A bare substring matches inside
+  "unresolved", so an opener that said "still unresolved after the spike" read as settled and left the
+  dashboard silently, which is the one failure mode a count exists to prevent. Word boundaries cost nothing
+  here: of the 31 resolved openers in this repo's build history, 16 wear `*resolved:*`, 10 a bare
+  `resolved <date>`, 4 a trailing `resolved)`, and 1 a `resolved with...`, and all 31 still match. Promoted
+  from the 2026-07-18 intent-legibility build (local `resolved-on-opener`). *Tagged in* `templates/intent.md`.
+
+- <a id="d77"></a>**D77 (placeholder-uncounted) — The scaffolded question in a fresh intent counts as zero, by a
+  rule and not by accident.** Every new build starts from a template carrying one placeholder question, and a
+  dashboard that greeted it with "open questions 1" would be shipped noise: a counter that is never zero is a
+  counter nobody reads. So an opener whose body is unfilled, still opening on its `<...>` fill-in, is scaffold
+  rather than a question and does not count. The rule reads the start of the body only, which leaves a real
+  question free to mention angle brackets further along, and it generalizes past the current placeholder text
+  to any unfilled scaffold. What it replaces is an accident. The placeholder used to escape the count purely
+  because the word "unresolved" contains "resolved", and closing that hole in
+  [**D76 (resolved-on-opener)**](#d76) took the accident with it, which is why the rule had to be stated
+  outright in the same step. Promoted from the 2026-07-18 intent-legibility build (local
+  `placeholder-uncounted`). *Tagged in* `templates/intent.md`.
 
 ### Superseded
 
