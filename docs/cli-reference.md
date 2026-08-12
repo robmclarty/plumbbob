@@ -118,9 +118,10 @@ plumbbob check [--bail] [--changed] [--all] [--only a,b] [--skip a,b] [--include
 ```
 
 Runs the heavy gate with **no** state change ([**D16 (check-plus-self-review)**](decisions.md#d16) / [**D24 (configurable-check)**](decisions.md#d24) / [**D32 (checkride-gate)**](decisions.md#d32)). The gate is
-[checkride](https://www.npmjs.com/package/checkride), run in-process: each slot (types,
-lint, struct, dead, test, docs, links, spell) resolves to the tool the repo already
-configures, raw output lands in `.check/`, and a red run names the failing slots with
+[checkride](https://www.npmjs.com/package/checkride), run in-process: each slot —
+checkride's own set (`types`, `lint`, `struct`, `dead`, `test`, `docs`, `links`, …) plus
+any custom check the config declares — resolves to the tool the repo already configures,
+raw output lands in `.check/`, and a red run names the failing slots with
 their `.check/<slot>` pointers. A `check` key in the settings ladder
 (`settings.local.json` → `settings.json`, [**D27 (settings-ladder)**](decisions.md#d27)) overrides checkride with a shell
 command, spawned exactly as before — that is how non-checkride repos gate.
@@ -128,6 +129,12 @@ command, spawned exactly as before — that is how non-checkride repos gate.
 The flags narrow a checkride run for the iteration loop (`--bail --only types,lint`);
 they map straight onto checkride's own flags and are warned-and-ignored on the override
 path. `checkpoint`'s gate takes no flags — the commit gate is always the full run.
+
+That full run is the only gate plumbbob has. A repo may *also* install checkride's own
+Stop hook, which gates the code at the end of every file-touching turn under whatever
+narrowed profile its `gate` key names — a separate gate on a separate plane, and one that
+never stands in for this one ([**D75 (two-gates)**](decisions.md#d75)). This repo runs
+both; [`../CONTRIBUTING.md`](../CONTRIBUTING.md) describes the pair.
 
 Exits with the check's code: **0** green, **1** red — including a run where every slot
 skipped, which refuses rather than passing vacuously — and **2** when the gate itself

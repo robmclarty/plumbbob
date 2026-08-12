@@ -3,17 +3,19 @@
 PlumbBob's design history is recorded as numbered decisions (`D`) and hard constraints
 (`C`). Every entry carries a short slug, and every reference site writes the number
 *with* its slug — `D17 (two-planes)`, `C1 (functional-only)` — so a reference reads on
-its own instead of sending you hunting. The code comments state each rule's *why* in
-plain language and do not cite these tags; the tags still appear in a few places a
-reader can hit — some CLI output lines (e.g. the latch's settings-`auto` note), some
-test titles, and the research notes under `research/`. This page is the key: it defines
-each tag and its slug.
+its own instead of sending you hunting ([**D74 (glossed-citations)**](#d74), which records
+how the rendering changes by surface and which slot of the gate enforces it). The
+code comments state each rule's *why* in plain language and do not cite these tags; the
+tags still appear in a few places a reader can hit — some CLI output lines (e.g. the
+latch's settings-`auto` note), some test titles, and the research notes under
+`research/`. This page is the key: it defines each tag and its slug.
 
 Some numbers (e.g. `D2`, `D5`, `D11`, `D12`, `D21`) belonged to superseded decisions
 and are no longer referenced. (A build's *own* `intent.md` numbers its decisions from `D1`
 locally — comments citing a build-local number are renumbered to this key when the work
 lands; [**D33 (info-exclude)**](#d33)–[**D38 (cli-owns-slugs)**](#d38) below came in that way from the July 2026 worktree restructure,
-and [**D71 (visible-reconcile)**](#d71)–[**D73 (subject-length-soft)**](#d73) from the July 2026 commit-subjects build.)
+[**D71 (visible-reconcile)**](#d71)–[**D73 (subject-length-soft)**](#d73) from the July 2026 commit-subjects build,
+and [**D74 (glossed-citations)**](#d74)–[**D75 (two-gates)**](#d75) from the 2026-07-31 citations build.)
 
 ## Constraints (C)
 
@@ -497,6 +499,52 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   2026-07-19 commit-subjects build (local `subject-length-soft`). *Tagged in* the `plan`/`step` skills,
   `templates/intent.md`, `docs/techniques.md`.
 
+- <a id="d74"></a>**D74 (glossed-citations) — A citation carries its slug, and the rendering follows the surface.**
+  A reference to a decision renders as one link carrying the number and the definition's own kebab-case
+  slug in parentheses — `[**D26 (build-folders)**](decisions.md#d26)` — so the gloss travels wherever the
+  link is copied and the reader never has to stop and look the number up. The slug is copied **verbatim**
+  from the definition, never recompressed per site: a gloss retyped at each citation is a gloss that
+  drifts. One rule, three renderings by surface. Under `docs/`, `README.md`, and `CONTRIBUTING.md` the
+  link is relative. In `skills/` and `templates/` it is an **absolute** GitHub URL, because `docs/` is not
+  in the package's `files` list, so a relative path is broken in every installed plugin — the shipped
+  `../../docs/decisions.md#d68` was exactly that. In strings the CLI prints, the gloss stands alone with
+  no link, since markdown in a terminal is noise and the gloss alone is what jogs the memory. Three things
+  are deliberately outside the rule: a tag inside a code span is a *mention*, never a citation (which is
+  how this page names its own retired numbers and how `templates/intent.md` writes a fill-in-the-blank
+  placeholder), a tag in a test title stays bare (it is a grep anchor read in failure output, not prose
+  browsed cold), and a finished `.plumbbob/builds/*/intent.md` is never retrofitted — the folder is the
+  record of what shipped ([**C4 (never-destroy)**](#c4)). `scripts/check-refs.ts` enforces the rest as the
+  gate's `refs` slot: linked, anchor matches the cited number, slug present, slug matches the definition
+  verbatim — plus the src variant, where a slug is required and a link is forbidden. Because that fourth
+  comparison is verbatim rather than fuzzy, a *wrong* citation is caught mechanically instead of being
+  left to review. Promoted from the 2026-07-31 citations build, merging its locals `slug-in-parens`,
+  `slug-is-the-gloss`, `absolute-urls-off-repo`, `terminal-gloss-only`, `consistency-is-a-rule`,
+  `code-spans-are-mentions`, `tags-stay-in-test-titles`, and `records-stay` — one rule with one scanner
+  reads better as one number than as eight. *Tagged in* `scripts/check-refs.ts`, `checkride.config.json`,
+  `CONTRIBUTING.md`, `docs/cli-reference.md`.
+
+- <a id="d75"></a>**D75 (two-gates) — Two gates, deliberately different: a fast one per turn on the code, the full
+  one at the checkpoint.** checkride's Stop hook runs at the end of every file-touching turn under a
+  narrowed profile — `"gate": {"skip": ["test"]}` in `checkride.config.json` — and comes back in about
+  two seconds, because vitest is very nearly the whole cost of the full run (~53s of ~56s when the
+  profile was chosen; the ratio is the part that lasts). It is a **skip** list rather than an `only`
+  list on purpose: a skip list stays correct as slots are added, where an only list silently stops
+  covering them. What `plumbbob check`, `/plumbbob:verify`, and `checkpoint` run is unchanged and still
+  the full check, test included ([**D24 (configurable-check)**](#d24)) — the fast profile never becomes
+  the commit gate, and checkride's own "NOT the full check" disclosure is never suppressed, because a
+  gate that overstates itself is worse than no gate at all. The profile is inert config without the hook
+  that reads it, so this repo installs the hook and tracks `.claude/settings.json`; the companion `dirty`
+  marker is what keeps a conversation-only turn from paying anything. **The seam is stated rather than
+  smoothed over.** That Stop hook genuinely *blocks* the agent from ending a red turn, inside the repo of
+  a tool whose thesis is that the human is the clock. It is not a contradiction, because the two gates
+  sit on different planes: checkride gates *the code*, plumbbob latches *the record*.
+  [**D10 (pause-not-lock)**](#d10) and [**D13 (no-edit-guards)**](#d13) are untouched on plumbbob's plane
+  — no edit is ever blocked, and the loop still pulls up to a pause only a human turn releases
+  ([**D64 (approval-latch)**](#d64)). plumbbob's refusal to enforce never meant that no other tool may.
+  Promoted from the 2026-07-31 citations build, merging its locals `skip-test-profile`,
+  `checkpoint-is-the-full-check`, `this-repo-takes-the-hook`, and `two-planes-two-gates`. *Tagged in*
+  `checkride.config.json`, `.claude/settings.json`, `CONTRIBUTING.md`, `docs/cli-reference.md`.
+
 ### Superseded
 
 - <a id="d20"></a>**D20 (local-archive) — The archive was local-only markdown.** Wrapping wrote a plain-markdown archive
@@ -512,8 +560,7 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
 
 *The conceptual companion to this key is [`techniques.md`](techniques.md), which explains
 the methods these decisions shape. Contributors adding a new settled decision should give
-it the next free `D#` **and a two- or three-word slug**, reference it as `D# (slug)` at
-every site that cites it, and add a line here — with the `<a id="d#"></a>` anchor the
-docs' `[**D# (slug)**](decisions.md#d#)` links point at. The slug travels with the number
-everywhere: a bare `D#` forces the reader to stop and look it up; `D# (slug)` reads in
-place.*
+it the next free `D#` **and a two- or three-word slug**, and add a line here — with the
+`<a id="d#"></a>` anchor every citation points at. Cite it in the form
+[**D74 (glossed-citations)**](#d74) sets out, which the gate's `refs` slot checks: a bare
+`D#` forces the reader to stop and look it up, where `D# (slug)` reads in place.*

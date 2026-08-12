@@ -135,7 +135,7 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
 9. [x] docs(cli): gloss the D-tags in the CLI's own output — **done when:** no bare tag survives in anything plumbbob prints, and the scanner's src rule is green
    - seam: `src/verbs/doctor.ts`, `src/lib/latch.ts`, `src/verbs/finish.ts`, `src/verbs/agent.ts`, `src/lib/intent.ts`, and the tests asserting those strings
    - model: sonnet — nine strings, each with a test to update
-10. [ ] chore(gate): wire the citation check into checkride and the fast profile — **done when:** `pnpm check` runs a green `refs` slot in wave 1, and the turn gate picks it up through [D7 (skip-test-profile)](#d7)
+10. [x] chore(gate): wire the citation check into checkride and the fast profile — **done when:** `pnpm check` runs a green `refs` slot in wave 1, and the turn gate picks it up through [D7 (skip-test-profile)](#d7)
    - seam: `checkride.config.json`
    - model: sonnet — one config entry
 11. [ ] docs(decisions): record the citation convention and the gate profile — **done when:** `docs/decisions.md` carries the citation rendering rule and the two-gate split as the next two free numbers after step 5's promotion, both cited in the new form, and the `links` slot resolves every anchor

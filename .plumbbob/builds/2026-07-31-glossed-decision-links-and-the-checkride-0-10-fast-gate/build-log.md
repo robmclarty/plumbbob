@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — glossed decision links and the checkride 0.10 fast gate
 
-**Current step:** 10 — chore(gate): wire the citation check into checkride and the fast profile
+**Current step:** 11 — docs(decisions): record the citation convention and the gate profile
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -32,7 +32,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 7. docs(skills): point the skills' citations at the published decisions
 - ☑ 8. feat(intent): anchor and gloss the build-local citations
 - ☑ 9. docs(cli): gloss the D-tags in the CLI's own output
-- ☐ 10. chore(gate): wire the citation check into checkride and the fast profile
+- ☑ 10. chore(gate): wire the citation check into checkride and the fast profile
 - ☐ 11. docs(decisions): record the citation convention and the gate profile
 - ☑ 12. docs(voice): seed the hand-owned voice exemplar folder
 - ☑ 13. chore(deps): upgrade checkride to 0.12.1
@@ -51,6 +51,9 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [x] the --body anti-pattern warning exists ONLY in skills/finish/SKILL.md:49-52 (once per build); port it to skills/build/SKILL.md:73 and skills/verify/SKILL.md:68 — the two skills that actually run checkpoint --body, once per STEP
 - [ ] harvest/SKILL.md:45-46 still teaches the pre-anchor Decision form (`D5 (retry-cap)`) when it folds a blocker into intent.md — outside step 8's seam, so the one intent.md-writing skill the anchored form never reached
 - [ ] templates/intent.md's Q1 placeholder stays uncounted only because its body says "unresolved" and parseOpenQuestions filters on /resolved/i — an accident, not a design; guarded by a test but a confusing trap if the placeholder is ever reworded
+- [ ] scripts/check-refs.ts's header comment still says the scanner is 'Not yet wired into checkride.config.json' — step 10 wired it as the refs slot, so the file's own account of itself is stale
+- [ ] scripts/check-refs.ts's comments cite this build's local D3/D5/D6/D10/D13, which name entirely different decisions in the repo key (repo D6 is parseable-steps, not records-stay) — scripts/ is outside the scanner's walk so nothing catches it; repoint them at D74 (glossed-citations) now that it is published
+- [ ] plumbbob check --only <slots> is ignored on the checkride path — 'check --only types' runs all 8 slots (65s) where 'pnpm exec checkride --only types' runs one (1.5s), so the iteration loop every skill recommends silently costs a full run; cli-reference.md documents the flags as mapping straight onto checkride's own, which is the contract to restore
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -104,3 +107,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-08-08 — step 7 checkpointed · 31ea13ffc — docs(skills): point the skills' citations at the published decisions (1 drift, 47m)
 - 2026-08-08 — step 8 checkpointed · 82be65b9f — feat(intent): anchor and gloss the build-local citations (37m)
 - 2026-08-08 — step 9 checkpointed · 90115ca06 — docs(cli): gloss the D-tags in the CLI's own output (6m)
+- 2026-08-12 — step 10 checkpointed · 4bed3f823 — chore(gate): wire the citation check into checkride and the fast profile (5m)

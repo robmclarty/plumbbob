@@ -40,12 +40,21 @@ plumbbob's one runtime dependency), which runs the tools this repo configures, i
 | `test` | `vitest` | the test suite |
 | `docs` | `markdownlint-cli2` | the docs |
 | `links` | built-in | relative markdown links resolve |
+| `refs` | `scripts/check-refs.ts` | every `D#` / `C#` citation is linked and glossed (see below) |
 
 Raw tool output lands in `.check/` (`summary.json` is the index). Narrow the loop while
 iterating: `pnpm check --bail`, `pnpm check --only types,lint`. An opt-in `mutation` slot
 (Stryker) audits test quality — `pnpm check --include mutation` — and is kept out of the
-default gate so the ~19s loop stays fast. There is no CI yet —
+default gate so the loop stays fast. There is no CI yet —
 **run `pnpm check` locally** before opening a pull request.
+
+**There is a second, faster gate, and it is not this one.** checkride's Stop hook runs at
+the end of every turn that touched a file, under the narrowed profile in
+`checkride.config.json`'s `gate` key — everything above except `test`, back in about two
+seconds. It catches a broken build while you are still in the conversation that broke it;
+it is not the full check and never claims to be. `pnpm check` — what `plumbbob checkpoint`
+also refuses on — stays the binding one ([**D75 (two-gates)**](docs/decisions.md#d75)). If a
+turn ends red, that hook will say so before you get a chance to forget.
 
 ## Code conventions
 
@@ -75,9 +84,14 @@ import loop-advancing verbs ([C6 (no-advance-verb)](docs/decisions.md#c6)) or sy
 `.gitignore` ([D33 (info-exclude)](docs/decisions.md#d33)), and no `CLAUDECODE` session-sniffing guard can return ([D13 (no-edit-guards)](docs/decisions.md#d13)).
 If the gate rejects an edit for one of these, that is by design.
 
-When you make a genuinely new design decision, give it the next free `D#`, reference it
-inline where it is implemented, and add a one-line entry to
-[`docs/decisions.md`](docs/decisions.md).
+When you make a genuinely new design decision, give it the next free `D#` and a short
+slug, and add an entry to [`docs/decisions.md`](docs/decisions.md) carrying the
+`<a id="d#"></a>` anchor every citation will point at. Cite it as one link that carries
+that slug verbatim — [**D75 (two-gates)**](docs/decisions.md#d75), not a bare `D75` — with
+an absolute GitHub URL from `skills/` and `templates/`, which ship without `docs/`, and
+with the gloss alone in anything the CLI prints, where a markdown link is noise. The
+`refs` slot checks all of that; the full rule, and the three places it deliberately does
+not reach, are [**D74 (glossed-citations)**](docs/decisions.md#d74).
 
 ## Tests
 
