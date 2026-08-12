@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — the em-dash sweep and the skills prose walk
 
-**Current step:** none (at the boundary)
+**Current step:** 1 — docs(skills): teach the harvest skill the anchored decision form
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -23,7 +23,19 @@ step boundaries. The antidote to "my plan got lost in the noise."
 line above. Only ONE step is in flight; a step is done only after a checkpoint —
 check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
-- ☐ 1. <step>
+- ☐ 1. docs(skills): teach the harvest skill the anchored decision form
+- ☐ 2. fix(skills): quote every SKILL.md frontmatter description
+- ☐ 3. chore(gate): walk skills/ in the prose slot and burn down the findings
+- ☐ 4. feat(prose): author the em-dash rule at warning and print the queue
+- ☐ 5. docs(decisions): sweep the key and settle both format markers
+- ☐ 6. docs(prose): sweep the guide docs
+- ☐ 7. docs(prose): sweep the reference docs
+- ☐ 8. docs(prose): sweep the front door and the agents guide
+- ☐ 9. docs(templates): sweep the templates and land the decided marker
+- ☐ 10. docs(skills): sweep the skills prose
+- ☐ 11. chore(prose): sweep the src and scripts doc comments
+- ☐ 12. docs(prose): sweep or exempt the hand-written essays
+- ☐ 13. chore(gate): raise the em-dash rule to error and record it
 
 ## Park list
 

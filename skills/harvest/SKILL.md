@@ -43,6 +43,7 @@ one line of reasoning, then **wait for the human to confirm or override**. Write
 - **Flip the harvested item** from `- [ ]` to `- [x]` in the Park list, so `/plumbbob:status`
   stops counting it as open.
 - A confirmed **blocker** also folds its decision into `intent.md` — slugged at birth
-  like any Decision (`D5 (retry-cap): <the call> — *because* <why>`), never a bare `D5`.
+  like any Decision, anchored the same way
+  (`- <a id="d5"></a>**D5 (retry-cap)**: <the call>, *because* <why>`), never a bare `D5`.
 - Never reclassify or resolve an item the human hasn't confirmed, and default every
   uncertain item to **tangent**, never to blocker.
