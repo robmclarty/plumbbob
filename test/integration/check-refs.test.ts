@@ -83,7 +83,7 @@ describe('the four markdown rules', () => {
   })
 })
 
-describe('the src variant — D5 (terminal-gloss-only)', () => {
+describe('the src variant — D74 (glossed-citations)', () => {
   it('passes a printed string carrying its gloss, no link', () => {
     expect(violationsFor('plumbbob doctor — check gate (D1 (lean-cli))', 'src')).toEqual([])
   })
@@ -101,7 +101,7 @@ describe('the src variant — D5 (terminal-gloss-only)', () => {
   })
 })
 
-describe('D13 (code-spans-are-mentions) — a tag in a code span is never a citation', () => {
+describe('D74 (glossed-citations) — a tag in a code span is never a citation', () => {
   it('skips a bare tag inside inline code', () => {
     expect(violationsFor('Retired: `D2`, `D5` belonged to superseded decisions.', 'markdown')).toEqual([])
   })

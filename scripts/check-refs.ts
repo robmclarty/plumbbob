@@ -2,8 +2,9 @@
 // scripts/check-refs.ts — the citation scanner. Reads docs/decisions.md for the
 // canonical D#/C# -> slug map, then scans every markdown file and every src/
 // TypeScript file for citations of those tags, flagging one that is bare, mislinked,
-// or unglossed. Not yet wired into checkride.config.json (D3
-// (checker-authored-first-wired-last)) — run it standalone: `node scripts/check-refs.ts`.
+// or unglossed. Wired into checkride.config.json as the `refs` slot, so it runs in the
+// full gate and in the per-turn profile alike; `node scripts/check-refs.ts` still runs
+// it standalone. The rule it enforces is D74 (glossed-citations).
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
@@ -40,12 +41,13 @@ const FENCED_CODE_RE = /```[\s\S]*?```/g
 const INLINE_CODE_RE = /`[^`\n]*`/g
 
 // Anything not in the surface globs (every *.md, every src/**/*.ts) never reaches the
-// walker at all; these are the exceptions carved out of those two globs — D6
-// (records-stay), D10 (tags-stay-in-test-titles). `examples/` carries its own
-// self-contained demo intent.md/spec.md content with fictional, build-local D#/C#
-// numbering (the same category `.plumbbob/builds/*/` is exempt for) — it is not one
-// of the three surfaces this build's citations cover, and no later step's seam
-// touches it.
+// walker at all; these are the exceptions carved out of those two globs, and they are
+// the carve-outs D74 (glossed-citations) names: a finished build folder is the record
+// of what shipped, and a tag in a test title is a grep anchor read in failure output,
+// not prose browsed cold. `examples/` carries its own self-contained demo
+// intent.md/spec.md content with fictional, build-local D#/C# numbering — the same
+// category `.plumbbob/builds/*/` is exempt for, and not one of the surfaces the rule
+// covers.
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'coverage', 'research', 'test', '__tests__', 'examples'])
 
 /**
@@ -81,7 +83,8 @@ function isWithin(index: number, spans: ReadonlyArray<readonly [number, number]>
 
 /**
  * Every D#/C# citation in a chunk of text, outside a code span/fence and outside a
- * decisions.md definition line (D13 (code-spans-are-mentions)). `surface: 'markdown'`
+ * decisions.md definition line — a tag inside a code span is a mention, never a
+ * citation, which is D74 (glossed-citations)'s own escape hatch. `surface: 'markdown'`
  * applies the code-span/definition exclusions; `surface: 'src'` scans raw, since a
  * TypeScript template-literal backtick is not a markdown code span.
  */
@@ -125,9 +128,10 @@ function wrongSlugMessage(citation: RawCitation, canonicalSlug: string | null): 
 
 /**
  * The four markdown rules — linked, anchor matches the cited number, slug present,
- * slug matches the definition verbatim — or the src variant (slug required, link
- * forbidden — D5 (terminal-gloss-only)), whichever the citation's surface is. Returns
- * the first rule that fails, or null for a clean citation.
+ * slug matches the definition verbatim — or the src variant, where a slug is required
+ * and a link is forbidden because markdown in a terminal is noise (D74
+ * (glossed-citations)), whichever the citation's surface is. Returns the first rule
+ * that fails, or null for a clean citation.
  */
 export function checkCitation(
   citation: RawCitation,
@@ -141,7 +145,7 @@ export function checkCitation(
       return {
         tag: citation.tag,
         kind: 'link-forbidden',
-        message: `${citation.tag} is wrapped in a markdown link; printed strings carry a gloss only (D5 (terminal-gloss-only))`,
+        message: `${citation.tag} is wrapped in a markdown link; printed strings carry a gloss only (D74 (glossed-citations))`,
       }
     }
     if (citation.slug === null) {
@@ -205,8 +209,8 @@ function* walkFiles(root: string, dir: string): Generator<string> {
 /**
  * Walks `root` for every markdown file and every src/ TypeScript file, checking each
  * D#/C# citation against docs/decisions.md's canonical map. `.plumbbob/`, `research/`,
- * `CHANGELOG.md`, and every test file are out of scope (D6 (records-stay), D10
- * (tags-stay-in-test-titles)).
+ * `CHANGELOG.md`, and every test file are out of scope — the carve-outs D74
+ * (glossed-citations) names.
  */
 export function scanRepo(root: string): ScanResult {
   const decisionsPath = join(root, 'docs', 'decisions.md')
