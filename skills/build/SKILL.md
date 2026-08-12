@@ -27,7 +27,7 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
 
 ## What this skill does, in order
 
-1. **Pick the step.** Use the number you were invoked with (e.g. `/plumbbob:build 4`) — or,
+1. **Pick the step.** Use the number you were invoked with (for example `/plumbbob:build 4`) — or,
    if you were given a range like `/plumbbob:build 1-3`, start at the first number and treat
    the second as the auto-approve ceiling (see the range note under `--auto`). With no
    argument, don't resolve the next step yourself — the CLI does: bare `plumbbob build`
@@ -193,9 +193,9 @@ just the one more entry already in the halt list above.
 
 - **`N-M` with N ≤ M** — build N…M, self-approving and checkpointing each, then pause at
   M. `N-N` is just the single step `N` (which already ends at the pause).
-- **N > M** (e.g. `3-1`) — that is not a range you can walk; report it and stop rather
+- **N > M** (for example `3-1`) — that is not a range you can walk; report it and stop rather
   than guess the intent.
-- **M past the last planned step** (e.g. `1-9` with three steps) — build through the
+- **M past the last planned step** (for example `1-9` with three steps) — build through the
   last planned step and stop; that is the existing "no planned steps remain" halt, not
   an error.
 - **A step inside the range won't build** (missing, or its seam won't parse) — `plumbbob

@@ -1,4 +1,4 @@
-<!-- checkride:begin hash=v1ee5172e724e1f3dc -->
+<!-- checkride:begin hash=v1d4baf8a2dc6c8ae7 -->
 
 ## Checkride: the definition of done
 
@@ -48,6 +48,6 @@ They are hand-written and human-owned: never edit, rewrite, or add to them, and
 never generate new ones. When your draft and an exemplar disagree about how a
 sentence should sound, the exemplar wins.
 
-Active checks in this repo: lint, struct, dead, links, refs, types, docs, test.
+Active checks in this repo: lint, struct, dead, links, refs, types, docs, prose, test.
 
 <!-- checkride:end -->

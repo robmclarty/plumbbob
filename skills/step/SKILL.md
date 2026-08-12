@@ -21,7 +21,7 @@ grew — but its everyday job is to sharpen, not to invent.
 - **`/plumbbob:step` (no input) → automatic sharpen.** Re-examine the next undone step
   against the completed code, the Decisions, the Constraints, and the build-log, then
   make the obvious revisions to its **done-when** and **seam** so it matches reality —
-  e.g. a file moved, a decision narrowed the scope, an earlier step already did part of
+  for example a file moved, a decision narrowed the scope, an earlier step already did part of
   it. This is the zero-effort "keep my next step in sync" move: if the human does
   nothing else, the next step stays current.
 - **`/plumbbob:step <what changed>` → directed revision.** Take the human's input and propose

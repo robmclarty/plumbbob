@@ -20,8 +20,8 @@ to change what the report says. If a check failed, surface its `→ fix` verbati
 The CLI's reach differs by install path, and that is the whole point of running `doctor` here:
 
 - **Marketplace plugin** — `plumbbob` is on PATH **only inside a Claude Code session** (its
-  `bin/` shims are injected into the Bash tool while the plugin is enabled). There is **no
-  terminal `plumbbob`** to run. So this skill — or letting me run `plumbbob doctor` in-session
+  `bin/` shims are injected into the Bash tool while the plugin is enabled). **No
+  terminal `plumbbob`** exists. So this skill — or letting me run `plumbbob doctor` in-session
   — is the *only* way to reach `doctor`. The fact that this skill loaded at all already proves
   the plugin is enabled and the shim is on PATH.
 - **Skills-dir / global install** (`npm i -g plumbbob` + `plumbbob init`) — `plumbbob` is on

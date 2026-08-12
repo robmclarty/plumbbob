@@ -33,11 +33,12 @@
         "docs",
         "src",
         "scripts",
+        "skills",
         "templates"
       ],
       "exemplars": "docs/voice",
-      "description": "Vale over the prose we own and can edit (docs, README, src doc comments); voice anchored to docs/voice/",
-      "note": "One narrowing, deliberate: the path list replaces the adapter's bare `.`, because vale reads no .gitignore and skips no hidden directory, so `.` would sweep node_modules/, dist/, and the two record surfaces nothing may rewrite, CHANGELOG.md and .plumbbob/builds/. `skills/` is the one owned path left out, and not by choice: vale parses markdown frontmatter as YAML, every SKILL.md description carries an unquoted colon, and one E201 abandons the entire run. Parked, not forgotten. The slot ran `optIn: true` until its first 59 findings were burned down by hand on 2026-08-11 (52 reworded; 7 were docs/generation-loss.md quoting the words these rules ban, now in code spans — a mention is not a use, and vale skips a code span the same way the refs scanner does). Nothing was baselined, and the slot now rides the default run and the fast turn gate like every other.",
+      "description": "Vale over the prose we own and can edit (docs, README, skills, src doc comments); voice anchored to docs/voice/",
+      "note": "One narrowing, deliberate: the path list replaces the adapter's bare `.`, because vale reads no .gitignore and skips no hidden directory, so `.` would sweep node_modules/, dist/, and the two record surfaces nothing may rewrite, CHANGELOG.md and .plumbbob/builds/. Every owned path is in the walk now. `skills/` joined last (2026-08-11), held out not by choice but by a parser: vale reads markdown frontmatter as YAML, an unquoted colon in a SKILL.md description raised E201, and one E201 abandons the entire run, so the path waited until all 13 descriptions were quoted; the 10 findings it brought were fixed the day it joined. The slot ran `optIn: true` until its first 59 findings were burned down by hand on 2026-08-11 (52 reworded; 7 were docs/generation-loss.md quoting the words these rules ban, now in code spans — a mention is not a use, and vale skips a code span the same way the refs scanner does). Nothing was baselined, and the slot now rides the default run and the fast turn gate like every other.",
       "order": 2
     },
 

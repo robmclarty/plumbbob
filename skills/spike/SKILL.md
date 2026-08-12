@@ -15,7 +15,7 @@ This is a **driver skill** — a chat-side trigger for the mechanical `plumbbob 
 
 ## What it does
 
-1. Read the spike target from the way you were invoked: a slug to open one (e.g. `/plumbbob:spike redis-cache`), `report <slug>` to scaffold a report without worktrees (`/plumbbob:spike report auth-store`), or the literal `done` to tear the current spike down (`/plumbbob:spike done`). If none is present, ask which and run nothing.
+1. Read the spike target from the way you were invoked: a slug to open one (for example `/plumbbob:spike redis-cache`), `report <slug>` to scaffold a report without worktrees (`/plumbbob:spike report auth-store`), or the literal `done` to tear the current spike down (`/plumbbob:spike done`). If none is present, ask which and run nothing.
 2. Run `plumbbob spike "<slug>"`, `plumbbob spike report "<slug>"`, or `plumbbob spike done` via Bash.
 3. Report the verb's output verbatim — the worktree it created or removed, the spike report it scaffolded, or any refusal. When the verb names a `spike-NN-<slug>.md` report, point the human at it; when `spike done` nudges that a verdict is unrecorded, relay that nudge verbatim.
 

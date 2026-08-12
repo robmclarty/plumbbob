@@ -114,7 +114,7 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
 1. [x] docs(skills): teach the harvest skill the anchored decision form — **done when:** the fold-a-blocker passage in `skills/harvest/SKILL.md` shows the anchored, slugged form a Decision is born in, matching what the plan and refine skills teach, with no pre-anchor example left; `pnpm check` green
    - seam: `skills/harvest/SKILL.md`
    - model: sonnet — a one-passage port from the sibling skills
-2. [ ] fix(skills): quote every SKILL.md frontmatter description — **done when:** all 13 descriptions are YAML-quoted (the 11 bare ones join `verify` and `plan`, already quoted), a vale run over `skills/` parses every file with no E201 abort, and the skills contract suite stays green
+2. [x] fix(skills): quote every SKILL.md frontmatter description — **done when:** all 13 descriptions are YAML-quoted (the 11 bare ones join `verify` and `plan`, already quoted), a vale run over `skills/` parses every file with no E201 abort, and the skills contract suite stays green
    - seam: `skills/`, `test/contract/skills.test.ts` (read; likely untouched)
    - model: sonnet — mechanical quoting behind an existing contract test
 3. [ ] chore(gate): walk skills/ in the prose slot and burn down the findings — **done when:** `skills` is in the prose slot's path list, the config note no longer calls `skills/` the one left-out path, the shipped rules' findings over `skills/` are fixed under [D7 (model-holds-the-pen)](#d7) with nothing baselined, and `pnpm check` is green

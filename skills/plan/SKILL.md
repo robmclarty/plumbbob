@@ -34,7 +34,7 @@ Look at the argument the human gave and pick the mode yourself:
    Read the spec and distill it into `intent.md`, **retaining enough detail that
    `intent.md` stands on its own** — don't just link to the source. Add a one-line
    provenance (`*Source: <path>*`) and, for anything sizable, a `## Source` appendix
-   preserving the original text. Any prose wrapped around the reference (e.g. "absorb
+   preserving the original text. Any prose wrapped around the reference (for example "absorb
    @spec.md") is extra intent — fold it in. (If the token isn't a real file, fall to
    mode 3.)
 3. **Any other text → expand the inline intent.** Treat the text as the human's
@@ -52,7 +52,7 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
    - **If `start` warns that the gate sees no code checks**, surface that to the
      human now — while they're still deciding, not at the first refused
      checkpoint — and offer to set the `check` key in `.plumbbob/settings.json`
-     (e.g. `"check": "npm test"`) before any step is built.
+     (for example `"check": "npm test"`) before any step is built.
 2. **Frame** (`.plumbbob/intent.md`), with the human: the **Problem** in plain words,
    the **smallest thing** that solves it, what **done looks like**, and what you are
    **explicitly NOT doing**. This is the human's convergence — propose wording, but
