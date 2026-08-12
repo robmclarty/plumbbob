@@ -5,6 +5,11 @@
 # cross-platform — the only cost is a one-line per-invocation stderr notice.
 allowBuilds:
   '@ast-grep/cli': false
+  # vale ships as a Go binary its postinstall fetches per platform; without the
+  # build there is no `vale` to exec and the `prose` slot cannot run. Allowed
+  # deliberately: it is the one dependency here that reaches the network at
+  # install time, and the version is exact-pinned so the fetch is reproducible.
+  '@vvago/vale': true
 
 # `bundleDependencies` (checkride ships inside the npm tarball so the extracted
 # tarball runs with no install step — the Claude Code plugin cache is a bare

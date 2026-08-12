@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — glossed decision links and the checkride 0.10 fast gate
 
-**Current step:** none (at the boundary)
+**Current step:** 14 — chore(gate): install the prose slot and point its exemplars at the voice folder
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -39,6 +39,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☐ 14. chore(gate): install the prose slot and point its exemplars at the voice folder
 - ☐ 15. docs(prose): burn down the first prose run by hand
 - ☐ 16. fix(cli): refuse --body when stdin cannot deliver one
+- ☐ 17. fix(intent): count an open question by its resolution marker, not a substring
 
 ## Park list
 
@@ -54,6 +55,9 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [x] scripts/check-refs.ts's header comment still says the scanner is 'Not yet wired into checkride.config.json' — step 10 wired it as the refs slot, so the file's own account of itself is stale
 - [x] scripts/check-refs.ts's comments cite this build's local D3/D5/D6/D10/D13, which name entirely different decisions in the repo key (repo D6 is parseable-steps, not records-stay) — scripts/ is outside the scanner's walk so nothing catches it; repoint them at D74 (glossed-citations) now that it is published
 - [x] plumbbob check --only <slots> is ignored on the checkride path — 'check --only types' runs all 8 slots (65s) where 'pnpm exec checkride --only types' runs one (1.5s), so the iteration loop every skill recommends silently costs a full run; cli-reference.md documents the flags as mapping straight onto checkride's own, which is the contract to restore
+- [ ] decide whether plumbbob's repo root wants a CLAUDE.md pointer at AGENTS.md — checkride init offers to write one; step 14 removed it as out of scope
+- [ ] quote the SKILL.md frontmatter descriptions so vale can parse them — all 13 carry an unquoted colon, which hard-errors E201 and aborts the whole prose run, so skills/ is out of the vale walk until then
+- [ ] step 15 must also drop `optIn: true` from the prose entry — its done-when only asks for a green `--only prose`, which passes while the slot still sits out of the default run and the fast turn gate
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 

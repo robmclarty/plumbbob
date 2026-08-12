@@ -58,6 +58,7 @@
     "@stryker-mutator/vitest-runner": "9.6.1",
     "@types/node": "24.13.1",
     "@vitest/coverage-v8": "4.1.9",
+    "@vvago/vale": "3.17.0",
     "fallow": "2.103.0",
     "fascicle": "0.8.16",
     "markdownlint-cli2": "0.22.1",

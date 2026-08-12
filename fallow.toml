@@ -17,7 +17,7 @@ entry = [
 ignorePatterns = ["examples/**", "site/**"]
 
 # CLI/config-plane deps never imported from source.
-ignoreDependencies = ["@ast-grep/cli", "markdownlint-cli2", "oxlint", "typescript", "@vitest/coverage-v8", "@types/node"]
+ignoreDependencies = ["@ast-grep/cli", "@vvago/vale", "markdownlint-cli2", "oxlint", "typescript", "@vitest/coverage-v8", "@types/node"]
 
 [rules]
 unused-exports = "error"
