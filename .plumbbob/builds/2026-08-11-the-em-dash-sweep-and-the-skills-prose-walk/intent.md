@@ -28,8 +28,11 @@ reads them once, to decide, and that legibility buys back a chat round-trip.
   prose plane.
   **(a) The em-dash ban has no teeth.** The voice (`docs/voice/voice.md`) bans the
   em-dash in prose; the repo carries roughly 1,200 of them in gate-visible surfaces.
-  Measured 2026-08-12: 932 across the markdown the vale walk covers (199 in
-  `docs/decisions.md` alone, 197 in the reference docs, 225 in the guide docs, 195 in
+  Measured 2026-08-12 by raw grep, before the rule existed, so these count every mark
+  including the ones inside code spans that the rule correctly ignores; step 4's own
+  measured queue is the one the steps are sized against, and it sits in the sketch
+  below. 932 across the markdown the vale walk covers (199 in `docs/decisions.md`
+  alone, 197 in the reference docs, 225 in the guide docs, 195 in
   README/CONTRIBUTING/SECURITY/`docs/agents.md`, 65 in the two hand-written essays, 51
   in `templates/`), 267 in `skills/`, and a comment-share of the 999 raw hits in `src/`
   plus 9 in `scripts/` that only the rule itself can size. Until a rule exists, every
@@ -51,8 +54,8 @@ reads them once, to decide, and that legibility buys back a chat round-trip.
   conjunction); one corrected passage in the harvest skill.
 - **Done looks like:** `pnpm check` green with `Repo.EmDash` at `error` across the whole
   walk, `skills/` included; zero entries in `checkride.baseline.json`; the only em-dashes
-  left in covered prose sit inside code spans, fences, or a deliberately exempted
-  hand-written file; `docs/decisions.md` records the rule as the next free number.
+  left in covered prose sit inside code spans, fences, or a deliberately exempted record
+  or hand-written file; `docs/decisions.md` records the rule as the next free number.
 - **Explicitly NOT doing:** Runtime strings the CLI prints keep their em-dashes (vale
   cannot see a string literal, and terminal output is not the prose plane the voice
   governs; most of the 999 raw `src/` hits are strings and test titles). `AGENTS.md` and
@@ -69,19 +72,20 @@ THE RULE — one severity ladder, wired last
 
   .vale/styles/Repo/EmDash.yml     flags U+2014 in prose scope
       step 4:  level: warning   →  visible on every run, fails nothing
-      step 13: level: error     →  the ban is live, gate and fast profile alike
+      step 15: level: error     →  the ban is live, gate and fast profile alike
   (only error-severity alerts fail the check — .vale.ini's own contract)
 
 THE SURFACES — swept in review-sized steps, walk extended first
 
   skills/ frontmatter quoted (2) → skills/ joins the walk (3) → rule lands (4)
       ↓
-  decisions.md 199 · guides 225 · reference 197 · front door 195
-  templates 51 · skills 267 · src+scripts comments (sized by the rule)
+  decisions.md 85 · guides 133 · reference 106 · front door 114
+  templates 20 · skills 147 · src+scripts comments 543, split three ways
       ↓
-  hand-written essays: Rob's pen, or a per-file exemption — never a model pass
+  records exempted (evals); hand-written essays: Rob's pen or a per-file
+  exemption — never a model pass
       ↓
-  rule → error, decisions.md records it (13)
+  rule → error, decisions.md records it (15)
 ```
 
 ## Decisions
@@ -97,6 +101,7 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
 - <a id="d6"></a>**D6 (exemption-over-forgery)**: a hand-written file Rob declines to sweep gets a per-file `Repo.EmDash = NO` stanza in `.vale.ini` with a one-line why, never a model re-punctuation, *because* a model pass over a hand-written anchor text is the exact copy-of-a-copy failure `docs/generation-loss.md` documents, and an exemption is honest about who owns the prose.
 - <a id="d7"></a>**D7 (model-holds-the-pen)**: the model applies the voice's four-way mapping file by file, every hunk read by the human at the step's pause; a site the mapping cannot settle without rewording is flagged, never reworded, and the two hand-written essays are excluded outright, *because* the mapping is the voice's own written rule (a punctuation transform, not a tone pass), and the review-sized checkpoint ([D4 (sweep-by-surface)](#d4)) is the human pass that keeps it honest. Resolved from [Q1 (who-holds-the-pen)](#q1), 2026-08-12.
 - <a id="d8"></a>**D8 (comma-and-colon)**: the decision line ends `, *because* <why>` and a definition header reads `**DNN (slug): Title.**`, *because* vale's RE2 has no lookaround, so an exempted marker is regex contortion or permanent under-coverage, and both replacements are punctuation the voice already prescribes; the refs scanner is indifferent ([C4 (scanner-stays-green)](#c4)). Resolved from [Q2 (format-markers)](#q2), 2026-08-12; this intent's own decisions wear the comma form from birth.
+- <a id="d9"></a>**D9 (receipts-are-records)**: `docs/evals/*` is exempted from `Repo.EmDash` with its own stanza in `.vale.ini`, never swept, *because* an eval receipt is a dated measurement written once, the same genus as the `CHANGELOG.md` and `.plumbbob/builds/*` this build already holds out, and re-punctuating one edits the record after the fact ([C3 (records-stay)](#c3)). Folded in from the step 4 park list, 2026-08-11.
 
 ## Constraints
 
@@ -121,35 +126,41 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
    - seam: `checkride.config.json`, `skills/`, `AGENTS.md`
    - model: fable — the fixes are wording calls in the most-read prose
    - notes: the finding count is unknown until the walk turns on; measure at step entry, and if it swamps the step, split by skill rather than reaching for the baseline ([C1 (no-baseline)](#c1)). While in the config: the generated AGENTS.md stanza's active-check list still omits `prose` (stale since the slot went default-on); regenerate it with checkride's own command rather than hand-editing the stanza ([C3 (records-stay)](#c3)).
-4. [ ] feat(prose): author the em-dash rule at warning and print the queue — **done when:** `.vale/styles/Repo/EmDash.yml` exists at `warning` severity flagging U+2014 in prose scope (code spans and fences escape it, the same way they escape the refs scanner), the full check stays green because warnings do not fail it ([D1 (warning-then-error)](#d1)), and one vale run prints the per-surface queue steps 5–12 burn down
+4. [x] feat(prose): author the em-dash rule at warning and print the queue — **done when:** `.vale/styles/Repo/EmDash.yml` exists at `warning` severity flagging U+2014 in prose scope (code spans and fences escape it, the same way they escape the refs scanner), the full check stays green because warnings do not fail it ([D1 (warning-then-error)](#d1)), and one vale run prints the per-surface queue steps 5–12 burn down
    - seam: `.vale/styles/Repo/EmDash.yml`
    - model: opus — vale scoping is the one subtle part: what "prose scope" means for markdown bodies and for ts-mapped-to-js comments
 5. [ ] docs(decisions): sweep the key and settle both format markers — **done when:** `docs/decisions.md` carries zero em-dashes outside code spans; the 79 definition headers wear the colon separator and its two literal `— *because*` sites the comma marker ([D8 (comma-and-colon)](#d8)); refs and links slots green throughout ([C4 (scanner-stays-green)](#c4))
    - seam: `docs/decisions.md`
-   - model: fable — 199 sites, and each replacement is an ear call under the voice's mapping
-6. [ ] docs(prose): sweep the guide docs — **done when:** `techniques`, `happy-path`, `state-and-git`, and `troubleshooting` carry zero em-dashes (225 today) and the reworded sentences read to the voice, not merely past the rule
+   - model: fable — 85 sites, and each replacement is an ear call under the voice's mapping
+6. [ ] docs(prose): sweep the guide docs — **done when:** `techniques`, `happy-path`, `state-and-git`, and `troubleshooting` carry zero em-dashes (133 today) and the reworded sentences read to the voice, not merely past the rule
    - seam: `docs/techniques.md`, `docs/happy-path.md`, `docs/state-and-git.md`, `docs/troubleshooting.md`
    - model: fable — the guides carry the repo's teaching register
-7. [ ] docs(prose): sweep the reference docs — **done when:** `cli-reference`, `skills-reference`, `install`, `architecture`, `local-model-review`, and `faq` carry zero em-dashes (197 today)
+7. [ ] docs(prose): sweep the reference docs — **done when:** `cli-reference`, `skills-reference`, `install`, `architecture`, `local-model-review`, and `faq` carry zero em-dashes (106 today)
    - seam: `docs/cli-reference.md`, `docs/skills-reference.md`, `docs/install.md`, `docs/architecture.md`, `docs/local-model-review.md`, `docs/faq.md`
    - model: fable — reference prose is dense with asides, the hardest of the four mappings to call
-8. [ ] docs(prose): sweep the front door and the agents guide — **done when:** `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, and `docs/agents.md` carry zero em-dashes (195 today)
+8. [ ] docs(prose): sweep the front door and the agents guide — **done when:** `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, and `docs/agents.md` carry zero em-dashes (114 today)
    - seam: `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `docs/agents.md`
    - model: fable — the README is the most-judged prose in the repo
-9. [ ] docs(templates): sweep the templates and land the decided marker — **done when:** the three templates carry zero em-dashes (51 today), `templates/intent.md`'s decision-line format teaches the `, *because*` marker ([D8 (comma-and-colon)](#d8)), and a build scaffolded from them is born clean
+9. [ ] docs(templates): sweep the templates and land the decided marker — **done when:** the three templates carry zero em-dashes (20 today), `templates/intent.md`'s decision-line format teaches the `, *because*` marker ([D8 (comma-and-colon)](#d8)), and a build scaffolded from them is born clean
    - seam: `templates/intent.md`, `templates/build-log.md`, `templates/spike-report.md`
    - model: fable — the templates seed every future build's prose
    - notes: [Q2 (format-markers)](#q2) named two format em-dashes; the template carries more, unfenced: the step-line `<title> — **done when:**` separator (which `parseSteps` in `src/lib/orient.ts` reads; its doc comment states the shape) and the `- model:` sub-line's ` — ` before the why. Each must be fenced, exempted, or changed *with* its parser, sized at step entry; a format change here reaches `orient.ts` and its tests, which this seam does not carry, so surface it rather than sprawl. Landing the comma marker also makes `docs/voice/voice.md`'s provisional parenthetical ("stands until that format is decided separately") stale; flagging it for Rob's pen is part of this step ([C2 (voice-stays-shut)](#c2)).
-10. [ ] docs(skills): sweep the skills prose — **done when:** `skills/*/SKILL.md` carry zero em-dashes (267 today) and every reworded instruction still reads as an instruction
+10. [ ] docs(skills): sweep the skills prose — **done when:** `skills/*/SKILL.md` carry zero em-dashes (147 today) and every reworded instruction still reads as an instruction
     - seam: `skills/`
     - model: fable — instructions must survive the re-punctuation with their imperative force intact
-11. [ ] chore(prose): sweep the src and scripts doc comments — **done when:** vale reports zero EmDash findings over `src/` and `scripts/` (the comment share of 999 raw `src/` hits, sized by step 4's queue); runtime strings and test titles untouched
-    - seam: `src/` (comments only), `scripts/check-refs.ts`
+11. [ ] chore(prose): sweep the src/lib doc comments — **done when:** vale reports zero EmDash findings over `src/lib/` outside its tests (231 today); runtime strings untouched
+    - seam: `src/lib/` (comments only, `__tests__` excluded)
     - model: sonnet — comment asides are short and the mapping covers nearly all of them
-12. [ ] docs(prose): sweep or exempt the hand-written essays — **done when:** `docs/generation-loss.md` (60) and `docs/attention-first-development.md` (5) are each either swept by the human's own hand or carry a per-file `Repo.EmDash = NO` in `.vale.ini` with its one-line why ([D6 (exemption-over-forgery)](#d6)); nothing baselined
-    - seam: `docs/generation-loss.md`, `docs/attention-first-development.md`, `.vale.ini`
-    - model: sonnet — the model's share is at most the exemption stanza; the sweep half, if chosen, is the human's pen (build it by hand and land it with `/plumbbob:verify`)
-13. [ ] chore(gate): raise the em-dash rule to error and record it — **done when:** `EmDash.yml` rides at `error`, the full `pnpm check` is green repo-wide with `checkride.baseline.json` still absent ([C1 (no-baseline)](#c1)), and `docs/decisions.md` carries the rule and its exemption policy as the next free number
+12. [ ] chore(prose): sweep the src/verbs doc comments — **done when:** vale reports zero EmDash findings over `src/verbs/` outside its tests (213 today); runtime strings untouched
+    - seam: `src/verbs/` (comments only, `__tests__` excluded)
+    - model: sonnet — the same mapping and the same shape as step 11
+13. [ ] chore(prose): sweep the test, entrypoint, and script comments — **done when:** vale reports zero EmDash findings over `src/**/__tests__/`, `src/cli.ts`, `src/cli-core.ts`, and `scripts/` (99 today); test titles are string literals and never surface
+    - seam: `src/**/__tests__/`, `src/cli.ts`, `src/cli-core.ts`, `scripts/check-refs.ts`
+    - model: sonnet — the remainder, almost all of it one-line comment asides
+14. [ ] docs(prose): exempt the receipts, sweep or exempt the essays — **done when:** `docs/evals/*` carries its `Repo.EmDash = NO` stanza and one-line why ([D9 (receipts-are-records)](#d9)); `docs/generation-loss.md` (42) and `docs/attention-first-development.md` (3) are each either swept by the human's own hand or carry the same per-file stanza ([D6 (exemption-over-forgery)](#d6)); nothing baselined
+    - seam: `.vale.ini`, `docs/generation-loss.md`, `docs/attention-first-development.md`
+    - model: sonnet — the model's share is at most the exemption stanzas; the sweep half, if chosen, is the human's pen (build it by hand and land it with `/plumbbob:verify`)
+15. [ ] chore(gate): raise the em-dash rule to error and record it — **done when:** `EmDash.yml` rides at `error`, the full `pnpm check` is green repo-wide with `checkride.baseline.json` still absent ([C1 (no-baseline)](#c1)), and `docs/decisions.md` carries the rule and its exemption policy as the next free number
     - seam: `.vale/styles/Repo/EmDash.yml`, `docs/decisions.md`
     - model: opus — the decisions entry is the durable record; the sweep's calls compress into it
 
