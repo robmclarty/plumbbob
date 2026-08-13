@@ -24,7 +24,7 @@ describe('finish', () => {
     const { code, stdout } = captureIo(() => finish(dir))
     expect(code).toBe(0)
     expect(hasSession(dir)).toBe(false)
-    // the tracked build folder itself is the archive — intent.md stays, and no archive/ is created.
+    // the tracked build folder itself is the archive: intent.md stays, and no archive/ is created.
     expect(existsSync(intentPath(dir))).toBe(true)
     expect(existsSync(join(sidecarDir(dir), 'archive'))).toBe(false)
     expect(subject(dir)).toBe('chore(finishing-up): finish') // Conventional Commits subject; the `plumbbob finish` marker rides in the body
@@ -40,7 +40,7 @@ describe('finish', () => {
     await captureIoAsync(() => start(dir, ['Cursor gone']))
     captureIo(() => finish(dir))
     // Cursor and session share the STATE file, so one delete both closes the session
-    // and clears the cursor — there is no separate settings.local.json write to undo.
+    // and clears the cursor: there is no separate settings.local.json write to undo.
     expect(hasSession(dir)).toBe(false)
     expect(existsSync(join(sidecarDir(dir), 'STATE'))).toBe(false)
     expect(execFileSync('git', ['-C', dir, 'status', '--porcelain'], { encoding: 'utf8' }).trim()).toBe('')
@@ -99,7 +99,7 @@ describe('finish', () => {
     await captureIoAsync(() => start(dir, ['Tty body', '--slug', 'tty-body']))
     const stdin = process.stdin as unknown as { isTTY?: boolean }
     const hadTty = stdin.isTTY
-    stdin.isTTY = true // a terminal never sends EOF — the read must be skipped, not hung
+    stdin.isTTY = true // a terminal never sends EOF: the read must be skipped, not hung
     try {
       const { code } = captureIo(() => finish(dir, ['--body']))
       expect(code).toBe(0)

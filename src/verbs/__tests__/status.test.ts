@@ -10,7 +10,7 @@ import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
 afterAll(cleanupTempRepos)
 
-// A started build carrying a harness.json — status reports the active build's
+// A started build carrying a harness.json: status reports the active build's
 // harness bindings. `harness` is written verbatim so tests can exercise valid
 // bindings and a broken file alike.
 const HARNESS_SLUG = 'harness-status'
@@ -99,7 +99,7 @@ describe('status — out-of-band receipts — D66 (oob-commits-surfaced)', () =>
     const dir = makeTempRepo()
     await captureIoAsync(() => start(dir, ['Receipts']))
     // Record the current HEAD as the last checkpoint, then let two commits land on
-    // top of it the way a human's own `git commit` would — outside plumbbob's ledger.
+    // top of it the way a human's own `git commit` would (outside plumbbob's ledger).
     const sha = headSha(dir)
     writeFileSync(checkpointsPath(dir), `baseline ${sha}\nstep 1 ${sha}\n`)
     for (const name of ['one', 'two']) {
@@ -123,7 +123,7 @@ describe('status — out-of-band receipts — D66 (oob-commits-surfaced)', () =>
   it('surfaces a commit landing after the plan but before the first step checkpoint', async () => {
     const dir = makeTempRepo()
     await captureIoAsync(() => start(dir, ['Plan Window']))
-    // The ledger holds only baseline + plan — exactly the window where a routed-
+    // The ledger holds only baseline + plan: exactly the window where a routed-
     // around commit would otherwise be invisible (no step line to anchor on).
     writeFileSync(checkpointsPath(dir), `baseline ${headSha(dir)}\nplan ${headSha(dir)}\n`)
     writeFileSync(join(dir, 'sneaky.txt'), 'landed by hand\n')

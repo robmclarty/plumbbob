@@ -74,7 +74,7 @@ describe('the entry stamp (TICK)', () => {
   it('skips the stamp when the turn ledger is absent or unreadable — dormant, never an error', () => {
     const dir = makeTempRepo()
     mkdirSync(sidecarDir(dir), { recursive: true })
-    stampTick(dir) // no TURN at all — a hookless host grows no ledger
+    stampTick(dir) // no TURN at all: a hookless host grows no ledger
     expect(existsSync(tickPath(dir))).toBe(false)
     writeFileSync(turnPath(dir), 'not a number\n')
     stampTick(dir) // a garbage ledger stamps nothing rather than a garbage tick
@@ -238,17 +238,17 @@ describe('excludeControl', () => {
     for (const pattern of [
       '.plumbbob/STATE',
       '.plumbbob/settings.local.json',
-      '.plumbbob/TURN', // the approval latch's turn ledger and its one-turn grant — per-worktree control
+      '.plumbbob/TURN', // the approval latch's turn ledger and its one-turn grant (per-worktree control)
       '.plumbbob/GRANT',
       '.plumbbob/builds/*/STEP',
       '.plumbbob/builds/*/SEAM',
       '.plumbbob/builds/*/SPIKE',
-      '.plumbbob/builds/*/TICK', // the latch's step-entry stamp — never swept in by stageAll
-      '.check/', // the checkride gate's raw output — never swept into a step commit
+      '.plumbbob/builds/*/TICK', // the latch's step-entry stamp (never swept in by stageAll)
+      '.check/', // the checkride gate's raw output (never swept into a step commit)
     ]) {
       expect(lines.filter((line) => line.trim() === pattern).length).toBe(1)
     }
-    // The whole directory is NOT excluded — intent/build-log/checkpoints track.
+    // The whole directory is NOT excluded: intent/build-log/checkpoints track.
     expect(lines).not.toContain('.plumbbob/')
   })
 })
@@ -270,7 +270,7 @@ describe('excludeSidecar', () => {
 
     excludeSidecar(wt)
 
-    // Lands in the common gitdir's exclude — the only file git reads — not the
+    // Lands in the common gitdir's exclude (the only file git reads), not the
     // per-worktree gitdir, which has no info/ (writing there would ENOENT).
     const commonExclude = readFileSync(join(realpathSync(main), '.git', 'info', 'exclude'), 'utf8')
     expect(commonExclude.split('\n')).toContain('.plumbbob/')
@@ -360,7 +360,7 @@ describe('per-build stats (research/07 Build 2b)', () => {
     const dir = statsRepo()
     stampStepStat(dir, null, 1, 'startedAt', 'x')
     expect(existsSync(join(sidecarDir(dir), 'stats.json'))).toBe(true)
-    // Tracked layout: stats.json must ride the branch — nothing in excludeControl
+    // Tracked layout: stats.json must ride the branch; nothing in excludeControl
     // may match it.
     excludeControl(dir)
     const exclude = readFileSync(join(dir, '.git', 'info', 'exclude'), 'utf8')

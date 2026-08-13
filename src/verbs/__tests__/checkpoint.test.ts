@@ -25,7 +25,7 @@ const INTENT = `# Checkpoint test
 
 // A started session with one planned step and a green stub gate. In the tracked
 // layout the build folder rides the tree, so overwriting intent/settings
-// dirties it — checkpoint stages that alongside the step's work.
+// dirties it: checkpoint stages that alongside the step's work.
 async function startedGreen(): Promise<string> {
   const dir = makeTempRepo()
   await captureIoAsync(() => start(dir, ['Checkpoint test', '--slug', 'checkpoint-test']))
@@ -43,7 +43,7 @@ describe('checkpoint', () => {
     expect(hasSession(dir)).toBe(true)
     expect(readFileSync(checkpointsPath(dir), 'utf8')).toMatch(/step 1 [0-9a-f]{40}/)
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x]')
-    // The SHA is shortened to exactly 9 hex chars — a full 40-char SHA here
+    // The SHA is shortened to exactly 9 hex chars: a full 40-char SHA here
     // would mean the slice was dropped.
     expect(stdout).toMatch(/step 1 checkpointed — [0-9a-f]{9}\. Back at the boundary/)
   })
@@ -114,7 +114,7 @@ describe('checkpoint', () => {
 
   // The scope fallback chain: title-scope → build-default `**Scope:**`
   // → build slug → bare. The slug rung is already pinned by the tests above (no
-  // `**Scope:**` field — an intent without the header keeps the slug-scope
+  // `**Scope:**` field: an intent without the header keeps the slug-scope
   // behavior); these pin the other rungs.
   describe('the scope fallback chain — D68 (conventional-subjects)', () => {
     it("a step's own `(scope)` prefix wins over the build-default `**Scope:**` header", async () => {
@@ -150,7 +150,7 @@ describe('checkpoint', () => {
       writeFileSync(join(dir, 'work.txt'), 'pending\n')
       await captureIoAsync(() => checkpoint(dir, ['1']))
       const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
-      expect(subject).toBe('feat(checkpoint-test): first') // the placeholder is absent — slug wins
+      expect(subject).toBe('feat(checkpoint-test): first') // the placeholder is absent: slug wins
     })
 
     it('the `--plan` commit subject uses the same build-default `**Scope:**` header', async () => {
@@ -189,7 +189,7 @@ describe('checkpoint', () => {
     writeFileSync(join(dir, 'src', 'a.ts'), 'in seam\n')
     writeFileSync(join(dir, 'stray.ts'), 'out of seam\n') // not in `src/a.ts`, not artifact
     const { code, stderr } = await captureIoAsync(() => checkpoint(dir, ['1']))
-    expect(code).toBe(0) // guidance, not a gate — the checkpoint still lands
+    expect(code).toBe(0) // guidance, not a gate: the checkpoint still lands
     expect(stderr).toContain("outside step 1's seam")
     expect(stderr).toContain('stray.ts')
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x]') // committed despite the drift
@@ -202,7 +202,7 @@ describe('checkpoint', () => {
     const { code } = await captureIoAsync(() => checkpoint(dir, ['1']))
     expect(code).toBe(0)
     expect(existsSync(tickPath(dir))).toBe(false)
-    // The stamp is excluded control — stageAll must not have swept it into the commit.
+    // The stamp is excluded control: stageAll must not have swept it into the commit.
     const names = execFileSync('git', ['show', '--pretty=format:', '--name-only', 'HEAD'], {
       cwd: dir,
       encoding: 'utf8',
@@ -277,7 +277,7 @@ describe('checkpoint', () => {
       intentPath(dir),
       '# Two\n\n## Steps\n\n1. [ ] First — **done when:** a.\n2. [ ] Second — **done when:** b.\n',
     )
-    writeFileSync(stepPath(dir), '2\n') // as `build` writes it — must survive the trim
+    writeFileSync(stepPath(dir), '2\n') // as `build` writes it (must survive the trim)
     await captureIoAsync(() => checkpoint(dir, []))
     const intent = readFileSync(intentPath(dir), 'utf8')
     expect(intent).toContain('2. [x]')
@@ -323,7 +323,7 @@ describe('checkpoint', () => {
     writeFileSync(join(dir, 'work.txt'), 'pending\n')
     const stdin = process.stdin as unknown as { isTTY?: boolean }
     const hadTty = stdin.isTTY
-    stdin.isTTY = true // a terminal never sends EOF — the read must be skipped, not hung
+    stdin.isTTY = true // a terminal never sends EOF: the read must be skipped, not hung
     try {
       const { code } = await captureIoAsync(() => checkpoint(dir, ['1', '--body']))
       expect(code).toBe(0)
@@ -340,7 +340,7 @@ describe('checkpoint', () => {
     chmodSync(intentPath(dir), 0o444) // the flip's write will fail
     try {
       const { code, stderr } = await captureIoAsync(() => checkpoint(dir, ['1']))
-      expect(code).toBe(0) // the checkpoint itself still lands — the SHA is the source of truth
+      expect(code).toBe(0) // the checkpoint itself still lands: the SHA is the source of truth
       expect(readFileSync(checkpointsPath(dir), 'utf8')).toMatch(/step 1 [0-9a-f]{40}/)
       expect(stderr).toContain('could not flip step 1')
     } finally {
@@ -409,7 +409,7 @@ describe('checkpoint', () => {
       const dir = makeTempRepo()
       // The repo's own .gitignore excludes the sidecar, committed so the tree is
       // clean for start. The tracked folder then cannot ride the branch, and an
-      // explicit `git add` of an ignored path is a hard error — the plan commit
+      // explicit `git add` of an ignored path is a hard error: the plan commit
       // must fall back to a valid record-only (empty) commit rather than dying.
       writeFileSync(join(dir, '.gitignore'), '/.plumbbob/\n')
       execFileSync('git', ['-C', dir, 'add', '-A'], { stdio: 'ignore' })
@@ -428,7 +428,7 @@ describe('checkpoint', () => {
       expect(subject).toBe('chore(checkpoint-test): plan')
       const body = execFileSync('git', ['log', '-1', '--format=%b'], { cwd: dir, encoding: 'utf8' })
       expect(body).toContain('plumbbob plan')
-      // The commit is empty — nothing tracked, because the sidecar is ignored.
+      // The commit is empty: nothing tracked, because the sidecar is ignored.
       const names = execFileSync('git', ['show', '--pretty=format:', '--name-only', 'HEAD'], { cwd: dir, encoding: 'utf8' })
         .split('\n')
         .filter((l) => l.length > 0)
@@ -437,7 +437,7 @@ describe('checkpoint', () => {
       expect(readFileSync(checkpointsPath(dir), 'utf8')).toMatch(/plan [0-9a-f]{40}/)
       expect(existsSync(tickPath(dir))).toBe(false)
     })
-    // `--body` reads fd 0, which an in-process unit test can't feed — the subprocess
+    // `--body` reads fd 0, which an in-process unit test can't feed: the subprocess
     // integration test (verify.test.ts) covers the plan commit's `--body` path.
   })
 })
@@ -456,7 +456,7 @@ describe('checkpoint (subprocess) — D64 (approval-latch)', () => {
 `
 
   // A started fixture with the ledger live and no human turn since entry:
-  // TURN == TICK, no grant — the strictest state, refused unless a row above
+  // TURN == TICK, no grant: the strictest state, refused unless a row above
   // row 5 speaks (the five-row matrix of D64 (approval-latch), as amended by
   // D67 (auto-not-a-grant)). Tests relax exactly the file their row reads.
   function latchedRepo(): string {
@@ -508,7 +508,7 @@ describe('checkpoint (subprocess) — D64 (approval-latch)', () => {
 
   it('row 2: a hand-built diff (no entry stamp) stays guidance-governed', async () => {
     const dir = latchedRepo()
-    rmSync(tickPath(dir)) // no `build <n>` ran — TURN alone does not latch
+    rmSync(tickPath(dir)) // no `build <n>` ran: TURN alone does not latch
     const { status } = runCli(dir, ['checkpoint', '1'])
     expect(status).toBe(0)
   })
@@ -557,7 +557,7 @@ describe('checkpoint (subprocess) — D64 (approval-latch)', () => {
     const dir = latchedRepo() // TICK stands in for the stamp `start` writes when TURN exists
     const refused = runCli(dir, ['checkpoint', '--plan'])
     expect(refused.status).toBe(1)
-    // The plan refusal speaks plan, not step — there is no diff or self-review yet.
+    // The plan refusal speaks plan, not step: there is no diff or self-review yet.
     expect(refused.stderr).toContain('no human turn since `start` stamped this plan')
     expect(refused.stderr).toContain('present the plan')
     writeFileSync(turnPath(dir), '3\n') // the human's next message ticks the ledger

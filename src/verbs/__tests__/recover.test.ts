@@ -1,4 +1,4 @@
-// `plumbbob recover` — the control-plane reconciliation verb. Each test plants
+// `plumbbob recover`: the control-plane reconciliation verb. Each test plants
 // one inconsistency a real session can land in (crash, context loss, a switched
 // build, a rewritten plan) and pins both halves of the contract: bare `recover`
 // reports and changes nothing, `--fix` repairs exactly the untracked control
@@ -236,7 +236,7 @@ describe('recover — what --fix must never touch', () => {
     const { code } = captureIo(() => recover(dir, ['--fix']))
 
     expect(code).toBe(0)
-    // The artifact plane is untouched — recover reconciles the control plane only.
+    // The artifact plane is untouched: recover reconciles the control plane only.
     expect(readFileSync(intentPath(dir), 'utf8')).toBe(intentBefore)
     expect(readFileSync(checkpointsPath(dir), 'utf8')).toBe(ledgerBefore)
     // And SEAM is not its business: a seam without a step is what `build` writes next.

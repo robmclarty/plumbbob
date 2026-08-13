@@ -151,11 +151,11 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
 11. [x] chore(prose): sweep the src/lib doc comments — **done when:** vale reports zero EmDash findings over `src/lib/` outside its tests (231 today); runtime strings untouched
     - seam: `src/lib/` (comments only, `__tests__` excluded)
     - model: sonnet — comment asides are short and the mapping covers nearly all of them
-12. [ ] chore(prose): sweep the src/verbs doc comments — **done when:** vale reports zero EmDash findings over `src/verbs/` outside its tests (213 today); runtime strings untouched
+12. [x] chore(prose): sweep the src/verbs doc comments — **done when:** vale reports zero EmDash findings over `src/verbs/` outside its tests (213 today); runtime strings untouched
     - seam: `src/verbs/` (comments only, `__tests__` excluded)
     - model: sonnet — the same mapping and the same shape as step 11
 13. [ ] chore(prose): sweep the test, entrypoint, and script comments — **done when:** vale reports zero EmDash findings over `src/**/__tests__/`, `src/cli.ts`, `src/cli-core.ts`, and `scripts/` (99 today); test titles are string literals and never surface
-    - seam: `src/**/__tests__/`, `src/cli.ts`, `src/cli-core.ts`, `scripts/check-refs.ts`
+    - seam: `src/__tests__/`, `src/lib/__tests__/`, `src/verbs/__tests__/`, `src/cli.ts`, `src/cli-core.ts`, `scripts/check-refs.ts`
     - model: sonnet — the remainder, almost all of it one-line comment asides
 14. [ ] docs(prose): exempt the receipts, sweep or exempt the essays — **done when:** `docs/evals/*` carries its `Repo.EmDash = NO` stanza and one-line why ([D9 (receipts-are-records)](#d9)); `docs/generation-loss.md` (42) and `docs/attention-first-development.md` (3) are each either swept by the human's own hand or carry the same per-file stanza ([D6 (exemption-over-forgery)](#d6)); nothing baselined
     - seam: `.vale.ini`, `docs/generation-loss.md`, `docs/attention-first-development.md`

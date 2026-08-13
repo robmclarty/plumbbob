@@ -115,7 +115,7 @@ describe('spike reports — D70 (spike-reports)', () => {
 
   it('`spike report` scaffolds without worktrees, stamping `step <n>` when a step is in flight', async () => {
     const dir = await started()
-    writeFileSync(stepPath(dir), '3\n') // a step in flight — the spike-as-step case
+    writeFileSync(stepPath(dir), '3\n') // a step in flight (the spike-as-step case)
     const { code, stdout } = captureIo(() => spike(dir, ['report', 'auth-store']))
     expect(code).toBe(0)
     expect(inSpike(dir)).toBe(false) // no SPIKE marker, no worktrees
@@ -148,7 +148,7 @@ describe('spike reports — D70 (spike-reports)', () => {
     const dir = await started()
     captureIo(() => spike(dir, ['auth'])) // scaffolds spike-01 with the placeholder verdict
     const { code, stderr } = captureIo(() => spike(dir, ['done']))
-    expect(code).toBe(0) // guidance, not a gate — it still closes
+    expect(code).toBe(0) // guidance, not a gate: it still closes
     expect(inSpike(dir)).toBe(false)
     expect(stderr).toContain('no verdict recorded in spike-01-auth.md')
   })

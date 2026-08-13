@@ -1,11 +1,11 @@
-// plumbbob CLI core — argv dispatch and the help table, separated from the bin
+// plumbbob CLI core: argv dispatch and the help table, separated from the bin
 // entry (cli.ts) so the routing/help logic is unit-testable in-process without
 // the top-level process.exit. Node builtins plus a deliberate few dependencies
 // (currently checkride alone, via check.ts). Functional/procedural: no classes,
 // no `this`, no default export.
 //
 // The deciding/executing boundary is a pause, not a lock, so there is nothing
-// to defend in the dispatcher — every verb runs the same whether a human or the
+// to defend in the dispatcher; every verb runs the same whether a human or the
 // model triggers it. No human-only `mode` escape hatch exists and no
 // CLAUDECODE in-session refusal; what keeps the human the decider is the pause
 // at the step boundary (the skills), not a refusal here.
@@ -46,7 +46,7 @@ type Arg = {
 type Verb = {
   readonly name: string
   // One lowercase fragment, used verbatim both as the help-table row and as the
-  // headline of `plumbbob <verb> --help` — plumbbob's messages are lowercase
+  // headline of `plumbbob <verb> --help`; plumbbob's messages are lowercase
   // throughout (`parked: …`, `plumbbob: check green.`), so neither site needs a
   // capitalized variant.
   readonly description: string
@@ -54,7 +54,7 @@ type Verb = {
   readonly args?: ReadonlyArray<Arg>
   readonly flags?: ReadonlyArray<Flag>
   readonly notes?: string
-  // Opt out of the unknown-flag refusal — `--help` is still honored. Two verbs
+  // Opt out of the unknown-flag refusal (`--help` is still honored). Two verbs
   // need it for unrelated reasons: park takes free text, so a `--`-prefixed
   // word inside it is the human's content rather than a typo; turn is the
   // UserPromptSubmit hook and returns 0 by contract, where a refusal would
@@ -74,7 +74,7 @@ const BUILD_FLAG: Flag = {
  *
  * One table drives three things: the top-level verb table, per-verb `--help`,
  * and the unknown-flag refusal in `run`. Keeping it as data rather than inline
- * writes is the deliberate exception to the write-at-the-call-site convention —
+ * writes is the deliberate exception to the write-at-the-call-site convention;
  * a synopsis has to be readable by the validator, not just printable.
  */
 const VERBS: ReadonlyArray<Verb> = [
@@ -295,7 +295,7 @@ export function verbSpec(name: string): Verb | null {
 }
 
 /**
- * Every verb name, in table order — the contract tests iterate this.
+ * Every verb name, in table order: the contract tests iterate this.
  */
 export function verbNames(): ReadonlyArray<string> {
   return VERBS.map((v) => v.name)
@@ -404,8 +404,8 @@ async function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>):
  * report and exit 1, so the bin entry only ever exits with the code returned
  * here.
  *
- * `cwd` is the repo the verbs act on. It defaults to the process's — the only
- * thing the bin entry ever wants — and is a parameter solely so a test can name
+ * `cwd` is the repo the verbs act on. It defaults to the process's (the only
+ * thing the bin entry ever wants) and is a parameter solely so a test can name
  * a fixture. Screening argv does not help when the argv is *valid*: `checkpoint
  * -m --help` reads `--help` as the subject, exactly as it should, and then
  * commits. Whose repo it commits is decided here, and a default is not a choice
@@ -416,7 +416,7 @@ export async function run(argv: ReadonlyArray<string>, cwd: string = process.cwd
   const rest = argv.slice(1)
 
   if (verb === 'help' || verb === '--help' || verb === '-h') {
-    // `plumbbob help <verb>` is the same page as `plumbbob <verb> --help` —
+    // `plumbbob help <verb>` is the same page as `plumbbob <verb> --help`;
     // both spellings get typed, so both work.
     const topic = rest.find((a) => !a.startsWith('-'))
     if (topic === undefined) {

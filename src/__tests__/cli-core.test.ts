@@ -5,7 +5,7 @@ import { makeTempDir } from '../../test/helpers/temp-repo.ts'
 
 // Every `run(...)` below that can reach a MUTATING verb names this directory
 // instead of inheriting `process.cwd()`. Under vitest the process cwd is THIS
-// repo, which carries a live plumbbob session — so `run(['checkpoint', …])`
+// repo, which carries a live plumbbob session, so `run(['checkpoint', …])`
 // checkpointed the developer's own branch, and (because this repo's `check`
 // setting is its own full pipeline) spawned a checkride run whose test suite
 // re-entered this file. A session-less temp dir makes the verbs refuse for the
@@ -105,7 +105,7 @@ describe('unknown flags', () => {
   })
 
   it("reads a value flag's value as a value, never as help", async () => {
-    // `checkpoint -m "--help"` must not print help — the token is the commit
+    // `checkpoint -m "--help"` must not print help: the token is the commit
     // subject, so it reaches the verb. Against NOWHERE the verb refuses for want
     // of a session, which is what this assertion has always meant to pin; against
     // the process cwd it used to CHECKPOINT, and the four `--help` commits in this

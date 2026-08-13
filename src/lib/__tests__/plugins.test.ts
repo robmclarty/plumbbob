@@ -24,7 +24,7 @@ describe('marketplacePlumbbob', () => {
       'plumbbob@robmclarty': {},
       'plumbbob@some-marketplace': {},
       'plumbbob-spike@robmclarty': {}, // shares the prefix but is a different plugin
-      'plumbbobx': {}, // no separator — not ours
+      'plumbbobx': {}, // no separator (not ours)
       'not-plumbbob@x': {},
     })
     expect(marketplacePlumbbob(home).sort()).toEqual([

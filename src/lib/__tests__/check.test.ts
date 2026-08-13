@@ -24,7 +24,7 @@ function writeLocalSettings(root: string, check: string): void {
   writeFileSync(localSettingsPath(root), JSON.stringify({ check }))
 }
 
-// A checkride.config.json whose only active check is a custom `node -e` stub —
+// A checkride.config.json whose only active check is a custom `node -e` stub:
 // built-in slots all skip (no tools in a bare tmp dir), so the stub alone
 // decides green/red without spawning any real adapter.
 function writeCheckrideStub(root: string, exitCode: number): void {
@@ -83,7 +83,7 @@ describe('runCheck (spawn override) — D24 (configurable-check)', () => {
     expect(stderr).toBe('')
   })
 
-  // Each narrowing flag alone must trip the warning — hasFlags is a disjunction,
+  // Each narrowing flag alone must trip the warning: hasFlags is a disjunction,
   // and only one-flag-at-a-time runs pin every clause.
   const singleFlagCases: ReadonlyArray<[string, CheckFlags]> = [
     ['bail', { bail: true }],
@@ -234,7 +234,7 @@ describe('runCheck (checkride seam, mocked runChecks)', () => {
     ])
   })
 
-  // `strict` is not a CheckFlag — it is plumbbob's standing posture on the
+  // `strict` is not a CheckFlag; it is plumbbob's standing posture on the
   // gate, so no flag combination may turn it off.
   it('always runs strict — the vacuous green is refused however the run was narrowed', async () => {
     const dir = makeTempDir()
@@ -269,14 +269,14 @@ describe('runCheck (checkride seam, mocked runChecks)', () => {
 })
 
 describe('detectGate (the plan-time probe, research/07 Build 2a)', () => {
-  // Synthetic DoctorCheck rows — only the fields the rule reads matter.
+  // Synthetic DoctorCheck rows: only the fields the rule reads matter.
   const row = (partial: Partial<DoctorCheck>): DoctorCheck =>
     ({ category: 'tool', name: 'types', adapter: null, status: 'skip', required: false, ...partial }) as DoctorCheck
 
   it('gateDetectsTools: a code-slot adapter counts; the always-on family alone does not', () => {
     expect(gateDetectsTools([row({ name: 'types', adapter: 'tsc' })])).toBe(true)
     // The always-on repo checks (present even for an empty directory) prove
-    // nothing about the code — a gate of only these is the silent version of
+    // nothing about the code; a gate of only these is the silent version of
     // the week-1 bounce.
     expect(
       gateDetectsTools([

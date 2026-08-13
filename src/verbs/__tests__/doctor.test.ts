@@ -1,4 +1,4 @@
-// `plumbbob doctor` — all three sections, in-process. The sidecar tests build a
+// `plumbbob doctor`: all three sections, in-process. The sidecar tests build a
 // LEGACY flat sidecar (the pre-builds/ layout) in a throwaway repo and assert
 // the move into the tracked builds/ layout: archive + active session become build
 // folders, config becomes settings.json, and the result is STAGED but never
@@ -52,7 +52,7 @@ function legacyRepo(): string {
   return dir
 }
 
-// A legacy sidecar carrying only some of the pre-restructure markers — detection
+// A legacy sidecar carrying only some of the pre-restructure markers: detection
 // must treat each marker (config, archive/, flat session) as sufficient on its own.
 function partialLegacyRepo(build: (sc: string) => void): string {
   const dir = makeTempRepo()
@@ -80,7 +80,7 @@ const gateEnv: GateEnv = {
     Promise.resolve(cmd === 'node' ? process.versions.node : cmd === 'pnpm' ? '11.1.2' : cmd === 'git' ? '2.40.0' : null),
   // checkride 0.10.2 asks the package manager to resolve a tool under Yarn PnP,
   // which has no node_modules/.bin to stat. These repos are pnpm, so the probe
-  // is never reached — it is here to satisfy the injected env's shape.
+  // is never reached; it is here to satisfy the injected env's shape.
   binPath: () => Promise.resolve(null),
   // checkride 0.12.0 reads the committed baseline for doctor's workspace row.
   // The row is gated on the file existing and these temp repos never write one,
@@ -166,7 +166,7 @@ describe('doctor — legacy detection', () => {
     expect(inspectLegacy(makeTempRepo())).toBeNull()
   })
 
-  // Each pre-restructure marker must trip detection on its own — a repo that only
+  // Each pre-restructure marker must trip detection on its own: a repo that only
   // kept its config, or only its archive, is still legacy and must not slip through.
   it('detects a config-only sidecar (no session, no archive)', () => {
     const legacy = inspectLegacy(partialLegacyRepo((sc) => writeFileSync(join(sc, 'config'), 'check=x\n')))
@@ -240,7 +240,7 @@ describe('doctor — migration', () => {
     expect(readFileSync(join(buildDir(dir, 'my-legacy-build'), 'build-log.md'), 'utf8')).toContain('keep me')
   })
 
-  // The action list IS the migration report doctor prints — pin it whole so the
+  // The action list IS the migration report doctor prints: pin it whole so the
   // order (config, then the session, then the archive, then the stage) and every
   // human-facing rename line hold.
   it('returns the exact action list, in order', () => {
@@ -262,7 +262,7 @@ describe('doctor — migration', () => {
       'config → settings.json (check: pnpm run check)',
       'staged the move (builds/ + settings.json) — commit it yourself',
     ])
-    expect(settingsJson(dir)).toEqual({ check: 'pnpm run check' }) // only what the config held — no invented auto
+    expect(settingsJson(dir)).toEqual({ check: 'pnpm run check' }) // only what the config held (no invented auto)
   })
 
   it('writes an empty settings.json when config carries no check line', () => {
@@ -427,7 +427,7 @@ describe('doctor — the verb', () => {
     expect(stdout).toContain('  ✓ links ← links (built-in)') // an ok adapter row carries what was found
     expect(stdout).toContain('  ○ types — Enable by adding') // an empty slot surfaces checkride's enable hint
     // The week-1-bounce callout (research/07 Build 2a): a bare repo's gate has
-    // no code checks — say so with the exact settings fix, informationally.
+    // no code checks; say so with the exact settings fix, informationally.
     expect(stdout).toContain('○ gate: no code checks detected')
     expect(stdout).toContain('set {"check": "npm test"} in .plumbbob/settings.json')
     expect(stdout).toContain('\n\nplumbbob: 1 problem(s)') // install is the only required failure
@@ -435,8 +435,8 @@ describe('doctor — the verb', () => {
 
   // checkride 0.10.2's `build` slot resolves off `scripts.build` alone, so a
   // package with a build script and no tool config at all now fills a slot the
-  // gate can see. It still checks nothing about the code — the slot is opt-in,
-  // so no default run selects it — and the callout must survive it.
+  // gate can see. It still checks nothing about the code (the slot is opt-in,
+  // so no default run selects it), and the callout must survive it.
   it('a build script alone is not a code check — the no-code-checks callout still fires', async () => {
     const home = makeTempDir()
     seedMarketplace(home, ['plumbbob@robmclarty'])
@@ -621,7 +621,7 @@ describe('doctor — plugin link (HOME pinned)', () => {
 
   it('flags a copied dir missing manifest and hook, counting only real skills', async () => {
     const home = makeTempDir()
-    const pkg = linkPath(home) // a real directory, not a symlink — the copied-install shape
+    const pkg = linkPath(home) // a real directory, not a symlink: the copied-install shape
     mkdirSync(join(pkg, 'skills', 'alpha'), { recursive: true })
     writeFileSync(join(pkg, 'skills', 'alpha', 'SKILL.md'), '# a\n')
     mkdirSync(join(pkg, 'skills', 'beta'), { recursive: true })
@@ -691,7 +691,7 @@ describe('doctor — approval latch — D64 (approval-latch)', () => {
     seedMarketplace(home, ['plumbbob@robmclarty'])
     const { code, stdout } = await doctorWithHome(home, overrideRepo())
     expect(code).toBe(0) // dormant is legitimate, never a failure
-    // Dormant must read as a state, not an accusation — a wired hook simply may not
+    // Dormant must read as a state, not an accusation: a wired hook simply may not
     // have ticked yet this session.
     expect(stdout).toContain(
       '○ latch: dormant — guidance only (no turn ledger yet; it ticks on your first prompt when the UserPromptSubmit hook is wired — re-run after one to confirm)',

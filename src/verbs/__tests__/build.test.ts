@@ -69,7 +69,7 @@ describe('build', () => {
   })
 
   it('accepts a multi-digit step number as a number, not a stray token', async () => {
-    // Step 12 does not exist in the intent — but it must reach seam parsing,
+    // Step 12 does not exist in the intent, but it must reach seam parsing,
     // not bounce off the step-number validation.
     const dir = await startedWithSteps()
     const { code, stderr } = captureIo(() => build(dir, ['12']))

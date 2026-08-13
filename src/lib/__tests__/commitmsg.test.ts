@@ -30,7 +30,7 @@ describe('parseConventionalTitle', () => {
   })
 
   it('does NOT misread a prose title whose first word is not a recognised type', () => {
-    // `Note` is not in the type vocabulary — the whole title stays the description.
+    // `Note` is not in the type vocabulary: the whole title stays the description.
     expect(parseConventionalTitle('Note: rewire the cache')).toEqual({
       type: null,
       scope: null,

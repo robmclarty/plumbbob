@@ -77,7 +77,7 @@ describe('grantFromPrompt', () => {
   it('reads through a bare step number to a grant, but an unrecognized flag ends the scan', async () => {
     expect(grantFromPrompt('/build 2 --auto')).toBe('auto') // a step number is argument-shaped
     // Only `--auto` is a sanctioned flag; any other `-` token ends the scan before a
-    // following range can mint — so `--wip 2020-2024` grants nothing (a known residual
+    // following range can mint, so `--wip 2020-2024` grants nothing (a known residual
     // gap in minting grants from the human's literal prompt).
     expect(grantFromPrompt('/build --wip 2020-2024')).toBeNull()
     expect(grantFromPrompt('/build --draft 1-3')).toBeNull()
@@ -165,7 +165,7 @@ describe('turn (the verb)', () => {
     const dir = await startedSession()
     const stdin = process.stdin as unknown as { isTTY?: boolean }
     const had = stdin.isTTY
-    stdin.isTTY = true // a terminal never sends EOF — the read must be skipped, not hung
+    stdin.isTTY = true // a terminal never sends EOF: the read must be skipped, not hung
     try {
       expect(turn(dir, [])).toBe(0)
     } finally {

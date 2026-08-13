@@ -42,7 +42,7 @@ async function startedBuild(): Promise<string> {
   return dir
 }
 
-// Drop a bash fixture agent under .plumbbob/agents/<name>/ — a run.sh speaking the
+// Drop a bash fixture agent under .plumbbob/agents/<name>/: a run.sh speaking the
 // envelope and an agent.json pointing `command` at it via PLUMBBOB_AGENT_DIR,
 // so the run proves the env var and the repo-root cwd at once.
 function makeAgent(
@@ -97,7 +97,7 @@ describe('agent run — happy path', () => {
     const agentDir = join(dir, '.plumbbob', 'agents', 'doer')
     expect(realpathSync(readFileSync(join(agentDir, 'cwd.txt'), 'utf8').trim())).toBe(realpathSync(dir))
 
-    // the composed StepContext — inline context plus the scraped Decisions/Constraints —
+    // the composed StepContext (inline context plus the scraped Decisions/Constraints)
     // reached the child on stdin.
     const input = JSON.parse(readFileSync(join(agentDir, 'last-input.json'), 'utf8'))
     expect(input).toMatchObject({
@@ -139,7 +139,7 @@ describe('agent run — per-agent config', () => {
 
     const { code } = await captureIoAsync(() => agent(dir, ['run', 'doer', '--step', '1']))
     expect(code).toBe(0)
-    // The local overlay replaces the whole agentConfig rung — `model` does NOT leak
+    // The local overlay replaces the whole agentConfig rung: `model` does NOT leak
     // through from the project rung; the agent's own `?? default` softens a partial.
     expect(recordedInput(dir, 'doer').settings.agent).toEqual({ provider: 'ollama' })
   })
@@ -285,7 +285,7 @@ describe('agent run — side effects — D44 (cli-side-effects), D47 (handoff-le
   })
 })
 
-// The harness.json path for the started build — a sibling of intent.md.
+// The harness.json path for the started build: a sibling of intent.md.
 function harnessPath(root: string): string {
   return join(buildFolder(root, SLUG), 'harness.json')
 }

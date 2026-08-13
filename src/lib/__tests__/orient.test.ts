@@ -64,7 +64,7 @@ describe('orient parsers', () => {
   })
 
   it('parseSteps returns nothing when there is no ## Steps section', () => {
-    // A numbered checkbox floating outside any Steps section is not a step —
+    // A numbered checkbox floating outside any Steps section is not a step:
     // a fresh intent with only prose must orient as "no steps planned yet".
     expect(parseSteps('1. [ ] stray line, no section\n\n## Notes\n\ntext\n')).toEqual([])
   })
@@ -101,7 +101,7 @@ describe('orient parsers', () => {
 
   it('parseSteps captures the done-when criterion exactly: trimmed, single line, tight spacing ok', () => {
     // The criterion is echoed verbatim in the dashboard and the build report,
-    // so it must be the criterion alone — not the seam line, not padding.
+    // so it must be the criterion alone (not the seam line, not padding).
     const intent = [
       '## Steps',
       '',
@@ -142,7 +142,7 @@ describe('orient parsers', () => {
 
   it('parseSteps scrapes the optional model recommendation verbatim, per step — D62 (model-recommendation)', () => {
     // The recommendation is advisory prose echoed back to the human, so it must
-    // come through verbatim — and only from the step's own block, never a neighbor's.
+    // come through verbatim, and only from the step's own block, never a neighbor's.
     const intent = [
       '## Steps',
       '',
@@ -189,7 +189,7 @@ describe('orient parsers', () => {
 
   it('parseOpenQuestions drops an opener whose *resolved:* marker lands on the opener line, sub-lines and all', () => {
     // Resolution is read from the opener line: the *resolved:* marker must be on
-    // the opener for the count to drop — pinning that the still-present
+    // the opener for the count to drop: pinning that the still-present
     // *plain:*/*lean:* scaffolding doesn't prevent it, and that a genuinely open
     // neighbor still counts.
     const intent = [
@@ -205,7 +205,7 @@ describe('orient parsers', () => {
 
   it('parseOpenQuestions is not resolved by the word "resolved" appearing on a sub-line', () => {
     // The parser tests each opener line in isolation (research/08 R1's noted sharp
-    // edge) — a *lean:* sub-line that merely discusses "resolved" downstream must
+    // edge): a *lean:* sub-line that merely discusses "resolved" downstream must
     // not silently drop the opener from the count.
     const intent = [
       '## Open questions',
@@ -246,8 +246,8 @@ describe('orient parsers', () => {
   it('parseOpenQuestions counts an anchored opener `- <a id="q2"></a>**Q2 (slug)**: ...` as open', () => {
     // The citation convention gives every build-local number an anchor to link to, so
     // an opener a `[Q2 (default-waves)](#q2)` reference points at is born carrying
-    // `<a id="q2"></a>` and bold markers. The counter must read straight through both
-    // — an anchored question that stopped counting would silently empty the dashboard.
+    // `<a id="q2"></a>` and bold markers. The counter must read straight through both:
+    // an anchored question that stopped counting would silently empty the dashboard.
     const intent = [
       '## Open questions',
       '',
@@ -306,7 +306,7 @@ describe('orient parsers', () => {
   })
 
   it('the real templates/intent.md parses to an open-question count of 0 (the placeholder is uncounted)', () => {
-    // The scaffolded Q1 placeholder must never read as an open question — a fresh
+    // The scaffolded Q1 placeholder must never read as an open question: a fresh
     // build showing "open questions 1" would be shipped noise.
     expect(parseOpenQuestions(readTemplate('intent.md'))).toBe(0)
   })
@@ -339,7 +339,7 @@ describe('orient parsers', () => {
   })
 
   it('parseLastCheckpoint requires a line-start `step`, reads wide spacing and multi-digit steps', () => {
-    // Only real checkpoint records count — "redo step N" prose must not
+    // Only real checkpoint records count: "redo step N" prose must not
     // become the last checkpoint the dashboard reports.
     const checkpoints = ['baseline deadbeef', 'step 1 abc1111', '  step  12  cafe3333', 'redo step 99 ffff9999'].join(
       '\n'
@@ -377,7 +377,7 @@ describe('markStepDone', () => {
     const out = markStepDone(MARK, 2)
     expect(out).toContain('2. [x] the target')
     // Checkbox-shaped lines outside the section, and other steps inside it,
-    // must survive untouched — this is bookkeeping, not a rewrite.
+    // must survive untouched; this is bookkeeping, not a rewrite.
     expect(out).toContain('2. [ ] decoy before the section')
     expect(out).toContain('2. [ ] decoy after the section')
     expect(out).toContain('3. [ ] left alone')
@@ -416,7 +416,7 @@ describe('orient next-move inference — D15 (one-next-move)', () => {
     const next = orient({ ...base, intent, buildLog }).next
     expect(next).toContain('/plumbbob:step') // just-in-time: plan the next step
     expect(next).toContain('/plumbbob:finish') // ...or finish up if truly done
-    // With nothing parked there is no harvest preamble — the move leads with
+    // With nothing parked there is no harvest preamble: the move leads with
     // finishing up, not with an empty harvest.
     expect(next).toMatch(/^finish up/)
   })
@@ -478,7 +478,7 @@ describe('formatOrientation', () => {
   })
 
   it('renders the whole dashboard exactly', () => {
-    // The dashboard IS the interface — layout, markers, blank lines, and the
+    // The dashboard IS the interface: layout, markers, blank lines, and the
     // 7-char sha are what the human reads, so pin the rendering verbatim.
     expect(formatOrientation(orient({ ...base }))).toBe(
       [
@@ -501,7 +501,7 @@ describe('formatOrientation', () => {
   })
 
   it('a rough next step shows no done-when, seam, or model detail', () => {
-    // "Only what's present" — a rough step must not render empty detail rows.
+    // "Only what's present": a rough step must not render empty detail rows.
     const intent = '# T\n\n## Steps\n\n1. [x] a — **done**\n2. [ ] rough idea\n'
     const out = formatOrientation(orient({ ...base, intent }))
     expect(out).not.toContain('done when:')
@@ -515,7 +515,7 @@ describe('formatOrientation', () => {
   })
 
   it('surfaces out-of-band commits as one neutral line, just under the checkpoint — D66 (oob-commits-surfaced)', () => {
-    // The count reads back to the human, so pin the phrasing and its placement —
+    // The count reads back to the human, so pin the phrasing and its placement:
     // the reconciliation note belongs with the ledger it reconciles.
     const out = formatOrientation(orient({ ...base, outOfBand: 3 }))
     expect(out).toContain('last checkpoint  step 1 · abc1234\n3 commits since the last checkpoint landed outside plumbbob\'s ledger.\nparked')
@@ -528,7 +528,7 @@ describe('formatOrientation', () => {
   })
 
   it('prints no reconciliation line when nothing landed out of band', () => {
-    // The line appears only when the count is positive — a clean ledger stays quiet.
+    // The line appears only when the count is positive: a clean ledger stays quiet.
     expect(formatOrientation(orient({ ...base, outOfBand: 0 }))).not.toContain('outside plumbbob')
   })
 

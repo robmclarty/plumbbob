@@ -45,7 +45,7 @@ describe('start', () => {
 
   it('stamps the plan entry TICK from a surviving turn ledger — D64 (approval-latch)', async () => {
     const dir = makeTempRepo()
-    // A prior session left the ledger and its excludes behind — TURN is excluded
+    // A prior session left the ledger and its excludes behind: TURN is excluded
     // control, so it must not read as the dirty tree `start` refuses on.
     excludeControl(dir)
     mkdirSync(sidecarDir(dir), { recursive: true })
@@ -73,7 +73,7 @@ describe('start', () => {
   })
 
   it('warns at plan time when the gate sees no code checks, with the exact fix (research/07 Build 2a)', async () => {
-    const dir = makeTempRepo() // bare: no tsconfig, no test runner — only always-on repo checks
+    const dir = makeTempRepo() // bare: no tsconfig, no test runner; only always-on repo checks
     const { code, stderr } = await captureIoAsync(() => start(dir, ['Bare Repo']))
     expect(code).toBe(0) // the warning is guidance, never the exit code
     expect(stderr).toContain('the check gate sees no code checks')
@@ -104,7 +104,7 @@ describe('start', () => {
     const dir = makeTempRepo()
     // The repo's own .gitignore excludes the sidecar (committed, so the tree is
     // clean). The tracked build folder can't ride the branch, so plan/finish
-    // commits will be record-only — say so at start, not at the first checkpoint.
+    // commits will be record-only: say so at start, not at the first checkpoint.
     writeFileSync(join(dir, '.gitignore'), '/.plumbbob/\n')
     execFileSync('git', ['-C', dir, 'add', '-A'])
     execFileSync('git', ['-C', dir, 'commit', '-q', '-m', 'ignore sidecar'])

@@ -147,7 +147,7 @@ describe('commitsSince', () => {
     const dir = makeTempRepo()
     const base = headSha(dir)
     // Two commits land on a side branch; merging them back is ONE event on the
-    // branch's own line — the out-of-band-commit count `status` surfaces must
+    // branch's own line: the out-of-band-commit count `status` surfaces must
     // not read merged-in history as out-of-band work.
     execFileSync('git', ['-C', dir, 'checkout', '-q', '-b', 'side'], { stdio: 'ignore' })
     for (const name of ['s1', 's2']) {

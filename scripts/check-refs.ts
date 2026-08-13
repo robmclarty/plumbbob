@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// scripts/check-refs.ts — the citation scanner. Reads docs/decisions.md for the
+// scripts/check-refs.ts: the citation scanner. Reads docs/decisions.md for the
 // canonical D#/C# -> slug map, then scans every markdown file and every src/
 // TypeScript file for citations of those tags, flagging one that is bare, mislinked,
 // or unglossed. Wired into checkride.config.json as the `refs` slot, so it runs in the
@@ -45,8 +45,8 @@ const INLINE_CODE_RE = /`[^`\n]*`/g
 // the carve-outs D74 (glossed-citations) names: a finished build folder is the record
 // of what shipped, and a tag in a test title is a grep anchor read in failure output,
 // not prose browsed cold. `examples/` carries its own self-contained demo
-// intent.md/spec.md content with fictional, build-local D#/C# numbering — the same
-// category `.plumbbob/builds/*/` is exempt for, and not one of the surfaces the rule
+// intent.md/spec.md content with fictional, build-local D#/C# numbering (the same
+// category `.plumbbob/builds/*/` is exempt for), and not one of the surfaces the rule
 // covers.
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'coverage', 'research', 'test', '__tests__', 'examples'])
 
@@ -83,7 +83,7 @@ function isWithin(index: number, spans: ReadonlyArray<readonly [number, number]>
 
 /**
  * Every D#/C# citation in a chunk of text, outside a code span/fence and outside a
- * decisions.md definition line — a tag inside a code span is a mention, never a
+ * decisions.md definition line: a tag inside a code span is a mention, never a
  * citation, which is D74 (glossed-citations)'s own escape hatch. `surface: 'markdown'`
  * applies the code-span/definition exclusions; `surface: 'src'` scans raw, since a
  * TypeScript template-literal backtick is not a markdown code span.
@@ -127,8 +127,8 @@ function wrongSlugMessage(citation: RawCitation, canonicalSlug: string | null): 
 }
 
 /**
- * The four markdown rules — linked, anchor matches the cited number, slug present,
- * slug matches the definition verbatim — or the src variant, where a slug is required
+ * The four markdown rules (linked, anchor matches the cited number, slug present,
+ * slug matches the definition verbatim) or the src variant, where a slug is required
  * and a link is forbidden because markdown in a terminal is noise (D74
  * (glossed-citations)), whichever the citation's surface is. Returns the first rule
  * that fails, or null for a clean citation.
@@ -209,7 +209,7 @@ function* walkFiles(root: string, dir: string): Generator<string> {
 /**
  * Walks `root` for every markdown file and every src/ TypeScript file, checking each
  * D#/C# citation against docs/decisions.md's canonical map. `.plumbbob/`, `research/`,
- * `CHANGELOG.md`, and every test file are out of scope — the carve-outs D74
+ * `CHANGELOG.md`, and every test file are out of scope: the carve-outs D74
  * (glossed-citations) names.
  */
 export function scanRepo(root: string): ScanResult {
