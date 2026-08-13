@@ -160,7 +160,7 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
 14. [x] docs(prose): exempt the receipts, sweep or exempt the essays — **done when:** `docs/evals/*` carries its `Repo.EmDash = NO` stanza and one-line why ([D9 (receipts-are-records)](#d9)); `docs/generation-loss.md` (42) and `docs/attention-first-development.md` (3) are each either swept by the human's own hand or carry the same per-file stanza ([D6 (exemption-over-forgery)](#d6)); nothing baselined
     - seam: `.vale.ini`, `docs/generation-loss.md`, `docs/attention-first-development.md`
     - model: sonnet — the model's share is at most the exemption stanzas; the sweep half, if chosen, is the human's pen (build it by hand and land it with `/plumbbob:verify`)
-15. [ ] chore(gate): raise the em-dash rule to error and record it — **done when:** `EmDash.yml` rides at `error`, the full `pnpm check` is green repo-wide with `checkride.baseline.json` still absent ([C1 (no-baseline)](#c1)), and `docs/decisions.md` carries the rule and its exemption policy as the next free number
+15. [x] chore(gate): raise the em-dash rule to error and record it — **done when:** `EmDash.yml` rides at `error`, the full `pnpm check` is green repo-wide with `checkride.baseline.json` still absent ([C1 (no-baseline)](#c1)), and `docs/decisions.md` carries the rule and its exemption policy as the next free number
     - seam: `.vale/styles/Repo/EmDash.yml`, `docs/decisions.md`
     - model: opus — the decisions entry is the durable record; the sweep's calls compress into it
 

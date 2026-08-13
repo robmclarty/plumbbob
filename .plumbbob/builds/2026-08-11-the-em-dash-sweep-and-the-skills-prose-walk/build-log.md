@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — the em-dash sweep and the skills prose walk
 
-**Current step:** 15 — chore(gate): raise the em-dash rule to error and record it
+**Current step:** none (at the boundary)
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -37,7 +37,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 12. chore(prose): sweep the src/verbs doc comments
 - ☑ 13. chore(prose): sweep the test, entrypoint, and script comments
 - ☑ 14. docs(prose): exempt the receipts, sweep or exempt the essays
-- ☐ 15. chore(gate): raise the em-dash rule to error and record it
+- ☑ 15. chore(gate): raise the em-dash rule to error and record it
 
 ## Park list
 
@@ -46,8 +46,8 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 > Capture is one line (`/plumbbob:park` composes it). Harvest happens only at the boundary.
 - [x] docs/evals/ carries 68 EmDash findings and no step owns it: steps 5-12 never name the eval receipts, so step 13 cannot reach error-green as planned. Records under C3, or a sweep step of its own -> /plumbbob:refine
 - [x] step 11 measures 543 findings (460 production comments, 83 in test files), past D4's 150-250 band by 2x: it needs splitting before it is built -> /plumbbob:refine
-- [ ] steps 6-13 queue counts undercount: vale collapses multi-line paragraphs when positioning findings, so per-file totals under-report (decisions.md's 85 was 197 outside code spans); re-measure at each step's entry with a mask-aware scan
-- [ ] docs/voice/voice.md's decision-register parenthetical ('stands until that format is decided separately') went stale when D8 landed the comma marker; Rob's pen only (C2) -> flag, never model-edit
+- [x] steps 6-13 queue counts undercount: vale collapses multi-line paragraphs when positioning findings, so per-file totals under-report (decisions.md's 85 was 197 outside code spans); re-measure at each step's entry with a mask-aware scan
+- [x] docs/voice/voice.md's decision-register parenthetical ('stands until that format is decided separately') went stale when D8 landed the comma marker; Rob's pen only (C2) -> flag, never model-edit
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -80,6 +80,20 @@ Harvest results this boundary:
 
 Both numbers came from step 4's queue, which is what that step existed to print.
 
+**Boundary after step 15** (2026-08-13, confirmed by Rob):
+
+- **tangent** — the plan's per-surface queue counts under-reported: vale collapses multi-line
+  paragraphs when positioning findings, so `docs/decisions.md`'s listed 85 was really 197 U+2014
+  outside code spans. It never blocked a step, since each sweep still reached zero em-dashes verified
+  by vale at `error`; the reusable half (size the next prose sweep with a mask-aware scan) is saved to
+  memory, and the item is closed.
+- **tangent** — the voice file's decision-register passage still taught the retired `— *because*`
+  marker and claimed the format was undecided. The park line said flag-only under
+  [C2 (voice-stays-shut)](intent.md#c2); Rob overrode with a typed instruction to apply the
+  minimal fix, which is the prompt that constraint's "never unprompted" waits for. Two edits:
+  the exemplar's marker swapped to the comma form, the stale "stands until decided" clause
+  dropped. No other line touched; the file still carries zero em-dashes.
+
 ## Log
 
 *(The build's history, oldest first. `plumbbob checkpoint` appends a dated line here
@@ -102,3 +116,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-08-13 — step 12 checkpointed · 97323949a — chore(prose): sweep the src/verbs doc comments (18m)
 - 2026-08-13 — step 13 checkpointed · e2546b69f — chore(prose): sweep the test, entrypoint, and script comments (60m)
 - 2026-08-13 — step 14 checkpointed · 9e7f40e98 — docs(prose): exempt the receipts, sweep or exempt the essays (7m)
+- 2026-08-13 — step 15 checkpointed · 4ce90053a — chore(gate): raise the em-dash rule to error and record it (1 drift, 18m)

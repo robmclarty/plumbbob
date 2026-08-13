@@ -24,8 +24,8 @@ reject rules the negative, one taste expressed twice.
 
 # Voice
 
-The register in one line: a careful essayist explaining a tool they built;
-complete sentences, concrete numbers, one governing metaphor carried all the
+The register in one line: a careful essayist explaining a tool they built.
+Complete sentences, concrete numbers, one governing metaphor carried all the
 way through, and the reason stated right after the claim.
 
 ## The rules the exemplars demonstrate
@@ -102,12 +102,11 @@ From `templates/intent.md`:
 From a build's intent (2026-07-31), shown as source because source is what
 the model writes; one line, the reason that mattered, the numbers plain. A
 citation carries its slug in parentheses, never behind a dash, and the slug is
-the definition's own, copied rather than reworded. (The `— *because*` is the
-decision format's own marker, not prose punctuation, and stands until that
-format is decided separately.)
+the definition's own, copied rather than reworded. (The `, *because*` is the
+decision format's own marker, kept greppable in italics.)
 
 ```markdown
 **D7 (skip-test-profile)**: the gate profile is `{"skip": ["test"]}`, not an
-`only` list — *because* vitest is 52.7s of the 54.7s, and a skip-list stays
+`only` list, *because* vitest is 52.7s of the 54.7s, and a skip-list stays
 correct as slots are added while an only-list silently stops covering them.
 ```
