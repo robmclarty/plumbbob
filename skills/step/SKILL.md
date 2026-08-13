@@ -1,12 +1,12 @@
 ---
 name: step
-description: "Revise the next increment just-in-time — sharpen the next undone step against what's now true, or (with input) re-cut, split, or add a step. Empty input runs an automatic sharpen. One at a time; the human approves."
+description: "Revise the next increment just-in-time: sharpen the next undone step against what's now true, or (with input) re-cut, split, or add a step. Empty input runs an automatic sharpen. One at a time; the human approves."
 argument-hint: "[what-changed]"
 disable-model-invocation: true
 allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob agent list:*)
 ---
 
-# PlumbBob — revise the next step (the single-increment move)
+# PlumbBob: revise the next step (the single-increment move)
 
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not on PATH in this session. Marketplace install: confirm the plugin is enabled in /plugin, then /reload-plugins. Skills-dir/global install: npm i -g plumbbob && plumbbob init."`
 
@@ -14,13 +14,13 @@ Current session state (injected when this skill runs): !`plumbbob status 2>/dev/
 **just-in-time revision** move: it keeps the *next* undone step honest against what the
 build has actually taught you, right before you `/plumbbob:build` it. (Framing the whole goal
 is the separate `/plumbbob:plan` move.) It can also add or re-cut a step when scope genuinely
-grew — but its everyday job is to sharpen, not to invent.
+grew, but its everyday job is to sharpen, not to invent.
 
 ## Two ways to run it
 
 - **`/plumbbob:step` (no input) → automatic sharpen.** Re-examine the next undone step
   against the completed code, the Decisions, the Constraints, and the build-log, then
-  make the obvious revisions to its **done-when** and **seam** so it matches reality —
+  make the obvious revisions to its **done-when** and **seam** so it matches reality:
   for example a file moved, a decision narrowed the scope, an earlier step already did part of
   it. This is the zero-effort "keep my next step in sync" move: if the human does
   nothing else, the next step stays current.
@@ -38,13 +38,13 @@ grew — but its everyday job is to sharpen, not to invent.
    what you changed and why. Re-check the optional `- model:` recommendation too:
    a step that sharpened into rote work can drop to a smaller model; one that grew subtle
    earns a frontier one. Advisory, plain text (no backticks), never a gate.
-3. **Get the human's OK**, then write it into `## Steps` in the standard format —
-   `N. [ ] <title> — **done when:** <criterion>` with a `- seam:` sub-line. Keep the
+3. **Get the human's OK**, then write it into `## Steps` in the standard format:
+   `N. [ ] <title>, **done when:** <criterion>` with a `- seam:` sub-line. Keep the
    sharpened `<title>` a plain, single-line Conventional-Commit subject,
-   `type(scope): description` — it lands in `git log` verbatim, so as the step tightens
+   `type(scope): description`; it lands in `git log` verbatim, so as the step tightens
    keep load-bearing detail (file paths, module names) in `seam` and `done-when`,
    **never jammed into the title**. A sharpened step carries its own `(scope)`
-   when it touches a distinct code area — one that **overrides the build-default**
+   when it touches a distinct code area, one that **overrides the build-default**
    `**Scope:**` header; drop the scope and it falls back to that default → build slug →
    bare, and the type to `feat` ([D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68)). Aim for a soft
    ≤72 chars, no gate. Revise the existing step in place; only append when you are
@@ -52,7 +52,7 @@ grew — but its everyday job is to sharpen, not to invent.
 4. **Revise the step's harness bindings if they drifted too** *(optional)*. If the
    build carries a `harness.json` (beside `intent.md`) and the reality that moved the
    step also changed which agents it wants, sharpen that step's slot bindings
-   (`before`/`build`/`after`) and `note` at the same time — this is the just-in-time
+   (`before`/`build`/`after`) and `note` at the same time; this is the just-in-time
    counterpart to `/plumbbob:plan`'s plan-time binding. `plumbbob agent list` shows what's
    resolvable. Same rule as the plan move: bindings + prose only, never a conditional
   . Leave it untouched when the step's agents are still right, or when the build
@@ -62,10 +62,10 @@ grew — but its everyday job is to sharpen, not to invent.
 
 - **One verifiable increment.** Each step carries a done-when `/plumbbob:verify` can check
   and a seam small enough to review in one pass.
-- **Edit `## Steps` only**, in the standard format `status` and `build` parse — never
+- **Edit `## Steps` only**, in the standard format `status` and `build` parse: never
   the Roadmap, never loose prose. A done step (`[x]`) is history; do not rewrite it.
 - **Cite the plan's own numbers in the linked form.** A `D`/`C`/`Q` you write into a
-  step's done-when, seam, or notes reads `[D4 (default-waves)](#d4)` — the slug travels
+  step's done-when, seam, or notes reads `[D4 (default-waves)](#d4)`; the slug travels
   with the number, and the link lands on the `<a id="d4">` anchor minted where the item
   was born. Never a bare `D4`; if the item you want to cite has no anchor yet, that is a
   `/plumbbob:refine` repair, not something to invent here.

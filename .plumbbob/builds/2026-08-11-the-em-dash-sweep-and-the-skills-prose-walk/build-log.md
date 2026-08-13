@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — the em-dash sweep and the skills prose walk
 
-**Current step:** 9 — docs(templates): sweep the templates and land the decided marker
+**Current step:** 10 — docs(skills): sweep the skills prose
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -31,7 +31,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 6. docs(prose): sweep the guide docs
 - ☑ 7. docs(prose): sweep the reference docs
 - ☑ 8. docs(prose): sweep the front door and the agents guide
-- ☐ 9. docs(templates): sweep the templates and land the decided marker
+- ☑ 9. docs(templates): sweep the templates and land the decided marker
 - ☐ 10. docs(skills): sweep the skills prose
 - ☐ 11. chore(prose): sweep the src/lib doc comments
 - ☐ 12. chore(prose): sweep the src/verbs doc comments
@@ -96,3 +96,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-08-13 — step 6 checkpointed · 7a2fa3b35 — docs(prose): sweep the guide docs (1 drift, 66m)
 - 2026-08-13 — step 7 checkpointed · 164460ed2 — docs(prose): sweep the reference docs (27m)
 - 2026-08-13 — step 8 checkpointed · a1caea2b8 — docs(prose): sweep the front door and the agents guide (19m)
+- 2026-08-13 — step 9 checkpointed · 44ee1ed11 — docs(templates): sweep the templates and land the decided marker (1 drift, 38m)
