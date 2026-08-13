@@ -278,8 +278,11 @@ function narrowExcludes(root: string): void {
 /**
  * Perform the migration and return a human-readable list of what moved.
  *
- * STAGES the result but never commits: the human owns that commit. Call only when
- * `inspectLegacy` reported a legacy layout; doctor prints the returned actions.
+ * STAGES the result but never commits: the human owns that commit. In a repo
+ * that gitignores the sidecar the stage is skipped (stagePath's record-only
+ * guard) and the report says so: the files move but stay untracked. Call only
+ * when `inspectLegacy` reported a legacy layout; doctor prints the returned
+ * actions.
  */
 export function migrateSidecar(root: string): string[] {
   const dir = sidecarDir(root)
@@ -327,8 +330,12 @@ export function migrateSidecar(root: string): string[] {
   rmSync(archiveDir, { recursive: true, force: true })
 
   narrowExcludes(root)
-  stagePath(root, '.plumbbob')
-  actions.push('staged the move (builds/ + settings.json) — commit it yourself')
+  const staged = stagePath(root, '.plumbbob')
+  actions.push(
+    staged
+      ? 'staged the move (builds/ + settings.json) — commit it yourself'
+      : 'moved but not staged (the sidecar is gitignored) — the files stay untracked',
+  )
   return actions
 }
 

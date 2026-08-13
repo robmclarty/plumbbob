@@ -234,6 +234,19 @@ describe('doctor — migration', () => {
     expect(files).not.toContain('.plumbbob/settings.local.json')
   })
 
+  // stagePath skips a gitignored sidecar (the record-only guard), so the move
+  // lands with nothing staged; the report must say so instead of claiming a
+  // stage that never happened.
+  it('moves but stages nothing when the repo gitignores the sidecar, and the report says so', () => {
+    const dir = legacyRepo()
+    writeFileSync(join(dir, '.gitignore'), '/.plumbbob/\n')
+    const actions = migrateSidecar(dir)
+    expect(actions).toContain('moved but not staged (the sidecar is gitignored) — the files stay untracked')
+    expect(actions).not.toContain('staged the move (builds/ + settings.json) — commit it yourself')
+    expect(existsSync(intentPath(dir, 'my-legacy-build'))).toBe(true) // the move itself still happened
+    expect(staged(dir)).toEqual([])
+  })
+
   it('preserves park lines through the move — C4 (never-destroy)', () => {
     const dir = legacyRepo()
     migrateSidecar(dir)
