@@ -135,7 +135,7 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
 6. [x] docs(prose): sweep the guide docs — **done when:** `techniques`, `happy-path`, `state-and-git`, and `troubleshooting` carry zero em-dashes (133 today) and the reworded sentences read to the voice, not merely past the rule
    - seam: `docs/techniques.md`, `docs/happy-path.md`, `docs/state-and-git.md`, `docs/troubleshooting.md`
    - model: fable — the guides carry the repo's teaching register
-7. [ ] docs(prose): sweep the reference docs — **done when:** `cli-reference`, `skills-reference`, `install`, `architecture`, `local-model-review`, and `faq` carry zero em-dashes (106 today)
+7. [x] docs(prose): sweep the reference docs — **done when:** `cli-reference`, `skills-reference`, `install`, `architecture`, `local-model-review`, and `faq` carry zero em-dashes (106 today)
    - seam: `docs/cli-reference.md`, `docs/skills-reference.md`, `docs/install.md`, `docs/architecture.md`, `docs/local-model-review.md`, `docs/faq.md`
    - model: fable — reference prose is dense with asides, the hardest of the four mappings to call
 8. [ ] docs(prose): sweep the front door and the agents guide — **done when:** `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, and `docs/agents.md` carry zero em-dashes (114 today)

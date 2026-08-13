@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Please report suspected vulnerabilities privately — not in a public issue:
+Please report suspected vulnerabilities privately, not in a public issue:
 
 - **GitHub**: [private vulnerability reporting](https://github.com/robmclarty/plumbbob/security/advisories/new)
   on this repository, or
@@ -17,11 +17,11 @@ PlumbBob is a local tool with a deliberately small execution surface. Everything
 runs on your machine, in your repo; the CLI makes **no network calls** and collects **no
 telemetry**.
 
-- **The CLI** (`plumbbob` / `pb`) shells out to `git` — additively only: it stages,
+- **The CLI** (`plumbbob` / `pb`) shells out to `git`, additively only: it stages,
   commits forward, and `reset --hard`s exclusively to SHAs it recorded itself; it never
   rewrites pushed history. Spikes create and remove git worktrees and `spike/*` branches.
-- **The check gate** runs [checkride](https://www.npmjs.com/package/checkride) — the one
-  runtime dependency, pinned exact — in-process, which in turn runs the dev tools your
+- **The check gate** runs [checkride](https://www.npmjs.com/package/checkride) (the one
+  runtime dependency, pinned exact) in-process, which in turn runs the dev tools your
   repo already configures.
 - **The `"check"` override is a shell command.** If `.plumbbob/settings.json` sets a
   `check` key, that string is spawned verbatim through a shell at every `plumbbob check`
@@ -35,7 +35,7 @@ telemetry**.
 - **`plumbbob init`** creates one symlink (`~/.claude/skills/plumbbob`) and never writes
   Claude Code's `settings.json`.
 
-Everything PlumbBob writes — intent, logs, checkpoints, reports — is plain markdown and
+Everything PlumbBob writes (intent, logs, checkpoints, reports) is plain markdown and
 plain text inside your repo's `.plumbbob/` folder, readable and editable by hand. What
 the *model* does during a session is governed by Claude Code's own permission system, not
 by PlumbBob; the skills declare narrow `allowed-tools` scopes but are guidance, not a
