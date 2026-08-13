@@ -157,6 +157,12 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
      see the plan and build record in review. In the same breath, offer the way out:
      a repo that won't track a tool folder can restart with `plumbbob start --local`
      (a fully untracked sidecar) before any steps are built.
+     - **Record-only variant.** When the repo's own `.gitignore` excludes `.plumbbob/`,
+       the folder can't ride the branch — `start` flags this up front, and the plan
+       commit lands *record-only*: an empty commit whose message carries the plan
+       (the `--body` earns its keep here), the files staying untracked. Say that
+       instead: the rationale is published in `git log`, not the folder, so pass a
+       fuller `--body` than you otherwise would, since the message is the whole record.
 7. **Offer to stress-test it.** Suggest `/plumbbob:refine` to attack the frame for holes (or
    to repair the plan as it drifts). Optional, the human's call.
 

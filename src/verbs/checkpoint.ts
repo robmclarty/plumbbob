@@ -156,13 +156,23 @@ function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
     return 1
   }
 
-  stagePath(root, buildFolder(root))
+  // A repo that gitignores the sidecar (its `.gitignore`, not plumbbob's own
+  // info/exclude) makes this folder-scoped add impossible; stagePath skips it
+  // and reports false, and the plan still lands as a valid record-only commit —
+  // its body carries the plan, the files stay untracked, and `--allow-empty`
+  // (in commit) makes the empty diff legal. History still reads baseline → plan
+  // → steps.
+  const staged = stagePath(root, buildFolder(root))
   const sha = commit(root, planSubject(root), withMarker('plumbbob plan', bodyResult.body ?? undefined))
   appendFileSync(checkpointsPath(root), `plan ${sha}\n`)
   // Landing the plan consumes `start`'s entry stamp: a later hand-built diff
   // (no `build <n>`) must find no stale TICK and stay guidance-governed.
   clearTick(root)
-  process.stdout.write(`plumbbob: plan committed — ${sha.slice(0, 9)}. Baseline → plan → steps.\n`)
+  process.stdout.write(
+    staged
+      ? `plumbbob: plan committed — ${sha.slice(0, 9)}. Baseline → plan → steps.\n`
+      : `plumbbob: plan committed (record-only — sidecar is gitignored; the plan rides the commit message, the files stay untracked) — ${sha.slice(0, 9)}. Baseline → plan → steps.\n`,
+  )
   return 0
 }
 

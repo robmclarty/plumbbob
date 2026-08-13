@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { readFileSync, realpathSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import {
@@ -10,8 +10,10 @@ import {
   hasCommit,
   headSha,
   isDirty,
+  isIgnored,
   resetHard,
   stageAll,
+  stagePath,
   untrackedPaths,
 } from '../git.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -74,6 +76,31 @@ describe('stageAll / untrackedPaths', () => {
     expect(untrackedPaths(dir)).toEqual(['new.txt'])
     stageAll(dir)
     expect(untrackedPaths(dir)).toEqual([])
+  })
+})
+
+describe('stagePath / isIgnored', () => {
+  it('stages a tracked path and reports true', () => {
+    const dir = makeTempRepo()
+    mkdirSync(join(dir, 'sub'), { recursive: true })
+    writeFileSync(join(dir, 'sub', 'a.txt'), 'a\n')
+    expect(isIgnored(dir, join(dir, 'sub'))).toBe(false)
+    expect(stagePath(dir, join(dir, 'sub'))).toBe(true)
+    expect(untrackedPaths(dir)).not.toContain('sub/a.txt') // the add landed
+  })
+
+  it('skips a gitignored path, reporting false without throwing — the record-only guard', () => {
+    const dir = makeTempRepo()
+    // A repo that ignores the sidecar in its own .gitignore: git hard-refuses an
+    // explicit `git add` of the folder (exit 1), so stagePath must skip it, not
+    // die, and report that nothing staged.
+    writeFileSync(join(dir, '.gitignore'), '/.plumbbob/\n')
+    const ignored = join(dir, '.plumbbob', 'builds', 'x')
+    mkdirSync(ignored, { recursive: true })
+    writeFileSync(join(ignored, 'intent.md'), 'plan\n')
+    expect(isIgnored(dir, ignored)).toBe(true)
+    expect(() => stagePath(dir, ignored)).not.toThrow()
+    expect(stagePath(dir, ignored)).toBe(false)
   })
 })
 

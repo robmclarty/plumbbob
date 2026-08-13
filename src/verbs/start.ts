@@ -8,7 +8,7 @@ import { existsSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { detectGate } from '../lib/check.ts'
 import { readTemplate, stampTemplate } from '../lib/templates.ts'
-import { findRepoRoot, hasCommit, headSha, isDirty } from '../lib/git.ts'
+import { findRepoRoot, hasCommit, headSha, isDirty, isIgnored } from '../lib/git.ts'
 import {
   sidecarDir,
   buildDir,
@@ -163,6 +163,23 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
     `plumbbob: started "${title}" — baseline ${sha.slice(0, 9)}. Frame and decide in ${intentLocation}; \`build\` a step once the decisions are made.\n`,
   )
 
+  // The tracked layout plants `builds/<slug>/` to ride the branch into the PR —
+  // but a repo whose own `.gitignore` excludes `.plumbbob/` overrides that, and
+  // an explicit `git add` of an ignored folder is a hard error. Detect it here,
+  // once, so the record-only mode (plan/finish commits land empty; their bodies
+  // carry the record, the files stay untracked) is a known mode from the start
+  // rather than a surprise at the first `checkpoint --plan`. `--local` already
+  // excludes the whole sidecar by design and says so, so skip the probe there.
+  // Guidance only, and the session is already open — a probe hiccup stays silent
+  // rather than half-crashing a scaffolded session.
+  if (!local && sidecarIsIgnored(root, slug)) {
+    process.stderr.write(
+      'plumbbob: heads-up — this repo gitignores .plumbbob/, so the tracked build folder cannot ride the branch.\n' +
+        '  Plan and finish commits will be record-only (empty commits; the plan and report ride the commit message).\n' +
+        '  To keep the record in-tree, unignore .plumbbob/builds/ (or the whole sidecar) before the first checkpoint.\n',
+    )
+  }
+
   // The plan-time gate probe: if checkride sees no code checks here, say so
   // NOW — while the human is still deciding — instead of at the first
   // checkpoint, where the gate either refuses a vacuous run or, worse, greens
@@ -194,6 +211,22 @@ function datedSlug(title: string): string {
   const now = new Date()
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${base}`
+}
+
+/**
+ * Whether the tracked build folder is gitignored — the record-only heads-up's
+ * predicate, probing exactly the path `checkpoint --plan` will try to stage.
+ *
+ * Best-effort: a probe that throws (a fatal `git check-ignore`) reads as
+ * not-ignored so the heads-up stays silent rather than crashing a session that
+ * is already open.
+ */
+function sidecarIsIgnored(root: string, slug: string): boolean {
+  try {
+    return isIgnored(root, buildDir(root, slug))
+  } catch {
+    return false
+  }
 }
 
 /**

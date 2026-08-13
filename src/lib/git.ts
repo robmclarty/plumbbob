@@ -107,15 +107,44 @@ export function stageAll(root: string): void {
 }
 
 /**
- * Stage a single path (vs `stageAll`'s `-A`).
+ * Stage a single path (vs `stageAll`'s `-A`), returning whether it staged.
  *
  * The plan-approval commit stages only the build's artifact folder so the
  * first step's diff can't absorb the plan scaffold — plan approval gets its
  * own commit. `path` may be absolute or repo-relative — git resolves it
  * against `root`. The `--` guards a path that could look like a flag.
+ *
+ * A repo that gitignores the sidecar has decided not to track it, and git
+ * hard-refuses an explicit `git add` of an ignored path — so probe
+ * `check-ignore` first: an ignored path is skipped and returns false (the
+ * caller's commit is then record-only), a tracked one stages and returns true.
+ * Never `git add -f`: honoring the repo's exclusion is the whole point.
  */
-export function stagePath(root: string, path: string): void {
+export function stagePath(root: string, path: string): boolean {
+  if (isIgnored(root, path)) {
+    return false
+  }
   runGit(root, ['add', '--', path])
+  return true
+}
+
+/**
+ * Whether git ignores `path` — a `git check-ignore -q` probe.
+ *
+ * Exit 0 means ignored; exit 1 means not (execFileSync throws on the non-zero,
+ * caught and read as false); any other status (128, a genuine failure)
+ * propagates. `path` may be absolute or repo-relative.
+ */
+export function isIgnored(root: string, path: string): boolean {
+  try {
+    runGit(root, ['check-ignore', '-q', '--', path])
+    return true
+  } catch (error) {
+    if ((error as { status?: number }).status === 1) {
+      return false
+    }
+    throw error
+  }
 }
 
 /**

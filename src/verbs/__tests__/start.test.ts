@@ -100,6 +100,26 @@ describe('start', () => {
     expect(stderr).not.toContain('no code checks')
   })
 
+  it('announces record-only mode when the repo gitignores the sidecar', async () => {
+    const dir = makeTempRepo()
+    // The repo's own .gitignore excludes the sidecar (committed, so the tree is
+    // clean). The tracked build folder can't ride the branch, so plan/finish
+    // commits will be record-only — say so at start, not at the first checkpoint.
+    writeFileSync(join(dir, '.gitignore'), '/.plumbbob/\n')
+    execFileSync('git', ['-C', dir, 'add', '-A'])
+    execFileSync('git', ['-C', dir, 'commit', '-q', '-m', 'ignore sidecar'])
+    const { code, stderr } = await captureIoAsync(() => start(dir, ['My Feature']))
+    expect(code).toBe(0)
+    expect(stderr).toContain('gitignores .plumbbob/')
+    expect(stderr).toContain('record-only')
+  })
+
+  it('stays silent about record-only under the default tracked layout', async () => {
+    const dir = makeTempRepo()
+    const { stderr } = await captureIoAsync(() => start(dir, ['My Feature']))
+    expect(stderr).not.toContain('record-only')
+  })
+
   it('refuses when the derived slug collides with an existing build — D38 (cli-owns-slugs)', async () => {
     const dir = makeTempRepo()
     mkdirSync(buildDir(dir, `${TODAY}-my-feature`), { recursive: true }) // a prior build already owns the slug

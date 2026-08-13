@@ -404,6 +404,39 @@ describe('checkpoint', () => {
       expect(code).toBe(0)
       expect(existsSync(tickPath(dir))).toBe(false)
     })
+
+    it('lands record-only — a valid empty commit, no raw git error — when the repo gitignores the sidecar', async () => {
+      const dir = makeTempRepo()
+      // The repo's own .gitignore excludes the sidecar, committed so the tree is
+      // clean for start. The tracked folder then cannot ride the branch, and an
+      // explicit `git add` of an ignored path is a hard error — the plan commit
+      // must fall back to a valid record-only (empty) commit rather than dying.
+      writeFileSync(join(dir, '.gitignore'), '/.plumbbob/\n')
+      execFileSync('git', ['-C', dir, 'add', '-A'], { stdio: 'ignore' })
+      execFileSync('git', ['-C', dir, 'commit', '-q', '-m', 'ignore sidecar'], { stdio: 'ignore' })
+      await captureIoAsync(() => start(dir, ['Checkpoint test', '--slug', 'checkpoint-test']))
+      writeFileSync(intentPath(dir), INTENT)
+      writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true' }))
+      writeFileSync(tickPath(dir), '2\n') // an entry stamp to prove it still gets consumed
+
+      const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
+
+      expect(code).toBe(0)
+      expect(stdout).toContain('record-only')
+      // The subject and body marker are unchanged from the tracked path.
+      const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
+      expect(subject).toBe('chore(checkpoint-test): plan')
+      const body = execFileSync('git', ['log', '-1', '--format=%b'], { cwd: dir, encoding: 'utf8' })
+      expect(body).toContain('plumbbob plan')
+      // The commit is empty — nothing tracked, because the sidecar is ignored.
+      const names = execFileSync('git', ['show', '--pretty=format:', '--name-only', 'HEAD'], { cwd: dir, encoding: 'utf8' })
+        .split('\n')
+        .filter((l) => l.length > 0)
+      expect(names).toEqual([])
+      // The ledger still records the plan, and the entry stamp is consumed.
+      expect(readFileSync(checkpointsPath(dir), 'utf8')).toMatch(/plan [0-9a-f]{40}/)
+      expect(existsSync(tickPath(dir))).toBe(false)
+    })
     // `--body` reads fd 0, which an in-process unit test can't feed — the subprocess
     // integration test (verify.test.ts) covers the plan commit's `--body` path.
   })
