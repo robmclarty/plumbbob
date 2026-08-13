@@ -52,22 +52,22 @@
     }
   },
   "devDependencies": {
-    "@ast-grep/cli": "0.43.0",
+    "@ast-grep/cli": "0.45.1",
     "@stryker-mutator/api": "9.6.1",
     "@stryker-mutator/core": "9.6.1",
     "@stryker-mutator/vitest-runner": "9.6.1",
-    "@types/node": "24.13.1",
-    "@vitest/coverage-v8": "4.1.9",
-    "@vvago/vale": "3.17.0",
-    "fallow": "2.103.0",
+    "@types/node": "26.2.0",
+    "@vitest/coverage-v8": "4.1.10",
+    "@vvago/vale": "3.17.1",
+    "fallow": "3.14.0",
     "fascicle": "0.8.16",
-    "markdownlint-cli2": "0.22.1",
-    "oxlint": "1.69.0",
+    "markdownlint-cli2": "0.23.2",
+    "oxlint": "1.78.0",
     "typescript": "6.0.3",
-    "vitest": "4.1.9"
+    "vitest": "4.1.10"
   },
   "dependencies": {
-    "checkride": "0.12.1"
+    "checkride": "0.12.2"
   },
   "bundleDependencies": [
     "checkride"
