@@ -90,7 +90,7 @@ state looks wrong.
 No — ceremony destroys attention too. A typo or a one-liner gets no session: just fix it.
 The full loop earns its keep from "contained bug" up to "feature touching a few modules";
 above that, reach for a fully autonomous harness. Sizing the process to the work is the
-skill ([`techniques.md`](techniques.md#calibration--size-the-process-to-the-work)).
+skill ([`techniques.md`](techniques.md#calibration-size-the-process-to-the-work)).
 
 ---
 

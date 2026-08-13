@@ -129,7 +129,7 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
 4. [x] feat(prose): author the em-dash rule at warning and print the queue — **done when:** `.vale/styles/Repo/EmDash.yml` exists at `warning` severity flagging U+2014 in prose scope (code spans and fences escape it, the same way they escape the refs scanner), the full check stays green because warnings do not fail it ([D1 (warning-then-error)](#d1)), and one vale run prints the per-surface queue steps 5–12 burn down
    - seam: `.vale/styles/Repo/EmDash.yml`
    - model: opus — vale scoping is the one subtle part: what "prose scope" means for markdown bodies and for ts-mapped-to-js comments
-5. [ ] docs(decisions): sweep the key and settle both format markers — **done when:** `docs/decisions.md` carries zero em-dashes outside code spans; the 79 definition headers wear the colon separator and its two literal `— *because*` sites the comma marker ([D8 (comma-and-colon)](#d8)); refs and links slots green throughout ([C4 (scanner-stays-green)](#c4))
+5. [x] docs(decisions): sweep the key and settle both format markers — **done when:** `docs/decisions.md` carries zero em-dashes outside code spans; the 79 definition headers wear the colon separator and its two literal `— *because*` sites the comma marker ([D8 (comma-and-colon)](#d8)); refs and links slots green throughout ([C4 (scanner-stays-green)](#c4))
    - seam: `docs/decisions.md`
    - model: fable — 85 sites, and each replacement is an ear call under the voice's mapping
 6. [ ] docs(prose): sweep the guide docs — **done when:** `techniques`, `happy-path`, `state-and-git`, and `troubleshooting` carry zero em-dashes (133 today) and the reworded sentences read to the voice, not merely past the rule
