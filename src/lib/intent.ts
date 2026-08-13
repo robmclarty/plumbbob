@@ -207,10 +207,10 @@ export function parseStepMeta(content: string, step: number): StepMeta {
 
   const m = DONE_WHEN.exec(body)
   if (m === null) {
-    return { title: stripTrailingDash(body), doneWhen: '' }
+    return { title: stripTrailingSeparator(body), doneWhen: '' }
   }
   return {
-    title: stripTrailingDash(body.slice(0, m.index)),
+    title: stripTrailingSeparator(body.slice(0, m.index)),
     doneWhen: body.slice(m.index + m[0].length).trim(),
   }
 }
@@ -306,11 +306,12 @@ export function scrapeBullets(content: string, heading: string): ScrapedBullets 
 }
 
 /**
- * Trim a trailing em-dash or hyphen (the `Title —` separator) plus surrounding
- * space, so a title never carries the marker that introduced its done-when.
+ * Trim a trailing separator (a comma, or the legacy em dash or hyphen) plus
+ * surrounding space, so a title never carries the marker that introduced its
+ * done-when.
  */
-function stripTrailingDash(text: string): string {
-  return text.replace(/\s*[—-]+\s*$/, '').trim()
+function stripTrailingSeparator(text: string): string {
+  return text.replace(/\s*[—,-]+\s*$/, '').trim()
 }
 
 /**

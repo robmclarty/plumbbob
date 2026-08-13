@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — the em-dash sweep and the skills prose walk
 
-**Current step:** 8 — docs(prose): sweep the front door and the agents guide
+**Current step:** 9 — docs(templates): sweep the templates and land the decided marker
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -30,7 +30,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 5. docs(decisions): sweep the key and settle both format markers
 - ☑ 6. docs(prose): sweep the guide docs
 - ☑ 7. docs(prose): sweep the reference docs
-- ☐ 8. docs(prose): sweep the front door and the agents guide
+- ☑ 8. docs(prose): sweep the front door and the agents guide
 - ☐ 9. docs(templates): sweep the templates and land the decided marker
 - ☐ 10. docs(skills): sweep the skills prose
 - ☐ 11. chore(prose): sweep the src/lib doc comments
@@ -47,6 +47,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [x] docs/evals/ carries 68 EmDash findings and no step owns it: steps 5-12 never name the eval receipts, so step 13 cannot reach error-green as planned. Records under C3, or a sweep step of its own -> /plumbbob:refine
 - [x] step 11 measures 543 findings (460 production comments, 83 in test files), past D4's 150-250 band by 2x: it needs splitting before it is built -> /plumbbob:refine
 - [ ] steps 6-13 queue counts undercount: vale collapses multi-line paragraphs when positioning findings, so per-file totals under-report (decisions.md's 85 was 197 outside code spans); re-measure at each step's entry with a mask-aware scan
+- [ ] docs/voice/voice.md's decision-register parenthetical ('stands until that format is decided separately') went stale when D8 landed the comma marker; Rob's pen only (C2) -> flag, never model-edit
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -94,3 +95,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-08-13 — step 5 checkpointed · 89da5fe5b — docs(decisions): sweep the key and settle both format markers (33m)
 - 2026-08-13 — step 6 checkpointed · 7a2fa3b35 — docs(prose): sweep the guide docs (1 drift, 66m)
 - 2026-08-13 — step 7 checkpointed · 164460ed2 — docs(prose): sweep the reference docs (27m)
+- 2026-08-13 — step 8 checkpointed · a1caea2b8 — docs(prose): sweep the front door and the agents guide (19m)

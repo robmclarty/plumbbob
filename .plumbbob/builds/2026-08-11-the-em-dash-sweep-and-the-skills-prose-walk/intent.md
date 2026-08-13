@@ -138,7 +138,7 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
 7. [x] docs(prose): sweep the reference docs — **done when:** `cli-reference`, `skills-reference`, `install`, `architecture`, `local-model-review`, and `faq` carry zero em-dashes (106 today)
    - seam: `docs/cli-reference.md`, `docs/skills-reference.md`, `docs/install.md`, `docs/architecture.md`, `docs/local-model-review.md`, `docs/faq.md`
    - model: fable — reference prose is dense with asides, the hardest of the four mappings to call
-8. [ ] docs(prose): sweep the front door and the agents guide — **done when:** `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, and `docs/agents.md` carry zero em-dashes (114 today)
+8. [x] docs(prose): sweep the front door and the agents guide — **done when:** `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, and `docs/agents.md` carry zero em-dashes (114 today)
    - seam: `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `docs/agents.md`
    - model: fable — the README is the most-judged prose in the repo
 9. [ ] docs(templates): sweep the templates and land the decided marker — **done when:** the three templates carry zero em-dashes (20 today), `templates/intent.md`'s decision-line format teaches the `, *because*` marker ([D8 (comma-and-colon)](#d8)), and a build scaffolded from them is born clean

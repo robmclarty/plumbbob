@@ -1,26 +1,26 @@
 <!--
-build-log.md — your live ledger for execution. Append constantly; reorganize at
+build-log.md: your live ledger for execution. Append constantly; reorganize at
 step boundaries. The antidote to "my plan got lost in the noise."
 
   Steps     : where you are. One step in flight at a time. CLI-maintained: `build`,
               `checkpoint`, and `revert` keep this mirror and the Current step line
-              in sync with intent.md — you never hand-edit them.
+              in sync with intent.md; you never hand-edit them.
   Park list : where ideas go so you do not chase them. CAPTURE, never act inline.
   Harvest   : the boundary ritual that keeps you on one branch.
   Log       : the build's history. `plumbbob checkpoint` appends a line per step as it
               lands; feeds the /plumbbob:finish report, which rides the branch into the PR.
 -->
 
-# Build log — {{TITLE}}
+# Build log: {{TITLE}}
 
 **Current step:** none (at the boundary)
 **Heavy check:** {{CHECK}}
 
 ## Steps
 
-*(Mirror of intent.md's Steps, with live status — CLI-maintained, not hand-edited.
+*(Mirror of intent.md's Steps, with live status; CLI-maintained, not hand-edited.
 `build`/`checkpoint`/`revert` re-render this from intent.md, and set the Current step
-line above. Only ONE step is in flight; a step is done only after a checkpoint —
+line above. Only ONE step is in flight; a step is done only after a checkpoint:
 check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
 - ☐ 1. <step>
@@ -52,8 +52,8 @@ Harvest results this boundary:
 ## Log
 
 *(The build's history, oldest first. `plumbbob checkpoint` appends a dated line here
-every time a step lands — via `/plumbbob:build` or `/plumbbob:verify` — so this
+every time a step lands (via `/plumbbob:build` or `/plumbbob:verify`), so this
 fills in as you go, not at the end. Add your own decision/event lines too: this is what
-you point at to say "I did that — the LLM helped, but those were my calls."
+you point at to say "I did that: the LLM helped, but those were my calls."
 `/plumbbob:finish` reads this for the report; `plumbbob finish` commits it with the build
 folder, so it rides the branch into the PR.)*

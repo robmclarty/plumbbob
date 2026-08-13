@@ -136,6 +136,11 @@ describe('parseStepMeta', () => {
     const intent = intentWith(['1. [ ] Just a title', '   - seam: `a.ts`'].join('\n'))
     expect(parseStepMeta(intent, 1)).toEqual({ title: 'Just a title', doneWhen: '' })
   })
+
+  it('strips the comma separator of the scaffold step form — D8 (comma-and-colon)', () => {
+    const intent = intentWith(['1. [ ] First thing, **done when:** it works', '   - seam: `a.ts`'].join('\n'))
+    expect(parseStepMeta(intent, 1)).toEqual({ title: 'First thing', doneWhen: 'it works' })
+  })
 })
 
 describe('scrapeBullets', () => {

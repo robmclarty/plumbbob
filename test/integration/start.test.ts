@@ -44,7 +44,7 @@ describe('plumbbob start', () => {
     const intent = readSidecar(dir, 'intent.md')
     expect(intent).toContain('# My change')
     expect(intent).not.toContain('{{TITLE}}')
-    expect(readSidecar(dir, 'build-log.md')).toContain('Build log — My change')
+    expect(readSidecar(dir, 'build-log.md')).toContain('Build log: My change')
   })
 
   it('narrows the git exclude to the control plane, leaving the artifact plane tracked — D17 (two-planes)', () => {

@@ -105,7 +105,7 @@ describe('spike reports — D70 (spike-reports)', () => {
       expect(listSpikeReports(dir)).toEqual(['spike-01-auth.md'])
       expect(stdout).toContain('spike-01-auth.md')
       const body = reportBody(dir, 'spike-01-auth.md')
-      expect(body).toContain('# Spike — auth')
+      expect(body).toContain('# Spike: auth')
       expect(body).toContain('**Via:** /plumbbob:spike — worktrees (a, b)')
       expect(body).toContain('*(viable | not viable | partial') // the unfilled verdict placeholder
     } finally {

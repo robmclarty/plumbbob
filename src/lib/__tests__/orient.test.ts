@@ -115,6 +115,23 @@ describe('orient parsers', () => {
     expect(parseSteps(INTENT)[1]?.doneWhen).toBe('the thing works.')
   })
 
+  it('parseSteps reads the comma step form with a clean title — D8 (comma-and-colon)', () => {
+    // The scaffold teaches `Title, **done when:**` now that the em dash is out
+    // of the prose kit; the marker anchors the split, so a comma inside the
+    // title survives, and the legacy dash form parses unchanged beside it.
+    const intent = [
+      '## Steps',
+      '',
+      '1. [ ] feat(scope): add a, then b, **done when:** both land',
+      '   - seam: `src/x.ts`',
+      '2. [ ] Legacy dash — **done when:** still parses',
+    ].join('\n')
+    const steps = parseSteps(intent)
+    expect(steps[0]).toMatchObject({ n: 1, title: 'feat(scope): add a, then b', planned: true })
+    expect(steps[0]?.doneWhen).toBe('both land')
+    expect(steps[1]?.title).toBe('Legacy dash')
+  })
+
   it('parseSteps reads only the ## Steps section, not roadmap prose', () => {
     const steps = parseSteps(INTENT)
     expect(steps).toHaveLength(3)

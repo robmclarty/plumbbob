@@ -1,5 +1,5 @@
 <!--
-intent.md — your canonical intent, written in DESIGN before any code. This is the
+intent.md: your canonical intent, written in DESIGN before any code. This is the
 head; the chat is the hand. When the model floods you, read this, not your memory.
 
 Size to the work: a small change fills Frame + a couple of Decisions and deletes
@@ -7,8 +7,8 @@ the rest; a medium feature fills it all. Opinionated where decided, explicit whe
 open. If the implementor (you-later, or the LLM) has to guess, the doc failed.
 
 One rule runs through the whole doc: compress what's settled; expand what's pending.
-Decisions and Constraints stay one line each — they re-inject into every build step,
-so their tokens recur. Open questions expand into plain-then-lean prose — a human
+Decisions and Constraints stay one line each; they re-inject into every build step,
+so their tokens recur. Open questions expand into plain-then-lean prose; a human
 reads them once, to decide, and that legibility buys back a chat round-trip.
 -->
 
@@ -16,11 +16,11 @@ reads them once, to decide, and that legibility buys back a chat round-trip.
 
 **Phase** (your own bookkeeping while framing): frame
 **Size:** tiny | small | medium
-**Scope:** <short-scope>  <!-- the build's default commit scope — plumbbob [D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68): a short feature-level name each step's own `(scope)` overrides. Leave the `<…>` placeholder (or blank) and it parses as absent — commits fall through to the build slug. -->
+**Scope:** <short-scope>  <!-- the build's default commit scope (plumbbob [D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68)): a short feature-level name each step's own `(scope)` overrides. Leave the `<…>` placeholder (or blank) and it parses as absent; commits fall through to the build slug. -->
 
 ## Frame
 
-*(You, on paper first. The problem in plain words — before any solution.)*
+*(You, on paper first. The problem in plain words, before any solution.)*
 
 - **Problem:** <what is wrong or missing, and why it matters>
 - **Smallest thing that solves it:** <the minimal change, not the ideal system>
@@ -37,34 +37,34 @@ reads them once, to decide, and that legibility buys back a chat round-trip.
 
 ## Decisions
 
-*(One line each — settled, not re-litigated in the chat. Grows as you resolve the
+*(One line each: settled, not re-litigated in the chat. Grows as you resolve the
 holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD. **Anchor and slug
-each item where it is born** — a two- or three-word slug, and an `<a id="…">` for
-references to land on — then cite it from anywhere else in this file as
+each item where it is born**: a two- or three-word slug, and an `<a id="…">` for
+references to land on; then cite it from anywhere else in this file as
 `[D1 (slug-here)](#d1)`, carrying that same slug verbatim. One link, one glance: a later
 `D4` never decays into a bare number a cold reader has to hunt down.)*
 
-- <a id="d1"></a>**D1 (slug-here)**: <decision> — *because* <the one reason that mattered>
+- <a id="d1"></a>**D1 (slug-here)**: <decision>, *because* <the one reason that mattered>
 
 ## Constraints
 
 *(Hard rules the build must honor. `/plumbbob:verify` and `/plumbbob:refine` read against these.
-Anchor and slug them at birth too — cited as `[C1 (no-new-deps)](#c1)` — same one line,
+Anchor and slug them at birth too (cited as `[C1 (no-new-deps)](#c1)`): same one line,
 same rule.)*
 
 - <a id="c1"></a>**C1 (no-new-deps)**: <for example functional/procedural only; no new dependencies>
 
 ## Steps
 
-*(The build plan. `/plumbbob:plan` authors the **whole list up front** — each step a small,
+*(The build plan. `/plumbbob:plan` authors the **whole list up front**: each step a small,
 verifiable increment with its own **done-when** and **seam** (the paths it will touch,
-which `/plumbbob:build` records in the build folder's `SEAM` for orientation — awareness, not a lock).
-An optional **model** line recommends the smallest model that can carry the step —
+which `/plumbbob:build` records in the build folder's `SEAM` for orientation: awareness, not a lock).
+An optional **model** line recommends the smallest model that can carry the step:
 mechanical work runs fine on a small model; subtle or creative work earns a frontier
-one. Advisory for the human, never a gate; write it plain, no backticks — plumbbob
-[D62 (model-recommendation)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d62). The step title *is* the checkpoint's commit subject —
-plumbbob [D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68): write it as one plain line, `type(scope): description` —
-load-bearing paths live in `seam`, never jammed into the title — aiming for ≤72
+one. Advisory for the human, never a gate; write it plain, no backticks (plumbbob
+[D62 (model-recommendation)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d62)). The step title *is* the checkpoint's commit subject
+(plumbbob [D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68)): write it as one plain line, `type(scope): description`
+(load-bearing paths live in `seam`, never jammed into the title), aiming for ≤72
 characters (GitHub's subject convention: soft, no gate).
 The `(scope)` names the primary code area the step touches (`plan`, `commitmsg`); the
 build's `**Scope:**` header is the feature-level catch-all a step overrides. Scope
@@ -73,31 +73,31 @@ title-type → `feat`. Then drive `/plumbbob:build` until done. Later steps may 
 fuzzier than the first; sharpen the next one just-in-time with `/plumbbob:step` (empty input
 auto-syncs it), and use `/plumbbob:refine` to repair the whole plan when a blocker rewrites it.)*
 
-1. [ ] feat: <step> — **done when:** <criterion, ideally a test or check result>
+1. [ ] feat: <step>, **done when:** <criterion, ideally a test or check result>
    - seam: `<file>`, `<file>`
-   - model: <smallest that can carry it, for example sonnet — mechanical, fully specified>
-2. [ ] <step> — **done when:** <criterion>
+   - model: <smallest that can carry it, for example sonnet (mechanical, fully specified)>
+2. [ ] <step>, **done when:** <criterion>
    - seam: `<file>`
 
 ## Open questions
 
-*(Holes you could NOT resolve on paper — the one section that expands rather than
+*(Holes you could NOT resolve on paper: the one section that expands rather than
 compresses. Do not guess them into Decisions; a genuine fork goes to a SPIKE, with
 the verdict recorded below and in Decisions.)*
 
 <!--
 Write each open question so a cold reader could answer it without flipping back to
-the code or the chat — that cold-reader test is the whole point of expanding it.
+the code or the chat; that cold-reader test is the whole point of expanding it.
 Three lines:
 
-  · the opener — the hole as a question, anchored and slugged at birth the same way a
+  · the opener: the hole as a question, anchored and slugged at birth the same way a
     Decision is (`- <a id="q1"></a>**Q1 (slug-here)**: …`, so a `[Q1 (slug-here)](#q1)`
     reference has somewhere to land), tagged *resolve by:* decide | spike | ask
-  · *plain:* — what's at stake, in plain words: the context and the cost of getting
+  · *plain:* what's at stake, in plain words: the context and the cost of getting
     it wrong, enough to judge it cold
-  · *lean:* — the model's proposed resolution: one answer to react to, not a menu
+  · *lean:* the model's proposed resolution: one answer to react to, not a menu
 
-The human reads *plain* to understand, then *lean* to approve or redirect — one
+The human reads *plain* to understand, then *lean* to approve or redirect: one
 pass, no round-trip.
 
 When a question resolves, swap *resolve by:* for *resolved:* <date, the call> ON THE
@@ -115,17 +115,17 @@ build reports zero open questions
 ([D77 (placeholder-uncounted)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d77));
 fill it in and it counts.
 
-Size to the work: a tiny build's single, obvious question may stay one bare line —
+Size to the work: a tiny build's single, obvious question may stay one bare line;
 the *plain:*/*lean:* pair earns its keep only when a human decision genuinely waits
 on it.
 -->
 
-- <a id="q1"></a>**Q1 (slug-here)**: <the unresolved hole, framed as a question> — *resolve by:* decide | spike | ask
-  - *plain:* <what's at stake, in plain words — enough to judge it cold>
-  - *lean:* <the model's proposed resolution — the answer to react to>
+- <a id="q1"></a>**Q1 (slug-here)**: <the unresolved hole, framed as a question>, *resolve by:* decide | spike | ask
+  - *plain:* <what's at stake, in plain words, enough to judge it cold>
+  - *lean:* <the model's proposed resolution: the answer to react to>
 
 ## Verdicts
 
-*(Filled in as spikes and forks resolve — the audit trail of "these were my calls.")*
+*(Filled in as spikes and forks resolve: the audit trail of "these were my calls.")*
 
-- <date> — <fork> → chose <option> because <reason>; deleted <the rest>
+- <date>: <fork> → chose <option> because <reason>; deleted <the rest>

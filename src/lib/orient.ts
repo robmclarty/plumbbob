@@ -93,12 +93,14 @@ export function parseTitle(intent: string): string | null {
 }
 
 /**
- * Parse the steps under `## Steps`: `N. [ |x] Title — **done when:** ...`.
+ * Parse the steps under `## Steps`: `N. [ |x] Title, **done when:** ...`
+ * (the legacy em-dash separator before the marker parses the same).
  *
- * The title is the text up to the first em dash; `planned` is true when the
- * step's block carries a `done when` criterion. Only `## Steps` is machine-read
- * as the build plan — narrative roadmap prose lives in its own section and
- * never lands here.
+ * The title is the text before the `**done when:**` marker on the opener line,
+ * trailing separator stripped; an opener without the marker falls back to the
+ * text up to the first em dash. `planned` is true when the step's block carries
+ * a `done when` criterion. Only `## Steps` is machine-read as the build plan;
+ * narrative roadmap prose lives in its own section and never lands here.
  */
 export function parseSteps(intent: string): Step[] {
   const lines = sectionLines(intent, '## Steps')
@@ -107,10 +109,12 @@ export function parseSteps(intent: string): Step[] {
     const m = /^(\d+)\.\s+\[([ xX])\]\s+(.*)$/.exec(line)
     if (m) {
       const rest = m[3] ?? ''
+      const marker = /\*\*done when:\*\*/i.exec(rest)
+      const head = marker ? rest.slice(0, marker.index) : (rest.split('—')[0] ?? rest)
       starts.push({
         n: Number(m[1]),
         done: (m[2] ?? ' ').toLowerCase() === 'x',
-        title: (rest.split('—')[0] ?? rest).trim(),
+        title: head.replace(/\s*[—,-]+\s*$/, '').trim(),
         idx,
       })
     }
