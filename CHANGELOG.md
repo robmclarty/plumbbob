@@ -5,6 +5,40 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2026-08-13
+
+- **Added:** the em-dash ban is now enforced. A new `Repo.EmDash` vale rule flags U+2014 in
+  every owned prose surface and rides at `error` severity, so a reintroduced em-dash fails
+  both the full check and the two-second per-turn gate. Its message spells out the voice's
+  four-way replacement (brackets for an aside, semicolon or colon between standing clauses,
+  comma before a conjunction) so a writer can fix it without leaving the terminal. Roughly
+  1,200 marks were swept from `docs/`, `README.md`, `templates/`, `skills/`, and `src/`'s doc
+  comments across nine review-sized passes; a dated record (`docs/evals/`) and two
+  hand-written essays are exempted by name rather than swept, and nothing was baselined.
+- **Added:** `skills/` joined the `prose` slot's vale walk. All 13 `SKILL.md` frontmatter
+  descriptions are now YAML-quoted, closing the unquoted-colon `E201` that used to abort the
+  whole vale run before it ever reached the most-read prose in the repo.
+- **Added:** a `build` check slot runs `tsc -p tsconfig.build.json` and turns on
+  `noEmitOnError`, so a broken publish artifact now fails the gate instead of shipping
+  silently; the base `types` slot runs `noEmit` and had never exercised that path before.
+- **Changed:** a decision line now reads `, *because* <why>` and a definition header
+  `**DNN (slug): Title.**`, replacing the em-dash markers both used to carry. `docs/decisions.md`
+  and every template were re-punctuated to match, and `parseSteps` reads the new comma form
+  alongside the legacy dash so an older build's steps still parse.
+- **Changed:** checkride upgraded to 0.12.2 alongside eight dev-dependency bumps, closing the
+  transitive `nanoid` advisory (GHSA-2v37-7h3g-55p8) that checkride's own bump did not pull in
+  under pnpm's resolution. TypeScript 7 was evaluated and deliberately not taken; Stryker still
+  calls an API the Go port removed.
+- **Fixed:** `plumbbob checkpoint --plan` failed outright in a repo that gitignores `.plumbbob/`,
+  since staging an explicitly named ignored path is a hard `git add` error rather than the
+  silent skip `git add -A` gives. It now probes with `git check-ignore` first and lands the
+  plan as a record-only empty commit when the sidecar is excluded.
+- **Fixed:** mutation testing (`stryker`) had been hanging silently since 2026-07-03. Vitest 4
+  dropped the `poolOptions.threads.singleThread` flag Stryker's runner depends on to share a
+  process across test files, and a second deadlock in that shared process (three test files
+  paired with `cli-core.test.ts`) is now excluded from the mutate config rather than scored
+  wrong.
+
 ## [0.9.6] - 2026-08-12
 
 - **Added:** a `refs` check slot (`scripts/check-refs.ts`) flags a `D`/`C` decision citation
