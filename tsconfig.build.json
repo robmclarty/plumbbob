@@ -7,6 +7,12 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": false,
+    // tsc emits by default even when it reports errors, and a failing build here
+    // writes its output relative to whatever rootDir resolved to. A probe with a
+    // bad rootDir on 2026-08-12 scattered 33 .js files through src/ that way, which
+    // only the `dead` slot noticed. A publish build that errored should produce
+    // nothing at all, so errors stop the emit.
+    "noEmitOnError": true,
     "rootDir": "src",
     "outDir": "dist",
     "rewriteRelativeImportExtensions": true

@@ -42,6 +42,13 @@
       "order": 2
     },
 
+    "build": {
+      "use": "build",
+      "description": "Publish build — `tsc -p tsconfig.build.json` emits dist/, the artifact the npm tarball ships",
+      "note": "Opt-in slot, turned on 2026-08-12. The `types` slot runs the base config, which is `noEmit`, so nothing in the default run ever exercised emit: `rewriteRelativeImportExtensions` rewriting `.ts` specifiers to `.js`, `rootDir` pinning the dist/ layout the verbs resolve `../../` against. Only `prepack` and `pnpm eval:*` touched that path, which meant a broken artifact could stay green until publish. Runs at order 3 so a type error fails in `types` first, where the diagnostic is better. Costs about a second on the native compiler, so the turn gate keeps it.",
+      "order": 3
+    },
+
     "test": {
       "use": "vitest",
       "order": "single",
