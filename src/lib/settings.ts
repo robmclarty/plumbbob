@@ -1,19 +1,19 @@
 // The settings ladder: a resolved setting comes from, in priority order,
-//   1. a CLI flag           — passed in by the verb (undefined when absent)
-//   2. settings.local.json  — untracked personal overlay, per-worktree
-//   3. settings.json        — tracked project defaults
-//   4. a built-in default   — supplied by the caller
+//   1. a CLI flag: passed in by the verb (undefined when absent)
+//   2. settings.local.json: untracked personal overlay, per-worktree
+//   3. settings.json: tracked project defaults
+//   4. a built-in default: supplied by the caller
 // The first defined rung wins. Both files are optional JSON; a missing or
 // malformed file contributes nothing rather than throwing, so a broken personal
 // overlay can never wedge the tool. Functional and procedural, node builtins only.
 //
-// Known keys: `check` (string — the command for the heavy verify gate, a project
-// default in settings.json) and `auto` (boolean — a personal preference, so it
+// Known keys: `check` (string: the command for the heavy verify gate, a project
+// default in settings.json) and `auto` (boolean: a personal preference, so it
 // belongs in settings.local.json). `auto` is NOT a checkpoint grant: the approval
-// latch never reads it to allow a land — a model can write this file, and a grant
-// it can forge is no grant — only to name it at the pause when set; self-approval
+// latch never reads it to allow a land (a model can write this file, and a grant
+// it can forge is no grant) only to name it at the pause when set; self-approval
 // comes solely from the human's literal `/build --auto` or a typed step range.
-// The per-worktree active-build cursor is NOT here — it lives in the STATE file
+// The per-worktree active-build cursor is NOT here: it lives in the STATE file
 // (see sidecar.ts), which keeps this overlay a human-authored file rather than
 // tool-managed state.
 
@@ -41,7 +41,7 @@ type Settings = Record<string, unknown>
 /**
  * Read one settings file as a plain object.
  *
- * A missing, malformed, or non-object file yields {} — an empty rung that
+ * A missing, malformed, or non-object file yields {}: an empty rung that
  * contributes nothing rather than wedging the tool.
  */
 function readSettings(path: string): Settings {
@@ -90,7 +90,7 @@ export function resolveBoolean(root: string, key: string, fallback: boolean, fla
  * Resolve a non-negative integer setting (for example `agentTimeout`).
  *
  * A missing rung, or one holding a non-finite / negative / non-integer number,
- * yields the caller's fallback rather than a garbage timeout — 0 means "no
+ * yields the caller's fallback rather than a garbage timeout: 0 means "no
  * timeout", so a broken value must never silently become one.
  */
 export function resolveNumber(root: string, key: string, fallback: number, flag?: number): number {
@@ -103,7 +103,7 @@ export function resolveNumber(root: string, key: string, fallback: number, flag?
  * across the same ladder.
  *
  * The first defined, object-typed rung wins; a missing rung, or one holding a
- * non-object / array / scalar, yields {} rather than garbage — mirrors the
+ * non-object / array / scalar, yields {} rather than garbage: mirrors the
  * string/boolean/number resolvers above. No flag rung: the caller (`agent
  * run`) merges these under the per-build harness bindings, not over a flag.
  */

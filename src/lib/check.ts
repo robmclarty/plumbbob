@@ -11,7 +11,7 @@
 //     pointers, and an all-slots-skipped run REFUSES rather than green-lighting
 //     a repo checkride can't see (a vacuous pass is not a pass).
 // Checkride's stream discipline holds: human progress goes to stderr. Exit 0 is
-// green, 1 is red, 2 means the harness itself broke — reported distinctly,
+// green, 1 is red, 2 means the harness itself broke: reported distinctly,
 // because a misconfigured gate must not read as broken code (both still block).
 
 import { spawnSync } from 'node:child_process'
@@ -35,7 +35,7 @@ export type GateDetection = {
  * Probe whether the check gate would have anything to run in `root`.
  *
  * A configured `check` command answers yes on its own; otherwise checkride's
- * doctor detection runs in-process — the same pass `plumbbob doctor` reports
+ * doctor detection runs in-process: the same pass `plumbbob doctor` reports
  * as a table. `start` reads this to surface "nothing to check" at plan time,
  * while the human is still deciding, instead of at the first refused
  * checkpoint.
@@ -49,7 +49,7 @@ export async function detectGate(root: string): Promise<GateDetection> {
     return { configured: null, detected: gateDetectsTools(report.checks) }
   } catch {
     // A broken checkride harness is a different problem with its own reporters
-    // (doctor's ✗ row, runCheck's exit 2) — the plan-time probe stays quiet
+    // (doctor's ✗ row, runCheck's exit 2); the plan-time probe stays quiet
     // rather than mislabeling it "nothing to check".
     return { configured: null, detected: true }
   }
@@ -57,12 +57,12 @@ export async function detectGate(root: string): Promise<GateDetection> {
 
 /**
  * Checkride's always-on repo checks: the adapters that resolve with no tool
- * config of their own — the built-in `links` slot, the pnpm-audit security
+ * config of their own: the built-in `links` slot, the pnpm-audit security
  * scan, the publint/attw package-shape probes, and the pack/smoke/snippets
  * publish-bundle slots. Several are named for their shape rather than because
  * a bare directory reports them: `publint`/`attw` resolve off a devDependency,
- * `build` off a `scripts.build` entry — which says the package can be built,
- * not that checkride can see the code that goes into it — and `snippets`
+ * `build` off a `scripts.build` entry (which says the package can be built,
+ * not that checkride can see the code that goes into it), and `snippets`
  * carries two adapters since checkride 0.10.2, so the dist-facing
  * `snippets-dist` is named beside it (this list matches ADAPTER names, not
  * slot names). Every one of them but `links` is an opt-in slot, so a default
@@ -86,7 +86,7 @@ const ALWAYS_ON_ADAPTERS: ReadonlyArray<string> = [
 
 /**
  * The detection rule, shared by `start`'s probe and doctor's callout: some
- * tool slot beyond the always-on family has an adapter — that is, checkride can
+ * tool slot beyond the always-on family has an adapter: that is, checkride can
  * see the CODE (a tsconfig, a test runner, a linter…), not just the repo.
  */
 export function gateDetectsTools(checks: ReadonlyArray<DoctorCheck>): boolean {
@@ -102,7 +102,7 @@ export function gateDetectsTools(checks: ReadonlyArray<DoctorCheck>): boolean {
 /**
  * Narrowing flags for iteration loops (`plumbbob check --bail --only
  * types,lint`), mapped 1:1 onto checkride's RunFlags. Only the checkride path
- * honors them; the spawn override warns and ignores — an opaque command has no
+ * honors them; the spawn override warns and ignores: an opaque command has no
  * slots to narrow.
  */
 export type CheckFlags = {
@@ -123,7 +123,7 @@ export type CheckFlags = {
  */
 export async function runCheck(root: string, flags: CheckFlags = {}, commandFlag?: string): Promise<number> {
   if (gateIsRunningFor(root)) {
-    // This repo re-entering its OWN gate is never a slow gate — it is a
+    // This repo re-entering its OWN gate is never a slow gate: it is a
     // recursion whose next generation forks wider than this one. Exit 2 (the
     // harness broke), not 1: nothing has been learned about the code. A gate on
     // a DIFFERENT root is ordinary nested work (the test suite gating its
@@ -141,7 +141,7 @@ export async function runCheck(root: string, flags: CheckFlags = {}, commandFlag
 
 /**
  * The spawn override: stream the configured command's own output to the
- * terminal and return its exit code — the command is trusted verbatim, no
+ * terminal and return its exit code: the command is trusted verbatim, no
  * interpretation.
  */
 function runCommand(root: string, command: string, flags: CheckFlags): number {
@@ -172,7 +172,7 @@ async function runCheckride(root: string, flags: CheckFlags): Promise<number> {
       include: flags.include !== undefined ? [...flags.include] : null,
       // Checkride's own vacuous-green refusal (0.10.2): zero checks executed is
       // an error, not a pass. It overlaps the refusal below and never reaches
-      // the human — our predicate is the broader one (it also catches a
+      // the human: our predicate is the broader one (it also catches a
       // links-only run, where a check DID execute) and fires first, so
       // plumbbob's message and its exit 1 are what a reader sees. Kept anyway:
       // it is the contract checkride asks a gate to run under, so a future
@@ -183,7 +183,7 @@ async function runCheckride(root: string, flags: CheckFlags): Promise<number> {
     exitCode = result.exitCode
   } catch (err) {
     // The harness broke, not the code: a malformed checkride.config.json or
-    // the like. Checkride's own CLI maps this to exit 2; so do we — a
+    // the like. Checkride's own CLI maps this to exit 2; so do we: a
     // misconfigured gate must report distinctly from red.
     const message = err instanceof Error ? err.message : String(err)
     process.stderr.write(
@@ -196,7 +196,7 @@ async function runCheckride(root: string, flags: CheckFlags): Promise<number> {
     // Zero-config checkride skips slots with no detected tool; a repo it can't
     // see must refuse, not vacuously green-light the checkpoint. The built-in
     // `links` slot is always-on (empty detect list), so it alone proves
-    // nothing about the code — a links-only run is still vacuous.
+    // nothing about the code: a links-only run is still vacuous.
     process.stderr.write(
       'plumbbob: checkride found nothing to check in this repo — refusing to call that green.\n' +
         '  Add tool configs (tsconfig, vitest, …) or a checkride.config.json custom check,\n' +
@@ -214,7 +214,7 @@ async function runCheckride(root: string, flags: CheckFlags): Promise<number> {
  * Name the failing slots and where their raw diagnostics landed, so the agent
  * (verify) reads the tool's own JSON instead of scraping scrollback.
  *
- * The summary is the canonical pointer — `output_file` is the adapter's
+ * The summary is the canonical pointer: `output_file` is the adapter's
  * preferred name, but non-JSON output falls back to `.check/<slot>.stdout.txt`.
  */
 function reportFailingSlots(summary: Summary): void {
@@ -228,7 +228,7 @@ function reportFailingSlots(summary: Summary): void {
 }
 
 /**
- * True when any narrowing flag was passed — the trigger for the spawn path's
+ * True when any narrowing flag was passed: the trigger for the spawn path's
  * flags-are-ignored warning.
  */
 function hasFlags(flags: CheckFlags): boolean {

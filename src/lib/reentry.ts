@@ -3,8 +3,8 @@
 //
 // The failure it exists to stop is not slowness, it is unbounded recursion. A
 // repo whose `check` setting is its own full pipeline (`pnpm check`) has a gate
-// that runs its test suite; anything in that suite which gates THAT SAME REPO —
-// a test driving `checkpoint` against the process cwd — spawns a second full
+// that runs its test suite; anything in that suite which gates THAT SAME REPO
+// (a test driving `checkpoint` against the process cwd) spawns a second full
 // pipeline, whose suite spawns a third. Each generation forks wider than the
 // last, and nothing in the loop is aware there is a loop. The only thing that
 // ended the first observed occurrence was checkride's 600s per-check cap
@@ -13,7 +13,7 @@
 // It is scoped BY ROOT, and that is the whole design. A flat "a gate is
 // running" flag is wrong in the one case that matters most: plumbbob's own
 // suite legitimately gates dozens of fixture repos, and when the suite itself
-// is running under this repo's gate it inherits the marker — so a flat flag
+// is running under this repo's gate it inherits the marker, so a flat flag
 // refuses every one of them and turns a green suite red. Recursion is a repo
 // re-entering ITS OWN gate; a different root is ordinary nested work and must
 // pass through untouched.

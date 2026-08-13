@@ -1,11 +1,11 @@
-// Keep the build-log's top half — the `**Current step:**` line and the `## Steps`
-// mirror — in sync with intent.md, the build's plan document. The build-log is the
+// Keep the build-log's top half (the `**Current step:**` line and the `## Steps`
+// mirror) in sync with intent.md, the build's plan document. The build-log is the
 // human-facing ledger in the build's tracked `builds/<slug>/` folder; its top half
 // is CLI-owned so it never lies: `build` sets the current-step label when a step
 // opens, `checkpoint` and `revert` reset it to the boundary, and all three
 // re-render the mirror from intent.md's parsed steps so it tracks reality without
 // a model turn. The write is best-effort (a missing or hand-edited build-log never
-// fails a verb — the checkpoints ledger and intent.md stay the source of truth),
+// fails a verb: the checkpoints ledger and intent.md stay the source of truth),
 // matching how `checkpoint`'s Log append behaves.
 
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -13,13 +13,13 @@ import { buildLogPath, intentPath } from './sidecar.ts'
 import { parseSteps } from './orient.ts'
 import { setCurrentStep, syncStepsSection } from './buildlog.ts'
 
-/** The Current-step label for no step in flight — the loop is at the step boundary. */
+/** The Current-step label for no step in flight: the loop is at the step boundary. */
 export const AT_BOUNDARY = 'none (at the boundary)'
 
 /**
- * The current-step label for an open step: `<n> — <title>`, or a bare `<n>`
- * when the step carries no title. `build` passes this; the boundary verbs pass
- * AT_BOUNDARY.
+ * The current-step label for an open step: the number and title joined by an
+ * em dash, or a bare `<n>` when the step carries no title. `build` passes
+ * this; the boundary verbs pass AT_BOUNDARY.
  */
 export function stepLabel(n: number, title: string | null): string {
   return title !== null && title.trim().length > 0 ? `${n} — ${title.trim()}` : String(n)
@@ -30,7 +30,7 @@ export function stepLabel(n: number, title: string | null): string {
  * `label` and re-render the `## Steps` mirror from intent.md.
  *
  * Each transform is skipped when its target is absent (null), and the whole
- * thing swallows any IO error — the ledger must never block the verb.
+ * thing swallows any IO error: the ledger must never block the verb.
  */
 export function syncBuildLogState(root: string, slug: string | null, label: string): void {
   try {

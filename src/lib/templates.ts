@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs'
  * Read a template by filename from the package's `templates/` directory.
  *
  * Resolved relative to the compiled module URL, so the same relative hop works
- * from `src/lib/` and `dist/lib/` alike — the templates ship with the package,
+ * from `src/lib/` and `dist/lib/` alike: the templates ship with the package,
  * never with the consumer's repo.
  */
 export function readTemplate(name: string): string {

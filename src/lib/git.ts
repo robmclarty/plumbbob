@@ -1,8 +1,8 @@
-// Thin git wrapper over `node:child_process` — the CLI stays on node builtins
+// Thin git wrapper over `node:child_process`: the CLI stays on node builtins
 // plus a small deliberate dependency allowlist, and subprocess spawning is
 // centralized in files like this one. Plumbbob's git footprint is additive by
 // rule: these helpers read, locate, stage, and commit forward, and reset
-// `--hard` only to plumbbob's own recorded checkpoint SHAs — never a
+// `--hard` only to plumbbob's own recorded checkpoint SHAs: never a
 // history-rewriting operation on anything pushed.
 
 import { execFileSync } from 'node:child_process'
@@ -11,7 +11,7 @@ import { isAbsolute, join } from 'node:path'
 /**
  * Run git in `root` and return its trimmed stdout.
  *
- * stderr is discarded and a non-zero exit throws — callers that tolerate
+ * stderr is discarded and a non-zero exit throws: callers that tolerate
  * failure wrap the call in their own try/catch.
  */
 function runGit(root: string, args: ReadonlyArray<string>): string {
@@ -38,8 +38,8 @@ export function findRepoRoot(cwd: string): string | null {
  * Plumbbob writes its control-plane excludes to the shared gitdir's
  * `info/exclude` (personal machinery, never the repo's `.gitignore`), and
  * `--git-path` maps common-dir entries like `info/exclude` to the shared file
- * even from a linked worktree — whose per-worktree gitdir has no `info/` and
- * which git never reads for excludes. The result is relative to `root` unless
+ * even from a linked worktree (whose per-worktree gitdir has no `info/` and
+ * which git never reads for excludes). The result is relative to `root` unless
  * already absolute.
  */
 export function gitPath(root: string, relative: string): string {
@@ -74,16 +74,16 @@ export function isDirty(root: string): boolean {
 }
 
 /**
- * The number of commits on HEAD not reachable from `sha` — `git rev-list
+ * The number of commits on HEAD not reachable from `sha`: `git rev-list
  * --count --first-parent <sha>..HEAD`.
  *
  * `status` reads this for its receipts line: one neutral note when commits
  * landed since the last checkpoint outside plumbbob's ledger (out-of-band
  * commits are surfaced, never blocked). `--first-parent` keeps the count on
  * the branch's own line: merging upstream reads as the one merge commit, not
- * the dozens it carried — those didn't land "outside the ledger" in any sense
+ * the dozens it carried; those didn't land "outside the ledger" in any sense
  * the receipt should nag about. Best-effort and never throws: 0 when the range
- * is empty, `sha` is unknown to the repo, or HEAD is unborn — the count is
+ * is empty, `sha` is unknown to the repo, or HEAD is unborn: the count is
  * informational (the human commits freely), never a gate.
  */
 export function commitsSince(root: string, sha: string): number {
@@ -99,7 +99,7 @@ export function commitsSince(root: string, sha: string): number {
 // only: stage/commit forward, reset --hard to a recorded checkpoint SHA. ---
 
 /**
- * Stage everything (`git add -A`) — the checkpoint sweep that carries the work
+ * Stage everything (`git add -A`): the checkpoint sweep that carries the work
  * plus plumbbob's own bookkeeping into one commit.
  */
 export function stageAll(root: string): void {
@@ -110,12 +110,12 @@ export function stageAll(root: string): void {
  * Stage a single path (vs `stageAll`'s `-A`), returning whether it staged.
  *
  * The plan-approval commit stages only the build's artifact folder so the
- * first step's diff can't absorb the plan scaffold — plan approval gets its
- * own commit. `path` may be absolute or repo-relative — git resolves it
+ * first step's diff can't absorb the plan scaffold: plan approval gets its
+ * own commit. `path` may be absolute or repo-relative; git resolves it
  * against `root`. The `--` guards a path that could look like a flag.
  *
  * A repo that gitignores the sidecar has decided not to track it, and git
- * hard-refuses an explicit `git add` of an ignored path — so probe
+ * hard-refuses an explicit `git add` of an ignored path, so probe
  * `check-ignore` first: an ignored path is skipped and returns false (the
  * caller's commit is then record-only), a tracked one stages and returns true.
  * Never `git add -f`: honoring the repo's exclusion is the whole point.
@@ -129,7 +129,7 @@ export function stagePath(root: string, path: string): boolean {
 }
 
 /**
- * Whether git ignores `path` — a `git check-ignore -q` probe.
+ * Whether git ignores `path`: a `git check-ignore -q` probe.
  *
  * Exit 0 means ignored; exit 1 means not (execFileSync throws on the non-zero,
  * caught and read as false); any other status (128, a genuine failure)
@@ -170,7 +170,7 @@ export function commit(root: string, subject: string, body?: string): string {
 }
 
 /**
- * The `--stat` summary of what is currently staged (vs HEAD) — the diffstat
+ * The `--stat` summary of what is currently staged (vs HEAD): the diffstat
  * the deterministic checkpoint body carries when no `--body` prose arrives.
  * Empty when nothing is staged.
  */
@@ -179,7 +179,7 @@ export function stagedStat(root: string): string {
 }
 
 /**
- * The repo-relative paths currently staged (vs HEAD) — the set `checkpoint`
+ * The repo-relative paths currently staged (vs HEAD): the set `checkpoint`
  * checks against the step's seam (its granted edit paths) to warn about scope
  * drift. Empty when nothing is staged.
  */
@@ -189,7 +189,7 @@ export function stagedPaths(root: string): ReadonlyArray<string> {
 }
 
 /**
- * Reset the worktree hard to `sha` — only ever one of plumbbob's own recorded
+ * Reset the worktree hard to `sha`: only ever one of plumbbob's own recorded
  * checkpoint SHAs, and only `revert` imports this (an ast-grep rule pins that
  * single importer).
  */

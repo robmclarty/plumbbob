@@ -1,22 +1,22 @@
-// The .plumbbob/ sidecar — plumbbob's control directory beside the code. Control
+// The .plumbbob/ sidecar: plumbbob's control directory beside the code. Control
 // state lives in flat files (bare numbers, plain path lists, one-line markers) so
 // shell hooks can read it with a grep and no markdown parsing. Functional and
 // procedural, node builtins only.
 //
 // Two planes share the directory: the tracked ARTIFACT plane (settings.json and
-// each build's `builds/<slug>/` folder — intent, build-log, checkpoints, report),
+// each build's `builds/<slug>/` folder: intent, build-log, checkpoints, report),
 // which rides its branch into the PR, and the git-excluded CONTROL plane (STATE,
 // the personal settings overlay, the turn ledger, and each build's in-flight
 // markers), which stays per-worktree and never commits.
 //
 // STATE is the session sentinel AND the active-build cursor: its EXISTENCE means
-// "a session is active", and its CONTENT names the build that session is on — the
+// "a session is active", and its CONTENT names the build that session is on: the
 // two reinforce each other (a session is always on some build; the cursor is
 // meaningless without a session). Content is empty under --local / no build.
 // hasSession stays existence-only; activeBuild reads the content. Homing the
-// cursor here — not in settings.local.json — keeps that overlay purely
+// cursor here (not in settings.local.json) keeps that overlay purely
 // human-owned (check/auto): the tool only ever reads it, never rewrites it. The
-// phase the dashboard shows (DESIGN/BUILD/SPIKE) is derived, not stored — BUILD ⇔
+// phase the dashboard shows (DESIGN/BUILD/SPIKE) is derived, not stored: BUILD ⇔
 // a STEP is in flight, SPIKE ⇔ the SPIKE marker is present, otherwise DESIGN.
 
 import { existsSync, readdirSync, readFileSync, writeFileSync, appendFileSync, rmSync, mkdirSync } from 'node:fs'
@@ -54,7 +54,7 @@ export function buildDir(root: string, slug: string): string {
  * Derive a filesystem-safe slug from a build title.
  *
  * Lowercased, every run of non-alphanumerics collapsed to a single hyphen,
- * trimmed of leading/trailing hyphens. The CLI stays dumb and explicit —
+ * trimmed of leading/trailing hyphens. The CLI stays dumb and explicit:
  * collision handling belongs to the caller (`start` refuses an existing slug
  * rather than silently suffixing `-2`, and prepends the `YYYY-MM-DD-` date that
  * keeps `listBuilds`' lexical sort chronological). A title with no alphanumerics
@@ -72,7 +72,7 @@ export function slugify(title: string): string {
  * date prefix `start` prepends stripped off.
  *
  * `2026-07-18-escape-hatch` yields the human-meaningful `escape-hatch`. Null
- * when no build resolves (`--local`, or a slug that is nothing but a date) — the
+ * when no build resolves (`--local`, or a slug that is nothing but a date); the
  * caller then omits the `(scope)` segment, which Conventional Commits permit.
  */
 export function buildScope(slug: string | null): string | null {
@@ -84,7 +84,7 @@ export function buildScope(slug: string | null): string | null {
 }
 
 /**
- * Existing build slugs — the directory names under `builds/`, sorted.
+ * Existing build slugs: the directory names under `builds/`, sorted.
  *
  * Empty when `builds/` is absent (a `--local` repo, or before the first tracked
  * `start`).
@@ -117,7 +117,7 @@ export function activeBuild(root: string, flag?: string): string | null {
 }
 
 /**
- * STATE's content — the active-build cursor — or null when it names no build.
+ * STATE's content (the active-build cursor) or null when it names no build.
  *
  * Empty means "no build" (--local, or a session whose cursor is unset), so
  * activeBuild falls through to the sole-build rule. The literal value `active`
@@ -142,7 +142,7 @@ function readCursor(root: string): string | null {
  *
  * Every verb resolves through this: an explicit `--build <slug>` wins, else the
  * cursor / sole-build fallback of `activeBuild`. `rest` matters because the slug
- * is a bare token — scanning positionals on the raw argv would let it masquerade
+ * is a bare token: scanning positionals on the raw argv would let it masquerade
  * as a step number or a spike slug, so callers scan `rest` instead.
  */
 export function resolveBuild(
@@ -155,7 +155,7 @@ export function resolveBuild(
 }
 
 /**
- * The STATE file — session sentinel and active-build cursor in one.
+ * The STATE file: session sentinel and active-build cursor in one.
  */
 function statePath(root: string): string {
   return join(root, DIRNAME, 'STATE')
@@ -169,7 +169,7 @@ function statePath(root: string): string {
  * omit it and the dir resolves from the cursor (the default the
  * executor-agnostic path reads lean on). Either way a `null` slug falls back to
  * the flat sidecar root, which covers the `--local` layout and any
- * no-cursor/no-build repo — the path reads stay stable even before a tracked
+ * no-cursor/no-build repo: the path reads stay stable even before a tracked
  * build exists or when a "no active session" guard is about to fire.
  */
 function artifactDir(root: string, slug?: string | null): string {
@@ -178,7 +178,7 @@ function artifactDir(root: string, slug?: string | null): string {
 }
 
 /**
- * The resolved build's artifact folder — the `builds/<slug>/` dir for the active
+ * The resolved build's artifact folder: the `builds/<slug>/` dir for the active
  * build (or the flat sidecar root under `--local`/no-cursor).
  *
  * Public so the plan-approval commit can stage exactly this build's scaffold and
@@ -189,7 +189,7 @@ export function buildFolder(root: string, slug?: string | null): string {
 }
 
 /**
- * The SPIKE marker — a single-purpose presence flag, like SEAM/STEP.
+ * The SPIKE marker: a single-purpose presence flag, like SEAM/STEP.
  *
  * Written by `spike` on open, removed on `spike done`. Its existence is the one
  * signal the dashboard and the spike gates read to know "a spike is active".
@@ -199,7 +199,7 @@ export function spikePath(root: string, slug?: string | null): string {
 }
 
 /**
- * SEAM — the in-flight step's edit grant: a plain list of the paths the step may
+ * SEAM: the in-flight step's edit grant: a plain list of the paths the step may
  * touch, one per line, so the hooks read it with a grep and no markdown parsing.
  */
 export function seamPath(root: string, slug?: string | null): string {
@@ -207,14 +207,14 @@ export function seamPath(root: string, slug?: string | null): string {
 }
 
 /**
- * STEP — the number of the step in flight, a bare number in a flat file.
+ * STEP: the number of the step in flight, a bare number in a flat file.
  */
 export function stepPath(root: string, slug?: string | null): string {
   return join(artifactDir(root, slug), 'STEP')
 }
 
 /**
- * The build's `checkpoints` ledger — the recorded SHAs of landed plan and step
+ * The build's `checkpoints` ledger: the recorded SHAs of landed plan and step
  * commits, one line each.
  */
 export function checkpointsPath(root: string, slug?: string | null): string {
@@ -222,21 +222,21 @@ export function checkpointsPath(root: string, slug?: string | null): string {
 }
 
 /**
- * intent.md — the build's plan: steps, seams, decisions, done-when.
+ * intent.md: the build's plan: steps, seams, decisions, done-when.
  */
 export function intentPath(root: string, slug?: string | null): string {
   return join(artifactDir(root, slug), 'intent.md')
 }
 
 /**
- * build-log.md — the human-facing build ledger (the Steps mirror and the Log).
+ * build-log.md: the human-facing build ledger (the Steps mirror and the Log).
  */
 export function buildLogPath(root: string, slug?: string | null): string {
   return join(artifactDir(root, slug), 'build-log.md')
 }
 
 /**
- * report.md — the close-out report, beside intent.md / build-log.md.
+ * report.md: the close-out report, beside intent.md / build-log.md.
  *
  * The finish skill writes it and `finish` commits it with the folder; the
  * tracked build folder is the archive, so the report rides the branch into the
@@ -247,7 +247,7 @@ export function reportPath(root: string, slug?: string | null): string {
 }
 
 // --- Spike reports: `spike-NN-<slug>.md` files in the build folder, beside
-// report.md. One per spike — an explicit `/plumbbob:spike` or a planned `spike:` step —
+// report.md. One per spike (an explicit `/plumbbob:spike` or a planned `spike:` step)
 // so a build with several forks tells its decision history through the folder
 // listing. NN is CLI-allocated (the human never numbers them), zero-padded for a
 // stable sort. ---
@@ -272,7 +272,7 @@ export function listSpikeReports(root: string, slug?: string | null): ReadonlyAr
  * sanitized spike slug.
  *
  * One past the highest existing NN, so a gap never reallocates a number. Pure
- * allocation — the caller writes the stamped template there.
+ * allocation: the caller writes the stamped template there.
  */
 export function nextSpikeReportPath(root: string, slug: string | null, spikeSlug: string): string {
   const used = listSpikeReports(root, slug).map((name) => Number(name.slice('spike-'.length, 'spike-'.length + 2)))
@@ -282,10 +282,10 @@ export function nextSpikeReportPath(root: string, slug: string | null, spikeSlug
 }
 
 /**
- * handoff.json — the agent-run ledger.
+ * handoff.json: the agent-run ledger.
  *
  * Each `agent run` appends its validated envelope here so a later invocation can
- * thread earlier results into the next call's `context[]` — the CLI itself is
+ * thread earlier results into the next call's `context[]`: the CLI itself is
  * memoryless between runs, and the file survives context-window compaction where
  * inline stdout does not. It is in-flight control state like STEP/SEAM:
  * untracked (excludeControl), scoped to the current step, cleared when the step
@@ -297,7 +297,7 @@ export function handoffPath(root: string, slug?: string | null): string {
 
 /**
  * One handoff entry: the agent's name, the slot it ran in, the step number, and
- * its validated envelope — enough for a reading skill to know which earlier run
+ * its validated envelope: enough for a reading skill to know which earlier run
  * produced which result. `envelope` is the same object `agent run` re-emits on
  * stdout; the shape is intentionally loose here (the sidecar is a single writer
  * and never re-validates its own ledger).
@@ -313,7 +313,7 @@ export type HandoffEntry = {
  * Append one entry to the build's handoff.json.
  *
  * Creates the file (as a JSON array) when absent and tolerates a malformed
- * existing file by starting fresh — a corrupt ledger must never wedge a run.
+ * existing file by starting fresh: a corrupt ledger must never wedge a run.
  * Pretty-printed so it stays readable.
  */
 export function appendHandoff(root: string, slug: string | null | undefined, entry: HandoffEntry): void {
@@ -331,7 +331,7 @@ export function appendHandoff(root: string, slug: string | null | undefined, ent
 }
 
 /**
- * Remove the build's handoff.json — the step-scoped ledger clears when the step
+ * Remove the build's handoff.json: the step-scoped ledger clears when the step
  * checkpoints, the same beat that clears STEP/SEAM.
  *
  * An absent file is a no-op (`force`).
@@ -341,7 +341,7 @@ export function clearHandoff(root: string, slug?: string | null): void {
 }
 
 // --- Per-build stats: the build's own receipt. One tracked stats.json beside
-// checkpoints — it rides the branch, because the numbers are the record's
+// checkpoints: it rides the branch, because the numbers are the record's
 // evidence. Keyed by step number; accrued at the beats the CLI already owns
 // (build stamps startedAt, checkpoint bumps/lands, revert bumps). Single-writer
 // and malformed-tolerant like handoff.json: a corrupt file starts fresh, and no
@@ -358,14 +358,14 @@ export type StepStats = {
 export type BuildStats = Readonly<Record<string, StepStats>>
 
 /**
- * stats.json — the per-build stats receipt, beside checkpoints.
+ * stats.json: the per-build stats receipt, beside checkpoints.
  */
 export function statsPath(root: string, slug?: string | null): string {
   return join(artifactDir(root, slug), 'stats.json')
 }
 
 /**
- * The whole stats file, or {} when absent or corrupt — malformed contributes
+ * The whole stats file, or {} when absent or corrupt: malformed contributes
  * nothing.
  */
 export function readStats(root: string, slug?: string | null): BuildStats {
@@ -380,7 +380,7 @@ export function readStats(root: string, slug?: string | null): BuildStats {
 /**
  * Increment one counter on one step.
  *
- * Best-effort by contract: a failed write is swallowed — the stats are a
+ * Best-effort by contract: a failed write is swallowed; the stats are a
  * receipt, never a gate on the verb that accrues them.
  */
 export function bumpStepStat(
@@ -393,7 +393,7 @@ export function bumpStepStat(
 }
 
 /**
- * Stamp one timestamp on one step — startedAt at `build <n>`, landedAt at
+ * Stamp one timestamp on one step: startedAt at `build <n>`, landedAt at
  * checkpoint.
  *
  * Same best-effort contract as bumpStepStat.
@@ -435,7 +435,7 @@ function patchStepStat(
 /**
  * A session exists iff STATE exists.
  *
- * Deleting STATE (at finish) is what flips the repo back to "no session" — the
+ * Deleting STATE (at finish) is what flips the repo back to "no session": the
  * file is the single source of truth for "is there a session". `start` calls
  * beginSession; `finish` removes the file. Existence is the whole session
  * signal; STATE's content is a separate axis (the cursor).
@@ -456,7 +456,7 @@ export function beginSession(root: string, slug: string | null = null): void {
 }
 
 /**
- * Re-point the cursor at an existing build (`use`) — a plain content rewrite
+ * Re-point the cursor at an existing build (`use`): a plain content rewrite
  * that leaves the session sentinel (STATE's existence) intact.
  *
  * Callers guard hasSession first, so this never resurrects a finished session.
@@ -473,14 +473,14 @@ function writeCursor(root: string, slug: string | null): void {
 }
 
 /**
- * True while a spike is open — the SPIKE marker exists (content is irrelevant).
+ * True while a spike is open: the SPIKE marker exists (content is irrelevant).
  */
 export function inSpike(root: string, slug?: string | null): boolean {
   return existsSync(spikePath(root, slug))
 }
 
 /**
- * Drop the SPIKE marker — existence is the whole signal.
+ * Drop the SPIKE marker: existence is the whole signal.
  */
 export function markSpike(root: string, slug?: string | null): void {
   writeFileSync(spikePath(root, slug), 'active\n')
@@ -495,7 +495,7 @@ export function clearSpike(root: string, slug?: string | null): void {
 
 // --- The turn ledger: the checkpoint latch's inputs. `.plumbbob/TURN` is a count
 // of human prompts the model never writes, with a one-turn `.plumbbob/GRANT`
-// beside it — both flat, per-worktree control (never per-build, never committed).
+// beside it: both flat, per-worktree control (never per-build, never committed).
 // `plumbbob turn` (the UserPromptSubmit hook) ticks TURN once per human prompt
 // and rewrites GRANT from the literal prompt; the checkpoint latch reads them to
 // refuse a land until a human turn has intervened since the step was entered.
@@ -503,14 +503,14 @@ export function clearSpike(root: string, slug?: string | null): void {
 // state are allowed. ---
 
 /**
- * TURN — the human-turn count the UserPromptSubmit hook maintains.
+ * TURN: the human-turn count the UserPromptSubmit hook maintains.
  */
 export function turnPath(root: string): string {
   return join(root, DIRNAME, 'TURN')
 }
 
 /**
- * GRANT — the one-turn self-approval minted from the human's literal prompt.
+ * GRANT: the one-turn self-approval minted from the human's literal prompt.
  */
 export function grantPath(root: string): string {
   return join(root, DIRNAME, 'GRANT')
@@ -520,8 +520,8 @@ export function grantPath(root: string): string {
  * Rewrite (or clear) the one-turn GRANT: a non-null value is the minted grant
  * (`auto` | `range M`), null clears it.
  *
- * The turn hook calls this on every human prompt — minted on a match, cleared
- * otherwise — so a grant lives exactly one turn by construction. Pairing the
+ * The turn hook calls this on every human prompt (minted on a match, cleared
+ * otherwise) so a grant lives exactly one turn by construction. Pairing the
  * write with its delete here means a grant can never half-persist, and the
  * delete lives where deletions belong.
  */
@@ -534,7 +534,7 @@ export function setGrant(root: string, grant: string | null): void {
 }
 
 /**
- * TICK — the per-build entry stamp: the TURN value recorded when work was
+ * TICK: the per-build entry stamp: the TURN value recorded when work was
  * entered (`build <n>` for a step, `start` for the plan), cleared when
  * `checkpoint` lands.
  *
@@ -558,7 +558,7 @@ export function stampTick(root: string, slug?: string | null): void {
 }
 
 /**
- * Consume the entry stamp — `checkpoint` clears it when a step (or the plan)
+ * Consume the entry stamp: `checkpoint` clears it when a step (or the plan)
  * lands, the same beat that clears STEP/SEAM/handoff.
  *
  * Absent is a no-op; the rmSync lives here with the sidecar's other deletions.
@@ -571,7 +571,7 @@ export function clearTick(root: string, slug?: string | null): void {
  * The TURN count, or null when the ledger is absent or unreadable.
  *
  * Absence is the "dormant" signal stampTick keys off and the doctor latch probe
- * reports — never an error.
+ * reports: never an error.
  */
 export function readTurn(root: string): number | null {
   try {
@@ -587,7 +587,7 @@ export function readTurn(root: string): number | null {
  * `.plumbbob/STATE` file), or null when there is none.
  *
  * The turn hook runs on every human prompt in every repo; this is the cheap,
- * git-free probe that keeps it a silent no-op outside a live plumbbob session —
+ * git-free probe that keeps it a silent no-op outside a live plumbbob session:
  * filesystem only, never a host sniff.
  */
 export function findSessionRoot(cwd: string): string | null {
@@ -604,8 +604,8 @@ export function findSessionRoot(cwd: string): string | null {
 /**
  * Append `patterns` to the repo's info/exclude, each at most once.
  *
- * Idempotent — a re-`start` after finish must not double-add. `gitPath` resolves
- * to the *common* gitdir's exclude — the only one git reads — so this works from
+ * Idempotent: a re-`start` after finish must not double-add. `gitPath` resolves
+ * to the *common* gitdir's exclude (the only one git reads) so this works from
  * a linked worktree, whose per-worktree gitdir has no `info/`. info/exclude
  * keeps the exclusion personal machinery, never something imposed on the repo's
  * own tracked ignore file.
@@ -630,7 +630,7 @@ function addExcludes(root: string, patterns: ReadonlyArray<string>): void {
  * Git-exclude the control plane while the artifact plane stays tracked.
  *
  * With `builds/<slug>/` tracked, only the per-worktree control files are
- * excluded — the session sentinel STATE (whose content is the active-build
+ * excluded: the session sentinel STATE (whose content is the active-build
  * cursor), the personal settings overlay, the turn ledger, and the in-flight
  * markers inside every build. Everything else under `.plumbbob/` (settings.json,
  * and each build's intent/build-log/checkpoints/report) rides the branch into
@@ -647,11 +647,11 @@ export function excludeControl(root: string): void {
     `${DIRNAME}/builds/*/STEP`,
     `${DIRNAME}/builds/*/SEAM`,
     `${DIRNAME}/builds/*/SPIKE`,
-    // The entry stamp is in-flight control like STEP/SEAM — checkpoint's
+    // The entry stamp is in-flight control like STEP/SEAM: checkpoint's
     // stageAll must never sweep it into a step commit.
     `${DIRNAME}/builds/*/TICK`,
     // The agent-run handoff ledger is step-scoped in-flight state, not a
-    // tracked artifact — it must never ride a step commit into the PR.
+    // tracked artifact: it must never ride a step commit into the PR.
     `${DIRNAME}/builds/*/handoff.json`,
     // The checkride gate writes raw tool output to `.check/`; checkpoint's
     // stageAll must never sweep it into a step commit.
@@ -660,7 +660,7 @@ export function excludeControl(root: string): void {
 }
 
 /**
- * `start --local`: opt out of the tracked layout into a fully untracked sidecar —
+ * `start --local`: opt out of the tracked layout into a fully untracked sidecar:
  * some team repos won't accept tool folders in-tree.
  *
  * Excludes the whole `.plumbbob/` directory.
@@ -672,7 +672,7 @@ export function excludeSidecar(root: string): void {
 /**
  * Whether info/exclude already carries `pattern` verbatim.
  *
- * Absent or unreadable reads as "no" — the caller's job is to write it, not to
+ * Absent or unreadable reads as "no": the caller's job is to write it, not to
  * fail on a repo that has never been excluded.
  */
 function hasExclude(root: string, pattern: string): boolean {
@@ -689,15 +689,15 @@ function hasExclude(root: string, pattern: string): boolean {
  * Re-apply the control-plane excludes on the way into a `git add -A`.
  *
  * `start` writes them once, but a plumbbob upgraded mid-build can add a control
- * file the running session's exclude never learned — TICK, GRANT and
- * handoff.json all arrived that way — and checkpoint/finish stage with `-A`,
+ * file the running session's exclude never learned (TICK, GRANT and
+ * handoff.json all arrived that way) and checkpoint/finish stage with `-A`,
  * which would sweep the unexcluded file into the commit and ride it into the PR.
  * Idempotent, so the common path is one read and no write.
  *
  * A fully untracked sidecar is already covered by its blanket `.plumbbob/` line;
  * layering the narrow patterns underneath would only add noise, so skip it. That
  * check reads info/exclude rather than the cursor because a null cursor means
- * "`--local` OR no build named" — and calling excludeSidecar on the tracked
+ * "`--local` OR no build named", and calling excludeSidecar on the tracked
  * layout would untrack the whole artifact plane.
  */
 export function refreshExcludes(root: string): void {

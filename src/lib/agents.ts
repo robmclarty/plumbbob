@@ -1,11 +1,11 @@
 // The agent contract. A user-authored agent is anything executable that speaks a
-// versioned JSON envelope — a JSON manifest on disk (`agent.json`), JSON on the
-// child's stdin, JSON on its stdout, prose on its stderr — so the doorway is
+// versioned JSON envelope (a JSON manifest on disk (`agent.json`), JSON on the
+// child's stdin, JSON on its stdout, prose on its stderr) so the doorway is
 // runtime-agnostic: any language, any framework, one subprocess boundary. This
 // module is the contract's validator, resolver, and runner: it type-narrows the
 // on-disk manifest and the output envelope a child returns (refusing a contract
 // major-version mismatch with an upgrade hint rather than guessing at a shape
-// that is only stable within a major — additions are a minor bump, removals or
+// that is only stable within a major: additions are a minor bump, removals or
 // renames a major), it walks the agent tiers to resolve an agent by name, it
 // composes the step context a child reads on stdin, and it spawns the child.
 // The validators are pure; the resolver reads `agent.json` files off disk with
@@ -31,7 +31,7 @@ export const CONTRACT_VERSION = 1
  * The three lifecycle slots an agent may bind to: `before` (context in),
  * `build` (the diff), `after` (advisory review).
  *
- * Exactly these, never a fourth — "a salient point in the middle" is judgment
+ * Exactly these, never a fourth; "a salient point in the middle" is judgment
  * the host model handles in prose, not a declarative slot.
  */
 export const SLOTS = ['before', 'build', 'after'] as const
@@ -49,12 +49,12 @@ export const ENVELOPE_STATUSES = ['done', 'blocked', 'drift'] as const
 export type EnvelopeStatus = (typeof ENVELOPE_STATUSES)[number]
 
 /**
- * A validated agent manifest — the `agent.json` in an agent's directory.
+ * A validated agent manifest: the `agent.json` in an agent's directory.
  *
  * The manifest speaks to two audiences. `command` is for the deterministic CLI:
  * the shell string spawned via `sh -c` at the repo root. `description` and
- * `when` are prose for the host model — the cue it reads to fire an agent
- * mid-build, the role a subagent's frontmatter description plays — and default
+ * `when` are prose for the host model (the cue it reads to fire an agent
+ * mid-build, the role a subagent's frontmatter description plays) and default
  * to empty. Unknown manifest keys are tolerated and dropped from the narrowed
  * type, keeping the contract surface minimal.
  */
@@ -72,7 +72,7 @@ export type AgentManifest = {
  * structured result plumbbob consumes at the verify pause.
  *
  * `summary` is the one-line headline; `body` and `notes` are optional prose;
- * `parked[]` are park lines — off-plan concerns captured for later triage —
+ * `parked[]` are park lines (off-plan concerns captured for later triage)
  * which the CLI lands through the park verb, because an agent never writes the
  * `.plumbbob/` sidecar itself (it keeps a single writer). No field here can
  * advance the loop: nothing an agent returns may checkpoint, flip a step, or
@@ -183,7 +183,7 @@ export function parseEnvelope(raw: unknown): EnvelopeParse {
  * True when a string names one of the three slots.
  *
  * Exported for the `agent run` verb's `--mode` refusal: a mode the manifest
- * doesn't declare is refused loud — the user who typed it asked for that slot
+ * doesn't declare is refused loud; the user who typed it asked for that slot
  * specifically.
  */
 export function isSlot(value: string): value is Slot {
@@ -235,7 +235,7 @@ function parseSlots(value: unknown): ReadonlyArray<Slot> | string {
 /**
  * Narrow the envelope's optional `parked[]` (absent = none).
  *
- * Present, it must be an array of non-blank strings — each becomes a park line
+ * Present, it must be an array of non-blank strings: each becomes a park line
  * the CLI lands through the park verb. A malformed list is refused rather than
  * silently dropped: losing a parked concern is a quiet data loss. Returns the
  * trimmed lines or an error string.
@@ -297,7 +297,7 @@ function envelopeFail(error: string): EnvelopeParse {
  * `flag` is a `--agent <path>` override (top priority); `project` is
  * `.plumbbob/agents/` (tracked, so it rides the branch into the PR);
  * `personal` is `~/.plumbbob/agents/` (the user's own library). Resolution
- * walks flag → project → personal, first hit wins — the same
+ * walks flag → project → personal, first hit wins: the same
  * most-specific-wins shape as the settings ladder.
  */
 export type AgentOrigin = 'flag' | 'project' | 'personal'
@@ -331,14 +331,14 @@ export type AgentListing = {
 }
 
 /**
- * The project agents tier — `.plumbbob/agents/` under the repo root.
+ * The project agents tier: `.plumbbob/agents/` under the repo root.
  */
 export function projectAgentsDir(root: string): string {
   return join(root, '.plumbbob', 'agents')
 }
 
 /**
- * The personal agents tier — `~/.plumbbob/agents/`, the user's own library.
+ * The personal agents tier: `~/.plumbbob/agents/`, the user's own library.
  */
 export function personalAgentsDir(home: string): string {
   return join(home, '.plumbbob', 'agents')
@@ -361,7 +361,7 @@ function agentsHome(home?: string): string {
  * A `flagPath` (from `--agent <path>`) points straight at an agent directory
  * and takes top priority. A tier "hits" when it holds an `agent.json`: a
  * malformed one there is surfaced as an error (project still shadows
- * personal), never silently skipped in favor of a different agent — an
+ * personal), never silently skipped in favor of a different agent; an
  * explicit ask fails loud. Returns the not-found error only when no tier holds
  * a manifest at all.
  */
@@ -392,7 +392,7 @@ export function resolveAgent(
 /**
  * Every resolvable agent across both tiers, sorted by name.
  *
- * Project shadows personal: a name defined in both resolves — and lists — from
+ * Project shadows personal: a name defined in both resolves (and lists) from
  * project. Each entry carries its origin and resolution; a malformed manifest
  * lands as an errored resolution rather than crashing the walk.
  */
@@ -445,7 +445,7 @@ export function formatAgentList(listings: ReadonlyArray<AgentListing>): string {
  * Returns null when the directory holds no manifest (a tier miss, so
  * resolution falls through), an errored resolution when the manifest is
  * present but unreadable/malformed, else the resolved agent. A missing file
- * (ENOENT throw) is the miss signal — one read, no TOCTOU race.
+ * (ENOENT throw) is the miss signal: one read, no TOCTOU race.
  */
 function loadAgentDir(dir: string, origin: AgentOrigin): AgentResolution | null {
   const file = join(dir, 'agent.json')
@@ -486,15 +486,15 @@ function agentDirNames(dir: string): string[] {
 // --- step context ---
 
 /**
- * The input JSON a child agent reads on stdin — the whole picture of the step
+ * The input JSON a child agent reads on stdin: the whole picture of the step
  * it runs against, composed deterministically from intent.md + settings.
  *
  * `mode` is the slot being run; `context[]` carries earlier before-slot
  * outputs inline (the simplest transport until size proves otherwise);
- * `settings` is plumbbob's own relevant settings and nothing else — plumbbob
+ * `settings` is plumbbob's own relevant settings and nothing else; plumbbob
  * never touches a provider key, so auth, model choice, and sandboxing stay the
- * agent's business. The step's `seam` — the paths the step is granted to
- * edit — is parsed strictly because seams gate git behavior; the title,
+ * agent's business. The step's `seam` (the paths the step is granted to
+ * edit) is parsed strictly because seams gate git behavior; the title,
  * done-when, decisions, and constraints are best-effort prose for the agent's
  * context.
  */
@@ -521,10 +521,10 @@ export type StepContextResult =
 /**
  * Compose the StepContext for one step.
  *
- * The strict seam parse is the only refusal path — a missing step or
+ * The strict seam parse is the only refusal path: a missing step or
  * unparseable seam gates git behavior, so it fails loud; everything else is
  * best-effort and lands whatever it can, returning `warnings` (skipped-bullet
- * lines) for the caller to print on stderr rather than writing there itself —
+ * lines) for the caller to print on stderr rather than writing there itself;
  * this module stays pure, the verb does the IO.
  */
 export function composeStepContext(params: {
@@ -578,7 +578,7 @@ function skipWarnings(heading: string, skipped: ReadonlyArray<string>): string[]
 /**
  * A slot→agents map: the agents bound to each of the three lifecycle points.
  *
- * Only bound slots are present as keys — an absent slot falls through the
+ * Only bound slots are present as keys; an absent slot falls through the
  * merge ladder, so the map must distinguish "not bound here" from "bound to
  * nothing". Shared by a harness `defaults` block, a per-step entry, and the
  * settings-level defaults.
@@ -589,7 +589,7 @@ export type SlotBindings = Partial<Record<Slot, ReadonlyArray<string>>>
  * One step's entry in the harness: its slot bindings plus `note`.
  *
  * `note` is prose the host model reads (like a manifest `when`), never the
- * CLI's mechanics — the harness stays bindings + prose, no control flow.
+ * CLI's mechanics: the harness stays bindings + prose, no control flow.
  * Loops, retries, and conditionals belong in agents (as code) or in prose (read
  * by the host model), never in config.
  */
@@ -599,7 +599,7 @@ export type StepBinding = {
 }
 
 /**
- * harness.json — the planned per-step agent bindings for one build.
+ * harness.json: the planned per-step agent bindings for one build.
  *
  * Authored at /plumbbob:plan time as a sibling of intent.md in the build's tracked
  * `builds/<slug>/` folder: the plan says what/why, the harness says with-what.
@@ -621,7 +621,7 @@ export type HarnessParse =
  * Validate a parsed harness.json.
  *
  * Contract first (a major mismatch gets the same upgrade hint as the manifest
- * and envelope). Structure is strict — a `steps` that is not an object, a
+ * and envelope). Structure is strict: a `steps` that is not an object, a
  * non-numeric step key, or a step entry that is not an object is the author's
  * error and is refused loud. Slot *contents* stay lenient: a slot value may be
  * one name or a list, and blanks/non-strings drop rather than refuse, because
@@ -660,9 +660,9 @@ function parseHarness(raw: unknown): HarnessParse {
 /**
  * Read and validate a harness.json at `path`.
  *
- * The caller builds the path from the build folder — this module stays
+ * The caller builds the path from the build folder; this module stays
  * ignorant of the sidecar layout, taking the full path. Returns null when the
- * file is absent (a build with no bound agents — a clean no-op); an errored
+ * file is absent (a build with no bound agents: a clean no-op); an errored
  * parse when present-but-broken (invalid JSON or a malformed structure the
  * author must fix); else the validated bindings. Shared so every reader
  * (`agent run`, `status`) parses the harness the same way.
@@ -688,7 +688,7 @@ export function readHarnessFile(path: string): HarnessParse | null {
  *
  * Accepts a harness `defaults` block, a per-step entry, or the settings-level
  * defaults. A slot value may be a single agent name or a list; blanks and
- * non-strings drop. Only the three real slots are read — `note` and any
+ * non-strings drop. Only the three real slots are read; `note` and any
  * stranger key are ignored here. A slot present but naming no valid agent
  * still counts as bound-to-nothing (an explicit override to none), so callers
  * get clean replace semantics up the ladder.
@@ -706,7 +706,7 @@ export function parseSlotBindings(raw: unknown): SlotBindings {
  * The agents bound to one slot for one step, merged down the bindings ladder.
  *
  * A per-step slot entry overrides the harness `defaults`, which override the
- * settings-level defaults — the first level that names the slot wins, replace
+ * settings-level defaults: the first level that names the slot wins, replace
  * not append, the same most-specific-wins shape as the settings ladder. The
  * `--agent` flag and an explicit name sit above all of this, but the verb
  * takes the single-agent path for those and never reaches here. Returns []
@@ -727,7 +727,7 @@ export function resolveSlotAgents(params: {
 }
 
 /**
- * Coerce a slot value — one agent name or a list — to a trimmed name list,
+ * Coerce a slot value (one agent name or a list) to a trimmed name list,
  * dropping blanks and non-strings.
  */
 function asNameList(value: unknown): ReadonlyArray<string> {
@@ -736,7 +736,7 @@ function asNameList(value: unknown): ReadonlyArray<string> {
 }
 
 /**
- * True when a value is a plain JSON object — not null, not an array.
+ * True when a value is a plain JSON object: not null, not an array.
  */
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -745,12 +745,12 @@ function isObject(value: unknown): value is Record<string, unknown> {
 // --- invocation ---
 
 /**
- * The outcome of one spawned agent run — a discriminated union the verb maps
+ * The outcome of one spawned agent run: a discriminated union the verb maps
  * to terminal reporting and side effects.
  *
  * Exactly one arm is authoritative: `ok` only when the child exited 0 AND its
  * stdout parsed to a valid envelope. A non-zero exit is a failed run reported
- * verbatim — the envelope of a child that failed is not trusted; `contract` is
+ * verbatim: the envelope of a child that failed is not trusted; `contract` is
  * exit-0-but-garbage (unparseable stdout or a version mismatch, carrying
  * parseEnvelope's hint); `timeout` and `interrupted` are the kill paths;
  * `spawn` is a shell that never started. `stdout` rides along on the outcomes
@@ -772,13 +772,13 @@ export type AgentRunResult =
  * directory rides in `PLUMBBOB_AGENT_DIR` so a root-cwd agent can still reach
  * its files. The composed StepContext is delivered as JSON on stdin. Stdout is
  * piped and captured (the envelope); stderr is inherited so the child's prose
- * streams live to the terminal — production (narrating) never collides with
+ * streams live to the terminal: production (narrating) never collides with
  * consumption (one structured result at the pause). A SIGINT while the child
- * runs kills it and reports `interrupted` rather than orphaning it — the human
+ * runs kills it and reports `interrupted` rather than orphaning it; the human
  * is present, Ctrl-C works. A positive `timeoutSeconds` arms a kill timer
  * (0 = off; a timeout is the user's explicit opt-in). Async `spawn`, not
  * `spawnSync`, so the parent stays live to interrupt gracefully. Never
- * rejects — every failure mode is a resolved `AgentRunResult`.
+ * rejects: every failure mode is a resolved `AgentRunResult`.
  */
 export function runAgent(params: {
   readonly root: string
@@ -826,7 +826,7 @@ export function runAgent(params: {
       stdout += chunk.toString()
     })
 
-    // A shell that never launched (for example `sh` itself missing) — distinct from a
+    // A shell that never launched (for example `sh` itself missing): distinct from a
     // command that ran and exited non-zero, which arrives on `close`.
     child.on('error', (err: Error) => {
       finish({ ok: false, reason: 'spawn', error: err.message })
@@ -854,9 +854,9 @@ export function runAgent(params: {
 /**
  * Parse the child's captured stdout into a validated envelope.
  *
- * JSON first (a non-JSON stdout is out of contract — the envelope must be one
+ * JSON first (a non-JSON stdout is out of contract: the envelope must be one
  * JSON object), then the envelope validator, which carries the
- * contract-mismatch hint. Kept private — `runAgent` is the only caller and the
+ * contract-mismatch hint. Kept private; `runAgent` is the only caller and the
  * verb reads the union, not this.
  */
 function parseChildEnvelope(stdout: string): EnvelopeParse {

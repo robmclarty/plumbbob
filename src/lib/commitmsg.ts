@@ -1,8 +1,8 @@
 // Conventional-Commit subject assembly. Plumbbob's commit subjects read as
-// `type(scope): description` — real feat/fix/chore types and a real parenthesised
-// scope — so `git log` speaks the same grammar as the rest of the branch. The
+// `type(scope): description` (real feat/fix/chore types and a real parenthesised
+// scope) so `git log` speaks the same grammar as the rest of the branch. The
 // `plumbbob`/`step N` identifiers ride a marker line at the head of the body,
-// which `withMarker` prepends — so `git log --grep plumbbob` finds every plumbbob
+// which `withMarker` prepends, so `git log --grep plumbbob` finds every plumbbob
 // commit. Functional and procedural, node builtins only, no gate: these only
 // shape a string the CLI is about to commit.
 
@@ -11,7 +11,7 @@
  * prefix on a step title.
  *
  * Anchoring on this closed set keeps a prose title like `Note: rewire the
- * cache` from being misread as a `Note` type — only these words, immediately
+ * cache` from being misread as a `Note` type; only these words, immediately
  * followed by an optional `(scope)`, an optional `!`, and a colon, count as an
  * author-supplied prefix.
  */
@@ -21,7 +21,7 @@ const TYPES = ['feat', 'fix', 'chore', 'docs', 'refactor', 'test', 'perf', 'buil
 // breaking !, colon, then the description.
 const PREFIX = new RegExp(`^(${TYPES.join('|')})(?:\\(([^)]+)\\))?(!)?:\\s+(.+)$`)
 
-/** A step title split into its Conventional parts — null type/scope when the title carried no prefix. */
+/** A step title split into its Conventional parts: null type/scope when the title carried no prefix. */
 export type ParsedTitle = {
   readonly type: string | null
   readonly scope: string | null
@@ -34,7 +34,7 @@ export type ParsedTitle = {
  *
  * `feat(escape-hatch): add the flag` → { type:'feat', scope:'escape-hatch',
  * breaking:false, description:'add the flag' }. A title with no recognised
- * prefix comes back whole as the description with a null type/scope — the
+ * prefix comes back whole as the description with a null type/scope; the
  * caller then defaults the type and fills the scope from the build.
  */
 export function parseConventionalTitle(title: string): ParsedTitle {
@@ -64,11 +64,11 @@ export function conventionalSubject(parts: {
 /**
  * A Conventional subject from a step title, filling gaps from the build.
  *
- * An author-written prefix (`fix(parser): …`) is honoured verbatim — its type,
+ * An author-written prefix (`fix(parser): …`) is honoured verbatim: its type,
  * scope, breaking marker, and exact wording all win. A bare prose title
  * defaults to `defaultType` and the build `scope`, and gets its sentence-case
  * opener de-capitalised (`Add the flag` → `add the flag`) to match
- * Conventional style — while an all-caps acronym start (`API`, `OAuth`) is
+ * Conventional style, while an all-caps acronym start (`API`, `OAuth`) is
  * left alone.
  */
 export function subjectFromTitle(title: string, defaultType: string, scope: string | null): string {

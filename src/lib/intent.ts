@@ -1,12 +1,12 @@
-// The intent.md parser. intent.md is a build's plan document — title, the
+// The intent.md parser. intent.md is a build's plan document: title, the
 // numbered increments under `## Steps`, decisions, constraints, open questions.
 // This module reads it in two registers. The seam parse is strict by design: a
-// seam is a step's edit grant — the backtick-wrapped, repo-relative paths on
-// its single `seam:` sub-line — and it gates git behavior, so the parse refuses
+// seam is a step's edit grant (the backtick-wrapped, repo-relative paths on
+// its single `seam:` sub-line) and it gates git behavior, so the parse refuses
 // precisely on globs, absolute paths, a missing step, a missing seam, or more
 // than one seam line, rather than guessing. The best-effort scrapers below
 // (title, done-when, decisions, constraints) feed an agent's context, not a
-// gate, so they never refuse — they return what they can and report the lines
+// gate, so they never refuse; they return what they can and report the lines
 // they skipped.
 
 const GLOB_CHARS = /[*?[\]{}]/
@@ -22,7 +22,7 @@ type StepSlice =
   | { readonly ok: false; readonly error: string }
 
 /**
- * The lines belonging to step `n` under `## Steps` — from its `N. ` opener to
+ * The lines belonging to step `n` under `## Steps`: from its `N. ` opener to
  * the next opener or the section end.
  *
  * Shared by the strict seam parse and the best-effort meta scrape; it keeps the
@@ -60,12 +60,12 @@ function sliceStep(content: string, step: number): StepSlice {
 }
 
 /**
- * Parse step `n`'s seam — the backtick-wrapped paths on its single `seam:` sub-line.
+ * Parse step `n`'s seam: the backtick-wrapped paths on its single `seam:` sub-line.
  *
  * Strict: the seam is the step's edit grant and gates git behavior, so this
  * refuses on a missing step, a missing or duplicated seam line, an empty token,
  * a glob, or an absolute path rather than guessing. Tokens are exact
- * repo-relative paths or `dir/` prefix grants — never globs.
+ * repo-relative paths or `dir/` prefix grants: never globs.
  */
 export function parseStepSeam(content: string, step: number): SeamParse {
   const slice = sliceStep(content, step)
@@ -155,7 +155,7 @@ export function isArtifactPath(relPath: string): boolean {
 
 /**
  * The staged paths that fall outside the step's seam AND outside the artifact
- * plane — the scope-drift set `checkpoint` warns about.
+ * plane: the scope-drift set `checkpoint` warns about.
  *
  * Guidance, not a gate: the checkpoint still commits them. An empty seam yields
  * no drift, so callers that cannot resolve a seam simply skip the warning
@@ -216,7 +216,7 @@ export function parseStepMeta(content: string, step: number): StepMeta {
 }
 
 /**
- * The build title — the first `# ` heading. '' when absent.
+ * The build title: the first `# ` heading. '' when absent.
  */
 export function parseBuildTitle(content: string): string {
   for (const line of content.split('\n')) {
@@ -232,12 +232,12 @@ const SCOPE_HEADER = /^\*\*Scope:\*\*\s*(.*)$/
 const SCOPE_PLACEHOLDER = /^<.*>$/
 
 /**
- * The build's default Conventional-Commit scope — the `**Scope:**` header field
+ * The build's default Conventional-Commit scope: the `**Scope:**` header field
  * authored once in intent.md at plan time.
  *
  * The value is read verbatim off the line, with any trailing `<!-- ... -->`
- * guidance note stripped. An unfilled placeholder — an empty value or an
- * angle-bracket placeholder like `<feature>` — parses as absent, so a freshly
+ * guidance note stripped. An unfilled placeholder (an empty value or an
+ * angle-bracket placeholder like `<feature>`) parses as absent, so a freshly
  * scaffolded, not-yet-edited build falls through to the next rung of the scope
  * fallback chain (the build slug) rather than landing commits scoped
  * `(<feature>)`. null when the header is missing entirely, so an intent.md
@@ -264,7 +264,7 @@ export type ScrapedBullets = { readonly items: ReadonlyArray<string>; readonly s
  *
  * Verbatim keeps a bullet's `*because*` rationale intact for the agent that
  * reads it. `skipped` holds any line under the heading that was neither a
- * bullet, a continuation, nor blank — a malformed bullet the caller warns
+ * bullet, a continuation, nor blank: a malformed bullet the caller warns
  * about rather than dropping silently.
  */
 export function scrapeBullets(content: string, heading: string): ScrapedBullets {

@@ -145,7 +145,7 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
    - seam: `templates/intent.md`, `templates/build-log.md`, `templates/spike-report.md`
    - model: fable — the templates seed every future build's prose
    - notes: [Q2 (format-markers)](#q2) named two format em-dashes; the template carries more, unfenced: the step-line `<title> — **done when:**` separator (which `parseSteps` in `src/lib/orient.ts` reads; its doc comment states the shape) and the `- model:` sub-line's ` — ` before the why. Each must be fenced, exempted, or changed *with* its parser, sized at step entry; a format change here reaches `orient.ts` and its tests, which this seam does not carry, so surface it rather than sprawl. Landing the comma marker also makes `docs/voice/voice.md`'s provisional parenthetical ("stands until that format is decided separately") stale; flagging it for Rob's pen is part of this step ([C2 (voice-stays-shut)](#c2)).
-10. [ ] docs(skills): sweep the skills prose — **done when:** `skills/*/SKILL.md` carry zero em-dashes (147 today) and every reworded instruction still reads as an instruction
+10. [x] docs(skills): sweep the skills prose — **done when:** `skills/*/SKILL.md` carry zero em-dashes (147 today) and every reworded instruction still reads as an instruction
     - seam: `skills/`
     - model: fable — instructions must survive the re-punctuation with their imperative force intact
 11. [ ] chore(prose): sweep the src/lib doc comments — **done when:** vale reports zero EmDash findings over `src/lib/` outside its tests (231 today); runtime strings untouched

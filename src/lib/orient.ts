@@ -1,5 +1,5 @@
 // The orientation model behind `status`: parse a live build session into the
-// where-am-I dashboard — title, phase, step list, last checkpoint, counts, and
+// where-am-I dashboard: title, phase, step list, last checkpoint, counts, and
 // one suggested next move. Pure and best-effort by design: it takes raw file
 // contents (no fs), and a malformed document degrades to fewer fields rather
 // than throwing.
@@ -13,7 +13,7 @@ export type Step = {
   readonly title: string
   readonly planned: boolean // carries a `done when:` criterion
   readonly doneWhen: string | null // the criterion text, for the dashboard
-  readonly model: string | null // the optional `- model:` recommendation, verbatim — advisory, never a gate
+  readonly model: string | null // the optional `- model:` recommendation, verbatim: advisory, never a gate
 }
 
 /** One landed step from the checkpoints ledger: its number and commit SHA. */
@@ -22,7 +22,7 @@ export type Checkpoint = { readonly n: number; readonly sha: string }
 /** The parsed where-am-I view that `status` renders. */
 export type Orientation = {
   readonly title: string | null
-  // The phase word shown in the dashboard — derived, not stored: SPIKE when a
+  // The phase word shown in the dashboard (derived, not stored): SPIKE when a
   // spike is open, BUILD when a step is in flight, else DESIGN.
   readonly phase: string
   readonly steps: ReadonlyArray<Step>
@@ -34,29 +34,29 @@ export type Orientation = {
   // the human can review (and `/plumbbob:step`-revise) before `/plumbbob:build`.
   readonly nextDoneWhen: string | null
   readonly nextSeam: ReadonlyArray<string>
-  // The next step's advisory model recommendation — the smallest model the plan
+  // The next step's advisory model recommendation: the smallest model the plan
   // says can carry the step. Orientation for the human choosing where to spend
   // attention and tokens, never a gate.
   readonly nextModel: string | null
   // Commits on HEAD since the last checkpoint that landed outside plumbbob's
   // checkpoints ledger (the per-build file recording baseline, plan, and step
-  // SHAs): surfaced as one neutral reconciliation line, never blocked — the
+  // SHAs): surfaced as one neutral reconciliation line, never blocked; the
   // human commits freely. 0 renders nothing.
   readonly outOfBand: number
 }
 
-/** The raw material `orient` parses — file contents and marker state, no fs. */
+/** The raw material `orient` parses: file contents and marker state, no fs. */
 export type OrientInput = {
   readonly intent: string
   readonly buildLog: string
   readonly checkpoints: string
   // The in-flight step number from the STEP marker (an untracked control file
-  // naming the step being built; null when none) — this is what makes the phase
+  // naming the step being built; null when none): this is what makes the phase
   // "BUILD". `spiking` is the SPIKE marker's presence.
   readonly inFlight: number | null
   readonly spiking: boolean
   // The out-of-band commit count: commits since the last checkpoint's SHA that
-  // the ledger didn't record. Only `status` can measure it (it needs git) —
+  // the ledger didn't record. Only `status` can measure it (it needs git);
   // orient stays pure/fs-free, so the caller computes it and passes it in. 0
   // when there is no checkpoint to reconcile against, or the tree is clean at
   // the last checkpoint.
@@ -80,7 +80,7 @@ function sectionLines(content: string, heading: string): string[] {
 }
 
 /**
- * The build title — the first `# ` heading in intent.md, or null when absent.
+ * The build title: the first `# ` heading in intent.md, or null when absent.
  */
 export function parseTitle(intent: string): string | null {
   for (const line of intent.split('\n')) {
@@ -157,7 +157,7 @@ export function markStepDone(intent: string, n: number): string {
  * Count the questions still open: `- Q\d+:` openers under `## Open questions`
  * that carry neither a resolution marker nor an unfilled scaffold body.
  *
- * The opener may carry a slug-at-birth gloss — `- Q2 (some-slug): ...` — and the
+ * The opener may carry a slug-at-birth gloss (`- Q2 (some-slug): ...`) and the
  * anchored form a citable question is born in:
  * `- <a id="q2"></a>**Q2 (some-slug)**: ...`, which is what a `[Q2 (some-slug)](#q2)`
  * reference site elsewhere in the file lands on. The count reads through both, and
@@ -207,12 +207,12 @@ export function parseLastCheckpoint(checkpoints: string): Checkpoint | null {
 }
 
 /**
- * The SHA of the last ledger line of ANY kind — baseline, plan, or step.
+ * The SHA of the last ledger line of ANY kind: baseline, plan, or step.
  *
  * This is the reconciliation anchor for the out-of-band commit count: a commit
  * that lands after the plan but before the first step checkpoint is exactly the
  * window the reconciliation line exists for, so anchoring on step lines alone
- * would leave it invisible. `parseLastCheckpoint` stays step-only — it feeds
+ * would leave it invisible. `parseLastCheckpoint` stays step-only; it feeds
  * the "last checkpoint step N" display, where baseline/plan would be noise.
  */
 export function lastLedgerSha(checkpoints: string): string | null {
@@ -248,7 +248,7 @@ function nextMove(spiking: boolean, steps: ReadonlyArray<Step>, inFlight: number
       return 'plan the first step — `/plumbbob:step`'
     }
     // Batch-default: the steps were planned up front, so finishing them usually
-    // means "finish up" — but `/plumbbob:step` can still add an increment if reality grew.
+    // means "finish up", but `/plumbbob:step` can still add an increment if reality grew.
     const harvest = parked > 0 ? `harvest ${parked} parked idea${parked === 1 ? '' : 's'} — \`/plumbbob:harvest\`; then ` : ''
     return `${harvest}finish up — \`/plumbbob:finish\` (or \`/plumbbob:step\` to add another increment)`
   }
@@ -295,7 +295,7 @@ export function formatOrientation(o: Orientation): string {
       return head
     }
     // Surface the next step's detail so the human can review it (and `/plumbbob:step`-
-    // revise) before building. Only what's present — a rough step shows neither.
+    // revise) before building. Only what's present: a rough step shows neither.
     const detail: string[] = []
     if (o.nextDoneWhen !== null) {
       detail.push(`        done when: ${o.nextDoneWhen}`)
@@ -316,7 +316,7 @@ export function formatOrientation(o: Orientation): string {
 
   // A neutral reconciliation note, only when there is something to reconcile:
   // commits landed since the last checkpoint that plumbbob's ledger didn't
-  // record. Informational — the human commits freely, so this never gates.
+  // record. Informational: the human commits freely, so this never gates.
   const receipts =
     o.outOfBand > 0
       ? [`${o.outOfBand} commit${o.outOfBand === 1 ? '' : 's'} since the last checkpoint landed outside plumbbob's ledger.`]

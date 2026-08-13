@@ -1,18 +1,18 @@
-// The approval latch — the ledger-plane predicate `checkpoint` evaluates before
+// The approval latch: the ledger-plane predicate `checkpoint` evaluates before
 // its check gate (the latch is cheap, so it runs first; the heavy gate already
-// ran in the verify tick). The work plane stays guidance — no edit is ever
-// blocked — but the commit tick is latched: a step may not land unless a human
+// ran in the verify tick). The work plane stays guidance (no edit is ever
+// blocked) but the commit tick is latched: a step may not land unless a human
 // turn intervened since the step was entered, the human granted a one-turn
 // self-approval from their literal prompt, or the turn ledger is dormant (a
 // host with no hooks grows no ledger, and the latch stays out of the way rather
 // than wedging). The ledger is a pair of flat sidecar control files: TURN
 // counts human prompts (ticked by the `plumbbob turn` hook), TICK stamps that
-// count when a step is entered — TURN > TICK means a human turn intervened.
+// count when a step is entered; TURN > TICK means a human turn intervened.
 // Five rows, evaluated in order, first hit wins; the refusal message *is* the
 // pause affordance. A standing `auto` in a settings file is never a grant: a
-// model can write that file, and a grant it can forge is no grant — the latch
+// model can write that file, and a grant it can forge is no grant; the latch
 // reads it only to say so at the pause, never to allow. It reads only
-// TURN/TICK/GRANT and isTTY — it never sniffs the host session. Named exports,
+// TURN/TICK/GRANT and isTTY; it never sniffs the host session. Named exports,
 // node builtins.
 
 import { readFileSync } from 'node:fs'
@@ -27,12 +27,12 @@ import { resolveBoolean } from './settings.ts'
 export type Grant = { readonly kind: 'auto' } | { readonly kind: 'range'; readonly ceiling: number }
 
 export type LatchInput = {
-  readonly isTTY: boolean // row 1 — a human at the keyboard is their own approval
-  readonly turn: number | null // rows 2/4 — the human-turn count; null = absent (dormant ledger)
-  readonly tick: number | null // rows 2/4 — the step-entry stamp; null = absent (hand-built diff)
-  readonly grant: Grant | null // row 3 — the one-turn grant from the human's prompt
+  readonly isTTY: boolean // row 1: a human at the keyboard is their own approval
+  readonly turn: number | null // rows 2/4: the human-turn count; null = absent (dormant ledger)
+  readonly tick: number | null // rows 2/4: the step-entry stamp; null = absent (hand-built diff)
+  readonly grant: Grant | null // row 3: the one-turn grant from the human's prompt
   readonly step: number | null // the step landing; null for `--plan`
-  readonly settingsAuto: boolean // a settings `auto` — never a grant, only decorates the refusal
+  readonly settingsAuto: boolean // a settings `auto`: never a grant, only decorates the refusal
 }
 
 export type LatchDecision =
@@ -42,7 +42,7 @@ export type LatchDecision =
 const ALLOW: LatchDecision = { allow: true }
 
 /**
- * The refusal message is the affordance — it tells the model what the pause is,
+ * The refusal message is the affordance; it tells the model what the pause is,
  * how it ends (approval on the next turn lands it; `/plumbbob:build` only starts the
  * next step), and names the only legitimate grants.
  */
@@ -55,7 +55,7 @@ boundary; \`/plumbbob:build\` only starts the next step, it never lands this one
 
 /**
  * The plan commit gets its own wording: there is no step, no diff, and no
- * self-review at plan time — what the human approves is the plan itself.
+ * self-review at plan time; what the human approves is the plan itself.
  */
 const NO_TURN_PLAN_MESSAGE = `plumbbob: checkpoint refused — no human turn since \`start\` stamped this plan. This
 is the plan pause: present the plan, then end the turn; the human's approving
@@ -64,7 +64,7 @@ step range in the human's own prompt is the only self-approval.)
 `
 
 /**
- * A settings `auto` is never a grant — a model can write that file, and a grant
+ * A settings `auto` is never a grant; a model can write that file, and a grant
  * it can forge is no grant. When one is set, the refusal names it rather than
  * silently ignoring it, and points at the only self-approval that works.
  */
@@ -86,15 +86,15 @@ function ceilingMessage(ceiling: number): string {
  * turn comparison.
  */
 export function evaluateLatch(input: LatchInput): LatchDecision {
-  if (input.isTTY) return ALLOW // 1 — a human at the keyboard
-  if (input.turn === null || input.tick === null) return ALLOW // 2 — dormant ledger / hand-built diff
-  if (input.grant?.kind === 'auto') return ALLOW // 3 — one-turn grant the human typed
+  if (input.isTTY) return ALLOW // 1: a human at the keyboard
+  if (input.turn === null || input.tick === null) return ALLOW // 2: dormant ledger / hand-built diff
+  if (input.grant?.kind === 'auto') return ALLOW // 3: one-turn grant the human typed
   if (input.grant?.kind === 'range' && input.step !== null) {
     if (input.step <= input.grant.ceiling) return ALLOW
     return { allow: false, reason: 'ceiling', message: ceilingMessage(input.grant.ceiling) }
   }
-  if (input.turn > input.tick) return ALLOW // 4 — a human turn intervened
-  // 5 — the pause (plan-worded when no step is landing). A settings `auto` never
+  if (input.turn > input.tick) return ALLOW // 4: a human turn intervened
+  // 5: the pause (plan-worded when no step is landing). A settings `auto` never
   // allows; when one is set, the refusal notes it rather than honoring it.
   const base = input.step === null ? NO_TURN_PLAN_MESSAGE : NO_TURN_MESSAGE
   return { allow: false, reason: 'no-turn', message: input.settingsAuto ? base + SETTINGS_AUTO_NOTE : base }
@@ -103,7 +103,7 @@ export function evaluateLatch(input: LatchInput): LatchDecision {
 /**
  * Parse a GRANT file's content (`auto` | `range <M>`).
  *
- * Anything else — including a corrupted or hand-mangled file — contributes
+ * Anything else (including a corrupted or hand-mangled file) contributes
  * nothing: no grant, never an error.
  */
 export function parseGrant(raw: string): Grant | null {
@@ -127,7 +127,7 @@ export function checkLatch(root: string, step: number | null): LatchDecision {
     tick: readCount(tickPath(root)),
     grant: readGrant(root),
     step,
-    // Read from the settings ladder — but only to decorate the pause, never to allow.
+    // Read from the settings ladder, but only to decorate the pause, never to allow.
     settingsAuto: resolveBoolean(root, 'auto', false),
   })
 }
