@@ -8,6 +8,8 @@ entry = [
   "src/__tests__/*.test.ts",
   "test/**/*.test.ts",
   "vitest.config.ts",
+  # Loaded by stryker.config.mjs as a string path, so nothing imports it.
+  "vitest.stryker.config.ts",
 ]
 
 # Standalone example packages carry their own package.json and dependency graph
