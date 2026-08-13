@@ -1,16 +1,16 @@
-// `plumbbob agent <subcommand>` — the doorway to user-authored agents: anything
+// `plumbbob agent <subcommand>`: the doorway to user-authored agents: anything
 // executable that speaks the JSON envelope contract (JSON in on stdin, JSON out
-// on stdout, prose streamed on stderr). `agent list` walks the two agent tiers —
-// the repo's tracked `.plumbbob/agents/<name>/`, then the personal
-// `~/.plumbbob/agents/<name>/` — and prints each resolvable agent. `agent run
+// on stdout, prose streamed on stderr). `agent list` walks the two agent tiers
+// (the repo's tracked `.plumbbob/agents/<name>/`, then the personal
+// `~/.plumbbob/agents/<name>/`) and prints each resolvable agent. `agent run
 // <name> [--step N] [--mode before|build|after]` composes the StepContext,
 // spawns the manifest command, streams its stderr live, captures and validates
 // the child's envelope, re-emits it on this verb's own stdout (machine) with the
 // human summary on stderr, lands `parked[]` through the build-log, and appends
-// the envelope to the handoff ledger (`builds/<slug>/handoff.json` — untracked,
+// the envelope to the handoff ledger (`builds/<slug>/handoff.json`: untracked,
 // step-scoped, cleared at checkpoint) so later runs can thread it back in.
 // No code path here can checkpoint, flip a step, or chain agents, and that
-// absence is deliberate — the subprocess boundary keeps the human as the clock
+// absence is deliberate; the subprocess boundary keeps the human as the clock
 // by construction, not by policy. A thin read-write shell: resolution,
 // composition, and spawn mechanics live in lib/agents.ts.
 
@@ -68,10 +68,10 @@ function list(cwd: string, _args: ReadonlyArray<string>): number {
  * Run one named agent, or a slot's harness-bound agents, against the step in flight.
  *
  * With a name (or `--agent` flag) it runs exactly that agent, failing loud on a
- * miss — the user who typed the name asked for it specifically. With no name it
+ * miss; the user who typed the name asked for it specifically. With no name it
  * runs whatever the build's harness.json binds to the requested slot. Either
- * way it composes the StepContext, spawns, and applies side effects — never
- * advancing the loop.
+ * way it composes the StepContext, spawns, and applies side effects (never
+ * advancing the loop).
  */
 async function run(cwd: string, args: ReadonlyArray<string>): Promise<number> {
   const root = findRepoRoot(cwd)
@@ -93,7 +93,7 @@ async function run(cwd: string, args: ReadonlyArray<string>): Promise<number> {
     return 1
   }
 
-  // A `--agent <path>` flag still needs a name — it labels an explicit run (the
+  // A `--agent <path>` flag still needs a name; it labels an explicit run (the
   // handoff ledger and the human summary key on the name), it does not name one.
   if (parsed.name === undefined && parsed.flagPath !== undefined) {
     process.stderr.write('plumbbob: --agent needs an agent name too, for the run label. Try: plumbbob agent run reviewer --agent ./path --step 3.\n')
@@ -129,10 +129,10 @@ type RunSpec = {
  * One agent's full run: resolve it, pick its slot, compose the StepContext, spawn, report.
  *
  * `ambient` marks a harness-bound run whose resolution or slot mismatch
- * degrades to a warning so a batch keeps going — a binding is ambient
+ * degrades to a warning so a batch keeps going; a binding is ambient
  * configuration the loop must survive without; an explicit ask
  * (`ambient: false`) fails loud on the same miss. A run that actually starts
- * and fails (non-zero exit, timeout, …) is a hard failure either way — the
+ * and fails (non-zero exit, timeout, …) is a hard failure either way: the
  * softening covers a *missing* agent, never a broken one.
  */
 async function runOne(root: string, slug: string | null, step: number, spec: RunSpec): Promise<number> {
@@ -171,17 +171,17 @@ async function runOne(root: string, slug: string | null, step: number, spec: Run
     mode,
     settings: {
       // The envelope reports the `auto` setting to agents as information only.
-      // The checkpoint latch never reads it — a model can write a settings
+      // The checkpoint latch never reads it; a model can write a settings
       // file, so a standing `auto` cannot be a self-approval grant; approval
       // comes only from what the human literally typed. A `true` here informs
       // an agent, it does not self-approve.
       auto: resolveBoolean(root, 'auto', false),
       agentTimeout: resolveNumber(root, 'agentTimeout', 0),
       // Hand this agent its own config block over the envelope's existing
-      // `settings` field — no new envelope field, no new verb; the config just
+      // `settings` field: no new envelope field, no new verb; the config just
       // rides here. Resolution: settings.json's agentConfig[name], with the
       // untracked personal overlay (settings.local.json) replacing the project
-      // entry whole — no deep merge — and {} when neither defines it.
+      // entry whole (no deep merge) and {} when neither defines it.
       agent: resolveRecord(root, 'agentConfig')[spec.name] ?? {},
     },
   })
@@ -207,7 +207,7 @@ async function runOne(root: string, slug: string | null, step: number, spec: Run
 /**
  * No name given: run the agents the build's harness.json binds to the requested slot.
  *
- * Bindings merge as a ladder — the per-step harness entry beats the harness
+ * Bindings merge as a ladder: the per-step harness entry beats the harness
  * `defaults`, which beat the settings-level `agents` key; the first level that
  * names the slot wins, replace not append. A missing bound agent degrades to a
  * warning; an absent harness, or one that binds nothing to this slot, is a
@@ -275,7 +275,7 @@ type RunArgs = {
  *
  * A value flag missing its value, or `--step` given a non-number, is a loud
  * error (returned as a string) rather than a silent default. An undeclared
- * `--flag` never arrives here — `run` screens argv against the verb spec in
+ * `--flag` never arrives here; `run` screens argv against the verb spec in
  * cli-core.ts and refuses before dispatch.
  */
 function parseRunArgs(args: ReadonlyArray<string>): RunArgs | string {
@@ -309,7 +309,7 @@ function parseRunArgs(args: ReadonlyArray<string>): RunArgs | string {
 /**
  * Resolve the slot the agent runs in.
  *
- * An explicit `--mode` must name a real slot AND one the manifest declares —
+ * An explicit `--mode` must name a real slot AND one the manifest declares;
  * an undeclared slot is refused loud, because the user asked for that exact
  * run. With no `--mode`, a single-slot agent uses its only slot; a multi-slot
  * agent must be told which one (harness bindings pick the slot from the
@@ -336,11 +336,11 @@ function resolveMode(flag: string | undefined, manifest: AgentManifest): { ok: t
 /**
  * Map the run outcome to reporting and side effects.
  *
- * A failed run — non-zero exit, out-of-contract stdout, timeout, interrupt, or a
- * shell that never started — reports on stderr and stops with NO side effects:
+ * A failed run (non-zero exit, out-of-contract stdout, timeout, interrupt, or a
+ * shell that never started) reports on stderr and stops with NO side effects:
  * the envelope of a failed child is not authoritative. A clean run lands
  * `parked[]`, records the envelope in the handoff ledger, prints the human
- * summary on stderr, and re-emits the machine envelope on stdout — nothing else,
+ * summary on stderr, and re-emits the machine envelope on stdout, nothing else,
  * ever (the stream discipline: stdout carries the envelope alone).
  */
 function report(
@@ -384,7 +384,7 @@ function failureLine(name: string, result: Exclude<AgentRunResult, { ok: true }>
 /**
  * Land each parked concern through the build-log's Park list.
  *
- * The agent never writes .plumbbob/ itself — parked lines only reach the
+ * The agent never writes .plumbbob/ itself; parked lines only reach the
  * build-log through this verb. A build-log with no "## Park list" section, or no
  * build-log at all, warns once rather than losing the lines silently.
  */
@@ -413,7 +413,7 @@ function applyParked(root: string, slug: string | null, parked: ReadonlyArray<st
 /**
  * The human-facing summary printed on stderr.
  *
- * A headline plus, for a halt, the route out — `blocked` unblocks and re-runs,
+ * A headline plus, for a halt, the route out: `blocked` unblocks and re-runs,
  * `drift` sends the plan to /plumbbob:refine. The machine envelope on stdout carries
  * the same status for the calling skill; this stderr copy is the terminal read.
  */

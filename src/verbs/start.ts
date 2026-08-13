@@ -1,4 +1,4 @@
-// `plumbbob start "<title>"` — open a session: scaffold the sidecar (the
+// `plumbbob start "<title>"`: open a session: scaffold the sidecar (the
 // `.plumbbob/` tree of build artifacts and control files), record the baseline
 // commit, and point the session at a new build. Refuses on a dirty tree (a
 // clean baseline is the contract; `--allow-dirty` overrides), an existing
@@ -31,7 +31,7 @@ import { settingsPath } from '../lib/settings.ts'
  * {{CHECK}} line.
  *
  * The gate is checkride unless a `check` setting overrides it, so settings.json
- * seeds with no `check` key at all — absence IS the default; this line says
+ * seeds with no `check` key at all; absence IS the default; this line says
  * that in prose where the templates need it.
  */
 const CHECK_ECHO = 'checkride (set a "check" key in .plumbbob/settings.json to override)'
@@ -107,13 +107,13 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
   const sha = headSha(root)
 
   mkdirSync(sidecarDir(root), { recursive: true })
-  // beginSession writes STATE — one file that is both the session sentinel (its
+  // beginSession writes STATE: one file that is both the session sentinel (its
   // existence means a session is live) and the active-build cursor (its single
-  // line names the build every verb acts on). Point it at this build — null
+  // line names the build every verb acts on). Point it at this build: null
   // under --local, which has no cursor. The cursor lives in STATE, not
   // settings.local.json, so that personal overlay stays purely human-owned.
   beginSession(root, local ? null : slug)
-  // Scaffold the tracked settings.json ONLY when absent, and seed it EMPTY — the
+  // Scaffold the tracked settings.json ONLY when absent, and seed it EMPTY: the
   // human owns this file once it exists (their `check` gate lives here), so a
   // re-start must never touch it. Inject no opinions even on first create:
   // absence of `check` already means checkride and absence of `auto` already
@@ -125,10 +125,10 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
   }
 
   // `--local` keeps a fully untracked flat layout (the whole `.plumbbob/`
-  // git-excluded); the default plants a tracked `builds/<slug>/` folder — the
-  // build's record (intent, build-log, checkpoints) rides its branch into the
-  // PR — and git-excludes only the per-worktree control files. The slug is
-  // date-prefixed when derived (see datedSlug) and validated unique above —
+  // git-excluded); the default plants a tracked `builds/<slug>/` folder (the
+  // build's record [intent, build-log, checkpoints] rides its branch into the
+  // PR) and git-excludes only the per-worktree control files. The slug is
+  // date-prefixed when derived (see datedSlug) and validated unique above;
   // the CLI refuses a collision, never auto-suffixes.
   let intentLocation: string
   if (local) {
@@ -149,12 +149,12 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
 
   // The plan's entry stamp for the checkpoint latch: set TICK to the current
   // TURN, so `checkpoint --plan` only lands once the harness ledger records a
-  // human turn after this moment. Skipped when TURN is absent — a hookless host
+  // human turn after this moment. Skipped when TURN is absent: a hookless host
   // grows no ledger and the latch stays dormant, which also covers a first
   // session where the hook has never ticked; that one plan commit stays
   // guidance-governed. Any GRANT file lying around predates this session (a
-  // legitimate one is minted by a `/build` prompt, which never runs `start`)
-  // — clear it so a stale grant can't self-approve this session's plan; a
+  // legitimate one is minted by a `/build` prompt, which never runs `start`);
+  // clear it so a stale grant can't self-approve this session's plan; a
   // grant's lifetime is one turn.
   setGrant(root, null)
   stampTick(root, local ? null : slug)
@@ -163,14 +163,14 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
     `plumbbob: started "${title}" — baseline ${sha.slice(0, 9)}. Frame and decide in ${intentLocation}; \`build\` a step once the decisions are made.\n`,
   )
 
-  // The tracked layout plants `builds/<slug>/` to ride the branch into the PR —
+  // The tracked layout plants `builds/<slug>/` to ride the branch into the PR,
   // but a repo whose own `.gitignore` excludes `.plumbbob/` overrides that, and
   // an explicit `git add` of an ignored folder is a hard error. Detect it here,
   // once, so the record-only mode (plan/finish commits land empty; their bodies
   // carry the record, the files stay untracked) is a known mode from the start
   // rather than a surprise at the first `checkpoint --plan`. `--local` already
   // excludes the whole sidecar by design and says so, so skip the probe there.
-  // Guidance only, and the session is already open — a probe hiccup stays silent
+  // Guidance only, and the session is already open: a probe hiccup stays silent
   // rather than half-crashing a scaffolded session.
   if (!local && sidecarIsIgnored(root, slug)) {
     process.stderr.write(
@@ -181,7 +181,7 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
   }
 
   // The plan-time gate probe: if checkride sees no code checks here, say so
-  // NOW — while the human is still deciding — instead of at the first
+  // NOW (while the human is still deciding) instead of at the first
   // checkpoint, where the gate either refuses a vacuous run or, worse, greens
   // on the always-on repo checks alone. Guidance only: it never changes the
   // exit code, and a configured `check` or a probe hiccup stays silent.
@@ -200,8 +200,8 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
  * Derive a `YYYY-MM-DD-<slug>` build slug from the title (local time).
  *
  * The date prefix makes `builds/` sort chronologically under `listBuilds`'
- * plain lexical sort — ordering by construction, not by titling convention. An
- * explicit `--slug` bypasses this and stays verbatim — the CLI never rewrites
+ * plain lexical sort: ordering by construction, not by titling convention. An
+ * explicit `--slug` bypasses this and stays verbatim: the CLI never rewrites
  * what the caller chose. An untitleable title yields `''` so the empty-slug
  * guard fires instead of minting a date-only slug.
  */
@@ -214,7 +214,7 @@ function datedSlug(title: string): string {
 }
 
 /**
- * Whether the tracked build folder is gitignored — the record-only heads-up's
+ * Whether the tracked build folder is gitignored: the record-only heads-up's
  * predicate, probing exactly the path `checkpoint --plan` will try to stage.
  *
  * Best-effort: a probe that throws (a fatal `git check-ignore`) reads as
@@ -239,7 +239,7 @@ function flagValue(args: ReadonlyArray<string>, flag: string): string | undefine
 }
 
 /**
- * Stamp a build template's `{{TITLE}}`/`{{CHECK}}` — the check is always the
+ * Stamp a build template's `{{TITLE}}`/`{{CHECK}}`: the check is always the
  * echo constant, since an absent `check` setting IS the checkride default.
  */
 function stampBuild(template: string, title: string): string {

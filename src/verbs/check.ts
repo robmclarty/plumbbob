@@ -1,14 +1,14 @@
-// `plumbbob check` — run the heavy gate and report, with NO state change. This
+// `plumbbob check`: run the heavy gate and report, with NO state change. This
 // is the read-only half of the verify tick: `/plumbbob:verify` runs it before the
 // pause so the human approves on a known-green check. The gate itself lives in
 // lib/check.ts: checkride (our sibling check-runner package) by default, or a
-// spawn command named by the `check` setting — resolved through the settings
-// ladder (flag → local overlay → tracked settings.json → default) — for repos
+// spawn command named by the `check` setting (resolved through the settings
+// ladder (flag → local overlay → tracked settings.json → default)) for repos
 // that gate through something else. Exits with the check's own code (0 = green,
 // 1 = red, 2 = the gate itself broke).
 //
 // Narrowing flags for the iteration loop (`check --bail --only types,lint`) map
-// straight onto checkride's run flags. Only this verb takes them — the
+// straight onto checkride's run flags. Only this verb takes them: the
 // checkpoint gate is always full-fat.
 
 import { findRepoRoot } from '../lib/git.ts'
@@ -39,7 +39,7 @@ export async function check(cwd: string, args: ReadonlyArray<string> = []): Prom
  * Only the declared flags are read here; an undeclared one never reaches this
  * function, because `run` screens argv against the verb spec in cli-core.ts and
  * refuses before dispatch. This used to tolerate unknown args on the grounds
- * that running the gate mattered more than flag hygiene — but the same tolerance
+ * that running the gate mattered more than flag hygiene, but the same tolerance
  * on the mutating verbs let `checkpoint --help` commit, so the screen is now
  * central and uniform.
  */
@@ -74,7 +74,7 @@ function slotList(args: ReadonlyArray<string>, flag: string): Partial<CheckFlags
 /**
  * The one-line human verdict for a check exit code.
  *
- * A broken gate (exit 2) reports distinctly from red — a misconfigured harness
+ * A broken gate (exit 2) reports distinctly from red: a misconfigured harness
  * must never read as broken code, though both block a checkpoint.
  */
 function verdictLine(code: number): string {

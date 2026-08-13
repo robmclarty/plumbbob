@@ -148,7 +148,7 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
 10. [x] docs(skills): sweep the skills prose — **done when:** `skills/*/SKILL.md` carry zero em-dashes (147 today) and every reworded instruction still reads as an instruction
     - seam: `skills/`
     - model: fable — instructions must survive the re-punctuation with their imperative force intact
-11. [ ] chore(prose): sweep the src/lib doc comments — **done when:** vale reports zero EmDash findings over `src/lib/` outside its tests (231 today); runtime strings untouched
+11. [x] chore(prose): sweep the src/lib doc comments — **done when:** vale reports zero EmDash findings over `src/lib/` outside its tests (231 today); runtime strings untouched
     - seam: `src/lib/` (comments only, `__tests__` excluded)
     - model: sonnet — comment asides are short and the mapping covers nearly all of them
 12. [ ] chore(prose): sweep the src/verbs doc comments — **done when:** vale reports zero EmDash findings over `src/verbs/` outside its tests (213 today); runtime strings untouched

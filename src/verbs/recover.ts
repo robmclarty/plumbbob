@@ -1,8 +1,8 @@
-// `plumbbob recover` — read the control plane and say, plainly, whether it is
+// `plumbbob recover`: read the control plane and say, plainly, whether it is
 // telling the truth. Nothing else reads these files as a set: `doctor` checks
 // the install and the gate, `status` reports what the markers claim without
 // questioning them. So a session that crashed, lost its context window, or was
-// switched away mid-step can sit in a state no verb detects — the worst being a
+// switched away mid-step can sit in a state no verb detects: the worst being a
 // cursor pointing at a build that no longer exists, which renders a perfectly
 // plausible empty dashboard instead of an error.
 //
@@ -10,7 +10,7 @@
 // `doctor --migrate` takes. What `--fix` may touch is deliberately narrow: only
 // the untracked control files this tool owns and can rewrite from what it
 // already knows. It never touches a tracked artifact (intent, build-log,
-// checkpoints, reports), never touches git, and never advances the loop — a
+// checkpoints, reports), never touches git, and never advances the loop: a
 // recovery verb that could land a step would be a second, quieter checkpoint.
 //
 // Spike leftovers are reported and never removed: those worktrees live outside
@@ -60,7 +60,7 @@ type Finding = {
  * ones that can be repaired without judgment.
  *
  * Exits 0 when the control plane is consistent (or when every problem found was
- * fixed), 1 while any problem is still standing — so a scripted caller can tell
+ * fixed), 1 while any problem is still standing, so a scripted caller can tell
  * "clean" from "you still have to look at this".
  */
 export function recover(cwd: string, args: ReadonlyArray<string>): number {
@@ -112,7 +112,7 @@ function summary(standing: number, fixable: number, fix: boolean): string {
  * Everything that depends on there being a session: the cursor, the phase
  * markers, and the per-build control files.
  *
- * With no session there is no control plane to be wrong about — only the spike
+ * With no session there is no control plane to be wrong about: only the spike
  * leftovers, which outlive `finish` and are checked separately.
  */
 function sessionFindings(root: string): ReadonlyArray<Finding> {
@@ -142,7 +142,7 @@ function sessionFindings(root: string): ReadonlyArray<Finding> {
  *
  * This is the quiet one: `status` takes the cursor at its word, so every read
  * comes back empty and the dashboard renders as a fresh, untouched build rather
- * than an error. Repairable only when exactly one real build remains — with
+ * than an error. Repairable only when exactly one real build remains; with
  * several, which one you meant is a judgment call.
  */
 function cursorFinding(root: string, slug: string | null): Finding {
@@ -172,7 +172,7 @@ function cursorFinding(root: string, slug: string | null): Finding {
  * Contradictions in what phase the build claims to be in.
  *
  * Phase is derived from the markers rather than stored, so two markers at once
- * is not an impossible state — it is an unreadable one, and `status` resolves
+ * is not an impossible state; it is an unreadable one, and `status` resolves
  * it by showing the spike and hiding the step entirely.
  */
 function phaseFindings(root: string, slug: string, stepInFlight: boolean): ReadonlyArray<Finding> {
@@ -222,7 +222,7 @@ function phaseFindings(root: string, slug: string, stepInFlight: boolean): Reado
 function leftoverFindings(root: string, slug: string, stepInFlight: boolean): ReadonlyArray<Finding> {
   const findings: Finding[] = []
 
-  // The handoff ledger is step-scoped and cleared by `checkpoint` alone — a
+  // The handoff ledger is step-scoped and cleared by `checkpoint` alone; a
   // revert or an abandoned step leaves it for the next step to inherit.
   const handoffs = handoffCount(root, slug)
   if (!stepInFlight && handoffs > 0) {
@@ -256,7 +256,7 @@ function leftoverFindings(root: string, slug: string, stepInFlight: boolean): Re
     findings.push({ name: 'latch tick', ok: true, detail: stepInFlight ? 'stamped for the step in flight' : 'clear' })
   }
 
-  // GRANT is rewritten on every turn tick, so it self-clears — but only while
+  // GRANT is rewritten on every turn tick, so it self-clears, but only while
   // the hook runs. Without a TURN ledger nothing will ever clear it, and the
   // latch reads a standing grant as self-approval.
   if (existsSync(grantPath(root)) && readTurn(root) === null) {
@@ -324,7 +324,7 @@ function handoffCount(root: string, slug: string): number {
 }
 
 /**
- * A control marker's trimmed content, or '?' when it cannot be read — a marker
+ * A control marker's trimmed content, or '?' when it cannot be read: a marker
  * exists to be reported on, so an unreadable one must not throw mid-report.
  */
 function readMarker(path: string): string {
@@ -333,7 +333,7 @@ function readMarker(path: string): string {
 }
 
 /**
- * File content, or '' when absent — recover reads state that may be missing by
+ * File content, or '' when absent: recover reads state that may be missing by
  * definition, so every read degrades rather than throws.
  */
 function readOr(path: string): string {

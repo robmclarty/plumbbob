@@ -1,34 +1,34 @@
-// `plumbbob doctor` — the health report, five sections under one verb.
+// `plumbbob doctor`: the health report, five sections under one verb.
 //
 // 1. The global plugin link (read-only). After `plumbbob init`, plumbbob lives as a
 //    symlink at ~/.claude/skills/plumbbob pointing at the installed package; Claude
 //    Code loads it in place as a plugin (skills `/plumbbob:*`, the post-edit hook from
 //    hooks.json). doctor verifies the link resolves to a package carrying the manifest,
-//    the skills, and the hook — and names the fix for anything missing. The failure
+//    the skills, and the hook, and names the fix for anything missing. The failure
 //    class it exists for is SILENT (a `/plumbbob:status` that opens an empty dashboard
 //    because the plugin never linked).
 //
 // 2. The repo sidecar layout. plumbbob keeps its per-repo state in a `.plumbbob/`
 //    sidecar: a tracked artifact plane (settings.json plus one `builds/<slug>/` folder
-//    per build — intent, build-log, checkpoints, report — that rides its branch into
+//    per build (intent, build-log, checkpoints, report) that rides its branch into
 //    the PR) and a git-excluded control plane of per-worktree files. A repo scaffolded
 //    by an older plumbbob carries the legacy FLAT sidecar instead (`.plumbbob/intent.md`,
 //    `config`, `archive/`), fully git-excluded, whose record dies with
 //    `git worktree remove`. doctor detects it and, with `--migrate`, moves it into the
 //    tracked `builds/<slug>/` layout: archive entries and the active session become
 //    build folders, `config` becomes `settings.json`, and the whole move is STAGED but
-//    never committed — the human owns that commit.
+//    never committed: the human owns that commit.
 //
 // 3. Agent validation. Every resolvable user-authored agent gets its manifest and its
 //    `command` statically checked, so a broken agent surfaces here rather than mid-build.
 //
 // 4. The check gate. When a `check` setting overrides checkride (the default heavy
 //    check), doctor names the command; otherwise it runs checkride's own doctor and
-//    prints the slot/adapter table — "detected but tool missing" is the footgun this
+//    prints the slot/adapter table: "detected but tool missing" is the footgun this
 //    exists for.
 //
 // 5. The approval latch. Reports whether the harness's turn ledger is live (checkpoint
-//    can latch on a recorded human turn) or dormant (guidance only) — dormant is a
+//    can latch on a recorded human turn) or dormant (guidance only): dormant is a
 //    state, never a failure.
 //
 // Functional, node builtins plus checkride.
@@ -121,10 +121,10 @@ function buildChecks(link: string, pkg: string, shipped: ReadonlyArray<string>):
 /**
  * The plugin-link diagnostic: how plumbbob is installed into Claude Code, as checks.
  *
- * Two install kinds are recognized: the marketplace plugin (one green line — skills
+ * Two install kinds are recognized: the marketplace plugin (one green line: skills
  * load and the CLI rides the plugin's bin/, nothing to verify piecemeal) and the
  * init-style link at ~/.claude/skills/plumbbob (verified piece by piece). Both at
- * once is a collision — two plugins named plumbbob fight over /plumbbob:* — reported
+ * once is a collision (two plugins named plumbbob fight over /plumbbob:*), reported
  * first, with the keep-one fix.
  */
 function pluginChecks(): Check[] {
@@ -153,7 +153,7 @@ function pluginChecks(): Check[] {
 
 // --- sidecar migration (the legacy flat layout → tracked builds/) ---
 
-// What the legacy flat sidecar holds — the pieces `--migrate` moves.
+// What the legacy flat sidecar holds: the pieces `--migrate` moves.
 type Legacy = {
   readonly config: boolean // .plumbbob/config present (the legacy check-command store)
   readonly archive: ReadonlyArray<string> // archive/<slug> folder names
@@ -178,7 +178,7 @@ function subdirs(dir: string): string[] {
  * Detect a legacy flat sidecar, or null when the repo is on the current layout
  * (or has no sidecar).
  *
- * `config` and `archive/` are unambiguous legacy markers — the builds/ layout has
+ * `config` and `archive/` are unambiguous legacy markers: the builds/ layout has
  * neither. A flat `intent.md` alone would also match today's `--local` layout, so it
  * only counts as legacy when the repo is NOT already migrated (no `builds/`, no
  * `settings.json`): that guard is what keeps `--local` untouched.
@@ -195,7 +195,7 @@ export function inspectLegacy(root: string): Legacy | null {
 }
 
 /**
- * The first `# Heading` in a flat intent.md — the build title the slug derives from.
+ * The first `# Heading` in a flat intent.md: the build title the slug derives from.
  */
 function titleFromIntent(path: string): string {
   try {
@@ -227,7 +227,7 @@ function configCheck(path: string): string | null {
 /**
  * A slug not already claimed by `taken`, suffixing `-2`, `-3`, … only on collision.
  *
- * `start` refuses a colliding slug outright — the human picks a new title — but
+ * `start` refuses a colliding slug outright (the human picks a new title), but
  * migration is mechanically moving folders that already exist, so it disambiguates
  * rather than aborting mid-move.
  */
@@ -270,7 +270,7 @@ function narrowExcludes(root: string): void {
       })
     writeFileSync(exclude, kept.join('\n'))
   } catch {
-    /* no exclude yet — excludeControl creates it */
+    /* no exclude yet: excludeControl creates it */
   }
   excludeControl(root)
 }
@@ -278,7 +278,7 @@ function narrowExcludes(root: string): void {
 /**
  * Perform the migration and return a human-readable list of what moved.
  *
- * STAGES the result but never commits — the human owns that commit. Call only when
+ * STAGES the result but never commits: the human owns that commit. Call only when
  * `inspectLegacy` reported a legacy layout; doctor prints the returned actions.
  */
 export function migrateSidecar(root: string): string[] {
@@ -290,7 +290,7 @@ export function migrateSidecar(root: string): string[] {
   const configPath = join(dir, 'config')
   if (existsSync(configPath)) {
     if (!existsSync(settingsPath(root))) {
-      // Carry forward ONLY what the legacy config actually held — a `check` line,
+      // Carry forward ONLY what the legacy config actually held: a `check` line,
       // nothing else. No invented `auto` (the config never had one, it defaults to
       // false, and it belongs in settings.local.json): migration yields exactly what
       // a fresh `start` would, plus the check. An empty config → an empty `{}`.
@@ -366,7 +366,7 @@ function sidecarReport(cwd: string, migrate: boolean): { readonly lines: string[
 /**
  * Interpreters recognized as the program of a manifest `command`: when the command
  * is `sh <script>` / `node <script>` / …, the checkable artifact is the script
- * argument (the interpreter reads it — the file need not carry +x), not the
+ * argument (the interpreter reads it: the file need not carry +x), not the
  * interpreter, which we trust to be on PATH.
  */
 const INTERPRETERS = new Set(['sh', 'bash', 'zsh', 'dash', 'node', 'deno', 'bun', 'python', 'python3', 'ruby', 'perl'])
@@ -375,7 +375,7 @@ const INTERPRETERS = new Set(['sh', 'bash', 'zsh', 'dash', 'node', 'deno', 'bun'
  * Expand PLUMBBOB_AGENT_DIR in a command and split it into bare tokens
  * (surrounding quotes stripped).
  *
- * A deliberately shallow split — enough for the static command check below, not a
+ * A deliberately shallow split: enough for the static command check below, not a
  * shell parser (which is neither possible nor wanted for a best-effort diagnostic).
  */
 function commandTokens(command: string, agentDir: string): string[] {
@@ -392,7 +392,7 @@ function commandTokens(command: string, agentDir: string): string[] {
  *
  * The command is a shell string spawned via `sh -c` with the repo root as cwd, so a
  * relative path resolves against `root` and PLUMBBOB_AGENT_DIR points at the agent's
- * own dir. Best-effort by design — a path-shaped program or an interpreter's script
+ * own dir. Best-effort by design: a path-shaped program or an interpreter's script
  * argument is checked; a bare command (a PATH binary, an inline `node -e` program)
  * is trusted, because we cannot prove a shell line broken without running it.
  * Returns the problem string, or null when nothing checkable is wrong.
@@ -474,7 +474,7 @@ function agentReport(cwd: string): { readonly lines: string[]; readonly failed: 
  *
  * A configured `check` setting names the spawn override and asks nothing more;
  * otherwise checkride's own doctor reports the slot/adapter table. Only rows
- * checkride marks `required` count as problems — an empty slot ("no tool detected")
+ * checkride marks `required` count as problems; an empty slot ("no tool detected")
  * is informational, not a failure, because the runtime gate already refuses a
  * vacuous run.
  */
@@ -504,7 +504,7 @@ async function gateReport(cwd: string, env?: GateEnv): Promise<{ readonly lines:
       if (c.required && c.status !== 'ok') failed += 1
     }
     // Called out where the human can see it coming: no CODE checks detected means
-    // checkpoints would be gated only by checkride's always-on repo checks — either
+    // checkpoints would be gated only by checkride's always-on repo checks: either
     // a vacuous refusal or, worse, a green that tested nothing. Informational, with
     // the exact fix; `start` surfaces the same probe at plan time.
     if (!gateDetectsTools(report.checks)) {
@@ -522,7 +522,8 @@ async function gateReport(cwd: string, env?: GateEnv): Promise<{ readonly lines:
 
 /**
  * One slot line: `✓ types ← tsc (6.0.3)`, `✗ dead ← fallow` with its install
- * hint, or `○ spell — no tool detected` for an empty (skipping) slot.
+ * hint, or `○ spell` joined by an em dash to "no tool detected" for an empty
+ * (skipping) slot.
  */
 function toolRow(c: DoctorCheck): string {
   if (c.adapter === null || c.adapter === undefined) {
@@ -540,8 +541,8 @@ function toolRow(c: DoctorCheck): string {
  * The latch is `checkpoint`'s refusal to land a step until the harness has recorded
  * a human turn since the step was entered. `.plumbbob/TURN` holds a count once the
  * UserPromptSubmit hook has ticked at least once, so a present count means the latch
- * is armed — its absence means the tick is guidance-only. Dormant is a legitimate
- * state (a host with no hooks simply has no ledger), never a failure — so this
+ * is armed; its absence means the tick is guidance-only. Dormant is a legitimate
+ * state (a host with no hooks simply has no ledger), never a failure, so this
  * section adds nothing to the problem count. The dormant hint names the hook because
  * a missing ledger almost always means it never wired, and that hook rides in either
  * install kind (the marketplace plugin's hooks/hooks.json or an init-style link).
@@ -558,9 +559,9 @@ function latchReport(cwd: string): { readonly lines: string[]; readonly failed: 
       : `  ✓ latch: live (turn ${turn})`
   const lines = ['', 'plumbbob doctor — approval latch — D64 (approval-latch)', line]
   // The latch ignores a settings `auto`: a model can write that file, and a grant
-  // the model can forge is no grant — self-approval comes only from the human's
+  // the model can forge is no grant: self-approval comes only from the human's
   // typed `/build --auto`. Surface a set value so a human relying on it isn't
-  // silently changed — informational, never a problem.
+  // silently changed: informational, never a problem.
   if (resolveBoolean(root, 'auto', false)) {
     lines.push('  ○ auto: set in settings but not a grant since D67 (auto-not-a-grant) — self-approve per run with `/plumbbob:build --auto`')
   }

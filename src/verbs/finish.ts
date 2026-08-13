@@ -1,9 +1,9 @@
-// `plumbbob finish` — the close-out. It appends the checkpoint SHAs and per-step
+// `plumbbob finish`: the close-out. It appends the checkpoint SHAs and per-step
 // stats to report.md, makes the final commit, and clears the control state (the
 // untracked session and step markers under `.plumbbob/`). The build folder is NOT
-// deleted — the tracked `.plumbbob/builds/<slug>/` folder IS the archive: it
+// deleted; the tracked `.plumbbob/builds/<slug>/` folder IS the archive: it
 // merges with the branch and shows up in the PR, so nothing is copied into a
-// separate local archive. A missing report never blocks the exit — guidance
+// separate local archive. A missing report never blocks the exit: guidance
 // offers the artifact, it does not wall the door. The git footprint stays
 // additive: one forward commit under the Conventional `chore(<scope>): finish`
 // subject, with the `plumbbob finish` identifier riding a marker line at the head
@@ -38,7 +38,7 @@ import { parseBuildScope } from '../lib/intent.ts'
  *
  * Requires an active session (the `.plumbbob/STATE` sentinel). When report.md
  * exists it gains a `## Checkpoints` SHA list and a `## Stats` table first; when
- * it doesn't, finish notes the absence and proceeds — the exit is never gated on
+ * it doesn't, finish notes the absence and proceeds; the exit is never gated on
  * a report.
  */
 export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
@@ -70,9 +70,9 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
     )
   }
 
-  // The final commit: stage the report just written plus the build folder's tail —
-  // a step's commit sweeps its own bookkeeping along with the work, so the last
-  // step's `checkpoints` line lands one commit late and finish absorbs it — and
+  // The final commit: stage the report just written plus the build folder's tail
+  // (a step's commit sweeps its own bookkeeping along with the work, so the last
+  // step's `checkpoints` line lands one commit late and finish absorbs it) and
   // commit under the `finish` subject. `--allow-empty` (via `commit`) still marks
   // the narrative endpoint when the tree is already clean, or under `--local`,
   // where the whole sidecar is git-excluded and there is nothing tracked to stage.
@@ -84,15 +84,15 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
 
   // Clear the control state: the in-flight markers first, then the session
   // sentinel last (so "no session" flips exactly at the end). Deleting STATE also
-  // drops the active-build cursor — cursor and session share that one file, so a
-  // single delete does both. The tracked artifacts stay in place — only the
+  // drops the active-build cursor: cursor and session share that one file, so a
+  // single delete does both. The tracked artifacts stay in place; only the
   // ephemera go.
   rmSync(seamPath(root, slug), { force: true })
   rmSync(stepPath(root, slug), { force: true })
   rmSync(spikePath(root, slug), { force: true })
   // The checkpoint latch's per-build entry stamp and the one-turn self-approval
   // grant go with the session: a grant lives one turn by construction, but only
-  // because every tick rewrites it — the session's last tick was the last rewrite,
+  // because every tick rewrites it: the session's last tick was the last rewrite,
   // so left behind, a stale `auto` could self-approve the next session's first
   // landing.
   clearTick(root, slug)
@@ -122,7 +122,7 @@ function subject(root: string, slug: string | null): string {
 /**
  * Resolve the commit scope: the intent.md `**Scope:**` header, else the slug.
  *
- * Twin of checkpoint.ts's helper — same fallback chain, but with this verb's own
+ * Twin of checkpoint.ts's helper: same fallback chain, but with this verb's own
  * `slug` resolution instead of the active-build cursor.
  */
 function buildDefaultScope(root: string, slug: string | null): string | null {
@@ -132,7 +132,7 @@ function buildDefaultScope(root: string, slug: string | null): string | null {
       return fromHeader
     }
   } catch {
-    // no intent.md — fall through to the slug rung.
+    // no intent.md: fall through to the slug rung.
   }
   return buildScope(slug)
 }
@@ -140,8 +140,8 @@ function buildDefaultScope(root: string, slug: string | null): string | null {
 /**
  * Roll the per-step receipts into report.md as a `## Stats` table.
  *
- * One row per step plus totals — red checks, drift warnings, reverts,
- * wall-clock — so "is the loop worth it?" is a table, not a feeling. Silently
+ * One row per step plus totals (red checks, drift warnings, reverts,
+ * wall-clock) so "is the loop worth it?" is a table, not a feeling. Silently
  * skipped when nothing accrued (a build with no red/revert/drift and no
  * `build <n>` stamps has nothing to say).
  */
@@ -194,7 +194,7 @@ function wallClockMs(s: StepStats): number | null {
 /**
  * Format a wall-clock duration for the stats table.
  *
- * `—` when unknown (a hand-built step never ran `build <n>`, so it has no
+ * An em dash when unknown (a hand-built step never ran `build <n>`, so it has no
  * startedAt), `<1m` under a minute, whole minutes otherwise.
  */
 function formatWall(ms: number | null): string {

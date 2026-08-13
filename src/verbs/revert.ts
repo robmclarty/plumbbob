@@ -1,18 +1,18 @@
-// `plumbbob revert [--to n]` — git reset --hard to a checkpoint SHA (the most
+// `plumbbob revert [--to n]`: git reset --hard to a checkpoint SHA (the most
 // recent step, or `--to n`, with the baseline as fallback), then remove untracked
 // files under the SEAM only (the seam is the in-flight step's flat list of
-// granted edit paths). The artifact plane — the tracked `.plumbbob/builds/<slug>/`
-// folder holding intent, build-log, checkpoints, and park lines — would not
+// granted edit paths). The artifact plane (the tracked `.plumbbob/builds/<slug>/`
+// folder holding intent, build-log, checkpoints, and park lines) would not
 // survive a bare reset: it would discard park lines and intent edits, or, when
 // reverting to a baseline that predates the build folder, delete the folder
 // wholesale. So revert snapshots the sidecar to temp and restores it as
-// uncommitted changes after the reset — a rewind must never destroy recorded
+// uncommitted changes after the reset: a rewind must never destroy recorded
 // work, in either case. The untracked cleanup additionally whitelists the
 // artifact plane, so no seam pattern can ever sweep away a build's own files.
 //
 // Plumbbob also installs its driver skills INTO the repo (.claude/skills/<driver>/
 // for a self-contained install), so a blunt reset would discard an out-of-seam
-// skill edit — or a `pnpm up plumbbob` re-setup — together with the half-done
+// skill edit (or a `pnpm up plumbbob` re-setup) together with the half-done
 // step. revert discards the step's WORK, never plumbbob's own machinery, so those
 // paths are carried across the reset unchanged.
 
@@ -70,7 +70,7 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
   const seam = readSeamTokens(root, slug)
   const toRemove = untrackedPaths(root).filter((p) => matchesSeam(p, seam) && !isArtifactPath(p))
   // A revert against an in-flight step is a datapoint the finish report's stats
-  // table wants — read the STEP marker before it goes, bump the counter after
+  // table wants: read the STEP marker before it goes, bump the counter after
   // the reset (the sidecar is preserved through it, so the write survives).
   const inFlight = readInFlightStep(root, slug)
 
@@ -84,7 +84,7 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
     bumpStepStat(root, slug, inFlight, 'reverts')
   }
   // The step is abandoned: the build-log's Current-step line returns to the
-  // boundary and its Steps mirror re-renders from the preserved intent.md —
+  // boundary and its Steps mirror re-renders from the preserved intent.md:
   // revert keeps intent edits, so intent's checkboxes stay the truth to reflect.
   // Best-effort, like every build-log write.
   syncBuildLogState(root, slug, AT_BOUNDARY)
@@ -103,8 +103,8 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
  * under .claude/skills/, named from plumbbob's own bundled `skills/` dir.
  *
  * The match is by name alone, and since the skills dropped their `pb-` prefix
- * those names are ordinary words — a user's own `.claude/skills/plan/` is
- * carried across the reset too. That errs toward keeping work — never destroy —
+ * those names are ordinary words; a user's own `.claude/skills/plan/` is
+ * carried across the reset too. That errs toward keeping work (never destroy),
  * so it is the safe direction to be wrong in. Only paths that currently exist are returned.
  */
 function plumbbobOwnedPaths(root: string): ReadonlyArray<string> {
@@ -114,7 +114,7 @@ function plumbbobOwnedPaths(root: string): ReadonlyArray<string> {
       paths.push(join(root, '.claude', 'skills', name))
     }
   } catch {
-    // Bundled skills dir not resolvable (unexpected) — protect just the sidecar.
+    // Bundled skills dir not resolvable (unexpected): protect just the sidecar.
   }
   return paths.filter((p) => existsSync(p))
 }
@@ -161,7 +161,7 @@ type Checkpoints = {
 /**
  * Parse the build's CHECKPOINTS record into a baseline sha and per-step shas.
  *
- * A missing or unreadable file yields an empty record — the caller then refuses
+ * A missing or unreadable file yields an empty record: the caller then refuses
  * with its own message rather than crashing here.
  */
 function readCheckpoints(root: string, slug: string | null): Checkpoints {
@@ -188,7 +188,7 @@ function readCheckpoints(root: string, slug: string | null): Checkpoints {
 }
 
 /**
- * Read the in-flight step's seam — its edit-grant paths, one per line.
+ * Read the in-flight step's seam: its edit-grant paths, one per line.
  *
  * A missing or unreadable SEAM contributes nothing: no tokens, never an error.
  */

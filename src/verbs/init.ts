@@ -1,7 +1,7 @@
-// `plumbbob init [--uninstall] [--force]` — link plumbbob into Claude Code as an
+// `plumbbob init [--uninstall] [--force]`: link plumbbob into Claude Code as an
 // in-place skills-directory plugin. It symlinks the installed package into
-// ~/.claude/skills/plumbbob, where Claude Code discovers it as `plumbbob@skills-dir`
-// — the skills load namespaced (`/plumbbob:*`) and the post-edit hook auto-registers
+// ~/.claude/skills/plumbbob, where Claude Code discovers it as `plumbbob@skills-dir`:
+// the skills load namespaced (`/plumbbob:*`) and the post-edit hook auto-registers
 // from hooks/hooks.json. This non-marketplace install path is first-class by design:
 // it serves an `npm i -g` global, local dev, and clients predating plugins, and it
 // keeps plumbbob usable as a standalone CLI outside any one host rather than
@@ -10,9 +10,9 @@
 // via bin/, so it needs neither `npm i -g` nor `init`). The two are mutually
 // exclusive: both register a plugin named `plumbbob`, and a double-install collides
 // over the /plumbbob:* namespace (skills can drop to flat `/status` names). So init
-// REFUSES when a marketplace plumbbob is already installed — `--force` overrides
+// REFUSES when a marketplace plumbbob is already installed: `--force` overrides
 // (the dev-install path uses it). Global-only by design: install scope is NOT session
-// scope — sessions stay per-project via `plumbbob start`. Idempotent + reversible
+// scope: sessions stay per-project via `plumbbob start`. Idempotent + reversible
 // (`--uninstall` drops the link); it NEVER writes settings.json. Node builtins only.
 
 import { lstatSync, mkdirSync, readlinkSync, rmSync, symlinkSync } from 'node:fs'
@@ -22,7 +22,7 @@ import { fileURLToPath } from 'node:url'
 import { marketplacePlumbbob } from '../lib/plugins.ts'
 
 /**
- * The installed package root — parent of .claude-plugin/, skills/, hooks/, dist/.
+ * The installed package root: parent of .claude-plugin/, skills/, hooks/, dist/.
  *
  * Derived from this module's URL: the global install when run as the published
  * bin, the checkout in dev. No trailing slash, so it compares clean against a
@@ -68,8 +68,8 @@ function symlinkTarget(path: string): string | null {
 /**
  * Link the installed package into ~/.claude/skills/plumbbob, or `--uninstall` it.
  *
- * Refuses when a marketplace plumbbob plugin is already installed — two plugins
- * named `plumbbob` collide over the /plumbbob:* namespace — unless `--force`.
+ * Refuses when a marketplace plumbbob plugin is already installed (two plugins
+ * named `plumbbob` collide over the /plumbbob:* namespace) unless `--force`.
  * Repoints a stale link from an earlier install location; already-linked is a
  * clean exit 0.
  */
@@ -107,7 +107,7 @@ export function init(args: ReadonlyArray<string>): number {
       process.stdout.write(`plumbbob: already linked (${link} → ${target}). Nothing to do.\n`)
       return 0
     }
-    rmSync(link) // a stale link from an earlier install location — repoint it
+    rmSync(link) // a stale link from an earlier install location: repoint it
   }
 
   symlinkSync(target, link)

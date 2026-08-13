@@ -1,10 +1,10 @@
-// `plumbbob use <slug>` — re-point the active-build cursor at an existing build
+// `plumbbob use <slug>`: re-point the active-build cursor at an existing build
 // and resume it, `nvm use`-shaped: switching and resuming are the same one word.
 // The cursor is the single-line content of `.plumbbob/STATE`, the untracked
 // per-worktree file whose existence means a session is live and whose one line
-// names the build that session is on — so pointing it elsewhere IS the switch,
+// names the build that session is on, so pointing it elsewhere IS the switch,
 // and one-active-per-worktree holds by construction (one line cannot name two
-// builds). It validates the target folder exists, and warns — but allows —
+// builds). It validates the target folder exists, and warns (but allows)
 // leaving a build with a step in flight: the in-flight markers live per build,
 // so that state survives the switch and resumes the next time you `use` the
 // build.
@@ -17,7 +17,7 @@ import { activeBuild, hasSession, intentPath, listBuilds, setActiveBuild, stepPa
  * Switch the active-build cursor to the named build.
  *
  * Refuses without a session, without a slug, or when the target folder has no
- * intent.md; notes — but allows — a step left in flight on the build being left.
+ * intent.md; notes (but allows) a step left in flight on the build being left.
  */
 export function use(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)

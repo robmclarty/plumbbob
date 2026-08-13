@@ -1,15 +1,15 @@
-// `plumbbob spike` — the spike lifecycle for a genuine fork the design phase
+// `plumbbob spike`: the spike lifecycle for a genuine fork the design phase
 // couldn't settle. `spike "<slug>" [opt…]` creates a sibling git worktree and a
 // `spike/<slug>-<opt>` branch per option OUTSIDE the repo root (default options
-// a/b) and drops the SPIKE marker — one of the untracked per-build control files
+// a/b) and drops the SPIKE marker: one of the untracked per-build control files
 // under `.plumbbob/` that record what's in flight. The main tree stays put while
 // you experiment in the worktrees, which are hook-dormant by construction: the
 // untracked control files don't exist in a fresh checkout, so the hooks find no
 // STATE (the session sentinel) there. `spike done` removes every spike worktree
 // and branch and clears the marker.
 //
-// Every spike also leaves a durable report — `spike-NN-<slug>.md` beside
-// intent.md in the tracked `builds/<slug>/` folder — so the verdict rides the
+// Every spike also leaves a durable report (`spike-NN-<slug>.md` beside
+// intent.md in the tracked `builds/<slug>/` folder) so the verdict rides the
 // branch into the PR instead of evaporating with the throwaway worktrees.
 //
 // Worktree git calls run directly here rather than via lib/git.ts (which holds the
@@ -33,17 +33,17 @@ import {
 } from '../lib/sidecar.ts'
 import { readTemplate, stampTemplate } from '../lib/templates.ts'
 
-// Worktree/branch names when the caller lists none — a fork defaults to two arms.
+// Worktree/branch names when the caller lists none: a fork defaults to two arms.
 const DEFAULT_OPTIONS: ReadonlyArray<string> = ['a', 'b']
 
 /**
- * The verbatim Verdict placeholder from templates/spike-report.md — its presence
+ * The verbatim Verdict placeholder from templates/spike-report.md: its presence
  * means the spike's call was never recorded, which `spike done` nudges on.
  */
 const VERDICT_PLACEHOLDER = '*(viable | not viable | partial'
 
 /**
- * Entry point for `plumbbob spike` — dispatches to open, `report`, or `done`.
+ * Entry point for `plumbbob spike`: dispatches to open, `report`, or `done`.
  *
  * Requires an active session (the STATE sentinel) and resolves which build the
  * spike belongs to before dispatching.
@@ -66,11 +66,11 @@ export function spike(cwd: string, args: ReadonlyArray<string>): number {
 }
 
 /**
- * `spike report "<slug>"` — scaffold a spike report WITHOUT worktrees.
+ * `spike report "<slug>"`: scaffold a spike report WITHOUT worktrees.
  *
  * Serves the spike-as-step case: a planned step titled `spike: …`, where the
  * increment itself is the experiment. No boundary requirement and no SPIKE
- * marker — a step in flight is exactly when this runs. Provenance is stamped
+ * marker: a step in flight is exactly when this runs. Provenance is stamped
  * `step <n>` when a step is in flight, else `/plumbbob:spike`.
  */
 function spikeReport(root: string, buildSlug: string | null, positionals: ReadonlyArray<string>): number {
@@ -93,7 +93,7 @@ function spikeReport(root: string, buildSlug: string | null, positionals: Readon
  * Write a fresh spike report from the template at the next free
  * `spike-NN-<slug>.md` in the build folder, and return its path.
  *
- * Shared by the worktree-opening spike and the spike-as-step `spike report` —
+ * Shared by the worktree-opening spike and the spike-as-step `spike report`:
  * one artifact, two entry points. The CLI owns the numbering; the human never
  * creates or numbers a report.
  */
@@ -105,7 +105,7 @@ function scaffoldSpikeReport(root: string, buildSlug: string | null, spikeSlug: 
 }
 
 /**
- * The build's in-flight step number, or null — reads the STEP marker `build`
+ * The build's in-flight step number, or null: reads the STEP marker `build`
  * writes.
  *
  * Used to stamp a spike-as-step report's provenance as `step <n>`.
@@ -122,7 +122,7 @@ function readInFlightStep(root: string, buildSlug: string | null): number | null
 /**
  * Open a spike: one throwaway worktree + `spike/<slug>-<opt>` branch per option.
  *
- * Refuses when a spike is already open or a step is in flight — a spike is a
+ * Refuses when a spike is already open or a step is in flight: a spike is a
  * deliberate fork from a settled boundary, so the current step must checkpoint
  * or revert first. Marks the SPIKE control file and scaffolds the report before
  * returning.
@@ -175,7 +175,7 @@ function spikeStart(root: string, buildSlug: string | null, positionals: Readonl
 /**
  * Close the spike: remove every spike worktree and branch, clear the marker.
  *
- * Nudges — but never refuses — when a report's Verdict is still the template
+ * Nudges (but never refuses) when a report's Verdict is still the template
  * placeholder: guidance, not a gate.
  */
 function spikeDone(root: string, buildSlug: string | null): number {
@@ -184,7 +184,7 @@ function spikeDone(root: string, buildSlug: string | null): number {
     return 1
   }
   // Check for an unrecorded verdict BEFORE teardown. The reports live in the
-  // build folder, not the spike worktrees, so they survive the removal — but the
+  // build folder, not the spike worktrees, so they survive the removal, but the
   // learning that fills them does not, so this is the moment to nudge.
   const unfilled = spikeReportsMissingVerdict(root, buildSlug)
 
@@ -216,7 +216,7 @@ function spikeDone(root: string, buildSlug: string | null): number {
 
 /**
  * The spike-report filenames in the build folder whose Verdict is still the
- * template placeholder — the ones `spike done` nudges on.
+ * template placeholder: the ones `spike done` nudges on.
  *
  * Best-effort per file: an unreadable report is skipped rather than blocking
  * the close.
@@ -233,7 +233,7 @@ function spikeReportsMissingVerdict(root: string, buildSlug: string | null): Rea
 }
 
 /**
- * Worktree paths whose checked-out branch is under spike/ — parsed from the
+ * Worktree paths whose checked-out branch is under spike/: parsed from the
  * porcelain output (blank-line-separated `worktree <path>` / `branch <ref>`
  * blocks).
  *
@@ -266,7 +266,7 @@ export function spikeBranches(root: string): ReadonlyArray<string> {
 }
 
 /**
- * Slugify a raw spike name — lowercase, non-alphanumerics collapsed to dashes.
+ * Slugify a raw spike name: lowercase, non-alphanumerics collapsed to dashes.
  */
 function sanitize(raw: string): string {
   return raw

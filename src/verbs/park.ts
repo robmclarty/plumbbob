@@ -1,6 +1,6 @@
-// `plumbbob park "<text>"` — the raw capture path for a thought you don't want
+// `plumbbob park "<text>"`: the raw capture path for a thought you don't want
 // to chase mid-step: append one flat line under the "## Park list" section of
-// build-log.md (the build's human-facing ledger). Capture stays dumb by design —
+// build-log.md (the build's human-facing ledger). Capture stays dumb by design:
 // a grep-readable append, no markdown parsing, no model turn (wording the line
 // well is /plumbbob:park's job); triage waits for a step boundary, via harvest.
 // Capture is not a state transition, so it runs in any context (terminal or
@@ -16,7 +16,7 @@ import { appendToSection } from '../lib/buildlog.ts'
  *
  * All non-flag args join into a single line. Refuses when there is no active
  * session, when the text is empty, or when build-log.md lacks a "## Park list"
- * section — a park line must never vanish silently.
+ * section: a park line must never vanish silently.
  */
 export function park(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
