@@ -132,7 +132,7 @@ holes `/plumbbob:refine` surfaces, and as blockers fold in during BUILD.)*
 5. [x] docs(decisions): sweep the key and settle both format markers — **done when:** `docs/decisions.md` carries zero em-dashes outside code spans; the 79 definition headers wear the colon separator and its two literal `— *because*` sites the comma marker ([D8 (comma-and-colon)](#d8)); refs and links slots green throughout ([C4 (scanner-stays-green)](#c4))
    - seam: `docs/decisions.md`
    - model: fable — 85 sites, and each replacement is an ear call under the voice's mapping
-6. [ ] docs(prose): sweep the guide docs — **done when:** `techniques`, `happy-path`, `state-and-git`, and `troubleshooting` carry zero em-dashes (133 today) and the reworded sentences read to the voice, not merely past the rule
+6. [x] docs(prose): sweep the guide docs — **done when:** `techniques`, `happy-path`, `state-and-git`, and `troubleshooting` carry zero em-dashes (133 today) and the reworded sentences read to the voice, not merely past the rule
    - seam: `docs/techniques.md`, `docs/happy-path.md`, `docs/state-and-git.md`, `docs/troubleshooting.md`
    - model: fable — the guides carry the repo's teaching register
 7. [ ] docs(prose): sweep the reference docs — **done when:** `cli-reference`, `skills-reference`, `install`, `architecture`, `local-model-review`, and `faq` carry zero em-dashes (106 today)

@@ -1,6 +1,6 @@
 # CLI reference
 
-The `plumbbob` CLI is the mechanical layer the `/plumbbob:*` skills shell out to — in
+The `plumbbob` CLI is the mechanical layer the `/plumbbob:*` skills shell out to; in
 normal use you **never type it by hand**. This page documents the full surface anyway, for
 power users, for driving PlumbBob from another harness, and for understanding what each
 skill actually runs.
@@ -9,8 +9,8 @@ skill actually runs.
 plumbbob <verb> [args]      # also available as `pb`
 ```
 
-It is a lean CLI — node builtins plus one deliberate dependency,
-[checkride](https://www.npmjs.com/package/checkride) ([**C2 (few-deliberate-deps)**](decisions.md#c2), amended; [**D32 (checkride-gate)**](decisions.md#d32)) — that runs
+It is a lean CLI (node builtins plus one deliberate dependency,
+[checkride](https://www.npmjs.com/package/checkride) ([**C2 (few-deliberate-deps)**](decisions.md#c2), amended; [**D32 (checkride-gate)**](decisions.md#d32))) that runs
 natively on Node ≥ 22.18. Every verb is a
 pure function that writes to stdout/stderr and returns an exit code; the only
 `process.exit` is the bin entry.
@@ -43,11 +43,11 @@ to target a specific build; without it, the verb resolves the active build from 
 ([**D28 (state-cursor)**](decisions.md#d28), see [the layout](#the-plumbbob-sidecar)). The other verbs act on
 the cursor's build only.
 
-Every verb answers `--help` (or `-h`) with its own synopsis, arguments, and flags —
+Every verb answers `--help` (or `-h`) with its own synopsis, arguments, and flags:
 `plumbbob checkpoint --help`, or equivalently `plumbbob help checkpoint`. The flags a verb
 declares are the only ones it accepts: an unrecognized flag is a refusal (exit 1), never a
 silently ignored token, so a typo cannot fall through into a commit. `turn` and `park` are the
-two exceptions to the refusal — `turn` is a hook that must never wedge a prompt, and `park`'s
+two exceptions to the refusal: `turn` is a hook that must never wedge a prompt, and `park`'s
 argument is free text.
 
 ## Session verbs
@@ -59,18 +59,18 @@ plumbbob start "<title>" [--slug <name>] [--local] [--allow-dirty]
 ```
 
 Scaffolds the sidecar, records the baseline `HEAD`, and opens the session. By default it
-plants a tracked build folder at `.plumbbob/builds/<slug>/` — the slug derived from the title
-as `YYYY-MM-DD-<title-slug>`, date-prefixed so `builds/` lists chronologically (`--slug`
-overrides it verbatim, no prefix) — holding `intent.md`, `build-log.md`, and `checkpoints`
-(`baseline <sha>`); it writes the tracked `settings.json` — seeded empty as `{}`, which is
+plants a tracked build folder at `.plumbbob/builds/<slug>/` (the slug derived from the title
+as `YYYY-MM-DD-<title-slug>`, date-prefixed so `builds/` lists chronologically; `--slug`
+overrides it verbatim, no prefix) holding `intent.md`, `build-log.md`, and `checkpoints`
+(`baseline <sha>`); it writes the tracked `settings.json` (seeded empty as `{}`, which is
 exactly "all defaults", since absent `check` already means checkride is the gate and absent
 `auto` already means false ([**D24 (configurable-check)**](decisions.md#d24)/[**D32 (checkride-gate)**](decisions.md#d32)); the file is
-yours once it exists, so a re-start never touches it — and the untracked
-`STATE` sentinel — whose content is the active-build cursor, pointed at the new build ([**D28 (state-cursor)**](decisions.md#d28)) — and narrows the
+yours once it exists, so a re-start never touches it) and the untracked
+`STATE` sentinel (whose content is the active-build cursor, pointed at the new build, [**D28 (state-cursor)**](decisions.md#d28)) and narrows the
 repo's `info/exclude` to the control-plane patterns ([**D17 (two-planes)**](decisions.md#d17)/[**D26 (build-folders)**](decisions.md#d26)). `--local` opts out into
-the old fully untracked flat layout — everything under `.plumbbob/` excluded ([**D26 (build-folders)**](decisions.md#d26)).
+the old fully untracked flat layout: everything under `.plumbbob/` excluded ([**D26 (build-folders)**](decisions.md#d26)).
 Refuses (exit 1) on an empty title, a slug that collides with an existing build, a non-git
-directory, a repo with no commits, an already-active session, or a dirty tree —
+directory, a repo with no commits, an already-active session, or a dirty tree;
 `--allow-dirty` overrides the dirty-tree refusal and records the current `HEAD` as the
 baseline ([**D22 (clean-baseline)**](decisions.md#d22)).
 
@@ -80,8 +80,8 @@ baseline ([**D22 (clean-baseline)**](decisions.md#d22)).
 plumbbob status [--build <slug>]
 ```
 
-Prints the orientation dashboard — title, the derived phase, the step list with the next
-step's done-when and seam, the last checkpoint, and the parked / open-question counts — then a
+Prints the orientation dashboard (title, the derived phase, the step list with the next
+step's done-when and seam, the last checkpoint, and the parked / open-question counts), then a
 single suggested next move ([**D8 (status-dashboard)**](decisions.md#d8) / [**D15 (one-next-move)**](decisions.md#d15)). Read-only; prints `NO ACTIVE SESSION` and
 exits 0 when there is no session.
 
@@ -92,10 +92,10 @@ plumbbob build [<n>] [--build <slug>]
 ```
 
 Reads step `n`'s seam from `intent.md` and writes `SEAM` (the path list) and `STEP` (the
-number) — the `STEP` file is what makes the dashboard read `BUILD`. The seam is
+number); the `STEP` file is what makes the dashboard read `BUILD`. The seam is
 orientation, not a lock. Refuses (exit 1)
 with no session, a non-numeric or `< 1` step, or a seam it cannot parse (seams are exact
-paths or `dir/` grants, never globs — [**D23 (no-glob-seams)**](decisions.md#d23)).
+paths or `dir/` grants, never globs; [**D23 (no-glob-seams)**](decisions.md#d23)).
 
 ### handoff
 
@@ -103,7 +103,7 @@ paths or `dir/` grants, never globs — [**D23 (no-glob-seams)**](decisions.md#d
 plumbbob handoff [<n>] [--build <slug>]
 ```
 
-Prints the standardized hand-off block — the "state / choice / what's next" the human sees at
+Prints the standardized hand-off block: the "state / choice / what's next" the human sees at
 each step boundary. Read-only, no state change. The moment is derived, not passed: a step in
 flight yields the pause block, none yields the post-checkpoint boundary block. An explicit
 `<n>` overrides which step it reports on; otherwise it uses the in-flight step, else the last
@@ -118,26 +118,25 @@ plumbbob check [--bail] [--changed] [--all] [--only a,b] [--skip a,b] [--include
 ```
 
 Runs the heavy gate with **no** state change ([**D16 (check-plus-self-review)**](decisions.md#d16) / [**D24 (configurable-check)**](decisions.md#d24) / [**D32 (checkride-gate)**](decisions.md#d32)). The gate is
-[checkride](https://www.npmjs.com/package/checkride), run in-process: each slot —
-checkride's own set (`types`, `lint`, `struct`, `dead`, `test`, `docs`, `links`, …) plus
-any custom check the config declares — resolves to the tool the repo already configures,
+[checkride](https://www.npmjs.com/package/checkride), run in-process: each slot (checkride's own set (`types`, `lint`, `struct`, `dead`, `test`, `docs`, `links`, …) plus
+any custom check the config declares) resolves to the tool the repo already configures,
 raw output lands in `.check/`, and a red run names the failing slots with
 their `.check/<slot>` pointers. A `check` key in the settings ladder
 (`settings.local.json` → `settings.json`, [**D27 (settings-ladder)**](decisions.md#d27)) overrides checkride with a shell
-command, spawned exactly as before — that is how non-checkride repos gate.
+command, spawned exactly as before; that is how non-checkride repos gate.
 
 The flags narrow a checkride run for the iteration loop (`--bail --only types,lint`);
 they map straight onto checkride's own flags and are warned-and-ignored on the override
-path. `checkpoint`'s gate takes no flags — the commit gate is always the full run.
+path. `checkpoint`'s gate takes no flags: the commit gate is always the full run.
 
 That full run is the only gate plumbbob has. A repo may *also* install checkride's own
 Stop hook, which gates the code at the end of every file-touching turn under whatever
-narrowed profile its `gate` key names — a separate gate on a separate plane, and one that
+narrowed profile its `gate` key names: a separate gate on a separate plane, and one that
 never stands in for this one ([**D75 (two-gates)**](decisions.md#d75)). This repo runs
 both; [`../CONTRIBUTING.md`](../CONTRIBUTING.md) describes the pair.
 
-Exits with the check's code: **0** green, **1** red — including a run where every slot
-skipped, which refuses rather than passing vacuously — and **2** when the gate itself
+Exits with the check's code: **0** green, **1** red (including a run where every slot
+skipped, which refuses rather than passing vacuously), and **2** when the gate itself
 broke (for example a malformed `checkride.config.json`). Refuses (exit 1) with no session.
 
 ### checkpoint
@@ -147,12 +146,12 @@ plumbbob checkpoint [<n>] [-m <msg>] [--body <<'BODY' … BODY]
 plumbbob checkpoint --plan  [--body …]
 ```
 
-The executor-agnostic commit tick ([**D3 (author-blind-executor)**](decisions.md#d3)). Resolves the step — explicit `<n>`, else the
-in-flight `STEP`, else the first undone step in `intent.md` — then gates on a green check,
+The executor-agnostic commit tick ([**D3 (author-blind-executor)**](decisions.md#d3)). Resolves the step (explicit `<n>`, else the
+in-flight `STEP`, else the first undone step in `intent.md`), then gates on a green check,
 commits any pending work (or records the existing `HEAD` if the tree is already clean) with a
-CLI-owned Conventional subject `<type>(<scope>): <description>` — scope from the build slug, type
-from the step title (author prefix honored, else `feat`) — appends `step <n> <sha>` to `checkpoints`,
-flips the step to `[x]`, and clears `SEAM`/`STEP` — dropping the dashboard back to the
+CLI-owned Conventional subject `<type>(<scope>): <description>` (scope from the build slug, type
+from the step title; author prefix honored, else `feat`), appends `step <n> <sha>` to `checkpoints`,
+flips the step to `[x]`, and clears `SEAM`/`STEP`, dropping the dashboard back to the
 `DESIGN` boundary. `-m <msg>` overrides the subject. The commit **body** leads with a
 `plumbbob step N` marker, then a `--body` heredoc on stdin (skill-composed,
 proportional); without it a deterministic fallback carries done-when + seam + diffstat
@@ -169,7 +168,7 @@ plumbbob revert [--to <n>] [--build <slug>]
 
 `git reset --hard` to a recorded checkpoint SHA: the last step by default, `--to <n>` for a
 specific step, or the baseline as the fallback. The build folder is now *tracked* ([**D26 (build-folders)**](decisions.md#d26)),
-so before the reset `revert` snapshots `builds/<slug>/` to a temp dir and restores it after —
+so before the reset `revert` snapshots `builds/<slug>/` to a temp dir and restores it after:
 park lines and intent edits survive even when reverting to a baseline that predates the folder
 ([**C4 (never-destroy)**](decisions.md#c4)). Untracked files **inside the seam** are removed, files outside it are left alone.
 Clears `SEAM`/`STEP`, dropping back to the `DESIGN` boundary. Refuses (exit 1) with no session,
@@ -182,7 +181,7 @@ plumbbob park "<text>"
 ```
 
 Appends `<text>` as a raw line under `## Park list` in `build-log.md` and prints
-`parked: <text>` ([**D7 (park-then-harvest)**](decisions.md#d7)). This is the dumb capture path — composing the tidy tagged line
+`parked: <text>` ([**D7 (park-then-harvest)**](decisions.md#d7)). This is the dumb capture path: composing the tidy tagged line
 is the `/plumbbob:park` skill's job. Refuses (exit 1) with no session, empty text, or no
 `## Park list` section.
 
@@ -208,14 +207,14 @@ plumbbob agent run <name> [--step N] [--mode before|build|after] [--agent <path>
 plumbbob agent run        --mode before|build|after [--step N]
 ```
 
-The doorway to **user-authored agents** ([**D39 (subprocess-envelope)**](decisions.md#d39) — the full author contract is
+The doorway to **user-authored agents** ([**D39 (subprocess-envelope)**](decisions.md#d39); the full author contract is
 [`agents.md`](agents.md)). An agent is any executable that speaks a versioned
 JSON-stdin / JSON-stdout / prose-stderr envelope; these two subcommands list and run them,
-with **no code path to advance the loop** — no checkpoint, no step flip, no chaining
+with **no code path to advance the loop**: no checkpoint, no step flip, no chaining
 ([**C6 (no-advance-verb)**](decisions.md#c6), the identity invariant).
 
-`agent list` prints every resolvable agent — name, origin tier (`project` /`personal`),
-slots, and description — walking `.plumbbob/agents/<name>/` (tracked) then
+`agent list` prints every resolvable agent (name, origin tier (`project` /`personal`),
+slots, and description), walking `.plumbbob/agents/<name>/` (tracked) then
 `~/.plumbbob/agents/<name>/` (personal), project shadowing personal ([**D41 (agent-resolution)**](decisions.md#d41)). A malformed
 `agent.json` lists as an `✗ … invalid:` line rather than hiding. Refuses (exit 1) outside a
 git repository.
@@ -223,14 +222,14 @@ git repository.
 `agent run` composes the step's `StepContext` from `intent.md` + settings, spawns the
 manifest `command` via `sh -c` at the **repo root** with the agent's own directory in
 `PLUMBBOB_AGENT_DIR` ([**D49 (posix-sh)**](decisions.md#d49)) and the context JSON on stdin, streams the child's stderr
-live, and — on a clean run (exit 0 + a valid envelope) — lands any `parked[]` through the
+live, and, on a clean run (exit 0 + a valid envelope), lands any `parked[]` through the
 park verb ([**D44 (cli-side-effects)**](decisions.md#d44)), appends the envelope to the step-scoped `builds/<slug>/handoff.json`
-ledger (untracked, cleared at checkpoint — [**D47 (handoff-ledger)**](decisions.md#d47)), prints the human summary on stderr, and
+ledger (untracked, cleared at checkpoint; [**D47 (handoff-ledger)**](decisions.md#d47)), prints the human summary on stderr, and
 re-emits the machine envelope on **its own stdout** for the calling skill ([**D46 (stream-discipline)**](decisions.md#d46)).
 
 - **`--step N`** picks the step (else the in-flight `STEP`; without either it refuses).
 - **A name** runs exactly that agent and **fails loud** on a miss or an undeclared
-  `--mode` slot ([**D54 (bindings-degrade-soft)**](decisions.md#d54) — you asked for it by name). **No name + `--mode <slot>`** runs the
+  `--mode` slot ([**D54 (bindings-degrade-soft)**](decisions.md#d54); you asked for it by name). **No name + `--mode <slot>`** runs the
   step's harness-**bound** agents for that slot ([**D42 (harness-bindings)**](decisions.md#d42)); a bound agent a teammate lacks
   **degrades to a warning** and is skipped ([**D54 (bindings-degrade-soft)**](decisions.md#d54)).
 - **`--mode`** names the slot; it must be one the manifest declares. A single-slot agent
@@ -240,7 +239,7 @@ re-emits the machine envelope on **its own stdout** for the calling skill ([**D4
 - **Ctrl-C** kills the child and reports rather than orphaning it ([**D58 (sigint-forwarded)**](decisions.md#d58)); a positive
   `agentTimeout` (below) arms a kill timer ([**D51 (agent-timeout)**](decisions.md#d51)).
 
-Exits **0** on a clean run, **1** on a failed one — a non-zero child exit (reported
+Exits **0** on a clean run, **1** on a failed one: a non-zero child exit (reported
 verbatim, the envelope of a failed child is *not* trusted), garbage on stdout (out of
 contract), a timeout kill, an interrupt, an explicit-name miss, or an undeclared-slot
 refusal. A batch of bound agents returns non-zero if any that actually ran failed.
@@ -251,10 +250,10 @@ refusal. A batch of bound agents returns non-zero if any that actually ran faile
 plumbbob use <slug>
 ```
 
-Re-points the active-build cursor at the named build and resumes it — the one verb for both
+Re-points the active-build cursor at the named build and resumes it: the one verb for both
 switching between builds and picking one back up ([**D30 (use-to-switch)**](decisions.md#d30)). Validates that
 `builds/<slug>/` exists, then rewrites the cursor in `STATE` (leaving the session sentinel intact). It warns (but
-allows) leaving a build that still has a step in flight — that surviving `STEP`/`SEAM` is the
+allows) leaving a build that still has a step in flight: that surviving `STEP`/`SEAM` is the
 payoff of per-build markers. Refuses (exit 1) with an empty slug or a slug with no build
 folder; `status` with no cursor lists the available builds instead of refusing.
 
@@ -269,7 +268,7 @@ The close-out ([**D9 (finish-no-gate)**](decisions.md#d9)/[**D29 (finish-replace
 refusal), makes the final
 commit (subject `chore(<scope>): finish`, mirroring the step-checkpoint Conventional shape; body
 leads with a `plumbbob finish` marker, then an optional `--body` heredoc), and clears
-the control state (`STATE`, the cursor, the in-flight markers). No separate archive copy — the
+the control state (`STATE`, the cursor, the in-flight markers). No separate archive copy: the
 tracked build folder already *is* the record and merges into `main` with the branch, so it
 rides into the PR ([**D26 (build-folders)**](decisions.md#d26)). **No** refuse-without-report gate stands in the way. Refuses (exit 1) only
 with no session.
@@ -281,7 +280,7 @@ plumbbob turn
 ```
 
 Hook machinery, not a user verb. Registered as the `UserPromptSubmit` hook, it reads the hook
-payload from **stdin** — it takes no arguments — ticks the human-turn ledger that the
+payload from **stdin** (it takes no arguments), ticks the human-turn ledger that the
 checkpoint latch reads, and emits any nudge as `additionalContext` JSON on stdout. It always
 exits 0 and never refuses an unrecognized flag: a hook that failed would wedge every prompt in
 the session.
@@ -289,7 +288,7 @@ the session.
 ## Install verbs
 
 PlumbBob has **two co-equal install paths**: the marketplace plugin (Claude Code installs
-the published npm package for you — skills and this CLI on PATH via `bin/` — so it needs no
+the published npm package for you (skills and this CLI on PATH via `bin/`), so it needs no
 `init`) and the skills-dir link these verbs manage. See [`install.md`](install.md) for the
 choice; the two are mutually exclusive.
 
@@ -304,7 +303,7 @@ Links plumbbob into Claude Code as the **skills-dir plugin**: it symlinks the pa
 the post-edit hook auto-registered from `hooks/hooks.json`). Idempotent, global-only, and it
 **never writes `settings.json`**. `--uninstall` drops the link. Refuses (exit 1) if the path
 exists and is not a plumbbob link, **or** if a marketplace plumbbob plugin is already
-installed — the two register the same plugin name and collide over the `/plumbbob:*`
+installed: the two register the same plugin name and collide over the `/plumbbob:*`
 namespace (skills can drop to flat names like `/plumbbob:status`); `--force` overrides that guard
 (the dev-install path uses it). Restart Claude Code (or `/reload-plugins`) to activate.
 
@@ -320,16 +319,16 @@ Three diagnostics under one verb.
 resolves to a package carrying the manifest, the skills, and the hook; it also recognizes a
 **marketplace-only** install as a valid, passing state, and flags the double-install
 **collision** when both are present, printing the exact fix for anything missing. Run it first
-if a `/plumbbob:*` skill opens an empty dashboard. Also available in-session as `/plumbbob:doctor` —
+if a `/plumbbob:*` skill opens an empty dashboard. Also available in-session as `/plumbbob:doctor`:
 the only way to reach it on a **marketplace** install, where the CLI is on PATH only inside a
 Claude Code session.
 
-**Sidecar layout.** When run inside a repo carrying a *legacy flat sidecar* — the
-pre-restructure layout with a `config` file, an `archive/` folder, or a flat active session —
+**Sidecar layout.** When run inside a repo carrying a *legacy flat sidecar* (the
+pre-restructure layout with a `config` file, an `archive/` folder, or a flat active session),
 `doctor` reports it and offers `--migrate`. `plumbbob doctor --migrate` moves the archive
 entries and the active session into tracked `builds/<slug>/` folders (the active one becomes
 the cursor; the rest are "done" simply by not being it), turns `config` into `settings.json`,
-narrows the excludes, and **stages** the whole move without committing — the commit is yours
+narrows the excludes, and **stages** the whole move without committing: the commit is yours
 ([**D31 (doctor-migrate)**](decisions.md#d31)).
 
 **Check gate** ([**D32 (checkride-gate)**](decisions.md#d32)). Reports how the heavy gate will resolve in this repo: a configured
@@ -348,7 +347,7 @@ plumbbob recover [--fix]
 
 Reads the control plane as a set and reports whether it is telling the truth. `doctor`
 answers "is plumbbob installed correctly"; `recover` answers "is *this session's* state
-consistent" — the question that matters after a crash, a lost context window, or a build
+consistent": the question that matters after a crash, a lost context window, or a build
 switched away mid-step. What it checks:
 
 - **The cursor resolves.** A `STATE` cursor naming a build that is gone is the quiet one:
@@ -357,19 +356,19 @@ switched away mid-step. What it checks:
   them and leaves the choice to you.
 - **The phase is readable.** A spike and a step both marked in flight means `status` shows
   the spike and hides the step. A `STEP` the plan no longer contains means a `refine`
-  rewrote `## Steps` underneath it. Both are reported, never auto-resolved — which one is
+  rewrote `## Steps` underneath it. Both are reported, never auto-resolved: which one is
   real is a judgment call.
 - **Nothing is left over.** An orphaned `handoff.json` would thread a finished step's agent
   output into the next step's context; a `TICK` stranded at the boundary arms the approval
   latch against a pause that already closed; a `GRANT` with no turn ledger to clear it
   reads as standing self-approval. `--fix` clears all three.
-- **Spike leftovers.** Worktrees and `spike/*` branches with no open spike — which
-  `spike done` refuses to touch, since it requires the marker. **Reported with the exact
+- **Spike leftovers.** Worktrees and `spike/*` branches with no open spike (which
+  `spike done` refuses to touch, since it requires the marker). **Reported with the exact
   removal commands and never removed:** those worktrees sit outside the repo and may hold
   the only copy of what the spike learned.
 
 Diagnosis is free; repair is asked for by name. `--fix` writes only the untracked control
-files plumbbob owns — it never touches a tracked artifact (intent, build log, checkpoints,
+files plumbbob owns: it never touches a tracked artifact (intent, build log, checkpoints,
 report), never touches git history, and never lands or advances a step. Recovering is not a
 rewind: it reconciles bookkeeping and never restores lost work (that is
 [`revert`](#revert), and it is destructive by design). Exits 0 when the control plane is
@@ -378,9 +377,9 @@ consistent, 1 while any problem stands.
 ## The `.plumbbob/` sidecar
 
 The sidecar splits into a **tracked artifact plane** and an **untracked control plane**
-([**D17 (two-planes)**](decisions.md#d17)/[**D26 (build-folders)**](decisions.md#d26)). The artifact plane — `settings.json` and every `builds/<slug>/` folder —
+([**D17 (two-planes)**](decisions.md#d17)/[**D26 (build-folders)**](decisions.md#d26)). The artifact plane (`settings.json` and every `builds/<slug>/` folder)
 is committed, so a build's record (intent, log, checkpoints, report) rides its branch into the
-PR. The control plane — `STATE`, `settings.local.json`, and each build's in-flight markers —
+PR. The control plane (`STATE`, `settings.local.json`, and each build's in-flight markers)
 stays git-excluded; a session is live iff `STATE` is present.
 
 ```text
@@ -405,13 +404,13 @@ stays git-excluded; a session is live iff `STATE` is present.
 
 Which build a verb acts on resolves `--build <slug>` → the active-build cursor in `STATE` → the sole
 build in `builds/` → a refusal with a hint ([**D28 (state-cursor)**](decisions.md#d28)). `plumbbob start --local` opts back into
-the old fully untracked flat layout — `intent.md`/`build-log.md`/`checkpoints` at the sidecar
-root, the whole `.plumbbob/` excluded — for repos that will not track tool folders ([**D26 (build-folders)**](decisions.md#d26)).
+the old fully untracked flat layout (`intent.md`/`build-log.md`/`checkpoints` at the sidecar
+root, the whole `.plumbbob/` excluded) for repos that will not track tool folders ([**D26 (build-folders)**](decisions.md#d26)).
 A repo scaffolded by a pre-restructure plumbbob keeps that legacy flat layout until
 `plumbbob doctor --migrate` moves it here ([**D31 (doctor-migrate)**](decisions.md#d31)).
 
-The control plane also carries the latch's flat files at the sidecar root — `TURN` (the
-human-turn counter) and `GRANT` (a one-turn self-approval) — plus each build's `TICK` entry
+The control plane also carries the latch's flat files at the sidecar root: `TURN` (the
+human-turn counter) and `GRANT` (a one-turn self-approval), plus each build's `TICK` entry
 stamp. What every one of them holds, how they are git-excluded, and why they are not in
 `.gitignore` or your home directory: [`state-and-git.md`](state-and-git.md).
 
@@ -434,26 +433,26 @@ default. The known keys:
 
 `check` overrides the heavy gate (a shell command run in the repo root; its exit code is
 the result); **absent, the gate is checkride** ([**D24 (configurable-check)**](decisions.md#d24)/[**D32 (checkride-gate)**](decisions.md#d32)). `auto` is whether the
-agent approves in your place. The per-worktree active-build cursor is **not** a setting — it
+agent approves in your place. The per-worktree active-build cursor is **not** a setting: it
 is `STATE`'s content, so plumbbob never rewrites this hand-editable overlay ([**D28 (state-cursor)**](decisions.md#d28)). `agents` sets
-project-wide slot bindings for [user-authored agents](agents.md) — the bottom rung under a
+project-wide slot bindings for [user-authored agents](agents.md): the bottom rung under a
 build's `harness.json` and the `--agent` flag ([**D57 (merge-ladder)**](decisions.md#d57)). `agentTimeout` (seconds) arms a
 kill timer for a spawned agent; absent or `0` means no timeout, since the human is present
-and Ctrl-C works ([**D51 (agent-timeout)**](decisions.md#d51)). Both files are optional JSON — a missing or malformed one
+and Ctrl-C works ([**D51 (agent-timeout)**](decisions.md#d51)). Both files are optional JSON: a missing or malformed one
 contributes nothing rather than wedging the tool.
 
 ## Exit codes
 
-- **0** — success. For `check` (and `checkpoint`'s gate), 0 means the heavy check was
+- **0**: success. For `check` (and `checkpoint`'s gate), 0 means the heavy check was
   green.
-- **1** — a refusal or failure: a guard tripped (no session, a step in flight, bad
+- **1**: a refusal or failure: a guard tripped (no session, a step in flight, bad
   argument), a red check, or an unknown verb. `check` propagates the underlying command's
   non-zero code.
-- **2** — the gate itself broke ([**D32 (checkride-gate)**](decisions.md#d32)): checkride couldn't run at all (for
+- **2**: the gate itself broke ([**D32 (checkride-gate)**](decisions.md#d32)); checkride couldn't run at all (for
   example a malformed `checkride.config.json`). Fix the harness before trusting green or red.
 
 ## See also
 
-- [`techniques.md`](techniques.md) — what each verb is *for* and how the methods fit.
-- [`troubleshooting.md`](troubleshooting.md) — what to do when a verb refuses.
-- [`decisions.md`](decisions.md) — the `D#` / `C#` tags referenced above.
+- [`techniques.md`](techniques.md): what each verb is *for* and how the methods fit.
+- [`troubleshooting.md`](troubleshooting.md): what to do when a verb refuses.
+- [`decisions.md`](decisions.md): the `D#` / `C#` tags referenced above.

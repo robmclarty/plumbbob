@@ -1,7 +1,7 @@
 # Architecture
 
 > **Status: in progress.** This page sketches the broad strokes for contributors and
-> executor authors. The parts marked *(research)* are direction, not contract — they
+> executor authors. The parts marked *(research)* are direction, not contract; they
 > track the working notes in [`research/`](../research/) and will firm up as those
 > decisions land. The settled design record is [`decisions.md`](decisions.md).
 
@@ -28,12 +28,12 @@ between them is never hidden: the sidecar is the whole memory.
 
 ## The CLI (`src/`)
 
-- `cli.ts` — the executable shell; the **only** `process.exit` in the codebase
+- `cli.ts`: the executable shell; the **only** `process.exit` in the codebase
   (enforced by `rules/no-process-exit.yml`), so everything below it is importable by
   tests.
-- `cli-core.ts` — verb routing and the help table.
-- `verbs/` — one file per verb, each a pure `(cwd, args) → exit code` function.
-- `lib/` — the shared mechanics: `git.ts` (additive-only git, [C5 (additive-git)](decisions.md#c5)), `sidecar.ts` (paths,
+- `cli-core.ts`: verb routing and the help table.
+- `verbs/`: one file per verb, each a pure `(cwd, args) → exit code` function.
+- `lib/`: the shared mechanics: `git.ts` (additive-only git, [C5 (additive-git)](decisions.md#c5)), `sidecar.ts` (paths,
   planes, excludes), `intent.ts` (step/seam parsing), `orient.ts` (the dashboard),
   `settings.ts` (the ladder, [D27 (settings-ladder)](decisions.md#d27)), `check.ts` (the gate), `buildlog.ts`, `plugins.ts`
   (install detection).
@@ -47,8 +47,8 @@ agent path ([C6 (no-advance-verb)](decisions.md#c6)).
 
 ## The two planes ([D17 (two-planes)](decisions.md#d17)/[D26 (build-folders)](decisions.md#d26))
 
-The sidecar splits by lifetime. The **artifact plane** is tracked — `settings.json`
-and each `builds/<slug>/` folder (intent, build-log, checkpoints, report) — so a
+The sidecar splits by lifetime. The **artifact plane** is tracked (`settings.json`
+and each `builds/<slug>/` folder (intent, build-log, checkpoints, report)), so a
 build's record rides its branch into the PR. The **control plane** is per-worktree
 ephemera, excluded via the shared gitdir's `info/exclude` ([D33 (info-exclude)](decisions.md#d33)), never `.gitignore`:
 `STATE` (its content is the active-build cursor, [D28 (state-cursor)](decisions.md#d28)), `settings.local.json` (the personal overlay), and each
@@ -61,7 +61,7 @@ Two tiers with different jobs. The **heavy** gate runs inside the verify tick:
 [checkride](https://www.npmjs.com/package/checkride) imported programmatically (the one
 runtime dependency), or the `"check"` shell command from the settings ladder as the
 override. Exit codes are the contract: 0 green, 1 red, 2 the-gate-itself-broke. The
-**light** tier is the single post-edit hook — file-scoped, non-blocking lint feedback
+**light** tier is the single post-edit hook: file-scoped, non-blocking lint feedback
 injected into the model's context, gated on an active build.
 
 ## Distribution
@@ -73,15 +73,15 @@ mutually exclusive; `doctor` arbitrates. See [`install.md`](install.md).
 
 ## In progress *(research)*
 
-- **User agent plugins** — a pluggable-executor contract beyond "run `/plumbbob:verify`
+- **User agent plugins**: a pluggable-executor contract beyond "run `/plumbbob:verify`
   yourself": executors as subprocesses speaking a JSON envelope, discovered under
   `.plumbbob/agents/<name>/`, with per-build wiring (before/build/after slots) in the
   build folder. The full analysis is
   [`research/04-user-agent-plugins.md`](../research/04-user-agent-plugins.md).
-- **Multi-host** — `plumbbob init --host codex|cursor|zed` placing the same skills
+- **Multi-host**: `plumbbob init --host codex|cursor|zed` placing the same skills
   where other agents look; the npm package as the agent-neutral carrier
   ([`research/02-model-agnostic-standalone.md`](../research/02-model-agnostic-standalone.md)).
-- **The reasoning seam** — how skills reach a frontier model from non-Claude hosts;
+- **The reasoning seam**: how skills reach a frontier model from non-Claude hosts;
   evaluated and settled in
   [`research/03-reasoning-seam-and-fascicle-plan.md`](../research/03-reasoning-seam-and-fascicle-plan.md)
   (host-plugin tool; a local-model "fascicle" was declined).
