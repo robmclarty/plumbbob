@@ -571,6 +571,42 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   outright in the same step. Promoted from the 2026-07-18 intent-legibility build (local
   `placeholder-uncounted`). *Tagged in* `templates/intent.md`.
 
+- <a id="d78"></a>**D78 (em-dash-ban): The em-dash is out of the prose kit, and a house vale rule holds the
+  line.** `docs/voice/voice.md` bans the em-dash in prose; `Repo.EmDash` in the `prose` slot is what makes
+  the ban mechanical rather than aspirational. It flags U+2014 alone, because the en-dash in a numeric range
+  (`steps 1–3`) and the ordinary hyphen are different marks doing different jobs, and a rule that over-matches
+  is one people learn to skim past. The message spells out the voice's own four-way replacement so a writer
+  reads the fix without leaving the terminal: an inner-sentence aside rides in brackets, and a pause with its
+  trailing phrase takes a semicolon when both halves stand alone, a colon when the second half names the
+  first, and a plain comma before a coordinating conjunction. Scope is prose, drawn the same way the citation
+  scanner draws it. In markdown a code span, a fenced block, and an indented block are invisible, because a
+  mark inside a code sample is part of the sample. In a `.ts` file (mapped to `js` in `.vale.ini`) vale reads
+  doc comments and nothing else, so a string literal the CLI prints and a test title never surface, while
+  frontmatter is prose, so a SKILL.md `description:` is linted like any sentence. Runtime strings keep their
+  em-dashes on purpose: vale cannot see a string literal, and a terminal is not the prose plane the voice
+  governs.
+
+  The rule needs no regex exception, because the two format markers that used to ride an em-dash were changed
+  to punctuation the voice already prescribes: a decision line now reads `, *because* <why>` and a definition
+  header `**DNN (slug): Title.**`. Vale's RE2 has no lookaround, so a rule made to spare one marker would be
+  regex contortion or permanent under-coverage of the two files where the voice matters most, and
+  [**D74 (glossed-citations)**](#d74) is indifferent to the swap because its scanner stops at the slug parens.
+
+  It landed at `warning` and rode there while the sweep burned roughly 1,200 marks off the owned surfaces, one
+  review-sized checkpoint per surface, then flipped to `error` in the last step; a rule that failed mid-sweep
+  would have refused the very checkpoints that cleaned it up. Two kinds of file are exempted rather than swept,
+  each with a per-file `Repo.EmDash = NO` stanza in `.vale.ini` and a one-line why: a record written once
+  (`docs/evals/*`, the same genus as the `CHANGELOG.md` and `.plumbbob/builds/*` the walk already holds out),
+  and a hand-written anchor text (`docs/generation-loss.md` and `docs/attention-first-development.md`), because
+  a model pass over hand-owned prose is the exact copy-of-a-copy failure `docs/generation-loss.md` documents.
+  An exemption is honest about who owns the prose, where a re-punctuation would edit a record or overwrite an
+  author. Nothing is written to `checkride.baseline.json`: every finding was fixed or its file exempted.
+  Promoted from the 2026-08-11 em-dash-sweep build, merging its locals `em-dash-only`, `warning-then-error`,
+  `sweep-by-surface`, `model-holds-the-pen`, `comma-and-colon`, `exemption-over-forgery`, and
+  `receipts-are-records`. *Tagged in* `.vale.ini`, whose exemption stanzas cite it; the rule itself lives in
+  `.vale/styles/Repo/EmDash.yml` and its walk in `checkride.config.json`, both stating the why in plain
+  language.
+
 ### Superseded
 
 - <a id="d20"></a>**D20 (local-archive): The archive was local-only markdown.** Wrapping wrote a plain-markdown archive

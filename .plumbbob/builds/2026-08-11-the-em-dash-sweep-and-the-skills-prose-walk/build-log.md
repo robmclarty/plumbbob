@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log — the em-dash sweep and the skills prose walk
 
-**Current step:** 14 — docs(prose): exempt the receipts, sweep or exempt the essays
+**Current step:** 15 — chore(gate): raise the em-dash rule to error and record it
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -36,7 +36,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 11. chore(prose): sweep the src/lib doc comments
 - ☑ 12. chore(prose): sweep the src/verbs doc comments
 - ☑ 13. chore(prose): sweep the test, entrypoint, and script comments
-- ☐ 14. docs(prose): exempt the receipts, sweep or exempt the essays
+- ☑ 14. docs(prose): exempt the receipts, sweep or exempt the essays
 - ☐ 15. chore(gate): raise the em-dash rule to error and record it
 
 ## Park list
@@ -101,3 +101,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-08-13 — step 11 checkpointed · f98486bc8 — chore(prose): sweep the src/lib doc comments (26m)
 - 2026-08-13 — step 12 checkpointed · 97323949a — chore(prose): sweep the src/verbs doc comments (18m)
 - 2026-08-13 — step 13 checkpointed · e2546b69f — chore(prose): sweep the test, entrypoint, and script comments (60m)
+- 2026-08-13 — step 14 checkpointed · 9e7f40e98 — docs(prose): exempt the receipts, sweep or exempt the essays (7m)

@@ -22,11 +22,12 @@
 # is prose too: a `description:` value in a SKILL.md is linted like any sentence.
 extends: existence
 message: "No em-dash in prose: brackets for an inner-sentence aside, a semicolon when both halves stand alone, a colon when the second half names the first, a comma before a coordinating conjunction."
-# Warning while the sweep runs. Only error-severity alerts fail the check, which
-# .vale.ini states as its own contract, so `warning` prints the whole queue on
-# every run without failing the checkpoints that burn it down. The last step of
-# the sweep raises this line to `error` and the ban goes live.
-level: warning
+# Error: the ban is live. Only error-severity alerts fail the check, which
+# .vale.ini states as its own contract, so a reintroduced em-dash now reddens
+# the gate and the fast turn profile alike. The rule rode at `warning` while the
+# sweep burned its queue down, so no checkpoint that cleaned a surface was ever
+# refused by the rule cleaning it; this line is that sweep's last step.
+level: error
 # A dash is not a word character, so the default boundaries would wrap the token
 # into a pattern that can never match.
 nonword: true

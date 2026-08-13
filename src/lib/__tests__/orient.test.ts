@@ -115,7 +115,7 @@ describe('orient parsers', () => {
     expect(parseSteps(INTENT)[1]?.doneWhen).toBe('the thing works.')
   })
 
-  it('parseSteps reads the comma step form with a clean title — D8 (comma-and-colon)', () => {
+  it('parseSteps reads the comma step form with a clean title — D78 (em-dash-ban)', () => {
     // The scaffold teaches `Title, **done when:**` now that the em dash is out
     // of the prose kit; the marker anchors the split, so a comma inside the
     // title survives, and the legacy dash form parses unchanged beside it.
