@@ -58,7 +58,7 @@ function leadingColumns(line: string): number {
  * context (indentation relative to a marker, not column zero) is not modeled; the
  * repo's own house style never nests indented code that deep.
  */
-function collectIndentedCodeSpans(text: string): Span[] {
+export function collectIndentedCodeSpans(text: string): Span[] {
   const spans: Span[] = []
   const lines = text.split('\n')
   const lineStarts: number[] = []

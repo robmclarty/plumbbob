@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: the leftovers: mask-aware sweep sizing, the park-nudge eval, and abandon-step
 
-**Current step:** 1 — chore(refs): share the masking spans and mask indented blocks
+**Current step:** 2 — feat(prose): add a mask-aware counter that sizes a prose sweep
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -23,7 +23,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 line above. Only ONE step is in flight; a step is done only after a checkpoint:
 check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
-- ☐ 1. chore(refs): share the masking spans and mask indented blocks
+- ☑ 1. chore(refs): share the masking spans and mask indented blocks
 - ☐ 2. feat(prose): add a mask-aware counter that sizes a prose sweep
 - ☐ 3. chore(evals): re-measure c5 both arms at 0.10.0, land the receipt
 - ☐ 4. fix(turn): reword the park nudge and re-measure the latched arm
@@ -35,6 +35,8 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 > Mid-step, every new problem / idea / "ooh what if" lands HERE, untouched, and you
 > go straight back to the step. Acting the instant an idea arrives is the disease.
 > Capture is one line (`/plumbbob:park` composes it). Harvest happens only at the boundary.
+- [ ] prose-mask.ts's INLINE_CODE_RE doesn't match a backtick-delimited span that wraps across a line break, so an em-dash inside one (e.g. skills/verify/SKILL.md:100-101) reads as unmasked prose to count-prose.ts
+- [ ] check-refs.ts's scan surface excludes scripts/**/*.ts, so a build-local D#/C# citation in a scripts/ comment (e.g. D2, D3, D14 in prose-mask.ts and count-prose.ts, all numbers already taken by unrelated decisions in docs/decisions.md) is never checked and can read as the wrong global decision
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -62,3 +64,4 @@ fills in as you go, not at the end. Add your own decision/event lines too: this 
 you point at to say "I did that: the LLM helped, but those were my calls."
 `/plumbbob:finish` reads this for the report; `plumbbob finish` commits it with the build
 folder, so it rides the branch into the PR.)*
+- 2026-08-14 — step 1 checkpointed · 38a2b8b56 — chore(refs): share the masking spans and mask indented blocks (2m)
