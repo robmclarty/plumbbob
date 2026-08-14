@@ -5,6 +5,53 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.1] - 2026-08-13
+
+- **Added:** `plumbbob abandon`, a third exit from an in-flight step. Until now a step had two
+  exits and both took the work with them: `checkpoint` lands it, `revert` destroys it. Abandon
+  drops the attempt and keeps the working-tree diff exactly where it is, clearing only the
+  in-flight markers (`STEP`, `SEAM`, `TICK`, and the step's agent handoff ledger) and appending a
+  build-log line. It touches neither the tree nor git nor the plan, so the step keeps its `[ ]`
+  and stays re-buildable. A step exit is a boundary crossing, so it honors the same approval
+  latch as `checkpoint`; that is load-bearing rather than decorative, since abandon clears the
+  entry stamp the latch reads, and an unlatched abandon followed by a same-turn checkpoint would
+  have reopened the side door D67 (auto-not-a-grant) closed. The composed case is pinned by test.
+  It ships with a `/plumbbob:abandon` driver skill, bringing the skill count to fourteen.
+- **Added:** `pnpm size:prose` (`scripts/count-prose.ts`), a mask-aware counter that sizes a prose
+  sweep by what the vale rule will actually flag. Both easy measures had been lying: vale collapses
+  multi-line paragraphs when positioning findings, so a per-file total under-reports, while raw
+  grep over-counts by including the code spans the rule correctly ignores. It counts a `--pattern`
+  (U+2014 by default) outside a shared mask, and `--show-masked` audits every masked indented span.
+- **Added:** a fresh skill-eval receipt (`docs/evals/2026-08-14.md`) measuring contract 5 (park,
+  don't chase) at 0.10.0 with both arms at n=5. The baseline arm, which strips the turn hook and
+  with it the park nudge, had never been run before, so this is the first measurement that isolates
+  the nudge's effect: **3/5 baseline against 5/5 latched**, alongside a regression check confirming
+  the latched arm holds two releases after the 0.9.0 reading.
+- **Changed:** the fenced and inline code masking that lived inside the citation scanner moved to a
+  shared `scripts/prose-mask.ts` that both it and the new counter import, and it learned to mask
+  indented blocks. The mask's contract is CommonMark, which is vale's own scope, rather than
+  guessed intent: a four-plus-space run masks only where an indented block can legally start, so
+  this repo's bullet-heavy two-space continuation style still counts as the prose it is.
+- **Changed:** the citation scanner now walks `scripts/**/*.ts` beside `src/**/*.ts`. That surface
+  had been entirely blind to the `refs` slot, which was hiding twelve real violations across the
+  three scripts touched in this release. Ten were build-local `D#` tags whose numbers collide with
+  the global decisions key, now named in words under a stated rule: shipped code under `src/` or
+  `scripts/` cites `docs/decisions.md` and nothing else.
+- **Fixed:** the shared mask now matches an inline code span that wraps a line break, stopping at a
+  blank line since a code span cannot cross a paragraph break. A span broken across two lines used
+  to read as unmasked prose, so the counter over-reported exactly what vale correctly ignores.
+- **Fixed:** the eval report generator emitted glossed but unlinked `D#`/`C#` citations, which the
+  `refs` slot flags in `docs/`. Earlier receipts had passed only because they were hand-linked
+  after generation, which is the exact edit the derived-receipt rule forbids. A fresh `--report`
+  now passes `refs` with the record still fully derived.
+- **Fixed:** `doctor --migrate` closed every report by claiming it had staged the move, even when
+  a gitignored sidecar meant nothing staged at all. The action line now follows what actually
+  happened.
+- **Fixed:** several stale counts and labels on the docs site. The skill catalogue on the landing
+  page listed only twelve entries (`recover` was never added when the count last moved), its
+  `revert` blurb still opened with the word `recover` that a prior release had renamed away, and a
+  banner still read "TWELVE SKILLS". Every count now reads fourteen over a list that holds fourteen.
+
 ## [0.10.0] - 2026-08-13
 
 - **Added:** the em-dash ban is now enforced. A new `Repo.EmDash` vale rule flags U+2014 in
