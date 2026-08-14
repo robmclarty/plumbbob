@@ -27,6 +27,16 @@ describe('countMatches — the mask-aware count Repo.EmDash would actually flag'
     expect(countMatches('See `a — b` for the token.', DASH)).toBe(0)
   })
 
+  it('skips an em-dash inside an inline code span whose backticks wrap a line break (D15 (wrapped-code-spans))', () => {
+    const text = ['See `a pause —', 'and more` for the token.'].join('\n')
+    expect(countMatches(text, DASH)).toBe(0)
+  })
+
+  it('does not mask across a blank line — a code span cannot cross a paragraph break', () => {
+    const text = ['See `a pause — clause.', '', 'and more` for the token.'].join('\n')
+    expect(countMatches(text, DASH)).toBe(1)
+  })
+
   it('skips an em-dash inside an indented code block that opens after a blank line', () => {
     const text = ['A paragraph.', '', '    code — not prose', ''].join('\n')
     expect(countMatches(text, DASH)).toBe(0)

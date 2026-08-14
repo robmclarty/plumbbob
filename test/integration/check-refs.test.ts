@@ -114,6 +114,18 @@ describe('D74 (glossed-citations) — a tag in a code span is never a citation',
   it('skips a fill-in-the-blank placeholder', () => {
     expect(violationsFor('Format: `D1 (slug-here)`', 'markdown')).toEqual([])
   })
+
+  it('skips a bare tag inside a code span whose backticks wrap a line break (D15 (wrapped-code-spans))', () => {
+    const text = ['See `D26 (build-folders)', 'for details` in the docs.'].join('\n')
+    expect(violationsFor(text, 'markdown')).toEqual([])
+  })
+
+  it('does not skip a tag whose would-be code span is broken by a blank line — a code span cannot cross a paragraph break', () => {
+    const text = ['See `D26 (build-folders)', '', 'for details` in the docs.'].join('\n')
+    const violations = violationsFor(text, 'markdown')
+    expect(violations).toHaveLength(1)
+    expect(violations[0]?.kind).toBe('unlinked')
+  })
 })
 
 describe('D14 (commonmark-parity) — an indented code block is never a citation', () => {
