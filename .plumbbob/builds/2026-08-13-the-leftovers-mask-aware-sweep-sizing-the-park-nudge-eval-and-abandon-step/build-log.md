@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: the leftovers: mask-aware sweep sizing, the park-nudge eval, and abandon-step
 
-**Current step:** none (at the boundary)
+**Current step:** 1 — chore(refs): share the masking spans and mask indented blocks
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -23,7 +23,12 @@ step boundaries. The antidote to "my plan got lost in the noise."
 line above. Only ONE step is in flight; a step is done only after a checkpoint:
 check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
-- ☐ 1. <step>
+- ☐ 1. chore(refs): share the masking spans and mask indented blocks
+- ☐ 2. feat(prose): add a mask-aware counter that sizes a prose sweep
+- ☐ 3. chore(evals): re-measure c5 both arms at 0.10.0, land the receipt
+- ☐ 4. fix(turn): reword the park nudge and re-measure the latched arm
+- ☐ 5. feat(abandon): drop an in-flight step and keep the work
+- ☐ 6. docs(abandon): add the driver skill and record the decision
 
 ## Park list
 

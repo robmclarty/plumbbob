@@ -8,6 +8,7 @@
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
+import { collectMaskSpans, isWithin } from './prose-mask.ts'
 
 export type Surface = 'markdown' | 'src'
 
@@ -37,8 +38,6 @@ export type ScanResult = {
 const DEFINITION_RE = /<a id="[dc]\d+"><\/a>\*\*([DC]\d+) \(([a-z0-9-]+)\)/g
 const CITATION_LINK_RE = /\[\*{0,2}([DC]\d+)(?:\s*\(([a-z0-9-]*)\))?\*{0,2}\]\(([^)]*)\)/g
 const TAG_RE = /\b([DC]\d+)\b/g
-const FENCED_CODE_RE = /```[\s\S]*?```/g
-const INLINE_CODE_RE = /`[^`\n]*`/g
 
 // Anything not in the surface globs (every *.md, every src/**/*.ts) never reaches the
 // walker at all; these are the exceptions carved out of those two globs, and they are
@@ -66,19 +65,18 @@ export function parseDefinitions(decisionsText: string): Map<string, string> {
   return definitions
 }
 
+/**
+ * The shared fenced/inline/indented mask (D2 (shared-mask)), plus a definition-line
+ * exclusion this scanner alone needs: a `decisions.md` `<a id="dN"></a>**DN (slug)**`
+ * header cites its own tag without citing itself.
+ */
 function collectExclusionSpans(text: string): ReadonlyArray<readonly [number, number]> {
-  const spans: Array<readonly [number, number]> = []
-  for (const re of [FENCED_CODE_RE, INLINE_CODE_RE, DEFINITION_RE]) {
-    for (const match of text.matchAll(re)) {
-      const start = match.index ?? 0
-      spans.push([start, start + match[0].length])
-    }
+  const spans = collectMaskSpans(text) as Array<readonly [number, number]>
+  for (const match of text.matchAll(DEFINITION_RE)) {
+    const start = match.index ?? 0
+    spans.push([start, start + match[0].length])
   }
   return spans
-}
-
-function isWithin(index: number, spans: ReadonlyArray<readonly [number, number]>): boolean {
-  return spans.some(([start, end]) => index >= start && index < end)
 }
 
 /**

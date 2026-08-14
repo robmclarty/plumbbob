@@ -116,6 +116,32 @@ describe('D74 (glossed-citations) — a tag in a code span is never a citation',
   })
 })
 
+describe('D14 (commonmark-parity) — an indented code block is never a citation', () => {
+  it('skips a bare tag in a four-space-indented block that opens after a blank line', () => {
+    const text = ['Some paragraph.', '', '    D26 (build-folders) example', ''].join('\n')
+    expect(violationsFor(text, 'markdown')).toEqual([])
+  })
+
+  it('does not skip a four-space-indented line with no preceding blank line — paragraph continuation, not code', () => {
+    const text = ['See the note below.', '    D26 needs a link.'].join('\n')
+    const violations = violationsFor(text, 'markdown')
+    expect(violations).toHaveLength(1)
+    expect(violations[0]?.kind).toBe('unlinked')
+  })
+
+  it('does not skip a two-space-indented line — sub-four-space indents are paragraphs, not code', () => {
+    const text = ['- Some item', '  D26 needs a link.'].join('\n')
+    const violations = violationsFor(text, 'markdown')
+    expect(violations).toHaveLength(1)
+    expect(violations[0]?.kind).toBe('unlinked')
+  })
+
+  it('skips a bare tag under a leading tab — a tab measures four columns', () => {
+    const text = ['Some paragraph.', '', '\tD26 (build-folders) example'].join('\n')
+    expect(violationsFor(text, 'markdown')).toEqual([])
+  })
+})
+
 describe('a decisions.md definition line is not a citation of itself', () => {
   it('finds zero citations on the defining line', () => {
     const text = '- <a id="d26"></a>**D26 (build-folders) — One folder per build.**'
