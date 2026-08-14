@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: the leftovers: mask-aware sweep sizing, the park-nudge eval, and abandon-step
 
-**Current step:** 7 — feat(abandon): drop an in-flight step and keep the work
+**Current step:** 8 — docs(abandon): add the driver skill and record the decision
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -29,7 +29,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 4. fix(refs): scan scripts/ and cite only global decisions there
 - ☑ 5. chore(evals): re-measure c5 both arms at 0.10.0, land the receipt
 - ☑ 6. fix(turn): reword the park nudge [STRUCK 2026-08-14, not built]
-- ☐ 7. feat(abandon): drop an in-flight step and keep the work
+- ☑ 7. feat(abandon): drop an in-flight step and keep the work
 - ☐ 8. docs(abandon): add the driver skill and record the decision
 
 ## Park list
@@ -110,3 +110,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-08-14 — step 4 done-when corrected (`/plumbbob:step`, Rob's call): the tally now reads twelve violations and ten build-local tags, `D15` ×2 joining `D2` ×4, `D14` ×3, `D3` ×1; seam and model unchanged since both cites already sit inside the seam's `scripts/prose-mask.ts`
 - 2026-08-14 — step 4 checkpointed · bcc358192 — fix(refs): scan scripts/ and cite only global decisions there (9m)
 - 2026-08-14 — step 5 checkpointed · d3a82abaa — chore(evals): re-measure c5 both arms at 0.10.0, land the receipt (1 drift, 68m)
+- 2026-08-14 — step 7 checkpointed · 399677d8b — feat(abandon): drop an in-flight step and keep the work (20m)

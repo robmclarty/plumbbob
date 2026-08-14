@@ -607,6 +607,25 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   `.vale/styles/Repo/EmDash.yml` and its walk in `checkride.config.json`, both stating the why in plain
   language.
 
+- <a id="d79"></a>**D79 (abandon-keeps-work): Dropping an in-flight step while keeping its work is its own
+  verb, and the tree is untouchable.** For most of the loop's life a step in flight had two exits:
+  `checkpoint` lands it, and `revert` destroys the work with a hard reset. The gap was recorded when
+  `recover` shipped and deliberately left unbuilt, because dropping the attempt while keeping the
+  working-tree diff is "a new loop transition rather than a repair of inconsistent state" and so earns its
+  own design pass; a repair verb whose own header bars loop transitions could not carry it, and a `revert`
+  flag would hang a keep-the-work mode off the one verb defined by throwing it away. `plumbbob abandon` is
+  that transition, and its whole contract is what it refuses to touch. It clears the in-flight control
+  markers (`STEP`, `SEAM`, `TICK`, the step-scoped handoff ledger), appends an abandon line to the build
+  log, and writes nothing else: no reset, no commit, no edit to the plan. The step keeps its `[ ]` and stays
+  re-buildable, because abandon drops the attempt rather than the intention, and removing a step the human
+  no longer wants is a plan edit, not a bookkeeping verb's call. A step exit is a boundary crossing, so
+  abandon honors the same approval latch as `checkpoint` ([**D64 (approval-latch)**](#d64)); that is
+  load-bearing rather than decorative, since abandon clears the entry stamp the latch reads, and an
+  unlatched abandon followed by a same-turn checkpoint would reopen the side door
+  [**D67 (auto-not-a-grant)**](#d67) closed. Promoted from the 2026-08-13 leftovers build, merging its
+  locals `abandon-verb`, `tree-untouched`, `stays-planned`, `abandon-log-line`, and `abandon-latched`.
+  *Tagged in* `docs/cli-reference.md`, `docs/skills-reference.md`, and `docs/state-and-git.md`.
+
 ### Superseded
 
 - <a id="d20"></a>**D20 (local-archive): The archive was local-only markdown.** Wrapping wrote a plain-markdown archive

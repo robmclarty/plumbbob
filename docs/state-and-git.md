@@ -61,11 +61,11 @@ branch.
 | `.plumbbob/TURN` | Monotonic count of human turns in this repo | the `UserPromptSubmit` hook | never (it's a counter) |
 | `.plumbbob/GRANT` | A one-turn self-approval, minted only when *you* typed `/build --auto` or a step range | the same hook | the next turn |
 | `.plumbbob/settings.local.json` | Your personal settings overlay (for example `{"auto": true}`) | you, by hand | you |
-| `builds/<slug>/STEP` | The step number in flight; its presence *is* the BUILD phase | `build` | `checkpoint` |
-| `builds/<slug>/SEAM` | The step's declared paths, one per line (awareness, not a lock) | `build` | `checkpoint` |
+| `builds/<slug>/STEP` | The step number in flight; its presence *is* the BUILD phase | `build` | `checkpoint` / `revert` / `abandon` |
+| `builds/<slug>/SEAM` | The step's declared paths, one per line (awareness, not a lock) | `build` | `checkpoint` / `revert` / `abandon` |
 | `builds/<slug>/SPIKE` | Marker: a spike fork is open | `spike` | `spike done` |
-| `builds/<slug>/TICK` | The `TURN` value at the moment the step was entered | `build` | `checkpoint` |
-| `builds/<slug>/handoff.json` | Ledger of agent runs for this step, so a later call can thread earlier results ([D47 (handoff-ledger)](decisions.md#d47)) | `agent run` | `checkpoint` |
+| `builds/<slug>/TICK` | The `TURN` value at the moment the step was entered | `build` | `checkpoint` / `abandon` |
+| `builds/<slug>/handoff.json` | Ledger of agent runs for this step, so a later call can thread earlier results ([D47 (handoff-ledger)](decisions.md#d47)) | `agent run` | `checkpoint` / `abandon` |
 | `.check/` | The check gate's raw tool output | checkride | overwritten each run |
 
 `TURN` and `TICK` are the least obvious pair, and they justify the whole mechanism. The
@@ -78,6 +78,12 @@ dormant" and stands down: it fails open, it never wedges.
 Phase is **derived, not stored**: SPIKE present ⇒ SPIKE, STEP present ⇒ BUILD, otherwise
 DESIGN. No status field exists to drift out of sync with reality, which is why these are
 mostly empty marker files rather than a state blob.
+
+A step in flight has three exits, and each settles these markers differently.
+`checkpoint` lands the step and clears them on its way; `revert` resets the working tree
+to a recorded SHA and clears the step markers with it; `abandon` clears the markers and
+writes a build-log line, touching neither the tree nor git, so the diff stays put and the
+step keeps its `[ ]` in the plan ([D79 (abandon-keeps-work)](decisions.md#d79)).
 
 ## How the ignoring works
 

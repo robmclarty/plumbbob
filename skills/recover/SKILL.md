@@ -25,4 +25,4 @@ Reach for it when the dashboard and reality disagree: `status` shows a build you
 
 - **Spike leftovers are reported, never removed.** Those worktrees sit outside the repo and may hold the only copy of what a spike learned, so the verb prints the exact `git worktree remove` / `git branch -D` commands and stops. Relay them; do not run them yourself.
 - **A contradictory phase is yours to settle.** A spike and a step both marked in flight, or a step number the plan no longer contains, need a decision about which one is real; `--fix` deliberately leaves them alone.
-- **It is not a rewind.** Recovering reconciles bookkeeping; it never restores lost work. Discarding a half-done step is `/plumbbob:revert`, and that is a different, destructive move the human asks for by name.
+- **It is not a rewind, and not an exit.** Recovering reconciles bookkeeping; it never restores lost work and never drops a step. Discarding a half-done step is `/plumbbob:revert` (destructive), and dropping one while keeping its work in the tree is `/plumbbob:abandon`; both are different moves the human asks for by name.

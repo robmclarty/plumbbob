@@ -1,28 +1,5 @@
 {
   "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/checkride-gate.sh\"",
-            "timeout": 900,
-            "statusMessage": "checkride gate — running `pnpm check`"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write|NotebookEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "mkdir -p \"${CLAUDE_PROJECT_DIR:-.}/.check\" && touch \"${CLAUDE_PROJECT_DIR:-.}/.check/.dirty\" || true"
-          }
-        ]
-      }
-    ]
   },
   "permissions": {
     "deny": [

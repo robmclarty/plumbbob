@@ -187,7 +187,7 @@ in-flight control markers (`STEP`, `SEAM`, `TICK`, and the step-scoped `handoff.
 an abandon line to the build-log's `## Log`, and records the drop in `stats.json`. It touches
 neither the working tree nor git nor the intent checkbox: the step keeps its `[ ]` and its place
 in the plan, re-buildable later, with its diff still in the tree for you to keep, rework, or
-commit by hand. A step exit is a boundary crossing, so `abandon` honors the same approval latch
+commit by hand ([**D79 (abandon-keeps-work)**](decisions.md#d79)). A step exit is a boundary crossing, so `abandon` honors the same approval latch
 as `checkpoint`: it refuses when no human turn has intervened since the step began, so an abandon
 can never slip a same-turn checkpoint past the pause. Refuses (exit 1) with no session, or with no
 step in flight.
@@ -242,7 +242,7 @@ manifest `command` via `sh -c` at the **repo root** with the agent's own directo
 `PLUMBBOB_AGENT_DIR` ([**D49 (posix-sh)**](decisions.md#d49)) and the context JSON on stdin, streams the child's stderr
 live, and, on a clean run (exit 0 + a valid envelope), lands any `parked[]` through the
 park verb ([**D44 (cli-side-effects)**](decisions.md#d44)), appends the envelope to the step-scoped `builds/<slug>/handoff.json`
-ledger (untracked, cleared at checkpoint; [**D47 (handoff-ledger)**](decisions.md#d47)), prints the human summary on stderr, and
+ledger (untracked, cleared at checkpoint or abandon; [**D47 (handoff-ledger)**](decisions.md#d47)), prints the human summary on stderr, and
 re-emits the machine envelope on **its own stdout** for the calling skill ([**D46 (stream-discipline)**](decisions.md#d46)).
 
 - **`--step N`** picks the step (else the in-flight `STEP`; without either it refuses).
@@ -417,7 +417,7 @@ stays git-excluded; a session is live iff `STATE` is present.
       STEP                 # untracked — the in-flight step number (its presence is the BUILD phase)
       SEAM                 # untracked — the in-flight step's declared paths (awareness, not a lock)
       SPIKE                # untracked — marker, present while a spike fork is open
-      handoff.json         # untracked — step-scoped agent-run ledger, cleared at checkpoint — D47 (handoff-ledger)
+      handoff.json         # untracked — step-scoped agent-run ledger, cleared at checkpoint or abandon — D47 (handoff-ledger)
 ```
 
 Which build a verb acts on resolves `--build <slug>` → the active-build cursor in `STATE` → the sole

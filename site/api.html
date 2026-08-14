@@ -239,11 +239,11 @@
       <sc-if value="{{ isSkills }}" hint-placeholder-val="{{ true }}">
         <div>
           <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:3px; color:#5A32C8; margin-bottom:14px;">THE SURFACE YOU DRIVE · START HERE</div>
-          <h1 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:60px; line-height:1; margin:0 0 20px;">The thirteen skills</h1>
+          <h1 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:60px; line-height:1; margin:0 0 20px;">The fourteen skills</h1>
           <p style="font-size:18px; line-height:1.6; color:#2E2A44; max-width:680px;">This is the interface you actually use. Every skill is <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">disable-model-invocation</span> — <em>you</em> fire every move. Claude Code namespaces them under the plugin, so the command is <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">/plumbbob:plan</span>; the bare <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">/plan</span> reaches it only where nothing else owns that name. The <span onClick="{{ goVerbs }}" style="cursor:pointer; color:#5A32C8; font-weight:700; border-bottom:2px solid #5A32C8;">CLI verbs</span> are the lower-level layer these shell out to — reach for them only to script the loop or drive it from another host.</p>
 
           <div style="margin-top:32px; display:flex; flex-direction:column; gap:12px;">
-            <sc-for list="{{ skillCards }}" as="c" hint-placeholder-count="12">
+            <sc-for list="{{ skillCards }}" as="c" hint-placeholder-count="14">
               <div style="border:3px solid #181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231; background:#ECEAF4;">
                 <div onClick="{{ c.toggle }}" style="cursor:pointer; display:flex; align-items:center; gap:16px; padding:16px 20px;">
                   <div style="font-family:'JetBrains Mono',monospace; font-size:16px; font-weight:700; color:{{ c.accent }}; min-width:130px;">{{ c.name }}</div>
@@ -296,7 +296,7 @@ class Component extends DCLogic {
   renderVals() {
     const sec = this.state.section;
     const navDef = [
-      { title: 'SKILLS · START HERE', items: [['skills', 'The thirteen skills']] },
+      { title: 'SKILLS · START HERE', items: [['skills', 'The fourteen skills']] },
       { title: 'THE SIDECAR', items: [['sidecar', 'The .plumbbob/ layout'], ['settings', 'Settings']] },
       { title: 'CLI · ADVANCED', items: [['commands', 'Verbs'], ['flags', 'Flags'], ['exit-codes', 'Exit codes']] },
     ];
@@ -414,6 +414,8 @@ class Component extends DCLogic {
         'The orientation move — a thin trigger for plumbbob status. Prints the dashboard (title, phase, the step list with the next step\'s done-when, seam, and advisory model recommendation, last checkpoint, parked and open-question counts) and names the single next move. The model line is the plan\'s suggestion of the smallest model that can carry the next step — guidance, never a gate. Read-only; fire it any time you lose the thread.'],
       ['/plumbbob:revert', 'helper', '[--to <step>]', 'Rewind — git reset --hard to a recorded checkpoint SHA.',
         'The undo — a human-triggered driver for plumbbob revert. Resets --hard to the last recorded checkpoint (or --to <step>, or the baseline as fallback), snapshotting the build folder across the reset so park lines and intent edits survive. Untracked files inside the seam are removed; everything outside it is left alone.'],
+      ['/plumbbob:abandon', 'helper', '—', 'Drop the in-flight step, keep its work in the tree.',
+        'The third exit from an in-flight step — checkpoint lands it, revert destroys the work, abandon drops the attempt and keeps the working-tree diff exactly where it is. It clears the in-flight markers and writes an abandon line to the build log, touching neither the tree nor git nor the plan: the step keeps its [ ] and stays re-buildable, with the diff yours to keep, rework, or commit by hand. A step exit is a boundary crossing, so abandon honors the same approval latch as checkpoint.'],
       ['/plumbbob:recover', 'helper', '[--fix]', 'Reconcile the session\'s own state when the dashboard looks wrong.',
         'For when the dashboard and reality disagree — a driver for plumbbob recover. Reads the session\'s state as a set and says whether it is telling the truth: does the active-build cursor still point at a build that exists (one that doesn\'t makes status render an empty dashboard rather than refuse), is the phase readable (a spike and a step both in flight, or a step number the plan no longer contains), and is anything left over from a step that never finished (an orphaned agent handoff ledger, a stranded latch stamp, a self-approval grant nothing will clear). Reports by default; --fix rewrites only the stale untracked control files — never intent, the build log, the checkpoints ledger, or git. Leftover spike worktrees are named with their removal commands but never deleted. It reconciles bookkeeping; it never restores lost work — that is /plumbbob:revert.'],
       ['/plumbbob:doctor', 'helper', '—', 'Check the install from inside a session.',

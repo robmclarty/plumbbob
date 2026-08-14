@@ -123,7 +123,8 @@ marked at once, an agent handoff ledger left over from a step that never landed,
 stamp stranded at the boundary by a `revert`. **Fix.** `plumbbob recover` reports each one
 with its consequence; `plumbbob recover --fix` repairs the ones that need no judgment. It
 touches only untracked control files (never intent, the build log, the checkpoints ledger,
-or git), and it is not a rewind: discarding a half-done step is still `/plumbbob:revert`.
+or git), and it is not a rewind: discarding a half-done step is still `/plumbbob:revert`,
+and dropping one while keeping its work in the tree is `/plumbbob:abandon`.
 
 ### `/plumbbob:park` or `/plumbbob:harvest` refuses
 
@@ -203,7 +204,8 @@ unaffected: `npm i -g plumbbob` ignores `devEngines` (it is dev-scoped to this p
 ### `spike` refuses to start
 
 **Cause.** Spikes start from a settled boundary ([**D18 (spike-lifecycle)**](decisions.md#d18)), not while a step is in flight.
-**Fix.** If a step is in flight, finish or revert it first. "Already in a spike" → run
+**Fix.** If a step is in flight, exit it first: checkpoint it, abandon it (the work stays
+in the tree), or revert it. "Already in a spike" → run
 `plumbbob spike done` to close the current one.
 If a worktree path "already exists," remove it or run `spike done`.
 

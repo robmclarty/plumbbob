@@ -81,14 +81,15 @@ describe('every skill (the three reinforcing layers)', () => {
 // The driver skills: human-fired chat triggers for the transition verbs
 // (A). They are pure mechanism — shell one verb, report it verbatim — and so are
 // pinned to haiku, disable model invocation, and carry no Edit/Write.
-// The surviving thin drivers: status (orient) plus the optional power moves
-// revert and spike. build is the default engine (own contract); the superseded
-// start/review/done drivers were removed in step 8.
+// The thin drivers: status (orient) plus the optional power moves revert,
+// spike, recover, and abandon. build is the default engine (own contract); the
+// superseded start/review/done drivers are gone.
 const DRIVER_VERB: Record<string, string> = {
   'status': 'status',
   'revert': 'revert',
   'spike': 'spike',
   'recover': 'recover',
+  'abandon': 'abandon',
 }
 
 describe('driver skills — the human fires the transition from the chat', () => {

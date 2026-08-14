@@ -123,9 +123,9 @@ function readInFlightStep(root: string, buildSlug: string | null): number | null
  * Open a spike: one throwaway worktree + `spike/<slug>-<opt>` branch per option.
  *
  * Refuses when a spike is already open or a step is in flight: a spike is a
- * deliberate fork from a settled boundary, so the current step must checkpoint
- * or revert first. Marks the SPIKE control file and scaffolds the report before
- * returning.
+ * deliberate fork from a settled boundary, so the current step must exit first
+ * (checkpoint, abandon, or revert). Marks the SPIKE control file and scaffolds
+ * the report before returning.
  */
 function spikeStart(root: string, buildSlug: string | null, positionals: ReadonlyArray<string>): number {
   if (inSpike(root, buildSlug)) {
@@ -135,7 +135,7 @@ function spikeStart(root: string, buildSlug: string | null, positionals: Readonl
   if (existsSync(stepPath(root, buildSlug))) {
     process.stderr.write(
       'plumbbob: spike starts from a settled boundary, but a step is in flight. ' +
-        'A spike is a deliberate fork — checkpoint or revert the current step first.\n',
+        'A spike is a deliberate fork — checkpoint, abandon, or revert the current step first.\n',
     )
     return 1
   }

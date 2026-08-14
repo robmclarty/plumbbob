@@ -1,6 +1,6 @@
 # Skills reference
 
-The thirteen skills are the surface you actually drive; the CLI underneath
+The fourteen skills are the surface you actually drive; the CLI underneath
 ([`cli-reference.md`](cli-reference.md)) is what they shell out to. This page is the
 reference for that surface: what each skill is for, what it takes, what it reads and
 writes, and when to reach for it.
@@ -29,6 +29,7 @@ Two ground rules apply to all of them:
 | [`/plumbbob:finish`](#finish) | none | write the report, make the final commit, clear for a fresh goal |
 | [`/plumbbob:refine`](#refine) | `[focus]` | attack the plan for holes, or repair a drifted one |
 | [`/plumbbob:revert`](#revert) | `[--to <step>]` | rewind: `git reset --hard` to a recorded checkpoint |
+| [`/plumbbob:abandon`](#abandon) | none | drop the in-flight step, keep its work in the tree; the step stays planned |
 | [`/plumbbob:spike`](#spike) | `<slug> \| done` | throwaway worktree experiment for a fork the plan can't settle |
 | [`/plumbbob:recover`](#recover) | `[--fix]` | reconcile the session's own state when the dashboard looks wrong |
 | [`/plumbbob:doctor`](#doctor) | none | check the install from inside a session |
@@ -156,7 +157,19 @@ on your approval. Where `/plumbbob:step` sharpens one step, refine works the who
 The undo: a human-triggered driver for `plumbbob revert`. Resets `--hard` to the last
 recorded checkpoint (or `--to <step>`, or the baseline as fallback), snapshotting the
 build folder across the reset so park lines and intent edits survive. Untracked files
-inside the seam are removed; everything outside it is left alone.
+inside the seam are removed; everything outside it is left alone. To drop the step
+while keeping its work, reach for [`abandon`](#abandon) instead.
+
+### abandon
+
+The third exit from an in-flight step. [`verify`](#verify) lands the step and
+[`revert`](#revert) destroys its work; `/plumbbob:abandon` (a driver for `plumbbob
+abandon`) drops the attempt and keeps the working-tree diff exactly where it is
+([D79 (abandon-keeps-work)](decisions.md#d79)). It clears only the in-flight markers and
+appends an abandon line to the build log: no reset, no commit, no edit to the plan, so
+the step keeps its `[ ]` and stays re-buildable, with the diff yours to keep, rework, or
+commit by hand. A step exit is a boundary crossing, so it honors the same approval latch
+as `checkpoint`.
 
 ### spike
 

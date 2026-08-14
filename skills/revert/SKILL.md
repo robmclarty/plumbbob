@@ -16,5 +16,5 @@ This is a **driver skill**: a chat-side trigger for the mechanical `plumbbob rev
 ## What it does
 
 1. Read an optional target step from the way you were invoked (for example `/plumbbob:revert --to 2` → step `2`). With no target, revert goes to the last done-checkpoint.
-2. Run `plumbbob revert` (or `plumbbob revert --to <n>`) via Bash. This is a `git reset --hard`; it discards the current in-progress step. Run it exactly as the human asked; do not add or drop the `--to` on your own.
+2. Run `plumbbob revert` (or `plumbbob revert --to <n>`) via Bash. This is a `git reset --hard`; it discards the current in-progress step *and its work*. If the human wants to drop the step but keep the working-tree diff, that is `/plumbbob:abandon`, not revert. Run it exactly as the human asked; do not add or drop the `--to` on your own.
 3. Report the verb's output verbatim: which checkpoint it reset to, or any refusal.
