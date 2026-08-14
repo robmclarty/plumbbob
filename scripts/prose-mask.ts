@@ -1,8 +1,8 @@
 // scripts/prose-mask.ts: the shared span collector for "what's code, not prose" in a
 // markdown file. Fenced blocks, inline code, and indented code blocks all vanish from
 // the citation scanner (D74 (glossed-citations)) and `Repo.EmDash` alike; this module is
-// the one place that collects those spans, so the two consumers cannot drift into two
-// different counts of the same file (D2 (shared-mask)).
+// the one place that collects those spans, so the two consumers share one mask and
+// cannot drift into two different counts of the same file.
 
 export type Span = readonly [number, number]
 
@@ -36,9 +36,9 @@ function splitIntoLines(text: string): { lines: readonly string[]; starts: reado
 }
 
 /**
- * The span of every run of consecutive non-blank lines in `text`: the boundary a code
- * span cannot cross (D15 (wrapped-code-spans)). CommonMark closes a code span at the
- * next matching backtick string regardless of newlines, but a blank line ends the block
+ * The span of every run of consecutive non-blank lines in `text`: the boundary a
+ * wrapped code span cannot cross. CommonMark closes a code span at the next matching
+ * backtick string regardless of newlines, but a blank line ends the block
  * its inline content is parsed within, so an opening backtick with no close before one
  * stays a literal backtick, never a span.
  */
@@ -64,8 +64,8 @@ function collectNonBlankLineBlocks(text: string): Span[] {
 }
 
 /**
- * Every inline code span (backtick-delimited, spanning a line break under
- * D15 (wrapped-code-spans) but never a blank line) in `text`.
+ * Every inline code span (backtick-delimited, spanning a line break but never a blank
+ * line) in `text`.
  */
 function collectInlineCodeSpans(text: string): Span[] {
   const spans: Span[] = []
@@ -95,9 +95,9 @@ function leadingColumns(line: string): number {
 }
 
 /**
- * Every indented code block span in `text`, under CommonMark's own rule
- * (D14 (commonmark-parity)): a run of non-blank lines each indented four or more
- * columns is a code block only when it cannot be read as a paragraph continuation,
+ * Every indented code block span in `text`, under CommonMark's own rule: a run of
+ * non-blank lines each indented four or more columns is a code block only when it
+ * cannot be read as a paragraph continuation,
  * meaning the line immediately before the run is blank (or the run opens the
  * document) or itself already inside the block. A four-plus-space run that instead
  * follows a paragraph line is paragraph continuation text, and stays unmasked. List

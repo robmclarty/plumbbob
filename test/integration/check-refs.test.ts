@@ -188,6 +188,7 @@ describe('scanRepo — walks the surfaces and honors the skip list', () => {
     created.push(dir)
     mkdirSync(join(dir, 'docs'), { recursive: true })
     mkdirSync(join(dir, 'src'), { recursive: true })
+    mkdirSync(join(dir, 'scripts'), { recursive: true })
     mkdirSync(join(dir, 'research'), { recursive: true })
     mkdirSync(join(dir, '.plumbbob'), { recursive: true })
     mkdirSync(join(dir, 'test'), { recursive: true })
@@ -196,6 +197,7 @@ describe('scanRepo — walks the surfaces and honors the skip list', () => {
     writeFileSync(join(dir, 'docs', 'decisions.md'), '- <a id="d1"></a>**D1 (lean-cli) — A deterministic, lean CLI.**\n')
     writeFileSync(join(dir, 'docs', 'example.md'), 'D1 needs a link.\n')
     writeFileSync(join(dir, 'src', 'example.ts'), "// clean\nconst msg = 'D1 (lean-cli) is the foundation'\n")
+    writeFileSync(join(dir, 'scripts', 'tool.ts'), "// clean\nconst note = 'D1 (lean-cli) powers the tool'\n")
     writeFileSync(join(dir, 'research', 'notes.md'), 'D1 bare, but research/ is out of scope.\n')
     writeFileSync(join(dir, '.plumbbob', 'build.md'), 'D1 bare, but .plumbbob/ is out of scope.\n')
     writeFileSync(join(dir, 'test', 'scratch.test.ts'), "it('D1: bare', () => {})\n")
@@ -204,13 +206,21 @@ describe('scanRepo — walks the surfaces and honors the skip list', () => {
     return dir
   }
 
-  it('scans only docs/**/*.md and src/**/*.ts, skipping the rest (including examples/, D6 (records-stay))', () => {
+  it('scans docs/**/*.md, src/**/*.ts, and scripts/**/*.ts, skipping the rest (including examples/, D6 (records-stay))', () => {
     const dir = makeTree()
     const { violations, filesScanned } = scanRepo(dir)
-    expect(filesScanned).toBe(3) // docs/decisions.md, docs/example.md, src/example.ts
+    expect(filesScanned).toBe(4) // docs/decisions.md, docs/example.md, src/example.ts, scripts/tool.ts
     expect(violations).toHaveLength(1)
     expect(violations[0]?.file).toBe(join('docs', 'example.md'))
     expect(violations[0]?.kind).toBe('unlinked')
     expect(violations[0]?.line).toBe(1)
+  })
+
+  it('walks scripts/**/*.ts and checks it as the src surface (D16 (scripts-in-refs-scan))', () => {
+    const dir = makeTree()
+    writeFileSync(join(dir, 'scripts', 'flag.ts'), "const bad = 'D1 printed without its gloss'\n")
+    const { violations } = scanRepo(dir)
+    const scriptViolation = violations.find((violation) => violation.file === join('scripts', 'flag.ts'))
+    expect(scriptViolation?.kind).toBe('missing-slug')
   })
 })

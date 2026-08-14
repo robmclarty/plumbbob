@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // scripts/check-refs.ts: the citation scanner. Reads docs/decisions.md for the
-// canonical D#/C# -> slug map, then scans every markdown file and every src/
-// TypeScript file for citations of those tags, flagging one that is bare, mislinked,
-// or unglossed. Wired into checkride.config.json as the `refs` slot, so it runs in the
-// full gate and in the per-turn profile alike; `node scripts/check-refs.ts` still runs
-// it standalone. The rule it enforces is D74 (glossed-citations).
+// canonical D#/C# -> slug map, then scans every markdown file and every src/ and
+// scripts/ TypeScript file for citations of those tags, flagging one that is bare,
+// mislinked, or unglossed. Wired into checkride.config.json as the `refs` slot, so it
+// runs in the full gate and in the per-turn profile alike; `node scripts/check-refs.ts`
+// still runs it standalone. The rule it enforces is D74 (glossed-citations).
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
@@ -66,8 +66,8 @@ export function parseDefinitions(decisionsText: string): Map<string, string> {
 }
 
 /**
- * The shared fenced/inline/indented mask (D2 (shared-mask)), plus a definition-line
- * exclusion this scanner alone needs: a `decisions.md` `<a id="dN"></a>**DN (slug)**`
+ * The shared fenced/inline/indented mask, plus a definition-line exclusion this
+ * scanner alone needs: a `decisions.md` `<a id="dN"></a>**DN (slug)**`
  * header cites its own tag without citing itself.
  */
 function collectExclusionSpans(text: string): ReadonlyArray<readonly [number, number]> {
@@ -127,9 +127,9 @@ function wrongSlugMessage(citation: RawCitation, canonicalSlug: string | null): 
 /**
  * The four markdown rules (linked, anchor matches the cited number, slug present,
  * slug matches the definition verbatim) or the src variant, where a slug is required
- * and a link is forbidden because markdown in a terminal is noise (D74
- * (glossed-citations)), whichever the citation's surface is. Returns the first rule
- * that fails, or null for a clean citation.
+ * and a link is forbidden because markdown in a terminal is noise
+ * (D74 (glossed-citations)), whichever the citation's surface is. Returns the first
+ * rule that fails, or null for a clean citation.
  */
 export function checkCitation(
   citation: RawCitation,
@@ -198,17 +198,17 @@ function* walkFiles(root: string, dir: string): Generator<string> {
     const rel = relative(root, full)
     if (rel.endsWith('.md')) {
       yield full
-    } else if (rel.endsWith('.ts') && rel.startsWith(`src${sep}`)) {
+    } else if (rel.endsWith('.ts') && (rel.startsWith(`src${sep}`) || rel.startsWith(`scripts${sep}`))) {
       yield full
     }
   }
 }
 
 /**
- * Walks `root` for every markdown file and every src/ TypeScript file, checking each
- * D#/C# citation against docs/decisions.md's canonical map. `.plumbbob/`, `research/`,
- * `CHANGELOG.md`, and every test file are out of scope: the carve-outs D74
- * (glossed-citations) names.
+ * Walks `root` for every markdown file and every src/ and scripts/ TypeScript file,
+ * checking each D#/C# citation against docs/decisions.md's canonical map. `.plumbbob/`,
+ * `research/`, `CHANGELOG.md`, and every test file are out of scope: the carve-outs
+ * D74 (glossed-citations) names.
  */
 export function scanRepo(root: string): ScanResult {
   const decisionsPath = join(root, 'docs', 'decisions.md')

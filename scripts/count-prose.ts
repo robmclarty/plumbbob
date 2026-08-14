@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // scripts/count-prose.ts: a mask-aware sweep sizer. Counts occurrences of `--pattern`
 // (default U+2014, the em-dash) in markdown prose using the same fenced/inline/indented
-// mask `scripts/prose-mask.ts` shares with the citation scanner (D2 (shared-mask)), so a
+// mask `scripts/prose-mask.ts` shares with the citation scanner, so a
 // sizing run predicts what `Repo.EmDash` will actually flag instead of lying the way raw
 // grep (counts code spans too) or vale's own per-file totals (collapse a multi-line
 // paragraph's findings into one position) both do. A meter, not a gate: it always exits 0.
@@ -12,8 +12,8 @@ import { collectIndentedCodeSpans, collectMaskSpans, isWithin } from './prose-ma
 
 export const DEFAULT_PATTERN = '—'
 
-// The `prose` slot's own walk (checkride.config.json); markdown-first (D3
-// (markdown-first)), so a `.ts`-only directory in this list simply yields no files.
+// The `prose` slot's own walk (checkride.config.json); markdown-first, so a
+// `.ts`-only directory in this list simply yields no files.
 const DEFAULT_PATHS: readonly string[] = ['README.md', 'CONTRIBUTING.md', 'SECURITY.md', 'docs', 'src', 'scripts', 'skills', 'templates']
 
 export type FileCount = {
@@ -104,8 +104,8 @@ export function collectMarkdownFiles(root: string, paths: readonly string[]): st
 
 /**
  * How many matches of `pattern` fall outside the shared fenced/inline/indented mask
- * (D2 (shared-mask), D14 (commonmark-parity)): the count `Repo.EmDash` would actually
- * flag in `text`.
+ * (CommonMark's own scope for what counts as code): the count `Repo.EmDash` would
+ * actually flag in `text`.
  */
 export function countMatches(text: string, pattern: RegExp): number {
   const spans = collectMaskSpans(text)
@@ -126,9 +126,9 @@ function lineOf(text: string, index: number): number {
 }
 
 /**
- * Every masked indented-code span across `files`, for `--show-masked` auditing: D14
- * (commonmark-parity) names list context as the mask's one approximation, so this is
- * what a sizing run eyeballs instead of trusting blind.
+ * Every masked indented-code span across `files`, for `--show-masked` auditing: the
+ * CommonMark-parity rule leaves list context as the mask's one approximation, so this
+ * is what a sizing run eyeballs instead of trusting blind.
  */
 export function collectMaskedIndentedSpans(root: string, files: readonly string[]): Array<{ file: string; line: number; text: string }> {
   const spans: Array<{ file: string; line: number; text: string }> = []

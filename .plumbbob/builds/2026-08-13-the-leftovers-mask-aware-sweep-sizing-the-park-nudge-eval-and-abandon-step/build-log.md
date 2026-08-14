@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: the leftovers: mask-aware sweep sizing, the park-nudge eval, and abandon-step
 
-**Current step:** 3 — fix(refs): mask an inline code span that wraps a line break
+**Current step:** 4 — fix(refs): scan scripts/ and cite only global decisions there
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -25,7 +25,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
 - ☑ 1. chore(refs): share the masking spans and mask indented blocks
 - ☑ 2. feat(prose): add a mask-aware counter that sizes a prose sweep
-- ☐ 3. fix(refs): mask an inline code span that wraps a line break
+- ☑ 3. fix(refs): mask an inline code span that wraps a line break
 - ☐ 4. fix(refs): scan scripts/ and cite only global decisions there
 - ☐ 5. chore(evals): re-measure c5 both arms at 0.10.0, land the receipt
 - ☐ 6. fix(turn): reword the park nudge and re-measure the latched arm
@@ -39,7 +39,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 > Capture is one line (`/plumbbob:park` composes it). Harvest happens only at the boundary.
 - [x] prose-mask.ts's INLINE_CODE_RE doesn't match a backtick-delimited span that wraps across a line break, so an em-dash inside one (e.g. skills/verify/SKILL.md:100-101) reads as unmasked prose to count-prose.ts
 - [x] check-refs.ts's scan surface excludes scripts/**/*.ts, so a build-local D#/C# citation in a scripts/ comment (e.g. D2, D3, D14 in prose-mask.ts and count-prose.ts, all numbers already taken by unrelated decisions in docs/decisions.md) is never checked and can read as the wrong global decision
-- [ ] step 3's fix added two more build-local D15 citations in scripts/prose-mask.ts (the collectNonBlankLineBlocks doc comment, and collectInlineCodeSpans's); step 4's done-when count (eight build-local tags: D2 x4, D14 x3, D3 x1) is now stale by two and needs D15 named in words too
+- [x] step 3's fix added two more build-local D15 citations in scripts/prose-mask.ts (the collectNonBlankLineBlocks doc comment, and collectInlineCodeSpans's); step 4's done-when count (eight build-local tags: D2 x4, D14 x3, D3 x1) is now stale by two and needs D15 named in words too
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -80,6 +80,20 @@ each want a step, landing before step 5 so the refs slot is honest when abandon 
 written. That is `/plumbbob:step`'s call, not this skill's. *(Made the same day: they ride
 as steps 3 and 4, ahead of the evals; abandon now rides 7, its docs 8; see the Log.)*
 
+**2026-08-14, after step 3. One item, called blocker by Rob; no tangents, no pivot signals.**
+
+- **blocker** — step 3's wrapped-span fix left two build-local `D15 (wrapped-code-spans)`
+  citations behind in `scripts/prose-mask.ts` (the `collectNonBlankLineBlocks` doc comment
+  and `collectInlineCodeSpans`'s, lines 40 and 68). Global `D15` is `one-next-move`
+  (`docs/decisions.md:115`), so the moment step 4 widens the scan to `scripts/**` the pair
+  reads as the wrong global decision: the very gloss mismatch step 4 exists to clear.
+  Step 4's done-when was counted before step 3 landed, so it undercounts by two — "eight
+  build-local tags / ten violations" should read ten and twelve, with `D15` ×2 named in
+  words alongside `D2`, `D14`, and `D3`. No new decision: this rides under the standing
+  D17 (global-tags-only-in-code); the fix is a done-when count correction, and that is
+  `/plumbbob:step`'s surgery, not this skill's. *(Made the same day: step 4's done-when
+  corrected via `/plumbbob:step`; see the Log.)*
+
 ## Log
 
 *(The build's history, oldest first. `plumbbob checkpoint` appends a dated line here
@@ -91,3 +105,6 @@ folder, so it rides the branch into the PR.)*
 - 2026-08-14 — step 1 checkpointed · 38a2b8b56 — chore(refs): share the masking spans and mask indented blocks (2m)
 - 2026-08-14 — step 2 checkpointed · b929bc11a — feat(prose): add a mask-aware counter that sizes a prose sweep (1 drift, 15m)
 - 2026-08-14 — plan revised (`/plumbbob:step`, Rob's call): the two harvest blockers land early as steps 3 (wrapped-span mask fix, D15) and 4 (scripts/ joins the refs scan, D16/D17), so the scanner is honest before abandon is written; evals and the reword shift to 5–6, abandon and its docs to 7–8; every step reference in intent.md synced to the new numbers
+- 2026-08-14 — step 3 checkpointed · 6e5db5d73 — fix(refs): mask an inline code span that wraps a line break (7m)
+- 2026-08-14 — harvest after step 3 (Rob's call): the one open park item called a blocker; step 3 seeded two build-local `D15 (wrapped-code-spans)` cites in `scripts/prose-mask.ts` (lines 40, 68), and global `D15` is `one-next-move`, so they read as the wrong decision once step 4 widens the scan. No new decision; rides under the standing D17 (global-tags-only-in-code)
+- 2026-08-14 — step 4 done-when corrected (`/plumbbob:step`, Rob's call): the tally now reads twelve violations and ten build-local tags, `D15` ×2 joining `D2` ×4, `D14` ×3, `D3` ×1; seam and model unchanged since both cites already sit inside the seam's `scripts/prose-mask.ts`
