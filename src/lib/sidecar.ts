@@ -207,10 +207,28 @@ export function seamPath(root: string, slug?: string | null): string {
 }
 
 /**
+ * Remove the SEAM marker: `abandon` drops the in-flight step's edit grant, the
+ * same clear `checkpoint` and `revert` do inline. Homed here so a verb not
+ * sanctioned to delete on its own can still return to the boundary; absent is a
+ * no-op.
+ */
+export function clearSeam(root: string, slug?: string | null): void {
+  rmSync(seamPath(root, slug), { force: true })
+}
+
+/**
  * STEP: the number of the step in flight, a bare number in a flat file.
  */
 export function stepPath(root: string, slug?: string | null): string {
   return join(artifactDir(root, slug), 'STEP')
+}
+
+/**
+ * Remove the STEP marker alongside SEAM, dropping the build back to the DESIGN
+ * boundary; absent is a no-op.
+ */
+export function clearStep(root: string, slug?: string | null): void {
+  rmSync(stepPath(root, slug), { force: true })
 }
 
 /**
@@ -351,6 +369,7 @@ export type StepStats = {
   readonly redChecks?: number
   readonly driftWarnings?: number
   readonly reverts?: number
+  readonly abandons?: number
   readonly startedAt?: string
   readonly landedAt?: string
 }
@@ -387,7 +406,7 @@ export function bumpStepStat(
   root: string,
   slug: string | null | undefined,
   step: number,
-  key: 'redChecks' | 'driftWarnings' | 'reverts',
+  key: 'redChecks' | 'driftWarnings' | 'reverts' | 'abandons',
 ): void {
   patchStepStat(root, slug, step, (current) => ({ [key]: (current[key] ?? 0) + 1 }))
 }

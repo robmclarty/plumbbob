@@ -204,7 +204,7 @@ function phaseFindings(root: string, slug: string, stepInFlight: boolean): Reado
         name: 'step marker',
         ok: false,
         detail: `step ${marker} is in flight but the plan has no step ${marker} (planned: ${planned.join(', ')})`,
-        hint: 'the plan was rewritten under the step — sharpen it with /plumbbob:step, or plumbbob revert to drop the step',
+        hint: 'the plan was rewritten under the step — sharpen it with /plumbbob:step, plumbbob revert to drop the step and its work, or plumbbob abandon to drop the step but keep the work',
       })
     }
   }

@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: the leftovers: mask-aware sweep sizing, the park-nudge eval, and abandon-step
 
-**Current step:** 5 — chore(evals): re-measure c5 both arms at 0.10.0, land the receipt
+**Current step:** 7 — feat(abandon): drop an in-flight step and keep the work
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -27,8 +27,8 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 2. feat(prose): add a mask-aware counter that sizes a prose sweep
 - ☑ 3. fix(refs): mask an inline code span that wraps a line break
 - ☑ 4. fix(refs): scan scripts/ and cite only global decisions there
-- ☐ 5. chore(evals): re-measure c5 both arms at 0.10.0, land the receipt
-- ☐ 6. fix(turn): reword the park nudge and re-measure the latched arm
+- ☑ 5. chore(evals): re-measure c5 both arms at 0.10.0, land the receipt
+- ☑ 6. fix(turn): reword the park nudge [STRUCK 2026-08-14, not built]
 - ☐ 7. feat(abandon): drop an in-flight step and keep the work
 - ☐ 8. docs(abandon): add the driver skill and record the decision
 
@@ -109,3 +109,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-08-14 — harvest after step 3 (Rob's call): the one open park item called a blocker; step 3 seeded two build-local `D15 (wrapped-code-spans)` cites in `scripts/prose-mask.ts` (lines 40, 68), and global `D15` is `one-next-move`, so they read as the wrong decision once step 4 widens the scan. No new decision; rides under the standing D17 (global-tags-only-in-code)
 - 2026-08-14 — step 4 done-when corrected (`/plumbbob:step`, Rob's call): the tally now reads twelve violations and ten build-local tags, `D15` ×2 joining `D2` ×4, `D14` ×3, `D3` ×1; seam and model unchanged since both cites already sit inside the seam's `scripts/prose-mask.ts`
 - 2026-08-14 — step 4 checkpointed · bcc358192 — fix(refs): scan scripts/ and cite only global decisions there (9m)
+- 2026-08-14 — step 5 checkpointed · d3a82abaa — chore(evals): re-measure c5 both arms at 0.10.0, land the receipt (1 drift, 68m)

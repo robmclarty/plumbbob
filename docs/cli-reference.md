@@ -26,6 +26,7 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 | `check` | `check [--bail] [--changed] [--all] [--only a,b] [--skip a,b] [--include a,b]` | run the heavy gate; no state change |
 | `checkpoint` | `checkpoint [<n>] [--plan] [-m <msg>] [--body <<'BODY'…]` | gate on green, commit, record SHA, mark step done |
 | `revert` | `revert [--to <n>] [--build <slug>]` | `git reset --hard` to a checkpoint SHA |
+| `abandon` | `abandon [--build <slug>]` | drop the in-flight step, keep its work in the tree |
 | `park` | `park <text>` | append a line to the park list |
 | `spike` | `spike <slug> [opt…] [--build <slug>]` \| `spike report <slug>` \| `spike done` | throwaway worktree experiment |
 | `agent` | `agent list` \| `agent run <name> [--step N] [--mode …] [--agent <path>] [--build <slug>]` | list user-authored agents, or run one through the doorway |
@@ -38,7 +39,7 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 | `help` | `help [<verb>]` \| `--help` \| `-h` | print the verb table, or one verb's flags |
 | `version` | `version` \| `--version` \| `-v` | print the CLI version |
 
-`status`, `build`, `handoff`, `revert`, `spike`, `finish`, and `agent` accept `--build <slug>`
+`status`, `build`, `handoff`, `revert`, `abandon`, `spike`, `finish`, and `agent` accept `--build <slug>`
 to target a specific build; without it, the verb resolves the active build from the cursor
 ([**D28 (state-cursor)**](decisions.md#d28), see [the layout](#the-plumbbob-sidecar)). The other verbs act on
 the cursor's build only.
@@ -173,6 +174,23 @@ park lines and intent edits survive even when reverting to a baseline that preda
 ([**C4 (never-destroy)**](decisions.md#c4)). Untracked files **inside the seam** are removed, files outside it are left alone.
 Clears `SEAM`/`STEP`, dropping back to the `DESIGN` boundary. Refuses (exit 1) with no session,
 an invalid `--to`, or a step with no recorded checkpoint.
+
+### abandon
+
+```text
+plumbbob abandon [--build <slug>]
+```
+
+The third exit from an in-flight step. `checkpoint` lands it and `revert` destroys the work;
+`abandon` drops the attempt and keeps the working-tree diff exactly where it is. It clears the
+in-flight control markers (`STEP`, `SEAM`, `TICK`, and the step-scoped `handoff.json`), appends
+an abandon line to the build-log's `## Log`, and records the drop in `stats.json`. It touches
+neither the working tree nor git nor the intent checkbox: the step keeps its `[ ]` and its place
+in the plan, re-buildable later, with its diff still in the tree for you to keep, rework, or
+commit by hand. A step exit is a boundary crossing, so `abandon` honors the same approval latch
+as `checkpoint`: it refuses when no human turn has intervened since the step began, so an abandon
+can never slip a same-turn checkpoint past the pause. Refuses (exit 1) with no session, or with no
+step in flight.
 
 ### park
 

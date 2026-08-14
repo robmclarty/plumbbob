@@ -115,3 +115,14 @@ export function checkpointLogLine(
   const titled = title !== null && title.length > 0 ? `${head} — ${title}` : head
   return stats !== null && stats.length > 0 ? `${titled} (${stats})` : titled
 }
+
+/**
+ * The Log line `abandon` writes for a dropped-but-kept step: the first
+ * non-checkpoint event the log records. Dated, names the step (its title when
+ * intent.md still carries it), and states plainly that the work stayed in the
+ * tree, so the narrative never has a step go quiet mid-flight.
+ */
+export function abandonLogLine(date: string, step: number, title: string | null): string {
+  const head = `- ${date} — step ${step} abandoned · work kept in tree`
+  return title !== null && title.length > 0 ? `${head} — ${title}` : head
+}

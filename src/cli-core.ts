@@ -20,6 +20,7 @@ import { handoff } from './verbs/handoff.ts'
 import { check } from './verbs/check.ts'
 import { checkpoint } from './verbs/checkpoint.ts'
 import { revert } from './verbs/revert.ts'
+import { abandon } from './verbs/abandon.ts'
 import { spike } from './verbs/spike.ts'
 import { use } from './verbs/use.ts'
 import { finish } from './verbs/finish.ts'
@@ -148,6 +149,14 @@ const VERBS: ReadonlyArray<Verb> = [
       BUILD_FLAG,
     ],
     notes: 'Refuses (exit 1) with no session, an invalid --to, or a step with no recorded checkpoint.',
+  },
+  {
+    name: 'abandon',
+    description: 'drop the in-flight step but keep its work in the tree',
+    synopsis: ['abandon [--build <slug>]'],
+    flags: [BUILD_FLAG],
+    notes:
+      'Refuses (exit 1) with no session, no step in flight, or a latched boundary (no human turn since the step began). Clears STEP/SEAM/TICK/handoff and logs the abandon; never touches the working tree, git, or the intent checkbox.',
   },
   {
     name: 'park',
@@ -371,6 +380,8 @@ async function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>):
       return checkpoint(cwd, rest)
     case 'revert':
       return revert(cwd, rest)
+    case 'abandon':
+      return abandon(cwd, rest)
     case 'spike':
       return spike(cwd, rest)
     case 'use':

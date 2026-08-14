@@ -331,6 +331,8 @@ class Component extends DCLogic {
         'The executor-agnostic commit tick. Resolves the step (explicit n, else the in-flight STEP, else the first undone), gates on a green check, commits with a Conventional subject <type>(<scope>): <description>, appends "step n <sha>" to checkpoints, flips the step to [x], and clears SEAM/STEP. --plan commits only the artifact folder as chore(<scope>): plan. The latch: it refuses to land a step until the harness records a human turn since that step began — the model can\'t self-commit past you.'],
       ['revert', 'plumbbob revert [--to <n>] [--build <slug>]',
         'git reset --hard to a recorded checkpoint SHA: the last step by default, --to <n> for a specific one, or the baseline as fallback. Snapshots builds/<slug>/ across the reset, so park lines and intent edits survive even when reverting to a pre-folder baseline. Untracked files inside the seam are removed; outside it, left alone.'],
+      ['abandon', 'plumbbob abandon [--build <slug>]',
+        'The third exit from an in-flight step: checkpoint lands it, revert destroys the work, and abandon drops the attempt but keeps the working-tree diff. Clears the in-flight markers (STEP, SEAM, TICK, handoff.json), logs the abandon to the build-log, and records it in stats.json, touching neither the working tree, git, nor the intent checkbox, so the step stays planned and re-buildable. A step exit is a boundary crossing, so it honors the same approval latch as checkpoint and refuses until a human turn intervenes.'],
       ['park', 'plumbbob park "<text>"',
         'The dumb capture path — appends <text> under ## Park list in build-log.md and prints "parked: <text>". Composing the tidy tagged line is the /plumbbob:park skill\'s job. Refuses on no session, empty text, or no ## Park list section.'],
       ['spike', 'plumbbob spike "<slug>" [opt…] [--build <slug>]\nplumbbob spike report "<slug>"\nplumbbob spike done',
@@ -381,7 +383,7 @@ class Component extends DCLogic {
       ['--to <n>', 'revert', 'Reset to step n\'s recorded checkpoint SHA instead of the last one.'],
       ['--migrate', 'doctor', 'Move a legacy flat sidecar into tracked builds/<slug>/ folders and stage the move.'],
       ['--fix', 'recover', 'Repair the stale untracked control files recover can put right on its own.'],
-      ['--build <slug>', 'status / build / handoff / revert / spike / finish / agent', 'Target a specific build instead of resolving from the cursor.'],
+      ['--build <slug>', 'status / build / handoff / revert / abandon / spike / finish / agent', 'Target a specific build instead of resolving from the cursor.'],
     ].map(([flag, verb, effect], i) => ({ flag, verb, effect, bg: i % 2 ? '#E1DCF0' : '#ECEAF4' }));
 
     // ---- settings keys ----
