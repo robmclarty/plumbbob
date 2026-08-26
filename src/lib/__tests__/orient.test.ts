@@ -7,6 +7,7 @@ import {
   parseLastCheckpoint,
   parseOpenQuestions,
   parseParked,
+  parseRequestedStep,
   parseSteps,
   parseTitle,
 } from '../orient.ts'
@@ -49,7 +50,15 @@ const BUILDLOG = `# Build log
 `
 
 const CHECKPOINTS = 'baseline deadbeef\nstep 1 abc1234def\n'
-const base = { intent: INTENT, buildLog: BUILDLOG, checkpoints: CHECKPOINTS, inFlight: null, spiking: false, outOfBand: 0 }
+const base = {
+  intent: INTENT,
+  buildLog: BUILDLOG,
+  checkpoints: CHECKPOINTS,
+  inFlight: null,
+  spiking: false,
+  requested: null,
+  outOfBand: 0,
+}
 
 describe('orient parsers', () => {
   it('parseTitle takes the first heading', () => {
@@ -533,11 +542,121 @@ describe('formatOrientation', () => {
   })
 
   it('empty inputs degrade to placeholders, never throw', () => {
-    const out = formatOrientation(orient({ intent: '', buildLog: '', checkpoints: '', inFlight: null, spiking: false, outOfBand: 0 }))
+    const out = formatOrientation(
+      orient({ intent: '', buildLog: '', checkpoints: '', inFlight: null, spiking: false, requested: null, outOfBand: 0 }),
+    )
     expect(out).toContain('PlumbBob — (untitled)   [DESIGN]')
     expect(out).toContain('  (no steps planned yet)')
     expect(out).toContain('last checkpoint  none yet')
     expect(out).toContain('parked 0 · open questions 0')
     expect(out).toContain('plan the first step')
+  })
+})
+
+describe('parseRequestedStep', () => {
+  it('reads a bare step number, ignoring flags around it', () => {
+    expect(parseRequestedStep('22')).toBe(22)
+    expect(parseRequestedStep('  22 --auto')).toBe(22)
+    expect(parseRequestedStep('--auto 22')).toBe(22)
+  })
+
+  it('reads a range as its first number (the range is the skill\'s auto-approve ceiling)', () => {
+    expect(parseRequestedStep('1-3')).toBe(1)
+    expect(parseRequestedStep('22-24 --auto')).toBe(22)
+  })
+
+  it('parses no ask to null', () => {
+    expect(parseRequestedStep(null)).toBe(null)
+    expect(parseRequestedStep('')).toBe(null)
+    expect(parseRequestedStep('--auto')).toBe(null)
+    // A host that never substitutes the invocation passes the placeholder
+    // through literally; that must degrade to "no ask", not a step.
+    expect(parseRequestedStep('$ARGUMENTS')).toBe(null)
+    expect(parseRequestedStep('0')).toBe(null)
+  })
+})
+
+describe('orient with an explicitly requested step', () => {
+  // The whole point: an explicit `/plumbbob:build <n>` must never share the context
+  // with a rival `next → build step <m>` line, whatever the plan says.
+  it('the request outranks the derived suggestion and names what it skips', () => {
+    // Step 3 is both a jump past undone step 2 and still rough: both notes
+    // ride in one parenthetical rather than fighting for the line.
+    expect(orient({ ...base, requested: 3 }).next).toBe(
+      'build step 3 — explicitly requested (skips 1 undone step; still unplanned: `/plumbbob:step` it first)',
+    )
+  })
+
+  it('a request agreeing with the next undone step still reads as requested', () => {
+    expect(orient({ ...base, requested: 2 }).next).toBe('build step 2 — explicitly requested')
+  })
+
+  it('a request for a checkpointed step says so instead of pointing elsewhere', () => {
+    expect(orient({ ...base, requested: 1 }).next).toBe('build step 1 — explicitly requested (already checkpointed)')
+  })
+
+  it('a request outside the plan asks for a report, and repoints nothing', () => {
+    const o = orient({ ...base, requested: 9 })
+    expect(o.next).toBe('step 9 is not in the plan (3 steps planned) — report the mismatch rather than guess')
+    expect(o.requested).toBe(null)
+    expect(o.nextDoneWhen).toBe('the thing works.') // detail stays with the next undone step
+  })
+
+  it('detail rows repoint at the requested step', () => {
+    const o = orient({ ...base, requested: 1 })
+    expect(o.requested).toBe(1)
+    expect(o.nextSeam).toEqual(['src/a.ts'])
+    expect(o.nextDoneWhen).toBe(null) // step 1 carries no done-when of its own
+  })
+
+  it('a request matching the in-flight step keeps the finish move', () => {
+    expect(orient({ ...base, requested: 2, inFlight: 2 }).next).toContain('finish step 2')
+  })
+
+  it('a request colliding with a different in-flight step surfaces the collision', () => {
+    expect(orient({ ...base, requested: 3, inFlight: 2 }).next).toBe(
+      'build step 3 — explicitly requested (step 2 is still in flight: `/plumbbob:verify` it or `/plumbbob:abandon` it first)',
+    )
+  })
+
+  it('a spike still closes first; the request rides behind it', () => {
+    expect(orient({ ...base, requested: 3, spiking: true }).next).toBe(
+      'close the spike — `plumbbob spike done`; then build step 3 (explicitly requested)',
+    )
+  })
+})
+
+describe('formatOrientation with an explicitly requested step', () => {
+  it('moves the one arrow to the requested row, exactly', () => {
+    // One arrow, always: the requested step takes the marker and the derived
+    // next step loses it, so the dashboard never argues with the invocation.
+    expect(formatOrientation(orient({ ...base, requested: 3 }))).toBe(
+      [
+        'PlumbBob — My Feature   [DESIGN]',
+        '',
+        '  steps  1/3 done',
+        '  ✓ 1  First step',
+        '    2  Second step',
+        '  ▸ 3  Third step   ← requested',
+        '',
+        'last checkpoint  step 1 · abc1234',
+        'parked 2 · open questions 2',
+        '',
+        'next → build step 3 — explicitly requested (skips 1 undone step; still unplanned: `/plumbbob:step` it first)',
+      ].join('\n'),
+    )
+  })
+
+  it('a requested checkpointed step keeps its ✓ and takes the arrow', () => {
+    const out = formatOrientation(orient({ ...base, requested: 1 }))
+    expect(out).toContain('✓ 1  First step   ← requested')
+    expect(out).toContain('seam: src/a.ts')
+    expect(out).not.toContain('← next')
+  })
+
+  it('an out-of-plan request leaves the ← next marker in place', () => {
+    const out = formatOrientation(orient({ ...base, requested: 9 }))
+    expect(out).toContain('▸ 2  Second step   ← next')
+    expect(out).toContain('step 9 is not in the plan')
   })
 })

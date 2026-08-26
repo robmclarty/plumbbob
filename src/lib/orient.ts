@@ -30,13 +30,20 @@ export type Orientation = {
   readonly parked: number
   readonly openQuestions: number
   readonly next: string
-  // The next undone step's detail, so `status` shows what's about to be built and
-  // the human can review (and `/plumbbob:step`-revise) before `/plumbbob:build`.
+  // The explicitly requested step (from `status --invoked`), but only when that
+  // step exists in the plan; null otherwise. When set, the dashboard's marker,
+  // detail rows, and next move all point here instead of at the next undone
+  // step, so an invocation like `/plumbbob:build 22` never shares the context
+  // with a rival `next → build step 15` suggestion.
+  readonly requested: number | null
+  // The target step's detail (the requested step when one is set, else the next
+  // undone), so `status` shows what's about to be built and the human can
+  // review (and `/plumbbob:step`-revise) before `/plumbbob:build`.
   readonly nextDoneWhen: string | null
   readonly nextSeam: ReadonlyArray<string>
-  // The next step's advisory model recommendation: the smallest model the plan
-  // says can carry the step. Orientation for the human choosing where to spend
-  // attention and tokens, never a gate.
+  // The target step's advisory model recommendation: the smallest model the
+  // plan says can carry the step. Orientation for the human choosing where to
+  // spend attention and tokens, never a gate.
   readonly nextModel: string | null
   // Commits on HEAD since the last checkpoint that landed outside plumbbob's
   // checkpoints ledger (the per-build file recording baseline, plan, and step
@@ -55,6 +62,10 @@ export type OrientInput = {
   // "BUILD". `spiking` is the SPIKE marker's presence.
   readonly inFlight: number | null
   readonly spiking: boolean
+  // The step number an explicit invocation asked for (`status --invoked`), or
+  // null when the run carried no explicit ask. The dashboard repoints at it so
+  // the injected state and the human's typed step never disagree.
+  readonly requested: number | null
   // The out-of-band commit count: commits since the last checkpoint's SHA that
   // the ledger didn't record. Only `status` can measure it (it needs git);
   // orient stays pure/fs-free, so the caller computes it and passes it in. 0
@@ -227,19 +238,75 @@ export function lastLedgerSha(checkpoints: string): string | null {
 }
 
 /**
+ * The step number an explicit skill invocation asks for, out of the raw
+ * argument text `status --invoked` receives.
+ *
+ * The first whitespace-separated token shaped like `22` or `22-24` names the
+ * step (a range asks to start at its first number); flags such as `--auto` and
+ * anything else parse to null, meaning "no explicit ask", which leaves the
+ * dashboard's own suggestion in charge. Null in means null out, so a host that
+ * never substitutes the invocation degrades to today's rendering.
+ */
+export function parseRequestedStep(raw: string | null): number | null {
+  if (raw === null) {
+    return null
+  }
+  for (const token of raw.trim().split(/\s+/)) {
+    const m = /^(\d+)(?:-\d+)?$/.exec(token)
+    if (m) {
+      const n = Number(m[1])
+      return n >= 1 ? n : null
+    }
+  }
+  return null
+}
+
+/**
  * The single primary next move the dashboard suggests.
  *
  * It suggests; the dashboard prints the full list + counts so the human can
- * always override. The phase is derived: a spike in progress and an in-flight
- * step each have one obvious next move; otherwise you are at the boundary and
- * the move follows from the steps.
+ * always override. An explicitly requested step outranks the derived
+ * suggestion: the request IS the human's override, so the move names that step
+ * (noting anything it skips or collides with) rather than arguing for the
+ * default. Otherwise the phase decides: a spike in progress and an in-flight
+ * step each have one obvious next move; else you are at the boundary and the
+ * move follows from the steps.
  */
-function nextMove(spiking: boolean, steps: ReadonlyArray<Step>, inFlight: number | null, parked: number): string {
+function nextMove(
+  spiking: boolean,
+  steps: ReadonlyArray<Step>,
+  inFlight: number | null,
+  parked: number,
+  requested: number | null,
+): string {
+  const target = requested === null ? undefined : steps.find((s) => s.n === requested)
+  if (requested !== null && target === undefined) {
+    return `step ${requested} is not in the plan (${steps.length} step${steps.length === 1 ? '' : 's'} planned) — report the mismatch rather than guess`
+  }
   if (spiking) {
-    return 'close the spike — `plumbbob spike done`'
+    const tail = target === undefined ? '' : `; then build step ${target.n} (explicitly requested)`
+    return `close the spike — \`plumbbob spike done\`${tail}`
   }
   if (inFlight !== null) {
+    if (target !== undefined && target.n !== inFlight) {
+      return `build step ${target.n} — explicitly requested (step ${inFlight} is still in flight: \`/plumbbob:verify\` it or \`/plumbbob:abandon\` it first)`
+    }
     return `finish step ${inFlight} — \`/plumbbob:verify\` (or keep editing, then \`/plumbbob:verify\`)`
+  }
+  if (target !== undefined) {
+    if (target.done) {
+      return `build step ${target.n} — explicitly requested (already checkpointed)`
+    }
+    const skipped = steps.filter((s) => !s.done && s.n < target.n).length
+    const notes: string[] = []
+    if (skipped > 0) {
+      notes.push(`skips ${skipped} undone step${skipped === 1 ? '' : 's'}`)
+    }
+    if (!target.planned) {
+      notes.push('still unplanned: `/plumbbob:step` it first')
+    }
+    const suffix = notes.length > 0 ? ` (${notes.join('; ')})` : ''
+    return `build step ${target.n} — explicitly requested${suffix}`
   }
   // At the boundary (DESIGN): the move follows from the steps.
   const nextUndone = steps.find((s) => !s.done)
@@ -263,8 +330,13 @@ function nextMove(spiking: boolean, steps: ReadonlyArray<Step>, inFlight: number
 export function orient(input: OrientInput): Orientation {
   const steps = parseSteps(input.intent)
   const parked = parseParked(input.buildLog)
-  const nextUndone = steps.find((s) => !s.done)
-  const seamParse = nextUndone === undefined ? null : parseStepSeam(input.intent, nextUndone.n)
+  // The target the dashboard details: the explicitly requested step when it
+  // exists in the plan, else the next undone. A requested number that names no
+  // planned step carries nothing here; the next-move line reports the mismatch
+  // while the rest of the dashboard renders as usual.
+  const requestedStep = input.requested === null ? undefined : steps.find((s) => s.n === input.requested)
+  const target = requestedStep ?? steps.find((s) => !s.done)
+  const seamParse = target === undefined ? null : parseStepSeam(input.intent, target.n)
   const phase = input.spiking ? 'SPIKE' : input.inFlight !== null ? 'BUILD' : 'DESIGN'
   return {
     title: parseTitle(input.intent),
@@ -273,10 +345,11 @@ export function orient(input: OrientInput): Orientation {
     lastCheckpoint: parseLastCheckpoint(input.checkpoints),
     parked,
     openQuestions: parseOpenQuestions(input.intent),
-    next: nextMove(input.spiking, steps, input.inFlight, parked),
-    nextDoneWhen: nextUndone?.doneWhen ?? null,
+    next: nextMove(input.spiking, steps, input.inFlight, parked, input.requested),
+    requested: requestedStep?.n ?? null,
+    nextDoneWhen: target?.doneWhen ?? null,
     nextSeam: seamParse !== null && seamParse.ok ? seamParse.seam : [],
-    nextModel: nextUndone?.model ?? null,
+    nextModel: target?.model ?? null,
     outOfBand: input.outOfBand,
   }
 }
@@ -287,14 +360,19 @@ export function orient(input: OrientInput): Orientation {
 export function formatOrientation(o: Orientation): string {
   const doneCount = o.steps.filter((s) => s.done).length
   const nextUndone = o.steps.find((s) => !s.done)
+  // One arrow, always: an explicitly requested step takes the marker and the
+  // detail rows, so the injected state never argues with the invocation. With
+  // no (valid) request the next undone step keeps them, as ever.
+  const requestedStep = o.requested === null ? undefined : o.steps.find((s) => s.n === o.requested)
+  const marked = requestedStep ?? nextUndone
   const stepLines = o.steps.map((s) => {
-    const marker = s.done ? '✓' : s === nextUndone ? '▸' : ' '
-    const tail = s === nextUndone ? '   ← next' : ''
+    const marker = s.done ? '✓' : s === marked ? '▸' : ' '
+    const tail = s === marked ? (requestedStep === undefined ? '   ← next' : '   ← requested') : ''
     const head = `  ${marker} ${s.n}  ${s.title}${tail}`
-    if (s !== nextUndone) {
+    if (s !== marked) {
       return head
     }
-    // Surface the next step's detail so the human can review it (and `/plumbbob:step`-
+    // Surface the target step's detail so the human can review it (and `/plumbbob:step`-
     // revise) before building. Only what's present: a rough step shows neither.
     const detail: string[] = []
     if (o.nextDoneWhen !== null) {

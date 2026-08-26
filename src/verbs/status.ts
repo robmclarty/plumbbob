@@ -26,7 +26,7 @@ import {
   resolveBuild,
   stepPath,
 } from '../lib/sidecar.ts'
-import { formatOrientation, lastLedgerSha, orient } from '../lib/orient.ts'
+import { formatOrientation, lastLedgerSha, orient, parseRequestedStep } from '../lib/orient.ts'
 
 /**
  * Read a file as utf8, or '' when it is missing or unreadable.
@@ -40,11 +40,33 @@ function readOr(path: string): string {
 }
 
 /**
+ * Split `--invoked "<raw args>"` out of the argument list, ahead of any other
+ * flag parsing.
+ *
+ * The value is the verbatim text of a skill invocation (the `$ARGUMENTS` the
+ * `/plumbbob:build` skill passes through), so it can contain anything,
+ * including tokens that look like this CLI's own flags; extracting it first
+ * keeps such a value from confusing `resolveBuild`. A missing flag, or one
+ * with no value, reads as null: no explicit ask.
+ */
+function takeInvoked(args: ReadonlyArray<string>): {
+  readonly invoked: string | null
+  readonly rest: ReadonlyArray<string>
+} {
+  const i = args.indexOf('--invoked')
+  if (i === -1) return { invoked: null, rest: args }
+  return { invoked: args[i + 1] ?? null, rest: [...args.slice(0, i), ...args.slice(i + 2)] }
+}
+
+/**
  * Print the orientation dashboard for the active build, plus its harness bindings.
  *
  * No session prints the exact `NO ACTIVE SESSION` sentinel; a session with
  * builds but no active one lists them and points at `use`. Always exits 0:
- * status is a report, never a gate.
+ * status is a report, never a gate. With `--invoked "<raw args>"` (how the
+ * `/plumbbob:build` skill passes its own invocation through), an explicit step
+ * number in the raw text repoints the dashboard's marker, detail, and next
+ * move at that step, so the injected state never contradicts the human's ask.
  */
 export function status(cwd: string, args: ReadonlyArray<string> = []): number {
   const root = findRepoRoot(cwd)
@@ -52,10 +74,11 @@ export function status(cwd: string, args: ReadonlyArray<string> = []): number {
     process.stdout.write('NO ACTIVE SESSION\n')
     return 0
   }
+  const { invoked, rest } = takeInvoked(args)
   // A session with builds but no resolvable cursor (finish cleared it, or the repo
   // holds several builds and none is active) has no single dashboard to show, so
   // list the builds and point at `use` instead of rendering a broken, empty one.
-  const { build: slug } = resolveBuild(root, args)
+  const { build: slug } = resolveBuild(root, rest)
   if (slug === null) {
     const builds = listBuilds(root)
     if (builds.length > 0) {
@@ -79,6 +102,7 @@ export function status(cwd: string, args: ReadonlyArray<string> = []): number {
     checkpoints,
     inFlight: /^\d+$/.test(inFlightRaw) ? Number(inFlightRaw) : null,
     spiking: inSpike(root, slug),
+    requested: parseRequestedStep(invoked),
     outOfBand: anchor === null ? 0 : commitsSince(root, anchor),
   })
   const lines = [formatOrientation(orientation), ...harnessSection(root, slug)]

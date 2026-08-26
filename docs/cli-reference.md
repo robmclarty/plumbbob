@@ -20,7 +20,7 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 | Verb | Synopsis | Effect |
 |------|----------|--------|
 | `start` | `start <title> [--slug <name>] [--local] [--allow-dirty]` | scaffold `builds/<slug>/`, record baseline, open the session |
-| `status` | `status [--build <slug>]` | print the orientation dashboard (or `NO ACTIVE SESSION`) |
+| `status` | `status [--build <slug>] [--invoked "<args>"]` | print the orientation dashboard (or `NO ACTIVE SESSION`) |
 | `build` | `build [<n>] [--build <slug>]` | write step `n`'s seam + `STEP` (goes in-flight) |
 | `handoff` | `handoff [<n>] [--build <slug>]` | print the standardized hand-off block; read-only |
 | `check` | `check [--bail] [--changed] [--all] [--only a,b] [--skip a,b] [--include a,b]` | run the heavy gate; no state change |
@@ -78,13 +78,20 @@ baseline ([**D22 (clean-baseline)**](decisions.md#d22)).
 ### status
 
 ```text
-plumbbob status [--build <slug>]
+plumbbob status [--build <slug>] [--invoked "<args>"]
 ```
 
 Prints the orientation dashboard (title, the derived phase, the step list with the next
 step's done-when and seam, the last checkpoint, and the parked / open-question counts), then a
 single suggested next move ([**D8 (status-dashboard)**](decisions.md#d8) / [**D15 (one-next-move)**](decisions.md#d15)). Read-only; prints `NO ACTIVE SESSION` and
 exits 0 when there is no session.
+
+`--invoked "<args>"` takes the raw text of a skill invocation (the `/plumbbob:build`
+skill passes its `$ARGUMENTS` through). An explicit step number in that text repoints
+the dashboard's marker, detail rows, and next move at the requested step, noting
+anything it skips or collides with; the injected state then never argues with a typed
+`/plumbbob:build 22`. Text with no step number (flags only, or a host that never
+substitutes the placeholder) changes nothing.
 
 ### build
 

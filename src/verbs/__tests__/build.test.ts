@@ -47,6 +47,21 @@ describe('build', () => {
     expect(stdout).toContain('building step 1 (next undone)')
   })
 
+  it('an explicit jump past undone work says what it skips', async () => {
+    // A deliberate `build 2` over an undone step 1 and a confused one must
+    // look different on the page; the count is the tell.
+    const dir = await startedWithSteps() // steps 1 and 2 both undone
+    const { stdout } = captureIo(() => build(dir, ['2']))
+    expect(stdout).toContain('building step 2 (explicitly requested; skips 1 undone step)')
+  })
+
+  it('an explicit request that skips nothing carries no note', async () => {
+    const dir = await startedWithSteps()
+    writeFileSync(intentPath(dir), INTENT.replace('1. [ ]', '1. [x]'))
+    const { stdout } = captureIo(() => build(dir, ['2']))
+    expect(stdout).toContain('building step 2. Seam')
+  })
+
   it('with no argument and every step checkpointed, refuses and writes nothing', async () => {
     const dir = await startedWithSteps()
     writeFileSync(intentPath(dir), INTENT.replace('1. [ ]', '1. [x]').replace('2. [ ]', '2. [x]'))

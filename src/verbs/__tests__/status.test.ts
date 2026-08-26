@@ -94,6 +94,53 @@ describe('status', () => {
   })
 })
 
+describe('status — --invoked repoints the dashboard at the requested step', () => {
+  const STEPS_INTENT = [
+    '# Invoked',
+    '',
+    '## Steps',
+    '',
+    '1. [x] First — **done when:** a works.',
+    '   - seam: `src/a.ts`',
+    '2. [ ] Second — **done when:** b works.',
+    '   - seam: `src/b.ts`',
+    '3. [ ] Third — **done when:** c works.',
+    '   - seam: `src/c.ts`',
+    '',
+  ].join('\n')
+
+  async function startedWithSteps(): Promise<string> {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Invoked', '--slug', 'invoked']))
+    writeFileSync(join(buildDir(dir, 'invoked'), 'intent.md'), STEPS_INTENT)
+    return dir
+  }
+
+  it('an explicit step number in the raw invocation takes the one arrow', async () => {
+    const dir = await startedWithSteps()
+    const { code, stdout } = captureIo(() => status(dir, ['--invoked', '3 --auto']))
+    expect(code).toBe(0)
+    expect(stdout).toContain('▸ 3  Third   ← requested')
+    expect(stdout).toContain('next → build step 3 — explicitly requested (skips 1 undone step)')
+    // The derived suggestion must not survive alongside the request.
+    expect(stdout).not.toContain('← next')
+  })
+
+  it('an invocation with no step number renders exactly the default dashboard', async () => {
+    const dir = await startedWithSteps()
+    const plain = captureIo(() => status(dir)).stdout
+    expect(captureIo(() => status(dir, ['--invoked', '--auto'])).stdout).toBe(plain)
+    expect(captureIo(() => status(dir, ['--invoked', ''])).stdout).toBe(plain)
+    expect(plain).toContain('← next')
+  })
+
+  it('composes with --build, whichever order the flags arrive in', async () => {
+    const dir = await startedWithSteps()
+    const { stdout } = captureIo(() => status(dir, ['--invoked', '2', '--build', 'invoked']))
+    expect(stdout).toContain('▸ 2  Second   ← requested')
+  })
+})
+
 describe('status — out-of-band receipts — D66 (oob-commits-surfaced)', () => {
   it('surfaces commits landed since the last checkpoint outside the ledger', async () => {
     const dir = makeTempRepo()

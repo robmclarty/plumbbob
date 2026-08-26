@@ -46,6 +46,7 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
   }
 
   const intent = readFileSync(intentPath(root, slug), 'utf8')
+  const steps = parseSteps(intent)
 
   // No argument ⇒ enter the next undone step in intent.md (the same idiom
   // `checkpoint` uses), so a bare `plumbbob build` advances the loop without the
@@ -53,7 +54,7 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
   // nudge, not a silent no-op.
   let step: number
   if (raw === undefined) {
-    const nextUndone = parseSteps(intent).find((s) => !s.done)
+    const nextUndone = steps.find((s) => !s.done)
     if (nextUndone === undefined) {
       process.stderr.write(
         'plumbbob: no undone step to build — every planned step is checkpointed. `/plumbbob:step` to add an increment, or `/plumbbob:finish`.\n',
@@ -83,10 +84,19 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
   // The build-log's top half is CLI-owned so it never lies: show this step in
   // flight: Current step plus the ☐/☑ mirror, re-rendered from intent.md.
   // Best-effort: a missing or hand-edited build-log never blocks the build.
-  const title = parseSteps(intent).find((s) => s.n === step)?.title ?? null
+  const title = steps.find((s) => s.n === step)?.title ?? null
   syncBuildLogState(root, slug, stepLabel(step, title))
 
-  const picked = raw === undefined ? ' (next undone)' : ''
+  // An explicit jump past undone work says so out loud: the entered step and
+  // the count it skips read back to the human (and to the transcript), so a
+  // deliberate `build 22` and a confused one look different on the page.
+  const skipped = raw === undefined ? 0 : steps.filter((s) => !s.done && s.n < step).length
+  const picked =
+    raw === undefined
+      ? ' (next undone)'
+      : skipped > 0
+        ? ` (explicitly requested; skips ${skipped} undone step${skipped === 1 ? '' : 's'})`
+        : ''
   process.stdout.write(
     `plumbbob: building step ${step}${picked}. Seam (for orientation; not a lock):\n${parsed.seam.map((p) => `  ${p}`).join('\n')}\n`,
   )

@@ -8,7 +8,14 @@ allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*
 
 # PlumbBob: build a step (the default engine)
 
-Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not on PATH in this session. Marketplace install: confirm the plugin is enabled in /plugin, then /reload-plugins. Skills-dir/global install: npm i -g plumbbob && plumbbob init."`
+Current session state (injected when this skill runs): !`plumbbob status --invoked "$ARGUMENTS" 2>/dev/null || echo "plumbbob CLI not on PATH in this session. Marketplace install: confirm the plugin is enabled in /plugin, then /reload-plugins. Skills-dir/global install: npm i -g plumbbob && plumbbob init."`
+
+**The invocation outranks the injected state.** The dashboard above is computed from
+the plan; the arguments you were invoked with are the human's explicit ask. When they
+name a step, build that step, whatever any `next →` line suggests. The CLI already
+repoints the dashboard at an explicit step number when it can see one (`--invoked`),
+so a surviving mismatch means the invocation text never reached it, and the typed
+number still wins.
 
 This is the **bundled executor**: the default engine, not the only one. It is
 **swappable**: you can implement any step by hand, in a vibe session, or with

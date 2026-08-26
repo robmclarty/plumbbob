@@ -94,8 +94,15 @@ const VERBS: ReadonlyArray<Verb> = [
   {
     name: 'status',
     description: 'print the orientation dashboard, or NO ACTIVE SESSION',
-    synopsis: ['status [--build <slug>]'],
-    flags: [BUILD_FLAG],
+    synopsis: ['status [--build <slug>] [--invoked "<args>"]'],
+    flags: [
+      BUILD_FLAG,
+      {
+        name: '--invoked',
+        value: '"<args>"',
+        gloss: 'the raw skill invocation; an explicit step number in it repoints the dashboard at that step',
+      },
+    ],
     notes: 'Read-only; always exits 0. With no cursor it lists the available builds.',
   },
   {

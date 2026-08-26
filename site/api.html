@@ -319,8 +319,8 @@ class Component extends DCLogic {
     const verbDef = [
       ['start', 'plumbbob start "<title>" [--slug <name>] [--local] [--allow-dirty]',
         'Scaffolds the sidecar, records the baseline HEAD, and opens the session. Derives slug YYYY-MM-DD-<title-slug>, plants the tracked build folder, writes settings.json plus the untracked STATE cursor, and narrows info/exclude to the control plane. Refuses on an empty title, a slug collision, a non-git dir, no commits, an already-active session, or a dirty tree (--allow-dirty overrides).'],
-      ['status', 'plumbbob status [--build <slug>]',
-        'Prints the orientation dashboard — title, derived phase, the step list with the next step\'s done-when and seam, the last checkpoint, and the parked / open-question counts — then a single suggested next move. Read-only; prints NO ACTIVE SESSION and exits 0 when there is no session.'],
+      ['status', 'plumbbob status [--build <slug>] [--invoked "<args>"]',
+        'Prints the orientation dashboard — title, derived phase, the step list with the next step\'s done-when and seam, the last checkpoint, and the parked / open-question counts — then a single suggested next move. With --invoked "<args>" (the raw skill invocation), an explicit step number repoints the dashboard at that step, so the injected state never argues with a typed /plumbbob:build 22. Read-only; prints NO ACTIVE SESSION and exits 0 when there is no session.'],
       ['build', 'plumbbob build [<n>] [--build <slug>]',
         'Reads step n\'s seam from intent.md and writes SEAM (the path list) and STEP (the number) — STEP\'s presence is what makes the dashboard read BUILD. The seam is orientation, not a lock. Refuses on no session, a non-numeric or < 1 step, or a seam it cannot parse.'],
       ['handoff', 'plumbbob handoff [<n>] [--build <slug>]',

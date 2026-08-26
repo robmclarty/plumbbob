@@ -298,8 +298,17 @@ describe('build — the default engine: implement the planned step, then verify'
     expect(data.model).toBeUndefined()
   })
 
-  it('opens with the status pre-injection', () => {
-    expect(body).toContain('!`plumbbob status 2>/dev/null')
+  it('opens with the status pre-injection, passing the invocation through', () => {
+    // The injected dashboard must be computed WITH the invocation in hand: an
+    // argument-blind status says `next → build step 15` while the human typed
+    // `/plumbbob:build 22`, and a small model follows the louder line.
+    expect(body).toContain('!`plumbbob status --invoked "$ARGUMENTS" 2>/dev/null')
+  })
+
+  it('states that the invocation outranks the injected state', () => {
+    // The prose fallback for a host that never substitutes $ARGUMENTS: the
+    // typed step number wins over any injected suggestion.
+    expect(body).toMatch(/invocation outranks/i)
   })
 
   it('can implement (Edit/Write) and drive build + the verify tick + park capture', () => {
