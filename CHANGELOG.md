@@ -5,6 +5,32 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.2] - 2026-08-25
+
+- **Added:** `plumbbob status --invoked "<args>"`, which takes the raw text of a skill
+  invocation and repoints the dashboard at an explicitly requested step. A step number in
+  the text takes the marker (reading `← requested`), the done-when/seam/model detail rows,
+  and the next-move line, which names what the jump skips, a still-unplanned or
+  already-checkpointed target, and a collision with a different in-flight step; a number
+  outside the plan asks for a report rather than a guess. Text with no step number in it,
+  including a literal unsubstituted `$ARGUMENTS` from a host that never substitutes the
+  placeholder, renders exactly the dashboard it always did.
+- **Changed:** an explicit `plumbbob build <n>` that jumps past undone work now says so in
+  its output ("explicitly requested; skips N undone steps"), so a deliberate jump and a
+  confused one look different in the transcript.
+- **Fixed:** `/plumbbob:build 22` could build step 15 on a smaller model. The skill's
+  injected status was computed blind to the invocation, so the dashboard argued for the
+  next undone step (the arrow, the only detail rows in context, and a closing
+  `next → build step 15`) while the typed 22 rode along as bare trailing text, and a
+  small model followed the louder line. The build skill now passes `$ARGUMENTS` through
+  to the injection, so there is only ever one arrow in context, and a prose line under it
+  states the precedence for hosts where the placeholder never substitutes: the invocation
+  outranks the injected state.
+- **Fixed:** the repo's checkride stop gate is re-armed. An earlier build's `git add -A`
+  had captured local edits that commented the gate script out and stripped its
+  Stop/PostToolUse wiring from `.claude/settings.json`; both are restored to their state
+  from before that build began.
+
 ## [0.10.1] - 2026-08-13
 
 - **Added:** `plumbbob abandon`, a third exit from an in-flight step. Until now a step had two
