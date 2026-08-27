@@ -13,6 +13,12 @@ import type { Step } from './orient.ts'
  * Append `line` after the last non-blank line of the `## <heading>` section:
  * that is, just before the next `## ` heading or EOF.
  *
+ * When `line` is a list item and the line above it is prose (the Park list's
+ * guidance blockquote, the Log's instructions paragraph), a blank line goes in
+ * first. Markdown wants lists separated from prose (MD032), and a consumer
+ * repo that lints `.plumbbob/**` turns the missing blank into a red gate at
+ * the first park or checkpoint of a build.
+ *
  * Returns null when the section is absent so the caller can report rather than
  * silently corrupt the doc.
  */
@@ -32,8 +38,19 @@ export function appendToSection(content: string, heading: string, line: string):
       insertAt = i + 1
     }
   }
-  lines.splice(insertAt, 0, line)
+  const prev = lines[insertAt - 1] ?? ''
+  const needsBlank = isListLine(line) && prev.trim() !== '' && !isListLine(prev)
+  lines.splice(insertAt, 0, ...(needsBlank ? ['', line] : [line]))
   return lines.join('\n')
+}
+
+/**
+ * A markdown list line: `-`, `*`, or `+` after optional indent. Every caller
+ * of appendToSection appends one of these, so the blank-line rule above keys
+ * on the line it lands after, not on which verb is writing.
+ */
+function isListLine(line: string): boolean {
+  return /^\s*[-*+]\s/.test(line)
 }
 
 /**

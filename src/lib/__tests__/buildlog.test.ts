@@ -48,8 +48,27 @@ describe('appendToSection', () => {
     const out = appendToSection(DOC, 'Park list', '- [ ] new idea')
     expect(out).not.toBeNull()
     const lines = (out as string).split('\n')
-    // lands right after the guidance line, before the next `## ` heading
-    expect(lines[lines.indexOf('> guidance line') + 1]).toBe('- [ ] new idea')
+    // lands after the guidance line, before the next `## ` heading
+    expect(lines.indexOf('- [ ] new idea')).toBeGreaterThan(lines.indexOf('> guidance line'))
+    expect(lines.indexOf('- [ ] new idea')).toBeLessThan(lines.indexOf('## Log'))
+  })
+
+  it('opens the list a blank line after prose, so the first park lints clean (MD032)', () => {
+    const lines = (appendToSection(DOC, 'Park list', '- [ ] new idea') as string).split('\n')
+    expect(lines[lines.indexOf('> guidance line') + 1]).toBe('')
+    expect(lines[lines.indexOf('> guidance line') + 2]).toBe('- [ ] new idea')
+  })
+
+  it('opens the Log a blank line after the instructions paragraph (first checkpoint)', () => {
+    const lines = (appendToSection(DOC, 'Log', '- 2026-06-30 — step 1 checkpointed') as string).split('\n')
+    expect(lines[lines.indexOf('*(instructions)*') + 1]).toBe('')
+    expect(lines[lines.indexOf('*(instructions)*') + 2]).toBe('- 2026-06-30 — step 1 checkpointed')
+  })
+
+  it('appends directly under an existing list item, no extra blank', () => {
+    const once = appendToSection(DOC, 'Park list', '- [ ] first') as string
+    const lines = (appendToSection(once, 'Park list', '- [ ] second') as string).split('\n')
+    expect(lines[lines.indexOf('- [ ] first') + 1]).toBe('- [ ] second')
   })
 
   it('appends into a section that ends at EOF', () => {
