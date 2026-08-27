@@ -32,7 +32,7 @@ same, so you rarely need `pnpm build`: only when you want to exercise the publis
 plumbbob's one runtime dependency), which runs the tools this repo configures, in order:
 
 | Slot | Tool | What it guards |
-|------|------|----------------|
+| ------ | ------ | ---------------- |
 | `types` | `tsc --build` | types |
 | `lint` | `oxlint` | correctness lint |
 | `struct` | `ast-grep scan` | the structural constraints (see below) |

@@ -18,7 +18,7 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 ## Verbs at a glance
 
 | Verb | Synopsis | Effect |
-|------|----------|--------|
+| ------ | ---------- | -------- |
 | `start` | `start <title> [--slug <name>] [--local] [--allow-dirty]` | scaffold `builds/<slug>/`, record baseline, open the session |
 | `status` | `status [--build <slug>] [--invoked "<args>"]` | print the orientation dashboard (or `NO ACTIVE SESSION`) |
 | `build` | `build [<n>] [--build <slug>]` | write step `n`'s seam + `STEP` (goes in-flight) |

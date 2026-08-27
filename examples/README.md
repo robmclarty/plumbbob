@@ -9,7 +9,7 @@ behind**: the build's tracked folder, exactly as it would sit at
 Read them in the order they were written:
 
 | File | Written by | When |
-|------|-----------|------|
+| ------ | ----------- | ------ |
 | [`intent.md`](rate-limit-the-login-endpoint/intent.md) | you + `/plumbbob:plan` | before any code — the Frame, Decisions, Constraints, and all Steps |
 | [`build-log.md`](rate-limit-the-login-endpoint/build-log.md) | the loop, as it runs | park lines mid-step, harvest calls and checkpoint lines at each boundary |
 | [`checkpoints`](rate-limit-the-login-endpoint/checkpoints) | the CLI | one SHA per recorded state — baseline, plan, each verified step |

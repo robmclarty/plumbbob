@@ -16,7 +16,7 @@ same reviewer made provider-switchable:
 The two fascicle reviewers are two shapes of the same idea, worth holding side by side:
 
 | | `ollama-reviewer` | `reviewer` |
-|---|-------------------|------------|
+| --- | ------------------- | ------------ |
 | **Provider** | single — Ollama only | **switchable** — `claude_cli` (default) or `ollama` |
 | **Transport / deps** | AI-SDK (`ai` + `ai-sdk-ollama`) | **native** — `fascicle` + `zod` only |
 | **Configured by** | env vars only | the **settings ladder** (`agentConfig.reviewer`), env under it |
@@ -32,7 +32,7 @@ constrained-decode-on-small-models, or other AI-SDK providers) is what you're af
 The reference agent from `docs/agents.md`, in two files:
 
 | File | What it is |
-|------|-----------|
+| ------ | ----------- |
 | [`echo-reviewer/agent.json`](echo-reviewer/agent.json) | the manifest — `name`, the `command` PlumbBob spawns, the `slots` it binds to, and prose (`description`, `when`) for the host model |
 | [`echo-reviewer/run.sh`](echo-reviewer/run.sh) | the agent — reads the StepContext on stdin, narrates on **stderr**, emits one envelope on **stdout** |
 
@@ -61,7 +61,7 @@ a complete spec `/plumbbob:plan` can absorb to set up a build with the agent bou
 after slot.
 
 | File | What it is |
-|------|-----------|
+| ------ | ----------- |
 | [`ollama-reviewer/agent.json`](ollama-reviewer/agent.json) | the manifest — binds the after slot, `node` as the command |
 | [`ollama-reviewer/review.mjs`](ollama-reviewer/review.mjs) | the agent — preflight, seam-scoped diff, fascicle model call, envelope mapping |
 | [`ollama-reviewer/demo/spec.md`](ollama-reviewer/demo/spec.md) | a spec for a small build that binds the agent via `harness.json` |
@@ -80,7 +80,7 @@ key, no local model to pull), or `ollama` for local, private compute — and con
 way every other environment property is configured: through the settings ladder, not env-only.
 
 | File | What it is |
-|------|-----------|
+| ------ | ----------- |
 | [`reviewer/agent.json`](reviewer/agent.json) | the manifest — binds the after slot, `node` as the command |
 | [`reviewer/review.mjs`](reviewer/review.mjs) | the agent — a `PROVIDERS` map of descriptors, per-provider preflight, seam-scoped diff, native/external fascicle composition, envelope mapping |
 

@@ -25,14 +25,14 @@ code the verdict. The § "The fascicle trap" discipline, enforced instead of han
 - **Ollama** installed and running (`ollama serve`), with a model pulled.
 
 | Model | Size | Notes |
-|-------|------|-------|
+| ----- | ---- | ----- |
 | `qwen3:8b` (default) | ~5 GB | reviews well; worth the download |
 | `llama3.2:3b` | ~2 GB | the light option; noticeably shallower reviews |
 
 Configuration is env only:
 
 | Variable | Default | |
-|----------|---------|---|
+| ---------- | --------- | --- |
 | `OLLAMA_MODEL` | `qwen3:8b` | the exact tag you pulled, colons and all |
 | `OLLAMA_BASE_URL` (or `OLLAMA_HOST`) | `http://localhost:11434` | where Ollama listens |
 

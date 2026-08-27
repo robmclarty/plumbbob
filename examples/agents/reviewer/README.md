@@ -22,7 +22,7 @@ writes exactly one JSON object to **stdout**, and makes the exit code the verdic
 ## Providers
 
 | Provider | `agentConfig.reviewer` keys | Env override | Auth | Cost / privacy |
-|----------|-----------------------------|--------------|------|----------------|
+| -------- | --------------------------- | ------------ | ---- | -------------- |
 | **`claude_cli`** *(default)* | `provider`, `model` (default `sonnet`), `binary` (default `claude`) | `PB_REVIEWER_PROVIDER`, `PB_REVIEWER_MODEL`, `PB_REVIEWER_CLAUDE_BINARY` | the logged-in Claude session (`auth_mode: oauth`) — **no API key** | billed to your Claude plan; the diff is sent to Anthropic |
 | **`ollama`** | `provider`, `model` (default `qwen3:8b`), `baseUrl` (default `http://localhost:11434`) | `PB_REVIEWER_PROVIDER`, `PB_REVIEWER_MODEL`, `OLLAMA_HOST` / `OLLAMA_BASE_URL` | none — a local server | **free**; the diff never leaves your machine |
 

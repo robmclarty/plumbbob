@@ -203,7 +203,7 @@ is worth in the moment. So mid-step ideas are **captured, not acted on.**
   mid-step) and triages the list. Each item gets exactly one class:
 
 | Class | Meaning | Action |
-|-------|---------|--------|
+| ------- | --------- | -------- |
 | **blocker** | the plan was wrong or incomplete; cannot proceed | fold into `intent.md`, handle now |
 | **tangent** | a different path, not clearly better (the default) | defer or kill |
 | **pivot signal** | real evidence the whole approach is wrong | stop and replan |
@@ -297,7 +297,7 @@ artifact it reads or writes. The skills are all `disable-model-invocation`, so *
 every move and `/plumbbob:status` always names the next one.
 
 | Technique | Skill | CLI verb | Artifact / state |
-|-----------|-------|----------|------------------|
+| ----------- | ------- | ---------- | ------------------ |
 | Frame and plan the goal | `/plumbbob:plan` | `plumbbob start` | `intent.md`, session opened |
 | Sharpen the next step | `/plumbbob:step` | none (edits markdown) | `intent.md` `## Steps` |
 | Stress-test or repair the plan | `/plumbbob:refine` | none (edits markdown) | `intent.md` |

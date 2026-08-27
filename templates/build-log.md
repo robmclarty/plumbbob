@@ -36,11 +36,11 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 Classify each parked item as exactly ONE. Naming it before acting is what keeps you
 from sprawling across branches.
 
-| Class            | Meaning                                   | Action                          |
-| ---------------- | ----------------------------------------- | ------------------------------- |
-| **blocker**      | Plan was wrong/incomplete; can't proceed  | `/plumbbob:revert`, fold into intent  |
-| **tangent**      | A different path, not clearly better      | Defer or kill. Default here.    |
-| **pivot signal** | Evidence the whole approach is wrong      | Stop. Replan deliberately.      |
+| Class            | Meaning                                   | Action                               |
+| ---------------- | ----------------------------------------- | ------------------------------------ |
+| **blocker**      | Plan was wrong/incomplete; can't proceed  | `/plumbbob:revert`, fold into intent |
+| **tangent**      | A different path, not clearly better      | Defer or kill. Default here.         |
+| **pivot signal** | Evidence the whole approach is wrong      | Stop. Replan deliberately.           |
 
 > Reality check: almost everything that *feels* like a pivot is a tangent. Require a
 > failed assumption, not a shinier idea, before you pivot.

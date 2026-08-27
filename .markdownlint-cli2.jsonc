@@ -8,8 +8,11 @@
     "MD033": false, // inline HTML — templates open with <!-- ... --> guidance
     "MD036": false, // emphasis-as-heading — templates use *(italic guidance)* sub-text
     "MD040": false, // fenced-code-language — architecture sketches are language-less ascii
-    "MD041": false, // first-line-heading — templates open with an HTML comment
-    "MD060": false // table-column-style — table pipes need not be visually aligned
+    "MD041": false // first-line-heading — templates open with an HTML comment
+    // MD060 (table-column-style) is back on at its default `any` (2026-08-26): a table
+    // may be aligned, compact, or tight, but not a mix. A mixed table is exactly the
+    // bug that shipped in the finish Stats emitter and the build-log template (#1),
+    // and this rule off was why our own gate never saw it.
   },
   "globs": ["**/*.md"],
   // `.plumbbob/**`: build records are mechanically-appended artifacts, not prose —

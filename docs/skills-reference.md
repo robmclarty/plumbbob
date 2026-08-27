@@ -18,7 +18,7 @@ Two ground rules apply to all of them:
 ## At a glance
 
 | Skill <img alt="" width="110" height="1"> | Takes <img alt="" width="150" height="1"> | Does |
-|------------------------------------|--------------------------------------|------|
+| ------------------------------------ | -------------------------------------- | ------ |
 | [`/plumbbob:plan`](#plan) | `[spec-path \| intent]` | open the session and author the whole plan: Frame, Decisions, Constraints, all Steps |
 | [`/plumbbob:step`](#step) | `[what-changed]` | revise/sharpen the next step (empty input auto-syncs it to reality) |
 | [`/plumbbob:build`](#build) | `[step-number \| step-range] [--auto]` | implement the next planned step, then verify it to the pause |

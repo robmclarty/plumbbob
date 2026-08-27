@@ -112,11 +112,11 @@ A single JSON object. Two fields are required; the rest default to empty:
 `status` is the routing signal, and the three values route differently at the pause
 ([**D52 (blocked-vs-drift)**](decisions.md#d52)):
 
-| `status`  | Meaning | What the human does |
-|-----------|---------|---------------------|
-| `done`    | Finished. | Read the summary; continue the loop. |
+| `status` | Meaning | What the human does |
+| --------- | ------- | ------------------- |
+| `done` | Finished. | Read the summary; continue the loop. |
 | `blocked` | Couldn't finish: missing input, failed precondition. | Read `notes`, unblock, **re-run** the agent. |
-| `drift`   | Finished, but the plan no longer matches reality. | Repair the plan with `/plumbbob:refine` before continuing. |
+| `drift` | Finished, but the plan no longer matches reality. | Repair the plan with `/plumbbob:refine` before continuing. |
 
 `parked[]` is how an agent captures a mid-run "ooh, what if" without acting on it: each
 string becomes a park line the CLI lands through the park verb ([**D44 (cli-side-effects)**](decisions.md#d44)). Unknown fields are

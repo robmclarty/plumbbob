@@ -152,7 +152,7 @@ a Claude Code built-in, so these docs write the full form.)
 nothing else:
 
 | Skill <img alt="" width="110" height="1"> | Does |
-|------------------------------------|------|
+| ------------------------------------ | ------ |
 | `/plumbbob:plan` | plan the whole goal: open the session and author intent's Frame, Decisions, Constraints, **and all Steps** |
 | `/plumbbob:build` | implement the next planned step, then verify it to the pause: `--auto` self-approves and chains to done; a range like `1-3` self-approves through step 3, then pauses |
 | `/plumbbob:finish` | finish up: write the report, make the final commit, clear for a fresh goal |
@@ -160,7 +160,7 @@ nothing else:
 **Plan-shaping moves**: optional, for when the plan needs work mid-flight:
 
 | Skill <img alt="" width="110" height="1"> | Does |
-|------------------------------------|------|
+| ------------------------------------ | ------ |
 | `/plumbbob:step` | revise/sharpen the next step (empty input auto-syncs it to reality) |
 | `/plumbbob:refine` | attack the frame for holes, or repair a drifted plan |
 | `/plumbbob:spike` | throwaway worktree experiment for a fork the plan can't settle |
@@ -168,7 +168,7 @@ nothing else:
 **Helpers**: orient, verify, recover, diagnose:
 
 | Skill <img alt="" width="110" height="1"> | Does |
-|------------------------------------|------|
+| ------------------------------------ | ------ |
 | `/plumbbob:status` | orient: where you are, the next step's done-when and seam, and the next move |
 | `/plumbbob:verify` | the tick, standalone: check → self-review → validate → **PAUSE** → checkpoint, for a diff `/plumbbob:build` didn't write |
 | `/plumbbob:revert` | rewind: `git reset --hard` to a recorded checkpoint |
@@ -179,7 +179,7 @@ nothing else:
 **Capture**: the park/harvest loop for mid-build ideas:
 
 | Skill <img alt="" width="110" height="1"> | Does |
-|------------------------------------|------|
+| ------------------------------------ | ------ |
 | `/plumbbob:park` | capture a mid-build idea without chasing it |
 | `/plumbbob:harvest` | triage parked ideas between steps (blocker / tangent / pivot) |
 
