@@ -143,6 +143,8 @@ describe('finish — the Stats roll-up (research/07 2b)', () => {
     const report = readFileSync(reportPath(dir), 'utf8')
     expect(report).toContain('## Stats')
     expect(report).toContain('| step | red checks | drift warnings | reverts | wall-clock |')
+    // spaced pipes on the delimiter row too, so the table lints clean (MD060)
+    expect(report).toContain('| ---- | ---------- | -------------- | ------- | ---------- |')
     expect(report).toContain('| 1 | 2 | 0 | 0 | 34m |')
     expect(report).toContain('| 2 | 0 | 0 | 1 | — |') // hand-built step: no stamps, no wall
     expect(report).toContain('| **total** | 2 | 0 | 1 | 34m |')

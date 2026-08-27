@@ -171,7 +171,7 @@ function appendStats(root: string, slug: string | null): void {
       '## Stats',
       '',
       '| step | red checks | drift warnings | reverts | wall-clock |',
-      '|------|------------|----------------|---------|------------|',
+      '| ---- | ---------- | -------------- | ------- | ---------- |',
       ...rows,
       `| **total** | ${totals.redChecks} | ${totals.driftWarnings} | ${totals.reverts} | ${formatWall(totals.wallMs > 0 ? totals.wallMs : null)} |`,
       '',

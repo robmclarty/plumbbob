@@ -32,7 +32,7 @@ Classify each parked item as exactly ONE. Naming it before acting is what keeps 
 from sprawling across branches.
 
 | Class            | Meaning                                   | Action                          |
-|------------------|-------------------------------------------|---------------------------------|
+| ---------------- | ----------------------------------------- | ------------------------------- |
 | **blocker**      | Plan was wrong/incomplete; can't proceed  | `/plumbbob:revert`, fold into intent  |
 | **tangent**      | A different path, not clearly better      | Defer or kill. Default here.    |
 | **pivot signal** | Evidence the whole approach is wrong      | Stop. Replan deliberately.      |
