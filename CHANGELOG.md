@@ -5,6 +5,30 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.3] - 2026-08-26
+
+- **Fixed:** the first `plumbbob park` of a build wrote its `- [ ]` line flush against the
+  Park list's guidance blockquote, and the first `checkpoint` did the same to its Log line
+  under the instructions paragraph. Markdown wants a blank line between prose and a list,
+  so in a consumer repo whose docs gate lints `.plumbbob/**` the next checkpoint refused on
+  a red gate, over a file plumbbob itself had just written, and the only hand fix was
+  editing a ledger whose own header says the CLI maintains it. The blank line is now part
+  of the append, which fixes the same latent defect in all four writers that share it.
+- **Fixed:** the `## Stats` table that `finish` appends to `report.md` mixed table styles,
+  spacing the pipes on its header and data rows but not on the delimiter row between them.
+  Because `finish` commits the report onto the branch, a consumer repo linting for
+  consistent tables went red right at the close-out. The delimiter row now matches its
+  neighbours, and the same mix is fixed in the Harvest table of the build-log template
+  that `plumbbob start` stamps into every repo.
+- **Changed:** this repo's own markdown gate stops ignoring inconsistent tables, and its
+  spell check is back on with cspell as a dependency and a project lexicon. Neither rule
+  changes what plumbbob does; both close the gaps that let the two bugs above ship green.
+- **Added:** tests that lint the markdown the CLI generates rather than only the docs the
+  repo tracks. The build log lives under `.plumbbob/`, which the repo's own gate ignores as
+  an append-only record, so nothing here could ever fail on generated markdown; that is the
+  blind spot both fixes above came through. The new tests run the real verbs into a
+  throwaway repo and lint what they wrote.
+
 ## [0.10.2] - 2026-08-25
 
 - **Added:** `plumbbob status --invoked "<args>"`, which takes the raw text of a skill
