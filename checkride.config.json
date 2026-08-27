@@ -56,7 +56,12 @@
       "timeout": 600
     },
 
-    "spell": false
+    "spell": {
+      "use": "cspell",
+      "description": "cspell over the owned prose and src/scripts code; project lexicon lives in cspell.json",
+      "note": "Turned back on 2026-08-26; the 2026-07 disable said only that cspell was not a dependency, and now it is. The walk mirrors the prose slot's idea of owned surfaces with two more exclusions: tests (fixture tokens are deliberate nonsense: typo probes like `drybrun`, regex stems like `approv`) and docs/voice (hand-owned; a finding there needs Rob's pen, and the gate must not block on a file only a human may edit). Citation names are scoped to docs/generation-loss.md by an override instead of riding the main word list. `language` is `en,en-GB` because the prose deliberately mixes both spellings. First 1430 findings burned down to zero the day it joined: all lexicon, no baselining, and no real typo found.",
+      "order": 2
+    }
   },
 
   "gate": {
