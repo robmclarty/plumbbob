@@ -72,9 +72,12 @@ function slotList(args: ReadonlyArray<string>, flag: string): Partial<CheckFlags
 }
 
 /**
- * The one-line human verdict for a check exit code.
+ * The one-line human verdict for a check exit code, printed on its own line.
  *
- * A broken gate (exit 2) reports distinctly from red: a misconfigured harness
+ * These three strings are the verbatim verdict-line forms the turn anatomy
+ * relays (docs/presentation.md): the model prints them unchanged between the
+ * recap and the card, so rewording one here means moving the spec first. A
+ * broken gate (exit 2) reports distinctly from red: a misconfigured harness
  * must never read as broken code, though both block a checkpoint.
  */
 function verdictLine(code: number): string {

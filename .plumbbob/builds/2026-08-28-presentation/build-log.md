@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: presentation
 
-**Current step:** 3 — feat(handoff): render the orientation banner and footer card
+**Current step:** 4 — feat(verify): emit the recap skeleton and gate verdict line
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -25,7 +25,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
 - ☑ 1. docs(presentation): author the turn anatomy spec
 - ☑ 2. feat(detail): the latest-step detail file and its lifecycle
-- ☐ 3. feat(handoff): render the orientation banner and footer card
+- ☑ 3. feat(handoff): render the orientation banner and footer card
 - ☐ 4. feat(verify): emit the recap skeleton and gate verdict line
 - ☐ 5. docs(skills): align every skill output spec to the anatomy
 - ☐ 6. docs(happy-path): make every illustrated block producible
@@ -66,3 +66,4 @@ folder, so it rides the branch into the PR.)*
 
 - 2026-08-29 — step 1 checkpointed · e1469c7f7 — docs(presentation): author the turn anatomy spec (1 drift, 52m)
 - 2026-08-29 — step 2 checkpointed · 030407ba6 — feat(detail): the latest-step detail file and its lifecycle (1 drift, 11m)
+- 2026-08-29 — step 3 checkpointed · 88d0656d3 — feat(handoff): render the orientation banner and footer card (1 drift, 16m)

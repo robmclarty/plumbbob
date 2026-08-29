@@ -44,10 +44,40 @@ this skill verifies it the same way: **it reads the diff, not the author**
    slug from `intent.md` (`C1 (no-new-deps)`, never a bare `C1`) so each finding reads
    on its own. You are reviewing, not building; do not fix anything.
 4. **Validate.** State, yes or no, whether the step's done-when is met, with the evidence.
-5. **PAUSE.** Present the check result, the self-review (with any `after`-agent
-   findings), and the validation, then
-   **stop and wait for the human's explicit approval.** This is the convergence beat;
+5. **PAUSE.** Render the pause as the turn anatomy: the recap, then the check verdict
+   on its own line, then the self-review and validation you formed in steps 2 through 4.
+   **Stop and wait for the human's explicit approval.** This is the convergence beat;
    the human is the clock. Never checkpoint without it.
+
+   The recap compresses the self-review into labeled rows inside one `text` fence: a
+   header rule, the measuring rows that apply (`check`, `done-when`, `decisions`,
+   `constraints`, `seam`), then the `diff` row last, each label padded so its value
+   starts at column 14. Every measuring row opens with a verdict word from the closed
+   set in the [turn anatomy spec](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md);
+   a cited decision or constraint carries its slug (`C1 (no-new-deps)`, never a bare
+   `C1`). A row that cannot apply vanishes; one whose good state is meaningful collapses
+   to it (`constraints  all honored`). The `diff` row counts what moved and never folds
+   into a verdict; the diff itself stays in the working tree, though a change of 20 lines
+   or fewer may ride inline in a `diff` fence just below the recap.
+
+   ```text
+   ── recap · step <N> of <M> ──
+   check        green (checkride: lint, types, test)
+   done-when    met: <the evidence, one line>
+   decisions    honored: D1 (some-slug), D2 (another-slug)
+   constraints  all honored
+   seam         held: 2 files, all inside
+   diff         +61 -3 across 2 files
+   ```
+
+   Below the recap, relay `plumbbob check`'s verdict verbatim on its own line, not
+   paraphrased or folded into a sentence. At the pause the gate is green, since a red
+   one stopped you back at step 1:
+
+   ```text
+   plumbbob: check green.
+   ```
+
    - **Reconcile a drifted subject here, in the open.** The planned title *is* the
      checkpoint subject ([D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68)). If the diff drifted from it (the
      step landed something the title no longer describes), the body pass may propose a

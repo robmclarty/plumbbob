@@ -160,7 +160,7 @@ the detail plane (never in the default turn body)
    pause, folded into the commit body and truncated by checkpoint per
    [D9 (latest-detail-file)](#d9), and unit tests cover the lifecycle
    - seam: `src/verbs/checkpoint.ts`, `src/verbs/start.ts`, `test/checkpoint.test.ts`
-3. [ ] feat(handoff): render the orientation banner and footer card,
+3. [x] feat(handoff): render the orientation banner and footer card,
    **done when:** unit tests assert the exact card text; the banner folds the
    parsed recap rows ([D14 (recap-as-wire)](#d14)) worst-of with measured
    facts ([D11 (worst-of-banner)](#d11)); the your-call block reads per

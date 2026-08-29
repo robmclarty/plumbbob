@@ -112,6 +112,33 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    `/plumbbob:build` only ever starts the *next* step. **Never route around a refusal with a
    raw `git commit`**; the work plane stays free, but the *record* is latched on purpose.
 
+   **Render the pause as the turn anatomy.** Before the hand-off block below, show the
+   recap and then the check verdict. The recap compresses your self-review into labeled
+   rows inside one `text` fence: a header rule, the measuring rows that apply (`check`,
+   `done-when`, `decisions`, `constraints`, `seam`), then the `diff` row last, each label
+   padded so its value starts at column 14, every measuring row opening with a verdict
+   word from the closed set in the [turn anatomy spec](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md).
+   A cited decision or constraint carries its slug (`C1 (no-new-deps)`, never a bare
+   `C1`); a row that cannot apply vanishes; the `diff` row counts what moved and a change
+   of 20 lines or fewer may ride inline in a `diff` fence just below it.
+
+   ```text
+   ── recap · step <N> of <M> ──
+   check        green (checkride: lint, types, test)
+   done-when    met: <the evidence, one line>
+   decisions    honored: D1 (some-slug), D2 (another-slug)
+   constraints  all honored
+   seam         held: 2 files, all inside
+   diff         +61 -3 across 2 files
+   ```
+
+   Below the recap, relay `plumbbob check`'s verdict verbatim on its own line, not
+   paraphrased or folded into a sentence:
+
+   ```text
+   plumbbob: check green.
+   ```
+
    **End every default build turn with the standardized hand-off block.** Run `plumbbob
    handoff` and present its output; it renders the same three-part shape (the state, the
    choice, what's next) straight from the session: step N built, the looks-good /
