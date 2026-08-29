@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: presentation
 
-**Current step:** 1 — docs(presentation): author the turn anatomy spec
+**Current step:** 2 — feat(detail): the latest-step detail file and its lifecycle
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -23,7 +23,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 line above. Only ONE step is in flight; a step is done only after a checkpoint:
 check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
-- ☐ 1. docs(presentation): author the turn anatomy spec
+- ☑ 1. docs(presentation): author the turn anatomy spec
 - ☐ 2. feat(detail): the latest-step detail file and its lifecycle
 - ☐ 3. feat(handoff): render the orientation banner and footer card
 - ☐ 4. feat(verify): emit the recap skeleton and gate verdict line
@@ -63,3 +63,5 @@ fills in as you go, not at the end. Add your own decision/event lines too: this 
 you point at to say "I did that: the LLM helped, but those were my calls."
 `/plumbbob:finish` reads this for the report; `plumbbob finish` commits it with the build
 folder, so it rides the branch into the PR.)*
+
+- 2026-08-29 — step 1 checkpointed · e1469c7f7 — docs(presentation): author the turn anatomy spec (1 drift, 52m)

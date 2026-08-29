@@ -19,8 +19,10 @@ import {
   buildScope,
   bumpStepStat,
   checkpointsPath,
+  clearDetail,
   clearHandoff,
   clearTick,
+  detailPath,
   hasSession,
   intentPath,
   readStats,
@@ -105,8 +107,10 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   if (isDirty(root)) {
     stageAll(root)
     warnScopeDrift(root, step)
-    const body = withMarker(`plumbbob step ${step}`, bodyResult.body ?? fallbackBody(root, step))
+    const lead = bodyResult.body ?? fallbackBody(root, step)
+    const body = withMarker(`plumbbob step ${step}`, foldDetail(lead, readDetail(root)))
     sha = commit(root, messageArg(args) ?? subjectForStep(root, step), body)
+    clearDetail(root) // the detail is folded into the commit now; clear it so no stale detail rides into the next step.
   } else {
     sha = headSha(root)
   }
@@ -395,6 +399,36 @@ function fallbackBody(root: string, step: number): string | undefined {
   if (stat.length > 0) {
     parts.push(stat)
   }
+  return parts.length > 0 ? parts.join('\n\n') : undefined
+}
+
+/**
+ * The in-flight step's detail from `.plumbbob/detail.md`, or null when the file
+ * is absent or empty.
+ *
+ * The model overwrites it before every pause; checkpoint reads it once here for
+ * the fold, and the caller clears it afterward. A missing or blank file folds
+ * nothing.
+ */
+function readDetail(root: string): string | null {
+  try {
+    const raw = readFileSync(detailPath(root), 'utf8').trim()
+    return raw.length > 0 ? raw : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Fold the detail beneath the lead prose for the commit body.
+ *
+ * The lead (an explicit `--body`, else the deterministic fallback) leads and the
+ * detail file's content follows, joined by a blank line so git keeps them as
+ * separate paragraphs. Either part may be absent; an all-empty fold returns
+ * undefined so `withMarker` leaves just the marker line.
+ */
+function foldDetail(lead: string | undefined, detail: string | null): string | undefined {
+  const parts = [lead, detail].filter((part): part is string => part !== undefined && part !== null && part.length > 0)
   return parts.length > 0 ? parts.join('\n\n') : undefined
 }
 

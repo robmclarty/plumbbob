@@ -146,7 +146,7 @@ the detail plane (never in the default turn body)
 
 ## Steps
 
-1. [ ] docs(presentation): author the turn anatomy spec, **done when:**
+1. [x] docs(presentation): author the turn anatomy spec, **done when:**
    `docs/presentation.md` defines the highlights, recap, verdict line, footer
    card (your-call wording per [D12 (instructive-choice)](#d12)), the state
    table ([D13 (circle-ladder)](#d13)), the tier map
