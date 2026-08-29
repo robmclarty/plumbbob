@@ -1,8 +1,9 @@
-import { writeFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { handoff } from '../handoff.ts'
 import { start } from '../start.ts'
-import { checkpointsPath, intentPath, stepPath } from '../../lib/sidecar.ts'
+import { checkpointsPath, detailPath, intentPath, statsPath, stepPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
@@ -22,6 +23,15 @@ const INTENT = `# Handoff test
    - model: sonnet — mechanical
 `
 
+const GREEN_RECAP = `── recap · step 2 of 3 ──
+check        green (checkride: lint, types, test)
+done-when    met: b works
+decisions    honored: D1 (some-decision)
+constraints  all honored
+seam         held: 1 file, all inside
+diff         +10 -2 across 1 file
+`
+
 async function started(intent = INTENT): Promise<string> {
   const dir = makeTempRepo()
   await captureIoAsync(() => start(dir, ['Handoff test']))
@@ -29,28 +39,101 @@ async function started(intent = INTENT): Promise<string> {
   return dir
 }
 
+function writeCheckSummary(dir: string, ok: boolean, checks: ReadonlyArray<{ name: string; ok: boolean }>): void {
+  mkdirSync(join(dir, '.check'), { recursive: true })
+  writeFileSync(join(dir, '.check', 'summary.json'), JSON.stringify({ schema_version: 1, ok, checks_run: checks.length, checks }))
+}
+
 describe('handoff', () => {
-  it('at the pause (a step in flight) shows the built step, the choice, and the next step + model', async () => {
+  it('at the pause, with a green recap and a measured green check, renders the plumb banner and the full your-call block', async () => {
     const dir = await started()
     writeFileSync(stepPath(dir), '2\n') // step 2 in flight
+    writeFileSync(detailPath(dir), GREEN_RECAP)
+    writeCheckSummary(dir, true, [
+      { name: 'lint', ok: true },
+      { name: 'types', ok: true },
+      { name: 'test', ok: true },
+    ])
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('Step 2 (Second) is built')
-    expect(stdout).toContain('looks good')
-    expect(stdout).toContain('needs work')
-    expect(stdout).toContain('Next up: step 3 (Third)')
-    // The model clause shows the token (not the verbatim rationale) for the /model call.
-    expect(stdout).toContain('model: sonnet')
-    expect(stdout).toContain('/model sonnet')
+    expect(stdout).toContain('● Plumb: Step 2 of 3')
+    expect(stdout).toContain('Next Up: Step 3 - Third (model: Sonnet)')
+    expect(stdout).toContain('Your Call:')
+    expect(stdout).toContain('  looks good  → I checkpoint step 2; back to the boundary')
+    expect(stdout).toContain('  needs work  → Tell me what to change; nothing lands until you approve')
+    expect(stdout).toContain('  revert      → I wind the work back to the last checkpoint')
   })
 
-  it('at the boundary (no step in flight) shows the checkpointed step and points at the next', async () => {
+  it('at the pause, with nothing measured yet, still renders a plumb banner but omits the looks-good move', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n') // step 2 in flight, no detail.md, no .check/summary.json
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).toContain('● Plumb: Step 2 of 3')
+    expect(stdout).not.toContain('looks good')
+    expect(stdout).toContain('needs work')
+    expect(stdout).toContain('revert')
+  })
+
+  it('at the boundary (no step in flight), renders the banner and next-up line but no your-call block', async () => {
     const dir = await started()
     writeFileSync(checkpointsPath(dir), 'step 2 abc1234\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('Step 2 (Second) checkpointed')
-    expect(stdout).toContain('Next up: step 3 (Third)')
+    expect(stdout).toContain('● Plumb: Step 2 of 3')
+    expect(stdout).toContain('Next Up: Step 3 - Third (model: Sonnet)')
+    expect(stdout).not.toContain('Your Call:')
+  })
+
+  it('folds a strayed seam row into an out-of-plumb banner naming the seam', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(
+      detailPath(dir),
+      GREEN_RECAP.replace('seam         held: 1 file, all inside', 'seam         strayed: src/other.ts outside the seam'),
+    )
+    writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).toContain('○ Out of plumb: seam strayed · Step 2 of 3')
+  })
+
+  it('folds a drifted done-when row into a not-standing banner', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(
+      detailPath(dir),
+      GREEN_RECAP.replace('done-when    met: b works', 'done-when    drift: the plan no longer matches reality'),
+    )
+    writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).toContain('✗ Not standing: done-when drifted · Step 2 of 3')
+  })
+
+  it('folds accrued red-check runs into an a-hair-off banner', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(detailPath(dir), GREEN_RECAP)
+    writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
+    writeFileSync(statsPath(dir), JSON.stringify({ '2': { redChecks: 2 } }))
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).toContain('◐ A hair off: 2 red runs before green · Step 2 of 3')
+  })
+
+  it('measures a red check over a green attested row (measured beats attested)', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(detailPath(dir), GREEN_RECAP) // model attested green...
+    writeCheckSummary(dir, false, [
+      { name: 'lint', ok: true },
+      { name: 'test', ok: false },
+    ]) // ...but the measured run is red
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).toContain('○ Out of plumb: check red · Step 2 of 3')
+    expect(stdout).not.toContain('looks good')
   })
 
   it('omits the model clause when the next step has no recommendation', async () => {
@@ -59,9 +142,8 @@ describe('handoff', () => {
     writeFileSync(stepPath(dir), '2\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('Next up: step 3 (Third)')
+    expect(stdout).toContain('Next Up: Step 3 - Third')
     expect(stdout).not.toContain('model:')
-    expect(stdout).toContain('/plumbbob:build to start it')
   })
 
   it('reports no planned steps remain when everything is done', async () => {
@@ -70,7 +152,7 @@ describe('handoff', () => {
     writeFileSync(checkpointsPath(dir), 'step 3 abc1234\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('No planned steps remain')
+    expect(stdout).toContain('Next Up: Nothing planned - /plumbbob:step or /plumbbob:finish')
   })
 
   it('lets an explicit step number override the derived current step', async () => {
@@ -78,19 +160,17 @@ describe('handoff', () => {
     writeFileSync(stepPath(dir), '2\n') // in-flight is 2…
     const { code, stdout } = captureIo(() => handoff(dir, ['1'])) // …but ask about 1
     expect(code).toBe(0)
-    expect(stdout).toContain('Step 1 (First) is built')
-    expect(stdout).toContain('Next up: step 2 (Second)')
+    expect(stdout).toContain('Step 1 of 3')
+    expect(stdout).toContain('Next Up: Step 2 - Second')
   })
 
-  it('with no step in flight and no checkpoint yet, emits only the forward pointer', async () => {
-    // Fresh session (planned, nothing built): there is no just-done step to label,
-    // so the block degrades to the "Next up" line alone.
+  it('with no step in flight and no checkpoint yet, emits only the forward pointer and no banner', async () => {
+    // Fresh session (planned, nothing built): there is nothing measured, so the
+    // card degrades to the "Next Up" line alone.
     const dir = await started()
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('Next up: step 2 (Second)')
-    expect(stdout).not.toContain('is built')
-    expect(stdout).not.toContain('checkpointed')
+    expect(stdout.trim()).toBe('Next Up: Step 2 - Second')
   })
 
   it('treats a whitespace-only model recommendation as none', async () => {
@@ -101,9 +181,8 @@ describe('handoff', () => {
     writeFileSync(stepPath(dir), '2\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('Next up: step 3 (Third)')
+    expect(stdout).toContain('Next Up: Step 3 - Third')
     expect(stdout).not.toContain('model:')
-    expect(stdout).toContain('/plumbbob:build to start it')
   })
 
   it('refuses with no active session', async () => {

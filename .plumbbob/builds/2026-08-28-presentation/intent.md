@@ -155,7 +155,7 @@ the detail plane (never in the default turn body)
    is green
    - seam: `docs/presentation.md`
    - model: fable (the design judgment of the whole build lives in this document)
-2. [ ] feat(detail): the latest-step detail file and its lifecycle,
+2. [x] feat(detail): the latest-step detail file and its lifecycle,
    **done when:** `.plumbbob/detail.md` is untracked, written before each
    pause, folded into the commit body and truncated by checkpoint per
    [D9 (latest-detail-file)](#d9), and unit tests cover the lifecycle

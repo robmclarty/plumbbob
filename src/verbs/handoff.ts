@@ -1,25 +1,35 @@
-// `plumbbob handoff`: print the standardized build hand-off block: the
-// "state / choice / what's next" the human sees at each step boundary. Read-only,
-// no state change. It derives the moment from the session: a step in flight ⇒ the
-// pause block (built → looks-good/needs-work → next), none ⇒ the post-checkpoint
-// boundary block, and renders the next undone step plus its advisory `- model:`
-// recommendation straight from intent.md, the build's plan document. Owning the
-// block here, rather than as prose in the build skill, keeps the skill from
-// drifting out of sync with `status`, which renders the same next-step detail
-// (both read `parseSteps`).
+// `plumbbob handoff`: render the footer card (docs/presentation.md), the CLI-owned,
+// always-last-text ending of a turn. Read-only, no state change. It derives the
+// moment from the session: a step in flight ⇒ the decision-tier card (banner,
+// next-up, the your-call block); a landed step with none in flight ⇒ the
+// orientation-tier card (banner and next-up only); a fresh session with nothing
+// yet measured ⇒ the forward pointer alone, no banner. The banner is computed,
+// never composed: it folds the model's recap (read from `.plumbbob/detail.md`)
+// worst-of with its own check measurement and the step's accrued stats.
 
 import { readFileSync } from 'node:fs'
-import { findRepoRoot } from '../lib/git.ts'
-import { checkpointsPath, hasSession, intentPath, resolveBuild, stepPath } from '../lib/sidecar.ts'
-import { type Step, parseLastCheckpoint, parseSteps } from '../lib/orient.ts'
+import { join } from 'node:path'
+import { commitsSince, findRepoRoot } from '../lib/git.ts'
+import { checkpointsPath, detailPath, hasSession, intentPath, readStats, resolveBuild, stepPath } from '../lib/sidecar.ts'
+import {
+  type AccruedStats,
+  type RecapRow,
+  type Step,
+  foldBanner,
+  lastLedgerSha,
+  parseLastCheckpoint,
+  parseRecap,
+  parseSteps,
+} from '../lib/orient.ts'
 
 /**
- * Print the hand-off block for the resolved build; return the exit code.
+ * Print the footer card for the resolved build; return the exit code.
  *
  * Requires an active session (the STATE sentinel under `.plumbbob/`). Which
- * moment to render is derived, not passed: a step in flight yields the pause
- * block, none yields the boundary block, and a fresh session with nothing to
- * report yields only the forward pointer.
+ * tier to render is derived, not passed: a step in flight yields the full
+ * decision-tier card, a landed step yields the orientation-tier card (no
+ * your-call block), and a fresh session with nothing to report yields only
+ * the forward pointer.
  */
 export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   const root = findRepoRoot(cwd)
@@ -47,76 +57,124 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   const nextUp = steps.find((s) => !s.done && s.n !== current)
 
   if (current === null) {
-    // No step to report as just-done (fresh session): emit only the forward pointer.
+    // Nothing measured yet (a fresh session): no banner, just the forward pointer.
     process.stdout.write(`${nextUpLine(nextUp)}\n`)
     return 0
   }
 
-  const block = inFlight !== null ? pauseBlock(current, titleOf(steps, current), nextUp) : boundaryBlock(current, titleOf(steps, current), nextUp)
-  process.stdout.write(`${block}\n`)
+  const measuredCheck = measuredCheckRow(root)
+  const banner = renderBanner(root, slug, current, steps.length, measuredCheck)
+  const lines = [banner, '', nextUpLine(nextUp)]
+  if (inFlight !== null) {
+    lines.push('', yourCallBlock(current, measuredCheck?.verdict === 'true'))
+  }
+  process.stdout.write(`${lines.join('\n')}\n`)
   return 0
 }
 
 /**
- * The pause block: the step is built and awaiting approval.
+ * Render the banner line: the ladder rung folded worst-of over the recap rows
+ * plus the step's accrued stats, the worst component named inline, the step
+ * segment last.
  *
- * The opener is neutral (the CLI cannot vouch for the diff), pointing at the
- * diff and self-review the skill shows above it.
+ * The recap comes from `.plumbbob/detail.md`; its check row is provisional as
+ * written and is replaced here by handoff's own measurement when one is
+ * available (measured beats attested).
  */
-function pauseBlock(step: number, title: string | null, nextUp: Step | undefined): string {
-  return [
-    `Step ${step}${paren(title)} is built. Review the diff and self-review above, then:`,
-    `  - looks good → I'll checkpoint it (lands step ${step} as its own commit, back to the boundary)`,
-    `  - needs work → tell me what to change and I'll iterate on this same step`,
-    '',
-    nextUpLine(nextUp),
-  ].join('\n')
+function renderBanner(root: string, slug: string | null, step: number, total: number, measuredCheck: RecapRow | null): string {
+  const recap = parseRecap(readOr(detailPath(root)))
+  const rows = { ...(recap?.rows ?? {}) }
+  if (measuredCheck !== null) {
+    rows.check = measuredCheck
+  }
+  const { ladder, worst } = foldBanner(rows, accruedStats(root, slug, step))
+  const head = `${ladder.glyph} ${ladder.state}:`
+  return worst === null ? `${head} Step ${step} of ${total}` : `${head} ${worst} · Step ${step} of ${total}`
 }
 
 /**
- * The boundary block: the checkpoint has landed and the loop is back at the
- * step boundary, pointing at what to build next.
+ * The step's accrued stats (red checks, reverts) plus commits that landed
+ * since the last ledger entry outside plumbbob's checkpoints: the advisory
+ * inputs to the banner's third fold rung.
  */
-function boundaryBlock(step: number, title: string | null, nextUp: Step | undefined): string {
-  return [`Step ${step}${paren(title)} checkpointed — back at the boundary.`, '', nextUpLine(nextUp)].join('\n')
+function accruedStats(root: string, slug: string | null, step: number): AccruedStats {
+  const stats = readStats(root, slug)[String(step)] ?? {}
+  const anchor = lastLedgerSha(readOr(checkpointsPath(root, slug)))
+  return {
+    redChecks: stats.redChecks ?? 0,
+    reverts: stats.reverts ?? 0,
+    outOfBand: anchor === null ? 0 : commitsSince(root, anchor),
+  }
 }
 
 /**
- * The forward pointer, shared by both blocks: the next undone step, its title,
- * and its advisory `- model:` recommendation.
- *
- * The recommendation renders as just the model token for the `/model` call;
- * the full rationale lives on the `status` dashboard. No next step ⇒ the
+ * handoff's own check measurement, read from the last `plumbbob check` run's
+ * `.check/summary.json`, or null when it is absent or unreadable (nothing to
+ * measure with; the fold then falls back to the recap's attested row, if it
+ * wrote one).
+ */
+function measuredCheckRow(root: string): RecapRow | null {
+  let summary: { readonly ok: boolean; readonly checks: ReadonlyArray<{ readonly name: string; readonly ok: boolean; readonly skipped?: boolean }> }
+  try {
+    summary = JSON.parse(readFileSync(join(root, '.check', 'summary.json'), 'utf8'))
+  } catch {
+    return null
+  }
+  const ran = summary.checks.filter((c) => c.skipped !== true).map((c) => c.name)
+  if (summary.ok) {
+    return { verdict: 'true', word: 'green', evidence: `green (checkride: ${ran.join(', ')})` }
+  }
+  const failing = summary.checks.find((c) => !c.ok && c.skipped !== true)
+  return {
+    verdict: 'failing',
+    word: 'red',
+    evidence: failing !== undefined ? `red (${failing.name} failing)` : 'red',
+  }
+}
+
+/**
+ * The your-call block: three moves, each quoting what the human says and
+ * stating what happens next. `looks good` renders only while the measured
+ * check is green; offering a move that would refuse teaches a false
+ * ceremony. The other two always render.
+ */
+function yourCallBlock(step: number, checkGreen: boolean): string {
+  const moves: string[] = []
+  if (checkGreen) {
+    moves.push(callLine('looks good', `I checkpoint step ${step}; back to the boundary`))
+  }
+  moves.push(callLine('needs work', 'Tell me what to change; nothing lands until you approve'))
+  moves.push(callLine('revert', 'I wind the work back to the last checkpoint'))
+  return ['Your Call:', ...moves].join('\n')
+}
+
+/**
+ * One your-call row: the lowercase move label (it quotes what the human
+ * says), padded so every arrow lands in the same column, then the outcome
+ * clause opening with a capital letter.
+ */
+function callLine(move: string, outcome: string): string {
+  return `  ${move.padEnd(10)}  → ${outcome}`
+}
+
+/**
+ * The forward pointer: the next undone step, its title, and its advisory
+ * `- model:` recommendation named in parentheses. No next step ⇒ the
  * finish/step nudge instead.
  */
 function nextUpLine(nextUp: Step | undefined): string {
   if (nextUp === undefined) {
-    return 'No planned steps remain — /plumbbob:step to add an increment, or /plumbbob:finish.'
+    return 'Next Up: Nothing planned - /plumbbob:step or /plumbbob:finish'
   }
-  const head = `Next up: step ${nextUp.n}${paren(nextUp.title)}`
+  const title = nextUp.title.length > 0 ? ` - ${nextUp.title}` : ''
   const token = modelToken(nextUp.model)
-  return token === null ? `${head} — /plumbbob:build to start it.` : `${head} · model: ${token} — /model ${token} then /plumbbob:build.`
-}
-
-/**
- * A step's title in parentheses, or nothing when the title is empty.
- */
-function paren(title: string | null): string {
-  return title !== null && title.length > 0 ? ` (${title})` : ''
-}
-
-/**
- * The title of step `n` from the parsed steps, or null when the step is
- * unknown or untitled.
- */
-function titleOf(steps: ReadonlyArray<Step>, n: number): string | null {
-  return steps.find((s) => s.n === n)?.title ?? null
+  const model = token === null ? '' : ` (model: ${capitalize(token)})`
+  return `Next Up: Step ${nextUp.n}${title}${model}`
 }
 
 /**
  * The model token from a `- model:` recommendation: the first word, so a
- * `model: opus` line followed by an em dash and rationale yields `opus` for
- * the `/model` call.
+ * `model: opus` line followed by an em dash and rationale yields `opus`.
  *
  * Null when there is no recommendation, or it degraded to whitespace (folding
  * the null model into the same guard keeps both branches live).
@@ -124,6 +182,14 @@ function titleOf(steps: ReadonlyArray<Step>, n: number): string | null {
 function modelToken(model: string | null): string | null {
   const first = model?.trim().split(/\s+/)[0]
   return first !== undefined && first.length > 0 ? first : null
+}
+
+/**
+ * Capitalize a token's first letter for the card's title-case furniture
+ * (`(model: Sonnet)`); the rest rides through unchanged.
+ */
+function capitalize(s: string): string {
+  return s.length === 0 ? s : `${s[0]?.toUpperCase()}${s.slice(1)}`
 }
 
 /**

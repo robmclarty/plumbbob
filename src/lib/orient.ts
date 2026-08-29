@@ -354,6 +354,148 @@ export function orient(input: OrientInput): Orientation {
   }
 }
 
+// --- The footer card: recap parsing and the banner's worst-of fold, spec'd in
+// docs/presentation.md. Pure: `handoff` supplies the parsed recap (with its
+// own check measurement folded over the model's attested row) and the step's
+// accrued stats; this section only decides which ladder state and worst
+// component result. ---
+
+/** One measuring row's classification: holding, failing now, or the plan itself is wrong. */
+export type RecapVerdict = 'true' | 'failing' | 'drift'
+
+/** One measuring row of the recap: its verdict, the leading word that earned it, and the evidence after the colon. */
+export type RecapRow = { readonly verdict: RecapVerdict; readonly word: string; readonly evidence: string }
+
+/** The recap's five measuring rows, in the fixed order the fold walks them. */
+const RECAP_ROW_NAMES = ['check', 'done-when', 'decisions', 'constraints', 'seam'] as const
+export type RecapRowName = (typeof RECAP_ROW_NAMES)[number]
+
+/** The recap the model writes into `.plumbbob/detail.md` before a pause. */
+export type Recap = {
+  readonly step: number
+  readonly total: number
+  readonly rows: Readonly<Partial<Record<RecapRowName, RecapRow>>>
+  readonly diff: string | null // information only; never folds into the banner
+}
+
+/**
+ * Classify one recap row's value by its leading word, per the closed vocabulary
+ * in docs/presentation.md's row table. Null when the value opens with none of
+ * the words the row's kind allows (an unparseable row is simply absent from
+ * the fold, the same as a row that never rode the recap at all).
+ */
+function classifyRecapRow(name: RecapRowName, value: string): { readonly verdict: RecapVerdict; readonly word: string } | null {
+  const v = value.trim()
+  const test = (re: RegExp, verdict: RecapVerdict): { readonly verdict: RecapVerdict; readonly word: string } | null => {
+    const m = re.exec(v)
+    return m === null ? null : { verdict, word: m[0] }
+  }
+  switch (name) {
+    case 'check':
+      return test(/^green\b/, 'true') ?? test(/^red\b/, 'failing') ?? test(/^error\b/, 'failing')
+    case 'done-when':
+      return test(/^met\b/, 'true') ?? test(/^not met\b/, 'failing') ?? test(/^drift\b/, 'drift')
+    case 'decisions':
+      return (
+        test(/^honored\b/, 'true') ?? test(/^none exercised\b/, 'true') ?? test(/^bent\b/, 'failing') ?? test(/^drift\b/, 'drift')
+      )
+    case 'constraints':
+      return test(/^all honored\b/, 'true') ?? test(/^bent\b/, 'failing') ?? test(/^drift\b/, 'drift')
+    case 'seam':
+      return test(/^held\b/, 'true') ?? test(/^strayed\b/, 'failing') ?? test(/^drift\b/, 'drift')
+  }
+}
+
+/**
+ * Parse the fenced recap the model writes into `.plumbbob/detail.md`: the
+ * `── recap · step N of M ──` header, the (subset of) five measuring rows
+ * present, and the free-text diff row. Null when no header is found.
+ *
+ * A row absent from the block is simply missing from `rows`: a vanished row
+ * the fold treats exactly like one that never applied, never like a failure.
+ */
+export function parseRecap(detail: string): Recap | null {
+  const lines = detail.split('\n')
+  const headerIdx = lines.findIndex((l) => /^──\s*recap\s*·\s*step\s+\d+\s+of\s+\d+\s*──$/.test(l.trim()))
+  if (headerIdx === -1) {
+    return null
+  }
+  const header = /step\s+(\d+)\s+of\s+(\d+)/.exec(lines[headerIdx] ?? '')
+  if (header === null) {
+    return null
+  }
+  const rows: Partial<Record<RecapRowName, RecapRow>> = {}
+  let diff: string | null = null
+  for (let i = headerIdx + 1; i < lines.length; i++) {
+    const line = lines[i] ?? ''
+    if (line.trim().length === 0) {
+      break // the fence is one contiguous block; a blank line ends it
+    }
+    const m = /^(\S[\w-]*)\s+(.+)$/.exec(line)
+    if (m === null) {
+      continue
+    }
+    const label = m[1] ?? ''
+    const value = (m[2] ?? '').trim()
+    if (label === 'diff') {
+      diff = value
+    } else if ((RECAP_ROW_NAMES as readonly string[]).includes(label)) {
+      const classified = classifyRecapRow(label as RecapRowName, value)
+      if (classified !== null) {
+        rows[label as RecapRowName] = { ...classified, evidence: value }
+      }
+    }
+  }
+  return { step: Number(header[1]), total: Number(header[2]), rows, diff }
+}
+
+/** One rung of the circle ladder (docs/presentation.md's state table): its glyph and its state word. */
+export type Ladder = { readonly glyph: string; readonly state: string }
+
+const PLUMB: Ladder = { glyph: '●', state: 'Plumb' }
+const A_HAIR_OFF: Ladder = { glyph: '◐', state: 'A hair off' }
+const OUT_OF_PLUMB: Ladder = { glyph: '○', state: 'Out of plumb' }
+const NOT_STANDING: Ladder = { glyph: '✗', state: 'Not standing' }
+
+/** The banner's computed result: the ladder rung, and the worst component named (null when nothing is off). */
+export type Banner = { readonly ladder: Ladder; readonly worst: string | null }
+
+/** A step's accrued stats, the advisory inputs to the fold's third rung. */
+export type AccruedStats = {
+  readonly redChecks: number
+  readonly reverts: number
+  readonly outOfBand: number
+}
+
+/**
+ * Fold the recap's measuring rows worst-of with the step's accrued stats:
+ * drift beats a live failure beats an advisory beats plumb, and each rung
+ * names the one component that earned it.
+ */
+export function foldBanner(rows: Readonly<Partial<Record<RecapRowName, RecapRow>>>, stats: AccruedStats): Banner {
+  for (const name of RECAP_ROW_NAMES) {
+    if (rows[name]?.verdict === 'drift') {
+      return { ladder: NOT_STANDING, worst: `${name} drifted` }
+    }
+  }
+  for (const name of RECAP_ROW_NAMES) {
+    const row = rows[name]
+    if (row !== undefined && row.verdict === 'failing') {
+      return { ladder: OUT_OF_PLUMB, worst: `${name} ${row.word}` }
+    }
+  }
+  if (stats.redChecks > 0) {
+    return { ladder: A_HAIR_OFF, worst: `${stats.redChecks} red run${stats.redChecks === 1 ? '' : 's'} before green` }
+  }
+  if (stats.reverts > 0) {
+    return { ladder: A_HAIR_OFF, worst: `${stats.reverts} revert${stats.reverts === 1 ? '' : 's'} on this step` }
+  }
+  if (stats.outOfBand > 0) {
+    return { ladder: A_HAIR_OFF, worst: `${stats.outOfBand} commit${stats.outOfBand === 1 ? '' : 's'} outside the ledger` }
+  }
+  return { ladder: PLUMB, worst: null }
+}
+
 /**
  * Render an Orientation as the plain-text dashboard `status` prints.
  */
