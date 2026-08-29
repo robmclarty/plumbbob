@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: presentation
 
-**Current step:** none (at the boundary)
+**Current step:** 1 — docs(presentation): author the turn anatomy spec
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -23,7 +23,13 @@ step boundaries. The antidote to "my plan got lost in the noise."
 line above. Only ONE step is in flight; a step is done only after a checkpoint:
 check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
-- ☐ 1. <step>
+- ☐ 1. docs(presentation): author the turn anatomy spec
+- ☐ 2. feat(detail): the latest-step detail file and its lifecycle
+- ☐ 3. feat(handoff): render the orientation banner and footer card
+- ☐ 4. feat(verify): emit the recap skeleton and gate verdict line
+- ☐ 5. docs(skills): align every skill output spec to the anatomy
+- ☐ 6. docs(happy-path): make every illustrated block producible
+- ☐ 7. test(evals): run the eval tier against the new anatomy
 
 ## Park list
 
