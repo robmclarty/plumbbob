@@ -33,6 +33,12 @@ harvest triages it cold. Then:
    confirm it as-is or edit the wording.
 2. **Only after** that approval, capture it by running `plumbbob park "<the
    approved line>"` via Bash.
+3. **Relay the capture, then get back to the step.** `plumbbob park` prints
+   `parked: <text>`; relay that line verbatim. Park is a driver turn (the
+   [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)):
+   the CLI's line is the whole output, so add nothing but a one-line pointer back to the
+   step in flight, read from the dashboard above ("back to step N"). The capture is a
+   one-beat interruption; the step keeps its focus.
 
 ## The one hard contract
 

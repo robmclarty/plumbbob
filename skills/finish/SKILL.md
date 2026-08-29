@@ -21,15 +21,19 @@ record.
    (`.plumbbob/builds/<slug>/report.md`), from `intent.md` + `build-log.md`.
    The build-log's `## Log` is already the chronological history; `plumbbob checkpoint`
    wrote a dated line for every step as it landed. **Read it as the spine; do not
-   re-narrate it.** The report adds only what the log does not already carry:
-   - **What shipped**: summarize from the `## Log` timeline; don't rebuild it step by step.
-   - **Decisions and why**: the settled calls that shaped the build (the *why* behind
+   re-narrate it.** The report adds only what the log does not already carry, one `##`
+   section apiece, in this order:
+   - `## What shipped`: summarize from the `## Log` timeline; don't rebuild it step by step.
+   - `## Decisions and why`: the settled calls that shaped the build (the *why* behind
      the log). Copy each one's `D# (slug)` from `intent.md` (never a bare `D#`) so
      the report reads without flipping back to the intent.
-   - **Parked & harvested**: what was captured and how each was classified.
-   - **Final status**: done or partial, and what is left.
-   - **Deferred tangents**: the harvested items that become future work.
-   This is the "yeah, I did that" artifact. Write it by default; the human may edit it.
+   - `## Parked & harvested`: what was captured and how each was classified.
+   - `## Final status`: done or partial, and what is left.
+   - `## Deferred tangents`: the harvested items that become future work.
+   Stop there. `plumbbob finish` appends `## Checkpoints` (the baseline and step SHAs) and
+   `## Stats` (the per-step receipts) itself, so do **not** hand-write either; a report
+   that spells them out collides with the CLI's own tail. This is the "yeah, I did that"
+   artifact. Write it by default; the human may edit it.
 2. **Finish.** Run `plumbbob finish`, which appends the checkpoint SHAs to the
    report and makes the final commit (subject `chore(<scope>): finish`, its body
    led by a `plumbbob finish` marker plus an optional proportional `--body`), then
@@ -51,7 +55,12 @@ record.
    always reads stdin. Under an agent harness that stdin is a socket, and `--body` now
    refuses rather than blocking on one; the refusal names this exact heredoc form. Omit
    `--body` entirely and the commit carries the `plumbbob finish` marker subject only.
-3. **Point at the next goal**: `/plumbbob:plan` to frame the next one.
+3. **Point at the next goal.** Relay `plumbbob finish`'s line verbatim; it names the
+   branch the tracked folder now rides into the PR and the next move. This is the
+   orientation tier's close (the
+   [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)):
+   the verb's own line, then the forward pointer. `finish` clears the session, so there is
+   no footer card to render; `/plumbbob:plan` frames the next goal.
 
 ## The hard contracts
 

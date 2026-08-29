@@ -167,7 +167,7 @@ the detail plane (never in the default turn body)
    [D12 (instructive-choice)](#d12)
    - seam: `src/verbs/handoff.ts`, `src/lib/orient.ts`, `test/handoff.test.ts`
    - model: sonnet (mechanical once step 1 has fixed the strings)
-4. [ ] feat(verify): emit the recap skeleton and gate verdict line,
+4. [x] feat(verify): emit the recap skeleton and gate verdict line,
    **done when:** the verify pause renders the recap template (diffstat row
    included per [D7 (code-on-request)](#d7)) with the check verdict verbatim
    on its own line
@@ -177,7 +177,7 @@ the detail plane (never in the default turn body)
    hand-off block carries one name everywhere, every skill's ending sits in
    its [D15 (three-tier-anatomy)](#d15) tier, and build/verify spec the
    detail-file write
-   - seam: `skills/*/SKILL.md`, `docs/cli-reference.md`
+   - seam: `skills/`, `docs/cli-reference.md`
    - model: opus (voice-governed prose across nine files)
 6. [ ] docs(happy-path): make every illustrated block producible,
    **done when:** each rendered block in `docs/happy-path.md` matches real CLI

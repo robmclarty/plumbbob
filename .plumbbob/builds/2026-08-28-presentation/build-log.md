@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: presentation
 
-**Current step:** 4 — feat(verify): emit the recap skeleton and gate verdict line
+**Current step:** 5 — docs(skills): align every skill output spec to the anatomy
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -26,7 +26,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 1. docs(presentation): author the turn anatomy spec
 - ☑ 2. feat(detail): the latest-step detail file and its lifecycle
 - ☑ 3. feat(handoff): render the orientation banner and footer card
-- ☐ 4. feat(verify): emit the recap skeleton and gate verdict line
+- ☑ 4. feat(verify): emit the recap skeleton and gate verdict line
 - ☐ 5. docs(skills): align every skill output spec to the anatomy
 - ☐ 6. docs(happy-path): make every illustrated block producible
 - ☐ 7. test(evals): run the eval tier against the new anatomy
@@ -36,6 +36,9 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 > Mid-step, every new problem / idea / "ooh what if" lands HERE, untouched, and you
 > go straight back to the step. Acting the instant an idea arrives is the disease.
 > Capture is one line (`/plumbbob:park` composes it). Harvest happens only at the boundary.
+
+- [ ] step 5 gap: the plan-pause your-call block and the mid-step driver next-up line are spec'd in presentation.md but not yet emitted by `plumbbob handoff` (needs a src change, outside step 5's docs seam); skills document the tier ending the CLI actually emits rather than fake the furniture.
+- [ ] bug: handoff's footer card omits a trailing blank line (src/verbs/handoff.ts ends its stdout with a single \n), so the next output clobbers the last your-call line — emit a trailing blank line so the card ends the turn with visual separation. A src fix, outside step 5's docs seam.
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -67,3 +70,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-08-29 — step 1 checkpointed · e1469c7f7 — docs(presentation): author the turn anatomy spec (1 drift, 52m)
 - 2026-08-29 — step 2 checkpointed · 030407ba6 — feat(detail): the latest-step detail file and its lifecycle (1 drift, 11m)
 - 2026-08-29 — step 3 checkpointed · 88d0656d3 — feat(handoff): render the orientation banner and footer card (1 drift, 16m)
+- 2026-08-29 — step 4 checkpointed · 65726e6f7 — feat(verify): emit the recap skeleton and gate verdict line (150m)

@@ -104,7 +104,7 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    build the step and reach the pause *in one turn*, so under plumbbob's turn hook the
    checkpoint at the end of that turn is **refused** ("no human turn since this step
    began"), and that refusal **is** the pause working as designed. Do exactly what the
-   pause asks: present the diff and the self-review, emit the closing block below, and
+   pause asks: present the diff and the self-review, render the footer card, and
    **end the turn**. The human's next message (their approval) is the human turn that
    lets the checkpoint land: on that turn you run `plumbbob checkpoint <n>` (now allowed)
    and **stop at the boundary**. Landing the checkpoint is its own deliberate beat (the
@@ -112,14 +112,39 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    `/plumbbob:build` only ever starts the *next* step. **Never route around a refusal with a
    raw `git commit`**; the work plane stays free, but the *record* is latched on purpose.
 
-   **Render the pause as the turn anatomy.** Before the hand-off block below, show the
-   recap and then the check verdict. The recap compresses your self-review into labeled
-   rows inside one `text` fence: a header rule, the measuring rows that apply (`check`,
-   `done-when`, `decisions`, `constraints`, `seam`), then the `diff` row last, each label
-   padded so its value starts at column 14, every measuring row opening with a verdict
-   word from the closed set in the [turn anatomy spec](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md).
+   **Render the pause as the full turn anatomy.** A build pause is a decision turn, and it
+   reads top to bottom in four parts, spec'd in the [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md):
+   a plain headline and numbered highlights, the fenced recap, the check verdict on its
+   own line, then the footer card last. You compose the first two; the CLI renders the
+   last two, and you relay them verbatim.
+
+   *Headline and highlights.* Open with one plain sentence naming the outcome, not the
+   activity ("Step 2 built: the 6th login attempt inside a minute now gets 429"). Then a
+   numbered list, five entries at most, each one move in plain English, a path in
+   backticks only when the name itself is the news. The numbers are handles: "expand 2"
+   opens the matching section of the detail file, so each highlight has a section behind
+   it. When any detail is elided, one pointer line follows, exact shape:
+
+   ```text
+   detail: <N> sections in .plumbbob/detail.md · "expand <n>" shows one
+   ```
+
+   *Write the detail file first.* Before you call `plumbbob handoff`, write
+   `.plumbbob/detail.md` for this step: the fenced recap first (it is the wire handoff
+   parses to compute the banner, so it must be byte-identical to the recap you show),
+   then one `## <n> <the highlight>` section per numbered highlight carrying the full
+   story (what moved, why, what was tried and dropped). `checkpoint` folds this file into
+   the commit body and then truncates it, so the detail lands in the durable commit
+   rather than piling up on disk; the detail plane in the [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)
+   has the shape. Overwrite it fresh at each pause; never let a past step's detail linger.
+
+   *The recap.* Compress your self-review into labeled rows inside one `text` fence: a
+   header rule, the measuring rows that apply (`check`, `done-when`, `decisions`,
+   `constraints`, `seam`), then the `diff` row last, each label padded so its value starts
+   at column 14, every measuring row opening with a verdict word from the closed set in
+   the [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md).
    A cited decision or constraint carries its slug (`C1 (no-new-deps)`, never a bare
-   `C1`); a row that cannot apply vanishes; the `diff` row counts what moved and a change
+   `C1`); a row that cannot apply vanishes; the `diff` row counts what moved, and a change
    of 20 lines or fewer may ride inline in a `diff` fence just below it.
 
    ```text
@@ -132,30 +157,34 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    diff         +61 -3 across 2 files
    ```
 
-   Below the recap, relay `plumbbob check`'s verdict verbatim on its own line, not
-   paraphrased or folded into a sentence:
+   *The verdict line.* Below the recap, relay `plumbbob check`'s verdict verbatim on its
+   own line, never paraphrased or folded into a sentence. The same slot carries any gate
+   verdict you relay: when checkride's per-turn Stop hook reports at the end of a
+   file-touching turn, its verdict rides here too, verbatim, and a narrowed gate's
+   `NOT the full check` clause rides with it. The relayed CLI strings keep their em-dashes;
+   your own prose never uses one, the write-versus-relay line of
+   [D78 (em-dash-ban)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d78).
 
    ```text
    plumbbob: check green.
    ```
 
-   **End every default build turn with the standardized hand-off block.** Run `plumbbob
-   handoff` and present its output; it renders the same three-part shape (the state, the
-   choice, what's next) straight from the session: step N built, the looks-good /
-   needs-work choice, and the next undone step with its `- model:` recommendation. Show
-   your diff and self-review above it. The CLI owns the block so it can't drift from what
-   `/plumbbob:status` reports; you supply only the judgment above it. It already drops the model
-   clause when the next step has none, and says so when no planned step remains; you
-   don't reproduce the template by hand.
+   *The footer card.* End every default build turn with the footer card: run `plumbbob
+   handoff` and relay its output verbatim, always the turn's last text. It renders the
+   whole card from the session (the banner folded worst-of from your recap, the next-up
+   line, and the your-call block), so it can't drift from what `/plumbbob:status` reports and
+   you never hand-write it. It drops the model clause when the next step has none, and says
+   so when no planned step remains.
 
    **Then hand off with the next model.** Once the checkpoint lands in the approval turn,
-   run `plumbbob handoff` again and relay its boundary block; with the step gone from
-   in-flight it renders "step N checkpointed" and points at the next undone step, carrying
-   that step's `- model:` recommendation (the plan's smallest-model-that-fits call) so the
-   human knows which `/model` to select before running `/plumbbob:build` again. It is what
-   carries the plan's suggestion across a fresh context window, which inherits the session
-   model, not the plan's. No `- model:` line means any model will do. Guidance, never a
-   gate.
+   `plumbbob checkpoint` prints `step N checkpointed — <sha>. Back at the boundary.`; then
+   run `plumbbob handoff` again and relay the footer card. With the step gone from
+   in-flight the card drops to its orientation-tier form (banner and next-up only, no
+   your-call block) and points at the next undone step, carrying that step's `- model:`
+   recommendation (the plan's smallest-model-that-fits call) so the human knows which
+   `/model` to select before running `/plumbbob:build` again. It is what carries the plan's
+   suggestion across a fresh context window, which inherits the session model, not the
+   plan's. No `- model:` line means any model will do. Guidance, never a gate.
 
 ## Running bound agents
 
@@ -208,8 +237,8 @@ and approves in the human's place**, and it **chains**:
   bound agent returns `blocked` or `drift` (unblock-and-re-run, or `/plumbbob:refine`; an
   agent cannot advance the loop), a new decision is needed, no planned steps
   remain, or the top of a requested range is reached. **When `--auto` halts back to the
-  human, give the same hand-off the default pause does**; run `plumbbob handoff` and
-  relay its block: the step just completed, the next undone step, and that next step's
+  human, render the footer card the default pause does**; run `plumbbob handoff` and
+  relay it: the step just completed, the next undone step, and that next step's
   `- model:` recommendation if it has one, so a fresh context window knows which `/model`
   to select.
 
@@ -256,15 +285,15 @@ just the one more entry already in the halt list above.
   who verifies and (bar `--auto`) the human is still the clock. See **§ Running bound
   agents** for the mechanics.
 - **A refused checkpoint is the pause, not an error.** Under plumbbob's turn
-  hook a same-turn `checkpoint` is refused by design: present the diff and the closing
-  block, **end the turn**; the human's approval on their next turn is what lets you land
+  hook a same-turn `checkpoint` is refused by design: present the diff and the footer
+  card, **end the turn**; the human's approval on their next turn is what lets you land
   it, and landing it is a deliberate beat, not a side effect of the next `/plumbbob:build`.
   Never route around it with a raw `git commit`. An explicit `/plumbbob:build --auto` or a typed
   step range in the human's own prompt are the only self-approvals; **never write `auto`
   into a settings file yourself to unlock a checkpoint. A grant you mint is no grant (the
   latch ignores it; [D67 (auto-not-a-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d67)); ask the human to type
   `/plumbbob:build --auto` again instead.**
-- **Close with the next model.** When a step lands, run `plumbbob handoff` and relay its
-  block; it cites the completed step and the next undone step, and names that next step's
-  `- model:` recommendation if it has one, which is what a fresh context window needs to
-  pick the right `/model` before the next run. Guidance, never a gate.
+- **Close with the next model.** When a step lands, run `plumbbob handoff` and relay the
+  footer card; it cites the completed step and the next undone step, and names that next
+  step's `- model:` recommendation if it has one, which is what a fresh context window
+  needs to pick the right `/model` before the next run. Guidance, never a gate.

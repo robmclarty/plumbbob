@@ -2,7 +2,7 @@
 name: verify
 description: "The verify tick: run the check, self-review the diff against intent, validate the step's done-when, pause for your approval, then checkpoint. Executor-agnostic: it reads the diff, not who wrote it."
 disable-model-invocation: true
-allowed-tools: Read, Bash(plumbbob status:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent:*), Bash(git diff:*), Bash(git status:*)
+allowed-tools: Read, Write, Bash(plumbbob status:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent:*), Bash(git diff:*), Bash(git status:*)
 ---
 
 # PlumbBob: verify a step (the tick)
@@ -44,16 +44,37 @@ this skill verifies it the same way: **it reads the diff, not the author**
    slug from `intent.md` (`C1 (no-new-deps)`, never a bare `C1`) so each finding reads
    on its own. You are reviewing, not building; do not fix anything.
 4. **Validate.** State, yes or no, whether the step's done-when is met, with the evidence.
-5. **PAUSE.** Render the pause as the turn anatomy: the recap, then the check verdict
-   on its own line, then the self-review and validation you formed in steps 2 through 4.
-   **Stop and wait for the human's explicit approval.** This is the convergence beat;
-   the human is the clock. Never checkpoint without it.
+5. **PAUSE.** Render the pause as the full turn anatomy, then **stop and wait for the
+   human's explicit approval**. This is the convergence beat; the human is the clock.
+   Never checkpoint without it. A verify pause is a decision turn, so it reads top to
+   bottom in the four parts the [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)
+   fixes: a plain headline and numbered highlights, the fenced recap, the check verdict
+   on its own line, then the footer card last.
 
-   The recap compresses the self-review into labeled rows inside one `text` fence: a
+   *Headline and highlights.* One plain sentence naming what the diff does, not the
+   activity, then a numbered list (five entries at most) drawn from the self-review you
+   formed in steps 2 through 4, each one move in plain English. The numbers are handles:
+   "expand 2" opens the matching section of the detail file. When any detail is elided,
+   one pointer line follows, exact shape:
+
+   ```text
+   detail: <N> sections in .plumbbob/detail.md · "expand <n>" shows one
+   ```
+
+   *Write the detail file first.* Before you call `plumbbob handoff`, write
+   `.plumbbob/detail.md`: the fenced recap first (it is the wire handoff parses to compute
+   the banner, so keep it byte-identical to the recap you show), then one
+   `## <n> <the highlight>` section per numbered highlight carrying the full story. This
+   is the **one** file `/plumbbob:verify` writes, and it is turn presentation, never the diff
+   under review; the author-blind contract below still holds. `checkpoint` folds this file
+   into the commit body and then truncates it (the detail plane in the
+   [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)).
+
+   *The recap.* Compress the self-review into labeled rows inside one `text` fence: a
    header rule, the measuring rows that apply (`check`, `done-when`, `decisions`,
    `constraints`, `seam`), then the `diff` row last, each label padded so its value
    starts at column 14. Every measuring row opens with a verdict word from the closed
-   set in the [turn anatomy spec](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md);
+   set in the [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md);
    a cited decision or constraint carries its slug (`C1 (no-new-deps)`, never a bare
    `C1`). A row that cannot apply vanishes; one whose good state is meaningful collapses
    to it (`constraints  all honored`). The `diff` row counts what moved and never folds
@@ -70,13 +91,23 @@ this skill verifies it the same way: **it reads the diff, not the author**
    diff         +61 -3 across 2 files
    ```
 
-   Below the recap, relay `plumbbob check`'s verdict verbatim on its own line, not
-   paraphrased or folded into a sentence. At the pause the gate is green, since a red
-   one stopped you back at step 1:
+   *The verdict line.* Below the recap, relay `plumbbob check`'s verdict verbatim on its
+   own line, never paraphrased or folded into a sentence. At the pause the gate is green,
+   since a red one stopped you back at step 1. The same slot carries any gate verdict you
+   relay: when checkride's per-turn Stop hook reports at the end of a file-touching turn,
+   its verdict rides here too, verbatim, and a narrowed gate's `NOT the full check` clause
+   rides with it. The relayed CLI strings keep their em-dashes; your own prose never uses
+   one, the write-versus-relay line of
+   [D78 (em-dash-ban)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d78).
 
    ```text
    plumbbob: check green.
    ```
+
+   *The footer card.* Run `plumbbob handoff` and relay its output verbatim, the turn's
+   last text. A step is in flight at the pause, so it renders the full decision-tier card:
+   the banner (folded worst-of from your recap), the next-up line, and the your-call
+   block. The CLI owns it, so it can't drift from `/plumbbob:status`; you never hand-write it.
 
    - **Reconcile a drifted subject here, in the open.** The planned title *is* the
      checkpoint subject ([D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68)). If the diff drifted from it (the
@@ -97,7 +128,7 @@ this skill verifies it the same way: **it reads the diff, not the author**
 
    ```bash
    plumbbob checkpoint <n> --body <<'BODY'
-   <your proportional body — what changed and why, no ceremony>
+   <your proportional body: what changed and why, no ceremony>
    BODY
    ```
 
@@ -114,14 +145,16 @@ this skill verifies it the same way: **it reads the diff, not the author**
    overriding the title-derived default for this one commit; unpresented, the CLI's
    deterministic subject stands.
 7. **Hand off with the next model** *(once the checkpoint lands)*. `plumbbob checkpoint`
-   returns to DESIGN; then run `plumbbob handoff` and relay its boundary block. With the
-   step gone from in-flight it renders `step N checkpointed — back at the boundary` and
-   points at the **next undone step**, carrying that step's `- model:` recommendation (the
-   plan's smallest-model-that-fits call) so the human knows which `/model` to select before
-   running `/plumbbob:build` again. This matters most across a context boundary: a fresh window
-   inherits the *session's* model, not the plan's suggestion, so this line is what carries
-   the recommendation over. The CLI owns the block, so it can't drift from what `plumbbob
-   status` reports; no `- model:` line means any model will do. Guidance, never a gate.
+   prints `step N checkpointed — <sha>. Back at the boundary.` and returns to DESIGN; then
+   run `plumbbob handoff` and relay the footer card. With the step gone from in-flight the
+   card drops to its orientation-tier form (banner and next-up only, no your-call block)
+   and points at the **next undone step**, carrying that step's `- model:` recommendation
+   (the plan's smallest-model-that-fits call) so the human knows which `/model` to select
+   before running `/plumbbob:build` again. This matters most across a context boundary: a fresh
+   window inherits the *session's* model, not the plan's suggestion, so this line is what
+   carries the recommendation over. The CLI owns the card, so it can't drift from what
+   `plumbbob status` reports; no `- model:` line means any model will do. Guidance, never a
+   gate.
 
 ## The latch makes the pause real
 
@@ -148,7 +181,8 @@ instead.**
 - **Red means stop, not pause.** A failing check is not an approval decision; report
   it and end your turn.
 - **You review; you do not build.** If the self-review finds a problem, surface it
-  and stop; fixing is a new build beat, not part of verify.
+  and stop; fixing is a new build beat, not part of verify. The one file the tick writes
+  is `.plumbbob/detail.md`, the turn's presentation; it never edits the diff under review.
 - **`after`-agents advise; they never gate**. Their output feeds the
   self-review; checkride gates, the human approves. `blocked` → unblock and re-run;
   `drift` → `/plumbbob:refine` before checkpointing. No code path makes them blocking.
@@ -157,6 +191,6 @@ instead.**
   turn**, and let the human's next message re-tick it. Never route around it with a raw
   `git commit`; the latch guards the record, not the work.
 - **Close with the next model.** After the checkpoint lands, run `plumbbob handoff` and
-  relay its block; it cites the completed step and the next undone step, and surfaces that
-  next step's `- model:` recommendation when it has one, which is what a fresh context
+  relay the footer card; it cites the completed step and the next undone step, and surfaces
+  that next step's `- model:` recommendation when it has one, which is what a fresh context
   window needs to pick the right `/model`. Guidance, never a gate.
