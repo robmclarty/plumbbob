@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { use } from '../use.ts'
-import { notice } from '../../lib/notice.ts'
+import { transition } from '../../lib/notice.ts'
 import { start } from '../start.ts'
 import { activeBuild, buildDir, stepPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -28,7 +28,7 @@ describe('use', () => {
     expect(code).toBe(0)
     expect(activeBuild(dir)).toBe('other-build')
     // Exact tail: no in-flight note when the target has no STEP file.
-    expect(stdout).toBe(notice({ fact: 'now on build "other-build"' }))
+    expect(stdout).toBe(transition({ label: 'Active build', fact: 'other-build' }))
     // And no in-flight warning when the build being left has none either.
     expect(stderr).not.toContain('step in flight')
   })

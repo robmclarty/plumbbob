@@ -24,7 +24,7 @@ describe('start', () => {
     expect(existsSync(join(build, 'intent.md'))).toBe(true)
     expect(existsSync(join(build, 'build-log.md'))).toBe(true)
     expect(readFileSync(join(build, 'checkpoints'), 'utf8')).toMatch(/^baseline [0-9a-f]{40}\n$/)
-    expect(stdout).toContain('started "My Feature"')
+    expect(stdout).toContain('**Session**: started "My Feature"')
     expect(stdout).toContain(`.plumbbob/builds/${TODAY}-my-feature/intent.md`)
   })
 

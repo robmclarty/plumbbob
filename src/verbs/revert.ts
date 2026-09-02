@@ -24,7 +24,7 @@ import { findRepoRoot, resetHard, untrackedPaths } from '../lib/git.ts'
 import { bumpStepStat, checkpointsPath, hasSession, resolveBuild, seamPath, sidecarDir, stepPath } from '../lib/sidecar.ts'
 import { isArtifactPath, matchesSeam } from '../lib/intent.ts'
 import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
-import { notice } from '../lib/notice.ts'
+import { notice, transition } from '../lib/notice.ts'
 
 /**
  * Rewind to a recorded checkpoint and return the build to the boundary.
@@ -91,7 +91,7 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
   syncBuildLogState(root, slug, AT_BOUNDARY)
 
   process.stdout.write(
-    notice({ fact: `reverted to ${sha.slice(0, 9)}`, detail: ['park lines and intent edits preserved'] }),
+    transition({ label: 'Reverted', fact: `to ${sha.slice(0, 9)}`, detail: ['park lines and intent edits preserved'] }),
   )
   return 0
 }

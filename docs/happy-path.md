@@ -38,7 +38,7 @@ Under the hood it runs `plumbbob start`, which records a baseline and drops you 
 `DESIGN`:
 
 ```text
-plumbbob: started "Rate-limit the login endpoint" (baseline 3a1f2b0c1)
+**Session**: started "Rate-limit the login endpoint" (baseline 3a1f2b0c1)
   → frame and decide in .plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md, then build a step
 ```
 
@@ -215,7 +215,7 @@ The boundary turn scales the anatomy down to what a landed step needs: the verb'
 then the Verdict and Next Up, with no Your Call block, because no decision is pending.
 
 ```text
-plumbbob: step 1 checkpointed (a1b2c3d4e)
+**Checkpoint**: Step 1 complete (a1b2c3d4e)
 
 **Verdict**: ● Plumb
 
@@ -265,7 +265,7 @@ you for a quick OK** (confirm it as-is or tweak the wording), then captures it b
 pointer back at the step it interrupted, and nothing else.
 
 ```text
-parked: should /password-reset get the same throttle? (tangent)
+**Parked**: should /password-reset get the same throttle? (tangent)
 
 **Next Up**: Back to step 2 of 3 - Wire the limiter into POST /login
 ```
@@ -363,7 +363,9 @@ the in-flight markers). It writes no separate archive copy: the tracked build fo
 the record now, so it merges into `main` with the branch:
 
 ```text
-plumbbob: finished (f3e9a1b2c, .plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/ rides your branch into the PR)
+**Session**: finished (f3e9a1b2c, .plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/ rides your branch into the PR)
+
+**Next Up**: Nothing planned - /plumbbob:plan
 ```
 
 The record now lives (tracked, on the branch) at:
@@ -392,7 +394,7 @@ The sidecar is clear and there's no active session. `/plumbbob:status` now reads
 ```
 
 ```text
-plumbbob: started "Add structured request logging" (baseline a1b2c3d4e)
+**Session**: started "Add structured request logging" (baseline a1b2c3d4e)
   → frame and decide in .plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md, then build a step
 ```
 

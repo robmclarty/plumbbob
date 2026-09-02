@@ -375,13 +375,21 @@ full:
 
 **Next Up**: Back to step 2 of 3 - Wire the limiter into POST /login
 
+**Next Up**: Close the spike - /plumbbob:spike done, then back to step 2
+
 **Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish
+
+**Next Up**: Nothing planned - /plumbbob:plan
 ```
 
 The progress count rides Next Up in every tier, because Next Up is the one
 line present at the pause, at the boundary, and on a driver turn. It is
 dropped only where it would lie: a driver pointer back at a step the plan no
-longer holds says `Back to step 9` and no count.
+longer holds says `Back to step 9` and no count, and an open spike outranks
+the step it interrupted, so the move named is closing it and the step to come
+back to rides as a trailing clause. The last shape is `plumbbob finish`'s own:
+finish clears the session the pointer would be read from, so it prints the
+line itself, and the only move left is a fresh plan.
 
 The model is the second bold token the line spends, because it is the one the
 human acts on (a `/model` call) before the next run. The rationale behind the
@@ -500,7 +508,7 @@ scales down with the turn:
 A boundary turn, whole:
 
 ```text
-plumbbob: step 2 checkpointed (b4c5d6e7f)
+**Checkpoint**: Step 2 complete (b4c5d6e7f)
 
 **Verdict**: ● Plumb
 
@@ -510,7 +518,7 @@ plumbbob: step 2 checkpointed (b4c5d6e7f)
 A driver turn, whole (a mid-step park):
 
 ```text
-parked: should /password-reset get the same throttle? (tangent)
+**Parked**: should /password-reset get the same throttle? (tangent)
 
 **Next Up**: Back to step 2 of 3 - Wire the limiter into POST /login
 ```
@@ -536,21 +544,32 @@ the reference the shape was read from:
 checkride green in 3.6s ✔ (10 checks, without test, slowest: spell in 1.8s)
 ```
 
-A line states its fact and never the move:
+A line states its fact and never the move, and the stream it is written to
+picks its head. An ending's own lead line goes to stdout, where it wears a
+bold label like every other part of the ending:
+
+```text
+**Checkpoint**: Step 15 complete (2d917cde7)
+**Parked**: should /password-reset get the same throttle? (tangent)
+```
+
+The label names the transition: the artifact that landed (`Checkpoint`,
+`Plan`, `Spike report`) or the subject that moved (`Parked`, `Reverted`,
+`Session`, `Active build`). The fact reads on from the label instead of
+repeating it, which is why `checkpointed` is no longer a word the CLI says;
+the noun is the artifact. A capture's tag rides the tail, so the line printed
+and the line written to the ledger read the same.
+
+An advisory or a refusal goes to stderr, and there the head is the prefix:
 
 ```text
 plumbbob: <subject> <state> (<detail>)
 ```
 
-The one colon is spent on the prefix, which earns it by naming the speaker:
-checkride's output, git's, and plumbbob's arrive in one terminal, and
-scrollback is grepped for that word. A capture spends the colon on `parked:`
-instead, and its tag rides the tail, so the line printed and the line written
-to the ledger read the same:
-
-```text
-parked: should /password-reset get the same throttle? (tangent)
-```
+The one colon is spent on that prefix, which earns it by naming the speaker:
+those are the lines that land beside checkride's output and git's in one
+terminal result, and scrollback is grepped for that word. The split falls
+exactly on the stream, so nothing has to judge which head a line wants.
 
 The detail is one trailing parenthetical, comma-separated, and it degrades by
 count the way a readout row does: a list that overruns 80 columns drops from
@@ -574,14 +593,15 @@ That `→` line is the remedy, indented and singular, and a refusal spends the
 same line on what unblocks it. The `heads-up` and `note` labels are retired: a
 chained label is the machine noise this register exists to kill, and the glyph
 table already gives `⚠` to a warning and `→` to what happens next. The order
-of an ending is fixed, primary line, then advisories, then a blank line, then
+of an ending is fixed, labeled line, then advisories, then a blank line, then
 the card, so a relay never has to work out which line leads.
 
-Every one of these lines is rendered by one formatter, `notice()` in
-`src/lib/notice.ts`, which takes the fact, the detail list, the advisory flag,
-and the remedy. A verb composes those parts and never a string, so moving the
-shape is one edit here and one there rather than a sweep across the verbs, and
-the tests assert through the same renderer.
+Every one of these lines is rendered by one formatter in `src/lib/notice.ts`:
+`transition()` for the labeled head, `notice()` for the prefixed one, and a
+single assembly under both for the fact, the detail list, and the remedy. A
+verb composes those parts and never a string, so moving the shape is one edit
+here and one there rather than a sweep across the verbs, and the tests assert
+through the same renderer.
 
 ## The glyph vocabulary
 

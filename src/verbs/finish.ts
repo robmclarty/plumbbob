@@ -34,7 +34,7 @@ import {
 } from '../lib/sidecar.ts'
 import { conventionalSubject, withMarker } from '../lib/commitmsg.ts'
 import { parseBuildScope } from '../lib/intent.ts'
-import { notice } from '../lib/notice.ts'
+import { notice, transition } from '../lib/notice.ts'
 
 // The pointer finish leaves the turn on. Every other one is `handoff`'s, but a
 // finished session has no state left to render from, and past a closed build
@@ -105,7 +105,7 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
 
   const where = slug === null ? '.plumbbob/' : `.plumbbob/builds/${slug}/`
   process.stdout.write(
-    notice({ fact: 'finished', detail: [sha.slice(0, 9), `${where} rides your branch into the PR`] }),
+    transition({ label: 'Session', fact: 'finished', detail: [sha.slice(0, 9), `${where} rides your branch into the PR`] }),
   )
   // The advisory follows the line it qualifies. Finishing without a report is
   // guidance, never a gate: the session is already closed by the time it prints.

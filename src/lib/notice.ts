@@ -1,11 +1,15 @@
-// The one renderer for every line plumbbob says out loud and a skill relays:
-// the transitions, the captures, the advisories, and the refusals. One shape,
-// so moving it is one edit rather than a sweep: `plumbbob: <subject> <state>
-// (<detail>)`, the single colon spent on the prefix, the detail a trailing
-// parenthetical that degrades by count instead of running off the edge, an
-// optional warning glyph, and an optional indented arrow line carrying what to
-// do next. The pointer at the next step is not a notice's job: `handoff`
-// renders one after every ending. Pure string assembly, no fs, no gate.
+// The one renderer for every line plumbbob says out loud and a skill relays.
+// It has two heads, and the stream picks which: an ending's own lead line goes
+// to stdout wearing a bold label, like every other part of the ending
+// (`**Checkpoint**: Step 15 complete (2d917cde7)`), while the advisories and
+// refusals that go to stderr keep the `plumbbob:` prefix, which earns its colon
+// by naming the speaker where checkride's output and git's share one result.
+// Under both heads the shape is the same: the fact as one clause, the detail a
+// trailing parenthetical that degrades by count instead of running off the
+// edge, and an optional indented arrow line carrying what to do next. One
+// shape, so moving it is one edit rather than a sweep. The pointer at the next
+// step is not a notice's job: `handoff` renders one after every ending. Pure
+// string assembly, no fs, no gate.
 
 /** The column budget a notice line aims to fit, matching the readout fence. */
 const WIDTH = 80
@@ -25,9 +29,25 @@ export type Notice = {
   readonly advisory?: boolean
   // What to do next, on its own indented `→` line beneath.
   readonly remedy?: string
-  // The speaker. `plumbbob` for everything except a capture, which spends its
-  // one colon on `parked`.
+  // The speaker, for a prefixed line. `plumbbob` for everything except a
+  // capture an agent reports, which spends its one colon on `parked`.
   readonly prefix?: string
+}
+
+/** One transition: the label naming it, the fact it states, and the detail qualifying it. */
+export type Transition = {
+  // The transition's name, rendered bold before the colon: the artifact that
+  // landed (`Checkpoint`, `Plan`, `Spike report`) or the subject that moved
+  // (`Parked`, `Reverted`, `Session`). Written as it prints, capitalized.
+  readonly label: string
+  // What the transition did, as one clause and no terminal period. It reads on
+  // from the label rather than repeating it.
+  readonly fact: string
+  // The trailing parenthetical's items, in the order they matter: a long list
+  // degrades from the tail, so put what must survive first.
+  readonly detail?: ReadonlyArray<string>
+  // What to do next, on its own indented `→` line beneath.
+  readonly remedy?: string
 }
 
 /**
@@ -42,10 +62,37 @@ export type Notice = {
  * ```
  */
 export function notice(n: Notice): string {
-  const head = `${n.prefix ?? 'plumbbob'}: ${trimFact(n.fact)}${n.advisory === true ? ' ⚠' : ''}`
+  return line(`${n.prefix ?? 'plumbbob'}: ${trimFact(n.fact)}${n.advisory === true ? ' ⚠' : ''}`, n)
+}
+
+/**
+ * Render one transition, newline included.
+ *
+ * The lead line of an ending, wearing a bold label so it reads as a part of the
+ * ending rather than as a second grammar beside it:
+ *
+ * ```text
+ * **Checkpoint**: Step 15 complete (2d917cde7)
+ * **Parked**: should /password-reset get the same throttle? (tangent)
+ * ```
+ *
+ * A transition never warns: an advisory qualifies the line and prints after it
+ * on stderr, where the `plumbbob:` prefix names the speaker.
+ */
+export function transition(t: Transition): string {
+  return line(`**${t.label}**: ${trimFact(t.fact)}`, t)
+}
+
+/**
+ * The head, its trailing parenthetical, and the remedy line beneath, assembled.
+ *
+ * The one place the parts meet, so a prefixed line and a labeled one can never
+ * drift in anything but their heads.
+ */
+function line(head: string, n: Notice | Transition): string {
   const detail = fit(head, (n.detail ?? []).map((d) => d.trim()).filter((d) => d.length > 0))
-  const line = detail.length === 0 ? head : `${head} (${detail.join(', ')})`
-  return n.remedy === undefined ? `${line}\n` : `${line}\n  → ${n.remedy}\n`
+  const text = detail.length === 0 ? head : `${head} (${detail.join(', ')})`
+  return n.remedy === undefined ? `${text}\n` : `${text}\n  → ${n.remedy}\n`
 }
 
 /**

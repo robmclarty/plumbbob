@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { abandon } from '../abandon.ts'
-import { notice } from '../../lib/notice.ts'
+import { notice, transition } from '../../lib/notice.ts'
 import { start } from '../start.ts'
 import { build } from '../build.ts'
 import {
@@ -60,7 +60,9 @@ describe('abandon', () => {
     // The work is kept: abandon never touches the tree, where revert would have
     // removed this in-seam untracked file.
     expect(readFileSync(join(dir, 'feature.txt'), 'utf8')).toBe('kept\n')
-    expect(stdout).toBe(notice({ fact: 'step 1 abandoned', detail: ['work kept in the tree', 'the step stays planned'] }))
+    expect(stdout).toBe(
+      transition({ label: 'Abandoned', fact: 'step 1', detail: ['work kept in the tree', 'the step stays planned'] }),
+    )
   })
 
   it('leaves the intent checkbox planned — it drops the attempt, not the intention', async () => {

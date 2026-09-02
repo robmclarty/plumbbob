@@ -39,7 +39,7 @@ import { parseBuildScope, parseStepSeam, scopeDrift } from '../lib/intent.ts'
 import { conventionalSubject, subjectFromTitle, withMarker } from '../lib/commitmsg.ts'
 import { appendToSection, checkpointLogLine } from '../lib/buildlog.ts'
 import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
-import { notice } from '../lib/notice.ts'
+import { notice, transition } from '../lib/notice.ts'
 
 /**
  * Land a step: latch, check gate, commit, record, return to the boundary.
@@ -140,7 +140,7 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   clearHandoff(root) // the agent-run handoff ledger is step-scoped; clear it with the markers.
   clearTick(root) // the step's entry stamp is spent; the next `build <n>` re-stamps.
 
-  process.stdout.write(notice({ fact: `step ${step} checkpointed`, detail: [sha.slice(0, 9)] }))
+  process.stdout.write(transition({ label: 'Checkpoint', fact: `Step ${step} complete`, detail: [sha.slice(0, 9)] }))
   process.stderr.write(drift + flipNotice)
   return 0
 }
@@ -184,7 +184,7 @@ function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
   // Landing the plan consumes `start`'s entry stamp: a later hand-built diff
   // (no `build <n>`) must find no stale TICK and stay guidance-governed.
   clearTick(root)
-  process.stdout.write(notice({ fact: 'plan committed', detail: [sha.slice(0, 9)] }))
+  process.stdout.write(transition({ label: 'Plan', fact: 'committed', detail: [sha.slice(0, 9)] }))
   if (!staged) {
     process.stderr.write(
       notice({

@@ -32,7 +32,7 @@ import {
   stepPath,
 } from '../lib/sidecar.ts'
 import { readTemplate, stampTemplate } from '../lib/templates.ts'
-import { notice } from '../lib/notice.ts'
+import { notice, transition } from '../lib/notice.ts'
 
 // Worktree/branch names when the caller lists none: a fork defaults to two arms.
 const DEFAULT_OPTIONS: ReadonlyArray<string> = ['a', 'b']
@@ -86,8 +86,9 @@ function spikeReport(root: string, buildSlug: string | null, positionals: Readon
   const via = inFlight !== null ? `step ${inFlight}` : '/plumbbob:spike'
   const path = scaffoldSpikeReport(root, buildSlug, slug, via)
   process.stdout.write(
-    notice({
-      fact: 'spike report scaffolded',
+    transition({
+      label: 'Spike report',
+      fact: 'scaffolded',
       detail: [relative(root, path)],
       remedy: 'record Findings and the Verdict there, which is what closes a spike step',
     }),
@@ -180,13 +181,15 @@ function spikeStart(root: string, buildSlug: string | null, positionals: Readonl
   // The notice states the fact; the throwaway worktrees are a list, so they ride
   // as a readout beneath it rather than crowding the line.
   process.stdout.write(
-    notice({
-      fact: 'spiking',
+    transition({
+      label: 'Spike',
+      fact: 'opened',
       detail: ['the main tree stays put', `${created.length} throwaway worktree${created.length === 1 ? '' : 's'}`],
     }) +
       `${created.map((path) => `  ${path}`).join('\n')}\n` +
-      notice({
-        fact: 'spike report scaffolded',
+      transition({
+        label: 'Spike report',
+        fact: 'scaffolded',
         detail: [relative(root, report)],
         remedy: 'record findings and the Verdict there, then run plumbbob spike done',
       }),
@@ -219,7 +222,7 @@ function spikeDone(root: string, buildSlug: string | null): number {
   }
   clearSpike(root, buildSlug)
 
-  process.stdout.write(notice({ fact: 'spike closed', detail: ['worktrees and branches removed'] }))
+  process.stdout.write(transition({ label: 'Spike', fact: 'closed', detail: ['worktrees and branches removed'] }))
   // Guidance, not a gate: a missing verdict is a nudge, and the spike still
   // closes. It follows the line it qualifies, and names the reports so the
   // human knows where to write the call.

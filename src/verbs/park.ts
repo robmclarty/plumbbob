@@ -10,7 +10,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { hasSession, buildLogPath } from '../lib/sidecar.ts'
 import { appendToSection } from '../lib/buildlog.ts'
-import { notice } from '../lib/notice.ts'
+import { notice, transition } from '../lib/notice.ts'
 
 /**
  * Append the given text as one unchecked `- [ ]` line to the build-log's Park list.
@@ -46,6 +46,6 @@ export function park(cwd: string, args: ReadonlyArray<string>): number {
     return 1
   }
   writeFileSync(path, updated)
-  process.stdout.write(notice({ prefix: 'parked', fact: text }))
+  process.stdout.write(transition({ label: 'Parked', fact: text }))
   return 0
 }

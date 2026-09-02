@@ -3,7 +3,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { finish } from '../finish.ts'
-import { notice } from '../../lib/notice.ts'
+import { transition } from '../../lib/notice.ts'
 import { start } from '../start.ts'
 import { bumpStepStat, checkpointsPath, grantPath, hasSession, intentPath, reportPath, sidecarDir, stampStepStat, tickPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -34,7 +34,11 @@ describe('finish', () => {
     // Short SHA (exactly 9 hex) and the archive pointer, then the forward pointer
     // finish prints itself: the line states its fact and the pointer states the move.
     const sha = execFileSync('git', ['-C', dir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim().slice(0, 9)
-    const line = notice({ fact: 'finished', detail: [sha, '.plumbbob/builds/finishing-up/ rides your branch into the PR'] })
+    const line = transition({
+      label: 'Session',
+      fact: 'finished',
+      detail: [sha, '.plumbbob/builds/finishing-up/ rides your branch into the PR'],
+    })
     expect(stdout).toBe(`${line}\n**Next Up**: Nothing planned - /plumbbob:plan\n\n`)
   })
 

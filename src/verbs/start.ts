@@ -25,7 +25,7 @@ import {
   stampTick,
 } from '../lib/sidecar.ts'
 import { settingsPath } from '../lib/settings.ts'
-import { notice } from '../lib/notice.ts'
+import { notice, transition } from '../lib/notice.ts'
 
 /**
  * Human-readable echo of the default check gate, stamped into the templates'
@@ -184,7 +184,8 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
   stampTick(root, local ? null : slug)
 
   process.stdout.write(
-    notice({
+    transition({
+      label: 'Session',
       fact: `started "${title}"`,
       detail: [`baseline ${sha.slice(0, 9)}`],
       remedy: `frame and decide in ${intentLocation}, then build a step`,

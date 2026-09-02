@@ -31,7 +31,7 @@ import {
 import { checkLatch } from '../lib/latch.ts'
 import { abandonLogLine, appendToSection } from '../lib/buildlog.ts'
 import { parseSteps } from '../lib/orient.ts'
-import { notice } from '../lib/notice.ts'
+import { notice, transition } from '../lib/notice.ts'
 
 /**
  * Drop the in-flight step while keeping its work: latch, clear the markers,
@@ -78,7 +78,7 @@ export function abandon(cwd: string, args: ReadonlyArray<string>): number {
   logAbandon(root, slug, step)
 
   process.stdout.write(
-    notice({ fact: `step ${step} abandoned`, detail: ['work kept in the tree', 'the step stays planned'] }),
+    transition({ label: 'Abandoned', fact: `step ${step}`, detail: ['work kept in the tree', 'the step stays planned'] }),
   )
   return 0
 }

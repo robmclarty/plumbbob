@@ -6,7 +6,7 @@ import { checkpoint } from '../checkpoint.ts'
 import { start } from '../start.ts'
 import { buildLogPath, checkpointsPath, grantPath, handoffPath, hasSession, intentPath, readStats, stampStepStat, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
 import { gitPath } from '../../lib/git.ts'
-import { notice } from '../../lib/notice.ts'
+import { notice, transition } from '../../lib/notice.ts'
 import { setLocalSetting, settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { cleanupFixtures, makeFixtureRepo, runCli } from '../../../test/helpers/fixture-repo.ts'
@@ -52,7 +52,7 @@ describe('checkpoint', () => {
     // Asserted through the formatter, so moving the shape stays one edit: what
     // this pins is the parts, and the SHA shortened to exactly 9 hex chars (a
     // full 40-char SHA here would mean the slice was dropped).
-    expect(stdout).toBe(notice({ fact: 'step 1 checkpointed', detail: [ledgerSha(dir, 'step 1')] }))
+    expect(stdout).toBe(transition({ label: 'Checkpoint', fact: 'Step 1 complete', detail: [ledgerSha(dir, 'step 1')] }))
   })
 
   it('refreshes a stale info/exclude so an in-flight control file never rides the step commit — D33 (info-exclude)', async () => {
@@ -272,7 +272,7 @@ describe('checkpoint', () => {
     writeFileSync(join(dir, 'work.txt'), 'pending\n')
     const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['-m', 'fix part 2']))
     expect(code).toBe(0)
-    expect(stdout).toContain('step 1 checkpointed')
+    expect(stdout).toContain('**Checkpoint**: Step 1 complete')
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x]')
     const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
     expect(subject).toBe('fix part 2')
@@ -381,7 +381,7 @@ describe('checkpoint', () => {
       const dir = await startedGreen()
       const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
       expect(code).toBe(0)
-      expect(stdout).toBe(notice({ fact: 'plan committed', detail: [ledgerSha(dir, 'plan')] })) // short SHA, not the full 40
+      expect(stdout).toBe(transition({ label: 'Plan', fact: 'committed', detail: [ledgerSha(dir, 'plan')] })) // short SHA, not the full 40
       const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
       expect(subject).toBe('chore(checkpoint-test): plan')
       const body = execFileSync('git', ['log', '-1', '--format=%b'], { cwd: dir, encoding: 'utf8' })
@@ -431,7 +431,7 @@ describe('checkpoint', () => {
       expect(code).toBe(0)
       // The fact leads on stdout; record-only is the advisory that qualifies it,
       // one line after, the way every ending is ordered.
-      expect(stdout).toBe(notice({ fact: 'plan committed', detail: [ledgerSha(dir, 'plan')] }))
+      expect(stdout).toBe(transition({ label: 'Plan', fact: 'committed', detail: [ledgerSha(dir, 'plan')] }))
       expect(stderr).toBe(
         notice({
           fact: 'the plan rides the commit message',

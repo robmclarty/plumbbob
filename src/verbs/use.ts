@@ -12,7 +12,7 @@
 import { existsSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { activeBuild, hasSession, intentPath, listBuilds, setActiveBuild, stepPath } from '../lib/sidecar.ts'
-import { notice } from '../lib/notice.ts'
+import { notice, transition } from '../lib/notice.ts'
 
 /**
  * Switch the active-build cursor to the named build.
@@ -49,8 +49,9 @@ export function use(cwd: string, args: ReadonlyArray<string>): number {
   // The primary line first, then the advisory it qualifies: one fixed order for
   // every ending, so the relay never has to guess which line leads.
   process.stdout.write(
-    notice({
-      fact: `now on build "${target}"`,
+    transition({
+      label: 'Active build',
+      fact: target,
       detail: existsSync(stepPath(root, target)) ? ['a step is in flight'] : [],
     }),
   )

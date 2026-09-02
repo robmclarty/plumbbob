@@ -51,6 +51,13 @@ silently ignored token, so a typo cannot fall through into a commit. `turn` and 
 two exceptions to the refusal: `turn` is a hook that must never wedge a prompt, and `park`'s
 argument is free text.
 
+The stream a line goes to picks its shape ([the turn anatomy](presentation.md)). A verb's
+own lead line goes to stdout wearing a bold label (`**Checkpoint**: Step 15 complete
+(2d917cde7)`), because it is the first part of the ending the skill relays; the advisories
+and refusals that follow go to stderr keeping the `plumbbob:` prefix, which names the
+speaker where checkride's output and git's share one result. One formatter in
+`src/lib/notice.ts` renders both.
+
 ## Session verbs
 
 ### start
@@ -240,7 +247,7 @@ plumbbob park "<text>"
 ```
 
 Appends `<text>` as a raw line under `## Park list` in `build-log.md` and prints
-`parked: <text>` ([**D7 (park-then-harvest)**](decisions.md#d7)). This is the dumb capture path: composing the tidy line,
+`**Parked**: <text>` ([**D7 (park-then-harvest)**](decisions.md#d7)). This is the dumb capture path: composing the tidy line,
 tag at the tail, is the `/plumbbob:park` skill's job. Refuses (exit 1) with no session, empty text, or no
 `## Park list` section.
 

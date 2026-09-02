@@ -41,7 +41,7 @@ describe('plumbbob spike', () => {
 
     const result = runCli(dir, ['spike', 'done'])
     expect(result.status).toBe(0)
-    expect(result.stdout).toContain('spike closed (worktrees and branches removed)')
+    expect(result.stdout).toContain('**Spike**: closed (worktrees and branches removed)')
     // The verdict nudge is the advisory that follows, and only when one is
     // actually missing: a section whose emptiness is meaningful says so, and a
     // recorded verdict says nothing at all.

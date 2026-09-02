@@ -41,7 +41,7 @@ Then:
 2. **Only after** that approval, capture it by running `plumbbob park "<the
    approved line>"` via Bash.
 3. **Relay the capture, then get back to the step.** `plumbbob park` prints
-   `parked: <text> (tag)`; relay that line verbatim, then relay `plumbbob handoff --driver`'s
+   `**Parked**: <text> (tag)`; relay that line verbatim, then relay `plumbbob handoff --driver`'s
    next-up line, which points back at the step in flight ("Next Up: Back to step N"). Park
    is a driver turn (the [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)):
    the verb's line plus that one pointer are the whole turn, and the pointer is handoff's to

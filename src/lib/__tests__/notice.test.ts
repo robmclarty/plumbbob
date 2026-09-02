@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { notice } from '../notice.ts'
+import { notice, transition } from '../notice.ts'
 
 describe('notice', () => {
   it('renders the bare shape: one prefix colon, the fact, no terminal period', () => {
@@ -30,7 +30,7 @@ describe('notice', () => {
     )
   })
 
-  it('spends the one colon on `parked` for a capture', () => {
+  it('spends the one colon on `parked` for a capture an agent reports', () => {
     expect(notice({ prefix: 'parked', fact: 'throttle /password-reset too (tangent)' })).toBe(
       'parked: throttle /password-reset too (tangent)\n',
     )
@@ -82,5 +82,35 @@ describe('notice', () => {
     })
     expect(line).toContain('and 1 other)')
     expect(line).not.toContain('1 others')
+  })
+})
+
+describe('transition — D42 (transitions-wear-the-label)', () => {
+  it('wears a bold label where a notice wears the speaker prefix', () => {
+    expect(transition({ label: 'Checkpoint', fact: 'Step 15 complete', detail: ['2d917cde7'] })).toBe(
+      '**Checkpoint**: Step 15 complete (2d917cde7)\n',
+    )
+  })
+
+  it('reads the capture on from its label, the tag in the tail', () => {
+    expect(transition({ label: 'Parked', fact: 'should /password-reset get the same throttle? (tangent)' })).toBe(
+      '**Parked**: should /password-reset get the same throttle? (tangent)\n',
+    )
+  })
+
+  it('degrades its detail and drops a terminal period the same way a notice does', () => {
+    expect(
+      transition({
+        label: 'Session',
+        fact: 'finished.',
+        detail: ['f3e9a1b2c', 'src/verbs/park.ts', 'src/verbs/use.ts', 'src/verbs/start.ts'],
+      }),
+    ).toBe('**Session**: finished (f3e9a1b2c, src/verbs/park.ts, and 2 others)\n')
+  })
+
+  it('puts the remedy on the same indented arrow line beneath', () => {
+    expect(
+      transition({ label: 'Spike report', fact: 'scaffolded', detail: ['spike-01-auth.md'], remedy: 'record the Verdict there' }),
+    ).toBe('**Spike report**: scaffolded (spike-01-auth.md)\n  → record the Verdict there\n')
   })
 })

@@ -19,7 +19,7 @@ describe('park', () => {
     const dir = await startedSession()
     const { code, stdout } = captureIo(() => park(dir, ['chase', 'this', 'later']))
     expect(code).toBe(0)
-    expect(stdout).toContain('parked: chase this later')
+    expect(stdout).toContain('**Parked**: chase this later')
     expect(readFileSync(buildLogPath(dir), 'utf8')).toContain('- [ ] chase this later')
   })
 

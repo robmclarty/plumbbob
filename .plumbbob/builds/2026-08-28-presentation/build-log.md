@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: presentation
 
-**Current step:** none (at the boundary)
+**Current step:** 16 — feat(notices): the ending's lead line wears its label
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -38,7 +38,8 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 13. docs(happy-path): make every illustrated block producible
 - ☑ 14. feat(notices): every relayed line states its fact through one formatter
 - ☑ 15. feat(handoff): point past an open spike and out of a finished session
-- ☐ 16. test(evals): run the eval tier against the new anatomy
+- ☐ 16. feat(notices): the ending's lead line wears its label
+- ☐ 17. test(evals): run the eval tier against the new anatomy
 
 ## Park list
 

@@ -1,9 +1,9 @@
 import { execFileSync } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { spike } from '../spike.ts'
-import { notice } from '../../lib/notice.ts'
+import { notice, transition } from '../../lib/notice.ts'
 import { start } from '../start.ts'
 import { buildFolder, inSpike, listSpikeReports, stepPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -26,6 +26,19 @@ async function started(): Promise<string> {
 }
 
 describe('spike', () => {
+  it('leads each ending with its labeled line — D42 (transitions-wear-the-label)', async () => {
+    const dir = await started()
+    const opened = captureIo(() => spike(dir, ['auth']))
+    expect(opened.stdout).toContain(
+      transition({ label: 'Spike', fact: 'opened', detail: ['the main tree stays put', '2 throwaway worktrees'] }),
+    )
+    expect(opened.stdout).toContain('**Spike report**: scaffolded (')
+    const closed = captureIo(() => spike(dir, ['done']))
+    expect(closed.stdout).toBe(
+      transition({ label: 'Spike', fact: 'closed', detail: ['worktrees and branches removed'] }),
+    )
+  })
+
   it('creates a worktree + branch per option (default a/b) and marks the spike', async () => {
     const dir = await started()
     try {
@@ -121,7 +134,14 @@ describe('spike reports — D70 (spike-reports)', () => {
     expect(code).toBe(0)
     expect(inSpike(dir)).toBe(false) // no SPIKE marker, no worktrees
     expect(spikeBranches(dir)).toEqual([])
-    expect(stdout).toContain('spike-01-auth-store.md')
+    expect(stdout).toBe(
+      transition({
+        label: 'Spike report',
+        fact: 'scaffolded',
+        detail: [join(relative(dir, buildFolder(dir)), 'spike-01-auth-store.md')],
+        remedy: 'record Findings and the Verdict there, which is what closes a spike step',
+      }),
+    )
     expect(reportBody(dir, 'spike-01-auth-store.md')).toContain('**Via:** step 3')
   })
 
