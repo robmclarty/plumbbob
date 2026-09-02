@@ -3,7 +3,7 @@ name: plan
 description: "Frame a fresh goal and author the whole plan (Frame, Decisions, Constraints, and all Steps) before any code. Three input modes: no arg interviews you; a file path (or @-mention) absorbs a spec; any other text expands your inline intent."
 argument-hint: "[spec-path | intent]"
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob start:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent list:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob handoff:*), Bash(plumbbob start:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent list:*)
 ---
 
 # PlumbBob: plan a goal (the whole-goal move)
@@ -144,12 +144,14 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
    baseline → plan → steps. Pass a proportional `--body` (the single-quoted stdin
    heredoc) when the rationale is worth carrying; skip it for a small plan. Do this
    only on the human's approval; the plan is their convergence.
-   - **The plan pause is a decision turn.** Present the framed plan for the human's call
-     and name the two moves that apply before anything is recorded (the decision tier of
-     the [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)):
-     *looks good* marks the plan decided, and `/plumbbob:build` starts step 1; *needs work*
-     sends you back to sharpen it, which is cheap now, before any code. The revert move
-     vanishes here: nothing has landed to wind back.
+   - **The plan pause is a decision turn.** Present the framed plan for the human's call,
+     then relay `plumbbob handoff --plan`'s plan-pause card: the CLI renders the your-call
+     block with the two moves that apply before anything is recorded (the decision tier of
+     the [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)),
+     so the moves are relayed, never hand-composed. *looks good* marks the plan decided and
+     starts `/plumbbob:build` at the first undone step; *needs work* sends you back to sharpen
+     it, which is cheap now, before any code. The revert move vanishes there on its own:
+     nothing has landed to wind back.
    - **The plan commit is latched too.** Once the turn ledger exists, `checkpoint
      --plan` refuses to land in the same turn `start` stamped it: present the plan,
      **end the turn**, and the human's approving message is the tick that lets it

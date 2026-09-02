@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: presentation
 
-**Current step:** none (at the boundary)
+**Current step:** 10 — docs(skills): relay every tier's ending from the plan and driver skills
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -34,7 +34,9 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 9. feat(handoff): label the recommendation and split the move from its
 - ☐ 10. docs(skills): relay every tier's ending from the plan and driver skills
 - ☐ 11. docs(happy-path): make every illustrated block producible
-- ☐ 12. test(evals): run the eval tier against the new anatomy
+- ☐ 12. feat(notices): every relayed line states its fact through one formatter
+- ☐ 13. feat(handoff): point past an open spike and out of a finished session
+- ☐ 14. test(evals): run the eval tier against the new anatomy
 
 ## Park list
 
