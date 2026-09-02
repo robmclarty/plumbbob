@@ -70,7 +70,7 @@ this skill verifies it the same way: **it reads the diff, not the author**
    of the turn:
 
    ```text
-   detail: <N> sections in .plumbbob/detail.md · "expand <n>" shows one
+   Detail: <N> sections in .plumbbob/detail.md · "expand <n>" shows one.
    ```
 
    *Write the detail file.* Before you call `plumbbob handoff`, overwrite

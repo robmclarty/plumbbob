@@ -133,7 +133,7 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    it. Close with the pointer, exact shape, your final authored line of the turn:
 
    ```text
-   detail: <N> sections in .plumbbob/detail.md · "expand <n>" shows one
+   Detail: <N> sections in .plumbbob/detail.md · "expand <n>" shows one.
    ```
 
    *Write the detail file.* Before you call `plumbbob handoff`, overwrite

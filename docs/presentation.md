@@ -51,7 +51,7 @@ Step 2 built: the 6th login attempt inside a minute now gets 429.
 2. Misses count against the bucket and successes do not reset it, as planned.
 3. `test/login.rate.test.ts` covers the 6th-request case red-to-green.
 
-detail: 3 sections in .plumbbob/detail.md · "expand 2" shows one
+Detail: 3 sections in .plumbbob/detail.md · "expand 2" shows one.
 
 ```text
 ── recap · step 2 of 3 ──
@@ -126,7 +126,7 @@ After the highlights comes the detail pointer, one line, exact shape, and the
 model's final authored line of the turn:
 
 ```text
-detail: <N> sections in .plumbbob/detail.md · "expand <n>" shows one
+Detail: <N> sections in .plumbbob/detail.md · "expand <n>" shows one.
 ```
 
 The count is the numbered sections, one per highlight; the recommendation is
