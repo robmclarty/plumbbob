@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: presentation
 
-**Current step:** 15 — feat(handoff): point past an open spike and out of a finished session
+**Current step:** none (at the boundary)
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -37,7 +37,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 12. feat(anatomy): render the whole turn from the detail file
 - ☑ 13. docs(happy-path): make every illustrated block producible
 - ☑ 14. feat(notices): every relayed line states its fact through one formatter
-- ☐ 15. feat(handoff): point past an open spike and out of a finished session
+- ☑ 15. feat(handoff): point past an open spike and out of a finished session
 - ☐ 16. test(evals): run the eval tier against the new anatomy
 
 ## Park list
@@ -56,7 +56,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [x] docs/cli-reference.md's handoff entry still calls the card the always-last text and omits the recap fence, inline diff, and recommendation the pause block now carries; outside step 8's seam, sweep it with the step-10 reconciliation
 - [x] plumbbob's own boundary and driver lines (checkpoint's 'step N checkpointed — sha. Back at the boundary.', park's 'parked: tag: text') do not meet the one-colon, no-dash notice register presentation.md now states; a src sweep of those strings, outside step 8's docs seam
 - [ ] the shared rate-limit example's step titles ('Add a token-bucket limiter') are not Conventional-Commit subjects, which the plan skill and D68 (conventional-subjects) mandate; upgrading them is a cross-doc sweep of happy-path.md, techniques.md, and presentation.md's worked example, so it was left out of step 13's two-file seam
-- [ ] the two new pointer shapes (close the spike, finish's /plumbbob:plan) are missing from presentation.md's Next Up list and the happy-path finish fence (doc-gap)
+- [x] the two new pointer shapes (close the spike, finish's /plumbbob:plan) are missing from presentation.md's Next Up list and the happy-path finish fence (doc-gap)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -163,3 +163,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-09-02 — step 12 checkpointed · 9b8956c9c — feat(anatomy): render the whole turn from the detail file (34m)
 - 2026-09-02 — step 13 checkpointed · c723202eb — docs(happy-path): make every illustrated block producible (20m)
 - 2026-09-02 — step 14 checkpointed · bb095523a — feat(notices): every relayed line states its fact through one formatter (1 drift, 40m)
+- 2026-09-02 — step 15 checkpointed · 2d917cde7 — feat(handoff): point past an open spike and out of a finished session (26m)

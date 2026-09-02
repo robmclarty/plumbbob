@@ -406,6 +406,24 @@ a boundary or driver turn, top to bottom
   routine housekeeping stops meaning anything within three steps (step 10's
   own Verdict read "a hair off" for three of Rob's boundary commits).
   [Q12 (stray-in-banner)](#q12) stays open; this settles its neighbor.
+- <a id="d42"></a>**D42 (transitions-wear-the-label)**: the line that leads
+  an ending is a labeled line like every other part of it, and its kin in
+  revert, abandon, spike open and close, use, and start take the same shape:
+
+  ```text
+  **Checkpoint**: Step 15 complete (2d917cde7)
+  **Parked**: should /password-reset get the same throttle? (tangent)
+  ```
+
+  Advisories and refusals keep the `plumbbob:` prefix, and the split falls
+  exactly on the stream, stdout labeled and stderr prefixed, *because* the
+  boundary turn ran two grammars at once when
+  [D33 (labeled-lines)](#d33) had already settled the rest of the ending, and
+  [D28 (fact-not-move)](#d28)'s speaker-naming rationale holds where output is
+  genuinely mixed (a warning beside checkride's and git's in one Bash result)
+  and not on the ending's own lead. `checkpointed` retires as a verb; the noun
+  is the artifact (Rob's call, 2026-09-02). Amends
+  [D28 (fact-not-move)](#d28).
 
 ## Constraints
 
@@ -567,7 +585,7 @@ a boundary or driver turn, top to bottom
    assert the new strings through the formatter's fixtures
    - seam: `docs/presentation.md`, `src/lib/notice.ts`, `src/lib/__tests__/notice.test.ts`, `src/verbs/checkpoint.ts`, `src/verbs/park.ts`, `src/verbs/build.ts`, `src/verbs/revert.ts`, `src/verbs/abandon.ts`, `src/verbs/spike.ts`, `src/verbs/use.ts`, `src/verbs/start.ts`, `src/verbs/finish.ts`, `src/verbs/agent.ts`, `src/verbs/__tests__/`, `skills/park/SKILL.md`
    - model: sonnet (mechanical once the decisions fix the shapes; the spec section wants a careful read)
-15. [ ] feat(handoff): point past an open spike and out of a finished session,
+15. [x] feat(handoff): point past an open spike and out of a finished session,
    **done when:** `plumbbob handoff --driver` renders `**Next Up**: Close the
    spike - /plumbbob:spike done, then back to step N` while a spike is open,
    a step exit ends on the forward pointer with no Verdict, and `plumbbob
@@ -577,7 +595,19 @@ a boundary or driver turn, top to bottom
    tests assert each pointer
    - seam: `src/verbs/handoff.ts`, `src/verbs/finish.ts`, `src/verbs/__tests__/handoff.test.ts`, `src/verbs/__tests__/finish.test.ts`, `skills/finish/SKILL.md`
    - model: sonnet (two pointer branches and one printed line, each with a test)
-16. [ ] test(evals): run the eval tier against the new anatomy, **done when:**
+16. [ ] feat(notices): the ending's lead line wears its label, **done when:**
+   every transition renders as a labeled line through the one formatter in
+   `src/lib/notice.ts`, advisories and refusals keep the `plumbbob:` prefix,
+   and the eleven stdout sites across checkpoint, park, revert, abandon, spike,
+   use, start, and finish are built through it
+   ([D42 (transitions-wear-the-label)](#d42)); the one-liners section of
+   `docs/presentation.md` carries the split, and the happy-path,
+   cli-reference, and skill blocks that quote these lines match, the parked
+   `doc-gap` pointer shapes folded in; the verb tests assert through the
+   formatter's fixtures
+   - seam: `src/lib/notice.ts`, `src/lib/__tests__/notice.test.ts`, `src/verbs/checkpoint.ts`, `src/verbs/park.ts`, `src/verbs/revert.ts`, `src/verbs/abandon.ts`, `src/verbs/spike.ts`, `src/verbs/use.ts`, `src/verbs/start.ts`, `src/verbs/finish.ts`, `src/verbs/__tests__/`, `docs/presentation.md`, `docs/happy-path.md`, `docs/cli-reference.md`, `skills/`
+   - model: sonnet (mechanical once the decision fixes the shapes; the spec section wants a careful read)
+17. [ ] test(evals): run the eval tier against the new anatomy, **done when:**
    the c-series contracts read the new turn shapes, the driver runs green,
    and a fresh receipt lands in `docs/evals/`
    - seam: `test/evals/contracts/`, `test/evals/helpers/`, `docs/evals/`
