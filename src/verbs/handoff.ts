@@ -1,11 +1,17 @@
-// `plumbbob handoff`: render the footer card (docs/presentation.md), the CLI-owned,
-// always-last-text ending of a turn. Read-only, no state change. It derives the
-// moment from the session: a step in flight ⇒ the decision-tier card (banner,
-// next-up, the your-call block); a landed step with none in flight ⇒ the
-// orientation-tier card (banner and next-up only); a fresh session with nothing
-// yet measured ⇒ the forward pointer alone, no banner. The banner is computed,
-// never composed: it folds the model's recap (read from `.plumbbob/detail.md`)
-// worst-of with its own check measurement and the step's accrued stats.
+// `plumbbob handoff`: emit the CLI-owned ending of a turn as one contiguous
+// block (docs/presentation.md). Read-only, no state change. It derives the
+// moment from the session: a step in flight ⇒ the decision-tier ending (the
+// assembled recap fence, the inline diff fence when the change is 20 lines or
+// fewer, the footer card, the recommendation last); a landed step with none in
+// flight ⇒ the orientation-tier card (banner and next-up only); a fresh
+// session with nothing yet measured ⇒ the forward pointer alone, no banner.
+//
+// If the CLI can compute a recap row, the CLI does: the check row comes from
+// the last run's summary, the seam row from the SEAM marker against the
+// work-plane diff, the diff row from `git diff --numstat`. The model's part
+// (`.plumbbob/detail.md`) supplies only the judgment rows and the
+// `## recommendation` prose; the banner folds the same assembled rows worst-of
+// with the step's accrued stats, so the fence shows exactly what the fold saw.
 //
 // Every tier's ending is emitted here, so no skill has to fake the furniture in
 // prose: `--plan` renders the plan-pause card and `--driver` the driver turn's
@@ -14,25 +20,50 @@
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { commitsSince, findRepoRoot } from '../lib/git.ts'
-import { checkpointsPath, detailPath, hasSession, intentPath, readStats, resolveBuild, stepPath } from '../lib/sidecar.ts'
+import { commitsSince, diffNumstat, diffPatch, findRepoRoot } from '../lib/git.ts'
+import { isArtifactPath, parseStepSeam } from '../lib/intent.ts'
+import {
+  checkpointsPath,
+  detailPath,
+  hasSession,
+  intentPath,
+  readStats,
+  resolveBuild,
+  seamPath,
+  stepPath,
+} from '../lib/sidecar.ts'
 import {
   type AccruedStats,
+  type CheckSummary,
+  type Ladder,
   type RecapRow,
+  type RecapRowName,
   type Step,
+  countDiff,
+  diffRowValue,
   foldBanner,
   lastLedgerSha,
   parseLastCheckpoint,
   parseRecap,
+  parseRecommendation,
   parseSteps,
+  recapLines,
+  seamRowFromDiff,
+  summaryCheckRow,
 } from '../lib/orient.ts'
 
+// The inline-diff threshold (docs/presentation.md): at 20 changed lines or
+// fewer the patch rides the turn; at 21 it stays in the working tree behind
+// the counted diff row.
+const INLINE_DIFF_MAX = 20
+
 /**
- * Print the footer card for the resolved build; return the exit code.
+ * Print the resolved build's turn ending; return the exit code.
  *
  * Requires an active session (the STATE sentinel under `.plumbbob/`). The step
  * tiers are derived, not passed: a step in flight yields the full
- * decision-tier card, a landed step yields the orientation-tier card (no
+ * decision-tier ending (recap fence, inline diff when small enough, card,
+ * recommendation), a landed step yields the orientation-tier card (no
  * your-call block), and a fresh session with nothing to report yields only
  * the forward pointer. The two endings no session state can distinguish are
  * named by a flag: `--plan` is the plan pause (a decision turn about the plan,
@@ -51,14 +82,17 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     process.stderr.write('plumbbob: handoff: --plan and --driver name different tiers; pass one.\n')
     return 1
   }
-  const steps = parseSteps(readOr(intentPath(root, slug)))
+  const intent = readOr(intentPath(root, slug))
+  const steps = parseSteps(intent)
   const inFlight = readStep(stepPath(root, slug))
+  const detail = readOr(detailPath(root))
 
   if (rest.includes('--plan')) {
     // The plan pause judges the plan, so nothing is measured and no banner
-    // renders; the pointer and the moves both aim at the first undone step.
+    // renders; the pointer and the moves both aim at the first undone step. A
+    // decision turn still ends on the model's recommendation when it wrote one.
     const first = steps.find((s) => !s.done)
-    return emit([nextUpLine(first), '', planCallBlock(first)])
+    return emit(withRecommendation([nextUpLine(first), '', planCallBlock(first)], parseRecommendation(detail)))
   }
 
   const explicit = rest.find((a) => /^\d+$/.test(a))
@@ -86,13 +120,52 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     return emit([nextUpLine(nextUp)])
   }
 
+  // Assemble the rows once and let the fence and the fold read the same set:
+  // the model's attested rows, with the check and seam rows replaced by the
+  // CLI's own measurements where one exists (measured beats attested).
   const measuredCheck = measuredCheckRow(root)
-  const banner = renderBanner(root, slug, current, steps.length, measuredCheck)
-  const lines = [banner, '', nextUpLine(nextUp)]
-  if (inFlight !== null) {
-    lines.push('', yourCallBlock(current, measuredCheck?.verdict === 'true'))
+  const work = diffNumstat(root).filter((e) => !isArtifactPath(e.path))
+  const rows: Partial<Record<RecapRowName, RecapRow>> = { ...(parseRecap(detail)?.rows ?? {}) }
+  if (measuredCheck !== null) {
+    rows.check = measuredCheck
   }
-  return emit(lines)
+  const measuredSeam = seamRowFromDiff(
+    work.map((e) => e.path),
+    seamTokens(root, slug, intent, current),
+  )
+  if (measuredSeam !== null) {
+    rows.seam = measuredSeam
+  }
+  const { ladder, worst } = foldBanner(rows, accruedStats(root, slug, current))
+  const banner = bannerLine(ladder, worst, current, steps.length)
+
+  if (inFlight === null) {
+    // The boundary: the orientation-tier card, banner and forward pointer only.
+    return emit([banner, '', nextUpLine(nextUp)])
+  }
+
+  // The pause: the whole CLI ending as one contiguous block: the assembled
+  // recap fence, the inline diff fence when the change is small enough, the
+  // card, and the recommendation last, plain and unfenced.
+  const counts = countDiff(work)
+  const changed = counts.added + counts.removed
+  const inline = changed > 0 && changed <= INLINE_DIFF_MAX
+  const recap = recapLines(current, steps.length, rows, diffRowValue(counts, inline))
+  const lines: string[] = []
+  if (recap.length > 0) {
+    lines.push(...fence('text', recap), '')
+  }
+  if (inline) {
+    const patch = diffPatch(
+      root,
+      work.map((e) => e.path),
+    )
+    if (patch.length > 0) {
+      lines.push(...fence('diff', patch.split('\n')), '')
+    }
+  }
+  lines.push(...fence('text', [banner, '', nextUpLine(nextUp), '', yourCallBlock(current, measuredCheck?.verdict === 'true')]))
+  return emit(withRecommendation(lines, parseRecommendation(detail)))
 }
 
 /**
@@ -107,23 +180,53 @@ function emit(lines: ReadonlyArray<string>): number {
 }
 
 /**
- * Render the banner line: the ladder rung folded worst-of over the recap rows
- * plus the step's accrued stats, the worst component named inline, the step
- * segment last.
- *
- * The recap comes from `.plumbbob/detail.md`; its check row is provisional as
- * written and is replaced here by handoff's own measurement when one is
- * available (measured beats attested).
+ * Render the banner line from an already-folded result: the ladder rung, the
+ * worst component when one exists, the step segment last.
  */
-function renderBanner(root: string, slug: string | null, step: number, total: number, measuredCheck: RecapRow | null): string {
-  const recap = parseRecap(readOr(detailPath(root)))
-  const rows = { ...(recap?.rows ?? {}) }
-  if (measuredCheck !== null) {
-    rows.check = measuredCheck
-  }
-  const { ladder, worst } = foldBanner(rows, accruedStats(root, slug, step))
+function bannerLine(ladder: Ladder, worst: string | null, step: number, total: number): string {
   const head = `${ladder.glyph} ${ladder.state}:`
   return worst === null ? `${head} Step ${step} of ${total}` : `${head} ${worst} · Step ${step} of ${total}`
+}
+
+/**
+ * The seam tokens governing `step`: the SEAM marker `build` wrote is
+ * authoritative while a build is live, else the step's declared seam parsed
+ * from intent.md. Empty when neither resolves, which vanishes the measured
+ * seam row rather than flagging the whole tree.
+ */
+function seamTokens(root: string, slug: string | null, intent: string, step: number): ReadonlyArray<string> {
+  try {
+    const fromFile = readFileSync(seamPath(root, slug), 'utf8')
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0)
+    if (fromFile.length > 0) {
+      return fromFile
+    }
+  } catch {
+    // no SEAM marker: fall through to the declared seam.
+  }
+  const parsed = parseStepSeam(intent, step)
+  return parsed.ok ? parsed.seam : []
+}
+
+/**
+ * Wrap lines in a markdown fence whose rail outruns any backtick run inside,
+ * so a patch that itself contains fence markers cannot break out of the
+ * `diff` fence it rides in.
+ */
+function fence(lang: string, lines: ReadonlyArray<string>): string[] {
+  const longest = lines.reduce((max, l) => Math.max(max, ...(l.match(/`+/g) ?? ['']).map((run) => run.length)), 0)
+  const rail = '`'.repeat(Math.max(3, longest + 1))
+  return [`${rail}${lang}`, ...lines, rail]
+}
+
+/**
+ * Append the recommendation beneath a block, blank-line separated, when the
+ * model wrote one; the ending's last text is then the model's own call.
+ */
+function withRecommendation(lines: ReadonlyArray<string>, recommendation: string | null): string[] {
+  return recommendation === null ? [...lines] : [...lines, '', recommendation]
 }
 
 /**
@@ -148,21 +251,11 @@ function accruedStats(root: string, slug: string | null, step: number): AccruedS
  * wrote one).
  */
 function measuredCheckRow(root: string): RecapRow | null {
-  let summary: { readonly ok: boolean; readonly checks: ReadonlyArray<{ readonly name: string; readonly ok: boolean; readonly skipped?: boolean }> }
   try {
-    summary = JSON.parse(readFileSync(join(root, '.check', 'summary.json'), 'utf8'))
+    const summary: CheckSummary = JSON.parse(readFileSync(join(root, '.check', 'summary.json'), 'utf8'))
+    return summaryCheckRow(summary)
   } catch {
     return null
-  }
-  const ran = summary.checks.filter((c) => c.skipped !== true).map((c) => c.name)
-  if (summary.ok) {
-    return { verdict: 'true', word: 'green', evidence: `green (checkride: ${ran.join(', ')})` }
-  }
-  const failing = summary.checks.find((c) => !c.ok && c.skipped !== true)
-  return {
-    verdict: 'failing',
-    word: 'red',
-    evidence: failing !== undefined ? `red (${failing.name} failing)` : 'red',
   }
 }
 

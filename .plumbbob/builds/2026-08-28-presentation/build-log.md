@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: presentation
 
-**Current step:** 6 — feat(handoff): emit the plan-pause card, driver next-up, and trailing
+**Current step:** 7 — feat(recap): handoff emits the whole CLI ending as one block
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -28,7 +28,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 3. feat(handoff): render the orientation banner and footer card
 - ☑ 4. feat(verify): emit the recap skeleton and gate verdict line
 - ☑ 5. docs(skills): align every skill output spec to the anatomy
-- ☐ 6. feat(handoff): emit the plan-pause card, driver next-up, and trailing
+- ☑ 6. feat(handoff): emit the plan-pause card, driver next-up, and trailing
 - ☐ 7. feat(recap): handoff emits the whole CLI ending as one block
 - ☐ 8. docs(anatomy): make the whole turn the anatomy and nothing else
 - ☐ 9. docs(skills): relay every tier's ending from the plan and driver skills
@@ -43,9 +43,11 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
 - [x] step 5 gap: the plan-pause your-call block and the mid-step driver next-up line are spec'd in presentation.md but not yet emitted by `plumbbob handoff` (needs a src change, outside step 5's docs seam); skills document the tier ending the CLI actually emits rather than fake the furniture.
 - [x] bug: handoff's footer card omits a trailing blank line (src/verbs/handoff.ts ends its stdout with a single \n), so the next output clobbers the last your-call line — emit a trailing blank line so the card ends the turn with visual separation. A src fix, outside step 5's docs seam.
-- [ ] the standalone verdict line duplicates the recap check row: step 7 computes that row anyway, so fold the gate verdict into it and drop the separate line from the anatomy (revisits D20)
-- [ ] recap values run long enough to force horizontal scrolling: give the row a width budget (short evidence clause in the recap, full story in the detail file)
-- [ ] close the pause with 1 or 2 sentences of recommendation / suggested next action, model-fed into handoff and rendered as plain text after the card, not inside a fence (revisits D5 verdict-last)
+- [x] the standalone verdict line duplicates the recap check row: step 7 computes that row anyway, so fold the gate verdict into it and drop the separate line from the anatomy (revisits D20)
+- [x] recap values run long enough to force horizontal scrolling: give the row a width budget (short evidence clause in the recap, full story in the detail file)
+- [x] close the pause with 1 or 2 sentences of recommendation / suggested next action, model-fed into handoff and rendered as plain text after the card, not inside a fence (revisits D5 verdict-last)
+- [ ] checkride summary.json marks nothing on a narrowed run; handoff's check row can only say NOT-the-full-check when skips are recorded
+- [ ] checkride verdict rewording retires the literal NOT-the-full-check phrase; sweep plumbbob's AGENTS.md stanza, verify skill, presentation spec, and summaryCheckRow suffix when the new checkride ships
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -76,6 +78,20 @@ Harvest results this boundary:
   times, wrapped in meta-narration). Captured as D18 (turn-is-the-anatomy) and
   step 7.
 
+Harvest results at the step-6 boundary (all three Rob's calls, all blocker):
+
+- **blocker**: the standalone verdict line duplicates the recap's check row.
+  Step 7 computes that row from the same measurement, so the anatomy would
+  render one fact twice, the repetition D18 (turn-is-the-anatomy) exists to
+  kill. Folded into intent as D21 (verdict-in-the-row); steps 7 and 8 absorb.
+- **blocker**: recap rows run long enough to force horizontal scrolling, and a
+  readout that scrolls sideways fails the thing the anatomy is for. Folded into
+  intent as D22 (recap-width-budget); steps 7 and 8 absorb.
+- **blocker**: the pause ends without a recommendation, and Rob calls that a
+  defect, not an enhancement: the your-call block teaches the moves but does
+  not say which one to take. Folded into intent as D23 (recommendation-last);
+  steps 7 and 8 absorb.
+
 ## Log
 
 *(The build's history, oldest first. `plumbbob checkpoint` appends a dated line here
@@ -91,3 +107,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-08-29 — step 4 checkpointed · 65726e6f7 — feat(verify): emit the recap skeleton and gate verdict line (150m)
 - 2026-08-29 — step 5 checkpointed · 45705f5a2 — docs(skills): align every skill output spec to the anatomy (44m)
 - 2026-09-01 — boundary decisions (Rob's calls): whole anatomy in this build; CLI does what it can (D19 (cli-does-what-it-can): check/seam/diff rows move to the CLI); one seam per turn (D20 (one-seam-turn): handoff emits the whole ending, the model relays once). Plan grew to 11 steps.
+- 2026-09-02 — step 6 checkpointed · 23768b624 — feat(handoff): emit the plan-pause card, driver next-up, and trailing (1 drift, 16m)

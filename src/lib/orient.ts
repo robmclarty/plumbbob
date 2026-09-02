@@ -4,7 +4,7 @@
 // contents (no fs), and a malformed document degrades to fewer fields rather
 // than throwing.
 
-import { parseStepSeam } from './intent.ts'
+import { parseStepSeam, scopeDrift } from './intent.ts'
 
 /** One numbered step under intent.md's `## Steps`. */
 export type Step = {
@@ -494,6 +494,174 @@ export function foldBanner(rows: Readonly<Partial<Record<RecapRowName, RecapRow>
     return { ladder: A_HAIR_OFF, worst: `${stats.outOfBand} commit${stats.outOfBand === 1 ? '' : 's'} outside the ledger` }
   }
   return { ladder: PLUMB, worst: null }
+}
+
+// --- The assembled recap: the CLI-computed rows and the fence they ride in
+// (docs/presentation.md). `handoff` measures (the check summary, the numstat,
+// the seam file) and this section turns each measurement into its row, every
+// value cut to the 58 columns the 13-character label pad leaves inside the
+// 72-column budget. ---
+
+/** The label pad: recap values start at column 14, so a value gets 58 of the 72. */
+const RECAP_VALUE_BUDGET = 58
+
+/** The check summary `plumbbob check` leaves in `.check/summary.json`, the fields the check row reads. */
+export type CheckSummary = {
+  readonly ok: boolean
+  readonly checks: ReadonlyArray<{ readonly name: string; readonly ok: boolean; readonly skipped?: boolean }>
+}
+
+/**
+ * The measured check row from the last run's summary: the verdict word, the
+ * gate, and its scope. A narrowed run records its deselected slots as skipped
+ * entries, and the row names them (`· without test`); a list too long for the
+ * value budget collapses to its counts (the elision is counted, never silent).
+ */
+export function summaryCheckRow(summary: CheckSummary): RecapRow {
+  const ran = summary.checks.filter((c) => c.skipped !== true).map((c) => c.name)
+  const skipped = summary.checks.filter((c) => c.skipped === true).map((c) => c.name)
+  const without = skipped.length === 0 ? '' : ` · without ${skipped.join(', ')}`
+  const fit = (candidates: ReadonlyArray<string>): string =>
+    candidates.find((c) => c.length <= RECAP_VALUE_BUDGET) ?? (candidates[candidates.length - 1] ?? '')
+  if (summary.ok) {
+    const scope = skipped.length === 0 ? `${ran.length} checks` : `${ran.length} of ${summary.checks.length} checks`
+    return {
+      verdict: 'true',
+      word: 'green',
+      evidence: fit([
+        `green (checkride: ${ran.join(', ')}${without})`,
+        `green (checkride: ${scope}${without})`,
+        `green (checkride: ${scope})`,
+      ]),
+    }
+  }
+  const failing = summary.checks.find((c) => !c.ok && c.skipped !== true)
+  const evidence =
+    failing !== undefined
+      ? fit([`red (${failing.name} failing${without})`, `red (${failing.name} failing)`])
+      : fit([`red${without}`, 'red'])
+  return { verdict: 'failing', word: 'red', evidence }
+}
+
+/**
+ * The measured seam row: the changed work-plane paths against the step's seam
+ * tokens. Null when there is no seam to measure against or nothing changed
+ * (the row then vanishes, or the model's attested row stands).
+ *
+ * A stray names its path; when the named form overflows the value budget it
+ * degrades to the first path plus a count, then to the bare count, so the
+ * evidence stays honest at every width.
+ */
+export function seamRowFromDiff(paths: ReadonlyArray<string>, seam: ReadonlyArray<string>): RecapRow | null {
+  if (seam.length === 0 || paths.length === 0) {
+    return null
+  }
+  const outside = scopeDrift(paths, seam)
+  if (outside.length === 0) {
+    return {
+      verdict: 'true',
+      word: 'held',
+      evidence: `held: ${paths.length} file${paths.length === 1 ? '' : 's'}, all inside`,
+    }
+  }
+  const more = outside.length > 1 ? ` +${outside.length - 1} more` : ''
+  const counted = `strayed: ${outside.length} path${outside.length === 1 ? '' : 's'} outside the seam`
+  const evidence =
+    [`strayed: ${outside.join(', ')} outside the seam`, `strayed: ${outside[0]}${more} outside the seam`].find(
+      (c) => c.length <= RECAP_VALUE_BUDGET,
+    ) ?? counted
+  return { verdict: 'failing', word: 'strayed', evidence }
+}
+
+/** The summed working-tree change: line counts and the file count. */
+export type DiffCounts = { readonly added: number; readonly removed: number; readonly files: number }
+
+/**
+ * Sum numstat entries into the diff row's three counts.
+ */
+export function countDiff(entries: ReadonlyArray<{ readonly added: number; readonly removed: number }>): DiffCounts {
+  return {
+    added: entries.reduce((sum, e) => sum + e.added, 0),
+    removed: entries.reduce((sum, e) => sum + e.removed, 0),
+    files: entries.length,
+  }
+}
+
+/**
+ * The diff row's value: `+<added> -<removed> across <N> files`, plus the
+ * `inline below` pointer when the patch rides the turn. Null when nothing
+ * changed: information only, and no change is no information.
+ */
+export function diffRowValue(counts: DiffCounts, inline: boolean): string | null {
+  if (counts.files === 0) {
+    return null
+  }
+  const files = `${counts.files} file${counts.files === 1 ? '' : 's'}`
+  return `+${counts.added} -${counts.removed} across ${files}${inline ? ' · inline below' : ''}`
+}
+
+/**
+ * The recap fence's inner lines: the header rule, the measuring rows present
+ * in their fixed order, and the diff row last, labels padded so every value
+ * starts at column 14. Empty when no row survived, so the caller can drop the
+ * fence entirely rather than emit a bare header.
+ */
+export function recapLines(
+  step: number,
+  total: number,
+  rows: Readonly<Partial<Record<RecapRowName, RecapRow>>>,
+  diffValue: string | null,
+): string[] {
+  const body: string[] = []
+  for (const name of RECAP_ROW_NAMES) {
+    const row = rows[name]
+    if (row !== undefined) {
+      body.push(`${name.padEnd(13)}${row.evidence}`)
+    }
+  }
+  if (diffValue !== null) {
+    body.push(`${'diff'.padEnd(13)}${diffValue}`)
+  }
+  return body.length === 0 ? [] : [`── recap · step ${step} of ${total} ──`, ...body]
+}
+
+/**
+ * The `## recommendation` section of `.plumbbob/detail.md`: the one or two
+ * plain sentences a decision turn ends on, or null when the model wrote none.
+ * `handoff` emits it after the card, unfenced; the eye lands on the last text,
+ * and the last text should say which move the model would take.
+ *
+ * The prose is unwrapped on the way out: lines inside a paragraph join into
+ * one, blank lines keep their paragraph breaks. It is flowing text, not a
+ * fence, so it should wrap at the renderer's width, not at whatever column
+ * the detail file happened to be written to.
+ */
+export function parseRecommendation(detail: string): string | null {
+  const lines = detail.split('\n')
+  const start = lines.findIndex((l) => /^##\s+recommendation\s*$/i.test(l.trim()))
+  if (start === -1) {
+    return null
+  }
+  let end = lines.findIndex((l, i) => i > start && l.startsWith('## '))
+  if (end === -1) {
+    end = lines.length
+  }
+  const text = lines
+    .slice(start + 1, end)
+    .join('\n')
+    .trim()
+  if (text.length === 0) {
+    return null
+  }
+  return text
+    .split(/\n{2,}/)
+    .map((paragraph) =>
+      paragraph
+        .split('\n')
+        .map((l) => l.trim())
+        .join(' '),
+    )
+    .join('\n\n')
 }
 
 /**

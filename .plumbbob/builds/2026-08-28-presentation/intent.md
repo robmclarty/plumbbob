@@ -22,7 +22,8 @@
   into one overwritten file, with git as the archive.
 - **Done looks like:** two consecutive step turns, driven by different models,
   render the same anatomy: numbered plain-English highlights, the aligned
-  recap, the gate verdict verbatim on its own line, and the footer card last.
+  recap carrying the gate verdict in its check row, the footer card, and the
+  model's recommendation as the turn's last words.
   Every illustrated block in `docs/happy-path.md` is producible by the shipped
   CLI and skills. The eval tier (`test/evals/`) runs green against the new
   anatomy, with a fresh receipt in `docs/evals/`. `pnpm check` green.
@@ -37,10 +38,13 @@
 ```
 a step turn, top to bottom
   [model] headline + numbered highlights      <- skill template, plain English
-  [model] recap: labeled judgment rows        <- skill template, fenced
-  [cli]   check verdict, verbatim, own line
+  [cli]   recap: measured rows + the model's
+          judgment rows, verdict in the check
+          row, every line inside 72 columns
   [cli]   footer card: banner (glyph + word + worst component + step N of M),
           next up (step + model), the your-call block
+  [cli]   recommendation: 1-2 plain sentences  <- model judgment, fed through
+          relayed unfenced, the last words        the detail file
 
 the detail plane (never in the default turn body)
   .plumbbob/detail.md                         <- the in-flight step's full
@@ -163,6 +167,31 @@ the detail plane (never in the default turn body)
   and a single seam leaves it nowhere to live; a positional rule ("your last
   line, then relay, then end") holds where a "don't repeat" prohibition does
   not.
+- <a id="d21"></a>**D21 (verdict-in-the-row)**: the gate verdict's one home is
+  the recap's `check` row; the standalone verdict line leaves the anatomy,
+  *because* handoff re-emits that row from its own measurement
+  ([D19 (cli-does-what-it-can)](#d19)), and one measured fact rendered twice is
+  the repetition [D18 (turn-is-the-anatomy)](#d18) exists to kill. The row's
+  evidence names the gate and its scope, so a narrowed gate still says
+  `NOT the full check` where the verdict now lives. Amends
+  [D20 (one-seam-turn)](#d20)'s block contents and step 4's skeleton.
+- <a id="d22"></a>**D22 (recap-width-budget)**: every recap line fits 72
+  columns: the label pad leaves 58 for the value, the evidence is one short
+  clause, and the full story lives behind the handle in the detail file
+  ([D4 (honest-elision)](#d4)), *because* a fence never wraps, so an overlong
+  row scrolls sideways in exactly the renderers
+  [C2 (markdown-only)](#c2) exists for. CLI-computed rows conform by
+  construction; the skill template carries the budget for the judgment rows.
+- <a id="d23"></a>**D23 (recommendation-last)**: a decision turn's last words
+  are the model's recommendation: one or two plain sentences naming the move
+  it would take and why, written into the detail file as a
+  `## recommendation` section, emitted by handoff after the card, and relayed
+  as plain prose, never fenced, *because* the your-call block teaches the
+  moves without saying which one to take, and a pause that leaves the human
+  deciding unassisted is a defect (Rob's call), not a missing nicety. Amends
+  [D5 (verdict-last)](#d5): the card stays the last rendered block; the
+  recommendation is the last text. Orientation and driver turns are unchanged
+  (nothing is pending there).
 
 ## Constraints
 
@@ -214,7 +243,7 @@ the detail plane (never in the default turn body)
    detail-file write
    - seam: `skills/`, `docs/cli-reference.md`
    - model: opus (voice-governed prose across nine files)
-6. [ ] feat(handoff): emit the plan-pause card, driver next-up, and trailing
+6. [x] feat(handoff): emit the plan-pause card, driver next-up, and trailing
    blank line, **done when:** `plumbbob handoff` renders the plan-pause card
    (the your-call block with the two plan-pause moves) and a driver-tier next-up
    line pointing back at the in-flight step, and every card ends with a trailing
@@ -225,21 +254,31 @@ the detail plane (never in the default turn body)
 7. [ ] feat(recap): handoff emits the whole CLI ending as one block,
    **done when:** `plumbbob handoff` computes the recap's `check` (from the last
    run), `seam` (the SEAM marker versus `git diff`), and `diff`
-   (`git diff --numstat`) rows, parses only the judgment rows (`done-when`,
-   `decisions`, `constraints`) from `.plumbbob/detail.md`, and emits the
-   assembled fence, the verdict line, the inline diff fence when the change is
-   20 lines or fewer, and the card as one contiguous block
-   ([D19 (cli-does-what-it-can)](#d19), [D20 (one-seam-turn)](#d20)); unit
-   tests cover each computed row and the assembled block
+   (`git diff --numstat`) rows, parses the judgment rows (`done-when`,
+   `decisions`, `constraints`) and the `## recommendation` section from
+   `.plumbbob/detail.md`, and emits the assembled fence (the gate verdict in
+   the check row, no standalone verdict line,
+   [D21 (verdict-in-the-row)](#d21)), the inline diff fence when the change is
+   20 lines or fewer, the card, and the recommendation last as one contiguous
+   block ([D19 (cli-does-what-it-can)](#d19), [D20 (one-seam-turn)](#d20),
+   [D23 (recommendation-last)](#d23)); every CLI-computed line fits the
+   72-column budget ([D22 (recap-width-budget)](#d22)); unit tests cover each
+   computed row, the assembled block, and the recommendation
    - seam: `src/lib/orient.ts`, `src/verbs/handoff.ts`, `src/verbs/check.ts`, `src/lib/git.ts`, `test/handoff.test.ts`
    - model: sonnet (git numstat and the seam diff are mechanical; the recap-assembly seam wants a careful read)
 8. [ ] docs(anatomy): make the whole turn the anatomy and nothing else,
    **done when:** `docs/presentation.md` and the build/verify skills spec the
    two-region turn: the model authors headline, highlights (a judgment flag is
    a highlight with its full story in a detail section, never a prose block),
-   and the detail pointer as its final authored line, writes only the recap's
-   judgment rows into `.plumbbob/detail.md`, then relays `plumbbob handoff`'s
-   block once, verbatim, and writes nothing after it; meta-narration of the
+   and the detail pointer as its final authored line, writes the recap's
+   judgment rows (inside the 72-column budget,
+   [D22 (recap-width-budget)](#d22)) and the `## recommendation` section into
+   `.plumbbob/detail.md`, then relays `plumbbob handoff`'s block once, the card
+   fenced and the recommendation as plain prose, and writes nothing after it;
+   the spec drops the standalone verdict line
+   ([D21 (verdict-in-the-row)](#d21)), re-homes the narrowed-gate clause and
+   the Stop-hook relay in the check row, and ends every decision turn on the
+   recommendation ([D23 (recommendation-last)](#d23)); meta-narration of the
    CLI-rendered parts and cross-part repetition are forbidden by the positional
    rule ([D18 (turn-is-the-anatomy)](#d18),
    [D19 (cli-does-what-it-can)](#d19), [D20 (one-seam-turn)](#d20))
@@ -337,6 +376,13 @@ the detail plane (never in the default turn body)
   handoff emits the whole CLI ending as one contiguous block, the model relays
   once and writes nothing after; deleted the four-slot interleave and
   "don't repeat" prohibitions.
+- 2026-09-01: step-6 harvest → all three parked items classed blocker (Rob's
+  calls; his read: a pause that ends without a recommendation is a defect).
+  The verdict line folds into the check row (D21 (verdict-in-the-row)), recap
+  rows get a 72-column budget (D22 (recap-width-budget)), and a decision
+  turn's last words are the model's recommendation, relayed unfenced
+  (D23 (recommendation-last), amending D5 (verdict-last)); deleted
+  defer-to-follow-up. Steps 7 and 8 absorb all three; no new steps.
 
 ## Research digest
 
