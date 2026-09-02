@@ -128,6 +128,41 @@ the detail plane (never in the default turn body)
   binds to the latest card; an older step takes its step number or sha, and
   the detail file anchors the same numbers, *because* expansion must be a
   lookup, never a recall.
+- <a id="d17"></a>**D17 (whole-anatomy-emitted)**: `plumbbob handoff` emits
+  every tier's ending, not only the step-pause and boundary cards: the
+  plan-pause card (the your-call block with the two plan-pause moves) and the
+  driver next-up line (pointing back at the in-flight step), and every card
+  ends with a trailing blank line, *because* the done-looks-like requires every
+  illustrated ending to be producible by the shipped CLI, and a card flush
+  against the next output cannot be the turn's last text
+  ([D5 (verdict-last)](#d5)). Resolves the step-5 parked gap and the
+  trailing-newline bug.
+- <a id="d18"></a>**D18 (turn-is-the-anatomy)**: a turn is the anatomy and
+  nothing else: the model never narrates or frames the CLI-rendered parts (no
+  "here is the pause", no restating the check verdict in prose), each fact
+  appears once in its designated part, and any judgment or flag rides as a
+  one-line highlight, not a freeform prose block, *because* the parts render
+  clean while the holistic turn goes verbose and repetitive when the model
+  wraps them in meta-narration and duplicates facts across parts (step 5's own
+  pause stated the check verdict three times).
+- <a id="d19"></a>**D19 (cli-does-what-it-can)**: apply
+  [D1 (consistency-from-ownership)](#d1) to the limit: if the CLI can compute or
+  render something deterministically, the CLI does it, and the model is reserved
+  for what only it can do (judgment and prose). Concretely the recap's `check`,
+  `seam`, and `diff` rows are CLI-computed (check from the last run, seam from
+  the SEAM marker versus `git diff`, diff from `git diff --numstat`) and the
+  model writes only the three judgment rows (`done-when`, `decisions`,
+  `constraints`), *because* every row the model attests is one it can pad or get
+  wrong, and determinism is what earns the readout its trust.
+- <a id="d20"></a>**D20 (one-seam-turn)**: the CLI ending is emitted by one
+  command as one contiguous block (the assembled recap fence, the verdict line,
+  the footer card, the trailing blank line, and the inline diff fence when the
+  change is 20 lines or fewer); the model's final authored line is the detail
+  pointer, it relays exactly once, and it writes nothing after the relay,
+  *because* every gap between interleaved parts is where meta-narration breeds,
+  and a single seam leaves it nowhere to live; a positional rule ("your last
+  line, then relay, then end") holds where a "don't repeat" prohibition does
+  not.
 
 ## Constraints
 
@@ -172,19 +207,57 @@ the detail plane (never in the default turn body)
    included per [D7 (code-on-request)](#d7)) with the check verdict verbatim
    on its own line
    - seam: `src/verbs/check.ts`, `skills/verify/SKILL.md`, `skills/build/SKILL.md`
-5. [ ] docs(skills): align every skill output spec to the anatomy,
+5. [x] docs(skills): align every skill output spec to the anatomy,
    **done when:** the nine catalogued drifts (digest below) are gone, the
    hand-off block carries one name everywhere, every skill's ending sits in
    its [D15 (three-tier-anatomy)](#d15) tier, and build/verify spec the
    detail-file write
    - seam: `skills/`, `docs/cli-reference.md`
    - model: opus (voice-governed prose across nine files)
-6. [ ] docs(happy-path): make every illustrated block producible,
+6. [ ] feat(handoff): emit the plan-pause card, driver next-up, and trailing
+   blank line, **done when:** `plumbbob handoff` renders the plan-pause card
+   (the your-call block with the two plan-pause moves) and a driver-tier next-up
+   line pointing back at the in-flight step, and every card ends with a trailing
+   blank line ([D17 (whole-anatomy-emitted)](#d17)); `test/handoff.test.ts`
+   asserts each shape
+   - seam: `src/verbs/handoff.ts`, `src/lib/orient.ts`, `test/handoff.test.ts`
+   - model: sonnet (mechanical extension of the existing card renderer)
+7. [ ] feat(recap): handoff emits the whole CLI ending as one block,
+   **done when:** `plumbbob handoff` computes the recap's `check` (from the last
+   run), `seam` (the SEAM marker versus `git diff`), and `diff`
+   (`git diff --numstat`) rows, parses only the judgment rows (`done-when`,
+   `decisions`, `constraints`) from `.plumbbob/detail.md`, and emits the
+   assembled fence, the verdict line, the inline diff fence when the change is
+   20 lines or fewer, and the card as one contiguous block
+   ([D19 (cli-does-what-it-can)](#d19), [D20 (one-seam-turn)](#d20)); unit
+   tests cover each computed row and the assembled block
+   - seam: `src/lib/orient.ts`, `src/verbs/handoff.ts`, `src/verbs/check.ts`, `src/lib/git.ts`, `test/handoff.test.ts`
+   - model: sonnet (git numstat and the seam diff are mechanical; the recap-assembly seam wants a careful read)
+8. [ ] docs(anatomy): make the whole turn the anatomy and nothing else,
+   **done when:** `docs/presentation.md` and the build/verify skills spec the
+   two-region turn: the model authors headline, highlights (a judgment flag is
+   a highlight with its full story in a detail section, never a prose block),
+   and the detail pointer as its final authored line, writes only the recap's
+   judgment rows into `.plumbbob/detail.md`, then relays `plumbbob handoff`'s
+   block once, verbatim, and writes nothing after it; meta-narration of the
+   CLI-rendered parts and cross-part repetition are forbidden by the positional
+   rule ([D18 (turn-is-the-anatomy)](#d18),
+   [D19 (cli-does-what-it-can)](#d19), [D20 (one-seam-turn)](#d20))
+   - seam: `docs/presentation.md`, `skills/build/SKILL.md`, `skills/verify/SKILL.md`
+   - model: fable (holistic editorial judgment on the whole turn)
+9. [ ] docs(skills): relay every tier's ending from the plan and driver skills,
+   **done when:** the plan skill relays the plan-pause card and the driver
+   skills (park, spike, revert, recover, abandon) relay the driver next-up line
+   from `plumbbob handoff` ([D17 (whole-anatomy-emitted)](#d17)), each ending
+   sitting in its [D15 (three-tier-anatomy)](#d15) tier
+   - seam: `skills/plan/SKILL.md`, `skills/park/SKILL.md`, `skills/spike/SKILL.md`, `skills/revert/SKILL.md`, `skills/recover/SKILL.md`, `skills/abandon/SKILL.md`
+   - model: sonnet (mechanical wiring once step 6 emits the endings)
+10. [ ] docs(happy-path): make every illustrated block producible,
    **done when:** each rendered block in `docs/happy-path.md` matches real CLI
    output or the skill's exact template
    - seam: `docs/happy-path.md`
    - model: sonnet (reconciliation against the shipped spec)
-7. [ ] test(evals): run the eval tier against the new anatomy, **done when:**
+11. [ ] test(evals): run the eval tier against the new anatomy, **done when:**
    the c-series contracts read the new turn shapes, the driver runs green,
    and a fresh receipt lands in `docs/evals/`
    - seam: `test/evals/contracts/`, `test/evals/helpers/`, `docs/evals/`
@@ -250,6 +323,20 @@ the detail plane (never in the default turn body)
   sha for older; deleted global numbering.
 - 2026-08-28: evals → in scope as step 7; the build is not complete until the
   tier runs against the new anatomy.
+- 2026-08-29: step-5 harvest → both parked items classed blocker; the whole
+  anatomy ships in this build (the plan-pause card, the driver next-up, the
+  trailing blank line), deleted defer-to-follow-up.
+- 2026-08-29: holistic verbosity → the turn is the anatomy and nothing else
+  ([D18 (turn-is-the-anatomy)](#d18)); deleted tone guidance in favor of
+  structural rules.
+- 2026-09-01: ownership limit → if the CLI can, the CLI does
+  ([D19 (cli-does-what-it-can)](#d19)): check/seam/diff rows move to the CLI,
+  the model keeps the three judgment rows; deleted the model-attested six-row
+  recap.
+- 2026-09-01: repetition → one seam per turn ([D20 (one-seam-turn)](#d20)):
+  handoff emits the whole CLI ending as one contiguous block, the model relays
+  once and writes nothing after; deleted the four-slot interleave and
+  "don't repeat" prohibitions.
 
 ## Research digest
 

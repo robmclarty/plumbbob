@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: presentation
 
-**Current step:** 5 — docs(skills): align every skill output spec to the anatomy
+**Current step:** 6 — feat(handoff): emit the plan-pause card, driver next-up, and trailing
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -27,9 +27,13 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 2. feat(detail): the latest-step detail file and its lifecycle
 - ☑ 3. feat(handoff): render the orientation banner and footer card
 - ☑ 4. feat(verify): emit the recap skeleton and gate verdict line
-- ☐ 5. docs(skills): align every skill output spec to the anatomy
-- ☐ 6. docs(happy-path): make every illustrated block producible
-- ☐ 7. test(evals): run the eval tier against the new anatomy
+- ☑ 5. docs(skills): align every skill output spec to the anatomy
+- ☐ 6. feat(handoff): emit the plan-pause card, driver next-up, and trailing
+- ☐ 7. feat(recap): handoff emits the whole CLI ending as one block
+- ☐ 8. docs(anatomy): make the whole turn the anatomy and nothing else
+- ☐ 9. docs(skills): relay every tier's ending from the plan and driver skills
+- ☐ 10. docs(happy-path): make every illustrated block producible
+- ☐ 11. test(evals): run the eval tier against the new anatomy
 
 ## Park list
 
@@ -37,8 +41,11 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 > go straight back to the step. Acting the instant an idea arrives is the disease.
 > Capture is one line (`/plumbbob:park` composes it). Harvest happens only at the boundary.
 
-- [ ] step 5 gap: the plan-pause your-call block and the mid-step driver next-up line are spec'd in presentation.md but not yet emitted by `plumbbob handoff` (needs a src change, outside step 5's docs seam); skills document the tier ending the CLI actually emits rather than fake the furniture.
-- [ ] bug: handoff's footer card omits a trailing blank line (src/verbs/handoff.ts ends its stdout with a single \n), so the next output clobbers the last your-call line — emit a trailing blank line so the card ends the turn with visual separation. A src fix, outside step 5's docs seam.
+- [x] step 5 gap: the plan-pause your-call block and the mid-step driver next-up line are spec'd in presentation.md but not yet emitted by `plumbbob handoff` (needs a src change, outside step 5's docs seam); skills document the tier ending the CLI actually emits rather than fake the furniture.
+- [x] bug: handoff's footer card omits a trailing blank line (src/verbs/handoff.ts ends its stdout with a single \n), so the next output clobbers the last your-call line — emit a trailing blank line so the card ends the turn with visual separation. A src fix, outside step 5's docs seam.
+- [ ] the standalone verdict line duplicates the recap check row: step 7 computes that row anyway, so fold the gate verdict into it and drop the separate line from the anatomy (revisits D20)
+- [ ] recap values run long enough to force horizontal scrolling: give the row a width budget (short evidence clause in the recap, full story in the detail file)
+- [ ] close the pause with 1 or 2 sentences of recommendation / suggested next action, model-fed into handoff and rendered as plain text after the card, not inside a fence (revisits D5 verdict-last)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -56,7 +63,18 @@ from sprawling across branches.
 
 Harvest results this boundary:
 
-- (none yet)
+- **blocker**: the anatomy gap (the plan-pause card and driver next-up line are
+  not emitted by `handoff`). The human wants the whole anatomy in this build, so
+  the shipped CLI must produce every tier's ending, not the skills faking it in
+  prose. Folded into intent as D17 (whole-anatomy-emitted) and steps 6 and 8.
+- **blocker**: `handoff`'s trailing-newline bug (the card clobbers its own last
+  line). A defect in the footer card, the build's core deliverable; a card flush
+  against the next output cannot be the turn's last text (D5). Folded into D17
+  and step 6.
+- Fresh feedback this boundary (not a parked item): the holistic turn reads
+  repetitive and verbose (step 5's own pause stated the check verdict three
+  times, wrapped in meta-narration). Captured as D18 (turn-is-the-anatomy) and
+  step 7.
 
 ## Log
 
@@ -71,3 +89,5 @@ folder, so it rides the branch into the PR.)*
 - 2026-08-29 — step 2 checkpointed · 030407ba6 — feat(detail): the latest-step detail file and its lifecycle (1 drift, 11m)
 - 2026-08-29 — step 3 checkpointed · 88d0656d3 — feat(handoff): render the orientation banner and footer card (1 drift, 16m)
 - 2026-08-29 — step 4 checkpointed · 65726e6f7 — feat(verify): emit the recap skeleton and gate verdict line (150m)
+- 2026-08-29 — step 5 checkpointed · 45705f5a2 — docs(skills): align every skill output spec to the anatomy (44m)
+- 2026-09-01 — boundary decisions (Rob's calls): whole anatomy in this build; CLI does what it can (D19 (cli-does-what-it-can): check/seam/diff rows move to the CLI); one seam per turn (D20 (one-seam-turn): handoff emits the whole ending, the model relays once). Plan grew to 11 steps.

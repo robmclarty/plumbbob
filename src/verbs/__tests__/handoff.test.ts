@@ -185,6 +185,70 @@ describe('handoff', () => {
     expect(stdout).not.toContain('model:')
   })
 
+  it('ends every card with a trailing blank line, so the next output cannot clobber it', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout.endsWith('\n\n')).toBe(true)
+  })
+
+  it('renders the plan-pause card under --plan: no banner, and the two plan moves', async () => {
+    // The plan pause judges the plan, not a diff: nothing is measured, and
+    // nothing is recorded yet, so `revert` has nothing to wind back to.
+    const planned = INTENT.replace('1. [x] First', '1. [ ] First')
+    const dir = await started(planned)
+    const { code, stdout } = captureIo(() => handoff(dir, ['--plan']))
+    expect(code).toBe(0)
+    expect(stdout).not.toContain('Plumb')
+    expect(stdout).toContain('Next Up: Step 1 - First')
+    expect(stdout).toContain('  looks good  → I mark the plan decided; /plumbbob:build starts step 1')
+    expect(stdout).toContain('  needs work  → Tell me what to sharpen; the plan is cheap to change now')
+    expect(stdout).not.toContain('revert')
+    expect(stdout.endsWith('\n\n')).toBe(true)
+  })
+
+  it('points --plan at the first undone step, so a mid-build refine names where the build resumes', async () => {
+    const dir = await started() // step 1 done, 2 and 3 planned
+    writeFileSync(stepPath(dir), '2\n')
+    const { code, stdout } = captureIo(() => handoff(dir, ['--plan']))
+    expect(code).toBe(0)
+    expect(stdout).toContain('Next Up: Step 2 - Second')
+    expect(stdout).toContain('/plumbbob:build starts step 2')
+  })
+
+  it('renders the driver next-up line under --driver, pointing back at the step still in flight', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    const { code, stdout } = captureIo(() => handoff(dir, ['--driver']))
+    expect(code).toBe(0)
+    expect(stdout.trim()).toBe('Next Up: Back to step 2 - Second')
+    expect(stdout.endsWith('\n\n')).toBe(true)
+  })
+
+  it('falls back to the forward pointer under --driver with no step in flight', async () => {
+    const dir = await started()
+    writeFileSync(checkpointsPath(dir), 'step 2 abc1234\n')
+    const { code, stdout } = captureIo(() => handoff(dir, ['--driver']))
+    expect(code).toBe(0)
+    expect(stdout.trim()).toBe('Next Up: Step 3 - Third (model: Sonnet)')
+  })
+
+  it('names the step number alone when the plan no longer holds the in-flight step', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '9\n') // a step the plan does not contain
+    const { code, stdout } = captureIo(() => handoff(dir, ['--driver']))
+    expect(code).toBe(0)
+    expect(stdout.trim()).toBe('Next Up: Back to step 9')
+  })
+
+  it('refuses --plan and --driver together, since they name different tiers', async () => {
+    const dir = await started()
+    const { code, stderr } = captureIo(() => handoff(dir, ['--plan', '--driver']))
+    expect(code).toBe(1)
+    expect(stderr).toContain('different tiers')
+  })
+
   it('refuses with no active session', async () => {
     const { code, stderr } = captureIo(() => handoff(makeTempRepo(), []))
     expect(code).toBe(1)

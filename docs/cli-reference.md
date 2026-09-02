@@ -22,7 +22,7 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 | `start` | `start <title> [--slug <name>] [--local] [--allow-dirty]` | scaffold `builds/<slug>/`, record baseline, open the session |
 | `status` | `status [--build <slug>] [--invoked "<args>"]` | print the orientation dashboard (or `NO ACTIVE SESSION`) |
 | `build` | `build [<n>] [--build <slug>]` | write step `n`'s seam + `STEP` (goes in-flight) |
-| `handoff` | `handoff [<n>] [--build <slug>]` | print the footer card (banner, next-up, your-call by tier); read-only |
+| `handoff` | `handoff [<n>] [--plan] [--driver] [--build <slug>]` | print the footer card (banner, next-up, your-call by tier); read-only |
 | `check` | `check [--bail] [--changed] [--all] [--only a,b] [--skip a,b] [--include a,b]` | run the heavy gate; no state change |
 | `checkpoint` | `checkpoint [<n>] [--plan] [-m <msg>] [--body <<'BODY'…]` | gate on green, commit, record SHA, mark step done |
 | `revert` | `revert [--to <n>] [--build <slug>]` | `git reset --hard` to a checkpoint SHA |
@@ -108,20 +108,28 @@ paths or `dir/` grants, never globs; [**D23 (no-glob-seams)**](decisions.md#d23)
 ### handoff
 
 ```text
-plumbbob handoff [<n>] [--build <slug>]
+plumbbob handoff [<n>] [--plan] [--driver] [--build <slug>]
 ```
 
 Prints the **footer card** ([the turn anatomy](presentation.md)): the CLI-owned,
-always-last-text ending of a turn. Read-only, no state change. Which tier it renders is
-derived, not passed: a step in flight yields the decision-tier card (banner, next-up, and
-the your-call block); a landed step with none in flight yields the orientation-tier card
-(banner and next-up only); a fresh session with nothing measured yields the forward pointer
-alone. The banner is computed, never composed: it folds the model's recap (read from
-`.plumbbob/detail.md`) worst-of with handoff's own check measurement and the step's accrued
-stats. An explicit `<n>` overrides which step it reports on; otherwise it uses the in-flight
-step, else the last checkpointed one. Owning the card here rather than as prose in the build
-skill keeps the skill from drifting out of sync with `status`, which renders the same
-next-step detail. Refuses (exit 1) only with no session.
+always-last-text ending of a turn, closed by a trailing blank line so nothing that follows
+can clobber it. Read-only, no state change. The step tiers are derived, not passed: a step
+in flight yields the decision-tier card (banner, next-up, and the your-call block); a landed
+step with none in flight yields the orientation-tier card (banner and next-up only); a fresh
+session with nothing measured yields the forward pointer alone. The banner is computed,
+never composed: it folds the model's recap (read from `.plumbbob/detail.md`) worst-of with
+handoff's own check measurement and the step's accrued stats. An explicit `<n>` overrides
+which step it reports on; otherwise it uses the in-flight step, else the last checkpointed
+one.
+
+Two endings no session state can tell apart from those take a flag, so every tier's ending
+is emitted here rather than faked in a skill's prose: `--plan` renders the plan-pause card
+(no banner, since nothing is measured yet, and the your-call block carries the two plan
+moves), and `--driver` renders a driver turn's pointer, which aims back at the step still
+open instead of forward at the next one. Owning the card here rather than as prose in the
+build skill keeps the skill from drifting out of sync with `status`, which renders the same
+next-step detail. Refuses (exit 1) with no session, or with `--plan` and `--driver`
+together.
 
 ### check
 

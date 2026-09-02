@@ -6,6 +6,11 @@
 // yet measured ⇒ the forward pointer alone, no banner. The banner is computed,
 // never composed: it folds the model's recap (read from `.plumbbob/detail.md`)
 // worst-of with its own check measurement and the step's accrued stats.
+//
+// Every tier's ending is emitted here, so no skill has to fake the furniture in
+// prose: `--plan` renders the plan-pause card and `--driver` the driver turn's
+// pointer back at the open step, the two endings the session state cannot tell
+// apart from the ones above.
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -25,11 +30,14 @@ import {
 /**
  * Print the footer card for the resolved build; return the exit code.
  *
- * Requires an active session (the STATE sentinel under `.plumbbob/`). Which
- * tier to render is derived, not passed: a step in flight yields the full
+ * Requires an active session (the STATE sentinel under `.plumbbob/`). The step
+ * tiers are derived, not passed: a step in flight yields the full
  * decision-tier card, a landed step yields the orientation-tier card (no
  * your-call block), and a fresh session with nothing to report yields only
- * the forward pointer.
+ * the forward pointer. The two endings no session state can distinguish are
+ * named by a flag: `--plan` is the plan pause (a decision turn about the plan,
+ * not a diff) and `--driver` is a driver turn (a park, a spike, a `use`), which
+ * interrupts a step without ending it.
  */
 export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   const root = findRepoRoot(cwd)
@@ -39,9 +47,20 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   }
 
   const { build: slug, rest } = resolveBuild(root, args)
+  if (rest.includes('--plan') && rest.includes('--driver')) {
+    process.stderr.write('plumbbob: handoff: --plan and --driver name different tiers; pass one.\n')
+    return 1
+  }
   const steps = parseSteps(readOr(intentPath(root, slug)))
-
   const inFlight = readStep(stepPath(root, slug))
+
+  if (rest.includes('--plan')) {
+    // The plan pause judges the plan, so nothing is measured and no banner
+    // renders; the pointer and the moves both aim at the first undone step.
+    const first = steps.find((s) => !s.done)
+    return emit([nextUpLine(first), '', planCallBlock(first)])
+  }
+
   const explicit = rest.find((a) => /^\d+$/.test(a))
   const lastDone = parseLastCheckpoint(readOr(checkpointsPath(root, slug)))
   // The step this hand-off is about: an explicit arg wins (the skill's override),
@@ -56,10 +75,15 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   // land on the earliest remaining step, never a gap.
   const nextUp = steps.find((s) => !s.done && s.n !== current)
 
+  if (rest.includes('--driver')) {
+    // A driver turn interrupts a step without ending it, so its pointer aims
+    // back at the step still open; with none open the ordinary pointer stands.
+    return emit([driverNextUpLine(steps, inFlight) ?? nextUpLine(nextUp)])
+  }
+
   if (current === null) {
     // Nothing measured yet (a fresh session): no banner, just the forward pointer.
-    process.stdout.write(`${nextUpLine(nextUp)}\n`)
-    return 0
+    return emit([nextUpLine(nextUp)])
   }
 
   const measuredCheck = measuredCheckRow(root)
@@ -68,7 +92,17 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   if (inFlight !== null) {
     lines.push('', yourCallBlock(current, measuredCheck?.verdict === 'true'))
   }
-  process.stdout.write(`${lines.join('\n')}\n`)
+  return emit(lines)
+}
+
+/**
+ * Write a card to stdout and return handoff's exit code.
+ *
+ * Every card ends with a trailing blank line: the card is the turn's last text,
+ * and one flush against the next output cannot read as an ending.
+ */
+function emit(lines: ReadonlyArray<string>): number {
+  process.stdout.write(`${lines.join('\n')}\n\n`)
   return 0
 }
 
@@ -155,6 +189,36 @@ function yourCallBlock(step: number, checkGreen: boolean): string {
  */
 function callLine(move: string, outcome: string): string {
   return `  ${move.padEnd(10)}  → ${outcome}`
+}
+
+/**
+ * The plan pause's your-call block: the same shape with the two moves that
+ * apply there. Nothing is recorded yet, so `revert` has nothing to wind back
+ * to and vanishes; `looks good` names the step the plan starts at, which is
+ * step 1 at the plan pause and the first undone step after a mid-build refine.
+ */
+function planCallBlock(first: Step | undefined): string {
+  const starts = first === undefined ? '' : `; /plumbbob:build starts step ${first.n}`
+  return [
+    'Your Call:',
+    callLine('looks good', `I mark the plan decided${starts}`),
+    callLine('needs work', 'Tell me what to sharpen; the plan is cheap to change now'),
+  ].join('\n')
+}
+
+/**
+ * The driver turn's pointer: back to the step still in flight, since a park or
+ * a spike interrupts a step without ending it. No model clause rides here; the
+ * step is already being built, so the `/model` call is behind us. Null when no
+ * step is open, which is the caller's cue to fall back to the forward pointer.
+ */
+function driverNextUpLine(steps: ReadonlyArray<Step>, inFlight: number | null): string | null {
+  if (inFlight === null) {
+    return null
+  }
+  const open = steps.find((s) => s.n === inFlight)
+  const title = open !== undefined && open.title.length > 0 ? ` - ${open.title}` : ''
+  return `Next Up: Back to step ${inFlight}${title}`
 }
 
 /**

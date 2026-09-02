@@ -115,11 +115,15 @@ const VERBS: ReadonlyArray<Verb> = [
   },
   {
     name: 'handoff',
-    description: 'print the standardized build hand-off block (pause or post-checkpoint); read-only',
-    synopsis: ['handoff [<n>] [--build <slug>]'],
+    description: 'print the footer card that ends a turn (pause, boundary, plan, or driver); read-only',
+    synopsis: ['handoff [<n>] [--plan] [--driver] [--build <slug>]'],
     args: [{ name: '<n>', gloss: 'step to report on (default: the in-flight step, else the last checkpointed one)' }],
-    flags: [BUILD_FLAG],
-    notes: 'Read-only; refuses (exit 1) only with no session.',
+    flags: [
+      { name: '--plan', gloss: 'render the plan-pause card instead of a step tier' },
+      { name: '--driver', gloss: "render a driver turn's pointer back at the open step" },
+      BUILD_FLAG,
+    ],
+    notes: 'Read-only; refuses (exit 1) with no session, or with --plan and --driver together.',
   },
   {
     name: 'check',
