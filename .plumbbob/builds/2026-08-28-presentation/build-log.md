@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: presentation
 
-**Current step:** 11 — feat(anatomy): render the ending as labeled lines with sized readout rows
+**Current step:** 12 — feat(anatomy): render the whole turn from the detail file
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -33,7 +33,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 8. docs(anatomy): make the whole turn the anatomy and nothing else
 - ☑ 9. feat(handoff): label the recommendation and split the move from its
 - ☑ 10. docs(skills): relay every tier's ending from the plan and driver skills
-- ☐ 11. feat(anatomy): render the ending as labeled lines with sized readout rows
+- ☑ 11. feat(anatomy): render the ending as labeled lines with sized readout rows
 - ☐ 12. feat(anatomy): render the whole turn from the detail file
 - ☐ 13. docs(happy-path): make every illustrated block producible
 - ☐ 14. feat(notices): every relayed line states its fact through one formatter
@@ -157,3 +157,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-09-02 — step 8 checkpointed · 2cc7a18bf — docs(anatomy): make the whole turn the anatomy and nothing else (16m)
 - 2026-09-02 — step 9 checkpointed · 30c88e8cd — feat(handoff): label the recommendation and split the move from its (7m)
 - 2026-09-02 — step 10 checkpointed · 0dd5ad52e — docs(skills): relay every tier's ending from the plan and driver skills (88m)
+- 2026-09-02 — step 11 checkpointed · 3cbb72719 — feat(anatomy): render the ending as labeled lines with sized readout rows (1 drift, 38m)

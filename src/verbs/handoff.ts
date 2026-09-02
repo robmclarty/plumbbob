@@ -8,12 +8,19 @@
 // with none in flight ⇒ the orientation-tier ending (Verdict and Next Up); a
 // fresh session with nothing yet measured ⇒ the forward pointer alone.
 //
+// The whole decision turn is rendered here, its opening block included: the
+// Summary lead and the numbered highlights come out of `.plumbbob/detail.md`
+// as the markdown the model wrote, with the `(details: …)` bracket appended so
+// the model never types a path. A region the model does not author is a region
+// it cannot narrate into.
+//
 // If the CLI can compute a recap row, the CLI does: the check row comes from
 // the last run's summary, the seam row from the SEAM marker against the
 // work-plane diff, the diff row from `git diff --numstat`. The model's part
-// (`.plumbbob/detail.md`) supplies only the judgment rows and the
-// `## recommendation` prose; the Verdict folds the same assembled rows worst-of
-// with the step's accrued stats, so the fence shows exactly what the fold saw.
+// (`.plumbbob/detail.md`) supplies only what takes judgment: the Summary, the
+// three judgment rows, and the recommendation; the Verdict folds the same
+// assembled rows worst-of with the step's accrued stats, so the fence shows
+// exactly what the fold saw.
 //
 // Every tier's ending is emitted here, so no skill has to fake the furniture in
 // prose: `--plan` renders the plan-pause ending and `--driver` the driver
@@ -44,6 +51,7 @@ import {
   type RecapRowName,
   type SpentInputs,
   type Step,
+  type Summary,
   countDiff,
   diffRowValue,
   foldVerdict,
@@ -53,6 +61,7 @@ import {
   parseRecap,
   parseRecommendation,
   parseSteps,
+  parseSummary,
   recapLines,
   seamRowFromDiff,
   spentRowValue,
@@ -70,12 +79,13 @@ const INLINE_DIFF_MAX = 20
 // meaning anything within three steps.
 const PLAN_COMMIT_MARKER = '^plumbbob plan$'
 
-// The seam rule: a decision-tier block opens on it, under a blank line of its
-// own. Pasted beneath the model's highlights, a label alone read as the list's
-// tail, and a run of blank lines collapses to one in every markdown renderer;
-// a thematic break is the one separator that renders as space everywhere. The
-// blank line above it matters: `---` flush under a text line turns that line
-// into a heading (the underline form), not a rule.
+// The seam rule, and the one tier that still has a seam to mark: at the plan
+// pause the model presents the framed plan above the relay, so the rule keeps
+// a label from reading as the tail of what precedes it, and a run of blank
+// lines collapses to one in every markdown renderer where a thematic break
+// renders as space. The blank line above it matters: `---` flush under a text
+// line turns that line into a heading (the underline form), not a rule. The
+// step pause needs none: handoff renders that whole turn, Summary included.
 const SEAM_RULE = ['', '---', '']
 
 /**
@@ -172,11 +182,10 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     return emit([verdict, '', nextUpLine(nextUp, steps.length, where)])
   }
 
-  // The pause: the whole CLI ending as one contiguous block, each part a
-  // labeled line with one blank line between, and the only fence the readout's
-  // own (plus the inline diff when the change is small enough). The block opens
-  // on the seam rule, which is what keeps the Readout from reading as the tail
-  // of the highlights list above it.
+  // The pause: the whole turn as one contiguous block, each part a labeled line
+  // with one blank line between, and the only fence the readout's own (plus the
+  // inline diff when the change is small enough). It opens on the Summary the
+  // model wrote into the detail file, so there is no seam left to rule off.
   const counts = countDiff(work)
   const changed = counts.added + counts.removed
   const inline = changed > 0 && changed <= INLINE_DIFF_MAX
@@ -185,7 +194,11 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     spent: spentRowValue(spentInputs(root, slug, current, summary)),
     constraints: parseConstraintCount(intent),
   })
-  const lines: string[] = [...SEAM_RULE]
+  const lines: string[] = []
+  const opening = summaryBlock(parseSummary(detail), relative(root, detailPath(root)))
+  if (opening.length > 0) {
+    lines.push(...opening, '')
+  }
   if (readout.length > 0) {
     lines.push(readoutLabel(current, steps), '', ...fence('text', readout), '')
   }
@@ -224,6 +237,27 @@ function emit(lines: ReadonlyArray<string>): number {
 function verdictLine(ladder: Ladder, worst: string | null): string {
   const state = `**Verdict**: ${ladder.glyph} ${ladder.state}`
   return worst === null ? state : `${state} (${worst})`
+}
+
+/**
+ * The turn's opening block: the model's lead behind the Summary label, with the
+ * `(details: …)` bracket appended, then the numbered highlights beneath it.
+ *
+ * The lead and the titles are the markdown the model wrote, passed through; the
+ * label, the bracket, and the numbering are the CLI's, so the model never types
+ * a path and the block cannot drift from where the detail actually is. Empty
+ * when the detail file carries no lead: a Summary that says nothing vanishes
+ * rather than labeling nothing.
+ */
+function summaryBlock(summary: Summary | null, where: string): string[] {
+  if (summary === null) {
+    return []
+  }
+  const lead = `**Summary**: ${summary.lead} (details: \`${where}\`)`
+  if (summary.highlights.length === 0) {
+    return [lead]
+  }
+  return [lead, '', ...summary.highlights.map((h) => `${h.n}. ${h.title}`)]
 }
 
 /**

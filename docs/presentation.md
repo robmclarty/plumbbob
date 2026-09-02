@@ -26,19 +26,22 @@ it appears in a skill or doc from here on.
 
 ## The shape of a turn
 
-A decision turn (the build/verify pause is the canonical one) is two regions
-with one seam between them. The model authors the top region; the CLI emits
-the bottom one as a single block, and the model relays it once:
+A decision turn (the build/verify pause is the canonical one) is one block.
+`plumbbob handoff` renders all of it, and the model relays it once. Judgment
+still runs through it, but none of it is typed into the chat: the model writes
+its judgment into `.plumbbob/detail.md` first, and handoff reads it back from
+there.
 
-| region | author | what it holds | how it reaches the turn |
-| --- | --- | --- | --- |
-| top | model | the Summary lead and its numbered highlights | composed fresh, under the shape rules below |
-| bottom | CLI (`plumbbob handoff`) | the Readout and its fence, the inline diff when the change is small, the Verdict, Next Up, Your Call, the recommendation | one command's output, relayed whole and verbatim |
+| what | whose judgment | how it reaches the turn |
+| --- | --- | --- |
+| the Summary lead, the numbered highlights, the `done-when`, `decisions`, and `constraints` rows, the recommendation | the model | written into `.plumbbob/detail.md`, read back and rendered by handoff |
+| the Readout's other rows, the inline diff when the change is small, the Verdict, Next Up, Your Call | the CLI | measured from the session, the gate, and git |
 
-The bottom region carries judgment too (three readout rows and the
-recommendation), but none of it is typed into the turn: the model writes it
-into `.plumbbob/detail.md` first, and handoff reads it from there. The turn
-is the anatomy and nothing else.
+The model authors nothing in the turn but the relay. Every defect the build
+that wrote this spec found in a live turn sat in the region the model was
+still writing (a bold token loose mid-sentence, an operational paragraph above
+the anatomy), and a region the model does not own is a region it cannot
+narrate into. The turn is the anatomy and nothing else.
 
 **Every part outside the readout fence is a bold label, a colon, and text
 that wraps.** A block sits beneath a label only where the block is the
@@ -58,8 +61,6 @@ The whole turn, rendered (the running example is
    requests return 429.
 2. Misses count against the bucket and successes do not reset it, as planned.
 3. `test/login.rate.test.ts` covers the 6th-request case red-to-green.
-
----
 
 **Readout**: Step 2 - Wire the limiter into POST /login
 
@@ -96,26 +97,19 @@ pasted at top level, never inside a fence of the model's own, because a
 butted or nested fence breaks in exactly the renderers this document exists
 to survive.
 
-### The seam between the regions
+### One block, relayed whole
 
-The rule at the seam is positional, not prohibitive. The last highlight is
-the last line the model writes; `plumbbob handoff`'s output follows it, and
-the turn ends where that output ends. That output opens on a horizontal
-rule, the seam made visible: a label alone under the highlights read as the
-list's tail, and a run of blank lines collapses to one in every markdown
-renderer, so the rule is the one separator that renders as space in all of
-them. It is the only rule in the turn, and it marks the only seam. The
-driver and orientation tiers carry none, because nothing of the model's
-precedes their lines. A positional rule holds where a list of
-forbidden phrases does not, because it leaves the meta-narration nowhere to
-live: there is no line between the highlights and the Readout for "here is
-the pause" or "the check came back green", and no line after the
-recommendation for a closing courtesy. Three consequences, spelled out
-because each was a real defect:
+The rule is positional, not prohibitive. The model writes the detail file,
+runs `plumbbob handoff`, and pastes its output at top level; the turn begins
+where that output begins and ends where it ends. A positional rule holds
+where a list of forbidden phrases does not, because it leaves the
+meta-narration nowhere to live: there is no line above the Summary for "here
+is the pause", none between the highlights and the Readout for "the check
+came back green", and none after the recommendation for a closing courtesy.
+Three consequences, spelled out because each was a real defect:
 
-- The model never frames or narrates the CLI-rendered parts. It does not
-  introduce the readout, read the Verdict back, or explain the Your Call
-  block.
+- The model never frames or narrates the block. It does not introduce the
+  readout, read the Verdict back, or explain the Your Call block.
 - Each fact appears once, in its designated part. The gate verdict lives in
   the check row; it does not also open the Summary or close the turn. (Step
   5 of the build that wrote this spec stated it three times in one pause.)
@@ -123,6 +117,15 @@ because each was a real defect:
   had to bend, a doubt about the done-when) is a highlight: one sentence,
   with its full story in the numbered detail section behind it. It is never a
   freeform paragraph above or below the block.
+
+One tier still has a seam to mark. At the plan pause the model presents the
+framed plan itself and then relays `plumbbob handoff --plan`, so that block
+opens on a horizontal rule: a label alone under the plan read as its tail,
+and a run of blank lines collapses to one in every markdown renderer, so the
+rule is the one separator that renders as space in all of them. That is the
+only rule in the anatomy and the only seam left in it. The step pause, the
+boundary, and a driver turn carry none, because nothing of the model's
+precedes their lines.
 
 ## The Summary and the highlights
 
@@ -145,12 +148,19 @@ every highlight has a section behind it with the full story. A step so small
 that one sentence covers it has one highlight and one section; the handle
 still holds.
 
-The Detail line retires. "5 sections in .plumbbob/detail.md; expand 2 opens
-one" was plumbbob talking to itself: the visible highlights already carry the
-count, and the `expand` move on the Your Call block already carries the
-affordance. Hidden detail is still counted and pointed at, because a silent
-cut reads as coverage; the counting is now done by two things the reader was
-going to look at anyway.
+Both come out of the detail file. The model writes the lead as that file's
+`## Summary` section and each highlight as the title of the `## <n>` section
+behind it; handoff prints the label, appends the bracket, and numbers the
+list from the handles the model wrote. So the model never types a path, and
+the handle on the card is the heading the `expand` move will open, not a
+number composed a second time.
+
+The Detail line retires with the rest of the model's typing. "5 sections in
+.plumbbob/detail.md; expand 2 opens one" was plumbbob talking to itself: the
+visible highlights already carry the count, and the `expand` move on the Your
+Call block already carries the affordance. Hidden detail is still counted and
+pointed at, because a silent cut reads as coverage; the counting is now done
+by two things the reader was going to look at anyway.
 
 ## The readout
 
@@ -488,7 +498,7 @@ scales down with the turn:
 
 | tier | turns | the ending renders |
 | --- | --- | --- |
-| decision | the build/verify pause, the plan pause, an auto halt | the two regions: Summary and highlights above; the Readout, the inline diff when small, the Verdict, Next Up, Your Call, and the recommendation below |
+| decision | the build/verify pause, the plan pause, an auto halt | the whole block: the Summary and its highlights, the Readout, the inline diff when small, the Verdict, Next Up, Your Call, and the recommendation. The plan pause judges no diff, so it renders the pointer, the moves, and the recommendation alone |
 | orientation | status, the checkpoint boundary, finish | the verb's own output, then the Verdict and Next Up; no Your Call block, no recommendation |
 | driver | park, spike, use, recover, revert, agent runs | the CLI's line verbatim, then Next Up; nothing else |
 
@@ -552,7 +562,7 @@ the sole channel. At line start, the glyph is followed by a space.
 | `·` | (separator) | between facts on one line |
 | `→` | what happens next | `next →`, the Your Call outcomes, a red row's evidence line |
 | `──` | (rule) | the detail file's readout header |
-| `---` | (rule) | the seam: the first line of a decision turn's CLI block |
+| `---` | (rule) | the seam: the first line of the plan pause's block, the one tier with a model region above it |
 
 Hierarchy comes from position, shape, and whitespace. The anatomy spends one
 bold token per line and no italics: the label, which every part outside the
@@ -572,7 +582,7 @@ ephemera, untracked via the shared gitdir's `info/exclude`
 ([D33 (info-exclude)](decisions.md#d33)), one file for the whole session,
 overwritten at each step boundary so no pile of stale detail accumulates.
 It is also the wire: the only path by which the model's judgment reaches the
-bottom region. Its shape:
+turn at all. Its shape:
 
 ```markdown
 # Detail · Step 2 · Wire the limiter into POST /login
@@ -582,7 +592,11 @@ done-when    met
 decisions    2 of 2 honored
 constraints  all honored
 
-## 1 <the first highlight, restated>
+## Summary
+
+<the lead: the outcome, one sentence or a short paragraph>
+
+## 1 <the first highlight>
 <the full story: what moved, why, what was tried and discarded>
 
 ## 2 ...
@@ -592,15 +606,18 @@ constraints  all honored
 <The move.> <The reason, one or two sentences.>
 ```
 
-Its headings are title case (`Detail`, `Step`, `Recommendation`), the same
-case the labels in the turn carry; handoff reads the recommendation heading
-case-insensitively, so a file written the older lowercase way still parses.
+Its headings are title case (`Detail`, `Step`, `Summary`, `Recommendation`),
+the same case the labels in the turn carry; handoff reads the Summary and
+recommendation headings case-insensitively, so a file written the older
+lowercase way still parses.
 
 The model writes it fresh before every pause: the three judgment rows under
 the header rule first (contiguous, since the first blank line ends them; no
-fence is needed, the file is a wire, not a rendering), then the numbered
-sections matching the highlight numbers, then the recommendation as the last
-section. The rows it does not write (`check`, `seam`, `diff`, `spent`)
+fence is needed, the file is a wire, not a rendering), then the Summary lead,
+then the numbered sections whose titles are the highlights, then the
+recommendation as the last section. The lead and the recommendation are
+flowing prose and handoff unwraps both, so neither is hard-wrapped to a
+column; only the judgment rows are laid out to one. The rows it does not write (`check`, `seam`, `diff`, `spent`)
 handoff measures for itself, and the constraints row it renders from the
 count declared in intent.md, whatever the model attested. The header rule
 keeps the word `recap`: it is the wire's parse anchor rather than a

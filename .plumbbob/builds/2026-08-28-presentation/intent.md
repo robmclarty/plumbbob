@@ -514,7 +514,7 @@ a boundary or driver turn, top to bottom
    sitting in its [D15 (three-tier-anatomy)](#d15) tier
    - seam: `skills/plan/SKILL.md`, `skills/park/SKILL.md`, `skills/spike/SKILL.md`, `skills/revert/SKILL.md`, `skills/recover/SKILL.md`, `skills/abandon/SKILL.md`
    - model: sonnet (mechanical wiring once step 6 emits the endings)
-11. [ ] feat(anatomy): render the ending as labeled lines with sized readout rows,
+11. [x] feat(anatomy): render the ending as labeled lines with sized readout rows,
    **done when:** `plumbbob handoff` emits every part outside the fence as a
    bold label, a colon, and wrapping text, blocks blank-line separated and
    never nested ([D33 (labeled-lines)](#d33)); the fence is labeled

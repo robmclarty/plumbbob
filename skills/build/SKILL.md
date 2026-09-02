@@ -104,7 +104,8 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    build the step and reach the pause *in one turn*, so under plumbbob's turn hook the
    checkpoint at the end of that turn is **refused** ("no human turn since this step
    began"), and that refusal **is** the pause working as designed. Do exactly what the
-   pause asks: render the two-region turn below and **end it there**. The human's next
+   pause asks: write the detail file, run `plumbbob handoff`, paste its block, and **end
+   the turn there**. The human's next
    message (their approval) is the human turn that lets the checkpoint land: on that turn
    you run `plumbbob checkpoint <n>` (now allowed) and **stop at the boundary**. Landing
    the checkpoint is its own deliberate beat (the thing approval triggers), never a side
@@ -112,86 +113,97 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    step. **Never route around a refusal with a raw `git commit`**; the work plane stays
    free, but the *record* is latched on purpose.
 
-   **Render the pause as the two-region turn.** A build pause is a decision turn, and the
+   **Render the pause: write the file, run handoff, paste.** A build pause is a decision
+   turn, and the
    [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)
-   fixes its shape as two regions with one seam between them. You author the top: a plain
-   headline, numbered highlights, and the detail pointer as your last line. The CLI emits
-   the bottom: `plumbbob handoff` prints the recap fence, the inline diff when the change is
-   small, the footer card, and your recommendation as one block. You relay that block once,
-   verbatim, and write nothing after it. The rule is positional on purpose: with the pointer
-   as your last authored line and the relay as the turn's last text, no line is left for
+   fixes it as one block. You author none of it in the chat. Your judgment goes into
+   `.plumbbob/detail.md`; `plumbbob handoff` renders the whole turn from that file and its
+   own measurements; you paste its output and write nothing before or after it. The rule is
+   positional on purpose: with the relay as the turn's whole text, no line is left for
    "here is the pause", for reading the check verdict back in prose, or for a closing
    courtesy. Each fact appears once, in its part.
 
-   *Headline and highlights.* Open with one plain sentence naming the outcome, not the
-   activity ("Step 2 built: the 6th login attempt inside a minute now gets 429"). Then a
-   numbered list, five entries at most, each one move in plain English, a path in
-   backticks only when the name itself is the news. A judgment or a flag (a stray the seam
-   row will name, a decision you had to bend, a doubt about the done-when) is one of these
-   entries, one sentence, never a paragraph of its own. The numbers are handles: "expand 2"
-   opens the matching section of the detail file, so every highlight has a section behind
-   it. Close with the pointer, exact shape, your final authored line of the turn:
-
-   ```text
-   Detail: <N> sections in .plumbbob/detail.md · "expand <n>" shows one.
-   ```
-
    *Write the detail file.* Before you call `plumbbob handoff`, overwrite
    `.plumbbob/detail.md` for this step; never let a past step's detail linger. It is the
-   wire handoff parses, and it carries the only judgment the CLI cannot measure:
+   wire handoff parses, and it is the only path by which your judgment reaches the turn:
 
    ```markdown
-   # detail · step <N> · <the step title>
+   # Detail · Step <N> · <the step title>
 
    ── recap · step <N> of <M> ──
-   done-when    met: <the evidence, one short clause>
+   done-when    met
    decisions    honored: D1 (some-slug), D2 (another-slug)
    constraints  all honored
 
-   ## 1 <the first highlight, restated>
+   ## Summary
+
+   <the outcome, not the activity: one sentence when one will do, a short
+   paragraph when the step needs explaining>
+
+   ## 1 <the first highlight: one sentence, one move>
    <the full story: what moved, why, what was tried and dropped>
 
    ## 2 ...
 
-   ## recommendation
+   ## Recommendation
 
    <The move.> <The reason, one or two sentences.>
    ```
 
    The three rows under the header rule are yours, and only those three; `check`, `seam`,
-   and `diff` are measured by the CLI, and a row you wrote for them would be overwritten.
-   Keep the rows contiguous (the first blank line ends them). Each opens with a verdict word
-   from the closed set in the turn anatomy (`met`, `not met`, `drift`; `honored`,
-   `none exercised`, `bent`, `drift`; `all honored`, `bent`, `drift`); a cited decision or
-   constraint carries its slug (`C1 (no-new-deps)`, never a bare `C1`); a row that cannot
-   apply vanishes. The value after the label fits in 58 characters so the whole row stays
-   inside the fence's 72 columns: one short clause, with the full story in the numbered
-   section behind the matching highlight. The recommendation is the last section: the
-   move you would take as its own sentence, closed by a period, then the reason as a
-   capitalized sentence or two, written as flowing text (handoff unwraps it to the
-   renderer's width; never hard-wrap it). handoff prepends the bold `**Recommendation**:`
-   label; you never type it. `checkpoint` folds this
-   file into the commit body and then truncates it, so the detail lands in the durable
-   commit rather than piling up on disk.
+   `diff`, and `spent` are measured by the CLI, and a row you wrote for them would be
+   overwritten. Keep the rows contiguous (the first blank line ends them). Each opens with a
+   verdict word from the closed set in the turn anatomy (`met`, `not met`, `drift`;
+   `honored`, `none exercised`, `bent`, `drift`; `all honored`, `bent`, `drift`); a cited
+   decision or constraint carries its slug (`C1 (no-new-deps)`, never a bare `C1`); a row
+   that cannot apply vanishes. A green row collapses to its word or its count and a red one
+   names the one offender in a short clause, which is what keeps the whole row inside the
+   fence's 80 columns (13 of label, 67 of value); two or more items break onto indented
+   continuation lines opening with `-`, and a red row's evidence onto an indented `→` line.
 
-   *Relay the block.* Run `plumbbob handoff` and relay its output whole, verbatim, trailing
-   blank line included, then end the turn. It prints the recap fence (its measured `check`,
-   `seam`, and `diff` rows folded with your three), a `diff` fence when the change is 20
-   lines or fewer, the card fence (the banner folded worst-of from the same rows, the
-   next-up line, the your-call block), and your recommendation last, unfenced. The gate
-   verdict's one home is that `check` row: no standalone verdict line exists, and you
-   never restate the verdict in prose. A narrowed run names the slots it skipped there
-   (`· without test`), and that named narrowing is the whole disclosure. The notice
-   checkride's Stop hook appends after your turn is not yours to relay or repeat; the
-   trailing blank line you kept is what lands it on its own line. Relayed CLI strings keep
-   their em-dashes; your own lines never use one, the write-versus-relay line of
+   The `## Summary` lead and the `## <n>` section titles are the turn's opening block:
+   handoff prints the lead behind the `**Summary**:` label, appends the `(details: …)`
+   bracket, and renders the titles as the numbered highlights, so you type neither the path
+   nor the list. Five highlights at most, each one sentence and one move, plain English
+   first, a path in backticks only when the name itself is the news. The numbers are
+   handles: "expand 2" opens `## 2`, so every highlight has a section behind it with the
+   full story. A judgment or a flag (a stray the seam row will name, a decision you had to
+   bend, a doubt about the done-when) is one of those highlights, never a paragraph of its
+   own. The recommendation is the last section: the move you would take as its own
+   sentence, closed by a period, then the reason as a capitalized sentence or two. The lead
+   and the recommendation are flowing prose and handoff unwraps both to the renderer's
+   width, so never hard-wrap them; handoff also prepends the bold `**Recommendation**:`
+   label, which you never type. `checkpoint` folds this file into the commit body and then
+   truncates it, so the detail lands in the durable commit rather than piling up on disk.
+
+   *Paste the turn.* Run `plumbbob handoff` and paste its output whole, verbatim, at top
+   level, trailing blank line included, then end the turn. Never nest it inside a fence of
+   your own; it carries fences of its own and they cannot nest. It prints the Summary and
+   its highlights, the Readout fence (its measured `check`, `seam`, `diff`, and `spent`
+   rows folded with your three), a `diff` fence when the change is 20 lines or fewer, the
+   Verdict folded worst-of from the same rows, Next Up, Your Call, and your recommendation
+   last. The gate verdict's one home is that `check` row: no standalone verdict line
+   exists, and you never restate the verdict in prose. A narrowed run names the slots it
+   skipped there (`· without test`), and that named narrowing is the whole disclosure. The
+   notice checkride's Stop hook appends after your turn is not yours to relay or repeat;
+   the trailing blank line you kept is what lands it on its own line. Relayed CLI strings
+   keep their em-dashes; your own lines never use one, the write-versus-relay line of
    [D78 (em-dash-ban)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d78).
+
+   *Then read the reply as an ask or a direction.* A message that **asks** ("expand 2",
+   "what does that mean?", "why did the seam row flag that?") is an expand: answer it from the detail file, from
+   `git diff`, or from `git show`, never from recall, then run `plumbbob handoff` again and
+   paste it. The step is still in flight, so it renders the same pause, and the Your Call
+   block stays the CLI's to render rather than yours to retype. A message that **directs**
+   is needs-work: take it as what to change, and nothing lands until the human says
+   `looks good`.
 
    **Then hand off with the next model.** Once the checkpoint lands in the approval turn,
    `plumbbob checkpoint` prints `step N checkpointed — <sha>. Back at the boundary.`; then
    run `plumbbob handoff` and relay its card. The turn is those two outputs and nothing
    written around them. With the step gone from in-flight the card drops to its
-   orientation-tier form (banner and next-up only; no your-call block, no recommendation)
+   orientation-tier form (the Verdict and Next Up only; no Your Call block, no
+   recommendation)
    and points at the next undone step, carrying that step's `- model:` recommendation (the
    plan's smallest-model-that-fits call) so the human knows which `/model` to select before
    running `/plumbbob:build` again. It is what carries the plan's suggestion across a fresh
@@ -249,10 +261,10 @@ and approves in the human's place**, and it **chains**:
   bound agent returns `blocked` or `drift` (unblock-and-re-run, or `/plumbbob:refine`; an
   agent cannot advance the loop), a new decision is needed, no planned steps
   remain, or the top of a requested range is reached. **When `--auto` halts back to the
-  human, end on the same two-region turn the default pause does**: write the detail file,
-  run `plumbbob handoff`, and relay its block: the step just completed, the next undone
-  step, and that next step's `- model:` recommendation if it has one, so a fresh context
-  window knows which `/model` to select.
+  human, end on the same turn the default pause does**: write the detail file, run
+  `plumbbob handoff`, and paste its block: the step just completed, the next undone step,
+  and that next step's `- model:` recommendation if it has one, so a fresh context window
+  knows which `/model` to select.
 
 `--auto` and a step range are the only paths that checkpoint without a human pause, and
 only because the human asked for it by name; a range re-imposes the pause at its top.
@@ -297,8 +309,9 @@ just the one more entry already in the halt list above.
   who verifies and (bar `--auto`) the human is still the clock. See **§ Running bound
   agents** for the mechanics.
 - **A refused checkpoint is the pause, not an error.** Under plumbbob's turn
-  hook a same-turn `checkpoint` is refused by design: render the two-region turn, **end
-  it there**; the human's approval on their next turn is what lets you land
+  hook a same-turn `checkpoint` is refused by design: write the file, run `plumbbob
+  handoff`, paste its block, **end the turn there**; the human's approval on their next
+  turn is what lets you land
   it, and landing it is a deliberate beat, not a side effect of the next `/plumbbob:build`.
   Never route around it with a raw `git commit`. An explicit `/plumbbob:build --auto` or a typed
   step range in the human's own prompt are the only self-approvals; **never write `auto`

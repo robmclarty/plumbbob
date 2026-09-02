@@ -33,6 +33,22 @@ const INTENT = `# Handoff test
 
 const THIRD_STEP_LINE = 9
 
+// What the model writes above its numbered detail sections: the lead handoff
+// labels, and the section titles it renders as the highlights.
+const SUMMARY = `
+## Summary
+
+The limiter runs before credentials are checked.
+
+## 1 \`POST /login\` returns 429 on the 6th attempt inside a minute.
+
+The full story.
+
+## 2 Misses count against the bucket; a success does not reset it.
+
+The rest of it.
+`
+
 const GREEN_RECAP = `── recap · step 2 of 3 ──
 check        green (checkride: lint, types, test)
 done-when    met: b works
@@ -81,14 +97,16 @@ describe('handoff', () => {
     writeFileSync(stepPath(dir), '2\n')
     writeFileSync(seamPath(dir), 'README.md\n')
     writeFileSync(join(dir, 'README.md'), `# fixture\n${Array.from({ length: 25 }, (_, i) => `line ${i + 1}`).join('\n')}\n`)
-    writeFileSync(detailPath(dir), `${GREEN_RECAP}\n## recommendation\n\nApprove it. The seam held and the gate is green.\n`)
+    writeFileSync(detailPath(dir), `${GREEN_RECAP}${SUMMARY}\n## recommendation\n\nApprove it. The seam held and the gate is green.\n`)
     writeCheckSummary(dir, true, [{ name: 'lint', ok: true }, { name: 'types', ok: true }, { name: 'test', ok: true }], 63_000)
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
     expect(stdout).toBe(
       [
-        '', // the seam rule: a blank line (so the rule cannot underline the model's last line) and the rule
-        '---',
+        '**Summary**: The limiter runs before credentials are checked. (details: `.plumbbob/detail.md`)',
+        '',
+        '1. `POST /login` returns 429 on the 6th attempt inside a minute.',
+        '2. Misses count against the bucket; a success does not reset it.',
         '',
         '**Readout**: Step 2 - Second',
         '',
@@ -119,6 +137,58 @@ describe('handoff', () => {
       ].join('\n'),
     )
     expect(stdout).not.toContain('── recap') // the header rule left the rendering; the label carries the identity
+  })
+
+  it('numbers each highlight by its own section handle, so `expand 2` opens `## 2`', async () => {
+    // The handles are the model's, passed through: renumbering them by position
+    // would silently break the one move the Your Call block offers.
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(detailPath(dir), '## Summary\n\nOne line.\n\n## 1 First move\n\nthe story\n\n## 2 Second move\n\nthe rest\n')
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout.startsWith('**Summary**: One line. (details: `.plumbbob/detail.md`)\n\n1. First move\n2. Second move\n\n')).toBe(true)
+  })
+
+  it('unwraps a hard-wrapped Summary lead, keeping its paragraph breaks', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(detailPath(dir), '## Summary\n\nThe limiter runs first,\nand nothing else moved.\n\nThe step needed the extra breath.\n\n## 1 A move\n')
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).toContain(
+      '**Summary**: The limiter runs first, and nothing else moved.\n\nThe step needed the extra breath. (details: `.plumbbob/detail.md`)',
+    )
+  })
+
+  it('renders the lead alone when the step has no numbered sections', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(detailPath(dir), '## Summary\n\nOne line covers it.\n')
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout.startsWith('**Summary**: One line covers it. (details: `.plumbbob/detail.md`)\n\n**Verdict**')).toBe(true)
+  })
+
+  it('vanishes the Summary block when the detail file carries no lead', async () => {
+    // A label over nothing is worse than no label; the rest of the ending stands.
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(detailPath(dir), `${GREEN_RECAP}\n## 1 A move\n\nthe story\n`)
+    writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).not.toContain('**Summary**')
+    expect(stdout).not.toContain('1. A move')
+    expect(stdout.startsWith('**Readout**: Step 2 - Second\n')).toBe(true)
+  })
+
+  it('leaves the Summary out of the boundary and driver tiers, where nothing is pending', async () => {
+    const dir = await started()
+    writeFileSync(checkpointsPath(dir), 'step 2 abc1234\n')
+    writeFileSync(detailPath(dir), '## Summary\n\nA lead the boundary never shows.\n\n## 1 A move\n')
+    expect(captureIo(() => handoff(dir, [])).stdout).not.toContain('**Summary**')
+    expect(captureIo(() => handoff(dir, ['--driver'])).stdout).not.toContain('**Summary**')
   })
 
   it('keeps every readout line inside 80 columns', async () => {
@@ -292,7 +362,7 @@ describe('handoff', () => {
     const { code, stdout } = captureIo(() => handoff(dir, ['--plan']))
     expect(code).toBe(0)
     expect(stdout).not.toContain('Plumb')
-    expect(stdout.startsWith('\n---\n\n**Next Up**: Step 1 of 3 - First')).toBe(true) // a decision turn opens on the seam rule
+    expect(stdout.startsWith('\n---\n\n**Next Up**: Step 1 of 3 - First')).toBe(true) // the one tier that still opens on the seam rule: the plan is presented above it
     expect(stdout).toContain('- `looks good` → I mark the plan decided; /plumbbob:build starts step 1')
     expect(stdout).toContain('- `expand`, or any question → I show more of what is there; nothing changes')
     expect(stdout).toContain('- anything that reads as direction → I take it as what to sharpen; the plan is cheap to change now')

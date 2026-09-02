@@ -807,20 +807,24 @@ export function recapLines(rows: Readonly<Partial<Record<RecapRowName, RecapRow>
   return body
 }
 
+// --- The detail file's prose: the Summary that opens a decision turn and the
+// recommendation that closes it (docs/presentation.md). The model writes both
+// into `.plumbbob/detail.md` and handoff renders them, so the whole turn is one
+// relayed block and the model authors nothing in the chat. ---
+
 /**
- * The `## Recommendation` section of `.plumbbob/detail.md`: the one or two
- * plain sentences a decision turn ends on, or null when the model wrote none.
- * `handoff` emits it after the card, unfenced; the eye lands on the last text,
- * and the last text should say which move the model would take.
+ * A named section's prose from `.plumbbob/detail.md`, unwrapped: the lines
+ * inside a paragraph join into one and blank lines keep their paragraph
+ * breaks. Null when the section is absent or holds nothing.
  *
- * The prose is unwrapped on the way out: lines inside a paragraph join into
- * one, blank lines keep their paragraph breaks. It is flowing text, not a
- * fence, so it should wrap at the renderer's width, not at whatever column
- * the detail file happened to be written to.
+ * The turn's prose flows at the renderer's width, so whatever column the
+ * detail file happened to be hard-wrapped to never reaches the turn. The
+ * headings are matched case-insensitively: a file written the older lowercase
+ * way still parses.
  */
-export function parseRecommendation(detail: string): string | null {
+function sectionProse(detail: string, heading: RegExp): string | null {
   const lines = detail.split('\n')
-  const start = lines.findIndex((l) => /^##\s+recommendation\s*$/i.test(l.trim())) // case-insensitive: the older lowercase heading still parses
+  const start = lines.findIndex((l) => heading.test(l.trim()))
   if (start === -1) {
     return null
   }
@@ -844,6 +848,50 @@ export function parseRecommendation(detail: string): string | null {
         .join(' '),
     )
     .join('\n\n')
+}
+
+/** One highlight: the handle `expand` binds to, and the title of the `## <n>` section behind it. */
+export type Highlight = { readonly n: number; readonly title: string }
+
+/** The turn's opening block, as the model wrote it into `.plumbbob/detail.md`. */
+export type Summary = {
+  readonly lead: string
+  readonly highlights: ReadonlyArray<Highlight>
+}
+
+/**
+ * The `## Summary` section of `.plumbbob/detail.md` and the numbered detail
+ * sections beneath it: the lead prose, then the title of every `## <n>`
+ * heading in the order the model wrote them. Null when the file carries no
+ * lead, which vanishes the block rather than labeling nothing.
+ *
+ * The titles pass through as the markdown the model wrote; they are the
+ * highlights, and their numbers are the handles `expand` binds to, so each
+ * renders under its own number rather than being renumbered by position.
+ */
+export function parseSummary(detail: string): Summary | null {
+  const lead = sectionProse(detail, /^##\s+summary\s*$/i)
+  if (lead === null) {
+    return null
+  }
+  const highlights: Highlight[] = []
+  for (const line of detail.split('\n')) {
+    const m = /^##\s+(\d+)\s+(\S.*?)\s*$/.exec(line)
+    if (m !== null) {
+      highlights.push({ n: Number(m[1]), title: m[2] ?? '' })
+    }
+  }
+  return { lead, highlights }
+}
+
+/**
+ * The `## Recommendation` section of `.plumbbob/detail.md`: the one or two
+ * plain sentences a decision turn ends on, or null when the model wrote none.
+ * `handoff` emits it after the card, unfenced; the eye lands on the last text,
+ * and the last text should say which move the model would take.
+ */
+export function parseRecommendation(detail: string): string | null {
+  return sectionProse(detail, /^##\s+recommendation\s*$/i)
 }
 
 /**
