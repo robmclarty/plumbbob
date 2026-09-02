@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: presentation
 
-**Current step:** none (at the boundary)
+**Current step:** 11 — feat(anatomy): render the ending as labeled lines with sized readout rows
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -33,10 +33,12 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 8. docs(anatomy): make the whole turn the anatomy and nothing else
 - ☑ 9. feat(handoff): label the recommendation and split the move from its
 - ☑ 10. docs(skills): relay every tier's ending from the plan and driver skills
-- ☐ 11. docs(happy-path): make every illustrated block producible
-- ☐ 12. feat(notices): every relayed line states its fact through one formatter
-- ☐ 13. feat(handoff): point past an open spike and out of a finished session
-- ☐ 14. test(evals): run the eval tier against the new anatomy
+- ☐ 11. feat(anatomy): render the ending as labeled lines with sized readout rows
+- ☐ 12. feat(anatomy): render the whole turn from the detail file
+- ☐ 13. docs(happy-path): make every illustrated block producible
+- ☐ 14. feat(notices): every relayed line states its fact through one formatter
+- ☐ 15. feat(handoff): point past an open spike and out of a finished session
+- ☐ 16. test(evals): run the eval tier against the new anatomy
 
 ## Park list
 

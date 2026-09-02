@@ -1,25 +1,27 @@
 // `plumbbob handoff`: emit the CLI-owned ending of a turn as one contiguous
-// block (docs/presentation.md). Read-only, no state change. It derives the
-// moment from the session: a step in flight ⇒ the decision-tier ending (the
-// assembled recap fence, the inline diff fence when the change is 20 lines or
-// fewer, the footer card, the recommendation last); a landed step with none in
-// flight ⇒ the orientation-tier card (banner and next-up only); a fresh
-// session with nothing yet measured ⇒ the forward pointer alone, no banner.
+// block (docs/presentation.md). Read-only, no state change. Every part outside
+// the readout fence is a bold label, a colon, and text that wraps, one blank
+// line between blocks and no fence but the readout's own. It derives the moment
+// from the session: a step in flight ⇒ the decision-tier ending (the labeled
+// Readout and its fence, the inline diff when the change is 20 lines or fewer,
+// the Verdict, Next Up, Your Call, and the Recommendation last); a landed step
+// with none in flight ⇒ the orientation-tier ending (Verdict and Next Up); a
+// fresh session with nothing yet measured ⇒ the forward pointer alone.
 //
 // If the CLI can compute a recap row, the CLI does: the check row comes from
 // the last run's summary, the seam row from the SEAM marker against the
 // work-plane diff, the diff row from `git diff --numstat`. The model's part
 // (`.plumbbob/detail.md`) supplies only the judgment rows and the
-// `## recommendation` prose; the banner folds the same assembled rows worst-of
+// `## recommendation` prose; the Verdict folds the same assembled rows worst-of
 // with the step's accrued stats, so the fence shows exactly what the fold saw.
 //
 // Every tier's ending is emitted here, so no skill has to fake the furniture in
-// prose: `--plan` renders the plan-pause card and `--driver` the driver turn's
-// pointer back at the open step, the two endings the session state cannot tell
-// apart from the ones above.
+// prose: `--plan` renders the plan-pause ending and `--driver` the driver
+// turn's pointer back at the open step, the two endings the session state
+// cannot tell apart from the ones above.
 
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { commitsSince, diffNumstat, diffPatch, findRepoRoot } from '../lib/git.ts'
 import { isArtifactPath, parseStepSeam } from '../lib/intent.ts'
 import {
@@ -28,9 +30,11 @@ import {
   hasSession,
   intentPath,
   readStats,
+  readTurn,
   resolveBuild,
   seamPath,
   stepPath,
+  tickPath,
 } from '../lib/sidecar.ts'
 import {
   type AccruedStats,
@@ -38,17 +42,20 @@ import {
   type Ladder,
   type RecapRow,
   type RecapRowName,
+  type SpentInputs,
   type Step,
   countDiff,
   diffRowValue,
-  foldBanner,
+  foldVerdict,
   lastLedgerSha,
+  parseConstraintCount,
   parseLastCheckpoint,
   parseRecap,
   parseRecommendation,
   parseSteps,
   recapLines,
   seamRowFromDiff,
+  spentRowValue,
   summaryCheckRow,
 } from '../lib/orient.ts'
 
@@ -57,14 +64,29 @@ import {
 // the counted diff row.
 const INLINE_DIFF_MAX = 20
 
+// plumbbob's own plan commits carry this marker on a line of their body. A
+// `chore(plan)` harvest lands between nearly every step, so counting them as
+// out-of-band would trip the advisory rung on routine housekeeping and stop
+// meaning anything within three steps.
+const PLAN_COMMIT_MARKER = '^plumbbob plan$'
+
+// The seam rule: a decision-tier block opens on it, under a blank line of its
+// own. Pasted beneath the model's highlights, a label alone read as the list's
+// tail, and a run of blank lines collapses to one in every markdown renderer;
+// a thematic break is the one separator that renders as space everywhere. The
+// blank line above it matters: `---` flush under a text line turns that line
+// into a heading (the underline form), not a rule.
+const SEAM_RULE = ['', '---', '']
+
 /**
  * Print the resolved build's turn ending; return the exit code.
  *
  * Requires an active session (the STATE sentinel under `.plumbbob/`). The step
  * tiers are derived, not passed: a step in flight yields the full
- * decision-tier ending (recap fence, inline diff when small enough, card,
- * recommendation), a landed step yields the orientation-tier card (no
- * your-call block), and a fresh session with nothing to report yields only
+ * decision-tier ending (the Readout and its fence, the inline diff when small
+ * enough, the Verdict, Next Up, Your Call, and the Recommendation), a landed
+ * step yields the orientation-tier ending (Verdict and Next Up, no Your Call),
+ * and a fresh session with nothing to report yields only
  * the forward pointer. The two endings no session state can distinguish are
  * named by a flag: `--plan` is the plan pause (a decision turn about the plan,
  * not a diff) and `--driver` is a driver turn (a park, a spike, a `use`), which
@@ -84,15 +106,19 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   }
   const intent = readOr(intentPath(root, slug))
   const steps = parseSteps(intent)
-  const inFlight = readStep(stepPath(root, slug))
+  const inFlight = readMarker(stepPath(root, slug))
   const detail = readOr(detailPath(root))
+  // Where a pointer sends the reader to read the step itself: the intent file
+  // as the human would type it, relative to the repo root.
+  const where = relative(root, intentPath(root, slug))
 
   if (rest.includes('--plan')) {
-    // The plan pause judges the plan, so nothing is measured and no banner
+    // The plan pause judges the plan, so nothing is measured and no Verdict
     // renders; the pointer and the moves both aim at the first undone step. A
     // decision turn still ends on the model's recommendation when it wrote one.
     const first = steps.find((s) => !s.done)
-    return emit(withRecommendation([nextUpLine(first), '', planCallBlock(first)], parseRecommendation(detail)))
+    const plan = [...SEAM_RULE, nextUpLine(first, steps.length, where), '', planCallBlock(first)]
+    return emit(withRecommendation(plan, parseRecommendation(detail)))
   }
 
   const explicit = rest.find((a) => /^\d+$/.test(a))
@@ -112,18 +138,19 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   if (rest.includes('--driver')) {
     // A driver turn interrupts a step without ending it, so its pointer aims
     // back at the step still open; with none open the ordinary pointer stands.
-    return emit([driverNextUpLine(steps, inFlight) ?? nextUpLine(nextUp)])
+    return emit([driverNextUpLine(steps, inFlight, steps.length) ?? nextUpLine(nextUp, steps.length, where)])
   }
 
   if (current === null) {
-    // Nothing measured yet (a fresh session): no banner, just the forward pointer.
-    return emit([nextUpLine(nextUp)])
+    // Nothing measured yet (a fresh session): no Verdict, just the forward pointer.
+    return emit([nextUpLine(nextUp, steps.length, where)])
   }
 
   // Assemble the rows once and let the fence and the fold read the same set:
   // the model's attested rows, with the check and seam rows replaced by the
   // CLI's own measurements where one exists (measured beats attested).
-  const measuredCheck = measuredCheckRow(root)
+  const summary = readCheckSummary(root)
+  const measuredCheck = summary === null ? null : summaryCheckRow(summary)
   const work = diffNumstat(root).filter((e) => !isArtifactPath(e.path))
   const rows: Partial<Record<RecapRowName, RecapRow>> = { ...(parseRecap(detail)?.rows ?? {}) }
   if (measuredCheck !== null) {
@@ -136,24 +163,31 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   if (measuredSeam !== null) {
     rows.seam = measuredSeam
   }
-  const { ladder, worst } = foldBanner(rows, accruedStats(root, slug, current))
-  const banner = bannerLine(ladder, worst, current, steps.length)
+  const { ladder, worst } = foldVerdict(rows, accruedStats(root, slug, current))
+  const verdict = verdictLine(ladder, worst)
 
   if (inFlight === null) {
-    // The boundary: the orientation-tier card, banner and forward pointer only.
-    return emit([banner, '', nextUpLine(nextUp)])
+    // The boundary: the orientation-tier ending, the state word and the forward
+    // pointer, no decision pending and so no Your Call.
+    return emit([verdict, '', nextUpLine(nextUp, steps.length, where)])
   }
 
-  // The pause: the whole CLI ending as one contiguous block: the assembled
-  // recap fence, the inline diff fence when the change is small enough, the
-  // card, and the recommendation last, plain and unfenced.
+  // The pause: the whole CLI ending as one contiguous block, each part a
+  // labeled line with one blank line between, and the only fence the readout's
+  // own (plus the inline diff when the change is small enough). The block opens
+  // on the seam rule, which is what keeps the Readout from reading as the tail
+  // of the highlights list above it.
   const counts = countDiff(work)
   const changed = counts.added + counts.removed
   const inline = changed > 0 && changed <= INLINE_DIFF_MAX
-  const recap = recapLines(current, steps.length, rows, diffRowValue(counts, inline))
-  const lines: string[] = []
-  if (recap.length > 0) {
-    lines.push(...fence('text', recap), '')
+  const readout = recapLines(rows, {
+    diff: diffRowValue(counts, inline),
+    spent: spentRowValue(spentInputs(root, slug, current, summary)),
+    constraints: parseConstraintCount(intent),
+  })
+  const lines: string[] = [...SEAM_RULE]
+  if (readout.length > 0) {
+    lines.push(readoutLabel(current, steps), '', ...fence('text', readout), '')
   }
   if (inline) {
     const patch = diffPatch(
@@ -164,14 +198,14 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
       lines.push(...fence('diff', patch.split('\n')), '')
     }
   }
-  lines.push(...fence('text', [banner, '', nextUpLine(nextUp), '', yourCallBlock(current, measuredCheck?.verdict === 'true')]))
+  lines.push(verdict, '', nextUpLine(nextUp, steps.length, where), '', yourCallBlock(current, measuredCheck?.verdict === 'true'))
   return emit(withRecommendation(lines, parseRecommendation(detail)))
 }
 
 /**
- * Write a card to stdout and return handoff's exit code.
+ * Write an ending to stdout and return handoff's exit code.
  *
- * Every card ends with a trailing blank line: the card is the turn's last text,
+ * Every ending closes with a trailing blank line: it is the turn's last text,
  * and one flush against the next output cannot read as an ending.
  */
 function emit(lines: ReadonlyArray<string>): number {
@@ -180,12 +214,48 @@ function emit(lines: ReadonlyArray<string>): number {
 }
 
 /**
- * Render the banner line from an already-folded result: the ladder rung, the
- * worst component when one exists, the step segment last.
+ * The Verdict line from an already-folded result: the ladder rung, and the
+ * worst component in a trailing parenthetical when one exists.
+ *
+ * No step segment rides here. The identity renders once per turn: the Readout
+ * label names the step, Next Up carries the progress count, and the Verdict is
+ * left saying the one thing only it says.
  */
-function bannerLine(ladder: Ladder, worst: string | null, step: number, total: number): string {
-  const head = `${ladder.glyph} ${ladder.state}:`
-  return worst === null ? `${head} Step ${step} of ${total}` : `${head} ${worst} · Step ${step} of ${total}`
+function verdictLine(ladder: Ladder, worst: string | null): string {
+  const state = `**Verdict**: ${ladder.glyph} ${ladder.state}`
+  return worst === null ? state : `${state} (${worst})`
+}
+
+/**
+ * The Readout's label: the step the fence below it measures, named once.
+ */
+function readoutLabel(step: number, steps: ReadonlyArray<Step>): string {
+  const open = steps.find((s) => s.n === step)
+  const title = open !== undefined && open.title.length > 0 ? ` - ${open.title}` : ''
+  return `**Readout**: Step ${step}${title}`
+}
+
+/**
+ * What the `spent` row is rendered from: the step's own stamps and counters
+ * from stats.json, the turns the ledger counted across the step (TURN minus
+ * the TICK stamped on entry), and the last gate's wall clock.
+ *
+ * A host with no turn hook grows no ledger, so `turns` comes back null there
+ * and the clause simply vanishes rather than reading zero.
+ */
+function spentInputs(root: string, slug: string | null, step: number, summary: CheckSummary | null): SpentInputs {
+  const stats = readStats(root, slug)[String(step)] ?? {}
+  const turn = readTurn(root)
+  const tick = readMarker(tickPath(root, slug))
+  return {
+    startedAt: stats.startedAt,
+    landedAt: stats.landedAt,
+    now: Date.now(),
+    turns: turn === null || tick === null ? null : Math.max(0, turn - tick),
+    redChecks: stats.redChecks ?? 0,
+    gateMs: summary?.total_duration_ms ?? null,
+    driftWarnings: stats.driftWarnings ?? 0,
+  }
 }
 
 /**
@@ -238,7 +308,7 @@ function withRecommendation(lines: ReadonlyArray<string>, recommendation: string
 /**
  * The step's accrued stats (red checks, reverts) plus commits that landed
  * since the last ledger entry outside plumbbob's checkpoints: the advisory
- * inputs to the banner's third fold rung.
+ * inputs to the Verdict's third fold rung.
  */
 function accruedStats(root: string, slug: string | null, step: number): AccruedStats {
   const stats = readStats(root, slug)[String(step)] ?? {}
@@ -246,62 +316,70 @@ function accruedStats(root: string, slug: string | null, step: number): AccruedS
   return {
     redChecks: stats.redChecks ?? 0,
     reverts: stats.reverts ?? 0,
-    outOfBand: anchor === null ? 0 : commitsSince(root, anchor),
+    outOfBand: anchor === null ? 0 : commitsSince(root, anchor, PLAN_COMMIT_MARKER),
   }
 }
 
 /**
- * handoff's own check measurement, read from the last `plumbbob check` run's
- * `.check/summary.json`, or null when it is absent or unreadable (nothing to
- * measure with; the fold then falls back to the recap's attested row, if it
- * wrote one).
+ * The last `plumbbob check` run's `.check/summary.json`, or null when it is
+ * absent or unreadable (nothing to measure with; the fold then falls back to
+ * the readout's attested row, if the model wrote one).
+ *
+ * Read once: the check row is measured from it, and so is the gate's wall
+ * clock in the `spent` row.
  */
-function measuredCheckRow(root: string): RecapRow | null {
+function readCheckSummary(root: string): CheckSummary | null {
   try {
-    const summary: CheckSummary = JSON.parse(readFileSync(join(root, '.check', 'summary.json'), 'utf8'))
-    return summaryCheckRow(summary)
+    return JSON.parse(readFileSync(join(root, '.check', 'summary.json'), 'utf8')) as CheckSummary
   } catch {
     return null
   }
 }
 
 /**
- * The your-call block: three moves, each quoting what the human says and
- * stating what happens next. `looks good` renders only while the measured
- * check is green; offering a move that would refuse teaches a false
- * ceremony. The other two always render.
+ * The Your Call block: the moves a human actually makes at a pause, each
+ * quoting what they say and stating what happens next.
+ *
+ * Nobody types "needs work", so the block names what really happens instead:
+ * a message that asks is an expand (nothing changes), and a message that
+ * directs is the fix. `revert` comes last, because a destructive move is named
+ * rather than discovered. `looks good` renders only while the measured check is
+ * green; offering a move that would refuse teaches a false ceremony.
  */
 function yourCallBlock(step: number, checkGreen: boolean): string {
   const moves: string[] = []
   if (checkGreen) {
-    moves.push(callLine('looks good', `I checkpoint step ${step}; back to the boundary`))
+    moves.push(callLine('`looks good`', `I checkpoint step ${step}; back to the boundary`))
   }
-  moves.push(callLine('needs work', 'Tell me what to change; nothing lands until you approve'))
-  moves.push(callLine('revert', 'I wind the work back to the last checkpoint'))
-  return ['Your Call:', ...moves].join('\n')
+  moves.push(callLine('`expand`, or any question', 'I show more of what is there; nothing changes'))
+  moves.push(callLine('anything that reads as direction', 'I take it as what to change; nothing lands until you approve'))
+  moves.push(callLine('`revert`', 'I wind the work back to the last checkpoint'))
+  return ['**Your Call**:', '', ...moves].join('\n')
 }
 
 /**
- * One your-call row: the lowercase move label (it quotes what the human
- * says), padded so every arrow lands in the same column, then the outcome
- * clause opening with a capital letter.
+ * One Your Call row: a list item naming the move, then the outcome clause
+ * behind the arrow, opening with a capital letter. The move stays lowercase
+ * because it quotes what the human says.
  */
 function callLine(move: string, outcome: string): string {
-  return `  ${move.padEnd(10)}  → ${outcome}`
+  return `- ${move} → ${outcome}`
 }
 
 /**
- * The plan pause's your-call block: the same shape with the two moves that
- * apply there. Nothing is recorded yet, so `revert` has nothing to wind back
- * to and vanishes; `looks good` names the step the plan starts at, which is
- * step 1 at the plan pause and the first undone step after a mid-build refine.
+ * The plan pause's Your Call block: the same shape with the moves that apply
+ * there. Nothing is recorded yet, so `revert` has nothing to wind back to and
+ * vanishes; `looks good` names the step the plan starts at, which is step 1 at
+ * the plan pause and the first undone step after a mid-build refine.
  */
 function planCallBlock(first: Step | undefined): string {
   const starts = first === undefined ? '' : `; /plumbbob:build starts step ${first.n}`
   return [
-    'Your Call:',
-    callLine('looks good', `I mark the plan decided${starts}`),
-    callLine('needs work', 'Tell me what to sharpen; the plan is cheap to change now'),
+    '**Your Call**:',
+    '',
+    callLine('`looks good`', `I mark the plan decided${starts}`),
+    callLine('`expand`, or any question', 'I show more of what is there; nothing changes'),
+    callLine('anything that reads as direction', 'I take it as what to sharpen; the plan is cheap to change now'),
   ].join('\n')
 }
 
@@ -311,28 +389,38 @@ function planCallBlock(first: Step | undefined): string {
  * step is already being built, so the `/model` call is behind us. Null when no
  * step is open, which is the caller's cue to fall back to the forward pointer.
  */
-function driverNextUpLine(steps: ReadonlyArray<Step>, inFlight: number | null): string | null {
+function driverNextUpLine(steps: ReadonlyArray<Step>, inFlight: number | null, total: number): string | null {
   if (inFlight === null) {
     return null
   }
   const open = steps.find((s) => s.n === inFlight)
   const title = open !== undefined && open.title.length > 0 ? ` - ${open.title}` : ''
-  return `Next Up: Back to step ${inFlight}${title}`
+  // The progress count rides every tier's pointer, but only where the plan
+  // actually holds the step: "step 9 of 3" would be worse than no count.
+  const progress = open === undefined ? '' : ` of ${total}`
+  return `**Next Up**: Back to step ${inFlight}${progress}${title}`
 }
 
 /**
- * The forward pointer: the next undone step, its title, and its advisory
- * `- model:` recommendation named in parentheses. No next step ⇒ the
- * finish/step nudge instead.
+ * The forward pointer: the next undone step with the progress count, its
+ * title, and a closing bracket carrying its advisory `- model:` recommendation
+ * and where to read the step in full. No next step ⇒ the finish/step nudge
+ * instead.
+ *
+ * The model is the second bold token the line spends, because it is the one
+ * the human acts on (a `/model` call) before the next run; the path is a bare
+ * `path:line` in a code span, the one link form that opens in a host and still
+ * reads as a path in a PR diff.
  */
-function nextUpLine(nextUp: Step | undefined): string {
+function nextUpLine(nextUp: Step | undefined, total: number, where: string): string {
   if (nextUp === undefined) {
-    return 'Next Up: Nothing planned - /plumbbob:step or /plumbbob:finish'
+    return '**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish'
   }
   const title = nextUp.title.length > 0 ? ` - ${nextUp.title}` : ''
   const token = modelToken(nextUp.model)
-  const model = token === null ? '' : ` (model: ${capitalize(token)})`
-  return `Next Up: Step ${nextUp.n}${title}${model}`
+  const bracket = token === null ? [] : [`model: **${capitalize(token)}**`]
+  bracket.push(`details: \`${where}:${nextUp.line}\``)
+  return `**Next Up**: Step ${nextUp.n} of ${total}${title} (${bracket.join(', ')})`
 }
 
 /**
@@ -368,11 +456,11 @@ function readOr(path: string): string {
 }
 
 /**
- * The in-flight step number from the STEP marker: the flat one-line file in
- * the build folder that records which step is open. Null when no step is in
- * flight or the file holds anything but a bare number.
+ * The count in a one-line marker file: STEP (which step is open) and TICK (the
+ * turn the step was entered on) are both written this way. Null when the file
+ * is absent or holds anything but a bare number.
  */
-function readStep(path: string): number | null {
+function readMarker(path: string): number | null {
   try {
     const raw = readFileSync(path, 'utf8').trim()
     return /^\d+$/.test(raw) ? Number(raw) : null

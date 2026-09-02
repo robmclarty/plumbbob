@@ -1,5 +1,6 @@
+import { execFileSync } from 'node:child_process'
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { handoff } from '../handoff.ts'
 import { start } from '../start.ts'
@@ -9,7 +10,9 @@ import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
 afterAll(cleanupTempRepos)
 
-// Step 1 done, 2 and 3 planned; step 3 carries a `- model:` recommendation.
+// Step 1 done, 2 and 3 planned; step 3 carries a `- model:` recommendation and
+// opens on line 9, which is where Next Up's `details:` pointer must land. Two
+// constraints, since the CLI reads that count for the constraints row.
 const INTENT = `# Handoff test
 
 ## Steps
@@ -21,7 +24,14 @@ const INTENT = `# Handoff test
 3. [ ] Third — **done when:** c works.
    - seam: \`src/c.ts\`
    - model: sonnet — mechanical
+
+## Constraints
+
+- <a id="c1"></a>**C1 (no-new-deps)**: no new dependencies.
+- <a id="c2"></a>**C2 (markdown-only)**: it has to read as plain text too.
 `
+
+const THIRD_STEP_LINE = 9
 
 const GREEN_RECAP = `── recap · step 2 of 3 ──
 check        green (checkride: lint, types, test)
@@ -39,53 +49,126 @@ async function started(intent = INTENT): Promise<string> {
   return dir
 }
 
-function writeCheckSummary(dir: string, ok: boolean, checks: ReadonlyArray<{ name: string; ok: boolean; skipped?: boolean }>): void {
+type CheckEntry = { name: string; ok: boolean; skipped?: boolean; output_file?: string | null }
+
+function writeCheckSummary(dir: string, ok: boolean, checks: ReadonlyArray<CheckEntry>, totalMs?: number): void {
   mkdirSync(join(dir, '.check'), { recursive: true })
-  writeFileSync(join(dir, '.check', 'summary.json'), JSON.stringify({ schema_version: 1, ok, checks_run: checks.length, checks }))
+  const summary = { schema_version: 1, ok, checks_run: checks.length, total_duration_ms: totalMs, checks }
+  writeFileSync(join(dir, '.check', 'summary.json'), JSON.stringify(summary))
+}
+
+/** The `details:` target Next Up points at for step 3: the intent path as a human would type it. */
+function thirdStepPointer(dir: string): string {
+  return `${relative(dir, intentPath(dir))}:${THIRD_STEP_LINE}`
+}
+
+function git(dir: string, args: ReadonlyArray<string>): void {
+  execFileSync('git', ['-C', dir, ...args], { stdio: 'ignore' })
+}
+
+/** Land a commit with `body` on the fixture repo, so the out-of-band count has something to see. */
+function commitWith(dir: string, file: string, subject: string, body: string): void {
+  writeFileSync(join(dir, file), `${subject}\n`)
+  git(dir, ['add', '-A'])
+  git(dir, ['commit', '-q', '-m', subject, '-m', body])
 }
 
 describe('handoff', () => {
-  it('at the pause, with a green recap and a measured green check, renders the plumb banner and the full your-call block', async () => {
+  it('renders the whole decision-tier ending, labeled lines and blank lines included', async () => {
+    // The canonical pause, asserted whole: this is the shape every other test
+    // here only checks one part of.
     const dir = await started()
-    writeFileSync(stepPath(dir), '2\n') // step 2 in flight
-    writeFileSync(detailPath(dir), GREEN_RECAP)
-    writeCheckSummary(dir, true, [
-      { name: 'lint', ok: true },
-      { name: 'types', ok: true },
-      { name: 'test', ok: true },
-    ])
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(seamPath(dir), 'README.md\n')
+    writeFileSync(join(dir, 'README.md'), `# fixture\n${Array.from({ length: 25 }, (_, i) => `line ${i + 1}`).join('\n')}\n`)
+    writeFileSync(detailPath(dir), `${GREEN_RECAP}\n## recommendation\n\nApprove it. The seam held and the gate is green.\n`)
+    writeCheckSummary(dir, true, [{ name: 'lint', ok: true }, { name: 'types', ok: true }, { name: 'test', ok: true }], 63_000)
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('● Plumb: Step 2 of 3')
-    expect(stdout).toContain('Next Up: Step 3 - Third (model: Sonnet)')
-    expect(stdout).toContain('Your Call:')
-    expect(stdout).toContain('  looks good  → I checkpoint step 2; back to the boundary')
-    expect(stdout).toContain('  needs work  → Tell me what to change; nothing lands until you approve')
-    expect(stdout).toContain('  revert      → I wind the work back to the last checkpoint')
+    expect(stdout).toBe(
+      [
+        '', // the seam rule: a blank line (so the rule cannot underline the model's last line) and the rule
+        '---',
+        '',
+        '**Readout**: Step 2 - Second',
+        '',
+        '```text',
+        'check        green: 3 of 3 checks',
+        'done-when    met',
+        'decisions    1 of 1 honored',
+        'constraints  2 of 2 honored',
+        'seam         held: 1 of 1 declared, no strays',
+        'diff         +25 -0 across 1 file',
+        'spent        63s gate · green first run',
+        '```',
+        '',
+        '**Verdict**: ● Plumb',
+        '',
+        `**Next Up**: Step 3 of 3 - Third (model: **Sonnet**, details: \`${thirdStepPointer(dir)}\`)`,
+        '',
+        '**Your Call**:',
+        '',
+        '- `looks good` → I checkpoint step 2; back to the boundary',
+        '- `expand`, or any question → I show more of what is there; nothing changes',
+        '- anything that reads as direction → I take it as what to change; nothing lands until you approve',
+        '- `revert` → I wind the work back to the last checkpoint',
+        '',
+        '**Recommendation**: Approve it. The seam held and the gate is green.',
+        '',
+        '',
+      ].join('\n'),
+    )
+    expect(stdout).not.toContain('── recap') // the header rule left the rendering; the label carries the identity
   })
 
-  it('at the pause, with nothing measured yet, still renders a plumb banner but omits the looks-good move', async () => {
+  it('keeps every readout line inside 80 columns', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(detailPath(dir), GREEN_RECAP)
+    writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
+    const { stdout } = captureIo(() => handoff(dir, []))
+    const fence = stdout.split('```text\n')[1]?.split('```')[0] ?? ''
+    expect(fence.length).toBeGreaterThan(0)
+    for (const line of fence.split('\n')) {
+      expect(line.length).toBeLessThanOrEqual(80)
+    }
+  })
+
+  it('at the pause, with nothing measured yet, renders no readout and omits the looks-good move', async () => {
     const dir = await started()
     writeFileSync(stepPath(dir), '2\n') // step 2 in flight, no detail.md, no .check/summary.json
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('● Plumb: Step 2 of 3')
+    expect(stdout).toContain('**Verdict**: ● Plumb')
+    expect(stdout).not.toContain('**Readout**')
     expect(stdout).not.toContain('looks good')
-    expect(stdout).toContain('needs work')
-    expect(stdout).toContain('revert')
+    expect(stdout).toContain('- `revert` → I wind the work back to the last checkpoint')
   })
 
-  it('at the boundary (no step in flight), renders the banner and next-up line but no your-call block', async () => {
+  it('at the boundary (no step in flight), renders the verdict and next-up line but no your-call block', async () => {
     const dir = await started()
     writeFileSync(checkpointsPath(dir), 'step 2 abc1234\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('● Plumb: Step 2 of 3')
-    expect(stdout).toContain('Next Up: Step 3 - Third (model: Sonnet)')
-    expect(stdout).not.toContain('Your Call:')
+    expect(stdout).toContain('**Verdict**: ● Plumb')
+    expect(stdout).toContain(`**Next Up**: Step 3 of 3 - Third (model: **Sonnet**, details: \`${thirdStepPointer(dir)}\`)`)
+    expect(stdout).not.toContain('**Your Call**')
+    expect(stdout).not.toContain('**Readout**')
   })
 
-  it('folds a strayed seam row into an out-of-plumb banner naming the seam', async () => {
+  it('names the worst component in the verdict parenthetical, with no step segment', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(detailPath(dir), GREEN_RECAP)
+    writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
+    writeFileSync(statsPath(dir), JSON.stringify({ '2': { redChecks: 2 } }))
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).toContain('**Verdict**: ◐ A hair off (2 red runs before green)')
+    expect(stdout).not.toContain('Step 2 of 3') // the identity renders once, on the Readout and Next Up
+  })
+
+  it('folds a strayed seam row into an out-of-plumb verdict naming the seam', async () => {
     const dir = await started()
     writeFileSync(stepPath(dir), '2\n')
     writeFileSync(
@@ -95,10 +178,10 @@ describe('handoff', () => {
     writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('○ Out of plumb: seam strayed · Step 2 of 3')
+    expect(stdout).toContain('**Verdict**: ○ Out of plumb (seam strayed)')
   })
 
-  it('folds a drifted done-when row into a not-standing banner', async () => {
+  it('folds a drifted done-when row into a not-standing verdict', async () => {
     const dir = await started()
     writeFileSync(stepPath(dir), '2\n')
     writeFileSync(
@@ -108,41 +191,48 @@ describe('handoff', () => {
     writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('✗ Not standing: done-when drifted · Step 2 of 3')
+    expect(stdout).toContain('**Verdict**: ✗ Not standing (done-when drifted)')
   })
 
-  it('folds accrued red-check runs into an a-hair-off banner', async () => {
+  it('measures a red check over a green attested row, pointing at the failing slot output', async () => {
     const dir = await started()
     writeFileSync(stepPath(dir), '2\n')
-    writeFileSync(detailPath(dir), GREEN_RECAP)
-    writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
-    writeFileSync(statsPath(dir), JSON.stringify({ '2': { redChecks: 2 } }))
-    const { code, stdout } = captureIo(() => handoff(dir, []))
-    expect(code).toBe(0)
-    expect(stdout).toContain('◐ A hair off: 2 red runs before green · Step 2 of 3')
-  })
-
-  it('measures a red check over a green attested row (measured beats attested)', async () => {
-    const dir = await started()
-    writeFileSync(stepPath(dir), '2\n')
-    writeFileSync(detailPath(dir), GREEN_RECAP) // model attested green...
+    writeFileSync(detailPath(dir), GREEN_RECAP) // the model attested green...
     writeCheckSummary(dir, false, [
       { name: 'lint', ok: true },
-      { name: 'test', ok: false },
+      { name: 'test', ok: false, output_file: 'test.json' },
     ]) // ...but the measured run is red
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('○ Out of plumb: check red · Step 2 of 3')
+    expect(stdout).toContain('check        red: test failing\n             → .check/test.json')
+    expect(stdout).toContain('**Verdict**: ○ Out of plumb (check red)')
     expect(stdout).not.toContain('looks good')
   })
 
-  it('omits the model clause when the next step has no recommendation', async () => {
+  it('collapses two or more failing slots to a count, listing them under the row', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeCheckSummary(dir, false, [
+      { name: 'lint', ok: false, output_file: 'lint.json' },
+      { name: 'types', ok: true },
+      { name: 'test', ok: false, output_file: 'test.json' },
+    ])
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).toContain(
+      ['check        red: 2 of 3 checks failing', '             - lint', '             - test', '             → .check/summary.json'].join(
+        '\n',
+      ),
+    )
+  })
+
+  it('omits the model clause when the next step has no recommendation, keeping the details pointer', async () => {
     const noModel = INTENT.replace('   - model: sonnet — mechanical\n', '')
     const dir = await started(noModel)
     writeFileSync(stepPath(dir), '2\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('Next Up: Step 3 - Third')
+    expect(stdout).toContain(`**Next Up**: Step 3 of 3 - Third (details: \`${thirdStepPointer(dir)}\`)`)
     expect(stdout).not.toContain('model:')
   })
 
@@ -152,25 +242,26 @@ describe('handoff', () => {
     writeFileSync(checkpointsPath(dir), 'step 3 abc1234\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('Next Up: Nothing planned - /plumbbob:step or /plumbbob:finish')
+    expect(stdout).toContain('**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish')
   })
 
   it('lets an explicit step number override the derived current step', async () => {
     const dir = await started()
     writeFileSync(stepPath(dir), '2\n') // in-flight is 2…
+    writeFileSync(detailPath(dir), GREEN_RECAP)
     const { code, stdout } = captureIo(() => handoff(dir, ['1'])) // …but ask about 1
     expect(code).toBe(0)
-    expect(stdout).toContain('Step 1 of 3')
-    expect(stdout).toContain('Next Up: Step 2 - Second')
+    expect(stdout).toContain('**Readout**: Step 1 - First')
+    expect(stdout).toContain('**Next Up**: Step 2 of 3 - Second')
   })
 
-  it('with no step in flight and no checkpoint yet, emits only the forward pointer and no banner', async () => {
+  it('with no step in flight and no checkpoint yet, emits only the forward pointer and no verdict', async () => {
     // Fresh session (planned, nothing built): there is nothing measured, so the
-    // card degrades to the "Next Up" line alone.
+    // ending degrades to the "Next Up" line alone.
     const dir = await started()
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout.trim()).toBe('Next Up: Step 2 - Second')
+    expect(stdout.trim()).toBe(`**Next Up**: Step 2 of 3 - Second (details: \`${relative(dir, intentPath(dir))}:7\`)`)
   })
 
   it('treats a whitespace-only model recommendation as none', async () => {
@@ -181,11 +272,11 @@ describe('handoff', () => {
     writeFileSync(stepPath(dir), '2\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('Next Up: Step 3 - Third')
+    expect(stdout).toContain('**Next Up**: Step 3 of 3 - Third (details:')
     expect(stdout).not.toContain('model:')
   })
 
-  it('ends every card with a trailing blank line, so the next output cannot clobber it', async () => {
+  it('ends every ending with a trailing blank line, so the next output cannot clobber it', async () => {
     const dir = await started()
     writeFileSync(stepPath(dir), '2\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
@@ -193,7 +284,7 @@ describe('handoff', () => {
     expect(stdout.endsWith('\n\n')).toBe(true)
   })
 
-  it('renders the plan-pause card under --plan: no banner, and the two plan moves', async () => {
+  it('renders the plan-pause ending under --plan: no verdict, and the plan moves', async () => {
     // The plan pause judges the plan, not a diff: nothing is measured, and
     // nothing is recorded yet, so `revert` has nothing to wind back to.
     const planned = INTENT.replace('1. [x] First', '1. [ ] First')
@@ -201,9 +292,10 @@ describe('handoff', () => {
     const { code, stdout } = captureIo(() => handoff(dir, ['--plan']))
     expect(code).toBe(0)
     expect(stdout).not.toContain('Plumb')
-    expect(stdout).toContain('Next Up: Step 1 - First')
-    expect(stdout).toContain('  looks good  → I mark the plan decided; /plumbbob:build starts step 1')
-    expect(stdout).toContain('  needs work  → Tell me what to sharpen; the plan is cheap to change now')
+    expect(stdout.startsWith('\n---\n\n**Next Up**: Step 1 of 3 - First')).toBe(true) // a decision turn opens on the seam rule
+    expect(stdout).toContain('- `looks good` → I mark the plan decided; /plumbbob:build starts step 1')
+    expect(stdout).toContain('- `expand`, or any question → I show more of what is there; nothing changes')
+    expect(stdout).toContain('- anything that reads as direction → I take it as what to sharpen; the plan is cheap to change now')
     expect(stdout).not.toContain('revert')
     expect(stdout.endsWith('\n\n')).toBe(true)
   })
@@ -213,7 +305,7 @@ describe('handoff', () => {
     writeFileSync(stepPath(dir), '2\n')
     const { code, stdout } = captureIo(() => handoff(dir, ['--plan']))
     expect(code).toBe(0)
-    expect(stdout).toContain('Next Up: Step 2 - Second')
+    expect(stdout).toContain('**Next Up**: Step 2 of 3 - Second')
     expect(stdout).toContain('/plumbbob:build starts step 2')
   })
 
@@ -222,7 +314,7 @@ describe('handoff', () => {
     writeFileSync(stepPath(dir), '2\n')
     const { code, stdout } = captureIo(() => handoff(dir, ['--driver']))
     expect(code).toBe(0)
-    expect(stdout.trim()).toBe('Next Up: Back to step 2 - Second')
+    expect(stdout.trim()).toBe('**Next Up**: Back to step 2 of 3 - Second') // no seam rule: nothing of the model's precedes a driver pointer
     expect(stdout.endsWith('\n\n')).toBe(true)
   })
 
@@ -231,7 +323,7 @@ describe('handoff', () => {
     writeFileSync(checkpointsPath(dir), 'step 2 abc1234\n')
     const { code, stdout } = captureIo(() => handoff(dir, ['--driver']))
     expect(code).toBe(0)
-    expect(stdout.trim()).toBe('Next Up: Step 3 - Third (model: Sonnet)')
+    expect(stdout.trim()).toBe(`**Next Up**: Step 3 of 3 - Third (model: **Sonnet**, details: \`${thirdStepPointer(dir)}\`)`)
   })
 
   it('names the step number alone when the plan no longer holds the in-flight step', async () => {
@@ -239,7 +331,7 @@ describe('handoff', () => {
     writeFileSync(stepPath(dir), '9\n') // a step the plan does not contain
     const { code, stdout } = captureIo(() => handoff(dir, ['--driver']))
     expect(code).toBe(0)
-    expect(stdout.trim()).toBe('Next Up: Back to step 9')
+    expect(stdout.trim()).toBe('**Next Up**: Back to step 9') // no "of 3": the count would be a lie
   })
 
   it('computes the diff row from numstat and rides a small change inline', async () => {
@@ -267,17 +359,17 @@ describe('handoff', () => {
     expect(stdout).not.toContain('```diff')
   })
 
-  it('computes the seam row from the SEAM marker against the work-plane diff', async () => {
+  it('sizes the seam row by the declared tokens the diff actually touched', async () => {
     const dir = await started()
     writeFileSync(stepPath(dir), '2\n')
-    writeFileSync(seamPath(dir), 'README.md\n')
+    writeFileSync(seamPath(dir), 'README.md\nsrc/b.ts\n') // two declared, one touched
     writeFileSync(join(dir, 'README.md'), '# fixture\nchanged\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('seam         held: 1 file, all inside')
+    expect(stdout).toContain('seam         held: 1 of 2 declared, no strays')
   })
 
-  it('replaces an attested seam row with its own stray measurement (measured beats attested)', async () => {
+  it('replaces an attested seam row with its own stray measurement, pointing at the one path', async () => {
     const dir = await started()
     writeFileSync(stepPath(dir), '2\n')
     writeFileSync(seamPath(dir), 'src/b.ts\n') // the granted seam…
@@ -286,11 +378,25 @@ describe('handoff', () => {
     writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('seam         strayed: README.md outside the seam')
-    expect(stdout).toContain('○ Out of plumb: seam strayed · Step 2 of 3')
+    expect(stdout).toContain('seam         strayed: 1 path outside the seam\n             → README.md')
+    expect(stdout).toContain('**Verdict**: ○ Out of plumb (seam strayed)')
   })
 
-  it('carries the gate verdict in the check row, naming a narrowed gate', async () => {
+  it('lists two or more strays under the row instead of naming one', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(seamPath(dir), 'src/b.ts\n')
+    writeFileSync(join(dir, 'other.md'), '# other\n')
+    git(dir, ['add', '-A'])
+    git(dir, ['commit', '-q', '-m', 'add other'])
+    writeFileSync(join(dir, 'README.md'), '# fixture\nchanged\n')
+    writeFileSync(join(dir, 'other.md'), '# other\nmore\n')
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).toContain('seam         strayed: 2 paths outside the seam\n             - README.md\n             - other.md')
+  })
+
+  it('carries the gate verdict in the check row as a count, naming a narrowed gate', async () => {
     const dir = await started()
     writeFileSync(stepPath(dir), '2\n')
     writeCheckSummary(dir, true, [
@@ -300,62 +406,104 @@ describe('handoff', () => {
     ])
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('check        green (checkride: lint, types · without test)')
+    expect(stdout).toContain('check        green: 2 of 3 checks · without test')
     expect(stdout).not.toContain('plumbbob: check') // the standalone verdict line left the anatomy
   })
 
-  it('collapses a long slot list to its count, keeping the row inside 72 columns', async () => {
+  it('collapses a long list of deselected slots to its count, keeping the row inside its budget', async () => {
     const dir = await started()
     writeFileSync(stepPath(dir), '2\n')
-    const names = ['lint', 'struct', 'dead', 'links', 'refs', 'types', 'docs', 'prose', 'test']
-    writeCheckSummary(
-      dir,
-      true,
-      names.map((name) => ({ name, ok: true })),
-    )
+    const skipped = ['struct', 'dead', 'links', 'refs', 'types', 'docs', 'prose', 'mutation', 'coverage']
+    writeCheckSummary(dir, true, [{ name: 'lint', ok: true }, ...skipped.map((name) => ({ name, ok: true, skipped: true }))])
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
     const row = stdout.split('\n').find((l) => l.startsWith('check'))
-    expect(row).toBe('check        green (checkride: 9 checks)')
-    expect((row ?? '').length).toBeLessThanOrEqual(72)
+    expect(row).toBe('check        green: 1 of 10 checks · without 9 others')
+    expect((row ?? '').length).toBeLessThanOrEqual(80)
   })
 
-  it('re-emits the judgment rows parsed from the detail file inside the assembled fence', async () => {
+  it('collapses the judgment rows the model wrote, reading the constraint count from intent.md', async () => {
     const dir = await started()
     writeFileSync(stepPath(dir), '2\n')
     writeFileSync(detailPath(dir), GREEN_RECAP)
     writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('done-when    met: b works')
-    expect(stdout).toContain('decisions    honored: D1 (some-decision)')
-    expect(stdout).toContain('constraints  all honored')
+    expect(stdout).toContain('done-when    met') // the Summary above is its evidence
+    expect(stdout).toContain('decisions    1 of 1 honored')
+    expect(stdout).toContain('constraints  2 of 2 honored') // both declared under `## Constraints`
   })
 
-  it('assembles the recap fence, the card, and the labeled recommendation as one block, in that order', async () => {
+  it('carries a judgment row\'s continuation lines through the detail file into the readout', async () => {
     const dir = await started()
     writeFileSync(stepPath(dir), '2\n')
-    writeFileSync(seamPath(dir), 'README.md\n')
-    writeFileSync(join(dir, 'README.md'), '# fixture\nchanged\n')
-    writeFileSync(detailPath(dir), `${GREEN_RECAP}\n## recommendation\n\nApprove it. The seam held and the gate is green.\n`)
+    writeFileSync(
+      detailPath(dir),
+      GREEN_RECAP.replace(
+        'constraints  all honored\n',
+        ['constraints  bent: C1 (no-new-deps), a dep rode in', '             - C2 (markdown-only), the fence lost its rails', '             → .plumbbob/detail.md', ''].join('\n'),
+      ),
+    )
     writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout.startsWith('```text\n── recap · step 2 of 3 ──')).toBe(true)
-    expect(stdout.indexOf('── recap')).toBeLessThan(stdout.indexOf('● Plumb'))
-    expect(stdout.indexOf('Your Call:')).toBeLessThan(stdout.indexOf('Approve it'))
-    expect(stdout).toContain('```\n\n**Recommendation**: Approve it. The seam held and the gate is green.') // after the card fence, unfenced, labeled
-    expect(stdout.trimEnd().endsWith('Approve it. The seam held and the gate is green.')).toBe(true)
-    expect(stdout.endsWith('\n\n')).toBe(true)
+    expect(stdout).toContain(
+      [
+        'constraints  bent: C1 (no-new-deps), a dep rode in',
+        '             - C2 (markdown-only), the fence lost its rails',
+        '             → .plumbbob/detail.md',
+      ].join('\n'),
+    )
+    expect(stdout).toContain('**Verdict**: ○ Out of plumb (constraints bent)')
+  })
+
+  it('renders the spent row from stats.json and the last gate', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(
+      statsPath(dir),
+      JSON.stringify({ '2': { startedAt: '2026-09-02T10:00:00.000Z', landedAt: '2026-09-02T11:28:00.000Z', redChecks: 2, driftWarnings: 1 } }),
+    )
+    writeCheckSummary(dir, true, [{ name: 'test', ok: true }], 63_400)
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).toContain('spent        88 min · 63s gate · 2 red runs · 1 drift warning')
+  })
+
+  it('vanishes the spent row when there is nothing to count', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(detailPath(dir), GREEN_RECAP)
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).not.toContain('spent')
+  })
+
+  it('leaves plumbbob\'s own plan commits out of the out-of-band count', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(detailPath(dir), GREEN_RECAP)
+    writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
+    const anchor = execFileSync('git', ['-C', dir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+    writeFileSync(checkpointsPath(dir), `step 1 ${anchor}\n`)
+    commitWith(dir, 'plan.txt', 'chore(plan): harvest the boundary', 'plumbbob plan')
+    const { stdout: quiet } = captureIo(() => handoff(dir, []))
+    expect(quiet).toContain('**Verdict**: ● Plumb') // routine housekeeping is not an advisory
+    commitWith(dir, 'other.txt', 'fix: something the human did', 'no marker here')
+    const { stdout: noisy } = captureIo(() => handoff(dir, []))
+    expect(noisy).toContain('**Verdict**: ◐ A hair off (1 commit outside the ledger)')
   })
 
   it('unwraps a hard-wrapped recommendation so it flows at the renderer width', async () => {
     const dir = await started()
     writeFileSync(stepPath(dir), '2\n')
-    writeFileSync(detailPath(dir), `${GREEN_RECAP}\n## recommendation\n\nApprove it: the gate is green\nand the seam held,\nso nothing blocks the land.\n`)
+    writeFileSync(
+      detailPath(dir),
+      `${GREEN_RECAP}\n## recommendation\n\nApprove it. The gate is green\nand the seam held,\nso nothing blocks the land.\n`,
+    )
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('**Recommendation**: Approve it: the gate is green and the seam held, so nothing blocks the land.')
+    expect(stdout).toContain('**Recommendation**: Approve it. The gate is green and the seam held, so nothing blocks the land.')
   })
 
   it('labels the recommendation on the plan pause too, as the ending of a decision turn', async () => {
@@ -363,7 +511,7 @@ describe('handoff', () => {
     writeFileSync(detailPath(dir), '## recommendation\n\nDecide it. Every open question is closed.\n')
     const { code, stdout } = captureIo(() => handoff(dir, ['--plan']))
     expect(code).toBe(0)
-    expect(stdout).toContain('Your Call:')
+    expect(stdout).toContain('**Your Call**:')
     expect(stdout.trimEnd().endsWith('**Recommendation**: Decide it. Every open question is closed.')).toBe(true)
   })
 

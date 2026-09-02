@@ -82,13 +82,18 @@ export function isDirty(root: string): boolean {
  * commits are surfaced, never blocked). `--first-parent` keeps the count on
  * the branch's own line: merging upstream reads as the one merge commit, not
  * the dozens it carried; those didn't land "outside the ledger" in any sense
- * the receipt should nag about. Best-effort and never throws: 0 when the range
- * is empty, `sha` is unknown to the repo, or HEAD is unborn: the count is
- * informational (the human commits freely), never a gate.
+ * the receipt should nag about. `excluding` is a commit-message pattern whose
+ * matches are left out of the count, which is how a caller drops plumbbob's own
+ * commits from a tally of what landed around them.
+ *
+ * Best-effort and never throws: 0 when the range is empty, `sha` is unknown to
+ * the repo, or HEAD is unborn: the count is informational (the human commits
+ * freely), never a gate.
  */
-export function commitsSince(root: string, sha: string): number {
+export function commitsSince(root: string, sha: string, excluding?: string): number {
   try {
-    const n = Number.parseInt(runGit(root, ['rev-list', '--count', '--first-parent', `${sha}..HEAD`]), 10)
+    const skip = excluding === undefined ? [] : ['--grep', excluding, '--invert-grep']
+    const n = Number.parseInt(runGit(root, ['rev-list', '--count', '--first-parent', ...skip, `${sha}..HEAD`]), 10)
     return Number.isFinite(n) && n > 0 ? n : 0
   } catch {
     return 0

@@ -14,6 +14,7 @@ export type Step = {
   readonly planned: boolean // carries a `done when:` criterion
   readonly doneWhen: string | null // the criterion text, for the dashboard
   readonly model: string | null // the optional `- model:` recommendation, verbatim: advisory, never a gate
+  readonly line: number // the 1-based line of the step's opener in intent.md, so a pointer can name where to read it
 }
 
 /** One landed step from the checkpoints ledger: its number and commit SHA. */
@@ -74,20 +75,25 @@ export type OrientInput = {
   readonly outOfBand: number
 }
 
+/** A named `## Section`'s body: its lines, and the 0-based offset of the first. */
+type Section = { readonly offset: number; readonly lines: ReadonlyArray<string> }
+
 /**
- * The lines of a named `## Section`, from its heading to the next `## ` (or EOF).
+ * The lines of a named `## Section`, from its heading to the next `## ` (or
+ * EOF), with the offset of the first line so a caller can name an absolute
+ * line number in the document rather than one relative to the section.
  */
-function sectionLines(content: string, heading: string): string[] {
+function sectionLines(content: string, heading: string): Section {
   const lines = content.split('\n')
   const start = lines.findIndex((l) => l.trim() === heading)
   if (start === -1) {
-    return []
+    return { offset: 0, lines: [] }
   }
   let end = lines.findIndex((l, i) => i > start && l.startsWith('## '))
   if (end === -1) {
     end = lines.length
   }
-  return lines.slice(start + 1, end)
+  return { offset: start + 1, lines: lines.slice(start + 1, end) }
 }
 
 /**
@@ -114,7 +120,7 @@ export function parseTitle(intent: string): string | null {
  * narrative roadmap prose lives in its own section and never lands here.
  */
 export function parseSteps(intent: string): Step[] {
-  const lines = sectionLines(intent, '## Steps')
+  const { offset, lines } = sectionLines(intent, '## Steps')
   const starts: Array<{ readonly n: number; readonly done: boolean; readonly title: string; readonly idx: number }> = []
   lines.forEach((line, idx) => {
     const m = /^(\d+)\.\s+\[([ xX])\]\s+(.*)$/.exec(line)
@@ -137,7 +143,7 @@ export function parseSteps(intent: string): Step[] {
     const doneWhen = dw ? (dw[1] ?? '').trim() : null
     const md = /^\s*-\s*model:\s*(.+)$/im.exec(block)
     const model = md ? (md[1] ?? '').trim() : null
-    return { n: s.n, done: s.done, title: s.title, planned: /done when/i.test(block), doneWhen, model }
+    return { n: s.n, done: s.done, title: s.title, planned: /done when/i.test(block), doneWhen, model, line: offset + s.idx + 1 }
   })
 }
 
@@ -184,7 +190,7 @@ export function markStepDone(intent: string, n: number): string {
  */
 export function parseOpenQuestions(intent: string): number {
   const opener = /^-\s+(?:<a id="[^"]*"><\/a>\s*)?\*{0,2}Q\d+(?: \([^)]+\))?\*{0,2}:\s*(.*)$/
-  return sectionLines(intent, '## Open questions').filter((l) => {
+  return sectionLines(intent, '## Open questions').lines.filter((l) => {
     const body = opener.exec(l.trim())?.[1]
     return body !== undefined && !/\bresolved\b/i.test(l) && !/^<[^>]*>/.test(body)
   }).length
@@ -199,7 +205,19 @@ export function parseOpenQuestions(intent: string): number {
  * never match.
  */
 export function parseParked(buildLog: string): number {
-  return sectionLines(buildLog, '## Park list').filter((l) => /^-\s+\[ \]\s+\S/.test(l.trim())).length
+  return sectionLines(buildLog, '## Park list').lines.filter((l) => /^-\s+\[ \]\s+\S/.test(l.trim())).length
+}
+
+/**
+ * Count the constraints declared under `## Constraints`: the section's
+ * top-level list items, in whatever anchored or glossed form they are written.
+ *
+ * This is the readout's denominator for the constraints row. A constraint
+ * always applies (that is what makes it one), so the count is the CLI's to read
+ * rather than the model's to attest.
+ */
+export function parseConstraintCount(intent: string): number {
+  return sectionLines(intent, '## Constraints').lines.filter((l) => /^-\s+\S/.test(l)).length
 }
 
 /**
@@ -354,7 +372,7 @@ export function orient(input: OrientInput): Orientation {
   }
 }
 
-// --- The footer card: recap parsing and the banner's worst-of fold, spec'd in
+// --- The footer card: readout parsing and the Verdict's worst-of fold, spec'd in
 // docs/presentation.md. Pure: `handoff` supplies the parsed recap (with its
 // own check measurement folded over the model's attested row) and the step's
 // accrued stats; this section only decides which ladder state and worst
@@ -363,8 +381,20 @@ export function orient(input: OrientInput): Orientation {
 /** One measuring row's classification: holding, failing now, or the plan itself is wrong. */
 export type RecapVerdict = 'true' | 'failing' | 'drift'
 
-/** One measuring row of the recap: its verdict, the leading word that earned it, and the evidence after the colon. */
-export type RecapRow = { readonly verdict: RecapVerdict; readonly word: string; readonly evidence: string }
+/**
+ * One measuring row of the readout: its verdict, the leading word that earned
+ * it, the evidence after that word, and the two shapes a row grows when one
+ * line cannot carry it. `items` are the `- ` continuation lines a row with two
+ * or more offenders breaks onto; `pointer` is the `→` line's target under a red
+ * row, the one place a fence can say where to look.
+ */
+export type RecapRow = {
+  readonly verdict: RecapVerdict
+  readonly word: string
+  readonly evidence: string
+  readonly items?: ReadonlyArray<string>
+  readonly pointer?: string
+}
 
 /** The recap's five measuring rows, in the fixed order the fold walks them. */
 const RECAP_ROW_NAMES = ['check', 'done-when', 'decisions', 'constraints', 'seam'] as const
@@ -375,7 +405,7 @@ export type Recap = {
   readonly step: number
   readonly total: number
   readonly rows: Readonly<Partial<Record<RecapRowName, RecapRow>>>
-  readonly diff: string | null // information only; never folds into the banner
+  readonly diff: string | null // information only; never folds into the Verdict
 }
 
 /**
@@ -397,10 +427,19 @@ function classifyRecapRow(name: RecapRowName, value: string): { readonly verdict
       return test(/^met\b/, 'true') ?? test(/^not met\b/, 'failing') ?? test(/^drift\b/, 'drift')
     case 'decisions':
       return (
-        test(/^honored\b/, 'true') ?? test(/^none exercised\b/, 'true') ?? test(/^bent\b/, 'failing') ?? test(/^drift\b/, 'drift')
+        test(/^honored\b/, 'true') ??
+        test(/^\d+ of \d+ honored\b/, 'true') ??
+        test(/^none exercised\b/, 'true') ??
+        test(/^bent\b/, 'failing') ??
+        test(/^drift\b/, 'drift')
       )
     case 'constraints':
-      return test(/^all honored\b/, 'true') ?? test(/^bent\b/, 'failing') ?? test(/^drift\b/, 'drift')
+      return (
+        test(/^all honored\b/, 'true') ??
+        test(/^\d+ of \d+ honored\b/, 'true') ??
+        test(/^bent\b/, 'failing') ??
+        test(/^drift\b/, 'drift')
+      )
     case 'seam':
       return test(/^held\b/, 'true') ?? test(/^strayed\b/, 'failing') ?? test(/^drift\b/, 'drift')
   }
@@ -413,6 +452,9 @@ function classifyRecapRow(name: RecapRowName, value: string): { readonly verdict
  *
  * A row absent from the block is simply missing from `rows`: a vanished row
  * the fold treats exactly like one that never applied, never like a failure.
+ * An indented `- ` or `→ ` line attaches to the row above it, which is how a
+ * row carrying two or more items, or a pointer at its evidence, survives the
+ * round trip through the file.
  */
 export function parseRecap(detail: string): Recap | null {
   const lines = detail.split('\n')
@@ -426,10 +468,20 @@ export function parseRecap(detail: string): Recap | null {
   }
   const rows: Partial<Record<RecapRowName, RecapRow>> = {}
   let diff: string | null = null
+  let last: RecapRowName | null = null
   for (let i = headerIdx + 1; i < lines.length; i++) {
     const line = lines[i] ?? ''
     if (line.trim().length === 0) {
       break // the fence is one contiguous block; a blank line ends it
+    }
+    const carried = /^\s+([-→])\s+(\S.*)$/.exec(line)
+    const open = last === null ? undefined : rows[last]
+    if (carried !== null) {
+      if (last !== null && open !== undefined) {
+        const item = (carried[2] ?? '').trim()
+        rows[last] = carried[1] === '→' ? { ...open, pointer: item } : { ...open, items: [...(open.items ?? []), item] }
+      }
+      continue
     }
     const m = /^(\S[\w-]*)\s+(.+)$/.exec(line)
     if (m === null) {
@@ -437,12 +489,14 @@ export function parseRecap(detail: string): Recap | null {
     }
     const label = m[1] ?? ''
     const value = (m[2] ?? '').trim()
+    last = null
     if (label === 'diff') {
       diff = value
     } else if ((RECAP_ROW_NAMES as readonly string[]).includes(label)) {
       const classified = classifyRecapRow(label as RecapRowName, value)
       if (classified !== null) {
         rows[label as RecapRowName] = { ...classified, evidence: value }
+        last = label as RecapRowName
       }
     }
   }
@@ -457,8 +511,8 @@ const A_HAIR_OFF: Ladder = { glyph: '◐', state: 'A hair off' }
 const OUT_OF_PLUMB: Ladder = { glyph: '○', state: 'Out of plumb' }
 const NOT_STANDING: Ladder = { glyph: '✗', state: 'Not standing' }
 
-/** The banner's computed result: the ladder rung, and the worst component named (null when nothing is off). */
-export type Banner = { readonly ladder: Ladder; readonly worst: string | null }
+/** The Verdict's computed result: the ladder rung, and the worst component named (null when nothing is off). */
+export type VerdictFold = { readonly ladder: Ladder; readonly worst: string | null }
 
 /** A step's accrued stats, the advisory inputs to the fold's third rung. */
 export type AccruedStats = {
@@ -472,7 +526,7 @@ export type AccruedStats = {
  * drift beats a live failure beats an advisory beats plumb, and each rung
  * names the one component that earned it.
  */
-export function foldBanner(rows: Readonly<Partial<Record<RecapRowName, RecapRow>>>, stats: AccruedStats): Banner {
+export function foldVerdict(rows: Readonly<Partial<Record<RecapRowName, RecapRow>>>, stats: AccruedStats): VerdictFold {
   for (const name of RECAP_ROW_NAMES) {
     if (rows[name]?.verdict === 'drift') {
       return { ladder: NOT_STANDING, worst: `${name} drifted` }
@@ -496,51 +550,73 @@ export function foldBanner(rows: Readonly<Partial<Record<RecapRowName, RecapRow>
   return { ladder: PLUMB, worst: null }
 }
 
-// --- The assembled recap: the CLI-computed rows and the fence they ride in
+// --- The assembled readout: the CLI-computed rows and the fence they ride in
 // (docs/presentation.md). `handoff` measures (the check summary, the numstat,
-// the seam file) and this section turns each measurement into its row, every
-// value cut to the 58 columns the 13-character label pad leaves inside the
-// 72-column budget. ---
+// the seam file, the stats receipt) and this section turns each measurement
+// into its row, every value cut to the 67 columns the 13-character label pad
+// leaves inside the 80-column fence. ---
 
-/** The label pad: recap values start at column 14, so a value gets 58 of the 72. */
-const RECAP_VALUE_BUDGET = 58
+/** The label pad: readout values start at column 14, so a value gets 67 of the 80. */
+const RECAP_VALUE_BUDGET = 67
 
-/** The check summary `plumbbob check` leaves in `.check/summary.json`, the fields the check row reads. */
+/** The continuation indent: a row's `- ` items and its `→ ` pointer align under the value column. */
+const RECAP_INDENT = ' '.repeat(13)
+
+/** Where a red check row points when no single slot owns the failure. */
+const CHECK_SUMMARY = '.check/summary.json'
+
+/** The check summary `plumbbob check` leaves in `.check/summary.json`, the fields the readout reads. */
 export type CheckSummary = {
   readonly ok: boolean
-  readonly checks: ReadonlyArray<{ readonly name: string; readonly ok: boolean; readonly skipped?: boolean }>
+  readonly total_duration_ms?: number
+  readonly checks: ReadonlyArray<{
+    readonly name: string
+    readonly ok: boolean
+    readonly skipped?: boolean
+    readonly output_file?: string | null
+  }>
 }
 
 /**
- * The measured check row from the last run's summary: the verdict word, the
- * gate, and its scope. A narrowed run records its deselected slots as skipped
- * entries, and the row names them (`· without test`); a list too long for the
- * value budget collapses to its counts (the elision is counted, never silent).
+ * The measured check row from the last run's summary: the verdict word and a
+ * count that sizes the gate. A narrowed run records its deselected slots as
+ * skipped entries and the row names them behind the separator, degrading to
+ * their count when the names overflow the value budget.
+ *
+ * Red expands where green collapses: one failing slot is named in the row and
+ * its raw output is the `→` pointer, and two or more collapse to a count with
+ * one `- ` line per slot.
  */
 export function summaryCheckRow(summary: CheckSummary): RecapRow {
-  const ran = summary.checks.filter((c) => c.skipped !== true).map((c) => c.name)
+  const ran = summary.checks.filter((c) => c.skipped !== true)
   const skipped = summary.checks.filter((c) => c.skipped === true).map((c) => c.name)
-  const without = skipped.length === 0 ? '' : ` · without ${skipped.join(', ')}`
-  const fit = (candidates: ReadonlyArray<string>): string =>
-    candidates.find((c) => c.length <= RECAP_VALUE_BUDGET) ?? (candidates[candidates.length - 1] ?? '')
+  const named = skipped.length === 0 ? '' : ` · without ${skipped.join(', ')}`
+  const counted = skipped.length === 0 ? '' : ` · without ${skipped.length} others`
+  const fit = (long: string, short: string): string => (long.length <= RECAP_VALUE_BUDGET ? long : short)
   if (summary.ok) {
-    const scope = skipped.length === 0 ? `${ran.length} checks` : `${ran.length} of ${summary.checks.length} checks`
+    const size = `${ran.length} of ${summary.checks.length} checks`
+    return { verdict: 'true', word: 'green', evidence: fit(`green: ${size}${named}`, `green: ${size}${counted}`) }
+  }
+  const failing = ran.filter((c) => !c.ok)
+  const first = failing[0]
+  if (failing.length > 1) {
     return {
-      verdict: 'true',
-      word: 'green',
-      evidence: fit([
-        `green (checkride: ${ran.join(', ')}${without})`,
-        `green (checkride: ${scope}${without})`,
-        `green (checkride: ${scope})`,
-      ]),
+      verdict: 'failing',
+      word: 'red',
+      evidence: `red: ${failing.length} of ${ran.length} checks failing`,
+      items: failing.map((c) => c.name),
+      pointer: CHECK_SUMMARY,
     }
   }
-  const failing = summary.checks.find((c) => !c.ok && c.skipped !== true)
-  const evidence =
-    failing !== undefined
-      ? fit([`red (${failing.name} failing${without})`, `red (${failing.name} failing)`])
-      : fit([`red${without}`, 'red'])
-  return { verdict: 'failing', word: 'red', evidence }
+  if (first !== undefined) {
+    return {
+      verdict: 'failing',
+      word: 'red',
+      evidence: fit(`red: ${first.name} failing${named}`, `red: ${first.name} failing`),
+      pointer: first.output_file == null ? CHECK_SUMMARY : `.check/${first.output_file}`,
+    }
+  }
+  return { verdict: 'failing', word: 'red', evidence: fit(`red${named}`, 'red'), pointer: CHECK_SUMMARY }
 }
 
 /**
@@ -548,9 +624,11 @@ export function summaryCheckRow(summary: CheckSummary): RecapRow {
  * tokens. Null when there is no seam to measure against or nothing changed
  * (the row then vanishes, or the model's attested row stands).
  *
- * A stray names its path; when the named form overflows the value budget it
- * degrades to the first path plus a count, then to the bare count, so the
- * evidence stays honest at every width.
+ * Green sizes the declared seam: how many of its tokens the diff actually
+ * touched, and that nothing landed outside them. Red states the size of the
+ * problem and lets the paths themselves be the evidence: one stray is the `→`
+ * pointer, and several break onto `- ` lines. `paths` are work-plane changes,
+ * artifacts already filtered by the caller.
  */
 export function seamRowFromDiff(paths: ReadonlyArray<string>, seam: ReadonlyArray<string>): RecapRow | null {
   if (seam.length === 0 || paths.length === 0) {
@@ -558,19 +636,14 @@ export function seamRowFromDiff(paths: ReadonlyArray<string>, seam: ReadonlyArra
   }
   const outside = scopeDrift(paths, seam)
   if (outside.length === 0) {
-    return {
-      verdict: 'true',
-      word: 'held',
-      evidence: `held: ${paths.length} file${paths.length === 1 ? '' : 's'}, all inside`,
-    }
+    const touched = seam.filter((token) => paths.some((p) => scopeDrift([p], [token]).length === 0)).length
+    return { verdict: 'true', word: 'held', evidence: `held: ${touched} of ${seam.length} declared, no strays` }
   }
-  const more = outside.length > 1 ? ` +${outside.length - 1} more` : ''
-  const counted = `strayed: ${outside.length} path${outside.length === 1 ? '' : 's'} outside the seam`
-  const evidence =
-    [`strayed: ${outside.join(', ')} outside the seam`, `strayed: ${outside[0]}${more} outside the seam`].find(
-      (c) => c.length <= RECAP_VALUE_BUDGET,
-    ) ?? counted
-  return { verdict: 'failing', word: 'strayed', evidence }
+  const evidence = `strayed: ${outside.length} path${outside.length === 1 ? '' : 's'} outside the seam`
+  const only = outside[0]
+  return outside.length === 1 && only !== undefined
+    ? { verdict: 'failing', word: 'strayed', evidence, pointer: only }
+    : { verdict: 'failing', word: 'strayed', evidence, items: outside }
 }
 
 /** The summed working-tree change: line counts and the file count. */
@@ -600,33 +673,142 @@ export function diffRowValue(counts: DiffCounts, inline: boolean): string | null
   return `+${counts.added} -${counts.removed} across ${files}${inline ? ' · inline below' : ''}`
 }
 
-/**
- * The recap fence's inner lines: the header rule, the measuring rows present
- * in their fixed order, and the diff row last, labels padded so every value
- * starts at column 14. Empty when no row survived, so the caller can drop the
- * fence entirely rather than emit a bare header.
- */
-export function recapLines(
-  step: number,
-  total: number,
-  rows: Readonly<Partial<Record<RecapRowName, RecapRow>>>,
-  diffValue: string | null,
-): string[] {
-  const body: string[] = []
-  for (const name of RECAP_ROW_NAMES) {
-    const row = rows[name]
-    if (row !== undefined) {
-      body.push(`${name.padEnd(13)}${row.evidence}`)
-    }
-  }
-  if (diffValue !== null) {
-    body.push(`${'diff'.padEnd(13)}${diffValue}`)
-  }
-  return body.length === 0 ? [] : [`── recap · step ${step} of ${total} ──`, ...body]
+/** What the `spent` row is rendered from: the step's stamps and counters, and the turn ledger. */
+export type SpentInputs = {
+  readonly startedAt?: string
+  readonly landedAt?: string
+  readonly now: number
+  readonly turns: number | null
+  readonly redChecks: number
+  readonly gateMs: number | null
+  readonly driftWarnings: number
 }
 
 /**
- * The `## recommendation` section of `.plumbbob/detail.md`: the one or two
+ * The `spent` row's value: what the step has consumed, read from what
+ * stats.json and the turn ledger already hold. Null when nothing is countable
+ * yet, which vanishes the row on a fresh session rather than printing zeroes.
+ *
+ * Tokens and cost stay out: the transcript is host-specific and a price table
+ * goes stale, while every fact here is on disk already.
+ */
+export function spentRowValue(input: SpentInputs): string | null {
+  const parts: string[] = []
+  const elapsed = elapsedSpent(input)
+  if (elapsed !== null) {
+    parts.push(elapsed)
+  }
+  if (input.turns !== null && input.turns > 0) {
+    parts.push(`${input.turns} turn${input.turns === 1 ? '' : 's'}`)
+  }
+  if (input.gateMs !== null) {
+    parts.push(`${Math.round(input.gateMs / 1000)}s gate`)
+  }
+  if (input.redChecks > 0) {
+    parts.push(`${input.redChecks} red run${input.redChecks === 1 ? '' : 's'}`)
+  } else if (input.gateMs !== null) {
+    parts.push('green first run')
+  }
+  if (input.driftWarnings > 0) {
+    parts.push(`${input.driftWarnings} drift warning${input.driftWarnings === 1 ? '' : 's'}`)
+  }
+  return parts.length === 0 ? null : parts.join(' · ')
+}
+
+/**
+ * The elapsed clause: the step's `startedAt` to its `landedAt` at the
+ * boundary, or to now while it is still open. Null when no stamp parses, or
+ * the span runs backwards (a hand-edited receipt), since a negative age is
+ * worse than a missing one.
+ */
+function elapsedSpent(input: SpentInputs): string | null {
+  const started = input.startedAt === undefined ? Number.NaN : Date.parse(input.startedAt)
+  if (!Number.isFinite(started)) {
+    return null
+  }
+  const landed = input.landedAt === undefined ? Number.NaN : Date.parse(input.landedAt)
+  const ms = (Number.isFinite(landed) ? landed : input.now) - started
+  if (ms < 0) {
+    return null
+  }
+  if (ms < 60_000) {
+    return `${Math.round(ms / 1000)}s`
+  }
+  const minutes = Math.round(ms / 60_000)
+  return minutes < 120 ? `${minutes} min` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`
+}
+
+/**
+ * Collapse a green row to the count that sizes its universe; a failing row
+ * comes back untouched, since red is where a row expands to name its offender.
+ *
+ * `done-when` collapses to its bare word (the Summary above is its evidence),
+ * `decisions` to the tags the model listed, and `constraints` to the number
+ * declared in intent.md, which the CLI counts rather than trusting the model's
+ * arithmetic. The measured rows arrive collapsed already.
+ */
+function collapseRow(name: RecapRowName, row: RecapRow, constraints: number): RecapRow {
+  if (row.verdict !== 'true') {
+    return row
+  }
+  switch (name) {
+    case 'done-when':
+      return { ...row, evidence: row.word }
+    case 'decisions': {
+      const tags = new Set(row.evidence.match(/\b[A-Z]\d+\b/g) ?? [])
+      return tags.size === 0 ? row : { ...row, evidence: `${tags.size} of ${tags.size} honored` }
+    }
+    case 'constraints':
+      return constraints === 0 ? row : { ...row, evidence: `${constraints} of ${constraints} honored` }
+    default:
+      return row
+  }
+}
+
+/** What the CLI measures for itself and hands the readout alongside the parsed rows. */
+export type RecapExtras = {
+  readonly diff: string | null
+  readonly spent: string | null
+  readonly constraints: number
+}
+
+/**
+ * The readout fence's inner lines: the measuring rows present, in their fixed
+ * order, then `diff` and `spent`, labels padded so every value starts at
+ * column 14. A row's `- ` items and its `→ ` pointer follow it on indented
+ * continuation lines.
+ *
+ * The step's identity is not in here: the `**Readout**:` label above the fence
+ * carries it, so it renders once. Empty when no row survived, so the caller can
+ * drop the label and the fence together rather than emit an empty instrument.
+ */
+export function recapLines(rows: Readonly<Partial<Record<RecapRowName, RecapRow>>>, extras: RecapExtras): string[] {
+  const body: string[] = []
+  for (const name of RECAP_ROW_NAMES) {
+    const row = rows[name]
+    if (row === undefined) {
+      continue
+    }
+    const shown = collapseRow(name, row, extras.constraints)
+    body.push(`${name.padEnd(13)}${shown.evidence}`)
+    for (const item of shown.items ?? []) {
+      body.push(`${RECAP_INDENT}- ${item}`)
+    }
+    if (shown.pointer !== undefined) {
+      body.push(`${RECAP_INDENT}→ ${shown.pointer}`)
+    }
+  }
+  if (extras.diff !== null) {
+    body.push(`${'diff'.padEnd(13)}${extras.diff}`)
+  }
+  if (extras.spent !== null) {
+    body.push(`${'spent'.padEnd(13)}${extras.spent}`)
+  }
+  return body
+}
+
+/**
+ * The `## Recommendation` section of `.plumbbob/detail.md`: the one or two
  * plain sentences a decision turn ends on, or null when the model wrote none.
  * `handoff` emits it after the card, unfenced; the eye lands on the last text,
  * and the last text should say which move the model would take.
@@ -638,7 +820,7 @@ export function recapLines(
  */
 export function parseRecommendation(detail: string): string | null {
   const lines = detail.split('\n')
-  const start = lines.findIndex((l) => /^##\s+recommendation\s*$/i.test(l.trim()))
+  const start = lines.findIndex((l) => /^##\s+recommendation\s*$/i.test(l.trim())) // case-insensitive: the older lowercase heading still parses
   if (start === -1) {
     return null
   }
