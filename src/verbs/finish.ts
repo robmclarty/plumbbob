@@ -7,7 +7,9 @@
 // offers the artifact, it does not wall the door. The git footprint stays
 // additive: one forward commit under the Conventional `chore(<scope>): finish`
 // subject, with the `plumbbob finish` identifier riding a marker line at the head
-// of the body so `git log --grep plumbbob` still finds it.
+// of the body so `git log --grep plumbbob` still finds it. The turn's forward
+// pointer is printed here rather than by `handoff`, the one ending handoff
+// cannot render: finish has just cleared the session it would read from.
 
 import { appendFileSync, existsSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
@@ -33,6 +35,11 @@ import {
 import { conventionalSubject, withMarker } from '../lib/commitmsg.ts'
 import { parseBuildScope } from '../lib/intent.ts'
 import { notice } from '../lib/notice.ts'
+
+// The pointer finish leaves the turn on. Every other one is `handoff`'s, but a
+// finished session has no state left to render from, and past a closed build
+// the only move is framing the next goal.
+const NEXT_UP = '**Next Up**: Nothing planned - /plumbbob:plan'
 
 /**
  * Close out the active build: report tail, final commit, control-state cleanup.
@@ -112,6 +119,9 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
       }),
     )
   }
+  // Last, under the fixed order of every ending: the verb's own line, its
+  // advisories, a blank line, then the pointer, which is the turn's last text.
+  process.stdout.write(`\n${NEXT_UP}\n\n`)
   return 0
 }
 

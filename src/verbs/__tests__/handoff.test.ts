@@ -4,7 +4,7 @@ import { join, relative } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { handoff } from '../handoff.ts'
 import { start } from '../start.ts'
-import { checkpointsPath, detailPath, intentPath, seamPath, statsPath, stepPath } from '../../lib/sidecar.ts'
+import { checkpointsPath, detailPath, intentPath, seamPath, spikePath, statsPath, stepPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
@@ -393,6 +393,36 @@ describe('handoff', () => {
     writeFileSync(checkpointsPath(dir), 'step 2 abc1234\n')
     const { code, stdout } = captureIo(() => handoff(dir, ['--driver']))
     expect(code).toBe(0)
+    expect(stdout.trim()).toBe(`**Next Up**: Step 3 of 3 - Third (model: **Sonnet**, details: \`${thirdStepPointer(dir)}\`)`)
+  })
+
+  it('points at closing the spike under --driver, with the interrupted step as the trailing clause', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(spikePath(dir), 'active\n')
+    const { code, stdout } = captureIo(() => handoff(dir, ['--driver']))
+    expect(code).toBe(0)
+    // The spike outranks the step it interrupted, so it is the move the pointer names.
+    expect(stdout.trim()).toBe('**Next Up**: Close the spike - /plumbbob:spike done, then back to step 2')
+  })
+
+  it('names closing the spike alone when one was opened at the boundary', async () => {
+    const dir = await started()
+    writeFileSync(spikePath(dir), 'active\n')
+    const { code, stdout } = captureIo(() => handoff(dir, ['--driver']))
+    expect(code).toBe(0)
+    expect(stdout.trim()).toBe('**Next Up**: Close the spike - /plumbbob:spike done') // nothing in flight to come back to
+  })
+
+  it('ends a step exit on the forward pointer with no Verdict, since nothing landed', async () => {
+    const dir = await started()
+    // What a revert, an abandon, or a `spike done` at the boundary leaves behind:
+    // a step checkpointed earlier, the STEP and SPIKE markers both gone.
+    writeFileSync(checkpointsPath(dir), 'step 2 abc1234\n')
+    writeFileSync(statsPath(dir), JSON.stringify({ '2': { redChecks: 2, reverts: 1 } })) // enough to fold a red Verdict, were one rendered
+    const { code, stdout } = captureIo(() => handoff(dir, ['--driver']))
+    expect(code).toBe(0)
+    expect(stdout).not.toContain('**Verdict**')
     expect(stdout.trim()).toBe(`**Next Up**: Step 3 of 3 - Third (model: **Sonnet**, details: \`${thirdStepPointer(dir)}\`)`)
   })
 

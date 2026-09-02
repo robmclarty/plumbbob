@@ -24,8 +24,11 @@
 //
 // Every tier's ending is emitted here, so no skill has to fake the furniture in
 // prose: `--plan` renders the plan-pause ending and `--driver` the driver
-// turn's pointer back at the open step, the two endings the session state
-// cannot tell apart from the ones above.
+// turn's pointer, the two endings the session state cannot tell apart from the
+// ones above. The driver pointer reads the phase it lands in: a spike open over
+// the step names closing the spike, a step exit (a revert, an abandon, a spike
+// closed at the boundary) finds nothing in flight and points forward, with no
+// Verdict either way, since nothing landed.
 
 import { readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
@@ -35,6 +38,7 @@ import {
   checkpointsPath,
   detailPath,
   hasSession,
+  inSpike,
   intentPath,
   readStats,
   readTurn,
@@ -147,8 +151,14 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
 
   if (rest.includes('--driver')) {
     // A driver turn interrupts a step without ending it, so its pointer aims
-    // back at the step still open; with none open the ordinary pointer stands.
-    return emit([driverNextUpLine(steps, inFlight, steps.length) ?? nextUpLine(nextUp, steps.length, where)])
+    // back at the step still open, or at the spike open over it. With neither
+    // (a step exit: a revert, an abandon, a spike closed at the boundary) the
+    // ordinary forward pointer stands, and no Verdict rides above it: nothing
+    // landed to measure.
+    const driver = inSpike(root, slug)
+      ? spikeNextUpLine(inFlight)
+      : driverNextUpLine(steps, inFlight, steps.length)
+    return emit([driver ?? nextUpLine(nextUp, steps.length, where)])
   }
 
   if (current === null) {
@@ -433,6 +443,20 @@ function driverNextUpLine(steps: ReadonlyArray<Step>, inFlight: number | null, t
   // actually holds the step: "step 9 of 3" would be worse than no count.
   const progress = open === undefined ? '' : ` of ${total}`
   return `**Next Up**: Back to step ${inFlight}${progress}${title}`
+}
+
+/**
+ * The driver pointer while a spike is open: the spike outranks the step it
+ * interrupted, so the move named is closing it and the step to come back to
+ * rides as a trailing clause.
+ *
+ * No progress count rides that clause. The count belongs to the step a pointer
+ * aims at, and this one aims at the spike; with nothing in flight (a spike
+ * opened at the boundary) the clause vanishes and the move stands alone.
+ */
+function spikeNextUpLine(inFlight: number | null): string {
+  const back = inFlight === null ? '' : `, then back to step ${inFlight}`
+  return `**Next Up**: Close the spike - /plumbbob:spike done${back}`
 }
 
 /**

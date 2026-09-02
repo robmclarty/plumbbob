@@ -553,7 +553,7 @@ a boundary or driver turn, top to bottom
    recommendation last ([D26 (reference-tracks-the-card)](#d26))
    - seam: `docs/happy-path.md`, `docs/cli-reference.md`
    - model: sonnet (reconciliation against the shipped spec)
-14. [ ] feat(notices): every relayed line states its fact through one formatter,
+14. [x] feat(notices): every relayed line states its fact through one formatter,
    **done when:** the one-liners section of `docs/presentation.md` carries
    the rules and the shapes ([D28 (fact-not-move)](#d28),
    [D29 (advisory-glyph)](#d29), [D30 (register-is-one-liners)](#d30)) and
