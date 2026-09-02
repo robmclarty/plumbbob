@@ -193,6 +193,16 @@ the detail plane (never in the default turn body)
   recommendation is the last text. Orientation and driver turns are unchanged
   (nothing is pending there).
 
+- <a id="d24"></a>**D24 (narrowing-named-not-shouted)**: a narrowed gate
+  discloses itself by naming its deselected slots, read from the summary's
+  skipped rows (checkride records `--only`/`--skip` deselections; the check
+  row renders `· without test`), and the literal `NOT the full check` phrase
+  retires from the anatomy, *because* Rob's checkride verdict rewording
+  (2026-09-01) moved every verdict to one sentence with one parenthetical,
+  and a named narrowing states the same fact without the shout. Amends
+  [D21 (verdict-in-the-row)](#d21); steps 8 and 10 write the docs to this,
+  and the AGENTS.md stanza refreshes at the next checkride release.
+
 ## Constraints
 
 - <a id="c1"></a>**C1 (no-new-deps)**: no new dependencies.
@@ -251,7 +261,7 @@ the detail plane (never in the default turn body)
    asserts each shape
    - seam: `src/verbs/handoff.ts`, `src/lib/orient.ts`, `test/handoff.test.ts`
    - model: sonnet (mechanical extension of the existing card renderer)
-7. [ ] feat(recap): handoff emits the whole CLI ending as one block,
+7. [x] feat(recap): handoff emits the whole CLI ending as one block,
    **done when:** `plumbbob handoff` computes the recap's `check` (from the last
    run), `seam` (the SEAM marker versus `git diff`), and `diff`
    (`git diff --numstat`) rows, parses the judgment rows (`done-when`,
@@ -383,6 +393,12 @@ the detail plane (never in the default turn body)
   turn's last words are the model's recommendation, relayed unfenced
   (D23 (recommendation-last), amending D5 (verdict-last)); deleted
   defer-to-follow-up. Steps 7 and 8 absorb all three; no new steps.
+
+- 2026-09-01: step-7 harvest → both parked items classed blocker, both already
+  handled in flight at Rob's direction: checkride records narrowed-run skips
+  and the check row names them (D24 (narrowing-named-not-shouted), amending
+  D21 (verdict-in-the-row)); the doc sweep is absorbed by steps 8 and 10, and
+  the AGENTS.md stanza refresh rides the checkride release. No new steps.
 
 ## Research digest
 
