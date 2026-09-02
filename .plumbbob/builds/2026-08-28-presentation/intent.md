@@ -534,7 +534,7 @@ a boundary or driver turn, top to bottom
    block, blank lines included
    - seam: `src/verbs/handoff.ts`, `src/lib/orient.ts`, `src/verbs/__tests__/handoff.test.ts`, `src/lib/__tests__/orient.test.ts`, `docs/presentation.md`
    - model: sonnet (rendering to fixed shapes; the row rule and the spec section want a careful read)
-12. [ ] feat(anatomy): render the whole turn from the detail file,
+12. [x] feat(anatomy): render the whole turn from the detail file,
    **done when:** `plumbbob handoff` reads the Summary lead (`## summary`) and
    the `## N` section titles from `.plumbbob/detail.md` and emits them as the
    turn's first block, the model's markdown passed through and the

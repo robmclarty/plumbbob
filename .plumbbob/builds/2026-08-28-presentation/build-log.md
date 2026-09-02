@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: presentation
 
-**Current step:** 12 — feat(anatomy): render the whole turn from the detail file
+**Current step:** 13 — docs(happy-path): make every illustrated block producible
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -34,7 +34,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 9. feat(handoff): label the recommendation and split the move from its
 - ☑ 10. docs(skills): relay every tier's ending from the plan and driver skills
 - ☑ 11. feat(anatomy): render the ending as labeled lines with sized readout rows
-- ☐ 12. feat(anatomy): render the whole turn from the detail file
+- ☑ 12. feat(anatomy): render the whole turn from the detail file
 - ☐ 13. docs(happy-path): make every illustrated block producible
 - ☐ 14. feat(notices): every relayed line states its fact through one formatter
 - ☐ 15. feat(handoff): point past an open spike and out of a finished session
@@ -55,6 +55,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [x] checkride verdict rewording retires the literal NOT-the-full-check phrase; sweep plumbbob's AGENTS.md stanza, verify skill, presentation spec, and summaryCheckRow suffix when the new checkride ships
 - [x] docs/cli-reference.md's handoff entry still calls the card the always-last text and omits the recap fence, inline diff, and recommendation the pause block now carries; outside step 8's seam, sweep it with the step-10 reconciliation
 - [x] plumbbob's own boundary and driver lines (checkpoint's 'step N checkpointed — sha. Back at the boundary.', park's 'parked: tag: text') do not meet the one-colon, no-dash notice register presentation.md now states; a src sweep of those strings, outside step 8's docs seam
+- [ ] the shared rate-limit example's step titles ('Add a token-bucket limiter') are not Conventional-Commit subjects, which the plan skill and D68 (conventional-subjects) mandate; upgrading them is a cross-doc sweep of happy-path.md, techniques.md, and presentation.md's worked example, so it was left out of step 13's two-file seam
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -158,3 +159,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-09-02 — step 9 checkpointed · 30c88e8cd — feat(handoff): label the recommendation and split the move from its (7m)
 - 2026-09-02 — step 10 checkpointed · 0dd5ad52e — docs(skills): relay every tier's ending from the plan and driver skills (88m)
 - 2026-09-02 — step 11 checkpointed · 3cbb72719 — feat(anatomy): render the ending as labeled lines with sized readout rows (1 drift, 38m)
+- 2026-09-02 — step 12 checkpointed · 9b8956c9c — feat(anatomy): render the whole turn from the detail file (34m)

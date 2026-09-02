@@ -22,7 +22,7 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 | `start` | `start <title> [--slug <name>] [--local] [--allow-dirty]` | scaffold `builds/<slug>/`, record baseline, open the session |
 | `status` | `status [--build <slug>] [--invoked "<args>"]` | print the orientation dashboard (or `NO ACTIVE SESSION`) |
 | `build` | `build [<n>] [--build <slug>]` | write step `n`'s seam + `STEP` (goes in-flight) |
-| `handoff` | `handoff [<n>] [--plan] [--driver] [--build <slug>]` | print the footer card (banner, next-up, your-call by tier); read-only |
+| `handoff` | `handoff [<n>] [--plan] [--driver] [--build <slug>]` | print the turn's whole CLI-rendered ending, by tier; read-only |
 | `check` | `check [--bail] [--changed] [--all] [--only a,b] [--skip a,b] [--include a,b]` | run the heavy gate; no state change |
 | `checkpoint` | `checkpoint [<n>] [--plan] [-m <msg>] [--body <<'BODY'…]` | gate on green, commit, record SHA, mark step done |
 | `revert` | `revert [--to <n>] [--build <slug>]` | `git reset --hard` to a checkpoint SHA |
@@ -111,25 +111,47 @@ paths or `dir/` grants, never globs; [**D23 (no-glob-seams)**](decisions.md#d23)
 plumbbob handoff [<n>] [--plan] [--driver] [--build <slug>]
 ```
 
-Prints the **footer card** ([the turn anatomy](presentation.md)): the CLI-owned,
-always-last-text ending of a turn, closed by a trailing blank line so nothing that follows
-can clobber it. Read-only, no state change. The step tiers are derived, not passed: a step
-in flight yields the decision-tier card (banner, next-up, and the your-call block); a landed
-step with none in flight yields the orientation-tier card (banner and next-up only); a fresh
-session with nothing measured yields the forward pointer alone. The banner is computed,
-never composed: it folds the model's recap (read from `.plumbbob/detail.md`) worst-of with
-handoff's own check measurement and the step's accrued stats. An explicit `<n>` overrides
-which step it reports on; otherwise it uses the in-flight step, else the last checkpointed
-one.
+Prints the whole CLI-rendered **ending of a turn** ([the turn anatomy](presentation.md))
+as one contiguous block, closed by a trailing blank line so nothing that follows can clobber
+it. Read-only, no state change. Every part outside the readout fence is a bold label, a
+colon, and text that wraps, with one blank line between blocks and no fence but the
+readout's own (plus the inline diff's).
+
+At a build pause it renders the turn entire, in this order:
+
+- `**Summary**:` the lead the model wrote as `.plumbbob/detail.md`'s `## Summary`
+  section, with the `(details: …)` bracket appended, then the `## <n>` section titles
+  beneath it as the numbered highlights.
+- `**Readout**:` the step and its title, then the fence: the `check` row measured from
+  `.check/summary.json`, `seam` from the SEAM marker against the work-plane diff, `diff`
+  and `spent` from `git diff --numstat`, `stats.json`, and the turn ledger, folded with
+  the three judgment rows (`done-when`, `decisions`, `constraints`) the model wrote into
+  the detail file. Green rows collapse to a count, red rows name the one offender.
+- a `diff` fence, when the change is 20 lines or fewer.
+- `**Verdict**:` the ladder rung, computed worst-of over those same rows plus the step's
+  accrued stats, naming its worst component in a trailing parenthetical.
+- `**Next Up**:` the next undone step, its progress count, and a bracket carrying the
+  step's `- model:` recommendation and where to read it in full.
+- `**Your Call**:` the moves a human actually makes at a pause, each with its outcome.
+- `**Recommendation**:` the model's own call, read from the detail file's
+  `## Recommendation` section behind a CLI-prepended label. It is the ending's last text,
+  Your Call being its last rendered block.
+
+The tiers below it are derived, not passed. A landed step with none in flight yields the
+orientation-tier ending (the Verdict and Next Up only: no Your Call, no recommendation),
+and a fresh session with nothing measured yields the forward pointer alone. An explicit
+`<n>` overrides which step it reports on; otherwise it uses the in-flight step, else the
+last checkpointed one.
 
 Two endings no session state can tell apart from those take a flag, so every tier's ending
-is emitted here rather than faked in a skill's prose: `--plan` renders the plan-pause card
-(no banner, since nothing is measured yet, and the your-call block carries the two plan
-moves), and `--driver` renders a driver turn's pointer, which aims back at the step still
-open instead of forward at the next one. Owning the card here rather than as prose in the
-build skill keeps the skill from drifting out of sync with `status`, which renders the same
-next-step detail. Refuses (exit 1) with no session, or with `--plan` and `--driver`
-together.
+is emitted here rather than faked in a skill's prose: `--plan` renders the plan-pause
+ending (a leading `---` rule, since the model's framed plan precedes it, then Next Up, a
+your-call block carrying the two plan moves, and the recommendation; nothing is measured
+yet, so no Verdict), and `--driver` renders a driver turn's pointer alone, which aims back
+at the step still open instead of forward at the next one. Owning every ending here rather
+than as prose in the skills keeps them from drifting out of sync with `status`, which
+renders the same next-step detail. Refuses (exit 1) with no session, or with `--plan` and
+`--driver` together.
 
 ### check
 
@@ -422,6 +444,7 @@ stays git-excluded; a session is live iff `STATE` is present.
 ```text
 .plumbbob/
   STATE                    # untracked — session sentinel (presence = live) AND the active-build cursor (its content — D28 (state-cursor))
+  detail.md                # untracked — the in-flight step's full detail; the wire handoff renders a turn from, folded into the commit body and truncated at checkpoint — D9 (latest-detail-file)
   settings.json            # tracked   — project defaults: {"check": "…", "auto": false}
   settings.local.json      # untracked — personal overlay only: {"auto": true, …} (no cursor — that lives in STATE)
   agents/                  # tracked   — optional: user-authored agents, one dir per agent (D41 (agent-resolution); see agents.md)
@@ -432,6 +455,7 @@ stays git-excluded; a session is live iff `STATE` is present.
       build-log.md         # tracked   — live ledger + park list
       checkpoints          # tracked   — "baseline <sha>", "plan <sha>", "step N <sha>"
       report.md            # tracked   — written at finish
+      stats.json           # tracked   — per-step receipts (stamps, red runs, reverts) the spent row reads
       harness.json         # tracked   — optional: per-step agent slot bindings (D42 (harness-bindings); see agents.md)
       STEP                 # untracked — the in-flight step number (its presence is the BUILD phase)
       SEAM                 # untracked — the in-flight step's declared paths (awareness, not a lock)
