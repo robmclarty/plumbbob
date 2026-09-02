@@ -57,6 +57,14 @@ the detail plane (never in the default turn body)
                                                  show, never from recall
 ```
 
+```
+a boundary or driver turn, top to bottom
+  [cli]   the verb's line: plumbbob: <fact> (<detail>)    <- one colon, no move
+  [cli]   advisories, if any: plumbbob: <fact> ⚠ (<detail>)
+            → <remedy>
+  [cli]   the card, from handoff: banner (boundary only) + Next Up
+```
+
 ## Decisions
 
 - <a id="d1"></a>**D1 (consistency-from-ownership)**: whatever can be
@@ -211,6 +219,80 @@ the detail plane (never in the default turn body)
   and its reason into one breathless clause (Rob's call, 2026-09-01). The
   label is the one bold token the turn body spends. Amends
   [D23 (recommendation-last)](#d23).
+- <a id="d26"></a>**D26 (reference-tracks-the-card)**: the `handoff` entry in
+  `docs/cli-reference.md` describes the block the verb emits today (the recap
+  fence, the inline diff when the change is 20 lines or fewer, the card, and
+  the labeled recommendation as the last text), *because* a reference that
+  still calls the card the always-last text contradicts
+  [D23 (recommendation-last)](#d23) and [D25 (labeled-recommendation)](#d25)
+  on the one page a reader opens to learn the verb (Rob's call, 2026-09-01).
+  Step 11 carries the reference in its seam.
+- <a id="d27"></a>**D27 (own-lines-one-colon)**: plumbbob's own boundary and
+  driver lines meet the notice register the spec states (one sentence, one
+  colon, detail in a single trailing parenthetical, no dash), *because* a
+  spec that names its own violation as a parked sweep cannot ship with the
+  sweep undone, and the eval tier reads those exact turn shapes, so the
+  strings settle before it runs (Rob's call, 2026-09-01). Lands as step 12,
+  ahead of the eval tier.
+- <a id="d28"></a>**D28 (fact-not-move)**: a verb's own line states its fact
+  and never the move, `plumbbob: <subject> <state> (<detail>)`, the one colon
+  spent on the prefix (or on `parked:`), the detail one trailing parenthetical
+  that degrades by count the way recap rows do, and the pointer left to the
+  card's Next Up line that follows every ending, *because* each of those
+  lines predates handoff and carried its own pointer sentence (`Back at the
+  boundary.`, `\`status\` to orient.`, `then run \`plumbbob spike done\``),
+  a second seam in a turn that now has one
+  ([D20 (one-seam-turn)](#d20)). In scope is every line a skill relays:
+  the transitions (checkpoint, plan commit, revert, abandon, spike open and
+  close, use, start, finish), the captures (park, the agent's parked lines,
+  the spike report), and the driver verbs' refusals, since the driver skills
+  relay a refusal in the same slot; plumbing errors in cli-core, init, and
+  the gate internals are never relayed and keep D78 (em-dash-ban)'s runtime
+  exemption. The `plumbbob:` prefix stays: it names the speaker when
+  checkride's, git's, and plumbbob's output share one Bash result, it is what
+  scrollback is grepped for, and 121 strings speak it. The park tag moves to
+  the tail, `parked: <text> (tag)`, so the line has one colon and the ledger
+  line matches. Amends [D27 (own-lines-one-colon)](#d27).
+- <a id="d29"></a>**D29 (advisory-glyph)**: an advisory is one line,
+  `plumbbob: <fact> ⚠ (<detail>)`, printed after its primary line, one per
+  line, with a remedy, when one is needed, as a single indented `→` line
+  beneath it; the `heads-up —` and `note —` labels retire, and the order of
+  every ending is fixed as primary line, advisories, blank line, card,
+  *because* a chained label is the machine noise
+  [D27 (own-lines-one-colon)](#d27) exists to kill, the glyph table already
+  gives `⚠` to advisories and `→` to what happens next (the shape recover's
+  fixes use), and today checkpoint prints its seam heads-up before its own
+  boundary line while start prints its after, so the relay's order is an
+  accident of the code.
+- <a id="d30"></a>**D30 (register-is-one-liners)**: the notice register
+  governs one-liners; a readout (the dashboard, recover's check lines,
+  spike's worktree paths under their notice) keeps its leading glyphs and
+  its list, the sentinel headers (`NO ACTIVE SESSION`, `NO ACTIVE BUILD`)
+  stay as they are, and the gate verdict the register cites is checkride's
+  Stop-hook notice, so `plumbbob check`'s console trailer stays frozen and
+  unrelayed as the check-row section already says, *because* the spec named
+  three kinds of line without saying which output kind it meant, and the
+  first sweep read the check trailer as a violation the spec had already
+  excused.
+- <a id="d31"></a>**D31 (one-notice-formatter)**: every relayed line is
+  built through one formatter in `src/lib/notice.ts` (the fact, its detail
+  list, an advisory flag), the verb tests assert through the same fixtures,
+  and the eval contracts match a shape rather than a string, *because* Rob
+  expects the shape to move again once it has been lived with, and a shape
+  that lives in one renderer and one spec section is one edit to move where
+  seventeen hand-written strings are a sweep every time.
+- <a id="d32"></a>**D32 (handoff-owns-every-pointer)**: `plumbbob handoff`
+  renders the pointer for every ending, and learns the two phases it lacks:
+  with a spike open the driver pointer reads `Next Up: Close the spike -
+  /plumbbob:spike done, then back to step N`, a step exit (revert, abandon,
+  spike done at the boundary) ends on the forward pointer with no banner
+  since nothing landed, and `plumbbob finish` prints `Next Up: Nothing
+  planned - /plumbbob:plan` itself after its line, since it clears the
+  session handoff would read, *because* three pointer vocabularies coexist
+  today (the dashboard's move-shaped `next →`, the card's step-shaped `Next
+  Up:`, and each verb's freehand tail) and only the dashboard's knows a
+  spike or an empty plan; one pointer per turn needs the card's to know
+  what the dashboard's does. Extends [D17 (whole-anatomy-emitted)](#d17).
 
 ## Constraints
 
@@ -303,7 +385,7 @@ the detail plane (never in the default turn body)
    [D19 (cli-does-what-it-can)](#d19), [D20 (one-seam-turn)](#d20))
    - seam: `docs/presentation.md`, `skills/build/SKILL.md`, `skills/verify/SKILL.md`
    - model: fable (holistic editorial judgment on the whole turn)
-9. [ ] feat(handoff): label the recommendation and split the move from its
+9. [x] feat(handoff): label the recommendation and split the move from its
    reason, **done when:** `plumbbob handoff` emits the recommendation as
    `**Recommendation**: <move>. <Reason>.` (the label CLI-prepended,
    [D25 (labeled-recommendation)](#d25)), unit tests assert the label on the
@@ -321,10 +403,35 @@ the detail plane (never in the default turn body)
    - model: sonnet (mechanical wiring once step 6 emits the endings)
 11. [ ] docs(happy-path): make every illustrated block producible,
    **done when:** each rendered block in `docs/happy-path.md` matches real CLI
-   output or the skill's exact template
-   - seam: `docs/happy-path.md`
+   output or the skill's exact template, and the `handoff` entry in
+   `docs/cli-reference.md` describes the emitted block, the labeled
+   recommendation last ([D26 (reference-tracks-the-card)](#d26))
+   - seam: `docs/happy-path.md`, `docs/cli-reference.md`
    - model: sonnet (reconciliation against the shipped spec)
-12. [ ] test(evals): run the eval tier against the new anatomy, **done when:**
+12. [ ] feat(notices): every relayed line states its fact through one formatter,
+   **done when:** the one-liners section of `docs/presentation.md` carries
+   the rules and the shapes ([D28 (fact-not-move)](#d28),
+   [D29 (advisory-glyph)](#d29), [D30 (register-is-one-liners)](#d30)) and
+   drops its parked-sweep and keep-their-em-dashes sentences; a `notice`
+   formatter in `src/lib/notice.ts` renders the line and the advisory
+   variant, and every transition, capture, advisory, and driver refusal
+   line in checkpoint, park, build, revert, abandon, spike, use, start,
+   finish, and agent is built through it
+   ([D31 (one-notice-formatter)](#d31)); advisories print after their
+   primary line; the park skill composes `<text> (tag)`; the verb tests
+   assert the new strings through the formatter's fixtures
+   - seam: `docs/presentation.md`, `src/lib/notice.ts`, `src/lib/__tests__/notice.test.ts`, `src/verbs/checkpoint.ts`, `src/verbs/park.ts`, `src/verbs/build.ts`, `src/verbs/revert.ts`, `src/verbs/abandon.ts`, `src/verbs/spike.ts`, `src/verbs/use.ts`, `src/verbs/start.ts`, `src/verbs/finish.ts`, `src/verbs/agent.ts`, `src/verbs/__tests__/`, `skills/park/SKILL.md`
+   - model: sonnet (mechanical once the decisions fix the shapes; the spec section wants a careful read)
+13. [ ] feat(handoff): point past an open spike and out of a finished session,
+   **done when:** `plumbbob handoff --driver` renders `Next Up: Close the
+   spike - /plumbbob:spike done, then back to step N` while a spike is open,
+   a step exit ends on the forward pointer with no banner, and `plumbbob
+   finish` prints `Next Up: Nothing planned - /plumbbob:plan` after its
+   line ([D32 (handoff-owns-every-pointer)](#d32)); the finish skill relays
+   both lines; unit tests assert each pointer
+   - seam: `src/verbs/handoff.ts`, `src/verbs/finish.ts`, `src/verbs/__tests__/handoff.test.ts`, `src/verbs/__tests__/finish.test.ts`, `skills/finish/SKILL.md`
+   - model: sonnet (two pointer branches and one printed line, each with a test)
+14. [ ] test(evals): run the eval tier against the new anatomy, **done when:**
    the c-series contracts read the new turn shapes, the driver runs green,
    and a fresh receipt lands in `docs/evals/`
    - seam: `test/evals/contracts/`, `test/evals/helpers/`, `docs/evals/`
@@ -362,6 +469,18 @@ the detail plane (never in the default turn body)
 - <a id="q11"></a>**Q11 (expand-addressing)**: *resolved:* 2026-08-28, bare
   numbers bind to the latest card
   ([D16 (latest-card-addressing)](#d16)).
+- <a id="q12"></a>**Q12 (stray-in-banner)**: a checkpoint-time seam stray
+  already bumps a stat; should it fold into the boundary banner's third rung
+  instead of printing an advisory, so one stray is one fact
+  ([D19 (cli-does-what-it-can)](#d19))? Open until the shape has been lived
+  with.
+- <a id="q13"></a>**Q13 (two-pointer-vocabularies)**: the dashboard's
+  `next →` line and the card's `Next Up:` say one thing in two shapes;
+  leave both, or converge? Not a step-12 item; the next place the format
+  may feel thin.
+- <a id="q14"></a>**Q14 (boundary-word-home)**: once the verb lines drop
+  `back at the boundary`, the card's missing your-call block is the only
+  boundary signal; is that legible, or does the state word need a home?
 
 ## Verdicts
 
@@ -422,6 +541,22 @@ the detail plane (never in the default turn body)
   capitalized after it (D25 (labeled-recommendation), amending
   D23 (recommendation-last)). Folded in as a new step 9; the plan grew to 12
   steps and the later steps shifted by one.
+- 2026-09-01: step-9 harvest → both parked items classed blocker (Rob's
+  calls). The `handoff` reference entry tracks the emitted block
+  (D26 (reference-tracks-the-card)); step 11's seam widens to carry it, no
+  new step. plumbbob's own boundary and driver lines meet the notice register
+  (D27 (own-lines-one-colon)); folded in as a new step 12 ahead of the eval
+  tier, so the plan grew to 13 steps and the eval step shifted to 13.
+- 2026-09-01: step-9 boundary, notice design → the seventeen relayed lines
+  that carry their own pointer are the second seam D20 (one-seam-turn) killed
+  at the pause; each shrinks to its fact (D28 (fact-not-move)), advisories
+  take the `⚠` shape after their primary (D29 (advisory-glyph)), the
+  register is read as one-liners only (D30 (register-is-one-liners)), one
+  formatter renders them all (D31 (one-notice-formatter)), and handoff's
+  pointer learns the spike and the finished session
+  (D32 (handoff-owns-every-pointer)). The `plumbbob:` prefix stays. Step 12
+  re-cut as the sweep, a new step 13 for the pointer, the eval step to 14;
+  Q12 to Q14 opened for the try-it-out phase.
 
 ## Research digest
 

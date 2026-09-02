@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: presentation
 
-**Current step:** 9 — feat(handoff): label the recommendation and split the move from its
+**Current step:** none (at the boundary)
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -31,7 +31,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 6. feat(handoff): emit the plan-pause card, driver next-up, and trailing
 - ☑ 7. feat(recap): handoff emits the whole CLI ending as one block
 - ☑ 8. docs(anatomy): make the whole turn the anatomy and nothing else
-- ☐ 9. feat(handoff): label the recommendation and split the move from its
+- ☑ 9. feat(handoff): label the recommendation and split the move from its
 - ☐ 10. docs(skills): relay every tier's ending from the plan and driver skills
 - ☐ 11. docs(happy-path): make every illustrated block producible
 - ☐ 12. test(evals): run the eval tier against the new anatomy
@@ -49,8 +49,8 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [x] close the pause with 1 or 2 sentences of recommendation / suggested next action, model-fed into handoff and rendered as plain text after the card, not inside a fence (revisits D5 verdict-last)
 - [x] checkride summary.json marks nothing on a narrowed run; handoff's check row can only say NOT-the-full-check when skips are recorded
 - [x] checkride verdict rewording retires the literal NOT-the-full-check phrase; sweep plumbbob's AGENTS.md stanza, verify skill, presentation spec, and summaryCheckRow suffix when the new checkride ships
-- [ ] docs/cli-reference.md's handoff entry still calls the card the always-last text and omits the recap fence, inline diff, and recommendation the pause block now carries; outside step 8's seam, sweep it with the step-10 reconciliation
-- [ ] plumbbob's own boundary and driver lines (checkpoint's 'step N checkpointed — sha. Back at the boundary.', park's 'parked: tag: text') do not meet the one-colon, no-dash notice register presentation.md now states; a src sweep of those strings, outside step 8's docs seam
+- [x] docs/cli-reference.md's handoff entry still calls the card the always-last text and omits the recap fence, inline diff, and recommendation the pause block now carries; outside step 8's seam, sweep it with the step-10 reconciliation
+- [x] plumbbob's own boundary and driver lines (checkpoint's 'step N checkpointed — sha. Back at the boundary.', park's 'parked: tag: text') do not meet the one-colon, no-dash notice register presentation.md now states; a src sweep of those strings, outside step 8's docs seam
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -111,6 +111,28 @@ already handled in flight at his direction):
   release-time chore: it regenerates from `checkride agent-setup` at the next
   refresh after the checkride release. No new steps.
 
+Harvest results at the step-9 boundary (both parked during step 8, both Rob's
+calls, both blocker):
+
+- **blocker**: the `handoff` entry in `docs/cli-reference.md` still calls the
+  card the always-last text and omits the recap fence, the inline diff, and
+  the labeled recommendation, so the reference contradicts the handoff the
+  build ships. A seam the plan missed, not a different path. Folded into
+  intent as D26 (reference-tracks-the-card); step 11's seam widens to carry
+  the reference, since that step already reconciles a doc against real CLI
+  output. No new step.
+- **blocker**: plumbbob's own boundary and driver lines (`checkpointed — <sha>.
+  Back at the boundary.`, `parked: <tag>: <text>`, and build's no-undone-step
+  refusal) break the one-colon notice register the spec states, and the spec
+  itself calls them a parked sweep, not an exemption. The sweep has to land
+  before the eval tier reads those turn shapes. Folded into intent as
+  D27 (own-lines-one-colon) and a new step 12; the eval step shifts to 13.
+- Fresh design at this boundary (not a parked item): the sweep's real
+  perimeter is every relayed line, seventeen of them, and each carries its
+  own pointer sentence. Recorded as D28 (fact-not-move) through
+  D32 (handoff-owns-every-pointer); step 12 re-cut as the sweep, step 13
+  added for handoff's pointer, the eval step to 14.
+
 ## Log
 
 *(The build's history, oldest first. `plumbbob checkpoint` appends a dated line here
@@ -129,3 +151,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-09-02 — step 6 checkpointed · 23768b624 — feat(handoff): emit the plan-pause card, driver next-up, and trailing (1 drift, 16m)
 - 2026-09-02 — step 7 checkpointed · 558737199 — feat(recap): handoff emits the whole CLI ending as one block (1 drift, 94m)
 - 2026-09-02 — step 8 checkpointed · 2cc7a18bf — docs(anatomy): make the whole turn the anatomy and nothing else (16m)
+- 2026-09-02 — step 9 checkpointed · 30c88e8cd — feat(handoff): label the recommendation and split the move from its (7m)
