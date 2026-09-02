@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: presentation
 
-**Current step:** 8 — docs(anatomy): make the whole turn the anatomy and nothing else
+**Current step:** 9 — feat(handoff): label the recommendation and split the move from its
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -30,10 +30,11 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 5. docs(skills): align every skill output spec to the anatomy
 - ☑ 6. feat(handoff): emit the plan-pause card, driver next-up, and trailing
 - ☑ 7. feat(recap): handoff emits the whole CLI ending as one block
-- ☐ 8. docs(anatomy): make the whole turn the anatomy and nothing else
-- ☐ 9. docs(skills): relay every tier's ending from the plan and driver skills
-- ☐ 10. docs(happy-path): make every illustrated block producible
-- ☐ 11. test(evals): run the eval tier against the new anatomy
+- ☑ 8. docs(anatomy): make the whole turn the anatomy and nothing else
+- ☐ 9. feat(handoff): label the recommendation and split the move from its
+- ☐ 10. docs(skills): relay every tier's ending from the plan and driver skills
+- ☐ 11. docs(happy-path): make every illustrated block producible
+- ☐ 12. test(evals): run the eval tier against the new anatomy
 
 ## Park list
 
@@ -127,3 +128,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-09-01 — boundary decisions (Rob's calls): whole anatomy in this build; CLI does what it can (D19 (cli-does-what-it-can): check/seam/diff rows move to the CLI); one seam per turn (D20 (one-seam-turn): handoff emits the whole ending, the model relays once). Plan grew to 11 steps.
 - 2026-09-02 — step 6 checkpointed · 23768b624 — feat(handoff): emit the plan-pause card, driver next-up, and trailing (1 drift, 16m)
 - 2026-09-02 — step 7 checkpointed · 558737199 — feat(recap): handoff emits the whole CLI ending as one block (1 drift, 94m)
+- 2026-09-02 — step 8 checkpointed · 2cc7a18bf — docs(anatomy): make the whole turn the anatomy and nothing else (16m)

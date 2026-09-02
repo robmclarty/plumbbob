@@ -92,7 +92,7 @@ this skill verifies it the same way: **it reads the diff, not the author**
 
    ## recommendation
 
-   <one or two plain sentences: the move you would take, and why>
+   <The move.> <The reason, one or two sentences.>
    ```
 
    The three rows under the header rule are yours, and only those three; `check`, `seam`,
@@ -105,8 +105,10 @@ this skill verifies it the same way: **it reads the diff, not the author**
    (`constraints  all honored`). The value after the label fits in 58 characters so the
    whole row stays inside the fence's 72 columns: one short clause, with the full story in
    the numbered section behind the matching highlight. The recommendation is the last
-   section: one or two plain sentences naming the move you would take and why, written as
-   flowing text (handoff unwraps it to the renderer's width; never hard-wrap it). This is
+   section: the move you would take as its own sentence, closed by a period, then the
+   reason as a capitalized sentence or two, written as flowing text (handoff unwraps it
+   to the renderer's width; never hard-wrap it). handoff prepends the bold
+   `**Recommendation**:` label; you never type it. This is
    the **one** file `/plumbbob:verify` writes, and it is turn presentation, never the diff
    under review; the author-blind contract below still holds. `checkpoint` folds this file
    into the commit body and then truncates it (the detail plane in the

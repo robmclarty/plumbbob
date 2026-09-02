@@ -332,20 +332,20 @@ describe('handoff', () => {
     expect(stdout).toContain('constraints  all honored')
   })
 
-  it('assembles the recap fence, the card, and the recommendation as one block, in that order', async () => {
+  it('assembles the recap fence, the card, and the labeled recommendation as one block, in that order', async () => {
     const dir = await started()
     writeFileSync(stepPath(dir), '2\n')
     writeFileSync(seamPath(dir), 'README.md\n')
     writeFileSync(join(dir, 'README.md'), '# fixture\nchanged\n')
-    writeFileSync(detailPath(dir), `${GREEN_RECAP}\n## recommendation\n\nApprove it; the seam held and the gate is green.\n`)
+    writeFileSync(detailPath(dir), `${GREEN_RECAP}\n## recommendation\n\nApprove it. The seam held and the gate is green.\n`)
     writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
     expect(stdout.startsWith('```text\n── recap · step 2 of 3 ──')).toBe(true)
     expect(stdout.indexOf('── recap')).toBeLessThan(stdout.indexOf('● Plumb'))
     expect(stdout.indexOf('Your Call:')).toBeLessThan(stdout.indexOf('Approve it'))
-    expect(stdout).toContain('```\n\nApprove it; the seam held and the gate is green.') // after the card fence, unfenced
-    expect(stdout.trimEnd().endsWith('Approve it; the seam held and the gate is green.')).toBe(true)
+    expect(stdout).toContain('```\n\n**Recommendation**: Approve it. The seam held and the gate is green.') // after the card fence, unfenced, labeled
+    expect(stdout.trimEnd().endsWith('Approve it. The seam held and the gate is green.')).toBe(true)
     expect(stdout.endsWith('\n\n')).toBe(true)
   })
 
@@ -355,7 +355,16 @@ describe('handoff', () => {
     writeFileSync(detailPath(dir), `${GREEN_RECAP}\n## recommendation\n\nApprove it: the gate is green\nand the seam held,\nso nothing blocks the land.\n`)
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('Approve it: the gate is green and the seam held, so nothing blocks the land.')
+    expect(stdout).toContain('**Recommendation**: Approve it: the gate is green and the seam held, so nothing blocks the land.')
+  })
+
+  it('labels the recommendation on the plan pause too, as the ending of a decision turn', async () => {
+    const dir = await started()
+    writeFileSync(detailPath(dir), '## recommendation\n\nDecide it. Every open question is closed.\n')
+    const { code, stdout } = captureIo(() => handoff(dir, ['--plan']))
+    expect(code).toBe(0)
+    expect(stdout).toContain('Your Call:')
+    expect(stdout.trimEnd().endsWith('**Recommendation**: Decide it. Every open question is closed.')).toBe(true)
   })
 
   it('refuses --plan and --driver together, since they name different tiers', async () => {

@@ -202,6 +202,15 @@ the detail plane (never in the default turn body)
   and a named narrowing states the same fact without the shout. Amends
   [D21 (verdict-in-the-row)](#d21); steps 8 and 10 write the docs to this,
   and the AGENTS.md stanza refreshes at the next checkride release.
+- <a id="d25"></a>**D25 (labeled-recommendation)**: the recommendation opens
+  with a bold `**Recommendation**:` label that `plumbbob handoff` prepends, then
+  the move as its own sentence closed by a period, then the reason as a
+  capitalized sentence (`**Recommendation**: Approve it. The gate is green
+  and the seam held.`), *because* the turn's last text should announce what
+  it is before the eye reads it, and a colon after the move fused the call
+  and its reason into one breathless clause (Rob's call, 2026-09-01). The
+  label is the one bold token the turn body spends. Amends
+  [D23 (recommendation-last)](#d23).
 
 ## Constraints
 
@@ -276,7 +285,7 @@ the detail plane (never in the default turn body)
    computed row, the assembled block, and the recommendation
    - seam: `src/lib/orient.ts`, `src/verbs/handoff.ts`, `src/verbs/check.ts`, `src/lib/git.ts`, `test/handoff.test.ts`
    - model: sonnet (git numstat and the seam diff are mechanical; the recap-assembly seam wants a careful read)
-8. [ ] docs(anatomy): make the whole turn the anatomy and nothing else,
+8. [x] docs(anatomy): make the whole turn the anatomy and nothing else,
    **done when:** `docs/presentation.md` and the build/verify skills spec the
    two-region turn: the model authors headline, highlights (a judgment flag is
    a highlight with its full story in a detail section, never a prose block),
@@ -294,19 +303,28 @@ the detail plane (never in the default turn body)
    [D19 (cli-does-what-it-can)](#d19), [D20 (one-seam-turn)](#d20))
    - seam: `docs/presentation.md`, `skills/build/SKILL.md`, `skills/verify/SKILL.md`
    - model: fable (holistic editorial judgment on the whole turn)
-9. [ ] docs(skills): relay every tier's ending from the plan and driver skills,
+9. [ ] feat(handoff): label the recommendation and split the move from its
+   reason, **done when:** `plumbbob handoff` emits the recommendation as
+   `**Recommendation**: <move>. <Reason>.` (the label CLI-prepended,
+   [D25 (labeled-recommendation)](#d25)), unit tests assert the label on the
+   pause and plan-pause endings, and `docs/presentation.md` and the
+   build/verify skills fix the move-then-reason shape in the template and the
+   worked example
+   - seam: `src/verbs/handoff.ts`, `src/verbs/__tests__/handoff.test.ts`, `docs/presentation.md`, `skills/build/SKILL.md`, `skills/verify/SKILL.md`
+   - model: sonnet (a one-line prefix, two test assertions, and template wording)
+10. [ ] docs(skills): relay every tier's ending from the plan and driver skills,
    **done when:** the plan skill relays the plan-pause card and the driver
    skills (park, spike, revert, recover, abandon) relay the driver next-up line
    from `plumbbob handoff` ([D17 (whole-anatomy-emitted)](#d17)), each ending
    sitting in its [D15 (three-tier-anatomy)](#d15) tier
    - seam: `skills/plan/SKILL.md`, `skills/park/SKILL.md`, `skills/spike/SKILL.md`, `skills/revert/SKILL.md`, `skills/recover/SKILL.md`, `skills/abandon/SKILL.md`
    - model: sonnet (mechanical wiring once step 6 emits the endings)
-10. [ ] docs(happy-path): make every illustrated block producible,
+11. [ ] docs(happy-path): make every illustrated block producible,
    **done when:** each rendered block in `docs/happy-path.md` matches real CLI
    output or the skill's exact template
    - seam: `docs/happy-path.md`
    - model: sonnet (reconciliation against the shipped spec)
-11. [ ] test(evals): run the eval tier against the new anatomy, **done when:**
+12. [ ] test(evals): run the eval tier against the new anatomy, **done when:**
    the c-series contracts read the new turn shapes, the driver runs green,
    and a fresh receipt lands in `docs/evals/`
    - seam: `test/evals/contracts/`, `test/evals/helpers/`, `docs/evals/`
@@ -399,6 +417,11 @@ the detail plane (never in the default turn body)
   and the check row names them (D24 (narrowing-named-not-shouted), amending
   D21 (verdict-in-the-row)); the doc sweep is absorbed by steps 8 and 10, and
   the AGENTS.md stanza refresh rides the checkride release. No new steps.
+- 2026-09-01: step-8 boundary → Rob's call on the recommendation's shape: a
+  bold `**Recommendation**:` label, the move as its own sentence, the reason
+  capitalized after it (D25 (labeled-recommendation), amending
+  D23 (recommendation-last)). Folded in as a new step 9; the plan grew to 12
+  steps and the later steps shifted by one.
 
 ## Research digest
 

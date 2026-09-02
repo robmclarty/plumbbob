@@ -155,7 +155,7 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
 
    ## recommendation
 
-   <one or two plain sentences: the move you would take, and why>
+   <The move.> <The reason, one or two sentences.>
    ```
 
    The three rows under the header rule are yours, and only those three; `check`, `seam`,
@@ -166,9 +166,11 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    constraint carries its slug (`C1 (no-new-deps)`, never a bare `C1`); a row that cannot
    apply vanishes. The value after the label fits in 58 characters so the whole row stays
    inside the fence's 72 columns: one short clause, with the full story in the numbered
-   section behind the matching highlight. The recommendation is the last section: one or
-   two plain sentences naming the move you would take and why, written as flowing text
-   (handoff unwraps it to the renderer's width; never hard-wrap it). `checkpoint` folds this
+   section behind the matching highlight. The recommendation is the last section: the
+   move you would take as its own sentence, closed by a period, then the reason as a
+   capitalized sentence or two, written as flowing text (handoff unwraps it to the
+   renderer's width; never hard-wrap it). handoff prepends the bold `**Recommendation**:`
+   label; you never type it. `checkpoint` folds this
    file into the commit body and then truncates it, so the detail lands in the durable
    commit rather than piling up on disk.
 

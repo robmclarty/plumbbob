@@ -221,12 +221,18 @@ function fence(lang: string, lines: ReadonlyArray<string>): string[] {
   return [`${rail}${lang}`, ...lines, rail]
 }
 
+// The recommendation's label (docs/presentation.md): the one bold token the
+// turn body spends, prepended here so the model never types it.
+const RECOMMENDATION_LABEL = '**Recommendation**: '
+
 /**
  * Append the recommendation beneath a block, blank-line separated, when the
- * model wrote one; the ending's last text is then the model's own call.
+ * model wrote one; the ending's last text is then the model's own call. The
+ * label is the CLI's: it announces what the last text is before the eye
+ * reads it, and a label the model typed would be one more line to drift.
  */
 function withRecommendation(lines: ReadonlyArray<string>, recommendation: string | null): string[] {
-  return recommendation === null ? [...lines] : [...lines, '', recommendation]
+  return recommendation === null ? [...lines] : [...lines, '', `${RECOMMENDATION_LABEL}${recommendation}`]
 }
 
 /**

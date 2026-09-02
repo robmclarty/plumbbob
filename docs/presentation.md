@@ -74,7 +74,7 @@ Your Call:
   revert      → I wind the work back to the last checkpoint
 ```
 
-Approve it: the gate is green, the seam held, and the one call the step made (misses count, successes do not reset) is what the plan already decided. Step 3 is mechanical; Sonnet is enough.
+**Recommendation**: Approve it. The gate is green, the seam held, and the one call the step made (misses count, successes do not reset) is what the plan already decided; step 3 is mechanical, and Sonnet is enough.
 ````
 
 Alignment survives only inside a fence in the renderers this has to read well
@@ -342,13 +342,25 @@ halt reason.
 
 ## The recommendation
 
-A decision turn's last words are the model's recommendation: one or two
-plain sentences naming the move it would take and why. The your-call block
-teaches the moves; a pause that leaves the human deciding unassisted is a
-defect, not a missing nicety. The model writes it into the detail file as a
-`## recommendation` section, handoff emits it after the card, and it is
-relayed as plain prose, never fenced, so the card stays the last rendered
-block and the recommendation is the last text.
+A decision turn's last words are the model's recommendation: the move it
+would take, then why. The your-call block teaches the moves; a pause that
+leaves the human deciding unassisted is a defect, not a missing nicety. The
+model writes it into the detail file as a `## recommendation` section,
+handoff emits it after the card behind a bold label, and it is relayed as
+plain prose, never fenced, so the card stays the last rendered block and the
+recommendation is the last text. The shape is exact:
+
+```text
+**Recommendation**: <The move.> <The reason, one or two sentences.>
+```
+
+The label is the CLI's; the model never types it. The move is a sentence of
+its own, closed by a period, and the reason opens with a capital letter: a
+colon after the move fused the call and its reason into one breathless
+clause, and the label announces what the last text is before the eye reads
+it. Written into the detail file, that is `Approve it. The gate is green and
+the seam held.`; the turn shows it as
+`**Recommendation**: Approve it. The gate is green and the seam held.`
 
 It is flowing text. handoff joins each paragraph's lines into one on the way
 out, so the recommendation wraps at the renderer's width however the detail
@@ -443,10 +455,10 @@ the sole channel. At line start, the glyph is followed by a space.
 | `→` | what happens next | `next →`, the your-call outcomes |
 | `──` | (rule) | the recap header |
 
-Hierarchy comes from position, shape, and whitespace. The anatomy spends no
-bold and no italics in the turn body; the budget is roughly one bold token
-per line before bold stops meaning anything, and spending zero is the one
-allocation nobody has to police.
+Hierarchy comes from position, shape, and whitespace. The anatomy spends one
+bold token in the turn body, the recommendation's label, and no italics; the
+budget is roughly one bold token per line before bold stops meaning anything,
+and a single fixed allocation is the next best thing to zero for policing.
 
 ## The detail plane
 
@@ -476,7 +488,7 @@ constraints  all honored
 
 ## recommendation
 
-<one or two plain sentences: the move the model would take, and why>
+<The move.> <The reason, one or two sentences.>
 ```
 
 The model writes it fresh before every pause: the three judgment rows under
