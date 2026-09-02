@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: presentation
 
-**Current step:** 10 — docs(skills): relay every tier's ending from the plan and driver skills
+**Current step:** none (at the boundary)
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -32,7 +32,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 7. feat(recap): handoff emits the whole CLI ending as one block
 - ☑ 8. docs(anatomy): make the whole turn the anatomy and nothing else
 - ☑ 9. feat(handoff): label the recommendation and split the move from its
-- ☐ 10. docs(skills): relay every tier's ending from the plan and driver skills
+- ☑ 10. docs(skills): relay every tier's ending from the plan and driver skills
 - ☐ 11. docs(happy-path): make every illustrated block producible
 - ☐ 12. feat(notices): every relayed line states its fact through one formatter
 - ☐ 13. feat(handoff): point past an open spike and out of a finished session
@@ -154,3 +154,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-09-02 — step 7 checkpointed · 558737199 — feat(recap): handoff emits the whole CLI ending as one block (1 drift, 94m)
 - 2026-09-02 — step 8 checkpointed · 2cc7a18bf — docs(anatomy): make the whole turn the anatomy and nothing else (16m)
 - 2026-09-02 — step 9 checkpointed · 30c88e8cd — feat(handoff): label the recommendation and split the move from its (7m)
+- 2026-09-02 — step 10 checkpointed · 0dd5ad52e — docs(skills): relay every tier's ending from the plan and driver skills (88m)

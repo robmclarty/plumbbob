@@ -21,9 +21,10 @@
   judgment lines only a model can fill. Detail moves behind numbered handles
   into one overwritten file, with git as the archive.
 - **Done looks like:** two consecutive step turns, driven by different models,
-  render the same anatomy: numbered plain-English highlights, the aligned
-  recap carrying the gate verdict in its check row, the footer card, and the
-  model's recommendation as the turn's last words.
+  render the same anatomy: a labeled Summary, the Readout fence carrying the
+  gate verdict in its check row, the Verdict, Next Up, Your Call, and the
+  model's recommendation as the turn's last words, every part rendered by
+  `plumbbob handoff` from the detail file.
   Every illustrated block in `docs/happy-path.md` is producible by the shipped
   CLI and skills. The eval tier (`test/evals/`) runs green against the new
   anatomy, with a fresh receipt in `docs/evals/`. `pnpm check` green.
@@ -36,24 +37,28 @@
 ## Architecture sketch
 
 ```
-a step turn, top to bottom
-  [model] headline + numbered highlights      <- skill template, plain English
-  [cli]   recap: measured rows + the model's
-          judgment rows, verdict in the check
-          row, every line inside 72 columns
-  [cli]   footer card: banner (glyph + word + worst component + step N of M),
-          next up (step + model), the your-call block
-  [cli]   recommendation: 1-2 plain sentences  <- model judgment, fed through
-          relayed unfenced, the last words        the detail file
+a step turn, top to bottom (every part rendered by handoff from detail.md;
+the model writes the file, runs handoff, pastes at top level, blank line
+between blocks, fences never nested)
+  Summary:        lead sentence, or a short paragraph when the step needs
+                  it (details: `path`) + numbered highlights   <- model prose
+  Readout:        Step N - <title>, then the fence: measured rows + the
+                  model's three judgment rows; a green row counts, a red
+                  row names one offender, a → line under a red row points
+                  at its evidence; spent last; 80 columns
+  Verdict:        glyph + word (+ worst component)
+  Next Up:        Step N+1 of M - <title> (model: **X**, details: `path`)
+  Your Call:      the four real moves, as a list
+  Recommendation: 1-2 plain sentences, the last words     <- model judgment
 
 the detail plane (never in the default turn body)
   .plumbbob/detail.md                         <- the in-flight step's full
                                                  detail, overwritten at each
-                                                 step boundary; also the wire
-                                                 handoff parses for the banner
+                                                 step boundary; the wire
+                                                 handoff renders the turn from
   git (checkpoint commits)                    <- the archive: diff in the
                                                  tree, commentary in the body
-  the chat: "expand 2"                        <- answered from disk or git
+  the chat: "expand #2", or any question      <- answered from disk or git
                                                  show, never from recall
 ```
 
@@ -226,13 +231,13 @@ a boundary or driver turn, top to bottom
   still calls the card the always-last text contradicts
   [D23 (recommendation-last)](#d23) and [D25 (labeled-recommendation)](#d25)
   on the one page a reader opens to learn the verb (Rob's call, 2026-09-01).
-  Step 11 carries the reference in its seam.
+  Step 13 carries the reference in its seam.
 - <a id="d27"></a>**D27 (own-lines-one-colon)**: plumbbob's own boundary and
   driver lines meet the notice register the spec states (one sentence, one
   colon, detail in a single trailing parenthetical, no dash), *because* a
   spec that names its own violation as a parked sweep cannot ship with the
   sweep undone, and the eval tier reads those exact turn shapes, so the
-  strings settle before it runs (Rob's call, 2026-09-01). Lands as step 12,
+  strings settle before it runs (Rob's call, 2026-09-01). Lands as step 14,
   ahead of the eval tier.
 - <a id="d28"></a>**D28 (fact-not-move)**: a verb's own line states its fact
   and never the move, `plumbbob: <subject> <state> (<detail>)`, the one colon
@@ -293,6 +298,114 @@ a boundary or driver turn, top to bottom
   Up:`, and each verb's freehand tail) and only the dashboard's knows a
   spike or an empty plan; one pointer per turn needs the card's to know
   what the dashboard's does. Extends [D17 (whole-anatomy-emitted)](#d17).
+- <a id="d33"></a>**D33 (labeled-lines)**: every part of the ending outside
+  the readout fence is one bold label, a colon, and inline text that wraps
+  (`**Summary**:`, `**Readout**:`, `**Verdict**:`, `**Next Up**:`,
+  `**Your Call**:`, `**Recommendation**:`), with a block beneath only where
+  the block is the content (the highlights list, the your-call list, the
+  readout fence); the card fence dissolves, every block is separated by one
+  blank line, and fences never nest (handoff's output is pasted at top level,
+  never inside a fence of the model's own), *because* the pause ran five
+  visual grammars at once (a bare headline, a list, a label, two fences) when
+  only the columnar rows need a fence, and a butted or nested fence breaks in
+  exactly the renderers [C2 (markdown-only)](#c2) exists for (Rob's call,
+  2026-09-02). Amends [D25 (labeled-recommendation)](#d25): one bold token
+  per line, and every label spends it; scopes
+  [D22 (recap-width-budget)](#d22) to fence rows, since a labeled line wraps.
+- <a id="d34"></a>**D34 (readout-and-summary)**: the fence is the
+  **Readout**, an instrument's rows rather than a retelling (the word
+  [D30 (register-is-one-liners)](#d30) already minted), labeled
+  `**Readout**: Step N - <title>`; the turn opens with `**Summary**:`, whose
+  lead is one sentence when one will do and a short paragraph when the step
+  needs explaining (an aim, not a limit; still a summary), followed by the
+  numbered highlights when the step is a list of moves; the Detail line
+  retires, its count carried by the visible highlights and its affordance by
+  the `expand` move, *because* Recap and Summary are near-synonyms twelve
+  lines apart, and "5 sections in .plumbbob/detail.md; expand 2 opens one"
+  was plumbbob talking to itself. Amends
+  [D16 (latest-card-addressing)](#d16)'s pointer line; the `## N` sections
+  stay the expand targets.
+- <a id="d35"></a>**D35 (collapse-to-count)**: a green readout row collapses
+  to a count that sizes its universe (`green: 11 of 11 checks`,
+  `5 of 5 honored`, `held: 6 of 6 declared, no strays`, and `done-when met`
+  bare, since the Summary above is its evidence), and a red row expands to
+  name the one offender with its slug and one clause; fence lines fit 80
+  columns (13 of label, 67 of value), a row carrying two or more items breaks
+  them onto indented `- ` continuation lines that `parseRecap` captures, and
+  the constraint count is CLI-read from `## Constraints` (a constraint always
+  applies; that is what makes it one) while the exercised-decision count
+  stays the model's, *because* the 58-column budget turned evidence into
+  telegraph, a glossed reference costs 25 columns so two never fit, and the
+  question a reviewer brings to the fence is "is anything off?", which a
+  count answers faster than a list. Finishes
+  [D6 (vanish-or-collapse)](#d6); amends [D22 (recap-width-budget)](#d22)'s
+  number; extends [D19 (cli-does-what-it-can)](#d19).
+- <a id="d36"></a>**D36 (progress-on-next-up)**: the step identity renders
+  once per turn: the progress count rides Next Up in every tier
+  (`Step 11 of 14`), the Readout label names the current step and title
+  without it, and the Verdict drops its step segment to become state plus
+  worst component (`◐ A hair off (3 commits outside the ledger)`), *because*
+  Next Up is the one line present at the pause, the boundary, and a driver
+  turn, and the card rendered "Step 10 of 14" twice. Amends
+  [D11 (worst-of-banner)](#d11)'s segment list; the Verdict at the boundary
+  is the state word's home ([Q14 (boundary-word-home)](#q14)).
+- <a id="d37"></a>**D37 (zero-seam-turn)**: `plumbbob handoff` renders the
+  whole turn from `.plumbbob/detail.md`: the Summary lead (a `## summary`
+  section) and the highlights (the `## N` section titles) passed through as
+  the markdown the model wrote, handoff appending the `(details: …)` bracket
+  so the model never types a path, then the judgment rows and the
+  recommendation; the model authors nothing in the chat but the relay,
+  *because* every defect this build found in the live turn sat in the
+  model-authored region (a bold token mid-sentence, an operational paragraph
+  above the anatomy), and a region the model does not own cannot be narrated
+  into. Extends [D19 (cli-does-what-it-can)](#d19) and
+  [D20 (one-seam-turn)](#d20); the build and verify skills shrink to "write
+  the file, run handoff, paste."
+- <a id="d38"></a>**D38 (real-moves)**: the your-call block lists the moves
+  the human actually makes: `looks good` (checkpoint), `expand #2` or any
+  question ("explain that thing about D15", "what does 'xyz' even mean?")
+  (show more of what's there; nothing changes), anything that reads as
+  direction (taken as what to change; nothing lands until looks good), and
+  `revert` last, since a destructive move is named, not discovered; the
+  skill's rule is that a message that asks is an expand, answered from the
+  detail file, the diff, or `git show` and never from recall, a message that
+  directs is needs-work, and an expand turn ends on the Your Call block again
+  so the pause stays legible, *because* nobody types "needs work", revert is
+  rare, and the move made most, zeroing in on one part before approving, was
+  not on the card at all (Rob's call, 2026-09-02). Amends
+  [D12 (instructive-choice)](#d12); `expand` keeps
+  [D16 (latest-card-addressing)](#d16)'s word and takes a number or a phrase.
+- <a id="d39"></a>**D39 (spent-row)**: the readout's last row is `spent`,
+  rendered from what stats.json and the turn ledger already hold: elapsed
+  (`startedAt` to now at the pause, to `landedAt` at the boundary), turns
+  (`TURN` minus `TICK`), red checks, the last gate's `total_duration_ms`, and
+  drift warnings when any (`spent  88 min · 3 turns · 63s gate · green first
+  run`), *because* a build is watched by what it consumes and every one of
+  those is on disk today; tokens and cost stay out (the transcript is
+  host-specific and a price table goes stale), and the row vanishes on a
+  fresh session with nothing to count.
+- <a id="d40"></a>**D40 (details-one-word)**: where to look is introduced by
+  one word, `details:`; in prose it is a code-spanned `path:line` inside the
+  closing bracket of the Summary lead (`(details: \`.plumbbob/detail.md\`)`)
+  and of Next Up (`(model: **Sonnet**, details: \`…/intent.md:404\`)`), and
+  in the fence it is a `→` line under its row, only under a red one (a
+  failing slot's raw output under check, the explaining section under a bent
+  decision or constraint, the stray file under seam), never inline in a fact,
+  *because* the bare `path:line` form is the one that opens in every host and
+  survives as plain text, a code span is the offset every renderer gives, and
+  a fence has only position and the glyph table, which already gives `→` to
+  where-to-go-next ([D29 (advisory-glyph)](#d29)). Next Up carries two bold
+  tokens, the label and the model, *because* the model is the token the human
+  acts on before the next run; `parseSteps` records each step's line so Next
+  Up can point at it. A green row carries no arrow line, so a plumb readout
+  has none.
+- <a id="d41"></a>**D41 (own-commits-not-out-of-band)**: the Verdict's
+  out-of-band count excludes plumbbob's own plan commits (those carrying the
+  `plumbbob plan` body marker), *because* a `chore(plan)` harvest lands
+  between nearly every step of this build, and an advisory rung that trips on
+  routine housekeeping stops meaning anything within three steps (step 10's
+  own Verdict read "a hair off" for three of Rob's boundary commits).
+  [Q12 (stray-in-banner)](#q12) stays open; this settles its neighbor.
 
 ## Constraints
 
@@ -394,21 +507,53 @@ a boundary or driver turn, top to bottom
    worked example
    - seam: `src/verbs/handoff.ts`, `src/verbs/__tests__/handoff.test.ts`, `docs/presentation.md`, `skills/build/SKILL.md`, `skills/verify/SKILL.md`
    - model: sonnet (a one-line prefix, two test assertions, and template wording)
-10. [ ] docs(skills): relay every tier's ending from the plan and driver skills,
+10. [x] docs(skills): relay every tier's ending from the plan and driver skills,
    **done when:** the plan skill relays the plan-pause card and the driver
    skills (park, spike, revert, recover, abandon) relay the driver next-up line
    from `plumbbob handoff` ([D17 (whole-anatomy-emitted)](#d17)), each ending
    sitting in its [D15 (three-tier-anatomy)](#d15) tier
    - seam: `skills/plan/SKILL.md`, `skills/park/SKILL.md`, `skills/spike/SKILL.md`, `skills/revert/SKILL.md`, `skills/recover/SKILL.md`, `skills/abandon/SKILL.md`
    - model: sonnet (mechanical wiring once step 6 emits the endings)
-11. [ ] docs(happy-path): make every illustrated block producible,
+11. [ ] feat(anatomy): render the ending as labeled lines with sized readout rows,
+   **done when:** `plumbbob handoff` emits every part outside the fence as a
+   bold label, a colon, and wrapping text, blocks blank-line separated and
+   never nested ([D33 (labeled-lines)](#d33)); the fence is labeled
+   `**Readout**: Step N - <title>` ([D34 (readout-and-summary)](#d34)); green
+   rows collapse to counts, red rows name the one offender, fence lines fit 80
+   columns, continuation lines carry two or more items, and the constraint
+   count is read from `## Constraints` ([D35 (collapse-to-count)](#d35)); the
+   step identity renders once, progress on Next Up and the Verdict a labeled
+   line of state plus worst component ([D36 (progress-on-next-up)](#d36));
+   the your-call block lists the four real moves ([D38 (real-moves)](#d38));
+   the `spent` row renders from stats.json and the ledger
+   ([D39 (spent-row)](#d39)); `details:` paths ride code-spanned in the
+   Summary and Next Up brackets and as `→` lines under red rows, the model
+   bold on Next Up ([D40 (details-one-word)](#d40)); plan commits leave the
+   out-of-band count ([D41 (own-commits-not-out-of-band)](#d41));
+   `docs/presentation.md` specs each shape, and unit tests assert the emitted
+   block, blank lines included
+   - seam: `src/verbs/handoff.ts`, `src/lib/orient.ts`, `src/verbs/__tests__/handoff.test.ts`, `src/lib/__tests__/orient.test.ts`, `docs/presentation.md`
+   - model: sonnet (rendering to fixed shapes; the row rule and the spec section want a careful read)
+12. [ ] feat(anatomy): render the whole turn from the detail file,
+   **done when:** `plumbbob handoff` reads the Summary lead (`## summary`) and
+   the `## N` section titles from `.plumbbob/detail.md` and emits them as the
+   turn's first block, the model's markdown passed through and the
+   `(details: …)` bracket appended to the lead ([D37 (zero-seam-turn)](#d37),
+   [D34 (readout-and-summary)](#d34)); the build and verify skills spec the
+   turn as write the file, run handoff, paste at top level, with the
+   ask-versus-direct rule for replies at the pause
+   ([D38 (real-moves)](#d38)); the Detail line is gone from the spec and the
+   skills; unit tests assert the whole emitted turn
+   - seam: `src/verbs/handoff.ts`, `src/lib/orient.ts`, `src/verbs/__tests__/handoff.test.ts`, `docs/presentation.md`, `skills/build/SKILL.md`, `skills/verify/SKILL.md`
+   - model: opus (the skills' template is voice-governed prose; the wire wants a careful read)
+13. [ ] docs(happy-path): make every illustrated block producible,
    **done when:** each rendered block in `docs/happy-path.md` matches real CLI
    output or the skill's exact template, and the `handoff` entry in
    `docs/cli-reference.md` describes the emitted block, the labeled
    recommendation last ([D26 (reference-tracks-the-card)](#d26))
    - seam: `docs/happy-path.md`, `docs/cli-reference.md`
    - model: sonnet (reconciliation against the shipped spec)
-12. [ ] feat(notices): every relayed line states its fact through one formatter,
+14. [ ] feat(notices): every relayed line states its fact through one formatter,
    **done when:** the one-liners section of `docs/presentation.md` carries
    the rules and the shapes ([D28 (fact-not-move)](#d28),
    [D29 (advisory-glyph)](#d29), [D30 (register-is-one-liners)](#d30)) and
@@ -422,16 +567,17 @@ a boundary or driver turn, top to bottom
    assert the new strings through the formatter's fixtures
    - seam: `docs/presentation.md`, `src/lib/notice.ts`, `src/lib/__tests__/notice.test.ts`, `src/verbs/checkpoint.ts`, `src/verbs/park.ts`, `src/verbs/build.ts`, `src/verbs/revert.ts`, `src/verbs/abandon.ts`, `src/verbs/spike.ts`, `src/verbs/use.ts`, `src/verbs/start.ts`, `src/verbs/finish.ts`, `src/verbs/agent.ts`, `src/verbs/__tests__/`, `skills/park/SKILL.md`
    - model: sonnet (mechanical once the decisions fix the shapes; the spec section wants a careful read)
-13. [ ] feat(handoff): point past an open spike and out of a finished session,
-   **done when:** `plumbbob handoff --driver` renders `Next Up: Close the
+15. [ ] feat(handoff): point past an open spike and out of a finished session,
+   **done when:** `plumbbob handoff --driver` renders `**Next Up**: Close the
    spike - /plumbbob:spike done, then back to step N` while a spike is open,
-   a step exit ends on the forward pointer with no banner, and `plumbbob
-   finish` prints `Next Up: Nothing planned - /plumbbob:plan` after its
-   line ([D32 (handoff-owns-every-pointer)](#d32)); the finish skill relays
-   both lines; unit tests assert each pointer
+   a step exit ends on the forward pointer with no Verdict, and `plumbbob
+   finish` prints `**Next Up**: Nothing planned - /plumbbob:plan` after its
+   line ([D32 (handoff-owns-every-pointer)](#d32), in the labeled form of
+   [D33 (labeled-lines)](#d33)); the finish skill relays both lines; unit
+   tests assert each pointer
    - seam: `src/verbs/handoff.ts`, `src/verbs/finish.ts`, `src/verbs/__tests__/handoff.test.ts`, `src/verbs/__tests__/finish.test.ts`, `skills/finish/SKILL.md`
    - model: sonnet (two pointer branches and one printed line, each with a test)
-14. [ ] test(evals): run the eval tier against the new anatomy, **done when:**
+16. [ ] test(evals): run the eval tier against the new anatomy, **done when:**
    the c-series contracts read the new turn shapes, the driver runs green,
    and a fresh receipt lands in `docs/evals/`
    - seam: `test/evals/contracts/`, `test/evals/helpers/`, `docs/evals/`
@@ -473,14 +619,16 @@ a boundary or driver turn, top to bottom
   already bumps a stat; should it fold into the boundary banner's third rung
   instead of printing an advisory, so one stray is one fact
   ([D19 (cli-does-what-it-can)](#d19))? Open until the shape has been lived
-  with.
+  with. [D41 (own-commits-not-out-of-band)](#d41) takes plan commits out of
+  the count; the stray itself is still the open question.
 - <a id="q13"></a>**Q13 (two-pointer-vocabularies)**: the dashboard's
-  `next →` line and the card's `Next Up:` say one thing in two shapes;
-  leave both, or converge? Not a step-12 item; the next place the format
+  `next →` line and the card's `**Next Up**:` say one thing in two shapes;
+  leave both, or converge? Not a step-14 item; the next place the format
   may feel thin.
-- <a id="q14"></a>**Q14 (boundary-word-home)**: once the verb lines drop
-  `back at the boundary`, the card's missing your-call block is the only
-  boundary signal; is that legible, or does the state word need a home?
+- <a id="q14"></a>**Q14 (boundary-word-home)**: *resolved:* 2026-09-02, the
+  labeled Verdict line is the state word's home at the boundary, pure state
+  plus worst component ([D33 (labeled-lines)](#d33),
+  [D36 (progress-on-next-up)](#d36)).
 
 ## Verdicts
 
@@ -557,6 +705,24 @@ a boundary or driver turn, top to bottom
   (D32 (handoff-owns-every-pointer)). The `plumbbob:` prefix stays. Step 12
   re-cut as the sweep, a new step 13 for the pointer, the eval step to 14;
   Q12 to Q14 opened for the try-it-out phase.
+- 2026-09-02: step-10 boundary, anatomy review → Rob read the live pause and
+  boundary turns and re-cut the ending's shape: every part outside the fence
+  a bold label with wrapping text, one blank line between blocks, no nested
+  fences (D33 (labeled-lines)); Readout and Summary named, the Detail line
+  retired (D34 (readout-and-summary)); green rows count and red rows name one
+  offender inside 80 columns, the constraint count CLI-read
+  (D35 (collapse-to-count)); the step identity once, progress on Next Up
+  (D36 (progress-on-next-up)); handoff renders the whole turn from the detail
+  file (D37 (zero-seam-turn)); the your-call block lists the moves actually
+  made, `expand` among them (D38 (real-moves)); a `spent` row from what is on
+  disk, tokens and cost deleted (D39 (spent-row)); `details:` as the one word
+  for where to look, code-spanned in prose and a `→` line under a red row,
+  the model bold on Next Up (D40 (details-one-word)); plan commits out of the
+  out-of-band count (D41 (own-commits-not-out-of-band)). Deleted: markdown
+  links with heading anchors (they open nowhere in a terminal), a path on
+  every highlight, the one-sentence limit on the Summary. Two new steps, 11
+  for the rendering and 12 for the wire; happy-path, notices, pointers, and
+  evals shift to 13 through 16; Q14 resolved.
 
 ## Research digest
 
