@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { revert } from '../revert.ts'
+import { notice } from '../../lib/notice.ts'
 import { start } from '../start.ts'
 import { build } from '../build.ts'
 import { checkpoint } from '../checkpoint.ts'
@@ -47,7 +48,9 @@ describe('revert', () => {
     expect(code).toBe(0)
     expect(existsSync(stepPath(dir))).toBe(false) // back at the boundary
     expect(readFileSync(join(dir, 'feature.txt'), 'utf8')).toBe('v1\n')
-    expect(stdout).toMatch(/reverted to [0-9a-f]{9} — back at the boundary/) // short SHA, not the full 40
+    // Short SHA, not the full 40; the back-at-the-boundary pointer is handoff's now.
+    const to = readFileSync(checkpointsPath(dir), 'utf8').match(/step 1 ([0-9a-f]{40})/)?.[1] ?? ''
+    expect(stdout).toBe(notice({ fact: `reverted to ${to.slice(0, 9)}`, detail: ['park lines and intent edits preserved'] }))
   })
 
   it('returns the build-log Current step to the boundary after abandoning a step — D69 (cli-owned-buildlog)', async () => {

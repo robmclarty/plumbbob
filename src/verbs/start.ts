@@ -25,6 +25,7 @@ import {
   stampTick,
 } from '../lib/sidecar.ts'
 import { settingsPath } from '../lib/settings.ts'
+import { notice } from '../lib/notice.ts'
 
 /**
  * Human-readable echo of the default check gate, stamped into the templates'
@@ -56,50 +57,73 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
   const slug = (flagValue(args, '--slug') ?? datedSlug(title)).trim()
 
   if (title.length === 0) {
-    process.stderr.write('plumbbob: start needs a title. Try: plumbbob start "what you are building".\n')
+    process.stderr.write(
+      notice({ fact: 'start needs a title', remedy: 'plumbbob start "what you are building"' }),
+    )
     return 1
   }
 
   const root = findRepoRoot(cwd)
   if (root === null) {
     process.stderr.write(
-      'plumbbob: not a git repository. PlumbBob records a baseline commit — run `git init` and make an initial commit first.\n',
+      notice({
+        fact: 'not a git repository',
+        detail: ['plumbbob records a baseline commit'],
+        remedy: 'git init, then make an initial commit',
+      }),
     )
     return 1
   }
   if (!hasCommit(root)) {
     process.stderr.write(
-      'plumbbob: this repository has no commits yet. Make an initial commit so `start` can record a baseline.\n',
+      notice({
+        fact: 'this repository has no commits yet',
+        remedy: 'make an initial commit, so start can record a baseline',
+      }),
     )
     return 1
   }
   if (hasSession(root)) {
     process.stderr.write(
-      'plumbbob: a session is already active here. Run `plumbbob finish` to close it before starting another.\n',
+      notice({ fact: 'a session is already active here', remedy: 'plumbbob finish to close it before starting another' }),
     )
     return 1
   }
   if (isDirty(root)) {
     if (!allowDirty) {
       process.stderr.write(
-        'plumbbob: the working tree is dirty. Commit or stash first, or `plumbbob start --allow-dirty "<title>"` to record the current HEAD as the baseline.\n',
+        notice({
+          fact: 'the working tree is dirty',
+          remedy: 'commit or stash first, or plumbbob start --allow-dirty "<title>" to record HEAD as the baseline',
+        }),
       )
       return 1
     }
     process.stderr.write(
-      'plumbbob: WARNING --allow-dirty: recording HEAD as baseline with a dirty tree. A later revert-to-baseline will DISCARD the uncommitted work.\n',
+      notice({
+        fact: 'recording HEAD as the baseline with a dirty tree',
+        advisory: true,
+        detail: ['--allow-dirty'],
+        remedy: 'a later revert to baseline will DISCARD the uncommitted work',
+      }),
     )
   }
 
   if (!local && slug.length === 0) {
     process.stderr.write(
-      `plumbbob: could not derive a build slug from "${title}". Pass --slug <name>, or retitle with letters or digits.\n`,
+      notice({
+        fact: `could not derive a build slug from "${title}"`,
+        remedy: 'pass --slug <name>, or retitle with letters or digits',
+      }),
     )
     return 1
   }
   if (!local && listBuilds(root).includes(slug)) {
     process.stderr.write(
-      `plumbbob: a build named "${slug}" already exists in .plumbbob/builds/. Retitle, or pass --slug <name> to choose another.\n`,
+      notice({
+        fact: `a build named "${slug}" already exists in .plumbbob/builds/`,
+        remedy: 'retitle, or pass --slug <name> to choose another',
+      }),
     )
     return 1
   }
@@ -160,7 +184,11 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
   stampTick(root, local ? null : slug)
 
   process.stdout.write(
-    `plumbbob: started "${title}" — baseline ${sha.slice(0, 9)}. Frame and decide in ${intentLocation}; \`build\` a step once the decisions are made.\n`,
+    notice({
+      fact: `started "${title}"`,
+      detail: [`baseline ${sha.slice(0, 9)}`],
+      remedy: `frame and decide in ${intentLocation}, then build a step`,
+    }),
   )
 
   // The tracked layout plants `builds/<slug>/` to ride the branch into the PR,
@@ -174,9 +202,12 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
   // rather than half-crashing a scaffolded session.
   if (!local && sidecarIsIgnored(root, slug)) {
     process.stderr.write(
-      'plumbbob: heads-up — this repo gitignores .plumbbob/, so the tracked build folder cannot ride the branch.\n' +
-        '  Plan and finish commits will be record-only (empty commits; the plan and report ride the commit message).\n' +
-        '  To keep the record in-tree, unignore .plumbbob/builds/ (or the whole sidecar) before the first checkpoint.\n',
+      notice({
+        fact: 'this repo gitignores .plumbbob/',
+        advisory: true,
+        detail: ['the build folder cannot ride the branch', 'plan and finish commits will be record-only'],
+        remedy: 'unignore .plumbbob/builds/ before the first checkpoint to keep the record in the tree',
+      }),
     )
   }
 
@@ -188,9 +219,12 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
   const gate = await detectGate(root)
   if (gate.configured === null && !gate.detected) {
     process.stderr.write(
-      'plumbbob: heads-up — the check gate sees no code checks in this repo (checkride detected no tools).\n' +
-        '  Set one while you are still planning: add {"check": "npm test"} to .plumbbob/settings.json.\n' +
-        '  Checkpoints gate on it — with nothing to run, the gate refuses or greens vacuously.\n',
+      notice({
+        fact: 'the check gate sees no code checks in this repo',
+        advisory: true,
+        detail: ['checkride detected no tools', 'checkpoints gate on it and would green vacuously'],
+        remedy: 'add {"check": "npm test"} to .plumbbob/settings.json while you are still planning',
+      }),
     )
   }
   return 0
@@ -214,11 +248,11 @@ function datedSlug(title: string): string {
 }
 
 /**
- * Whether the tracked build folder is gitignored: the record-only heads-up's
+ * Whether the tracked build folder is gitignored: the record-only advisory's
  * predicate, probing exactly the path `checkpoint --plan` will try to stage.
  *
  * Best-effort: a probe that throws (a fatal `git check-ignore`) reads as
- * not-ignored so the heads-up stays silent rather than crashing a session that
+ * not-ignored so the advisory stays silent rather than crashing a session that
  * is already open.
  */
 function sidecarIsIgnored(root: string, slug: string): boolean {

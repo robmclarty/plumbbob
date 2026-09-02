@@ -91,7 +91,7 @@ describe('agent run — happy path', () => {
     const envelope = envelopeFromStdout(stdout)
     expect(envelope).toMatchObject({ contract: 1, status: 'done', summary: 'did the thing' })
     // the human summary rides stderr, not stdout.
-    expect(stderr).toContain('agent "doer" (build) — done: did the thing')
+    expect(stderr).toContain('agent "doer" reports done (build slot, did the thing)')
 
     // the child ran at the repo root with PLUMBBOB_AGENT_DIR pointing at its own dir.
     const agentDir = join(dir, '.plumbbob', 'agents', 'doer')
@@ -116,7 +116,7 @@ describe('agent run — happy path', () => {
     makeAgent(dir, 'onlyafter', { slots: ['after'], script: DONE_SCRIPT })
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', 'onlyafter', '--step', '1']))
     expect(code).toBe(0)
-    expect(stderr).toContain('agent "onlyafter" (after) —')
+    expect(stderr).toContain('agent "onlyafter" reports done (after slot')
   })
 })
 
@@ -165,8 +165,8 @@ describe('agent run — status routing — D52 (blocked-vs-drift)', () => {
     const { code, stdout, stderr } = await captureIoAsync(() => agent(dir, ['run', 'stuck', '--step', '1']))
     expect(code).toBe(0)
     expect(envelopeFromStdout(stdout).status).toBe('blocked')
-    expect(stderr).toContain('blocked — the agent')
-    expect(stderr).toContain('notes: missing FOO')
+    expect(stderr).toContain("→ the agent couldn't finish, so unblock it and re-run")
+    expect(stderr).toContain('need a key, missing FOO)') // the summary and the notes ride one parenthetical
   })
 
   it('routes a drift run to /plumbbob:refine on stderr', async () => {
@@ -189,7 +189,7 @@ describe('agent run — failure modes — D46 (stream-discipline), D51 (agent-ti
     const { code, stdout, stderr } = await captureIoAsync(() => agent(dir, ['run', 'boom', '--step', '1']))
     expect(code).toBe(1)
     expect(stdout).toBe('') // no envelope re-emitted for a failed child
-    expect(stderr).toContain('exited 3 — failed run, stopping')
+    expect(stderr).toContain('exited 3 (a failed run, stopping, no side effects applied)')
     expect(existsSync(handoffPath(dir))).toBe(false) // no side effects
   })
 
@@ -264,7 +264,7 @@ describe('agent run — side effects — D44 (cli-side-effects), D47 (handoff-le
     const log = readFileSync(buildLogPath(dir), 'utf8')
     expect(log).toContain('- [ ] a stray idea')
     expect(log).toContain('- [ ] another one')
-    expect(stderr).toContain('parked — a stray idea')
+    expect(stderr).toContain('parked: a stray idea')
   })
 
   it('appends each run to the handoff ledger, and checkpoint clears it', async () => {
@@ -307,7 +307,7 @@ describe('agent run — harness bindings — D42 (harness-bindings), D57 (merge-
 
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', '--step', '1', '--mode', 'build']))
     expect(code).toBe(0)
-    expect(stderr).toContain('agent "stepper" (build)')
+    expect(stderr).toContain('agent "stepper" reports done (build slot')
     expect(stderr).not.toContain('defaulter')
 
     const ledger = JSON.parse(readFileSync(handoffPath(dir), 'utf8'))
@@ -321,7 +321,7 @@ describe('agent run — harness bindings — D42 (harness-bindings), D57 (merge-
 
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', '--step', '1', '--mode', 'after']))
     expect(code).toBe(0)
-    expect(stderr).toContain('agent "defaulter" (after)')
+    expect(stderr).toContain('agent "defaulter" reports done (after slot')
   })
 
   it('merges settings-level defaults under the harness — a settings default binds with no harness file — D57 (merge-ladder)', async () => {
@@ -331,7 +331,7 @@ describe('agent run — harness bindings — D42 (harness-bindings), D57 (merge-
 
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', '--step', '1', '--mode', 'after']))
     expect(code).toBe(0)
-    expect(stderr).toContain('agent "settingsrev" (after)')
+    expect(stderr).toContain('agent "settingsrev" reports done (after slot')
   })
 
   it('runs every agent bound to the slot, in order', async () => {
@@ -360,8 +360,8 @@ describe('agent run — harness bindings — D42 (harness-bindings), D57 (merge-
 
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', '--step', '1', '--mode', 'after']))
     expect(code).toBe(0)
-    expect(stderr).toContain('bound agent "ghostreviewer" did not resolve')
-    expect(stderr).toContain('Skipping')
+    expect(stderr).toContain('no agent named "ghostreviewer"')
+    expect(stderr).toContain('→ skipping this binding')
     expect(existsSync(handoffPath(dir))).toBe(false)
   })
 
@@ -373,7 +373,7 @@ describe('agent run — harness bindings — D42 (harness-bindings), D57 (merge-
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', '--step', '1', '--mode', 'build']))
     expect(code).toBe(0)
     expect(stderr).toContain('does not declare')
-    expect(stderr).toContain('Skipping')
+    expect(stderr).toContain('→ skipping this binding')
   })
 
   it('lets an explicit name override the bindings — D57 (merge-ladder): a name sits above the harness', async () => {
@@ -384,7 +384,7 @@ describe('agent run — harness bindings — D42 (harness-bindings), D57 (merge-
 
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', 'named', '--step', '1', '--mode', 'build']))
     expect(code).toBe(0)
-    expect(stderr).toContain('agent "named" (build)')
+    expect(stderr).toContain('agent "named" reports done (build slot')
     expect(stderr).not.toContain('"bound"')
   })
 

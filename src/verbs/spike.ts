@@ -32,6 +32,7 @@ import {
   stepPath,
 } from '../lib/sidecar.ts'
 import { readTemplate, stampTemplate } from '../lib/templates.ts'
+import { notice } from '../lib/notice.ts'
 
 // Worktree/branch names when the caller lists none: a fork defaults to two arms.
 const DEFAULT_OPTIONS: ReadonlyArray<string> = ['a', 'b']
@@ -51,7 +52,7 @@ const VERDICT_PLACEHOLDER = '*(viable | not viable | partial'
 export function spike(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
-    process.stderr.write('plumbbob: no active session. Run `plumbbob start "<title>"` first.\n')
+    process.stderr.write(notice({ fact: 'no active session', remedy: 'plumbbob start "<title>"' }))
     return 1
   }
   const { build: buildSlug, rest } = resolveBuild(root, args)
@@ -76,15 +77,20 @@ export function spike(cwd: string, args: ReadonlyArray<string>): number {
 function spikeReport(root: string, buildSlug: string | null, positionals: ReadonlyArray<string>): number {
   const slug = sanitize(positionals[0] ?? '')
   if (slug.length === 0) {
-    process.stderr.write('plumbbob: spike report needs a slug. Try: plumbbob spike report "auth-store".\n')
+    process.stderr.write(
+      notice({ fact: 'spike report needs a slug', remedy: 'plumbbob spike report "auth-store"' }),
+    )
     return 1
   }
   const inFlight = readInFlightStep(root, buildSlug)
   const via = inFlight !== null ? `step ${inFlight}` : '/plumbbob:spike'
   const path = scaffoldSpikeReport(root, buildSlug, slug, via)
   process.stdout.write(
-    `plumbbob: spike report scaffolded — ${relative(root, path)}. Fill Findings and the Verdict as you go; ` +
-      `a recorded Verdict is what closes a spike step.\n`,
+    notice({
+      fact: 'spike report scaffolded',
+      detail: [relative(root, path)],
+      remedy: 'record Findings and the Verdict there, which is what closes a spike step',
+    }),
   )
   return 0
 }
@@ -129,19 +135,22 @@ function readInFlightStep(root: string, buildSlug: string | null): number | null
  */
 function spikeStart(root: string, buildSlug: string | null, positionals: ReadonlyArray<string>): number {
   if (inSpike(root, buildSlug)) {
-    process.stderr.write('plumbbob: already in a spike. Run `plumbbob spike done` to close it first.\n')
+    process.stderr.write(notice({ fact: 'already in a spike', remedy: 'plumbbob spike done to close it first' }))
     return 1
   }
   if (existsSync(stepPath(root, buildSlug))) {
     process.stderr.write(
-      'plumbbob: spike starts from a settled boundary, but a step is in flight. ' +
-        'A spike is a deliberate fork — checkpoint, abandon, or revert the current step first.\n',
+      notice({
+        fact: 'a step is in flight',
+        detail: ['a spike is a deliberate fork from a settled boundary'],
+        remedy: 'checkpoint, abandon, or revert the current step first',
+      }),
     )
     return 1
   }
   const slug = sanitize(positionals[0] ?? '')
   if (slug.length === 0) {
-    process.stderr.write('plumbbob: spike needs a slug. Try: plumbbob spike "auth-store" a b.\n')
+    process.stderr.write(notice({ fact: 'spike needs a slug', remedy: 'plumbbob spike "auth-store" a b' }))
     return 1
   }
   const explicit = positionals.slice(1).map(sanitize).filter((o) => o.length > 0)
@@ -151,7 +160,13 @@ function spikeStart(root: string, buildSlug: string | null, positionals: Readonl
   for (const opt of options) {
     const path = join(dirname(root), `${basename(root)}-spike-${slug}-${opt}`)
     if (existsSync(path)) {
-      process.stderr.write(`plumbbob: ${path} already exists — remove it or run \`plumbbob spike done\` first.\n`)
+      process.stderr.write(
+        notice({
+          fact: 'the spike worktree path already exists',
+          detail: [path],
+          remedy: 'remove it, or run plumbbob spike done first',
+        }),
+      )
       return 1
     }
     git(root, ['worktree', 'add', '-b', `spike/${slug}-${opt}`, path, 'HEAD'])
@@ -162,12 +177,19 @@ function spikeStart(root: string, buildSlug: string | null, positionals: Readonl
   // Scaffold the report NOW, while the worktrees live: findings accrue during the
   // experiment, not from memory after the teardown. Provenance names the worktrees.
   const report = scaffoldSpikeReport(root, buildSlug, slug, `/plumbbob:spike — worktrees (${options.join(', ')})`)
+  // The notice states the fact; the throwaway worktrees are a list, so they ride
+  // as a readout beneath it rather than crowding the line.
   process.stdout.write(
-    `plumbbob: spiking — the main tree stays put. Experiment in the throwaway worktrees:\n${created
-      .map((p) => `  ${p}`)
-      .join(
-        '\n',
-      )}\nRecord findings and the Verdict in ${relative(root, report)} as you go, then run \`plumbbob spike done\`.\n`,
+    notice({
+      fact: 'spiking',
+      detail: ['the main tree stays put', `${created.length} throwaway worktree${created.length === 1 ? '' : 's'}`],
+    }) +
+      `${created.map((path) => `  ${path}`).join('\n')}\n` +
+      notice({
+        fact: 'spike report scaffolded',
+        detail: [relative(root, report)],
+        remedy: 'record findings and the Verdict there, then run plumbbob spike done',
+      }),
   )
   return 0
 }
@@ -180,7 +202,7 @@ function spikeStart(root: string, buildSlug: string | null, positionals: Readonl
  */
 function spikeDone(root: string, buildSlug: string | null): number {
   if (!inSpike(root, buildSlug)) {
-    process.stderr.write('plumbbob: no active spike to close.\n')
+    process.stderr.write(notice({ fact: 'no active spike to close' }))
     return 1
   }
   // Check for an unrecorded verdict BEFORE teardown. The reports live in the
@@ -197,20 +219,20 @@ function spikeDone(root: string, buildSlug: string | null): number {
   }
   clearSpike(root, buildSlug)
 
+  process.stdout.write(notice({ fact: 'spike closed', detail: ['worktrees and branches removed'] }))
   // Guidance, not a gate: a missing verdict is a nudge, and the spike still
-  // closes. Name the reports so the human knows where to write it.
+  // closes. It follows the line it qualifies, and names the reports so the
+  // human knows where to write the call.
   if (unfilled.length > 0) {
     process.stderr.write(
-      `plumbbob: heads-up — no verdict recorded in ${unfilled.join(', ')}. ` +
-        `The worktrees are gone; capture the call there before it fades.\n`,
+      notice({
+        fact: 'no verdict recorded',
+        advisory: true,
+        detail: unfilled,
+        remedy: 'record which option won, and why, now the worktrees are gone',
+      }),
     )
   }
-  const reports = listSpikeReports(root, buildSlug)
-  const where = reports.length > 0 ? `the spike report${reports.length === 1 ? '' : 's'} (${reports.join(', ')})` : 'intent.md'
-  process.stdout.write(
-    `plumbbob: spike closed — worktrees and branches removed, back at the boundary. ` +
-      `Record the verdict (which option won, and why) in ${where} before you \`build\`.\n`,
-  )
   return 0
 }
 

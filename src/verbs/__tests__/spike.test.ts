@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { spike } from '../spike.ts'
+import { notice } from '../../lib/notice.ts'
 import { start } from '../start.ts'
 import { buildFolder, inSpike, listSpikeReports, stepPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -150,7 +151,7 @@ describe('spike reports — D70 (spike-reports)', () => {
     const { code, stderr } = captureIo(() => spike(dir, ['done']))
     expect(code).toBe(0) // guidance, not a gate: it still closes
     expect(inSpike(dir)).toBe(false)
-    expect(stderr).toContain('no verdict recorded in spike-01-auth.md')
+    expect(stderr).toContain(notice({ fact: 'no verdict recorded', advisory: true, detail: ['spike-01-auth.md'] }).trim())
   })
 
   it('`spike done` stays quiet once the verdict is filled in', async () => {

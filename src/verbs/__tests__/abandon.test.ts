@@ -2,6 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { abandon } from '../abandon.ts'
+import { notice } from '../../lib/notice.ts'
 import { start } from '../start.ts'
 import { build } from '../build.ts'
 import {
@@ -59,7 +60,7 @@ describe('abandon', () => {
     // The work is kept: abandon never touches the tree, where revert would have
     // removed this in-seam untracked file.
     expect(readFileSync(join(dir, 'feature.txt'), 'utf8')).toBe('kept\n')
-    expect(stdout).toMatch(/step 1 abandoned — work kept in the tree/)
+    expect(stdout).toBe(notice({ fact: 'step 1 abandoned', detail: ['work kept in the tree', 'the step stays planned'] }))
   })
 
   it('leaves the intent checkbox planned — it drops the attempt, not the intention', async () => {
@@ -122,7 +123,9 @@ describe('abandon (subprocess) — the latch holds across a step exit', () => {
 
     const abandoned = runCli(dir, ['abandon'])
     expect(abandoned.status).toBe(1)
-    expect(abandoned.stderr).toContain('abandon refused — no human turn since this step began')
+    expect(abandoned.stderr).toContain(
+      notice({ fact: 'abandon refused', detail: ['no human turn since this step began'] }).trim(),
+    )
     // The markers survive the refusal, so the entry stamp the latch reads is
     // still standing and no side door was opened.
     expect(existsSync(stepPath(dir))).toBe(true)

@@ -308,11 +308,6 @@ recommendation's last sentence. The model never restates it, and the run it
 reports leaves the summary the next handoff reads, so its narrowing surfaces
 in the next check row as `· without test` and nowhere else.
 
-The relayed CLI strings keep their em-dashes (a boundary line, a notice); the
-model's own lines never use one. That boundary is
-[D78 (em-dash-ban)](decisions.md#d78)'s write-versus-relay line, restated
-here because this is the surface where the model works.
-
 ## The footer card
 
 The card is the ending's three closing parts, CLI-rendered by `plumbbob
@@ -505,7 +500,7 @@ scales down with the turn:
 A boundary turn, whole:
 
 ```text
-plumbbob: step 2 checkpointed — b4c5d6e7f. Back at the boundary.
+plumbbob: step 2 checkpointed (b4c5d6e7f)
 
 **Verdict**: ● Plumb
 
@@ -515,7 +510,7 @@ plumbbob: step 2 checkpointed — b4c5d6e7f. Back at the boundary.
 A driver turn, whole (a mid-step park):
 
 ```text
-parked: tangent: should /password-reset get the same throttle?
+parked: should /password-reset get the same throttle? (tangent)
 
 **Next Up**: Back to step 2 of 3 - Wire the limiter into POST /login
 ```
@@ -527,21 +522,66 @@ pointer.
 
 ### The one-liners
 
-A CLI notice (a boundary line, a driver line, a gate verdict) reads as one
-sentence with one colon. Its detail rides in a single parenthetical,
-comma-separated, and a glyph, when one rides at all, trails the clause
-rather than leading it. No chained labels, no dash pile-ups: a line that
-lands behind a harness prefix such as `Notice:` is already one colon deep,
-and a second chain of them reads as machine noise where a sentence would do.
-checkride's gate verdict is the reference shape:
+The register governs one-liners, and only those: the transitions, the
+captures, the advisories, and the refusals, each a single line a skill relays
+into a turn. A readout keeps its own shape, glyphs and list intact (the
+dashboard, `recover`'s check lines, the worktree paths under a spike's
+notice), and the sentinel headers (`NO ACTIVE SESSION`, `NO ACTIVE BUILD`)
+stay exactly as they are. So does `plumbbob check`'s console trailer, which is
+never relayed: the gate verdict this register cites is checkride's Stop-hook
+notice, and the check row above is where it lands. checkride's own verdict is
+the reference the shape was read from:
 
 ```text
 checkride green in 3.6s ✔ (10 checks, without test, slowest: spell in 1.8s)
 ```
 
-plumbbob's own boundary and driver lines predate the rule and still carry a
-second colon or a dash (`parked: tangent: …`, `checkpointed — <sha>. Back at
-the boundary.`). That is a parked sweep, not an exemption.
+A line states its fact and never the move:
+
+```text
+plumbbob: <subject> <state> (<detail>)
+```
+
+The one colon is spent on the prefix, which earns it by naming the speaker:
+checkride's output, git's, and plumbbob's arrive in one terminal, and
+scrollback is grepped for that word. A capture spends the colon on `parked:`
+instead, and its tag rides the tail, so the line printed and the line written
+to the ledger read the same:
+
+```text
+parked: should /password-reset get the same throttle? (tangent)
+```
+
+The detail is one trailing parenthetical, comma-separated, and it degrades by
+count the way a readout row does: a list that overruns 80 columns drops from
+the tail and says how many it left (`and 2 others`), keeping two named so the
+count sizes something the reader can see. One or two items never degrade,
+because a notice wraps where a fence row cannot.
+
+No pointer rides a notice. Every ending closes on the card's Next Up line, so
+a verb that carried its own tail (`Back at the boundary.`, `` `status` to
+orient. ``) was a second seam in a turn that has one.
+
+An advisory is one line, printed after the primary line it qualifies, one per
+line, the warning glyph trailing the fact:
+
+```text
+plumbbob: this repo gitignores .plumbbob/ ⚠ (the build folder cannot ride the branch)
+  → unignore .plumbbob/builds/ before the first checkpoint
+```
+
+That `→` line is the remedy, indented and singular, and a refusal spends the
+same line on what unblocks it. The `heads-up` and `note` labels are retired: a
+chained label is the machine noise this register exists to kill, and the glyph
+table already gives `⚠` to a warning and `→` to what happens next. The order
+of an ending is fixed, primary line, then advisories, then a blank line, then
+the card, so a relay never has to work out which line leads.
+
+Every one of these lines is rendered by one formatter, `notice()` in
+`src/lib/notice.ts`, which takes the fact, the detail list, the advisory flag,
+and the remedy. A verb composes those parts and never a string, so moving the
+shape is one edit here and one there rather than a sweep across the verbs, and
+the tests assert through the same renderer.
 
 ## The glyph vocabulary
 
@@ -560,7 +600,7 @@ the sole channel. At line start, the glyph is followed by a space.
 | `●` `◐` `○` `✗` | the ladder words | the Verdict; `✗` alone also marks a hard failure (`harness bindings: ✗`) |
 | `⚠` | a named warning | binding warnings and advisories |
 | `·` | (separator) | between facts on one line |
-| `→` | what happens next | `next →`, the Your Call outcomes, a red row's evidence line |
+| `→` | what happens next | `next →`, the Your Call outcomes, a red row's evidence line, a notice's remedy |
 | `──` | (rule) | the detail file's readout header |
 | `---` | (rule) | the seam: the first line of the plan pause's block, the one tier with a model region above it |
 

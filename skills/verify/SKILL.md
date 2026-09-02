@@ -173,7 +173,7 @@ this skill verifies it the same way: **it reads the diff, not the author**
    overriding the title-derived default for this one commit; unpresented, the CLI's
    deterministic subject stands.
 7. **Hand off with the next model** *(once the checkpoint lands)*. `plumbbob checkpoint`
-   prints `step N checkpointed — <sha>. Back at the boundary.` and returns to DESIGN; then
+   prints `step N checkpointed (<sha>)` and returns to DESIGN; then
    run `plumbbob handoff` and relay its card. The turn is those two outputs and nothing
    written around them. With the step gone from in-flight the card drops to its
    orientation-tier form (the Verdict and Next Up only; no Your Call block, no

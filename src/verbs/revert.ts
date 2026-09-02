@@ -24,6 +24,7 @@ import { findRepoRoot, resetHard, untrackedPaths } from '../lib/git.ts'
 import { bumpStepStat, checkpointsPath, hasSession, resolveBuild, seamPath, sidecarDir, stepPath } from '../lib/sidecar.ts'
 import { isArtifactPath, matchesSeam } from '../lib/intent.ts'
 import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
+import { notice } from '../lib/notice.ts'
 
 /**
  * Rewind to a recorded checkpoint and return the build to the boundary.
@@ -37,14 +38,14 @@ import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
 export function revert(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
-    process.stderr.write('plumbbob: no active session. Run `plumbbob start "<title>"` first.\n')
+    process.stderr.write(notice({ fact: 'no active session', remedy: 'plumbbob start "<title>"' }))
     return 1
   }
 
   const { build: slug, rest } = resolveBuild(root, args)
   const to = parseTo(rest)
   if (to === 'invalid') {
-    process.stderr.write('plumbbob: revert --to needs a step number. Try: plumbbob revert --to 2.\n')
+    process.stderr.write(notice({ fact: 'revert --to needs a step number', remedy: 'plumbbob revert --to 2' }))
     return 1
   }
 
@@ -55,13 +56,13 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
   } else {
     const entry = checkpoints.steps.find((e) => e.n === to)
     if (entry === undefined) {
-      process.stderr.write(`plumbbob: no checkpoint recorded for step ${to}.\n`)
+      process.stderr.write(notice({ fact: `no checkpoint recorded for step ${to}` }))
       return 1
     }
     sha = entry.sha
   }
   if (sha === undefined) {
-    process.stderr.write('plumbbob: no baseline recorded in checkpoints — cannot revert.\n')
+    process.stderr.write(notice({ fact: 'no baseline recorded in checkpoints', detail: ['nothing to revert to'] }))
     return 1
   }
 
@@ -90,7 +91,7 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
   syncBuildLogState(root, slug, AT_BOUNDARY)
 
   process.stdout.write(
-    `plumbbob: reverted to ${sha.slice(0, 9)} — back at the boundary. Park lines and intent edits were preserved.\n`,
+    notice({ fact: `reverted to ${sha.slice(0, 9)}`, detail: ['park lines and intent edits preserved'] }),
   )
   return 0
 }

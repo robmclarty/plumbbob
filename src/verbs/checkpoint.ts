@@ -39,6 +39,7 @@ import { parseBuildScope, parseStepSeam, scopeDrift } from '../lib/intent.ts'
 import { conventionalSubject, subjectFromTitle, withMarker } from '../lib/commitmsg.ts'
 import { appendToSection, checkpointLogLine } from '../lib/buildlog.ts'
 import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
+import { notice } from '../lib/notice.ts'
 
 /**
  * Land a step: latch, check gate, commit, record, return to the boundary.
@@ -49,7 +50,7 @@ import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
 export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Promise<number> {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
-    process.stderr.write('plumbbob: no active session. Run `plumbbob start "<title>"` first.\n')
+    process.stderr.write(notice({ fact: 'no active session', remedy: 'plumbbob start "<title>"' }))
     return 1
   }
 
@@ -64,7 +65,9 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
 
   const step = resolveStep(root, args)
   if (step === null) {
-    process.stderr.write('plumbbob: no step to checkpoint — pass a number, or plan a step in intent.md first.\n')
+    process.stderr.write(
+      notice({ fact: 'no step to checkpoint', remedy: 'pass a step number, or plan a step in intent.md first' }),
+    )
     return 1
   }
 
@@ -97,16 +100,24 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
     }
     process.stderr.write(
       gate === 2
-        ? 'plumbbob: the check gate itself broke — checkpoint refuses until the harness is fixed.\n'
-        : 'plumbbob: check failed (red) — checkpoint refuses on red. Fix it and re-run.\n',
+        ? notice({
+            fact: 'checkpoint refused',
+            detail: ['the check gate itself broke'],
+            remedy: 'fix the harness, then run it again',
+          })
+        : notice({ fact: 'checkpoint refused', detail: ['the check is red'], remedy: 'fix it, then run it again' }),
     )
     return 1
   }
 
   let sha: string
+  // The drift advisory is read off the index (staged, before the commit clears
+  // it) but printed after the boundary line, so every ending reads in the one
+  // fixed order: the fact, then what qualifies it.
+  let drift = ''
   if (isDirty(root)) {
     stageAll(root)
-    warnScopeDrift(root, step)
+    drift = scopeDriftNotice(root, step)
     const lead = bodyResult.body ?? fallbackBody(root, step)
     const body = withMarker(`plumbbob step ${step}`, foldDetail(lead, readDetail(root)))
     sha = commit(root, messageArg(args) ?? subjectForStep(root, step), body)
@@ -116,7 +127,7 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   }
 
   appendFileSync(checkpointsPath(root), `step ${step} ${sha}\n`)
-  flipIntent(root, step)
+  const flipNotice = flipIntent(root, step)
   stampStepStat(root, undefined, step, 'landedAt', new Date().toISOString())
   logCheckpoint(root, step, sha)
   // The step landed: the build-log's ☐/☑ mirror flips and its Current-step line
@@ -129,7 +140,8 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   clearHandoff(root) // the agent-run handoff ledger is step-scoped; clear it with the markers.
   clearTick(root) // the step's entry stamp is spent; the next `build <n>` re-stamps.
 
-  process.stdout.write(`plumbbob: step ${step} checkpointed — ${sha.slice(0, 9)}. Back at the boundary.\n`)
+  process.stdout.write(notice({ fact: `step ${step} checkpointed`, detail: [sha.slice(0, 9)] }))
+  process.stderr.write(drift + flipNotice)
   return 0
 }
 
@@ -172,11 +184,17 @@ function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
   // Landing the plan consumes `start`'s entry stamp: a later hand-built diff
   // (no `build <n>`) must find no stale TICK and stay guidance-governed.
   clearTick(root)
-  process.stdout.write(
-    staged
-      ? `plumbbob: plan committed — ${sha.slice(0, 9)}. Baseline → plan → steps.\n`
-      : `plumbbob: plan committed (record-only — sidecar is gitignored; the plan rides the commit message, the files stay untracked) — ${sha.slice(0, 9)}. Baseline → plan → steps.\n`,
-  )
+  process.stdout.write(notice({ fact: 'plan committed', detail: [sha.slice(0, 9)] }))
+  if (!staged) {
+    process.stderr.write(
+      notice({
+        fact: 'the plan rides the commit message',
+        advisory: true,
+        detail: ['record-only', '.plumbbob/ is gitignored, so the files stay untracked'],
+        remedy: 'unignore .plumbbob/builds/ to keep the record in the tree',
+      }),
+    )
+  }
   return 0
 }
 
@@ -215,7 +233,8 @@ function resolveStep(root: string, args: ReadonlyArray<string>): number | null {
 }
 
 /**
- * Warn (never refuse) when the staged tree reaches beyond the step's seam.
+ * The advisory (never a refusal) for a staged tree that reaches beyond the
+ * step's seam, or '' when it held.
  *
  * Guidance, not a gate: the checkpoint captures the drift and says so. The seam
  * (the step's edit grant: exact paths or `dir/` prefixes) comes from the
@@ -224,16 +243,17 @@ function resolveStep(root: string, args: ReadonlyArray<string>): number | null {
  * so the `[x]` flip and build-log line this very checkpoint stages never read
  * as drift. No seam means no warning.
  */
-function warnScopeDrift(root: string, step: number): void {
+function scopeDriftNotice(root: string, step: number): string {
   const seam = seamTokens(root, step)
   const outside = scopeDrift(stagedPaths(root), seam)
-  if (outside.length > 0) {
-    bumpStepStat(root, undefined, step, 'driftWarnings') // accrues into the build-log's stats receipt
-    process.stderr.write(
-      `plumbbob: heads-up — staged paths outside step ${step}'s seam: ${outside.join(', ')}. ` +
-        `The checkpoint captures them; if that's real scope drift, the plan may need a \`/plumbbob:step\` revision.\n`,
-    )
-  }
+  if (outside.length === 0) return ''
+  bumpStepStat(root, undefined, step, 'driftWarnings') // accrues into the build-log's stats receipt
+  return notice({
+    fact: `staged paths reach outside step ${step}'s seam`,
+    advisory: true,
+    detail: outside,
+    remedy: 'the checkpoint captures them, so revise the plan with /plumbbob:step if that is real scope drift',
+  })
 }
 
 /**
@@ -264,16 +284,20 @@ function seamTokens(root: string, step: number): ReadonlyArray<string> {
  *
  * Best-effort bookkeeping (the checkpoint SHA is the source of truth) but the
  * dashboard reads intent.md, so a swallowed failure here would make orientation
- * lie; the catch warns and asks for a hand flip instead.
+ * lie; the catch returns the advisory asking for a hand flip, which the caller
+ * prints after the boundary line. Returns '' on the happy path.
  */
-function flipIntent(root: string, step: number): void {
+function flipIntent(root: string, step: number): string {
   try {
     writeFileSync(intentPath(root), markStepDone(readFileSync(intentPath(root), 'utf8'), step))
+    return ''
   } catch {
-    process.stderr.write(
-      `plumbbob: heads-up — could not flip step ${step} to [x] in intent.md; ` +
-        `the checkpoint is recorded, but the dashboard will still show step ${step} as next. Flip it by hand.\n`,
-    )
+    return notice({
+      fact: `could not flip step ${step} to [x] in intent.md`,
+      advisory: true,
+      detail: ['the checkpoint is recorded', `the dashboard still shows step ${step} as next`],
+      remedy: 'flip the checkbox by hand',
+    })
   }
 }
 

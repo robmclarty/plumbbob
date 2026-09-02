@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: presentation
 
-**Current step:** 13 — docs(happy-path): make every illustrated block producible
+**Current step:** 14 — feat(notices): every relayed line states its fact through one formatter
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -35,7 +35,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 10. docs(skills): relay every tier's ending from the plan and driver skills
 - ☑ 11. feat(anatomy): render the ending as labeled lines with sized readout rows
 - ☑ 12. feat(anatomy): render the whole turn from the detail file
-- ☐ 13. docs(happy-path): make every illustrated block producible
+- ☑ 13. docs(happy-path): make every illustrated block producible
 - ☐ 14. feat(notices): every relayed line states its fact through one formatter
 - ☐ 15. feat(handoff): point past an open spike and out of a finished session
 - ☐ 16. test(evals): run the eval tier against the new anatomy
@@ -160,3 +160,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-09-02 — step 10 checkpointed · 0dd5ad52e — docs(skills): relay every tier's ending from the plan and driver skills (88m)
 - 2026-09-02 — step 11 checkpointed · 3cbb72719 — feat(anatomy): render the ending as labeled lines with sized readout rows (1 drift, 38m)
 - 2026-09-02 — step 12 checkpointed · 9b8956c9c — feat(anatomy): render the whole turn from the detail file (34m)
+- 2026-09-02 — step 13 checkpointed · c723202eb — docs(happy-path): make every illustrated block producible (20m)

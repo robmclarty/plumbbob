@@ -199,7 +199,7 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    `looks good`.
 
    **Then hand off with the next model.** Once the checkpoint lands in the approval turn,
-   `plumbbob checkpoint` prints `step N checkpointed — <sha>. Back at the boundary.`; then
+   `plumbbob checkpoint` prints `step N checkpointed (<sha>)`; then
    run `plumbbob handoff` and relay its card. The turn is those two outputs and nothing
    written around them. With the step gone from in-flight the card drops to its
    orientation-tier form (the Verdict and Next Up only; no Your Call block, no

@@ -38,7 +38,8 @@ Under the hood it runs `plumbbob start`, which records a baseline and drops you 
 `DESIGN`:
 
 ```text
-plumbbob: started "Rate-limit the login endpoint" — baseline 3a1f2b0c1. Frame and decide in .plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md; `build` a step once the decisions are made.
+plumbbob: started "Rate-limit the login endpoint" (baseline 3a1f2b0c1)
+  → frame and decide in .plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md, then build a step
 ```
 
 In interview mode it proposes wording you can accept without typing ("done-when: the
@@ -138,7 +139,8 @@ straight through the verify tick to the pause.
 It goes in-flight, recording the seam for orientation (not a lock):
 
 ```text
-plumbbob: building step 1. Seam (for orientation; not a lock):
+plumbbob: building step 1 (next undone)
+plumbbob: the seam is orientation, not a lock (2 paths)
   src/limiter.ts
   test/limiter.test.ts
 ```
@@ -213,7 +215,7 @@ The boundary turn scales the anatomy down to what a landed step needs: the verb'
 then the Verdict and Next Up, with no Your Call block, because no decision is pending.
 
 ```text
-plumbbob: step 1 checkpointed — a1b2c3d4e. Back at the boundary.
+plumbbob: step 1 checkpointed (a1b2c3d4e)
 
 **Verdict**: ● Plumb
 
@@ -263,7 +265,7 @@ you for a quick OK** (confirm it as-is or tweak the wording), then captures it b
 pointer back at the step it interrupted, and nothing else.
 
 ```text
-parked: tangent: should /password-reset get the same throttle?
+parked: should /password-reset get the same throttle? (tangent)
 
 **Next Up**: Back to step 2 of 3 - Wire the limiter into POST /login
 ```
@@ -361,7 +363,7 @@ the in-flight markers). It writes no separate archive copy: the tracked build fo
 the record now, so it merges into `main` with the branch:
 
 ```text
-plumbbob: finished — f3e9a1b2c. .plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/ rides your branch into the PR. Run `/plumbbob:plan` (or `plumbbob start "<title>"`) to frame the next goal.
+plumbbob: finished (f3e9a1b2c, .plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/ rides your branch into the PR)
 ```
 
 The record now lives (tracked, on the branch) at:
@@ -390,7 +392,8 @@ The sidecar is clear and there's no active session. `/plumbbob:status` now reads
 ```
 
 ```text
-plumbbob: started "Add structured request logging" — baseline a1b2c3d4e. Frame and decide in .plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md; `build` a step once the decisions are made.
+plumbbob: started "Add structured request logging" (baseline a1b2c3d4e)
+  → frame and decide in .plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md, then build a step
 ```
 
 And you're back at step 0 with a clean head and the previous goal safely on the shelf.

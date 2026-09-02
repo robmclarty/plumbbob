@@ -240,8 +240,8 @@ plumbbob park "<text>"
 ```
 
 Appends `<text>` as a raw line under `## Park list` in `build-log.md` and prints
-`parked: <text>` ([**D7 (park-then-harvest)**](decisions.md#d7)). This is the dumb capture path: composing the tidy tagged line
-is the `/plumbbob:park` skill's job. Refuses (exit 1) with no session, empty text, or no
+`parked: <text>` ([**D7 (park-then-harvest)**](decisions.md#d7)). This is the dumb capture path: composing the tidy line,
+tag at the tail, is the `/plumbbob:park` skill's job. Refuses (exit 1) with no session, empty text, or no
 `## Park list` section.
 
 ### spike

@@ -27,14 +27,21 @@ is fine; capture is always available, which is the whole point of parking.
 Take the idea, problem, or "ooh what if" the human just had and **compose it into one
 tidy, tagged line**: short, legible, self-contained, and carrying a **one-clause why**
 (what it is *and* why it's worth revisiting), so it still reads cleanly weeks later when
-harvest triages it cold. Then:
+harvest triages it cold. **The tag rides the tail, in brackets**, so the line spends its
+one colon on the `parked:` prefix and reads the same in the chat as in the ledger:
+
+```text
+should /password-reset get the same throttle? (tangent)
+```
+
+Then:
 
 1. **Show the composed line to the human** and wait for **in-turn approval**: they
    confirm it as-is or edit the wording.
 2. **Only after** that approval, capture it by running `plumbbob park "<the
    approved line>"` via Bash.
 3. **Relay the capture, then get back to the step.** `plumbbob park` prints
-   `parked: <text>`; relay that line verbatim, then relay `plumbbob handoff --driver`'s
+   `parked: <text> (tag)`; relay that line verbatim, then relay `plumbbob handoff --driver`'s
    next-up line, which points back at the step in flight ("Next Up: Back to step N"). Park
    is a driver turn (the [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)):
    the verb's line plus that one pointer are the whole turn, and the pointer is handoff's to

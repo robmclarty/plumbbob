@@ -32,6 +32,7 @@ import {
 } from '../lib/sidecar.ts'
 import { conventionalSubject, withMarker } from '../lib/commitmsg.ts'
 import { parseBuildScope } from '../lib/intent.ts'
+import { notice } from '../lib/notice.ts'
 
 /**
  * Close out the active build: report tail, final commit, control-state cleanup.
@@ -44,7 +45,7 @@ import { parseBuildScope } from '../lib/intent.ts'
 export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
-    process.stderr.write('plumbbob: no active session. Run `plumbbob start "<title>"` first.\n')
+    process.stderr.write(notice({ fact: 'no active session', remedy: 'plumbbob start "<title>"' }))
     return 1
   }
 
@@ -60,14 +61,10 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
 
   const { build: slug } = resolveBuild(root, args)
 
-  if (existsSync(reportPath(root, slug))) {
+  const reported = existsSync(reportPath(root, slug))
+  if (reported) {
     appendCheckpointShas(root, slug)
     appendStats(root, slug)
-  } else {
-    process.stderr.write(
-      'plumbbob: note — no report.md found; finishing without one ' +
-        '(/plumbbob:finish normally writes the report first). No gate — D9 (finish-no-gate).\n',
-    )
   }
 
   // The final commit: stage the report just written plus the build folder's tail
@@ -101,9 +98,20 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
 
   const where = slug === null ? '.plumbbob/' : `.plumbbob/builds/${slug}/`
   process.stdout.write(
-    `plumbbob: finished — ${sha.slice(0, 9)}. ${where} rides your branch into the PR. ` +
-      'Run `/plumbbob:plan` (or `plumbbob start "<title>"`) to frame the next goal.\n',
+    notice({ fact: 'finished', detail: [sha.slice(0, 9), `${where} rides your branch into the PR`] }),
   )
+  // The advisory follows the line it qualifies. Finishing without a report is
+  // guidance, never a gate: the session is already closed by the time it prints.
+  if (!reported) {
+    process.stderr.write(
+      notice({
+        fact: 'no report.md found',
+        advisory: true,
+        detail: ['finished without one', 'no gate here by design'],
+        remedy: '/plumbbob:finish normally writes the report first',
+      }),
+    )
+  }
   return 0
 }
 

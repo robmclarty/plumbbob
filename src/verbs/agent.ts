@@ -36,6 +36,10 @@ import {
 import { appendToSection } from '../lib/buildlog.ts'
 import { resolveBoolean, resolveNumber, resolveRecord } from '../lib/settings.ts'
 import { appendHandoff, buildFolder, buildLogPath, hasSession, intentPath, resolveBuild, stepPath } from '../lib/sidecar.ts'
+import { notice } from '../lib/notice.ts'
+
+/** The remedy on an ambient binding's advisory: a binding is configuration the loop must survive without. */
+const SKIPPING = 'skipping this binding, since the loop works without it'
 
 /**
  * Dispatch `plumbbob agent list|run`, refusing an unknown subcommand with a hint.
@@ -46,7 +50,9 @@ export async function agent(cwd: string, args: ReadonlyArray<string> = []): Prom
   if (sub === 'run') return run(cwd, rest)
   const known = 'Available subcommands: list, run.'
   const message =
-    sub === undefined ? `plumbbob agent <subcommand>. ${known}` : `plumbbob: unknown 'agent' subcommand '${sub}'. ${known}`
+    sub === undefined
+      ? `plumbbob agent <subcommand>. ${known}`
+      : notice({ fact: `unknown 'agent' subcommand '${sub}'`, remedy: 'plumbbob agent list, or plumbbob agent run' }).trimEnd()
   process.stderr.write(`${message}\n`)
   return 1
 }
@@ -57,7 +63,7 @@ export async function agent(cwd: string, args: ReadonlyArray<string> = []): Prom
 function list(cwd: string, _args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
   if (root === null) {
-    process.stderr.write('plumbbob: not inside a git repository.\n')
+    process.stderr.write(notice({ fact: 'not inside a git repository' }))
     return 1
   }
   process.stdout.write(`${formatAgentList(listAgents(root))}\n`)
@@ -76,7 +82,7 @@ function list(cwd: string, _args: ReadonlyArray<string>): number {
 async function run(cwd: string, args: ReadonlyArray<string>): Promise<number> {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
-    process.stderr.write('plumbbob: no active session. Run `plumbbob start "<title>"` first.\n')
+    process.stderr.write(notice({ fact: 'no active session', remedy: 'plumbbob start "<title>"' }))
     return 1
   }
 
@@ -89,14 +95,22 @@ async function run(cwd: string, args: ReadonlyArray<string>): Promise<number> {
 
   const step = parsed.step ?? readStep(root, slug)
   if (step === null) {
-    process.stderr.write('plumbbob: no step to run against — pass --step N, or `plumbbob build N` first.\n')
+    process.stderr.write(
+      notice({ fact: 'no step to run against', remedy: 'pass --step N, or plumbbob build N first' }),
+    )
     return 1
   }
 
   // A `--agent <path>` flag still needs a name; it labels an explicit run (the
   // handoff ledger and the human summary key on the name), it does not name one.
   if (parsed.name === undefined && parsed.flagPath !== undefined) {
-    process.stderr.write('plumbbob: --agent needs an agent name too, for the run label. Try: plumbbob agent run reviewer --agent ./path --step 3.\n')
+    process.stderr.write(
+      notice({
+        fact: '--agent needs an agent name too',
+        detail: ['the name is the run label'],
+        remedy: 'plumbbob agent run reviewer --agent ./path --step 3',
+      }),
+    )
     return 1
   }
 
@@ -140,18 +154,19 @@ async function runOne(root: string, slug: string | null, step: number, spec: Run
   if (!resolution.ok) {
     return degrade(
       spec.ambient,
-      `plumbbob: ${resolution.error}`,
-      `plumbbob: bound agent "${spec.name}" did not resolve — ${resolution.error} Skipping — D54 (bindings-degrade-soft): the loop works without it.`,
+      notice({ fact: resolution.error }).trimEnd(),
+      notice({ fact: resolution.error, advisory: true, remedy: SKIPPING }).trimEnd(),
     )
   }
   const { manifest, dir } = resolution.agent
 
   const resolved = resolveMode(spec.mode, manifest)
   if (!resolved.ok) {
+    const parts = { fact: resolved.fact, detail: resolved.detail }
     return degrade(
       spec.ambient,
-      resolved.error,
-      `plumbbob: bound agent "${spec.name}" — ${resolved.error.replace(/^plumbbob:\s*/, '')} Skipping — D54 (bindings-degrade-soft).`,
+      notice(resolved.remedy === undefined ? parts : { ...parts, remedy: resolved.remedy }).trimEnd(),
+      notice({ ...parts, advisory: true, remedy: SKIPPING }).trimEnd(),
     )
   }
   const mode = resolved.mode
@@ -160,7 +175,9 @@ async function runOne(root: string, slug: string | null, step: number, spec: Run
   try {
     intent = readFileSync(intentPath(root, slug), 'utf8')
   } catch {
-    process.stderr.write('plumbbob: no intent.md for the active build — cannot compose the agent input.\n')
+    process.stderr.write(
+      notice({ fact: 'no intent.md for the active build', detail: ['cannot compose the agent input'] }),
+    )
     return 1
   }
 
@@ -216,11 +233,16 @@ async function runOne(root: string, slug: string | null, step: number, spec: Run
  */
 async function runBound(root: string, slug: string | null, step: number, modeFlag: string | undefined): Promise<number> {
   if (modeFlag === undefined) {
-    process.stderr.write('plumbbob: agent run needs an agent name, or --mode <slot> to run the step\'s bound agents.\n')
+    process.stderr.write(
+      notice({
+        fact: 'agent run needs an agent name',
+        remedy: "name one, or pass --mode <slot> to run the step's bound agents",
+      }),
+    )
     return 1
   }
   if (!isSlot(modeFlag)) {
-    process.stderr.write(`plumbbob: unknown --mode '${modeFlag}' — slots are ${SLOTS.join(', ')}.\n`)
+    process.stderr.write(notice({ fact: `unknown --mode '${modeFlag}'`, detail: [...SLOTS] }))
     return 1
   }
 
@@ -237,7 +259,9 @@ async function runBound(root: string, slug: string | null, step: number, modeFla
     slot: modeFlag,
   })
   if (names.length === 0) {
-    process.stderr.write(`plumbbob: no agents bound to the '${modeFlag}' slot for step ${step} — nothing to run.\n`)
+    process.stderr.write(
+      notice({ fact: `no agents bound to the '${modeFlag}' slot for step ${step}`, detail: ['nothing to run'] }),
+    )
     return 0
   }
 
@@ -288,16 +312,16 @@ function parseRunArgs(args: ReadonlyArray<string>): RunArgs | string {
     if (arg === '--step') {
       const value = args[++i]
       if (value === undefined || !/^\d+$/.test(value) || Number(value) < 1) {
-        return 'plumbbob: --step needs a positive step number.'
+        return notice({ fact: '--step needs a positive step number' }).trimEnd()
       }
       step = Number(value)
     } else if (arg === '--mode') {
       const value = args[++i]
-      if (value === undefined) return `plumbbob: --mode needs a slot (${SLOTS.join(', ')}).`
+      if (value === undefined) return notice({ fact: '--mode needs a slot', detail: [...SLOTS] }).trimEnd()
       mode = value
     } else if (arg === '--agent') {
       const value = args[++i]
-      if (value === undefined) return 'plumbbob: --agent needs a path to an agent directory.'
+      if (value === undefined) return notice({ fact: '--agent needs a path to an agent directory' }).trimEnd()
       flagPath = value
     } else if (!arg.startsWith('--')) {
       positionals.push(arg)
@@ -305,6 +329,16 @@ function parseRunArgs(args: ReadonlyArray<string>): RunArgs | string {
   }
   return { name: positionals[0], step, mode, flagPath }
 }
+
+/**
+ * A resolved slot, or the parts of the notice explaining why it did not
+ * resolve. The parts stay unrendered so the caller can print the same fact
+ * twice over: loud for an explicit ask, advisory with a skipping remedy for an
+ * ambient binding.
+ */
+type ModeResolution =
+  | { readonly ok: true; readonly mode: Slot }
+  | { readonly ok: false; readonly fact: string; readonly detail: ReadonlyArray<string>; readonly remedy?: string }
 
 /**
  * Resolve the slot the agent runs in.
@@ -315,13 +349,16 @@ function parseRunArgs(args: ReadonlyArray<string>): RunArgs | string {
  * agent must be told which one (harness bindings pick the slot from the
  * lifecycle point; a bare `run` cannot guess).
  */
-function resolveMode(flag: string | undefined, manifest: AgentManifest): { ok: true; mode: Slot } | { ok: false; error: string } {
+function resolveMode(flag: string | undefined, manifest: AgentManifest): ModeResolution {
   if (flag !== undefined) {
-    if (!isSlot(flag)) return { ok: false, error: `plumbbob: unknown --mode '${flag}' — slots are ${SLOTS.join(', ')}.` }
+    if (!isSlot(flag)) {
+      return { ok: false, fact: `unknown --mode '${flag}'`, detail: [...SLOTS] }
+    }
     if (!manifest.slots.includes(flag)) {
       return {
         ok: false,
-        error: `plumbbob: agent "${manifest.name}" does not declare the '${flag}' slot (it declares ${manifest.slots.join(', ')}).`,
+        fact: `agent "${manifest.name}" does not declare the '${flag}' slot`,
+        detail: [`it declares ${manifest.slots.join(', ')}`],
       }
     }
     return { ok: true, mode: flag }
@@ -329,7 +366,9 @@ function resolveMode(flag: string | undefined, manifest: AgentManifest): { ok: t
   if (manifest.slots.length === 1) return { ok: true, mode: manifest.slots[0] as Slot }
   return {
     ok: false,
-    error: `plumbbob: agent "${manifest.name}" declares multiple slots (${manifest.slots.join(', ')}) — pass --mode <slot>.`,
+    fact: `agent "${manifest.name}" declares multiple slots`,
+    detail: manifest.slots,
+    remedy: 'pass --mode <slot>',
   }
 }
 
@@ -369,15 +408,18 @@ function report(
 function failureLine(name: string, result: Exclude<AgentRunResult, { ok: true }>): string {
   switch (result.reason) {
     case 'exit':
-      return `plumbbob: agent "${name}" exited ${result.code} — failed run, stopping. No side effects applied.`
+      return notice({
+        fact: `agent "${name}" exited ${result.code}`,
+        detail: ['a failed run, stopping', 'no side effects applied'],
+      }).trimEnd()
     case 'contract':
-      return `plumbbob: agent "${name}" is out of contract — ${result.error}`
+      return notice({ fact: `agent "${name}" is out of contract`, detail: [result.error] }).trimEnd()
     case 'timeout':
-      return `plumbbob: agent "${name}" timed out after ${result.seconds}s — killed.`
+      return notice({ fact: `agent "${name}" timed out after ${result.seconds}s`, detail: ['killed'] }).trimEnd()
     case 'interrupted':
-      return `plumbbob: interrupted — killed agent "${name}".`
+      return notice({ fact: `agent "${name}" killed`, detail: ['interrupted'] }).trimEnd()
     case 'spawn':
-      return `plumbbob: could not spawn agent "${name}" — ${result.error}`
+      return notice({ fact: `could not spawn agent "${name}"`, detail: [result.error] }).trimEnd()
   }
 }
 
@@ -395,17 +437,22 @@ function applyParked(root: string, slug: string | null, parked: ReadonlyArray<st
   try {
     content = readFileSync(path, 'utf8')
   } catch {
-    process.stderr.write(`plumbbob: no build-log.md — could not park ${parked.length} line(s) the agent returned.\n`)
+    process.stderr.write(
+      notice({
+        fact: 'no build-log.md',
+        detail: [`could not park ${parked.length} line${parked.length === 1 ? '' : 's'} the agent returned`],
+      }),
+    )
     return
   }
   for (const line of parked) {
     const updated = appendToSection(content, 'Park list', `- [ ] ${line}`)
     if (updated === null) {
-      process.stderr.write(`plumbbob: no "## Park list" in build-log.md — could not park: ${line}\n`)
+      process.stderr.write(notice({ fact: 'no "## Park list" in build-log.md', detail: [`could not park ${line}`] }))
       return
     }
     content = updated
-    process.stderr.write(`plumbbob: parked — ${line}\n`)
+    process.stderr.write(notice({ prefix: 'parked', fact: line }))
   }
   writeFileSync(path, content)
 }
@@ -418,15 +465,23 @@ function applyParked(root: string, slug: string | null, parked: ReadonlyArray<st
  * the same status for the calling skill; this stderr copy is the terminal read.
  */
 function humanSummary(name: string, mode: Slot, envelope: AgentEnvelope): string {
-  const head = `plumbbob: agent "${name}" (${mode}) — ${envelope.status}: ${envelope.summary}\n`
-  const notes = envelope.notes.length > 0 ? `  notes: ${envelope.notes}\n` : ''
+  const detail = [`${mode} slot`, envelope.summary]
+  if (envelope.notes.length > 0) detail.push(envelope.notes)
   if (envelope.status === 'blocked') {
-    return `${head}  blocked — the agent couldn't finish; unblock and re-run.\n${notes}`
+    return notice({
+      fact: `agent "${name}" reports blocked`,
+      detail,
+      remedy: "the agent couldn't finish, so unblock it and re-run",
+    })
   }
   if (envelope.status === 'drift') {
-    return `${head}  drift — the plan no longer matches reality; /plumbbob:refine before continuing.\n${notes}`
+    return notice({
+      fact: `agent "${name}" reports drift`,
+      detail,
+      remedy: 'the plan no longer matches reality, so /plumbbob:refine before continuing',
+    })
   }
-  return head
+  return notice({ fact: `agent "${name}" reports ${envelope.status}`, detail })
 }
 
 /**

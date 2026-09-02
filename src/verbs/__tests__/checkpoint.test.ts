@@ -6,6 +6,7 @@ import { checkpoint } from '../checkpoint.ts'
 import { start } from '../start.ts'
 import { buildLogPath, checkpointsPath, grantPath, handoffPath, hasSession, intentPath, readStats, stampStepStat, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
 import { gitPath } from '../../lib/git.ts'
+import { notice } from '../../lib/notice.ts'
 import { setLocalSetting, settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { cleanupFixtures, makeFixtureRepo, runCli } from '../../../test/helpers/fixture-repo.ts'
@@ -26,6 +27,11 @@ const INTENT = `# Checkpoint test
 // A started session with one planned step and a green stub gate. In the tracked
 // layout the build folder rides the tree, so overwriting intent/settings
 // dirties it: checkpoint stages that alongside the step's work.
+/** The 9-char SHA the ledger recorded under `label`, the same short form the verb prints. */
+function ledgerSha(dir: string, label: string): string {
+  return (new RegExp(`${label} ([0-9a-f]{40})`).exec(readFileSync(checkpointsPath(dir), 'utf8'))?.[1] ?? '').slice(0, 9)
+}
+
 async function startedGreen(): Promise<string> {
   const dir = makeTempRepo()
   await captureIoAsync(() => start(dir, ['Checkpoint test', '--slug', 'checkpoint-test']))
@@ -43,9 +49,10 @@ describe('checkpoint', () => {
     expect(hasSession(dir)).toBe(true)
     expect(readFileSync(checkpointsPath(dir), 'utf8')).toMatch(/step 1 [0-9a-f]{40}/)
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x]')
-    // The SHA is shortened to exactly 9 hex chars: a full 40-char SHA here
-    // would mean the slice was dropped.
-    expect(stdout).toMatch(/step 1 checkpointed — [0-9a-f]{9}\. Back at the boundary/)
+    // Asserted through the formatter, so moving the shape stays one edit: what
+    // this pins is the parts, and the SHA shortened to exactly 9 hex chars (a
+    // full 40-char SHA here would mean the slice was dropped).
+    expect(stdout).toBe(notice({ fact: 'step 1 checkpointed', detail: [ledgerSha(dir, 'step 1')] }))
   })
 
   it('refreshes a stale info/exclude so an in-flight control file never rides the step commit — D33 (info-exclude)', async () => {
@@ -215,7 +222,7 @@ describe('checkpoint', () => {
     writeFileSync(settingsPath(dir), JSON.stringify({ check: 'false' }))
     const { code, stderr } = await captureIoAsync(() => checkpoint(dir, ['1']))
     expect(code).toBe(1)
-    expect(stderr).toContain('check failed')
+    expect(stderr).toBe(notice({ fact: 'checkpoint refused', detail: ['the check is red'], remedy: 'fix it, then run it again' }))
   })
 
   it('refuses distinctly when the gate itself breaks (checkride exit 2)', async () => {
@@ -374,7 +381,7 @@ describe('checkpoint', () => {
       const dir = await startedGreen()
       const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
       expect(code).toBe(0)
-      expect(stdout).toMatch(/plan committed — [0-9a-f]{9}\./) // short SHA, not the full 40
+      expect(stdout).toBe(notice({ fact: 'plan committed', detail: [ledgerSha(dir, 'plan')] })) // short SHA, not the full 40
       const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
       expect(subject).toBe('chore(checkpoint-test): plan')
       const body = execFileSync('git', ['log', '-1', '--format=%b'], { cwd: dir, encoding: 'utf8' })
@@ -419,10 +426,20 @@ describe('checkpoint', () => {
       writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true' }))
       writeFileSync(tickPath(dir), '2\n') // an entry stamp to prove it still gets consumed
 
-      const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
+      const { code, stdout, stderr } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
 
       expect(code).toBe(0)
-      expect(stdout).toContain('record-only')
+      // The fact leads on stdout; record-only is the advisory that qualifies it,
+      // one line after, the way every ending is ordered.
+      expect(stdout).toBe(notice({ fact: 'plan committed', detail: [ledgerSha(dir, 'plan')] }))
+      expect(stderr).toBe(
+        notice({
+          fact: 'the plan rides the commit message',
+          advisory: true,
+          detail: ['record-only', '.plumbbob/ is gitignored, so the files stay untracked'],
+          remedy: 'unignore .plumbbob/builds/ to keep the record in the tree',
+        }),
+      )
       // The subject and body marker are unchanged from the tracked path.
       const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
       expect(subject).toBe('chore(checkpoint-test): plan')

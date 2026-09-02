@@ -3,6 +3,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { finish } from '../finish.ts'
+import { notice } from '../../lib/notice.ts'
 import { start } from '../start.ts'
 import { bumpStepStat, checkpointsPath, grantPath, hasSession, intentPath, reportPath, sidecarDir, stampStepStat, tickPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -30,9 +31,12 @@ describe('finish', () => {
     expect(subject(dir)).toBe('chore(finishing-up): finish') // Conventional Commits subject; the `plumbbob finish` marker rides in the body
     const body = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%b'], { encoding: 'utf8' })
     expect(body).toContain('plumbbob finish')
-    // Short SHA (exactly 9 hex), the archive pointer, and the next-goal nudge.
-    expect(stdout).toMatch(/finished — [0-9a-f]{9}\. \.plumbbob\/builds\/finishing-up\/ rides your branch/)
-    expect(stdout).toContain('plan')
+    // Short SHA (exactly 9 hex) and the archive pointer, and nothing after: the
+    // line states its fact, and the pointer at what comes next is handoff's.
+    const sha = execFileSync('git', ['-C', dir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim().slice(0, 9)
+    expect(stdout).toBe(
+      notice({ fact: 'finished', detail: [sha, '.plumbbob/builds/finishing-up/ rides your branch into the PR'] }),
+    )
   })
 
   it('clears the cursor by removing STATE and leaves a clean tree', async () => {

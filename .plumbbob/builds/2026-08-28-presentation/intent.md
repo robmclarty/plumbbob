@@ -546,7 +546,7 @@ a boundary or driver turn, top to bottom
    skills; unit tests assert the whole emitted turn
    - seam: `src/verbs/handoff.ts`, `src/lib/orient.ts`, `src/verbs/__tests__/handoff.test.ts`, `docs/presentation.md`, `skills/build/SKILL.md`, `skills/verify/SKILL.md`
    - model: opus (the skills' template is voice-governed prose; the wire wants a careful read)
-13. [ ] docs(happy-path): make every illustrated block producible,
+13. [x] docs(happy-path): make every illustrated block producible,
    **done when:** each rendered block in `docs/happy-path.md` matches real CLI
    output or the skill's exact template, and the `handoff` entry in
    `docs/cli-reference.md` describes the emitted block, the labeled

@@ -10,6 +10,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { hasSession, buildLogPath } from '../lib/sidecar.ts'
 import { appendToSection } from '../lib/buildlog.ts'
+import { notice } from '../lib/notice.ts'
 
 /**
  * Append the given text as one unchecked `- [ ]` line to the build-log's Park list.
@@ -22,7 +23,7 @@ export function park(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
     process.stderr.write(
-      'plumbbob: no active session — nothing to park to. Run `plumbbob start "<title>"` first.\n',
+      notice({ fact: 'no active session', detail: ['nothing to park to'], remedy: 'plumbbob start "<title>"' }),
     )
     return 1
   }
@@ -31,16 +32,20 @@ export function park(cwd: string, args: ReadonlyArray<string>): number {
     .join(' ')
     .trim()
   if (text.length === 0) {
-    process.stderr.write('plumbbob: park needs text. Try: plumbbob park "the idea you do not want to chase right now".\n')
+    process.stderr.write(
+      notice({ fact: 'park needs text', remedy: 'plumbbob park "the idea you do not want to chase right now"' }),
+    )
     return 1
   }
   const path = buildLogPath(root)
   const updated = appendToSection(readFileSync(path, 'utf8'), 'Park list', `- [ ] ${text}`)
   if (updated === null) {
-    process.stderr.write('plumbbob: could not find a "## Park list" section in build-log.md.\n')
+    process.stderr.write(
+      notice({ fact: 'no "## Park list" section in build-log.md', remedy: 'add the section, then park again' }),
+    )
     return 1
   }
   writeFileSync(path, updated)
-  process.stdout.write(`parked: ${text}\n`)
+  process.stdout.write(notice({ prefix: 'parked', fact: text }))
   return 0
 }
