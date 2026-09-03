@@ -219,7 +219,8 @@ and why it matters; when the read found more than one, say how many sit behind `
 and name `/plumbbob:refine` as the move that writes them up as Open questions, with their
 plain and lean sub-lines, for the human to settle. Three findings at most; the rest is
 refine's. `plumbbob handoff --plan` prints the label and your recommendation as the turn's
-last text, and "expand 2" opens `## 2`. The cold read is the tip of refine: it makes the
+last text, "expand 2" opens `## 2`, and `checkpoint --plan` records the read beneath the
+plan's line in the build-log's `## Log`, the build's first entry. The cold read is the tip of refine: it makes the
 full attack discoverable at the moment it would pay, and lets a sound plan skip it. Refine
 is where the real adversary looks; this is an estimate, and it says so by staying short.
 

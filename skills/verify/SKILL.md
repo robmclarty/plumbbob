@@ -109,8 +109,8 @@ this skill verifies it the same way: **it reads the diff, not the author**
    width, so never hard-wrap them; handoff also prepends the bold `**Recommendation**:`
    label, which you never type. This is the **one** file `/plumbbob:verify` writes, and it
    is turn presentation, never the diff under review; the author-blind contract below still
-   holds. `checkpoint` folds this file into the commit body and then truncates it (the
-   detail plane in the
+   holds. `checkpoint` records this file beneath the step's dated line in the build-log's
+   `## Log` and then truncates it (the detail plane in the
    [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)).
 
    *Paste the turn.* Run `plumbbob handoff` and paste its output whole, verbatim, at top
@@ -130,7 +130,7 @@ this skill verifies it the same way: **it reads the diff, not the author**
 
    *Then read the reply as an ask or a direction.* A message that **asks** ("expand 2",
    "what does that mean?", "why did the seam row flag that?") is an expand: answer it from the detail file, from
-   `git diff`, or from `git show`, never from recall, then run `plumbbob handoff` again and
+   `git diff`, or from the build-log's `## Log` for an older step, never from recall, then run `plumbbob handoff` again and
    paste it. The step is still in flight, so it renders the same pause, and the Your Call
    block stays the CLI's to render rather than yours to retype. A message that **directs**
    is needs-work: take it as what to change, and nothing lands until the human says

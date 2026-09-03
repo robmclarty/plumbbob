@@ -173,8 +173,9 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    sentence, closed by a period, then the reason as a capitalized sentence or two. The lead
    and the recommendation are flowing prose and handoff unwraps both to the renderer's
    width, so never hard-wrap them; handoff also prepends the bold `**Recommendation**:`
-   label, which you never type. `checkpoint` folds this file into the commit body and then
-   truncates it, so the detail lands in the durable commit rather than piling up on disk.
+   label, which you never type. `checkpoint` records this file beneath the step's dated
+   line in the build-log's `## Log` and then truncates it, so the detail lands in the
+   tracked ledger rather than piling up on disk.
 
    *Paste the turn.* Run `plumbbob handoff` and paste its output whole, verbatim, at top
    level, trailing blank line included, then end the turn. Never nest it inside a fence of
@@ -192,7 +193,7 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
 
    *Then read the reply as an ask or a direction.* A message that **asks** ("expand 2",
    "what does that mean?", "why did the seam row flag that?") is an expand: answer it from the detail file, from
-   `git diff`, or from `git show`, never from recall, then run `plumbbob handoff` again and
+   `git diff`, or from the build-log's `## Log` for an older step, never from recall, then run `plumbbob handoff` again and
    paste it. The step is still in flight, so it renders the same pause, and the Your Call
    block stays the CLI's to render rather than yours to retype. A message that **directs**
    is needs-work: take it as what to change, and nothing lands until the human says
