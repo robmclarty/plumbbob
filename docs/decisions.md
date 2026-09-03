@@ -653,14 +653,19 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   `docs/cli-reference.md`.
 
 - <a id="d81"></a>**D81 (detail-file): One untracked file is the wire the model's judgment travels on, and
-  git is the archive.** `.plumbbob/detail.md` holds the in-flight step's full detail: the three judgment
+  the build log is the archive.** `.plumbbob/detail.md` holds the in-flight step's full detail: the three judgment
   rows under a header rule, the `## Summary` lead, the `## <n>` sections whose titles are the highlights,
   and the `## Recommendation`. It is flat per session rather than per build, overwritten before every pause,
   and control-plane ephemera excluded through `info/exclude` like the rest ([**D33 (info-exclude)**](#d33)).
-  `checkpoint` folds it into the commit body beneath the explicit `--body` prose and then truncates it,
-  because the checkpoint commit is the durable archive and a pile of stale detail files is its own flood;
-  "expand 2" at the pause is a lookup of the file's `## 2`, an older step takes its number or sha and is
-  answered from `git show`, and neither is ever a recall. Hidden detail is always counted and pointed at (the
+  `checkpoint` records it beneath the step's dated line in the build-log's `## Log` (the Summary and
+  highlights, the Readout, the Verdict, the recommendation, then the full story behind each highlight,
+  as the pause showed them) and then truncates it, because the ledger is tracked and rides the branch
+  into the PR where a commit body dies at the squash-merge, and a pile of stale detail files is its own
+  flood; the commit body keeps its marker and the `--body` prose only, so one durable copy exists, and
+  the lead line's bracket points at the entry. The plan commit records the cold read the same way,
+  beneath a `plan committed` line. "expand 2" at the pause is a lookup of the file's `## 2`, an older
+  step takes its number and is answered from its Log entry, and neither is ever a recall. (Revised
+  2026-09-02, before release: the archive moved from the commit body to the ledger, Rob's call.) Hidden detail is always counted and pointed at (the
   visible highlights carry the count, the `expand` move the affordance), because a silent cut reads as
   coverage. Code stays out of the default turn with one exception: a diff of 20 changed lines or fewer rides
   inline below the readout, and anything larger stays in the working tree behind the diffstat row, because
