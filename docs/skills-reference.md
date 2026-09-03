@@ -5,7 +5,7 @@ The fifteen skills are the surface you actually drive; the CLI underneath
 reference for that surface: what each skill is for, what it takes, what it reads and
 writes, and when to reach for it.
 
-Two ground rules apply to all of them:
+Three ground rules apply to all of them:
 
 - **You fire every move.** Every skill is `disable-model-invocation`: the model never
   invokes one on its own, and `/plumbbob:status` always names your next one.
@@ -14,6 +14,10 @@ Two ground rules apply to all of them:
   plugin skill *unless another command already owns that name*, and four of these
   (`plan`, `status`, `verify`, `doctor`) share a name with a Claude Code built-in, which
   wins. Type the verb and pick plumbbob's from the menu, or write the full form.
+- **The CLI renders the ending.** At every pause and boundary, the block you read is
+  `plumbbob handoff`'s or the transition verb's own output, relayed whole; the model's
+  judgment reaches it through `.plumbbob/detail.md`, never the chat
+  ([the turn anatomy](presentation.md); [D83 (card-teaches-itself)](decisions.md#d83)).
 
 ## At a glance
 
@@ -49,8 +53,12 @@ commits the plan on its own
 (`plumbbob checkpoint --plan`), so the first step's diff stays clean. It writes intent
 only, never source. If the build will lean on user-authored agents it also offers to
 author `harness.json` beside `intent.md`: the per-step [slot bindings](#the-harness-slots)
-reviewed at the same plan pause. Reach for it whenever there is no active session and a
-goal worth more than a one-liner.
+reviewed at the same plan pause. At that pause it gives the framed plan a cold read (one
+adversarial pass under refine's lens, surfacing without appending) and writes the result
+into `.plumbbob/detail.md` as the recommendation `plumbbob handoff --plan` prints last:
+`Approve it`, or `Sharpen <the worst hole> first`, naming `/plumbbob:refine` when the read
+found more than one. Reach for it whenever there is no active session and a goal worth
+more than a one-liner.
 
 > **Passing a spec:** a plain path is the surest form (`/plumbbob:plan specs/foo.md`). An
 > `@`-mention works too, but only with leading text (`/plumbbob:plan absorb @specs/foo.md`):
@@ -79,7 +87,10 @@ bound, and fires an agent mid-build when a manifest's `when` prose calls for it.
 lets the agent self-approve and chain step after step until the plan is done, halting the
 moment a check goes red, the self-review finds a mismatch, or a bound agent returns
 `blocked`/`drift`. A step range like `1-3` is a bounded `--auto`: it self-approves
-through step 3, then pauses.
+through step 3, then pauses. At the pause it writes its judgment into `.plumbbob/detail.md`,
+runs `plumbbob handoff`, and pastes the block; you reply with one of the four moves the
+block names (`looks good`, `expand`, a direction, `revert`), and on `looks good` the
+checkpoint prints the boundary block for it to relay.
 
 ### verify
 
@@ -89,14 +100,17 @@ diff against done-when / Decisions / Constraints, validate the done-when with ev
 record the SHA, flip the step to `[x]`). Any `after`-slot [agents](#the-harness-slots)
 run here too, as **advisory input** to the self-review; checkride gates, they never do.
 It reads the *diff, not the author*: a step you wrote by hand or vibed in another harness
-verifies exactly like a `/plumbbob:build` step.
+verifies exactly like a `/plumbbob:build` step. The pause it reaches is the same block,
+rendered the same way, and the one file it writes is the detail file, never the diff
+under review.
 
 ### park
 
 Captures a mid-build "ooh, what if" without chasing it. Give it the idea inline or fire it
 bare to use the one you just raised; it composes a single tidy, tagged line, shows it for
-a quick OK, then appends it via `plumbbob park`, never by editing the file itself. The
-step in flight stays protected; the list gets triaged later by `/plumbbob:harvest`.
+a quick OK, then appends it via `plumbbob park`, never by editing the file itself, and
+relays the verb's two lines: the capture, and the pointer back at the step in flight. The
+step stays protected; the list gets triaged later by `/plumbbob:harvest`.
 
 ### status
 
@@ -152,6 +166,9 @@ and Decisions that surfaces holes as one-line **Open questions**, never as Decis
 because resolving a hole is your call. **Repair**: when the plan has drifted from what the
 code actually does, it proposes the edits that bring it back, before/after, written only
 on your approval. Where `/plumbbob:step` sharpens one step, refine works the whole plan.
+The plan pause's cold read is refine's tip: it surfaces the worst hole and names refine
+for the rest, so the full attack stays optional and arrives when the read says it would
+pay. Refine is where the real adversary looks; the cold read is an estimate.
 
 ### revert
 

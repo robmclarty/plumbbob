@@ -8,6 +8,7 @@
 // exactly what this contract measures. (Plan 05, contract table row 5.)
 
 import { check, dirtyPathsIn, info, parkLines, snapshot, treeHash, validity } from '../helpers/assert.ts'
+import { anatomyChecks } from '../helpers/anatomy.ts'
 import { makeEvalFixture } from '../helpers/fixture.ts'
 import { TWO_STEPS, type Contract } from './contract.ts'
 
@@ -41,6 +42,9 @@ export const c5: Contract = {
         // work commits it without changing any file's bytes.
         check('the tangent turn authored no source edits', treeHash(repo, 'src') === sources1),
         info('no checkpoint landed on the tangent turn (latch-legal either way)', t2.checkpoints === t1.checkpoints),
+        // Two tiers in one contract: turn 1 pauses, turn 2 is the park's driver turn.
+        ...anatomyChecks(turn1.content, 'decision'),
+        ...anatomyChecks(turn2.content, 'driver'),
       ],
     }
   },

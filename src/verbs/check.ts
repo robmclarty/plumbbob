@@ -72,10 +72,15 @@ function slotList(args: ReadonlyArray<string>, flag: string): Partial<CheckFlags
 }
 
 /**
- * The one-line human verdict for a check exit code.
+ * The one-line human verdict for a check exit code, printed on its own line.
  *
- * A broken gate (exit 2) reports distinctly from red: a misconfigured harness
- * must never read as broken code, though both block a checkpoint.
+ * This is `plumbbob check`'s own console verdict, for whoever ran it. In the
+ * turn anatomy the gate verdict's home is the recap's check row, which
+ * `plumbbob handoff` re-emits from its own read of `.check/summary.json`
+ * (docs/presentation.md); nothing relays these strings any more, but they stay
+ * word-for-word stable because humans grep scrollback for them. A broken gate
+ * (exit 2) reports distinctly from red: a misconfigured harness must never
+ * read as broken code, though both block a checkpoint.
  */
 function verdictLine(code: number): string {
   if (code === 0) return '\nplumbbob: check green.\n'

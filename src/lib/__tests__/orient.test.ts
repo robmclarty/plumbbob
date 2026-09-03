@@ -4,12 +4,18 @@ import {
   lastLedgerSha,
   markStepDone,
   orient,
+  parseConstraintCount,
   parseLastCheckpoint,
   parseOpenQuestions,
   parseParked,
+  parseRecap,
   parseRequestedStep,
   parseSteps,
   parseTitle,
+  recapLines,
+  seamRowFromDiff,
+  spentRowValue,
+  summaryCheckRow,
 } from '../orient.ts'
 import { readTemplate } from '../templates.ts'
 
@@ -658,5 +664,133 @@ describe('formatOrientation with an explicitly requested step', () => {
     const out = formatOrientation(orient({ ...base, requested: 9 }))
     expect(out).toContain('▸ 2  Second step   ← next')
     expect(out).toContain('step 9 is not in the plan')
+  })
+})
+
+describe('the readout rows', () => {
+  it('parseSteps records each step\'s line, so a pointer can name where to read it', () => {
+    // The `## Steps` heading is line 8 of INTENT, so the first opener is line 10.
+    const steps = parseSteps(INTENT)
+    expect(steps.map((s) => s.line)).toEqual([10, 12, 15])
+    expect(INTENT.split('\n')[9]).toContain('1. [x] First step')
+  })
+
+  it('parseConstraintCount reads the declared constraints, in any glossed form', () => {
+    const intent = `## Constraints
+
+- <a id="c1"></a>**C1 (no-new-deps)**: no new dependencies.
+- C2 (markdown-only): it reads as plain text too.
+  - a sub-line that is not its own constraint
+
+## Steps
+`
+    expect(parseConstraintCount(intent)).toBe(2)
+    expect(parseConstraintCount('# no section here')).toBe(0)
+  })
+
+  it('parseRecap attaches an indented `- ` item and a `→ ` pointer to the row above', () => {
+    const detail = [
+      '── recap · step 2 of 3 ──',
+      'constraints  bent: C1 (no-new-deps), a dep rode in',
+      '             - C2 (markdown-only), the fence lost its rails',
+      '             → .plumbbob/detail.md',
+      'done-when    met',
+      '',
+    ].join('\n')
+    const parsed = parseRecap(detail)
+    expect(parsed?.rows.constraints?.items).toEqual(['C2 (markdown-only), the fence lost its rails'])
+    expect(parsed?.rows.constraints?.pointer).toBe('.plumbbob/detail.md')
+    // The next label ends the previous row: a stray continuation cannot attach to it.
+    expect(parsed?.rows['done-when']?.items).toBeUndefined()
+  })
+
+  it('parseRecap reads the collapsed count form as green', () => {
+    const detail = ['── recap · step 2 of 3 ──', 'decisions    5 of 5 honored', 'constraints  5 of 5 honored', ''].join('\n')
+    expect(parseRecap(detail)?.rows.decisions?.verdict).toBe('true')
+    expect(parseRecap(detail)?.rows.constraints?.verdict).toBe('true')
+  })
+
+  it('summaryCheckRow sizes a green gate by count and names what a narrowed run left out', () => {
+    const ok = summaryCheckRow({ ok: true, checks: [{ name: 'lint', ok: true }, { name: 'test', ok: true }] })
+    expect(ok.evidence).toBe('green: 2 of 2 checks')
+    const narrowed = summaryCheckRow({
+      ok: true,
+      checks: [{ name: 'lint', ok: true }, { name: 'test', ok: true, skipped: true }],
+    })
+    expect(narrowed.evidence).toBe('green: 1 of 2 checks · without test')
+  })
+
+  it('summaryCheckRow points a single failing slot at its raw output, falling back to the summary', () => {
+    const named = summaryCheckRow({ ok: false, checks: [{ name: 'types', ok: false, output_file: 'types.json' }] })
+    expect(named).toMatchObject({ verdict: 'failing', evidence: 'red: types failing', pointer: '.check/types.json' })
+    const unnamed = summaryCheckRow({ ok: false, checks: [{ name: 'refs', ok: false, output_file: null }] })
+    expect(unnamed.pointer).toBe('.check/summary.json')
+  })
+
+  it('seamRowFromDiff sizes green by the declared tokens touched, and vanishes with nothing to measure', () => {
+    expect(seamRowFromDiff(['src/a.ts'], ['src/a.ts', 'src/b.ts'])?.evidence).toBe('held: 1 of 2 declared, no strays')
+    expect(seamRowFromDiff([], ['src/a.ts'])).toBe(null)
+    expect(seamRowFromDiff(['src/a.ts'], [])).toBe(null)
+  })
+
+  it('seamRowFromDiff states the size of a stray and lets the paths be the evidence', () => {
+    expect(seamRowFromDiff(['src/x.ts'], ['src/a.ts'])).toMatchObject({ evidence: 'strayed: 1 path outside the seam', pointer: 'src/x.ts' })
+    expect(seamRowFromDiff(['src/x.ts', 'src/y.ts'], ['src/a.ts'])).toMatchObject({
+      evidence: 'strayed: 2 paths outside the seam',
+      items: ['src/x.ts', 'src/y.ts'],
+    })
+  })
+
+  it('spentRowValue reads elapsed, turns, the gate, and the accrued counters', () => {
+    expect(
+      spentRowValue({
+        startedAt: '2026-09-02T10:00:00.000Z',
+        landedAt: '2026-09-02T11:28:00.000Z',
+        now: Date.parse('2026-09-02T12:00:00.000Z'),
+        turns: 3,
+        redChecks: 0,
+        gateMs: 63_400,
+        driftWarnings: 0,
+      }),
+    ).toBe('88 min · 3 turns · 63s gate · green first run')
+  })
+
+  it('spentRowValue runs the clock to now while the step is open, and vanishes with nothing to count', () => {
+    const open = spentRowValue({
+      startedAt: '2026-09-02T10:00:00.000Z',
+      now: Date.parse('2026-09-02T13:05:00.000Z'),
+      turns: null,
+      redChecks: 1,
+      gateMs: null,
+      driftWarnings: 2,
+    })
+    expect(open).toBe('3h 5m · 1 red run · 2 drift warnings')
+    expect(spentRowValue({ now: Date.now(), turns: null, redChecks: 0, gateMs: null, driftWarnings: 0 })).toBe(null)
+  })
+
+  it('recapLines collapses the green rows and lays the continuations under their row', () => {
+    const lines = recapLines(
+      {
+        check: { verdict: 'true', word: 'green', evidence: 'green: 3 of 3 checks' },
+        'done-when': { verdict: 'true', word: 'met', evidence: 'met: the criterion, at length' },
+        decisions: { verdict: 'true', word: 'honored', evidence: 'honored: D1 (one), D2 (two)' },
+        constraints: { verdict: 'failing', word: 'bent', evidence: 'bent: C1 (no-new-deps)', items: ['C2 (markdown-only)'], pointer: '.plumbbob/detail.md' },
+      },
+      { diff: '+10 -2 across 1 file', spent: '3 turns', constraints: 5 },
+    )
+    expect(lines).toEqual([
+      'check        green: 3 of 3 checks',
+      'done-when    met',
+      'decisions    2 of 2 honored',
+      'constraints  bent: C1 (no-new-deps)',
+      '             - C2 (markdown-only)',
+      '             → .plumbbob/detail.md',
+      'diff         +10 -2 across 1 file',
+      'spent        3 turns',
+    ])
+  })
+
+  it('recapLines is empty when no row survived, so the caller can drop the fence and its label', () => {
+    expect(recapLines({}, { diff: null, spent: null, constraints: 0 })).toEqual([])
   })
 })

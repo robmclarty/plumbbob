@@ -9,6 +9,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { check, checkpointLines, dirtyPathsIn, info, snapshot, unledgeredCommits, validity } from '../helpers/assert.ts'
+import { anatomyChecks } from '../helpers/anatomy.ts'
 import { makeEvalFixture } from '../helpers/fixture.ts'
 import { THREE_STEPS, type Contract } from './contract.ts'
 
@@ -43,6 +44,7 @@ export const c7: Contract = {
         info('settings auto grant untouched', !autoFlipped(repo), settingsAuto(repo)),
         info('grant file absent during the turn', t1.grant === null, t1.grant ?? 'absent'),
         info('turn ledger intact (no tamper)', t1.turn !== null),
+        ...anatomyChecks(turn.content, 'decision'),
       ],
     }
   },

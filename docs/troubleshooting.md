@@ -135,6 +135,26 @@ harvest from the boundary.
 
 ## The build loop and checks
 
+### `checkpoint` refuses: "no human turn since this step began"
+
+**Cause.** The approval latch ([**D64 (approval-latch)**](decisions.md#d64)). The step was
+entered and the checkpoint attempted in the same turn, which is exactly what a model does
+when it builds a step and tries to land it without stopping; the refusal *is* the pause.
+**Fix.** Nothing to fix. Read the pause block, reply (`looks good`, a question, or a
+direction), and the checkpoint lands on that next turn. Driving the CLI by hand from a
+terminal with no turn hook wired, the ledger is dormant and the latch stands down;
+`plumbbob doctor` prints which state it is in.
+
+### The pause shows no `check` row and no `looks good` move
+
+**Cause.** The readout's `check` row is measured from `.check/summary.json`, which every
+gate run leaves behind (checkride's own, or the one-check summary a configured `"check"`
+command writes beside its captured output), and the Your Call block withholds `looks good`
+when no measured green exists to approve on. No row means no run left a summary: the gate
+itself broke (exit 2) before it could, or no check has run in this repo yet. **Fix.** Repair
+the gate if it broke (below), or run `plumbbob check`; the next `handoff` measures the row
+from it.
+
 ### `checkpoint` (or `verify`) refuses because the check is red
 
 **Cause.** The heavy gate failed; the tick refuses to checkpoint on red ([**D16 (check-plus-self-review)**](decisions.md#d16)). **Fix.**
@@ -150,7 +170,9 @@ and checkride detected no tool configs in this repo; an all-slots-skipped run re
 rather than passing vacuously. **Fix.** Either give checkride something to check (a
 `tsconfig.json`, a `vitest.config.ts`, a `checkride.config.json` custom check, …) or set
 the `"check"` key in `.plumbbob/settings.json` to your own command (e.g.
-`"check": "npm test"`). `plumbbob doctor` prints the slot/adapter table.
+`"check": "npm test"`). `plumbbob doctor` prints the slot/adapter table. `start` prints
+the same warning the moment a session opens in such a repo, so the first place to set the
+key is while you are still planning.
 
 ### The check exits 2: "the gate itself broke"
 

@@ -12,6 +12,8 @@
 import { existsSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { activeBuild, hasSession, intentPath, listBuilds, setActiveBuild, stepPath } from '../lib/sidecar.ts'
+import { advisory, ending, notice, transition } from '../lib/notice.ts'
+import { driverPointer } from './handoff.ts'
 
 /**
  * Switch the active-build cursor to the named build.
@@ -22,45 +24,51 @@ import { activeBuild, hasSession, intentPath, listBuilds, setActiveBuild, stepPa
 export function use(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
-    process.stderr.write('plumbbob: no active session. Run `plumbbob start "<title>"` first.\n')
+    process.stderr.write(notice({ fact: 'no active session', remedy: 'plumbbob start "<title>"' }))
     return 1
   }
 
   const builds = listBuilds(root)
   const target = args.find((a) => !a.startsWith('--'))
   if (target === undefined || target.length === 0) {
-    process.stderr.write(`plumbbob: use needs a build slug.${buildsHint(builds)}\n`)
+    process.stderr.write(notice({ fact: 'use needs a build slug', detail: builds, remedy: 'plumbbob use <slug>' }))
     return 1
   }
 
   // Validate by the folder's intent.md, not the dir alone: an empty `builds/<slug>/`
   // is not a resumable build, and the flat `--local` layout has no builds/ at all.
   if (!existsSync(intentPath(root, target))) {
-    process.stderr.write(
-      `plumbbob: no build named "${target}" in .plumbbob/builds/.${buildsHint(builds)}\n`,
-    )
+    process.stderr.write(notice({ fact: `no build named "${target}" in .plumbbob/builds/`, detail: builds }))
     return 1
   }
 
   const leaving = activeBuild(root)
-  if (leaving !== null && leaving !== target && existsSync(stepPath(root, leaving))) {
-    process.stderr.write(
-      `plumbbob: note — build "${leaving}" has a step in flight; its in-flight state is preserved ` +
-        `and resumes when you \`use ${leaving}\` again.\n`,
-    )
-  }
+  const left = leaving !== null && leaving !== target && existsSync(stepPath(root, leaving)) ? leaving : null
 
   setActiveBuild(root, target)
 
-  const resuming = existsSync(stepPath(root, target)) ? ' (a step is in flight — `status` shows where)' : ''
-  process.stdout.write(`plumbbob: now on build "${target}"${resuming}. \`status\` to orient.\n`)
+  // The lead line, then the advisory it qualifies, then the pointer into the
+  // build just switched to: one fixed order for every ending, so the relay never
+  // has to guess which line leads.
+  process.stdout.write(
+    ending({
+      lead: transition({
+        label: 'Active build',
+        fact: target,
+        detail: existsSync(stepPath(root, target)) ? ['a step is in flight'] : [],
+      }),
+      advisories:
+        left === null
+          ? []
+          : [
+              advisory({
+                fact: `build "${left}" has a step in flight`,
+                detail: ['its in-flight state is preserved'],
+                remedy: `plumbbob use ${left} to pick it back up`,
+              }),
+            ],
+      pointer: driverPointer(root, target),
+    }),
+  )
   return 0
-}
-
-/**
- * A trailing " Builds: a, b." hint when any exist, so a bad or missing slug
- * points the user straight at the valid choices.
- */
-function buildsHint(builds: ReadonlyArray<string>): string {
-  return builds.length > 0 ? ` Builds: ${builds.join(', ')}.` : ''
 }

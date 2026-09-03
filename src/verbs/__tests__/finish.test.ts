@@ -3,6 +3,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { finish } from '../finish.ts'
+import { advisory, ending, transition } from '../../lib/notice.ts'
 import { start } from '../start.ts'
 import { bumpStepStat, checkpointsPath, grantPath, hasSession, intentPath, reportPath, sidecarDir, stampStepStat, tickPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -30,9 +31,26 @@ describe('finish', () => {
     expect(subject(dir)).toBe('chore(finishing-up): finish') // Conventional Commits subject; the `plumbbob finish` marker rides in the body
     const body = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%b'], { encoding: 'utf8' })
     expect(body).toContain('plumbbob finish')
-    // Short SHA (exactly 9 hex), the archive pointer, and the next-goal nudge.
-    expect(stdout).toMatch(/finished — [0-9a-f]{9}\. \.plumbbob\/builds\/finishing-up\/ rides your branch/)
-    expect(stdout).toContain('plan')
+    // Short SHA (exactly 9 hex) and the archive pointer, then the forward pointer
+    // finish prints itself: the line states its fact and the pointer states the move.
+    const sha = execFileSync('git', ['-C', dir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim().slice(0, 9)
+    expect(stdout).toBe(
+      ending({
+        lead: transition({
+          label: 'Session',
+          fact: 'finished',
+          detail: [sha, '.plumbbob/builds/finishing-up/ rides your branch into the PR'],
+        }),
+        advisories: [
+          advisory({
+            fact: 'no report.md found',
+            detail: ['finished without one', 'no gate here by design'],
+            remedy: '/plumbbob:finish normally writes the report first',
+          }),
+        ],
+        pointer: '**Next Up**: Nothing planned - /plumbbob:plan',
+      }),
+    )
   })
 
   it('clears the cursor by removing STATE and leaves a clean tree', async () => {
@@ -83,9 +101,19 @@ describe('finish', () => {
   it('notes a missing report but finishes anyway — D9 (finish-no-gate)', async () => {
     const dir = makeTempRepo()
     await captureIoAsync(() => start(dir, ['No report']))
-    const { code, stderr } = captureIo(() => finish(dir))
+    const { code, stdout } = captureIo(() => finish(dir))
     expect(code).toBe(0)
-    expect(stderr).toContain('no report.md found')
+    expect(stdout).toContain('No report.md found ⚠ (finished without one, no gate here by design)')
+  })
+
+  it('points past the finished session itself — D32 (handoff-owns-every-pointer)', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Nothing after this']))
+    const { code, stdout } = captureIo(() => finish(dir))
+    expect(code).toBe(0)
+    // The one ending handoff cannot render: finish has just deleted the session
+    // it would read, so the pointer is printed here, last, and blank-line separated.
+    expect(stdout.endsWith('\n\n**Next Up**: Nothing planned - /plumbbob:plan\n\n')).toBe(true)
   })
 
   it('refuses with no active session', async () => {

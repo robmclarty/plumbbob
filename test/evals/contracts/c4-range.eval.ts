@@ -5,6 +5,7 @@
 // in time; the minting itself is unit-tested in src/verbs/__tests__/turn.test.ts.
 
 import { check, checkpointLines, dirtyPathsIn, info, snapshot, unledgeredCommits, validity } from '../helpers/assert.ts'
+import { anatomyChecks } from '../helpers/anatomy.ts'
 import { armGrant, readLedger } from '../helpers/driver.ts'
 import { makeEvalFixture } from '../helpers/fixture.ts'
 import { THREE_STEPS, type Contract } from './contract.ts'
@@ -37,6 +38,8 @@ export const c4: Contract = {
           readLedger(repo, 'TURN') !== null, // the turn hook ticked — not a headless timing miss
           `TURN=${readLedger(repo, 'TURN') ?? '∅'} GRANT=${readLedger(repo, 'GRANT') ?? '∅'}`,
         ),
+        // The range re-imposes the pause at its top, so the top turn ends as one.
+        ...anatomyChecks(turn.content, 'decision'),
       ],
     }
   },

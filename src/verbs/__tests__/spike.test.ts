@@ -1,10 +1,12 @@
 import { execFileSync } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { spike } from '../spike.ts'
+import { driverPointer } from '../handoff.ts'
+import { advisory, ending, transition } from '../../lib/notice.ts'
 import { start } from '../start.ts'
-import { buildFolder, inSpike, listSpikeReports, stepPath } from '../../lib/sidecar.ts'
+import { activeBuild, buildFolder, inSpike, listSpikeReports, stepPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
@@ -25,6 +27,29 @@ async function started(): Promise<string> {
 }
 
 describe('spike', () => {
+  it('leads each ending with its labeled line — D42 (transitions-wear-the-label)', async () => {
+    const dir = await started()
+    const opened = captureIo(() => spike(dir, ['auth']))
+    expect(opened.stdout).toContain(
+      transition({ label: 'Spike', fact: 'opened', detail: ['the main tree stays put', '2 throwaway worktrees'] }),
+    )
+    expect(opened.stdout).toContain('**Spike report**: scaffolded (')
+    const closed = captureIo(() => spike(dir, ['done']))
+    expect(closed.stdout).toBe(
+      ending({
+        lead: transition({ label: 'Spike', fact: 'closed', detail: ['worktrees and branches removed'] }),
+        advisories: [
+          advisory({
+            fact: 'no verdict recorded',
+            detail: ['spike-01-auth.md'],
+            remedy: 'record which option won, and why, now the worktrees are gone',
+          }),
+        ],
+        pointer: driverPointer(dir, activeBuild(dir)),
+      }),
+    )
+  })
+
   it('creates a worktree + branch per option (default a/b) and marks the spike', async () => {
     const dir = await started()
     try {
@@ -120,7 +145,19 @@ describe('spike reports — D70 (spike-reports)', () => {
     expect(code).toBe(0)
     expect(inSpike(dir)).toBe(false) // no SPIKE marker, no worktrees
     expect(spikeBranches(dir)).toEqual([])
-    expect(stdout).toContain('spike-01-auth-store.md')
+    // The scaffold's own ending: the report that landed, then the pointer back
+    // at the step the spike-as-step is being run for.
+    expect(stdout).toBe(
+      ending({
+        lead: transition({
+          label: 'Spike report',
+          fact: 'scaffolded',
+          detail: [join(relative(dir, buildFolder(dir)), 'spike-01-auth-store.md')],
+          remedy: 'record Findings and the Verdict there, which is what closes a spike step',
+        }),
+        pointer: '**Next Up**: Back to Step 3',
+      }),
+    )
     expect(reportBody(dir, 'spike-01-auth-store.md')).toContain('**Via:** step 3')
   })
 
@@ -147,10 +184,10 @@ describe('spike reports — D70 (spike-reports)', () => {
   it('`spike done` nudges (but still closes) when a verdict is unrecorded', async () => {
     const dir = await started()
     captureIo(() => spike(dir, ['auth'])) // scaffolds spike-01 with the placeholder verdict
-    const { code, stderr } = captureIo(() => spike(dir, ['done']))
+    const { code, stdout } = captureIo(() => spike(dir, ['done']))
     expect(code).toBe(0) // guidance, not a gate: it still closes
     expect(inSpike(dir)).toBe(false)
-    expect(stderr).toContain('no verdict recorded in spike-01-auth.md')
+    expect(stdout).toContain(advisory({ fact: 'no verdict recorded', detail: ['spike-01-auth.md'] }).trim())
   })
 
   it('`spike done` stays quiet once the verdict is filled in', async () => {

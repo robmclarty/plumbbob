@@ -11,6 +11,7 @@ import { hasSession, intentPath, resolveBuild, seamPath, stampStepStat, stampTic
 import { parseStepSeam } from '../lib/intent.ts'
 import { parseSteps } from '../lib/orient.ts'
 import { stepLabel, syncBuildLogState } from '../lib/buildlogsync.ts'
+import { notice } from '../lib/notice.ts'
 
 /**
  * Enter step n (or the next undone step) and write its SEAM/STEP markers.
@@ -23,7 +24,7 @@ import { stepLabel, syncBuildLogState } from '../lib/buildlogsync.ts'
 export function build(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
-    process.stderr.write('plumbbob: no active session. Run `plumbbob start "<title>"` first.\n')
+    process.stderr.write(notice({ fact: 'no active session', remedy: 'plumbbob start "<title>"' }))
     return 1
   }
 
@@ -34,14 +35,18 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
   // in-flight step at a time. Name it rather than bounce off the generic usage.
   if (raw !== undefined && /^\d+-\d*$/.test(raw)) {
     process.stderr.write(
-      `plumbbob: build takes one step number; \`${raw}\` step ranges are a \`/plumbbob:build\` feature (auto-approve through the range, then pause). Try \`plumbbob build ${raw.split('-')[0]}\`.\n`,
+      notice({
+        fact: 'build takes one step number',
+        detail: [`\`${raw}\` is a /plumbbob:build range, which auto-approves through it and then pauses`],
+        remedy: `plumbbob build ${raw.split('-')[0]}`,
+      }),
     )
     return 1
   }
   // An explicit arg that isn't a positive integer is a usage error: caught before
   // reading intent.md so the message doesn't depend on the plan being present.
   if (raw !== undefined && (!/^\d+$/.test(raw) || Number(raw) < 1)) {
-    process.stderr.write('plumbbob: build needs a step number. Try: plumbbob build 2.\n')
+    process.stderr.write(notice({ fact: 'build needs a step number', remedy: 'plumbbob build 2' }))
     return 1
   }
 
@@ -57,7 +62,11 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
     const nextUndone = steps.find((s) => !s.done)
     if (nextUndone === undefined) {
       process.stderr.write(
-        'plumbbob: no undone step to build — every planned step is checkpointed. `/plumbbob:step` to add an increment, or `/plumbbob:finish`.\n',
+        notice({
+          fact: 'no undone step to build',
+          detail: ['every planned step is checkpointed'],
+          remedy: '/plumbbob:step to add an increment, or /plumbbob:finish',
+        }),
       )
       return 1
     }
@@ -68,7 +77,9 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
 
   const parsed = parseStepSeam(intent, step)
   if (!parsed.ok) {
-    process.stderr.write(`plumbbob: ${parsed.error} Fix the step's seam in intent.md, then \`build ${step}\` again.\n`)
+    process.stderr.write(
+      notice({ fact: parsed.error, remedy: `fix the step's seam in intent.md, then \`build ${step}\` again` }),
+    )
     return 1
   }
 
@@ -93,12 +104,19 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
   const skipped = raw === undefined ? 0 : steps.filter((s) => !s.done && s.n < step).length
   const picked =
     raw === undefined
-      ? ' (next undone)'
+      ? ['next undone']
       : skipped > 0
-        ? ` (explicitly requested; skips ${skipped} undone step${skipped === 1 ? '' : 's'})`
-        : ''
+        ? ['explicitly requested', `skips ${skipped} undone step${skipped === 1 ? '' : 's'}`]
+        : []
+  // Two lines, one colon each, then the seam as a plain readout beneath the
+  // notice that frames it: the paths are a list, and a list is not a one-liner.
   process.stdout.write(
-    `plumbbob: building step ${step}${picked}. Seam (for orientation; not a lock):\n${parsed.seam.map((p) => `  ${p}`).join('\n')}\n`,
+    notice({ fact: `building step ${step}`, detail: picked }) +
+      notice({
+        fact: 'the seam is orientation, not a lock',
+        detail: [`${parsed.seam.length} path${parsed.seam.length === 1 ? '' : 's'}`],
+      }) +
+      `${parsed.seam.map((path) => `  ${path}`).join('\n')}\n`,
   )
   return 0
 }

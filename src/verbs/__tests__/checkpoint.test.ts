@@ -1,11 +1,12 @@
 import { execFileSync } from 'node:child_process'
 import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { checkpoint } from '../checkpoint.ts'
 import { start } from '../start.ts'
-import { buildLogPath, checkpointsPath, grantPath, handoffPath, hasSession, intentPath, readStats, stampStepStat, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
+import { buildLogPath, checkpointsPath, detailPath, grantPath, handoffPath, hasSession, intentPath, readStats, stampStepStat, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
 import { gitPath } from '../../lib/git.ts'
+import { advisory, ending, notice, transition } from '../../lib/notice.ts'
 import { setLocalSetting, settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { cleanupFixtures, makeFixtureRepo, runCli } from '../../../test/helpers/fixture-repo.ts'
@@ -26,6 +27,51 @@ const INTENT = `# Checkpoint test
 // A started session with one planned step and a green stub gate. In the tracked
 // layout the build folder rides the tree, so overwriting intent/settings
 // dirties it: checkpoint stages that alongside the step's work.
+/** The 9-char SHA the ledger recorded under `label`, the same short form the verb prints. */
+function ledgerSha(dir: string, label: string): string {
+  return (new RegExp(`${label} ([0-9a-f]{40})`).exec(readFileSync(checkpointsPath(dir), 'utf8'))?.[1] ?? '').slice(0, 9)
+}
+
+/** The `details:` pointer the lead line carries: the Log line holding `label`, as `path:line` from the repo root. */
+function logPointer(dir: string, label: string): string {
+  const at = readFileSync(buildLogPath(dir), 'utf8').split('\n').findIndex((l) => l.includes(label))
+  return `${relative(dir, buildLogPath(dir))}:${at + 1}`
+}
+
+// A pause's detail file for step 1: the three judgment rows under the header
+// rule, the Summary lead, one section, and the recommendation.
+const DETAIL = `# Detail · Step 1 · First
+
+── recap · step 1 of 1 ──
+done-when    met
+decisions    none exercised
+constraints  all honored
+
+## Summary
+
+A works now.
+
+## 1 The first move
+
+The whole story.
+
+## Recommendation
+
+Approve it. Nothing is off.
+`
+
+// A plan pause's detail file: the cold read's one finding and its recommendation.
+const PLAN_DETAIL = `# Detail · Plan · Checkpoint test
+
+## 1 The done-when names no test
+
+Nothing in the seam is a test file.
+
+## Recommendation
+
+Sharpen step 1 first. Its done-when names no test.
+`
+
 async function startedGreen(): Promise<string> {
   const dir = makeTempRepo()
   await captureIoAsync(() => start(dir, ['Checkpoint test', '--slug', 'checkpoint-test']))
@@ -43,9 +89,25 @@ describe('checkpoint', () => {
     expect(hasSession(dir)).toBe(true)
     expect(readFileSync(checkpointsPath(dir), 'utf8')).toMatch(/step 1 [0-9a-f]{40}/)
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x]')
-    // The SHA is shortened to exactly 9 hex chars: a full 40-char SHA here
-    // would mean the slice was dropped.
-    expect(stdout).toMatch(/step 1 checkpointed — [0-9a-f]{9}\. Back at the boundary/)
+    // Asserted through the formatter, so moving the shape stays one edit: what
+    // this pins is the whole ending checkpoint prints for itself, the SHA
+    // shortened to exactly 9 hex chars (a full 40-char SHA here would mean the
+    // slice was dropped). `work.txt` is outside the step's declared seam, so the
+    // stray advisory rides too, and the Verdict wears the rung it earned.
+    expect(stdout).toBe(
+      ending({
+        lead: transition({ label: 'Checkpoint', fact: 'Step 1 complete', detail: [ledgerSha(dir, 'step 1'), `details: \`${logPointer(dir, 'step 1 checkpointed')}\``] }),
+        verdict: '**Verdict**: ◐ A hair off (staged outside the seam)',
+        advisories: [
+          advisory({
+            fact: "staged paths reach outside Step 1's seam",
+            detail: ['work.txt'],
+            remedy: 'the checkpoint captures them, so revise the plan with /plumbbob:step if that is real scope drift',
+          }),
+        ],
+        pointer: '**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish',
+      }),
+    )
   })
 
   it('refreshes a stale info/exclude so an in-flight control file never rides the step commit — D33 (info-exclude)', async () => {
@@ -172,15 +234,52 @@ describe('checkpoint', () => {
     expect(log).toMatch(/- \d{4}-\d{2}-\d{2} — step 1 checkpointed · [0-9a-f]{9} — First/)
   })
 
+  it("records the pause beneath the Log line — Summary, Readout, Verdict, Recommendation, the stories — and clears the detail file", async () => {
+    const dir = await startedGreen()
+    mkdirSync(join(dir, 'src'), { recursive: true })
+    writeFileSync(join(dir, 'src', 'a.ts'), 'in seam\n')
+    writeFileSync(detailPath(dir), DETAIL)
+    const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(code).toBe(0)
+    const log = readFileSync(buildLogPath(dir), 'utf8')
+    // The record nests under the dated line as its own content, two spaces in,
+    // in the order the pause showed it; the detail bracket is gone because the
+    // record is where the detail now lives.
+    expect(log).toMatch(/- \d{4}-\d{2}-\d{2} — step 1 checkpointed · [0-9a-f]{9} — First\n\n  \*\*Summary\*\*: A works now\.\n\n  1\. The first move\n/)
+    expect(log).toContain('  **Readout**: Step 1 - First\n\n  ```text\n')
+    expect(log).toContain('  done-when    met\n')
+    expect(log).toContain('  **Verdict**: ')
+    expect(log).toContain('  **Recommendation**: Approve it. Nothing is off.\n\n  **1.** The first move\n\n  The whole story.')
+    expect(log).not.toContain('(details:')
+    expect(existsSync(detailPath(dir))).toBe(false)
+    // The lead line points at the entry; the commit body keeps its marker and
+    // the lead prose only, since the ledger is the archive now.
+    expect(stdout).toContain(`details: \`${logPointer(dir, 'step 1 checkpointed')}\``)
+    const body = execFileSync('git', ['log', '-1', '--format=%b'], { cwd: dir, encoding: 'utf8' })
+    expect(body).not.toContain('The whole story')
+  })
+
+  it('records the cold read beneath a plan line in the Log and clears the detail file', async () => {
+    const dir = await startedGreen()
+    writeFileSync(detailPath(dir), PLAN_DETAIL)
+    const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
+    expect(code).toBe(0)
+    const log = readFileSync(buildLogPath(dir), 'utf8')
+    expect(log).toMatch(/- \d{4}-\d{2}-\d{2} — plan committed · [0-9a-f]{9}\n\n  \*\*Recommendation\*\*: Sharpen step 1 first\./)
+    expect(log).toContain('  **1.** The done-when names no test\n\n  Nothing in the seam is a test file.')
+    expect(existsSync(detailPath(dir))).toBe(false)
+    expect(stdout).toContain(`details: \`${logPointer(dir, 'plan committed')}\``)
+  })
+
   it('whitelists its own staged artifact writes — no scope-drift warning (step 7)', async () => {
     const dir = await startedGreen()
     mkdirSync(join(dir, 'src'), { recursive: true })
     writeFileSync(join(dir, 'src', 'a.ts'), 'in seam\n') // matches the step's `src/a.ts` seam
-    const { code, stderr } = await captureIoAsync(() => checkpoint(dir, ['1']))
+    const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['1']))
     expect(code).toBe(0)
     // The build folder (intent.md, build-log.md) is staged too, but it lives under
     // `.plumbbob/` and must never read as drift.
-    expect(stderr).not.toContain('outside step')
+    expect(stdout).not.toContain('outside Step')
   })
 
   it('warns (but still commits) when staged work reaches outside the step seam', async () => {
@@ -188,10 +287,10 @@ describe('checkpoint', () => {
     mkdirSync(join(dir, 'src'), { recursive: true })
     writeFileSync(join(dir, 'src', 'a.ts'), 'in seam\n')
     writeFileSync(join(dir, 'stray.ts'), 'out of seam\n') // not in `src/a.ts`, not artifact
-    const { code, stderr } = await captureIoAsync(() => checkpoint(dir, ['1']))
+    const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['1']))
     expect(code).toBe(0) // guidance, not a gate: the checkpoint still lands
-    expect(stderr).toContain("outside step 1's seam")
-    expect(stderr).toContain('stray.ts')
+    expect(stdout).toContain("Staged paths reach outside Step 1's seam")
+    expect(stdout).toContain('stray.ts')
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x]') // committed despite the drift
   })
 
@@ -215,7 +314,7 @@ describe('checkpoint', () => {
     writeFileSync(settingsPath(dir), JSON.stringify({ check: 'false' }))
     const { code, stderr } = await captureIoAsync(() => checkpoint(dir, ['1']))
     expect(code).toBe(1)
-    expect(stderr).toContain('check failed')
+    expect(stderr).toBe(notice({ fact: 'checkpoint refused', detail: ['the check is red'], remedy: 'fix it, then run it again' }))
   })
 
   it('refuses distinctly when the gate itself breaks (checkride exit 2)', async () => {
@@ -265,7 +364,7 @@ describe('checkpoint', () => {
     writeFileSync(join(dir, 'work.txt'), 'pending\n')
     const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['-m', 'fix part 2']))
     expect(code).toBe(0)
-    expect(stdout).toContain('step 1 checkpointed')
+    expect(stdout).toContain('**Checkpoint**: Step 1 complete')
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x]')
     const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
     expect(subject).toBe('fix part 2')
@@ -339,10 +438,10 @@ describe('checkpoint', () => {
     writeFileSync(join(dir, 'work.txt'), 'pending\n')
     chmodSync(intentPath(dir), 0o444) // the flip's write will fail
     try {
-      const { code, stderr } = await captureIoAsync(() => checkpoint(dir, ['1']))
+      const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['1']))
       expect(code).toBe(0) // the checkpoint itself still lands: the SHA is the source of truth
       expect(readFileSync(checkpointsPath(dir), 'utf8')).toMatch(/step 1 [0-9a-f]{40}/)
-      expect(stderr).toContain('could not flip step 1')
+      expect(stdout).toContain('Could not flip Step 1 to [x] in intent.md')
     } finally {
       chmodSync(intentPath(dir), 0o644)
     }
@@ -374,7 +473,12 @@ describe('checkpoint', () => {
       const dir = await startedGreen()
       const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
       expect(code).toBe(0)
-      expect(stdout).toMatch(/plan committed — [0-9a-f]{9}\./) // short SHA, not the full 40
+      expect(stdout).toBe(
+        ending({
+          lead: transition({ label: 'Plan', fact: 'committed', detail: [ledgerSha(dir, 'plan'), `details: \`${logPointer(dir, 'plan committed')}\``] }),
+          pointer: '**Next Up**: Step 1 of 1 - First (details: `.plumbbob/builds/checkpoint-test/intent.md:5`)',
+        }),
+      ) // short SHA, not the full 40
       const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
       expect(subject).toBe('chore(checkpoint-test): plan')
       const body = execFileSync('git', ['log', '-1', '--format=%b'], { cwd: dir, encoding: 'utf8' })
@@ -419,10 +523,25 @@ describe('checkpoint', () => {
       writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true' }))
       writeFileSync(tickPath(dir), '2\n') // an entry stamp to prove it still gets consumed
 
-      const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
+      const { code, stdout, stderr } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
 
       expect(code).toBe(0)
-      expect(stdout).toContain('record-only')
+      // The fact leads; record-only is the advisory that qualifies it, and the
+      // pointer closes: one stdout block, in the order every ending is written.
+      expect(stdout).toBe(
+        ending({
+          lead: transition({ label: 'Plan', fact: 'committed', detail: [ledgerSha(dir, 'plan'), `details: \`${logPointer(dir, 'plan committed')}\``] }),
+          advisories: [
+            advisory({
+              fact: 'the plan rides the commit message',
+              detail: ['record-only', '.plumbbob/ is gitignored, so the files stay untracked'],
+              remedy: 'unignore .plumbbob/builds/ to keep the record in the tree',
+            }),
+          ],
+          pointer: '**Next Up**: Step 1 of 1 - First (details: `.plumbbob/builds/checkpoint-test/intent.md:5`)',
+        }),
+      )
+      expect(stderr).toBe('') // an ending is one block, and it is not stderr's
       // The subject and body marker are unchanged from the tracked path.
       const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
       expect(subject).toBe('chore(checkpoint-test): plan')

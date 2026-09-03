@@ -11,6 +11,7 @@
 // DESIGN boundary.
 
 import { appendFileSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { relative } from 'node:path'
 import { commit, findRepoRoot, headSha, isDirty, stageAll, stagePath, stagedPaths, stagedStat } from '../lib/git.ts'
 import {
   activeBuild,
@@ -19,8 +20,10 @@ import {
   buildScope,
   bumpStepStat,
   checkpointsPath,
+  clearDetail,
   clearHandoff,
   clearTick,
+  detailPath,
   hasSession,
   intentPath,
   readStats,
@@ -35,8 +38,10 @@ import { checkLatch } from '../lib/latch.ts'
 import { markStepDone, parseSteps } from '../lib/orient.ts'
 import { parseBuildScope, parseStepSeam, scopeDrift } from '../lib/intent.ts'
 import { conventionalSubject, subjectFromTitle, withMarker } from '../lib/commitmsg.ts'
-import { appendToSection, checkpointLogLine } from '../lib/buildlog.ts'
+import { appendToSection, checkpointLogLine, logEntry, planLogLine } from '../lib/buildlog.ts'
 import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
+import { advisory, ending, notice, transition } from '../lib/notice.ts'
+import { boundaryEnding, planRecord, stepRecord } from './handoff.ts'
 
 /**
  * Land a step: latch, check gate, commit, record, return to the boundary.
@@ -47,7 +52,7 @@ import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
 export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Promise<number> {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
-    process.stderr.write('plumbbob: no active session. Run `plumbbob start "<title>"` first.\n')
+    process.stderr.write(notice({ fact: 'no active session', remedy: 'plumbbob start "<title>"' }))
     return 1
   }
 
@@ -62,7 +67,9 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
 
   const step = resolveStep(root, args)
   if (step === null) {
-    process.stderr.write('plumbbob: no step to checkpoint — pass a number, or plan a step in intent.md first.\n')
+    process.stderr.write(
+      notice({ fact: 'no step to checkpoint', remedy: 'pass a step number, or plan a step in intent.md first' }),
+    )
     return 1
   }
 
@@ -95,26 +102,42 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
     }
     process.stderr.write(
       gate === 2
-        ? 'plumbbob: the check gate itself broke — checkpoint refuses until the harness is fixed.\n'
-        : 'plumbbob: check failed (red) — checkpoint refuses on red. Fix it and re-run.\n',
+        ? notice({
+            fact: 'checkpoint refused',
+            detail: ['the check gate itself broke'],
+            remedy: 'fix the harness, then run it again',
+          })
+        : notice({ fact: 'checkpoint refused', detail: ['the check is red'], remedy: 'fix it, then run it again' }),
     )
     return 1
   }
 
+  // The step's record, as the pause showed it: measured now, before the work
+  // is staged, since the seam and diff rows read the working tree the way the
+  // pause did. It lands in the build-log's Log beneath the dated line (the
+  // tracked ledger is the archive, and it rides the branch where a commit body
+  // would not survive the squash); the commit body keeps its marker and the
+  // lead prose only.
+  const record = stepRecord(root, activeBuild(root), step, readDetail(root) ?? '')
   let sha: string
+  // The drift advisory is read off the index (staged, before the commit clears
+  // it) but printed inside the ending below, where the fixed order puts it: the
+  // fact, the Verdict it earned a rung on, then what qualifies it.
+  let drift = ''
   if (isDirty(root)) {
     stageAll(root)
-    warnScopeDrift(root, step)
+    drift = scopeDriftNotice(root, step)
     const body = withMarker(`plumbbob step ${step}`, bodyResult.body ?? fallbackBody(root, step))
     sha = commit(root, messageArg(args) ?? subjectForStep(root, step), body)
   } else {
     sha = headSha(root)
   }
+  clearDetail(root) // the detail is recorded in the Log below; clear it so no stale detail rides into the next step.
 
   appendFileSync(checkpointsPath(root), `step ${step} ${sha}\n`)
-  flipIntent(root, step)
+  const flipNotice = flipIntent(root, step)
   stampStepStat(root, undefined, step, 'landedAt', new Date().toISOString())
-  logCheckpoint(root, step, sha)
+  const pointer = logCheckpoint(root, step, sha, record)
   // The step landed: the build-log's ☐/☑ mirror flips and its Current-step line
   // returns to the boundary, re-read from the intent.md `flipIntent` just wrote.
   // The artifact-plane whitelist keeps this build-log write from ever reading as
@@ -125,7 +148,19 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   clearHandoff(root) // the agent-run handoff ledger is step-scoped; clear it with the markers.
   clearTick(root) // the step's entry stamp is spent; the next `build <n>` re-stamps.
 
-  process.stdout.write(`plumbbob: step ${step} checkpointed — ${sha.slice(0, 9)}. Back at the boundary.\n`)
+  // The whole ending, one block: the lead line, the Verdict folded over what
+  // just landed, the advisories this checkpoint alone can state, and the
+  // pointer. Read after the flip and the ledger append, so the fold and the
+  // pointer both see the boundary the human is standing at.
+  const landed = boundaryEnding(root, activeBuild(root), step)
+  process.stdout.write(
+    ending({
+      lead: transition({ label: 'Checkpoint', fact: `Step ${step} complete`, detail: leadDetail(sha, pointer) }),
+      verdict: landed.verdict,
+      advisories: [drift, flipNotice],
+      pointer: landed.pointer,
+    }),
+  )
   return 0
 }
 
@@ -165,13 +200,29 @@ function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
   const staged = stagePath(root, buildFolder(root))
   const sha = commit(root, planSubject(root), withMarker('plumbbob plan', bodyResult.body ?? undefined))
   appendFileSync(checkpointsPath(root), `plan ${sha}\n`)
+  // The cold read that approved the plan is the Log's first entry, beneath a
+  // dated plan line; the detail file is then spent, the same as at a step.
+  const pointer = logPlan(root, sha, planRecord(readDetail(root) ?? ''))
+  clearDetail(root)
   // Landing the plan consumes `start`'s entry stamp: a later hand-built diff
   // (no `build <n>`) must find no stale TICK and stay guidance-governed.
   clearTick(root)
+  // No Verdict: the plan commit measures nothing. The pointer aims at the step
+  // the build starts on, which is what `handoff` renders from a null step.
   process.stdout.write(
-    staged
-      ? `plumbbob: plan committed — ${sha.slice(0, 9)}. Baseline → plan → steps.\n`
-      : `plumbbob: plan committed (record-only — sidecar is gitignored; the plan rides the commit message, the files stay untracked) — ${sha.slice(0, 9)}. Baseline → plan → steps.\n`,
+    ending({
+      lead: transition({ label: 'Plan', fact: 'committed', detail: leadDetail(sha, pointer) }),
+      advisories: staged
+        ? []
+        : [
+            advisory({
+              fact: 'the plan rides the commit message',
+              detail: ['record-only', '.plumbbob/ is gitignored, so the files stay untracked'],
+              remedy: 'unignore .plumbbob/builds/ to keep the record in the tree',
+            }),
+          ],
+      pointer: boundaryEnding(root, activeBuild(root), null).pointer,
+    }),
   )
   return 0
 }
@@ -211,25 +262,27 @@ function resolveStep(root: string, args: ReadonlyArray<string>): number | null {
 }
 
 /**
- * Warn (never refuse) when the staged tree reaches beyond the step's seam.
+ * The advisory (never a refusal) for a staged tree that reaches beyond the
+ * step's seam, or '' when it held.
  *
- * Guidance, not a gate: the checkpoint captures the drift and says so. The seam
+ * Guidance, not a gate: the checkpoint captures the drift and says so, and the
+ * bumped stat puts a `staged outside the seam` rung under the Verdict. The seam
  * (the step's edit grant: exact paths or `dir/` prefixes) comes from the
  * in-flight SEAM file when a build is live, else the step's declared seam in
  * intent.md. Plumbbob's own artifact plane is whitelisted inside `scopeDrift`,
  * so the `[x]` flip and build-log line this very checkpoint stages never read
  * as drift. No seam means no warning.
  */
-function warnScopeDrift(root: string, step: number): void {
+function scopeDriftNotice(root: string, step: number): string {
   const seam = seamTokens(root, step)
   const outside = scopeDrift(stagedPaths(root), seam)
-  if (outside.length > 0) {
-    bumpStepStat(root, undefined, step, 'driftWarnings') // accrues into the build-log's stats receipt
-    process.stderr.write(
-      `plumbbob: heads-up — staged paths outside step ${step}'s seam: ${outside.join(', ')}. ` +
-        `The checkpoint captures them; if that's real scope drift, the plan may need a \`/plumbbob:step\` revision.\n`,
-    )
-  }
+  if (outside.length === 0) return ''
+  bumpStepStat(root, undefined, step, 'driftWarnings') // accrues into the build-log's stats receipt, and into the Verdict's third rung
+  return advisory({
+    fact: `staged paths reach outside Step ${step}'s seam`,
+    detail: outside,
+    remedy: 'the checkpoint captures them, so revise the plan with /plumbbob:step if that is real scope drift',
+  })
 }
 
 /**
@@ -260,38 +313,70 @@ function seamTokens(root: string, step: number): ReadonlyArray<string> {
  *
  * Best-effort bookkeeping (the checkpoint SHA is the source of truth) but the
  * dashboard reads intent.md, so a swallowed failure here would make orientation
- * lie; the catch warns and asks for a hand flip instead.
+ * lie; the catch returns the advisory asking for a hand flip, which the caller
+ * folds into the ending. Returns '' on the happy path.
  */
-function flipIntent(root: string, step: number): void {
+function flipIntent(root: string, step: number): string {
   try {
     writeFileSync(intentPath(root), markStepDone(readFileSync(intentPath(root), 'utf8'), step))
+    return ''
   } catch {
-    process.stderr.write(
-      `plumbbob: heads-up — could not flip step ${step} to [x] in intent.md; ` +
-        `the checkpoint is recorded, but the dashboard will still show step ${step} as next. Flip it by hand.\n`,
-    )
+    return advisory({
+      fact: `could not flip Step ${step} to [x] in intent.md`,
+      detail: ['the checkpoint is recorded', `the dashboard still shows Step ${step} as next`],
+      remedy: 'flip the checkbox by hand',
+    })
   }
 }
 
 /**
- * Append a dated line to the build-log's `## Log` section.
+ * The lead line's trailing parenthetical: the short SHA, and where the Log
+ * entry landed when one did, as the same `details:` clause Next Up carries.
+ */
+function leadDetail(sha: string, pointer: string | null): string[] {
+  return pointer === null ? [sha.slice(0, 9)] : [sha.slice(0, 9), `details: \`${pointer}\``]
+}
+
+/**
+ * Append the step's entry to the build-log's `## Log` section: the dated line,
+ * and beneath it the record of the pause when the model wrote one.
  *
  * The build's history accrues at each checkpoint instead of being reconstructed
  * at finish; the step's title is lifted from intent.md when still present.
  * Best-effort: a missing or odd build-log never blocks a checkpoint; the
- * `checkpoints` SHA is the source of truth.
+ * `checkpoints` SHA is the source of truth. Returns where the line landed, as
+ * `path:line` from the repo root, or null when nothing was written.
  */
-function logCheckpoint(root: string, step: number, sha: string): void {
+function logCheckpoint(root: string, step: number, sha: string, record: string | null): string | null {
+  const date = new Date().toISOString().slice(0, 10)
+  return appendLog(root, checkpointLogLine(date, step, sha, titleForStep(root, step), statsSuffix(root, step)), record)
+}
+
+/**
+ * Append the plan's entry to the Log: a dated `plan committed` line, and
+ * beneath it the cold read that approved the plan when the model wrote one.
+ */
+function logPlan(root: string, sha: string, record: string | null): string | null {
+  return appendLog(root, planLogLine(new Date().toISOString().slice(0, 10), sha), record)
+}
+
+/**
+ * Write one Log entry and say where its dated line landed (`path:line` from
+ * the repo root), or null when the section is missing or the write failed.
+ */
+function appendLog(root: string, line: string, record: string | null): string | null {
   try {
     const path = buildLogPath(root)
-    const date = new Date().toISOString().slice(0, 10)
-    const line = checkpointLogLine(date, step, sha, titleForStep(root, step), statsSuffix(root, step))
-    const updated = appendToSection(readFileSync(path, 'utf8'), 'Log', line)
-    if (updated !== null) {
-      writeFileSync(path, updated)
+    const updated = appendToSection(readFileSync(path, 'utf8'), 'Log', logEntry(line, record))
+    if (updated === null) {
+      return null
     }
+    writeFileSync(path, updated)
+    const at = updated.split('\n').lastIndexOf(line)
+    return at === -1 ? null : `${relative(root, path)}:${at + 1}`
   } catch {
     // best-effort ledger; never fail a checkpoint over the build-log.
+    return null
   }
 }
 
@@ -396,6 +481,23 @@ function fallbackBody(root: string, step: number): string | undefined {
     parts.push(stat)
   }
   return parts.length > 0 ? parts.join('\n\n') : undefined
+}
+
+/**
+ * The in-flight step's detail from `.plumbbob/detail.md`, or null when the file
+ * is absent or empty.
+ *
+ * The model overwrites it before every pause; checkpoint reads it once here for
+ * the Log's record, and the caller clears it afterward. A missing or blank file
+ * records nothing.
+ */
+function readDetail(root: string): string | null {
+  try {
+    const raw = readFileSync(detailPath(root), 'utf8').trim()
+    return raw.length > 0 ? raw : null
+  } catch {
+    return null
+  }
 }
 
 /**

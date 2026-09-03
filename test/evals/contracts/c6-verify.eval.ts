@@ -9,6 +9,7 @@
 // (Plan 05, contract table row 6.)
 
 import { check, checkpointLines, info, snapshot, treeHash, unledgeredCommits, validity } from '../helpers/assert.ts'
+import { anatomyChecks } from '../helpers/anatomy.ts'
 import { makeEvalFixture, seedFlawedGreeting } from '../helpers/fixture.ts'
 import { TWO_STEPS, type Contract } from './contract.ts'
 
@@ -37,6 +38,7 @@ export const c6: Contract = {
         check('box 1 still unchecked', !t1.intent.includes('1. [x]')),
         check('no unledgered commits', unledgeredCommits(repo, t0.headSha).length === 0),
         info('the seeded flaw was surfaced (comma discrepancy named)', /comma|Hello,/.test(turn.content)),
+        ...anatomyChecks(turn.content, 'decision'),
       ],
     }
   },

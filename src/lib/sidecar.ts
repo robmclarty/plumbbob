@@ -358,6 +358,32 @@ export function clearHandoff(root: string, slug?: string | null): void {
   rmSync(handoffPath(root, slug), { force: true })
 }
 
+// --- The detail plane: `.plumbbob/detail.md`, one flat per-session file holding
+// the in-flight step's full detail. The model overwrites it before every pause
+// (the recap first, then numbered sections matching the highlights); checkpoint
+// records it beneath the step's dated line in the build-log's Log and then
+// clears it, so the durable archive is the tracked ledger and no stale detail
+// piles up. Flat like STATE/TURN, not per-build: a session drives one build at
+// a time, and a past step's expansion reads the ledger, never this file. ---
+
+/**
+ * detail.md: the in-flight step's full detail, at the flat sidecar root.
+ */
+export function detailPath(root: string): string {
+  return join(root, DIRNAME, 'detail.md')
+}
+
+/**
+ * Clear detail.md once checkpoint has recorded it in the Log; absent is a
+ * no-op.
+ *
+ * The rmSync lives here with the sidecar's other deletions, the same home
+ * clearHandoff and clearTick keep.
+ */
+export function clearDetail(root: string): void {
+  rmSync(detailPath(root), { force: true })
+}
+
 // --- Per-build stats: the build's own receipt. One tracked stats.json beside
 // checkpoints: it rides the branch, because the numbers are the record's
 // evidence. Keyed by step number; accrued at the beats the CLI already owns
@@ -663,6 +689,11 @@ export function excludeControl(root: string): void {
     // never writes, and never commits.
     `${DIRNAME}/TURN`,
     `${DIRNAME}/GRANT`,
+    // The in-flight step's detail file: flat per-session control the model
+    // overwrites before every pause. checkpoint folds it into the commit body
+    // and then clears it, so its archive is the commit, never a tracked path;
+    // excluding it keeps stageAll from ever sweeping it into a step commit.
+    `${DIRNAME}/detail.md`,
     `${DIRNAME}/builds/*/STEP`,
     `${DIRNAME}/builds/*/SEAM`,
     `${DIRNAME}/builds/*/SPIKE`,

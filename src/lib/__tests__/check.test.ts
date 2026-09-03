@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest'
 import type { DoctorCheck, RunOptions, RunResult, Summary, SummaryCheck } from 'checkride'
@@ -51,6 +51,46 @@ describe('runCheck (spawn override) — D24 (configurable-check)', () => {
     const dir = makeTempDir()
     writeSettings(dir, 'exit 3')
     expect(await runCheck(dir)).toBe(3)
+  })
+
+  it('leaves a one-check summary and the captured output under .check/, so the pause can measure an override gate', async () => {
+    const dir = makeTempDir()
+    writeSettings(dir, 'echo hello from the gate && exit 3')
+    const { code, stdout } = await captureIoAsync(() => runCheck(dir))
+    expect(code).toBe(3)
+    expect(stdout).toContain('hello from the gate') // still streamed to the terminal
+    const summary = JSON.parse(readFileSync(join(dir, '.check', 'summary.json'), 'utf8')) as Summary
+    expect(summary.ok).toBe(false)
+    expect(summary.checks_run).toBe(1)
+    expect(summary.checks).toHaveLength(1)
+    expect(summary.checks[0]).toMatchObject({
+      name: 'echo hello from the gate && exit 3',
+      adapter: null,
+      ok: false,
+      exit_code: 3,
+      output_file: 'check.stdout.txt',
+    })
+    expect(readFileSync(join(dir, '.check', 'check.stdout.txt'), 'utf8')).toContain('hello from the gate')
+  })
+
+  it('records a green override as one check run, so the readout reads green: 1 of 1 checks', async () => {
+    const dir = makeTempDir()
+    writeSettings(dir, 'true')
+    expect(await runCheck(dir)).toBe(0)
+    const summary = JSON.parse(readFileSync(join(dir, '.check', 'summary.json'), 'utf8')) as Summary
+    expect(summary.ok).toBe(true)
+    expect(summary.checks_run).toBe(1)
+    expect(summary.checks[0]).toMatchObject({ name: 'true', ok: true, exit_code: 0 })
+  })
+
+  it('cuts a long command to the name budget with an ellipsis, keeping the full command in the description', async () => {
+    const dir = makeTempDir()
+    const long = 'true # a configured check command far longer than the forty-column name budget'
+    writeSettings(dir, long)
+    expect(await runCheck(dir)).toBe(0)
+    const summary = JSON.parse(readFileSync(join(dir, '.check', 'summary.json'), 'utf8')) as Summary
+    expect(summary.checks[0]?.name).toBe(`${long.slice(0, 39)}…`)
+    expect(summary.checks[0]?.description).toContain(long)
   })
 
   it('lets settings.local.json override settings.json', async () => {

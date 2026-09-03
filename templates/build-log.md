@@ -51,9 +51,10 @@ Harvest results this boundary:
 
 ## Log
 
-*(The build's history, oldest first. `plumbbob checkpoint` appends a dated line here
-every time a step lands (via `/plumbbob:build` or `/plumbbob:verify`), so this
-fills in as you go, not at the end. Add your own decision/event lines too: this is what
+*(The build's history, oldest first. `plumbbob checkpoint` appends an entry here
+every time a step lands (via `/plumbbob:build` or `/plumbbob:verify`): the dated line,
+and beneath it the pause as you approved it, so this fills in as you go, not at the
+end, and an older step's detail is a scroll away. Add your own decision/event lines too: this is what
 you point at to say "I did that: the LLM helped, but those were my calls."
 `/plumbbob:finish` reads this for the report; `plumbbob finish` commits it with the build
 folder, so it rides the branch into the PR.)*

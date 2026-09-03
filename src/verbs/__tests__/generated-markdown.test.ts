@@ -6,15 +6,17 @@
 // what the CLI actually writes, in a throwaway repo, under the same rules
 // .markdownlint-cli2.jsonc enforces on the docs we track.
 
-import { readFileSync, writeFileSync } from 'node:fs'
-import { relative } from 'node:path'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { join, relative } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { main } from 'markdownlint-cli2'
 import { start } from '../start.ts'
 import { park } from '../park.ts'
 import { finish } from '../finish.ts'
+import { checkpoint } from '../checkpoint.ts'
 import { appendToSection, checkpointLogLine } from '../../lib/buildlog.ts'
-import { buildLogPath, bumpStepStat, intentPath, reportPath, stampStepStat } from '../../lib/sidecar.ts'
+import { buildLogPath, bumpStepStat, detailPath, intentPath, reportPath, stampStepStat } from '../../lib/sidecar.ts'
+import { settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
@@ -70,6 +72,61 @@ describe('generated markdown lints clean under a consumer-strict gate', () => {
     )
     writeFileSync(path, logged as string)
     expect(await lintFindings(dir, [path])).toEqual([])
+  })
+
+  it('a checkpoint with a detail file: the record nested under the Log line, fence and lists included', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Log the record', '--slug', 'log-the-record']))
+    writeFileSync(intentPath(dir), '# Log the record\n\n## Steps\n\n1. [ ] First — **done when:** a works.\n   - seam: `src/a.ts`\n')
+    writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true' }))
+    mkdirSync(join(dir, 'src'), { recursive: true })
+    writeFileSync(join(dir, 'src', 'a.ts'), 'in seam\n')
+    writeFileSync(
+      detailPath(dir),
+      [
+        '# Detail · Step 1 · First',
+        '',
+        '── recap · step 1 of 1 ──',
+        'done-when    met',
+        'decisions    none exercised',
+        'constraints  all honored',
+        '',
+        '## Summary',
+        '',
+        'A works now, and the story below has a list and a fence of its own.',
+        '',
+        '## 1 The first move',
+        '',
+        'The whole story, in two paragraphs.',
+        '',
+        '- one thing it tried',
+        '- one thing it dropped',
+        '',
+        '```ts',
+        'export const a = 1',
+        '```',
+        '',
+        '## 2 The second move',
+        '',
+        '## Recommendation',
+        '',
+        'Approve it. Nothing is off.',
+        '',
+      ].join('\n'),
+    )
+    await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(readFileSync(buildLogPath(dir), 'utf8')).toContain('  **Summary**: A works now')
+    expect(await lintFindings(dir, [buildLogPath(dir)])).toEqual([])
+  })
+
+  it('a plan commit with a cold read: the plan line and its record', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Log the read', '--slug', 'log-the-read']))
+    writeFileSync(intentPath(dir), '# Log the read\n\n## Steps\n\n1. [ ] First — **done when:** a works.\n   - seam: `src/a.ts`\n')
+    writeFileSync(detailPath(dir), '# Detail · Plan · Log the read\n\n## 1 The done-when names no test\n\nNothing in the seam is a test file.\n\n## Recommendation\n\nSharpen step 1 first. Its done-when names no test.\n')
+    await captureIoAsync(() => checkpoint(dir, ['--plan']))
+    expect(readFileSync(buildLogPath(dir), 'utf8')).toContain('plan committed')
+    expect(await lintFindings(dir, [buildLogPath(dir)])).toEqual([])
   })
 
   it('the finish report: Checkpoints and a Stats table', async () => {

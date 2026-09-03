@@ -17,7 +17,8 @@ lands; [**D33 (info-exclude)**](#d33)–[**D38 (cli-owns-slugs)**](#d38) below c
 [**D71 (visible-reconcile)**](#d71)–[**D73 (subject-length-soft)**](#d73) from the July 2026 commit-subjects build,
 [**D74 (glossed-citations)**](#d74)–[**D75 (two-gates)**](#d75) from the 2026-07-31 citations build, and
 [**D76 (resolved-on-opener)**](#d76)–[**D77 (placeholder-uncounted)**](#d77) from the 2026-07-18
-intent-legibility build.)
+intent-legibility build, and [**D80 (cli-renders-model-relays)**](#d80)–[**D84 (one-liner-register)**](#d84)
+from the 2026-08-28 presentation build.)
 
 ## Constraints (C)
 
@@ -625,6 +626,128 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   [**D67 (auto-not-a-grant)**](#d67) closed. Promoted from the 2026-08-13 leftovers build, merging its
   locals `abandon-verb`, `tree-untouched`, `stays-planned`, `abandon-log-line`, and `abandon-latched`.
   *Tagged in* `docs/cli-reference.md`, `docs/skills-reference.md`, and `docs/state-and-git.md`.
+
+- <a id="d80"></a>**D80 (cli-renders-model-relays): Whatever can be deterministic is rendered by the CLI and
+  relayed verbatim; the model composes only judgment, and the turn is the anatomy and nothing else.** The
+  hand-off block proved the mechanism: once `plumbbob handoff` took it over at 0.8.5 it stopped drifting,
+  while every model-composed section around it kept mutating in length, order, and register from model to
+  model. The presentation build pushed that split to its limit. If the CLI can compute or render a line it
+  does (the check row from the gate's summary, the seam and diff rows from git, the `spent` row from
+  `stats.json` and the turn ledger, the Verdict, Next Up, Your Call), and the model is kept for what only a
+  model can do: the Summary lead, the highlights, the three judgment rows, and the recommendation, all
+  written into the detail file ([**D81 (detail-file)**](#d81)) rather than typed into the chat. The rule that
+  keeps the two apart is positional: the model writes the file, runs `handoff`, pastes its output at top
+  level, and the turn begins where that output begins and ends where it ends, because every defect the build
+  found in a live turn sat in the region the model was still writing (a bold token loose mid-sentence, an
+  operational paragraph above the anatomy, a check verdict restated three times), and a region the model
+  does not own is a region it cannot narrate into. The same ownership reaches every tier: `handoff` emits
+  the plan-pause card and the driver pointer as well as the pause and the boundary, and a transition verb
+  (`checkpoint`, `park`, `revert`, `abandon`, `spike`, `use`, `finish`) prints its whole ending itself,
+  through the one formatter in `src/lib/notice.ts`, so a boundary or a driver turn is one command's output
+  and cannot be relayed out of order or disagree with itself. The spec for the shape is
+  `docs/presentation.md`; a change to the shape is a change to that file first. Promoted from the
+  2026-08-28 presentation build, merging its locals `consistency-from-ownership`, `cli-does-what-it-can`,
+  `recap-split-by-nature`, `recap-as-wire`, `turn-is-the-anatomy`, `one-seam-turn`, `zero-seam-turn`,
+  `whole-anatomy-emitted`, `handoff-owns-every-pointer`, `verb-prints-its-ending`, and
+  `one-notice-formatter`. *Tagged in* `docs/presentation.md`, `docs/architecture.md`, and
+  `docs/cli-reference.md`.
+
+- <a id="d81"></a>**D81 (detail-file): One untracked file is the wire the model's judgment travels on, and
+  the build log is the archive.** `.plumbbob/detail.md` holds the in-flight step's full detail: the three judgment
+  rows under a header rule, the `## Summary` lead, the `## <n>` sections whose titles are the highlights,
+  and the `## Recommendation`. It is flat per session rather than per build, overwritten before every pause,
+  and control-plane ephemera excluded through `info/exclude` like the rest ([**D33 (info-exclude)**](#d33)).
+  `checkpoint` records it beneath the step's dated line in the build-log's `## Log` (the Summary and
+  highlights, the Readout, the Verdict, the recommendation, then the full story behind each highlight,
+  as the pause showed them) and then truncates it, because the ledger is tracked and rides the branch
+  into the PR where a commit body dies at the squash-merge, and a pile of stale detail files is its own
+  flood; the commit body keeps its marker and the `--body` prose only, so one durable copy exists, and
+  the lead line's bracket points at the entry. The plan commit records the cold read the same way,
+  beneath a `plan committed` line. "expand 2" at the pause is a lookup of the file's `## 2`, an older
+  step takes its number and is answered from its Log entry, and neither is ever a recall. (Revised
+  2026-09-02, before release: the archive moved from the commit body to the ledger, Rob's call.) Hidden detail is always counted and pointed at (the
+  visible highlights carry the count, the `expand` move the affordance), because a silent cut reads as
+  coverage. Code stays out of the default turn with one exception: a diff of 20 changed lines or fewer rides
+  inline below the readout, and anything larger stays in the working tree behind the diffstat row, because
+  code is the single largest source of visual flood and the counted row already says what moved. Where to
+  look is introduced by one word, `details:`, a code-spanned `path:line` inside the closing bracket of the
+  Summary lead and of Next Up, the form that opens in every host and survives as plain text. Promoted from
+  the 2026-08-28 presentation build, merging its locals `latest-detail-file`, `latest-card-addressing`,
+  `honest-elision`, `code-on-request`, and `details-one-word`. *Tagged in* `docs/presentation.md`,
+  `docs/cli-reference.md`, and `docs/state-and-git.md`.
+
+- <a id="d82"></a>**D82 (readout-ladder): The readout is an instrument, a green row collapses to a count
+  and a red row names one offender, and the Verdict is computed worst-of over the same rows.** The fence
+  holds seven rows at most, in order: `check`, `done-when`, `decisions`, `constraints`, `seam`, `diff`,
+  `spent`. Measured beats attested: the CLI's `check`, `seam`, `diff`, and `spent` rows overwrite anything
+  the model wrote for them, and the constraint count is read from `## Constraints`, because every row the
+  model attests is one it can pad or get wrong, and determinism is what earns the readout its trust. Each
+  measuring row opens with a verdict word from a closed set (true, failing, or `drift`, the plan-wrong word
+  the agent envelope already uses, [**D52 (blocked-vs-drift)**](#d52)); a green row collapses to a count that
+  sizes its universe (`green: 11 of 11 checks`, `held: 6 of 6 declared, no strays`) and a red row names the
+  one offender with its slug and one clause, its evidence on an indented `→` line, because the question a
+  reviewer brings to an instrument is "is anything off?" and a count answers it faster than a list; a row
+  that cannot apply vanishes, one whose good state is meaningful collapses to it, and every fence line fits
+  80 columns (13 of label, 67 of value) by counted degradation, never a silent cut. The gate verdict has one
+  home, the `check` row, measured from the last run's summary; a narrowed run names the slots it skipped
+  there (`· without test`), and the phrase `NOT the full check` retires. The Verdict folds those same rows
+  worst-of with the step's accrued stats onto a four-rung ladder in the plumb register, `● Plumb`,
+  `◐ A hair off`, `○ Out of plumb`, `✗ Not standing`, naming its worst component in a trailing
+  parenthetical, because a computed verdict is trustworthy where a vibed one is theater, and the split that
+  earns the fourth rung is "fix the work" against "fix the plan". The step identity renders once per turn:
+  the progress count rides Next Up, so the Verdict says only the one thing it says; and the out-of-band
+  rung excludes plumbbob's own plan commits, because an advisory that trips on routine housekeeping stops
+  meaning anything within three steps. Promoted from the 2026-08-28 presentation build, merging its locals
+  `readout-and-summary`, `collapse-to-count`, `vanish-or-collapse`, `worst-of-banner`, `circle-ladder`,
+  `plumb-when-natural`, `verdict-in-the-row`, `narrowing-named-not-shouted`, `recap-width-budget`,
+  `progress-on-next-up`, `spent-row`, and `own-commits-not-out-of-band`. *Tagged in*
+  `docs/presentation.md` and `docs/cli-reference.md`.
+
+- <a id="d83"></a>**D83 (card-teaches-itself): Every part outside the fence is a labeled line, the Your
+  Call block names the moves a human actually makes, and a decision turn's last words are the model's
+  recommendation.** Every part outside the readout fence is one bold label, a colon, and text that wraps
+  (`**Summary**:`, `**Readout**:`, `**Verdict**:`, `**Next Up**:`, `**Your Call**:`,
+  `**Recommendation**:`), one blank line between blocks, fences never nesting, because the pause used to run
+  five visual grammars at once and only columnar rows need a fence. The Your Call block quotes what the
+  human says and states what happens next, and it lists the four real replies (`looks good`; `expand`, or
+  any question; anything that reads as direction; `revert` last, since a destructive move is named rather
+  than discovered), because nobody types "needs work" and the move made most, zeroing in on one part before
+  approving, was not on the card at all; `looks good` renders only while the measured check is green, since
+  offering a move the checkpoint would refuse teaches a false ceremony. The recommendation follows the card
+  behind a label the CLI prepends, the move as its own sentence and then the reason, because the card
+  teaches the moves without saying which to take, and a pause that leaves the human deciding unassisted is a
+  defect, not a missing nicety. Three tiers scale the ending to the turn: a decision turn (the build and
+  verify pause, the plan pause, an auto halt) carries the whole block, an orientation turn (status, the
+  boundary, finish) the lead line, the Verdict, and Next Up, a driver turn (park, spike, use, recover,
+  revert, agent runs) the lead line and Next Up, because the Your Call block belongs only where a decision
+  is pending. Next Up carries the progress count and the plan's model recommendation
+  ([**D62 (model-recommendation)**](#d62)), the one token besides the label a line may bold, because it is the
+  token the human acts on before the next run. Promoted from the 2026-08-28 presentation build, merging its
+  locals `labeled-lines`, `instructive-choice`, `real-moves`, `verdict-last`, `recommendation-last`,
+  `labeled-recommendation`, and `three-tier-anatomy`. *Tagged in* `docs/presentation.md` and
+  `docs/skills-reference.md`.
+
+- <a id="d84"></a>**D84 (one-liner-register): A line plumbbob says out loud states its fact and never the
+  move, and where it sits picks its head.** An ending goes to stdout as one block and its lead line wears a
+  bold label like every other part of it (`**Checkpoint**: Step 15 complete (2d917cde7)`,
+  `**Parked**: should /password-reset get the same throttle? (tangent)`): the label names the artifact that
+  landed or the subject that moved, the fact reads on from it, `checkpointed` is no longer a word the CLI
+  says, a capture's tag rides the tail so the printed line and the ledger line match, and `Step N` is a
+  proper noun throughout. An advisory belongs to the ending it qualifies, so it rides stdout unprefixed as a
+  capitalized sentence, the `⚠` glyph trailing the fact and one indented `→` line beneath it carrying the
+  remedy; the `heads-up` and `note` labels retire, because the glyph table already gives `⚠` to a warning
+  and `→` to what happens next. A refusal is not an ending: nothing landed, so it goes to stderr with the
+  `plumbbob:` prefix, which earns its one colon by naming the speaker where checkride's output and git's
+  share one result and scrollback is grepped for that word. The detail is one trailing parenthetical that
+  degrades by count (`and 2 others`). No pointer rides a single line; every ending closes on its Next Up,
+  the one exception being `start`, which ends on its remedy line because the plan skill owns the turn that
+  follows and no step exists to aim at. The register governs one-liners only: the dashboard, `recover`'s
+  check lines, and the sentinel headers keep their shape. Glyphs are a closed set of text-presentation
+  codepoints, each always paired with its word, because renderers differ, fonts drop glyphs to tofu, and
+  screen readers speak Unicode names. Promoted from the 2026-08-28 presentation build, merging its locals
+  `own-lines-one-colon`, `fact-not-move`, `advisory-glyph`, `register-is-one-liners`,
+  `transitions-wear-the-label`, `word-carries-meaning`, and `text-glyphs-only`. *Tagged in*
+  `docs/presentation.md` and `docs/cli-reference.md`.
 
 ### Superseded
 

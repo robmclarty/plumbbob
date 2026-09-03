@@ -166,14 +166,27 @@
       <div style="margin-top:28px; display:flex; gap:20px; align-items:stretch; flex-wrap:wrap;">
         <div style="flex:1; min-width:340px; background:#181231; border:3px solid #181231; box-shadow:1px 1px 0 #5A32C8, 2px 2px 0 #5A32C8, 3px 3px 0 #5A32C8, 4px 4px 0 #5A32C8, 5px 5px 0 #5A32C8, 6px 6px 0 #5A32C8; padding:26px 28px;">
           <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:2px; color:#C1922E; margin-bottom:14px;">THE PAUSE</div>
-          <div style="font-family:'JetBrains Mono',monospace; font-size:14px; line-height:1.9; color:#DAD5EC; white-space:pre-wrap;"><span style="color:#8A6BE8;">⏸ PAUSE</span> — read the diff as an editor.<br>Approve to checkpoint, or send fixes.</div>
-          <p style="font-size:14.5px; line-height:1.6; color:#B7B0D0; margin:18px 0 0;">On your OK it commits the step as a checkpoint, marks it done, and returns to the boundary. Fire <span style="font-family:'JetBrains Mono',monospace; font-size:13px; color:#ECEAF4;">/plumbbob:build</span> again for the next step. <strong style="color:#ECEAF4;">You are the clock.</strong></p>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:13px; line-height:1.75; color:#DAD5EC; white-space:pre-wrap;"><strong style="color:#C1922E;">Verdict</strong>: ● Plumb
+
+<strong style="color:#C1922E;">Next Up</strong>: Step 2 of 3 - Wire the limiter into POST /login
+
+<strong style="color:#C1922E;">Your Call</strong>:
+- <span style="color:#8A6BE8;">looks good</span> → I checkpoint Step 1; back to the boundary
+- <span style="color:#8A6BE8;">expand</span>, or any question → I show more of what is there; nothing changes
+- anything that reads as direction → I take it as what to change; nothing lands until you approve
+- <span style="color:#8A6BE8;">revert</span> → I wind the work back to the last checkpoint</div>
+          <p style="font-size:14.5px; line-height:1.6; color:#B7B0D0; margin:18px 0 0;">The tail of every pause: above it sit a Summary, a Readout of measured rows, and below it the model's Recommendation, all rendered by the CLI and relayed whole. Say <em style="color:#ECEAF4;">looks good</em> and the step commits as a checkpoint; ask, and it shows more without changing anything. Fire <span style="font-family:'JetBrains Mono',monospace; font-size:13px; color:#ECEAF4;">/plumbbob:build</span> again for the next step. <strong style="color:#ECEAF4;">You are the clock.</strong></p>
         </div>
         <div style="flex:1; min-width:340px; background:#ECEAF4; border:3px solid #181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231, 5px 5px 0 #181231, 6px 6px 0 #181231; padding:26px 28px;">
           <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:2px; color:#5A32C8; margin-bottom:14px;">SWAP THE EXECUTOR</div>
           <div style="font-family:'DM Serif Display',serif; font-size:26px; color:#181231; line-height:1.08; margin-bottom:14px;">It reads the diff, not the author.</div>
           <p style="font-size:14.5px; line-height:1.6; color:#2E2A44; margin:0;"><span style="font-family:'JetBrains Mono',monospace; font-size:13px;">/plumbbob:build</span> is the default engine, not the only one. Implement a step by hand — or vibe it in another session, or in another harness entirely — and run <span style="font-family:'JetBrains Mono',monospace; font-size:13px;">/plumbbob:verify</span> instead: same checks, same pause, same checkpoint.</p>
         </div>
+      </div>
+
+      <div style="margin-top:28px; border:3px solid #181231; background:#181231; box-shadow:1px 1px 0 #C1922E, 2px 2px 0 #C1922E, 3px 3px 0 #C1922E, 4px 4px 0 #C1922E, 5px 5px 0 #C1922E, 6px 6px 0 #C1922E;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:11px 16px; border-bottom:1px solid #3A315C;"><span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8B84A8;">one step, as Claude Code renders it</span></div>
+        <img src="media/loop-one-step.svg" alt="One step of the loop: build, the pause, looks good, the checkpoint" style="display:block; width:100%; height:auto;">
       </div>
     </div>
   </div>
@@ -216,7 +229,7 @@
               <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8B84A8; margin-top:4px;">LATCHED</div>
             </div>
           </div>
-          <div style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#5C5677; margin-top:18px; line-height:1.5;">opus · 2026-07-11, reproduced 2026-07-18 @ 0.8.7</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#5C5677; margin-top:18px; line-height:1.5;">opus · 2026-07-11, reproduced 2026-07-18 @ 0.8.7 · latest sweep 2026-09-03 @ 0.10.3</div>
         </div>
       </div>
     </div>
@@ -248,7 +261,7 @@
         </tbody>
       </table>
     </div>
-    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#5C5677; margin-top:14px;">Under the skills: a lean <span style="color:#5A32C8;">plumbbob</span> CLI, one session-gated post-edit hook, and a <span style="color:#5A32C8;">.plumbbob/</span> sidecar you can open and edit by hand · full surface in the <a href="api.html" style="color:#5A32C8; font-weight:700; border-bottom:2px solid #5A32C8;">API reference</a></div>
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#5C5677; margin-top:14px;">Under the skills: a lean <span style="color:#5A32C8;">plumbbob</span> CLI, three hooks (a post-edit lint, a git-commit ask, the turn ledger), and a <span style="color:#5A32C8;">.plumbbob/</span> sidecar you can open and edit by hand · full surface in the <a href="api.html" style="color:#5A32C8; font-weight:700; border-bottom:2px solid #5A32C8;">API reference</a></div>
   </div>
 
   <!-- ===================== BRING YOUR OWN AGENTS ===================== -->
@@ -414,15 +427,17 @@ class Component extends DCLogic {
       termLines = [
         line([['$ ', VIO], ['/plumbbob:plan ', INK], ['rate-limit POST /login, 5/min/IP', DIM]]),
         line([['  ✎ ', BRASS], ['intent.md written', INK], [' — frame · decisions · 4 steps', DIM]]),
-        line([['  ● ', VIO], ['plan committed', INK], ['  chore(login): plan', DIM]]),
+        line([['  Plan  ', BRASS], ['committed ', INK], ['chore(login): plan', DIM]]),
         blank(),
         line([['$ ', VIO], ['/plumbbob:build', INK]]),
-        line([['  → ', VIO], ['step 1/4  ', INK], ['add the token bucket', DIM]]),
-        line([['  ✓ ', GRN], ['check   ', INK], ['types · lint · test · dead   ', DIM], ['green', GRN]]),
-        line([['  ⏸ ', VIO], ['PAUSE', VIO], [' — read the diff as an editor.', INK]]),
+        line([['  Summary  ', BRASS], ['the 6th try in a minute now gets 429', INK]]),
+        line([['  check ', DIM], ['green: 7 of 7', GRN], ['  seam ', DIM], ['held', GRN], ['  diff ', DIM], ['+61 -3', INK]]),
+        line([['  Verdict  ', BRASS], ['● Plumb', GRN]]),
+        line([['  Your Call  ', BRASS], ['looks good · expand · direct · revert', INK]]),
         blank(),
-        line([['(approve)', DIM]]),
-        line([['  ✓ ', GRN], ['checkpoint  ', INK], ['feat(login): add token bucket  ', DIM], ['#a1b2c3d', BRASS]]),
+        line([['$ ', VIO], ['looks good', INK]]),
+        line([['  Checkpoint  ', BRASS], ['Step 1 complete ', INK], ['(a1b2c3d)', DIM]]),
+        line([['  Next Up  ', BRASS], ['Step 2 of 4 - wire it into POST /login', INK]]),
         blank(),
         line([['  You are the clock.', VIO]]),
       ];
@@ -453,7 +468,7 @@ class Component extends DCLogic {
     const loopStages = [
       { tag: 'ONCE', cmd: '/plumbbob:plan', accent: '#5A32C8', body: 'Decide everything on paper — frame, decisions, and all steps. No code is written yet.' },
       { tag: 'PER STEP', cmd: '/plumbbob:build', accent: '#C1922E', body: 'Implement the next step → run the check gate → self-review against the plan → PAUSE.' },
-      { tag: 'PER STEP', cmd: '(approve)', accent: '#C43B5B', body: 'On your OK the step commits as a checkpoint. Fire /plumbbob:build again — that is the clock tick.' },
+      { tag: 'PER STEP', cmd: 'looks good', accent: '#C43B5B', body: 'Say it and the step commits as a checkpoint. Ask instead, and it shows more; direct it, and nothing lands until you approve. Fire /plumbbob:build again — that is the clock tick.' },
       { tag: 'ONCE', cmd: '/plumbbob:finish', accent: '#5C5677', body: 'Report what shipped and why, make the final commit, and clear for the next goal.' },
     ];
 

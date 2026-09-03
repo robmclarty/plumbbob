@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { use } from '../use.ts'
+import { ending, transition } from '../../lib/notice.ts'
 import { start } from '../start.ts'
 import { activeBuild, buildDir, stepPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -26,10 +27,17 @@ describe('use', () => {
     const { code, stdout, stderr } = captureIo(() => use(dir, ['other-build']))
     expect(code).toBe(0)
     expect(activeBuild(dir)).toBe('other-build')
-    // Exact tail: no in-flight note when the target has no STEP file.
-    expect(stdout).toContain('now on build "other-build". `status` to orient.')
+    // Exact ending: no in-flight note when the target has no STEP file, and the
+    // pointer aims into the build just switched to.
+    expect(stdout).toBe(
+      ending({
+        lead: transition({ label: 'Active build', fact: 'other-build' }),
+        pointer: '**Next Up**: Step 1 of 1 - Do it (details: `.plumbbob/builds/other-build/intent.md:5`)',
+      }),
+    )
     // And no in-flight warning when the build being left has none either.
-    expect(stderr).not.toContain('step in flight')
+    expect(stderr).toBe('')
+    expect(stdout).not.toContain('step in flight')
   })
 
   it('skips flag args when finding the slug', async () => {
@@ -55,7 +63,7 @@ describe('use', () => {
     const { code, stderr } = captureIo(() => use(dir, ['ghost']))
     expect(code).toBe(1)
     expect(stderr).toContain('no build named "ghost"')
-    expect(stderr).toContain('Builds: my-feature.')
+    expect(stderr).toContain('(my-feature)') // the real builds ride the detail parenthetical
     expect(activeBuild(dir)).toBe('my-feature') // unchanged
   })
 
@@ -72,10 +80,10 @@ describe('use', () => {
     await captureIoAsync(() => start(dir, ['My Feature', '--slug', 'my-feature']))
     writeFileSync(stepPath(dir), '2\n') // my-feature has a step in flight
     seedBuild(dir, 'other-build')
-    const { code, stderr } = captureIo(() => use(dir, ['other-build']))
+    const { code, stdout } = captureIo(() => use(dir, ['other-build']))
     expect(code).toBe(0)
-    expect(stderr).toContain('has a step in flight')
-    expect(stderr).toContain('resumes when you `use my-feature`') // points back at the door
+    expect(stdout).toContain('Build "my-feature" has a step in flight')
+    expect(stdout).toContain('→ plumbbob use my-feature to pick it back up') // points back at the door
     expect(activeBuild(dir)).toBe('other-build')
   })
 

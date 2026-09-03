@@ -9,6 +9,7 @@ const step = (n: number, done: boolean, title: string): Step => ({
   planned: true,
   doneWhen: null,
   model: null,
+  line: n,
 })
 
 // The relevant top-half shape of templates/build-log.md.

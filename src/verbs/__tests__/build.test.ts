@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { build } from '../build.ts'
+import { notice } from '../../lib/notice.ts'
 import { start } from '../start.ts'
 import { buildDir, buildLogPath, intentPath, readStats, seamPath, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -34,8 +35,11 @@ describe('build', () => {
     expect(readFileSync(seamPath(dir), 'utf8')).toBe('src/b.ts\nsrc/c.ts\n')
     expect(readFileSync(stepPath(dir), 'utf8').trim()).toBe('2')
     expect(stdout).toContain('building step 2')
-    // The seam is printed indented, one path per line, under the not-a-lock banner.
-    expect(stdout).toContain('not a lock):\n  src/b.ts\n  src/c.ts')
+    // The seam is printed indented, one path per line, as a readout under the
+    // notice that frames it: a list is not a one-liner.
+    expect(stdout).toContain(
+      notice({ fact: 'the seam is orientation, not a lock', detail: ['2 paths'] }) + '  src/b.ts\n  src/c.ts',
+    )
   })
 
   it('with no argument, enters the next undone step', async () => {
@@ -52,14 +56,14 @@ describe('build', () => {
     // look different on the page; the count is the tell.
     const dir = await startedWithSteps() // steps 1 and 2 both undone
     const { stdout } = captureIo(() => build(dir, ['2']))
-    expect(stdout).toContain('building step 2 (explicitly requested; skips 1 undone step)')
+    expect(stdout).toContain(notice({ fact: 'building step 2', detail: ['explicitly requested', 'skips 1 undone step'] }))
   })
 
   it('an explicit request that skips nothing carries no note', async () => {
     const dir = await startedWithSteps()
     writeFileSync(intentPath(dir), INTENT.replace('1. [ ]', '1. [x]'))
     const { stdout } = captureIo(() => build(dir, ['2']))
-    expect(stdout).toContain('building step 2. Seam')
+    expect(stdout).toContain(notice({ fact: 'building step 2' }))
   })
 
   it('with no argument and every step checkpointed, refuses and writes nothing', async () => {
@@ -100,7 +104,7 @@ describe('build', () => {
     const { code, stderr } = captureIo(() => build(dir, ['1-3']))
     expect(code).toBe(1)
     expect(stderr).not.toContain('build needs a step number')
-    expect(stderr).toContain('step ranges are a `/plumbbob:build` feature')
+    expect(stderr).toContain('`1-3` is a /plumbbob:build range')
     expect(stderr).toContain('plumbbob build 1')
   })
 
@@ -115,7 +119,7 @@ describe('build', () => {
     const dir = await startedWithSteps()
     const { code, stderr } = captureIo(() => build(dir, ['9']))
     expect(code).toBe(1)
-    expect(stderr).toContain("Fix the step's seam in intent.md, then `build 9` again.")
+    expect(stderr).toContain("→ fix the step's seam in intent.md, then `build 9` again")
   })
 
   it('refuses with no active session — and says so', async () => {

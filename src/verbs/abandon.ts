@@ -31,6 +31,8 @@ import {
 import { checkLatch } from '../lib/latch.ts'
 import { abandonLogLine, appendToSection } from '../lib/buildlog.ts'
 import { parseSteps } from '../lib/orient.ts'
+import { ending, notice, transition } from '../lib/notice.ts'
+import { driverPointer } from './handoff.ts'
 
 /**
  * Drop the in-flight step while keeping its work: latch, clear the markers,
@@ -42,7 +44,7 @@ import { parseSteps } from '../lib/orient.ts'
 export function abandon(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
-    process.stderr.write('plumbbob: no active session. Run `plumbbob start "<title>"` first.\n')
+    process.stderr.write(notice({ fact: 'no active session', remedy: 'plumbbob start "<title>"' }))
     return 1
   }
 
@@ -51,7 +53,7 @@ export function abandon(cwd: string, args: ReadonlyArray<string>): number {
   const step = readInFlightStep(root, slug)
   if (step === null) {
     process.stderr.write(
-      'plumbbob: no step in flight to abandon. abandon drops an in-flight step; from the boundary there is nothing to drop.\n',
+      notice({ fact: 'no step in flight to abandon', detail: ['abandon drops an in-flight step'] }),
     )
     return 1
   }
@@ -76,8 +78,17 @@ export function abandon(cwd: string, args: ReadonlyArray<string>): number {
   bumpStepStat(root, slug, step, 'abandons')
   logAbandon(root, slug, step)
 
+  // A step exit: with the step back at `[ ]` and its markers gone, the pointer
+  // aims forward from the boundary, at the very step just dropped.
   process.stdout.write(
-    `plumbbob: step ${step} abandoned — work kept in the tree, back at the boundary. The step stays planned.\n`,
+    ending({
+      lead: transition({
+        label: 'Abandoned',
+        fact: `Step ${step}`,
+        detail: ['work kept in the tree', 'the step stays planned'],
+      }),
+      pointer: driverPointer(root, slug),
+    }),
   )
   return 0
 }
@@ -92,12 +103,18 @@ export function abandon(cwd: string, args: ReadonlyArray<string>): number {
  */
 function abandonPause(reason: 'no-turn' | 'ceiling', step: number): string {
   if (reason === 'ceiling') {
-    return `plumbbob: abandon refused — step ${step} is past the range you granted; pause here, then run it again to continue.\n`
+    return notice({
+      fact: 'abandon refused',
+      detail: [`step ${step} is past the range you granted`],
+      remedy: 'pause here, then run it again to continue',
+    })
   }
-  return `plumbbob: abandon refused — no human turn since this step began. A step exit crosses the same
-boundary as a checkpoint, so abandon honors the same pause: end the turn, and the human's approval on
-their next turn is what lets it land. (An explicit \`/plumbbob:build --auto\` or a step range in the
-human's own prompt is the only self-approval.)
+  // The fact rides the register; the paragraph under it stays, because the
+  // pause affordance is an explanation, not a one-liner, and it mirrors the
+  // one the checkpoint latch prints.
+  return `${notice({ fact: 'abandon refused', detail: ['no human turn since this step began'] })}A step exit crosses the same boundary as a checkpoint, so abandon honors the same pause: end the
+turn, and the human's approval on their next turn is what lets it land. (An explicit
+\`/plumbbob:build --auto\` or a step range in the human's own prompt is the only self-approval.)
 `
 }
 

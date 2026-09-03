@@ -5,6 +5,129 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.1] - 2026-09-02
+
+- **Added:** the plan pause ends on a recommendation, drawn from a cold read. Before relaying
+  `handoff --plan`, the plan skill gives the framed plan one bounded adversarial pass under
+  `/plumbbob:refine`'s lens (an ambiguity a builder would guess through, an assumption no
+  Decision settles, a collision with the code the seams name, a done-when nothing can
+  measure, a step too large to review), surfacing without appending, and writes at most
+  three findings and the recommendation into the detail file. It reads `Approve it.` with
+  what the read found sound, or `Sharpen <the worst hole> first.`, and names refine when
+  there is more than one. The read stays in the same context by design: refine is where the
+  real adversary looks, and the recommendation is an estimate, so it costs no wait.
+- **Added:** the turn anatomy's decisions are recorded in `docs/decisions.md` as
+  D80 (cli-renders-model-relays) through D84 (one-liner-register), each merging the
+  presentation build's locals; a `docs/glossary.md` defining every term the loop mints; a
+  "Who it's for" section in the README; a before-your-first-session list in the install
+  guide; FAQ entries for what to say at the pause, a repo with no tests, and which model to
+  run; and troubleshooting entries for the latch refusal and a pause with no check row. Ten
+  labeled placeholder images stand where screenshots and recordings belong, with
+  `docs/media/README.md` as the shot list.
+- **Changed:** `checkpoint` records the pause in the build log instead of the commit body.
+  Beneath the step's dated line in `build-log.md`'s `## Log` it nests the pause as the human
+  approved it (the Summary and highlights, the Readout fence, the Verdict, the
+  recommendation, then each highlight's full story), measured before the work is staged so
+  the seam and diff rows match what the pause showed; the lead line carries a `details:`
+  pointer at the entry, and `checkpoint --plan` writes a `plan committed` line with the cold
+  read beneath it. The commit body keeps its marker and the `--body` prose only, because a
+  commit body dies at the squash-merge while the tracked ledger rides the branch into the
+  PR; an older step's `expand` now reads its Log entry rather than `git show`, and a detail
+  file with nothing on the wire's shape is kept verbatim rather than dropped.
+  D81 (detail-file) is revised to match.
+- **Changed:** the docs and the site show the 0.11.0 anatomy: the README's first session and
+  the site's pause cards render the real pause and boundary blocks in place of the retired
+  `PAUSE — read the diff` line, the API page's verb blurbs and sidecar tree match the shipped
+  CLI, the settings reference drops the retired `auto` grant, the hook count reads three,
+  CONTRIBUTING describes the CI that exists and the stop hook that is off, SECURITY lists
+  every hook, and the examples show Conventional commit subjects with a `stats.json` and the
+  report's Stats table. The README shows the loop before the five edges, and its eval
+  blockquote shrinks to two sentences and a link.
+- **Fixed:** a configured `check` command left no summary, so every pause in a repo gating
+  through its own command (the README's own `"check": "npm test"` advice) rendered no
+  `check` row and withheld the `looks good` move. The override now streams its output live,
+  keeps a copy under `.check/check.stdout.txt`, and writes the same one-check summary
+  checkride would, so the row reads `green: 1 of 1 checks`, a red run names the command and
+  points at the captured output, and the move is on the card.
+- **Removed:** the animated `demo.svg`, which showed retired output, and the fold of the
+  detail file into the commit body.
+
+## [0.11.0] - 2026-09-02
+
+- **Added:** a written anatomy for the turn, in `docs/presentation.md`. Every plumbbob turn
+  now ends in the same shape: a **Summary** (a lead sentence or short paragraph, then
+  numbered highlights), a **Readout** fence of measured rows, a **Verdict** on a four-state
+  ladder that speaks the plumb register (`● Plumb`, `◐ A hair off`, `○ Out of plumb`,
+  `✗ Not standing`) and names its worst component, **Next Up** with the progress count and
+  the model, **Your Call** listing the four moves a human actually makes (`looks good`,
+  `expand`, a direction, `revert`), and the model's **Recommendation** as the turn's last
+  words. The spec fixes the glyph set, the three tiers (decision, orientation, driver), the
+  80-column fence budget, and the one-liner register plumbbob's own lines speak.
+- **Added:** `plumbbob handoff` renders the whole decision turn from `.plumbbob/detail.md`,
+  so the model authors nothing in the chat but the relay. The CLI measures the Readout's
+  `check` row from the last run (naming a narrowed run's skipped slots as `· without test`,
+  read from the skipped rows checkride records from its next release), the `seam` row from
+  the step's SEAM marker against the diff, the `diff` row from `git diff --numstat`, and a
+  `spent` row from stats.json and the turn ledger; the model supplies only the three
+  judgment rows and the recommendation. A green row collapses to a count that sizes its
+  universe and a red row names one offender with a `→` line under it. A diff of 20 lines or
+  fewer rides inline; anything larger stays behind the diffstat. `--plan` renders the
+  plan-pause card and `--driver` the pointer back at the in-flight step, or at an open
+  spike (`Close the spike - /plumbbob:spike done, then back to step N`).
+- **Added:** `.plumbbob/detail.md`, one untracked file holding the in-flight step's full
+  detail. The model writes it before each pause; `checkpoint` folds it into the commit body
+  beneath the lead prose and then truncates it, so git is the archive and "expand 2" at the
+  pause is a lookup from disk or `git show`, never a recall.
+- **Added:** the eval tier measures the shape of a turn, not only the behaviour behind it.
+  Each contract folds three or four `info` probes at its own tier (the parts owed and their
+  order, the gate verdict in the check row, the recommendation last, nothing after the
+  relay), and the receipt carries a `## Turn anatomy` table. The first receipt, at
+  `docs/evals/2026-09-03.md`, passes 15 of 16 latched runs and lands the anatomy whole in
+  about half of live decision turns. It also surfaced two gaps that ship with this release:
+  a repo that gates through a configured `check` command writes no check summary, so its
+  pause renders no check row and its Verdict folds with no gate input, and the seam and diff
+  rows do not see untracked or staged files.
+- **Changed:** every transition verb prints its whole ending as one stdout block. The lead
+  line is a labeled line like the rest of the anatomy (`**Checkpoint**: Step 15 complete
+  (2d917cde7)`, `**Parked**: <text> (tag)`, `**Reverted**`, `**Abandoned**`, and kin across
+  spike, use, start, and finish), followed where one is measured by the Verdict (whose
+  third rung now names a seam stray from the checkpoint's own drift warning), any advisories
+  as unprefixed sentences with their `→` remedy beneath, and the Next Up pointer, one blank
+  line between each. The pointer sentences those lines used to carry (`Back at the
+  boundary.`, `status to orient`) are gone: the fact is the verb's, the move is Next Up's.
+  Refusals keep the `plumbbob:` prefix on stderr, where output is genuinely mixed. `start`
+  ends on its remedy line, and `finish` prints `**Next Up**: Nothing planned -
+  /plumbbob:plan` itself, since it has just cleared the session handoff would read from.
+  The park tag moves to the tail of the line, so the ledger line and the relay match.
+- **Changed:** the skills relay rather than compose. Build and verify shrink to write the
+  detail file, run `plumbbob handoff`, and paste the block at top level; plan and the driver
+  skills (park, spike, revert, abandon, finish) relay the verb's block and run no second
+  command; recover keeps its readout. A message that asks at the pause is an `expand`,
+  answered from the detail file, the diff, or `git show`; a message that directs is
+  needs-work, and nothing lands until `looks good`. Nine catalogued drifts between the
+  skills' output specs are gone, and the CLI-owned ending carries one name everywhere.
+- **Changed:** `docs/happy-path.md` shows only what the shipped CLI and skills produce, and
+  the `handoff` entry in `docs/cli-reference.md` lists the seven emitted parts in order and
+  says which the CLI measures and which come from the detail file.
+- **Changed:** this repo's own per-turn checkride stop-hook gate is off again. Its notice
+  landed right under the turn ending this release exists to keep clean, and its narrowed
+  run overwrote the check summary the Readout's check row reads. The full check still runs
+  on `plumbbob check` and at every checkpoint, so nothing lands unverified.
+- **Fixed:** `handoff`'s footer card ended without a trailing blank line, so the next
+  output clobbered the last your-call line.
+- **Fixed:** the eval tier's contract 8 readers expected the bare decision opener
+  (`D1 (slug): …`) while the intent template teaches the anchored, bolded one, so a
+  flawless intent scored `invalid` with zero authored decisions. The readers take both
+  forms now, and the receipt renderer no longer emits the compact table delimiter row that
+  fails the docs gate.
+- **Fixed:** the Verdict's out-of-band rung tripped on plumbbob's own `chore(plan)` harvest
+  commits, so a build whose plan grew at every boundary read "a hair off" for routine
+  housekeeping. Commits carrying the `plumbbob plan` marker leave the count.
+- **Removed:** the standalone gate verdict line at the pause, which duplicated the check
+  row; the fence around the footer card; the `heads-up —` and `note —` advisory labels; and
+  the `Detail:` pointer line, whose count the highlights now carry and whose affordance is
+  the `expand` move.
+
 ## [0.10.3] - 2026-08-26
 
 - **Fixed:** the first `plumbbob park` of a build wrote its `- [ ]` line flush against the

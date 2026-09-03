@@ -32,6 +32,15 @@ telemetry**.
   build, only on source-file edits, and only executes `oxlint` and `ast-grep` from that
   repo's own `node_modules/.bin` when they exist. It never blocks an edit and always
   exits 0.
+- **The commit ask-hook** (`hooks/pre-bash-commit.sh`) runs before each Bash tool call
+  while a step is in flight. When the command is a raw `git commit`, it answers Claude
+  Code's permission prompt with *ask*, so you decide; it never denies, never rewrites the
+  command, and exits 0 in every other case.
+- **The turn hook** (`plumbbob turn`, on `UserPromptSubmit`) runs once per prompt you
+  send in a repo with an active session. It increments a counter file (`.plumbbob/TURN`),
+  mints a one-turn self-approval (`.plumbbob/GRANT`) only when your own prompt was
+  `/plumbbob:build --auto` or a step range, and may inject one line of context. It always
+  exits 0.
 - **`plumbbob init`** creates one symlink (`~/.claude/skills/plumbbob`) and never writes
   Claude Code's `settings.json`.
 

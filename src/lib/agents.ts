@@ -385,7 +385,7 @@ export function resolveAgent(
   }
   return {
     ok: false,
-    error: `no agent named "${name}" — looked in ${projectAgentsDir(root)} and ${personalAgentsDir(home)}.`,
+    error: `no agent named "${name}", looked in ${projectAgentsDir(root)} and ${personalAgentsDir(home)}`,
   }
 }
 
@@ -864,7 +864,7 @@ function parseChildEnvelope(stdout: string): EnvelopeParse {
   try {
     raw = JSON.parse(stdout)
   } catch {
-    return { ok: false, error: 'the agent wrote non-JSON to stdout — the envelope must be a single JSON object.' }
+    return { ok: false, error: 'the agent wrote non-JSON to stdout, so the envelope is not a single JSON object' }
   }
   return parseEnvelope(raw)
 }

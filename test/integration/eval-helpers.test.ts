@@ -29,6 +29,19 @@ import {
   unledgeredCommits,
   worktreeFingerprint,
 } from '../evals/helpers/assert.ts'
+import {
+  anatomyChecks,
+  endingRenders,
+  forbiddenParts,
+  hasCheckRow,
+  missingParts,
+  partsInOrder,
+  readAnatomy,
+  shapeDetail,
+  tailAfterRule,
+  tierParts,
+  transitionLabel,
+} from '../evals/helpers/anatomy.ts'
 import { EVAL_SLUG, makeEvalFixture, seedFlawedGreeting } from '../evals/helpers/fixture.ts'
 import { REPO_ROOT, resolvePluginDir, stripLatchHooks } from '../evals/helpers/plugin.ts'
 
@@ -385,6 +398,27 @@ describe('legibility readers (contract 8)', () => {
     expect(bulletLabel('D9 (a-b): x — *because* y')?.slug).toBe('a-b')
   })
 
+  it('reads the anchored, bolded opener templates/intent.md actually teaches', () => {
+    // The form a live sweep authored, which the pre-anchor readers scored as no
+    // decision at all — every bullet unlabelled, so a perfect plan came back
+    // `invalid`. Anchor and bold are both optional, so the older bare form still
+    // parses beside it.
+    expect(bulletLabel('<a id="d1"></a>**D1 (sliding-window)**: a sliding window, *because* it is fair')).toEqual({
+      letter: 'D',
+      n: 1,
+      slug: 'sliding-window',
+    })
+    expect(bulletLabel('**C1 (no-new-deps)**: no new dependencies')).toEqual({ letter: 'C', n: 1, slug: 'no-new-deps' })
+    expect(bulletLabel('C2 (markdown-only): it reads as plain text')).toEqual({ letter: 'C', n: 2, slug: 'markdown-only' })
+    // Anchored but unglossed is still the finding the required check reports.
+    expect(bulletLabel('<a id="d5"></a>**D5**: no slug here')).toEqual({ letter: 'D', n: 5, slug: null })
+    // The anchor is markup the author is told to keep, not a placeholder left behind.
+    expect(hasTemplatePlaceholder('<a id="d1"></a>**D1 (sliding-window)**: a sliding window')).toBe(false)
+    expect(hasTemplatePlaceholder('<a id="d1"></a>**D1 (slug-here)**: <decision>')).toBe(true)
+    // And an anchored opener is an opener, not a reference site that dropped its gloss.
+    expect(bareRefs('- <a id="d2"></a>**D2**: text\nsee D4 for why')).toEqual(['D4'])
+  })
+
   it('hasTemplatePlaceholder catches the scaffold survivors', () => {
     expect(hasTemplatePlaceholder('D1 (slug-here): <decision> — *because* <the one reason>')).toBe(true)
     expect(hasTemplatePlaceholder('C1 (no-new-deps): <e.g. functional only>')).toBe(true)
@@ -549,5 +583,200 @@ describe('c8 legible-intent outcomes (stub session)', () => {
     expect(result.checks.filter((c) => c.kind === 'validity').every((c) => c.pass)).toBe(true)
     expect(result.checks.find((c) => c.name.startsWith('no template placeholders'))?.pass).toBe(false)
     expect(deriveOutcome(result)).toBe('fail')
+  })
+})
+
+// The anatomy reader (step 18), anchored on the shipped renderer rather than on
+// a hand-typed copy of it: each tier is driven out of a real fixture through the
+// real CLI, then read back. A reader pinned to a transcription would keep
+// passing after handoff moved; this one cannot.
+describe('turn-anatomy readers (the shape every ending is measured against)', () => {
+  function pausedFixture(): string {
+    const { repo } = makeEvalFixture({ steps: TWO_STEPS, gate: 'green' })
+    runCli(repo, ['build', '1'])
+    writeFileSync(
+      join(repo, 'src', 'greet.js'),
+      ['function greet(name) {', '  return `Hello, ${name}!`', '}', '', 'module.exports = { greet }', ''].join('\n'),
+    )
+    mkdirSync(join(repo, '.check'), { recursive: true })
+    writeFileSync(
+      join(repo, '.check', 'summary.json'),
+      JSON.stringify({ schema_version: 1, ok: true, checks_run: 1, total_duration_ms: 1200, checks: [{ name: 'check', ok: true }] }),
+    )
+    writeFileSync(
+      join(repo, '.plumbbob', 'detail.md'),
+      [
+        '# Detail · Step 1 · Create the greeting module',
+        '',
+        '── recap · step 1 of 2 ──',
+        'done-when    met',
+        'decisions    1 of 1 honored',
+        'constraints  all honored',
+        '',
+        '## Summary',
+        '',
+        'greet() returns the comma-carrying greeting the done-when names.',
+        '',
+        '## 1 src/greet.js exports greet(name)',
+        '',
+        'The whole story.',
+        '',
+        '## Recommendation',
+        '',
+        'Approve it. The gate is green and the seam held.',
+        '',
+      ].join('\n'),
+    )
+    return repo
+  }
+
+  it('reads the shipped pause as a whole decision ending', () => {
+    const { stdout } = runCli(pausedFixture(), ['handoff'])
+    const a = readAnatomy(stdout)
+    expect(a.labels).toEqual(tierParts('decision'))
+    expect(a.trailingLabels).toEqual(a.labels)
+    expect(hasCheckRow(a)).toBe(true)
+    expect(a.moves).toHaveLength(4)
+    expect(a.highlights).toHaveLength(1)
+    expect(a.endsOn).toBe('Recommendation')
+    expect(a.strays).toEqual([])
+    expect(a.nestedFence).toBe(false)
+    expect(endingRenders(a, 'decision')).toBe(true)
+    expect(shapeDetail(a, 'decision')).toBe('')
+  })
+
+  it('reads a transition as a driver ending, which owes no Verdict', () => {
+    const { stdout } = runCli(pausedFixture(), ['park', 'should farewell get the same shape? (tangent)'])
+    const a = readAnatomy(stdout)
+    expect(transitionLabel(a)).toBe('Parked')
+    expect(endingRenders(a, 'driver')).toBe(true)
+    expect(a.strays).toEqual([])
+    // The pause's own parts would all be unexpected here.
+    expect(forbiddenParts(readAnatomy(runCli(pausedFixture(), ['handoff']).stdout), 'driver')).toEqual([
+      'Your Call',
+      'Verdict',
+      'Readout',
+      'Recommendation',
+    ])
+  })
+
+  it('cuts the plan pause to the tail under the seam rule, past the framed plan', () => {
+    const { stdout } = runCli(pausedFixture(), ['handoff', '--plan'])
+    const framed = ['Here is the plan, three steps and two constraints.', '', '1. Build the greeting.', stdout].join('\n')
+    // Read whole, the model's own plan above the rule is a stray; cut to the
+    // tail, the block stands alone — which is why the plan tier reads the tail.
+    expect(readAnatomy(framed).strays).not.toEqual([])
+    const a = readAnatomy(tailAfterRule(framed))
+    expect(a.labels).toEqual(tierParts('plan'))
+    expect(a.strays).toEqual([])
+    expect(a.endsOn).toBe('Recommendation')
+    expect(endingRenders(a, 'plan')).toBe(true)
+  })
+
+  it('catches a turn that says more after the relay, and one that nests the fence', () => {
+    const { stdout } = runCli(pausedFixture(), ['handoff'])
+    const chatty = `${stdout}\nLet me know if you want me to proceed with step 2!`
+    expect(readAnatomy(chatty).strays).toEqual(['Let me know if you want me to proceed with step 2!'])
+    expect(readAnatomy(chatty).endsOn).toBeNull()
+    expect(anatomyChecks(chatty, 'decision').find((c) => c.name.endsWith('after the relay'))?.pass).toBe(false)
+    const wrapped = ['````markdown', stdout, '````'].join('\n')
+    expect(readAnatomy(wrapped).nestedFence).toBe(true)
+  })
+
+  it('reads the ending out of the driver\u2019s accumulated prose, preamble and all', () => {
+    // What fascicle actually hands a contract: every text part of the session
+    // concatenated, so the step's narration arrives glued to the relay with no
+    // newline between them. The ending still has to read whole.
+    const { stdout } = runCli(pausedFixture(), ['handoff'])
+    const accumulated = `I'll start by checking the current state.Now let me build it.${stdout}`
+    const a = readAnatomy(accumulated)
+    expect(a.strays).toEqual(["I'll start by checking the current state.Now let me build it."])
+    expect(a.trailingLabels).toEqual(tierParts('decision'))
+    expect(endingRenders(a, 'decision')).toBe(true)
+    // The preamble is before the relay, not after it, so the positional rule holds.
+    expect(anatomyChecks(accumulated, 'decision').every((c) => c.pass)).toBe(true)
+  })
+
+  it('reports a Verdict folded without a measured check as a missing check row', () => {
+    // The live sweep's first finding: a pause whose readout carried no `check`
+    // row still printed a Plumb Verdict. The row is the gate verdict's one home,
+    // so its absence is the probe, not a footnote.
+    const noGate = [
+      '**Summary**: it built. (details: `.plumbbob/detail.md`)',
+      '',
+      '**Readout**: Step 1 - First',
+      '',
+      '```text',
+      'done-when    met',
+      'spent        26s',
+      '```',
+      '',
+      '**Verdict**: ● Plumb',
+      '',
+      '**Next Up**: Step 2 of 2 - Second',
+      '',
+      '**Your Call**:',
+      '',
+      '- `revert` → I wind the work back to the last checkpoint',
+      '',
+      '**Recommendation**: Approve it.',
+      '',
+    ].join('\n')
+    const a = readAnatomy(noGate)
+    expect(endingRenders(a, 'decision')).toBe(true)
+    expect(hasCheckRow(a)).toBe(false)
+    const gateProbe = anatomyChecks(noGate, 'decision').find((c) => c.name.endsWith('check row'))
+    expect(gateProbe?.pass).toBe(false)
+    expect(gateProbe?.detail).toBe('done-when, spent')
+  })
+
+  it('names what a partial or reordered ending is missing rather than just failing it', () => {
+    const short = ['**Summary**: it built.', '', '**Verdict**: ● Plumb', ''].join('\n')
+    expect(missingParts(readAnatomy(short), 'decision')).toEqual(['Readout', 'Next Up', 'Your Call', 'Recommendation'])
+    expect(shapeDetail(readAnatomy(short), 'decision')).toBe('missing: Readout, Next Up, Your Call, Recommendation')
+
+    const swapped = ['**Verdict**: ● Plumb', '', '**Next Up**: Step 2 of 2 - Second', ''].join('\n')
+    expect(partsInOrder(readAnatomy(swapped), 'boundary')).toBe(true)
+    const backwards = ['**Next Up**: Step 2 of 2 - Second', '', '**Verdict**: ● Plumb', ''].join('\n')
+    expect(partsInOrder(readAnatomy(backwards), 'boundary')).toBe(false)
+    expect(shapeDetail(readAnatomy(backwards), 'boundary')).toBe('out of order: Next Up > Verdict')
+  })
+
+  it('keeps the advisory and its remedy inside the ending, not outside it', () => {
+    const boundary = [
+      '**Checkpoint**: Step 16 complete (f2b83e17c)',
+      '',
+      '**Verdict**: ◐ A hair off (staged outside the seam)',
+      '',
+      'Staged paths reach outside Step 16’s seam ⚠ (test/integration/spike.test.ts)',
+      '  → the checkpoint captures them, so revise the plan with /plumbbob:step',
+      '',
+      '**Next Up**: Step 17 of 18 - Third (details: `x/intent.md:9`)',
+      '',
+    ].join('\n')
+    const a = readAnatomy(boundary)
+    expect(a.advisories).toHaveLength(1)
+    expect(a.strays).toEqual([])
+    expect(endingRenders(a, 'boundary')).toBe(true)
+    expect(transitionLabel(a)).toBe('Checkpoint')
+  })
+
+  it('folds the probes a contract reads a turn through, every one informational', () => {
+    const { stdout } = runCli(pausedFixture(), ['handoff'])
+    const checks = anatomyChecks(stdout, 'decision')
+    expect(checks.every((c) => c.kind === 'info')).toBe(true)
+    expect(checks.every((c) => c.pass)).toBe(true)
+    expect(checks.map((c) => c.name)).toEqual([
+      'anatomy: decision ending renders whole',
+      'anatomy: the gate verdict rides the check row',
+      'anatomy: recommendation is the last text',
+      'anatomy: nothing after the relay',
+    ])
+    // A driver turn owes no readout and no recommendation, so it is read
+    // through two probes, not four.
+    expect(anatomyChecks(stdout, 'driver').map((c) => c.name)).toEqual([
+      'anatomy: driver ending renders whole',
+      'anatomy: nothing after the relay',
+    ])
   })
 })

@@ -6,6 +6,7 @@ import { start } from '../start.ts'
 import { activeBuild, buildDir, excludeControl, grantPath, hasSession, sidecarDir, tickPath, turnPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIoAsync } from '../../../test/helpers/capture-io.ts'
+import { advisory, ending, transition } from '../../lib/notice.ts'
 
 afterAll(cleanupTempRepos)
 
@@ -24,8 +25,29 @@ describe('start', () => {
     expect(existsSync(join(build, 'intent.md'))).toBe(true)
     expect(existsSync(join(build, 'build-log.md'))).toBe(true)
     expect(readFileSync(join(build, 'checkpoints'), 'utf8')).toMatch(/^baseline [0-9a-f]{40}\n$/)
-    expect(stdout).toContain('started "My Feature"')
-    expect(stdout).toContain(`.plumbbob/builds/${TODAY}-my-feature/intent.md`)
+    // No pointer: the plan skill owns the turn that follows and no step exists
+    // to aim at, so the ending closes on a remedy line (D43 (verb-prints-its-ending)).
+    // A bare temp repo has nothing for the gate to see, so its advisory rides
+    // the same block rather than a second stream.
+    const sha = readFileSync(join(build, 'checkpoints'), 'utf8').slice(9, 18)
+    expect(stdout).toBe(
+      ending({
+        lead: transition({
+          label: 'Session',
+          fact: 'started "My Feature"',
+          detail: [`baseline ${sha}`],
+          remedy: `frame and decide in .plumbbob/builds/${TODAY}-my-feature/intent.md, then build a step`,
+        }),
+        advisories: [
+          advisory({
+            fact: 'the check gate sees no code checks in this repo',
+            detail: ['checkride detected no tools', 'checkpoints gate on it and would green vacuously'],
+            remedy: 'add {"check": "npm test"} to .plumbbob/settings.json while you are still planning',
+          }),
+        ],
+      }),
+    )
+    expect(stdout).not.toContain('**Next Up**')
   })
 
   it('points the STATE cursor at the new build — D28 (state-cursor)', async () => {
@@ -74,10 +96,10 @@ describe('start', () => {
 
   it('warns at plan time when the gate sees no code checks, with the exact fix (research/07 Build 2a)', async () => {
     const dir = makeTempRepo() // bare: no tsconfig, no test runner; only always-on repo checks
-    const { code, stderr } = await captureIoAsync(() => start(dir, ['Bare Repo']))
+    const { code, stdout } = await captureIoAsync(() => start(dir, ['Bare Repo']))
     expect(code).toBe(0) // the warning is guidance, never the exit code
-    expect(stderr).toContain('the check gate sees no code checks')
-    expect(stderr).toContain('add {"check": "npm test"} to .plumbbob/settings.json')
+    expect(stdout).toContain('The check gate sees no code checks')
+    expect(stdout).toContain('add {"check": "npm test"} to .plumbbob/settings.json')
   })
 
   it('probes silently when checkride can see the code', async () => {
@@ -85,9 +107,9 @@ describe('start', () => {
     writeFileSync(join(dir, 'tsconfig.json'), '{}\n')
     execFileSync('git', ['-C', dir, 'add', '-A'])
     execFileSync('git', ['-C', dir, 'commit', '-q', '-m', 'tsconfig'])
-    const { code, stderr } = await captureIoAsync(() => start(dir, ['Typed Repo']))
+    const { code, stdout } = await captureIoAsync(() => start(dir, ['Typed Repo']))
     expect(code).toBe(0)
-    expect(stderr).not.toContain('no code checks')
+    expect(stdout).not.toContain('no code checks')
   })
 
   it('probes silently when a check is already configured (settings.local.json)', async () => {
@@ -95,9 +117,9 @@ describe('start', () => {
     mkdirSync(sidecarDir(dir), { recursive: true })
     writeFileSync(join(sidecarDir(dir), 'settings.local.json'), JSON.stringify({ check: 'true' }))
     excludeControl(dir) // keep the untracked overlay from reading as a dirty tree
-    const { code, stderr } = await captureIoAsync(() => start(dir, ['Configured Repo']))
+    const { code, stdout } = await captureIoAsync(() => start(dir, ['Configured Repo']))
     expect(code).toBe(0)
-    expect(stderr).not.toContain('no code checks')
+    expect(stdout).not.toContain('no code checks')
   })
 
   it('announces record-only mode when the repo gitignores the sidecar', async () => {
@@ -108,16 +130,16 @@ describe('start', () => {
     writeFileSync(join(dir, '.gitignore'), '/.plumbbob/\n')
     execFileSync('git', ['-C', dir, 'add', '-A'])
     execFileSync('git', ['-C', dir, 'commit', '-q', '-m', 'ignore sidecar'])
-    const { code, stderr } = await captureIoAsync(() => start(dir, ['My Feature']))
+    const { code, stdout } = await captureIoAsync(() => start(dir, ['My Feature']))
     expect(code).toBe(0)
-    expect(stderr).toContain('gitignores .plumbbob/')
-    expect(stderr).toContain('record-only')
+    expect(stdout).toContain('This repo gitignores .plumbbob/')
+    expect(stdout).toContain('record-only')
   })
 
   it('stays silent about record-only under the default tracked layout', async () => {
     const dir = makeTempRepo()
-    const { stderr } = await captureIoAsync(() => start(dir, ['My Feature']))
-    expect(stderr).not.toContain('record-only')
+    const { stdout } = await captureIoAsync(() => start(dir, ['My Feature']))
+    expect(stdout).not.toContain('record-only')
   })
 
   it('refuses when the derived slug collides with an existing build — D38 (cli-owns-slugs)', async () => {
@@ -219,9 +241,9 @@ describe('start', () => {
     const dir = makeTempRepo()
     writeFileSync(join(dir, 'README.md'), '# dirty\n')
     expect((await captureIoAsync(() => start(dir, ["x"]))).code).toBe(1)
-    const { code, stderr } = await captureIoAsync(() => start(dir, ['--allow-dirty', 'x']))
+    const { code, stdout } = await captureIoAsync(() => start(dir, ['--allow-dirty', 'x']))
     expect(code).toBe(0)
-    expect(stderr).toContain('--allow-dirty')
+    expect(stdout).toContain('Recording HEAD as the baseline with a dirty tree ⚠ (--allow-dirty)')
     expect(hasSession(dir)).toBe(true)
   })
 

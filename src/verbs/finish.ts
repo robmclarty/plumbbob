@@ -7,7 +7,9 @@
 // offers the artifact, it does not wall the door. The git footprint stays
 // additive: one forward commit under the Conventional `chore(<scope>): finish`
 // subject, with the `plumbbob finish` identifier riding a marker line at the head
-// of the body so `git log --grep plumbbob` still finds it.
+// of the body so `git log --grep plumbbob` still finds it. The turn's forward
+// pointer is printed here rather than by `handoff`, the one ending handoff
+// cannot render: finish has just cleared the session it would read from.
 
 import { appendFileSync, existsSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
@@ -32,6 +34,12 @@ import {
 } from '../lib/sidecar.ts'
 import { conventionalSubject, withMarker } from '../lib/commitmsg.ts'
 import { parseBuildScope } from '../lib/intent.ts'
+import { advisory, ending, notice, transition } from '../lib/notice.ts'
+
+// The pointer finish leaves the turn on. Every other one is `handoff`'s, but a
+// finished session has no state left to render from, and past a closed build
+// the only move is framing the next goal.
+const NEXT_UP = '**Next Up**: Nothing planned - /plumbbob:plan'
 
 /**
  * Close out the active build: report tail, final commit, control-state cleanup.
@@ -44,7 +52,7 @@ import { parseBuildScope } from '../lib/intent.ts'
 export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
-    process.stderr.write('plumbbob: no active session. Run `plumbbob start "<title>"` first.\n')
+    process.stderr.write(notice({ fact: 'no active session', remedy: 'plumbbob start "<title>"' }))
     return 1
   }
 
@@ -60,14 +68,10 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
 
   const { build: slug } = resolveBuild(root, args)
 
-  if (existsSync(reportPath(root, slug))) {
+  const reported = existsSync(reportPath(root, slug))
+  if (reported) {
     appendCheckpointShas(root, slug)
     appendStats(root, slug)
-  } else {
-    process.stderr.write(
-      'plumbbob: note — no report.md found; finishing without one ' +
-        '(/plumbbob:finish normally writes the report first). No gate — D9 (finish-no-gate).\n',
-    )
   }
 
   // The final commit: stage the report just written plus the build folder's tail
@@ -99,10 +103,30 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   setGrant(root, null)
   rmSync(join(sidecarDir(root), 'STATE'), { force: true })
 
+  // The whole ending in the fixed order: the lead line, the advisory that
+  // qualifies it (finishing without a report is guidance, never a gate; the
+  // session is already closed by the time it prints), and the pointer, which is
+  // the turn's last text. finish renders that pointer itself: it just cleared
+  // the session `handoff` would read one from.
   const where = slug === null ? '.plumbbob/' : `.plumbbob/builds/${slug}/`
   process.stdout.write(
-    `plumbbob: finished — ${sha.slice(0, 9)}. ${where} rides your branch into the PR. ` +
-      'Run `/plumbbob:plan` (or `plumbbob start "<title>"`) to frame the next goal.\n',
+    ending({
+      lead: transition({
+        label: 'Session',
+        fact: 'finished',
+        detail: [sha.slice(0, 9), `${where} rides your branch into the PR`],
+      }),
+      advisories: reported
+        ? []
+        : [
+            advisory({
+              fact: 'no report.md found',
+              detail: ['finished without one', 'no gate here by design'],
+              remedy: '/plumbbob:finish normally writes the report first',
+            }),
+          ],
+      pointer: NEXT_UP,
+    }),
   )
   return 0
 }

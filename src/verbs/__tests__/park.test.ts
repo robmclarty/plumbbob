@@ -5,6 +5,9 @@ import { start } from '../start.ts'
 import { buildLogPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
+import { ending, transition } from '../../lib/notice.ts'
+import { driverPointer } from '../handoff.ts'
+import { activeBuild } from '../../lib/sidecar.ts'
 
 afterAll(cleanupTempRepos)
 
@@ -19,7 +22,15 @@ describe('park', () => {
     const dir = await startedSession()
     const { code, stdout } = captureIo(() => park(dir, ['chase', 'this', 'later']))
     expect(code).toBe(0)
-    expect(stdout).toContain('parked: chase this later')
+    // The whole ending, one block: the capture and the pointer back at what the
+    // park interrupted, which here is a fresh session with nothing planned yet.
+    expect(stdout).toBe(
+      ending({
+        lead: transition({ label: 'Parked', fact: 'chase this later' }),
+        pointer: driverPointer(dir, activeBuild(dir)),
+      }),
+    )
+    expect(stdout).toContain('**Next Up**:')
     expect(readFileSync(buildLogPath(dir), 'utf8')).toContain('- [ ] chase this later')
   })
 

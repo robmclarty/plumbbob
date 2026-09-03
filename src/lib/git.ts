@@ -82,16 +82,75 @@ export function isDirty(root: string): boolean {
  * commits are surfaced, never blocked). `--first-parent` keeps the count on
  * the branch's own line: merging upstream reads as the one merge commit, not
  * the dozens it carried; those didn't land "outside the ledger" in any sense
- * the receipt should nag about. Best-effort and never throws: 0 when the range
- * is empty, `sha` is unknown to the repo, or HEAD is unborn: the count is
- * informational (the human commits freely), never a gate.
+ * the receipt should nag about. `excluding` is a commit-message pattern whose
+ * matches are left out of the count, which is how a caller drops plumbbob's own
+ * commits from a tally of what landed around them.
+ *
+ * Best-effort and never throws: 0 when the range is empty, `sha` is unknown to
+ * the repo, or HEAD is unborn: the count is informational (the human commits
+ * freely), never a gate.
  */
-export function commitsSince(root: string, sha: string): number {
+export function commitsSince(root: string, sha: string, excluding?: string): number {
   try {
-    const n = Number.parseInt(runGit(root, ['rev-list', '--count', '--first-parent', `${sha}..HEAD`]), 10)
+    const skip = excluding === undefined ? [] : ['--grep', excluding, '--invert-grep']
+    const n = Number.parseInt(runGit(root, ['rev-list', '--count', '--first-parent', ...skip, `${sha}..HEAD`]), 10)
     return Number.isFinite(n) && n > 0 ? n : 0
   } catch {
     return 0
+  }
+}
+
+/** One changed file in the working tree: its added/removed line counts and path. */
+export type NumstatEntry = { readonly added: number; readonly removed: number; readonly path: string }
+
+/**
+ * The working tree's changes against the index, one entry per file, as
+ * `git diff --numstat` reports them; a binary file counts 0/0.
+ *
+ * This feeds the recap's `diff` and `seam` rows at the pause: information,
+ * never a gate, so it is best-effort and never throws ([] on any failure).
+ */
+export function diffNumstat(root: string): ReadonlyArray<NumstatEntry> {
+  let out: string
+  try {
+    out = runGit(root, ['diff', '--numstat'])
+  } catch {
+    return []
+  }
+  if (out.length === 0) {
+    return []
+  }
+  return out.split('\n').map((line) => {
+    const [added, removed, ...path] = line.split('\t')
+    return { added: toCount(added), removed: toCount(removed), path: path.join('\t') }
+  })
+}
+
+/**
+ * A numstat count field as a number: `-` (a binary file) and anything else
+ * unparseable read as 0.
+ */
+function toCount(field: string | undefined): number {
+  const n = Number.parseInt(field ?? '', 10)
+  return Number.isFinite(n) && n >= 0 ? n : 0
+}
+
+/**
+ * The raw `git diff` patch for `paths` (working tree against the index), or ''
+ * when nothing differs or git refuses.
+ *
+ * Only the pause's inline-diff fence reads this, and only after the numstat
+ * count came in at 20 changed lines or fewer, so the patch is always small.
+ * Best-effort like diffNumstat: information, never a gate.
+ */
+export function diffPatch(root: string, paths: ReadonlyArray<string>): string {
+  if (paths.length === 0) {
+    return ''
+  }
+  try {
+    return runGit(root, ['diff', '--', ...paths])
+  } catch {
+    return ''
   }
 }
 

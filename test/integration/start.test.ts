@@ -97,7 +97,7 @@ describe('plumbbob start', () => {
 
     const allowed = runCli(dir, ['start', '--allow-dirty', 'Yes'])
     expect(allowed.status).toBe(0)
-    expect(allowed.stderr).toContain('--allow-dirty')
+    expect(allowed.stdout).toContain('--allow-dirty')
     expect(phase(dir)).toBe('DESIGN')
   })
 

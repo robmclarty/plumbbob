@@ -3,7 +3,7 @@ name: plan
 description: "Frame a fresh goal and author the whole plan (Frame, Decisions, Constraints, and all Steps) before any code. Three input modes: no arg interviews you; a file path (or @-mention) absorbs a spec; any other text expands your inline intent."
 argument-hint: "[spec-path | intent]"
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob start:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent list:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob handoff:*), Bash(plumbbob start:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent list:*)
 ---
 
 # PlumbBob: plan a goal (the whole-goal move)
@@ -144,6 +144,17 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
    baseline → plan → steps. Pass a proportional `--body` (the single-quoted stdin
    heredoc) when the rationale is worth carrying; skip it for a small plan. Do this
    only on the human's approval; the plan is their convergence.
+   - **The plan pause is a decision turn.** Present the framed plan for the human's call,
+     then give it the cold read (**§ The cold read**), write the result into
+     `.plumbbob/detail.md`, and relay `plumbbob handoff --plan`'s block whole: the CLI
+     renders the your-call block with the moves that apply before anything is recorded and
+     prints your recommendation last (the decision tier of the
+     [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)),
+     so the moves are relayed, never hand-composed. *looks good* marks the plan decided and
+     starts `/plumbbob:build` at the first undone step; a message that asks (`expand 2`, or
+     any question) is answered from the detail file or `intent.md` and changes nothing; a
+     message that directs is what to sharpen, cheap now, before any code. The revert move
+     vanishes there on its own: nothing has landed to wind back.
    - **The plan commit is latched too.** Once the turn ledger exists, `checkpoint
      --plan` refuses to land in the same turn `start` stamped it: present the plan,
      **end the turn**, and the human's approving message is the tick that lets it
@@ -152,6 +163,11 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
      session runs `start` *before* the turn hook has ever ticked, so that single
      commit predates the ledger and stays guidance-governed; it lands without a
      refusal.)
+   - **The plan commit prints its own close.** `plumbbob checkpoint --plan` emits the
+     whole boundary ending: `**Plan**: committed (<sha>)`, any advisory, and the pointer at
+     the step the build starts on. Relay that block whole and run no second command; the
+     plan-pause card above is the one place `handoff` is still called, because no verb has
+     run yet there.
    - **Say what the commit publishes.** The close-out line names the tracked folder:
      `.plumbbob/builds/<slug>/` now rides this branch into the PR, so teammates will
      see the plan and build record in review. In the same breath, offer the way out:
@@ -165,6 +181,48 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
        fuller `--body` than you otherwise would, since the message is the whole record.
 7. **Offer to stress-test it.** Suggest `/plumbbob:refine` to attack the frame for holes (or
    to repair the plan as it drifts). Optional, the human's call.
+
+## The cold read
+
+The plan pause ends on your recommendation, and the recommendation is an estimate made
+with fresh eyes, not a re-reading of your own plan. Before you relay the card, give the
+framed plan one bounded adversarial pass under a fixed lens, the pass `/plumbbob:refine`'s
+attack mode makes, but without its writing: surface, never append. Edit nothing, add no
+Open questions, and keep it to one screen of reading. The lens:
+
+- an ambiguity a builder would have to guess through;
+- an edge case or a hidden assumption no Decision settles;
+- a collision with the existing code (read the files the seams name);
+- a done-when no test or check can measure, or a seam that names a file that does not
+  exist or misses one that must change;
+- a step too large to review in one pass, or a Decision with no *because*.
+
+Write what you found into `.plumbbob/detail.md`, overwriting whatever a past session
+left, the findings first and the recommendation last:
+
+```markdown
+# Detail · Plan · <the title>
+
+## 1 <the first hole: one sentence, naming where it sits in intent.md>
+<what it is, and what closing it would take>
+
+## 2 ...
+
+## Recommendation
+
+<The move.> <The reason, one or two sentences.>
+```
+
+The recommendation takes one of two shapes. A sound plan gets `Approve it.` and what the
+read checked and found sound. A plan with a hole gets `Sharpen <the one worst hole> first.`
+and why it matters; when the read found more than one, say how many sit behind `expand`
+and name `/plumbbob:refine` as the move that writes them up as Open questions, with their
+plain and lean sub-lines, for the human to settle. Three findings at most; the rest is
+refine's. `plumbbob handoff --plan` prints the label and your recommendation as the turn's
+last text, "expand 2" opens `## 2`, and `checkpoint --plan` records the read beneath the
+plan's line in the build-log's `## Log`, the build's first entry. The cold read is the tip of refine: it makes the
+full attack discoverable at the moment it would pay, and lets a sound plan skip it. Refine
+is where the real adversary looks; this is an estimate, and it says so by staying short.
 
 ## The interview (mode 1)
 

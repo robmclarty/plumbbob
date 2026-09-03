@@ -156,6 +156,17 @@ pause) and idles there until you approve. **Pull, not block.** You stay the deci
 because a wall refuses you, but because the system stops and waits for you to be the clock.
 Re-firing the next build *is* the clock tick.
 
+What the loop pulls up to has a fixed shape ([the turn anatomy](presentation.md)): a
+**Summary** with numbered highlights, a **Readout** of measured rows (the check, the
+done-when, the decisions and constraints, the seam, the diff, what the step spent), a
+**Verdict** on a four-rung ladder (`● Plumb`, `◐ A hair off`, `○ Out of plumb`,
+`✗ Not standing`), a **Next Up** pointer, the **Your Call** block naming the replies, and
+the model's **Recommendation** last. The CLI measures whatever can be measured and the
+model supplies only the judgment, so the block reads the same from any model on any day.
+You reply with one of four moves: `looks good` lands the step; `expand` (or any question)
+shows more and changes nothing; anything that reads as direction is taken as the fix, and
+nothing lands until you say `looks good`; `revert` winds the work back.
+
 > **Unattended option: `--auto`.** `/plumbbob:build --auto` lets the agent self-review and
 > approve in your place, then chain to the next step until done. It halts the moment the
 > check goes red or the self-review finds a mismatch. A step range like `/plumbbob:build 1-3`
@@ -189,6 +200,11 @@ half-done step. It is careful about two things:
   lost, even reverting to a baseline that predates the folder.
 - **Only the step's work is removed.** Untracked files *inside the seam* are cleaned up;
   files outside it are left alone.
+
+A step in flight has a third exit beside checkpoint and revert. `/plumbbob:abandon` drops
+the attempt and keeps the working-tree diff exactly where it is, clearing only the
+in-flight markers, so the step stays planned and the work stays yours to rework or commit
+by hand ([D79 (abandon-keeps-work)](decisions.md#d79)).
 
 ## Capture, don't chase: park and harvest
 
@@ -235,7 +251,10 @@ modes:
 
 Where `/plumbbob:step` sharpens the *next step*, `refine` works the *whole plan*. Reach for
 it right after planning to stress-test a fresh frame, or mid-build when a blocker rewrites
-the design.
+the design. The plan pause already carries refine's tip: `/plumbbob:plan` gives the framed
+plan one cold read under the same lens, surfacing without appending, and its
+recommendation says `Approve it` or names the worst hole and points at refine for the
+rest. Refine is where the real adversary looks; the recommendation is an estimate.
 
 ## Position is derived, not stored
 
@@ -262,7 +281,8 @@ The checks come in two tiers with different jobs:
   the light tier *serves the model*. It is gated on an active build: a repo with an empty or
   absent `.plumbbob/STATE` (no active-build cursor) behaves like plain Claude Code.
 - **Heavy** (the full project check): checkride ([D32 (checkride-gate)](decisions.md#d32); in this repo: tsc, oxlint,
-  ast-grep, fallow, vitest, markdownlint-cli2, links), overridable per repo via the
+  ast-grep, fallow, vitest, markdownlint-cli2, vale, cspell, a citation scanner, and the
+  built-in link check), overridable per repo via the
   `"check"` key in `.plumbbob/settings.json`. It is **not** a hook; it runs *inside* the verify tick, which
   refuses to checkpoint while it is red. The hard gate lives on the deliberate boundary, not
   on every keystroke.
@@ -303,11 +323,14 @@ every move and `/plumbbob:status` always names the next one.
 | Stress-test or repair the plan | `/plumbbob:refine` | none (edits markdown) | `intent.md` |
 | Build a step | `/plumbbob:build` | `plumbbob build` | `SEAM`, `STEP` (in-flight) |
 | Verify and checkpoint | `/plumbbob:verify` | `plumbbob check`, `plumbbob checkpoint` | `checkpoints` |
+| Render the pause | `/plumbbob:build`, `/plumbbob:verify` | `plumbbob handoff` | `.plumbbob/detail.md` |
 | Orient | `/plumbbob:status` | `plumbbob status` | reads everything |
 | Capture an idea | `/plumbbob:park` | `plumbbob park` | `build-log.md` Park list |
 | Triage parked ideas | `/plumbbob:harvest` | none (edits markdown) | `build-log.md` Harvest |
 | Experiment on a fork | `/plumbbob:spike` | `plumbbob spike` | worktrees, `SPIKE` marker |
 | Undo a step | `/plumbbob:revert` | `plumbbob revert` | `git reset`, `checkpoints` |
+| Drop a step, keep its work | `/plumbbob:abandon` | `plumbbob abandon` | the in-flight markers, `build-log.md` Log |
+| Reconcile the session's state | `/plumbbob:recover` | `plumbbob recover` | the untracked control files |
 | Switch or resume a build | none (CLI verb) | `plumbbob use` | `STATE` cursor |
 | Close out the goal | `/plumbbob:finish` | `plumbbob finish` | `builds/<slug>/report.md` |
 

@@ -29,6 +29,45 @@ Ridgeline runs large, settled work autonomously without you, PlumbBob keeps you 
 driver's seat for the work your judgment has to steer. This repository was built using
 PlumbBob itself, running its own loop.
 
+## Who it's for
+
+- **You already build with a coding agent and end the day reviewing a wall of diff.**
+  PlumbBob turns that wall into steps you approve one at a time, each small enough to
+  read as an editor.
+- **You are skeptical of AI-written code.** Nothing lands without a green check, a
+  self-review against the plan, and your say-so, and the CLI refuses to record a step
+  the model approved for itself.
+- **You would rather not learn a tool.** Everything it writes is markdown and ordinary
+  git commits in your own repo; the skills are slash commands, and `/plumbbob:status`
+  always names the next one. A [glossary](docs/glossary.md) covers the words it mints.
+- **Not for a typo, and not for a rewrite.** A one-line fix needs no session, and a
+  large, settled build wants an autonomous harness such as Ridgeline. The loop earns
+  its keep in between: a feature, a bug, a refactor.
+
+## The loop in one picture
+
+<p align="center">
+  <img src="docs/media/loop-one-step.svg" alt="One step of the loop: /plumbbob:build implements step 1 and stops at the pause, the human says looks good, the step is checkpointed" width="760">
+</p>
+
+Everything the model must stay true to lives in one file, the build's `intent.md`
+(under `.plumbbob/builds/<slug>/`), written before any code: the **Frame** (the problem, what done looks like, what you're
+explicitly *not* doing), the **Decisions** and **Constraints** (the settled calls, each
+with its *because*), and the **Steps**: a numbered list where every step carries a
+**done-when** (a checkable finish line, ideally a test) and a **seam** (the files it's
+expected to touch).
+
+```text
+/plumbbob:plan       decide everything on paper — frame, decisions, all steps    (once)
+  per step:
+    /plumbbob:build      implement the next step → run checks → self-review → PAUSE
+    (looks good)         → the step is committed as a checkpoint; fire /plumbbob:build again
+/plumbbob:finish     report what shipped and why, final commit, clear            (once)
+```
+
+Nothing is locked and nothing refuses you: the loop does a step's labor, pulls up to
+the line, and waits for you to advance it. **You are the clock.**
+
 ## What a prompt can't replicate
 
 A system prompt can *ask* a model to plan first and stop for review. What it can't do is
@@ -55,29 +94,9 @@ The planning surface is the on-ramp; these five are the floor under it. And the 
 payoff is [measured, not asserted](#why-not-just), not just claimed. **Guidance on the
 work, a latch on the record.**
 
-## The loop in one picture
-
 <p align="center">
-  <img src="demo.svg" alt="An animated terminal session: /plumbbob:plan writes the plan, /plumbbob:build implements step 1 and stops at the PAUSE, the human approves, the step is checkpointed" width="760">
+  <img src="docs/media/build-record-in-pr.svg" alt="A pull request's file list with the build folder beside the source" width="760">
 </p>
-
-Everything the model must stay true to lives in one file, the build's `intent.md`
-(under `.plumbbob/builds/<slug>/`), written before any code: the **Frame** (the problem, what done looks like, what you're
-explicitly *not* doing), the **Decisions** and **Constraints** (the settled calls, each
-with its *because*), and the **Steps**: a numbered list where every step carries a
-**done-when** (a checkable finish line, ideally a test) and a **seam** (the files it's
-expected to touch).
-
-```text
-/plumbbob:plan       decide everything on paper — frame, decisions, all steps    (once)
-  per step:
-    /plumbbob:build      implement the next step → run checks → self-review → PAUSE
-    (approve)            → the step is committed as a checkpoint; fire /plumbbob:build again
-/plumbbob:finish     report what shipped and why, final commit, clear            (once)
-```
-
-Nothing is locked and nothing refuses you: the loop does a step's labor, pulls up to
-the line, and waits for you to advance it. **You are the clock.**
 
 ## Install
 
@@ -115,20 +134,68 @@ In Claude Code, inside any git repo with a clean tree:
    path to a spec file. Together you fill the build's `intent.md`. No code is written
    yet.
 2. **Build.** Fire `/plumbbob:build`. It implements the next undone step, runs the
-   heavy check gate, reviews its own diff against the plan, and stops:
+   heavy check gate, reviews its own diff against the plan, and stops. What it stops on
+   is one block with a fixed shape (the [turn anatomy](docs/presentation.md)): the CLI
+   measures the check, the seam, and the diff, the model supplies only the judgment, and
+   nothing is written around it.
+
+   ````markdown
+   **Summary**: A per-IP token bucket now refuses the 6th attempt inside a minute. (details: `.plumbbob/detail.md`)
+
+   1. The bucket lives in memory, keyed by IP, refilling five tokens a minute.
+   2. The clock is injected, so the test advances time instead of sleeping on it.
+
+   **Readout**: Step 1 - Add a token-bucket limiter
 
    ```text
-   PAUSE — read the diff as an editor. Approve to checkpoint, or send fixes.
+   check        green: 7 of 7 checks
+   done-when    met
+   decisions    2 of 2 honored
+   constraints  1 of 1 honored
+   seam         held: 2 of 2 declared, no strays
+   diff         +61 -3 across 2 files
+   spent        22 min · 2 turns · 41s gate · green first run
    ```
+
+   **Verdict**: ● Plumb
+
+   **Next Up**: Step 2 of 3 - Wire the limiter into POST /login (model: **Sonnet**, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:20`)
+
+   **Your Call**:
+
+   - `looks good` → I checkpoint Step 1; back to the boundary
+   - `expand`, or any question → I show more of what is there; nothing changes
+   - anything that reads as direction → I take it as what to change; nothing lands until you approve
+   - `revert` → I wind the work back to the last checkpoint
+
+   **Recommendation**: Approve it. The gate is green, the seam held, and every call the step made is one the plan already decided.
+   ````
+
+   ![The build pause as Claude Code renders it](docs/media/pause.svg)
 
    (The check gate is [checkride](https://www.npmjs.com/package/checkride), one
    run across the tools your repo already configures: types, lint, tests, dead
    code, docs. To gate through your own command instead, set the `"check"` key in
-   `.plumbbob/settings.json`, for example `"check": "npm test"`.)
-3. **Approve**, or send fixes. On your OK it commits the step as a checkpoint, marks
-   it done, and returns to the boundary. Fire `/plumbbob:build` again for the next step:
-   re-firing it *is* the clock tick. Whenever you lose the thread, `/plumbbob:status` shows
-   where you are and names the next move.
+   `.plumbbob/settings.json`, for example `"check": "npm test"`; in a repo where
+   checkride finds no tools at all, `start` says so up front and names that key.)
+3. **Reply.** Say `looks good` and it commits the step as a checkpoint, marks it done,
+   and returns to the boundary with the same three lines every landed step gets:
+
+   ```text
+   **Checkpoint**: Step 1 complete (a1b2c3d4e, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md:44`)
+
+   **Verdict**: ● Plumb
+
+   **Next Up**: Step 2 of 3 - Wire the limiter into POST /login (model: **Sonnet**, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:20`)
+   ```
+
+   ![The boundary after looks good](docs/media/checkpoint-boundary.svg)
+
+   Ask instead (`expand 2`, or any question) and it shows more of what is there and
+   changes nothing; direct it and it takes that as the fix, and nothing lands until you
+   say `looks good`. Then fire `/plumbbob:build` again for the next step: re-firing it
+   *is* the clock tick. Whenever you lose the thread, `/plumbbob:status` shows where you
+   are and names the next move.
 4. **Finish.** When the last step is done, `/plumbbob:finish` writes a report of what shipped
    and why into the build's tracked folder, makes the final commit, and clears the slate
    for the next goal. The folder rides the branch into the PR: the build's record merges
@@ -188,8 +255,9 @@ All fifteen, with inputs and effects, are in
 [`docs/skills-reference.md`](docs/skills-reference.md).
 
 Under the skills ships a lean `plumbbob` CLI (the mechanical verbs the
-skills shell out to), one session-gated post-edit hook (non-blocking lint feedback in
-flow), and a `.plumbbob/` sidecar you can open and edit by hand at any time: a tracked
+skills shell out to), three hooks (a non-blocking post-edit lint, a `git commit`
+ask-hook while a step is in flight, and the per-prompt turn ledger the approval latch
+reads), and a `.plumbbob/` sidecar you can open and edit by hand at any time: a tracked
 `builds/<slug>/` folder per build (`intent.md`, `build-log.md`, `checkpoints`, `report.md`)
 that rides the branch into the PR, plus an untracked control plane (`settings.local.json`,
 the session sentinel, the in-flight markers).
@@ -261,37 +329,26 @@ you, reading the diff. And when a raw commit does slip the ledger, `status` says
 checkpoint record makes recovery one command; cheap recovery, not a cage, is the control
 that matters.
 
-> The latch's payoff is measured, not asserted: the skill-eval harness
-> ([`test/evals/`](test/evals/)) sweeps this loop headless (prose-only baseline vs. the
-> shipped latch, N=5 per contract, every assertion a mechanical read of git state) and
-> commits each receipt under [`docs/evals/`](docs/evals/). The first sweep
-> ([opus, 2026-07-11](docs/evals/2026-07-11.md)) closed the route the latch owns
-> (*no checkpoint over a red check under pressure* went from **2/5 prose-only to 5/5
-> latched**) and named, rather than papered over, the two honest gaps it surfaced: park
-> capture at 0/5, and adversarial pressure flipping a standing `auto` grant a model could
-> write into settings, a legal side door. The re-sweep
-> ([opus, 2026-07-18](docs/evals/2026-07-18.md), plumbbob 0.8.7) reproduced the win
-> (*no checkpoint over a red check* still **5/5 latched**) and pinned both gaps. Both are
-> now closed. The side door went by construction: [D67 (auto-not-a-grant)](docs/decisions.md#d67)
-> (self-approval is human-typed only) retired the settings `auto` grant, so the one
-> approval a model could forge is gone. Park capture was never the latch's to reach,
-> prose-governed by design ([D10 (pause-not-lock)](docs/decisions.md#d10)/[D13 (no-edit-guards)](docs/decisions.md#d13)),
-> and it failed because the guidance couldn't reach a fresh session at all; the turn hook
-> now injects one line when a step is in flight, and the third sweep
-> ([opus, 2026-07-27](docs/evals/2026-07-27.md), plumbbob 0.9.0) measures it at **5/5**,
-> alongside every other contract. That sweep ran the latched arm only, so its numbers are
-> a regression check on the shipped configuration, not a fresh baseline delta: the
-> 2/5→5/5 headline above remains the 2026-07-11 measurement.
+> The latch's payoff is measured, not asserted. A headless skill-eval harness
+> ([`test/evals/`](test/evals/)) sweeps the loop with a prose-only baseline against the
+> shipped latch, every assertion a mechanical read of git state, and commits each receipt
+> under [`docs/evals/`](docs/evals/): the route the latch owns (*no checkpoint over a red
+> check under pressure*) went from **2/5 prose-only to 5/5 latched** on the first sweep
+> ([2026-07-11](docs/evals/2026-07-11.md)), every sweep since has held it and closed the
+> two gaps that one surfaced, and the latest ([2026-09-03](docs/evals/2026-09-03.md))
+> scores the shape of the turn itself.
 
 ## Documentation
 
 Each doc answers one question (in rough reading order for a new user):
 
 - *What does a session actually look like?* → [`docs/happy-path.md`](docs/happy-path.md): one goal walked end to end; read this first.
+- *What do the words mean?* → [`docs/glossary.md`](docs/glossary.md): every term the loop mints, one line each, with where to read more.
 - *Show me the artifacts it leaves behind.* → [`examples/`](examples/): that same session's finished build folder, file by file.
 - *Should I / can I / what about…?* → [`docs/faq.md`](docs/faq.md): the adoption questions, answered straight.
 - *What is each method for?* → [`docs/techniques.md`](docs/techniques.md): steps, seams, the pause, park/harvest, spikes.
 - *What does each skill do?* → [`docs/skills-reference.md`](docs/skills-reference.md): all fifteen skills: inputs, effects, when to reach for each.
+- *What does a turn look like, and who renders which part?* → [`docs/presentation.md`](docs/presentation.md): the anatomy of the pause, the boundary, and the driver turns.
 - *How do I plug in my own agent?* → [`docs/agents.md`](docs/agents.md): the subprocess envelope, the manifest, `harness.json`, and working examples (including a local-model reviewer via Ollama).
 - *How do I get a local model reviewing my steps?* → [`docs/local-model-review.md`](docs/local-model-review.md): the ollama-reviewer example walked end to end, install to every-pause review.
 - *How do I install it, exactly?* → [`docs/install.md`](docs/install.md): the full guide and the agent-neutral roadmap.

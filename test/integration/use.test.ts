@@ -34,7 +34,7 @@ describe('plumbbob use', () => {
 
     const used = runCli(dir, ['use', 'second-build'])
     expect(used.status).toBe(0)
-    expect(used.stdout).toContain('now on build "second-build"')
+    expect(used.stdout).toContain('**Active build**: second-build')
     expect(runCli(dir, ['status']).stdout).toContain('Second Feature')
   })
 
