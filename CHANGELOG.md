@@ -5,6 +5,53 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.1] - 2026-09-02
+
+- **Added:** the plan pause ends on a recommendation, drawn from a cold read. Before relaying
+  `handoff --plan`, the plan skill gives the framed plan one bounded adversarial pass under
+  `/plumbbob:refine`'s lens (an ambiguity a builder would guess through, an assumption no
+  Decision settles, a collision with the code the seams name, a done-when nothing can
+  measure, a step too large to review), surfacing without appending, and writes at most
+  three findings and the recommendation into the detail file. It reads `Approve it.` with
+  what the read found sound, or `Sharpen <the worst hole> first.`, and names refine when
+  there is more than one. The read stays in the same context by design: refine is where the
+  real adversary looks, and the recommendation is an estimate, so it costs no wait.
+- **Added:** the turn anatomy's decisions are recorded in `docs/decisions.md` as
+  D80 (cli-renders-model-relays) through D84 (one-liner-register), each merging the
+  presentation build's locals; a `docs/glossary.md` defining every term the loop mints; a
+  "Who it's for" section in the README; a before-your-first-session list in the install
+  guide; FAQ entries for what to say at the pause, a repo with no tests, and which model to
+  run; and troubleshooting entries for the latch refusal and a pause with no check row. Ten
+  labeled placeholder images stand where screenshots and recordings belong, with
+  `docs/media/README.md` as the shot list.
+- **Changed:** `checkpoint` records the pause in the build log instead of the commit body.
+  Beneath the step's dated line in `build-log.md`'s `## Log` it nests the pause as the human
+  approved it (the Summary and highlights, the Readout fence, the Verdict, the
+  recommendation, then each highlight's full story), measured before the work is staged so
+  the seam and diff rows match what the pause showed; the lead line carries a `details:`
+  pointer at the entry, and `checkpoint --plan` writes a `plan committed` line with the cold
+  read beneath it. The commit body keeps its marker and the `--body` prose only, because a
+  commit body dies at the squash-merge while the tracked ledger rides the branch into the
+  PR; an older step's `expand` now reads its Log entry rather than `git show`, and a detail
+  file with nothing on the wire's shape is kept verbatim rather than dropped.
+  D81 (detail-file) is revised to match.
+- **Changed:** the docs and the site show the 0.11.0 anatomy: the README's first session and
+  the site's pause cards render the real pause and boundary blocks in place of the retired
+  `PAUSE — read the diff` line, the API page's verb blurbs and sidecar tree match the shipped
+  CLI, the settings reference drops the retired `auto` grant, the hook count reads three,
+  CONTRIBUTING describes the CI that exists and the stop hook that is off, SECURITY lists
+  every hook, and the examples show Conventional commit subjects with a `stats.json` and the
+  report's Stats table. The README shows the loop before the five edges, and its eval
+  blockquote shrinks to two sentences and a link.
+- **Fixed:** a configured `check` command left no summary, so every pause in a repo gating
+  through its own command (the README's own `"check": "npm test"` advice) rendered no
+  `check` row and withheld the `looks good` move. The override now streams its output live,
+  keeps a copy under `.check/check.stdout.txt`, and writes the same one-check summary
+  checkride would, so the row reads `green: 1 of 1 checks`, a red run names the command and
+  points at the captured output, and the move is on the card.
+- **Removed:** the animated `demo.svg`, which showed retired output, and the fold of the
+  detail file into the commit body.
+
 ## [0.11.0] - 2026-09-02
 
 - **Added:** a written anatomy for the turn, in `docs/presentation.md`. Every plumbbob turn
