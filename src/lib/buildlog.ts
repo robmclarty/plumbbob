@@ -134,6 +134,30 @@ export function checkpointLogLine(
 }
 
 /**
+ * The Log line `checkpoint --plan` writes when the plan lands: dated, with the
+ * short SHA. The cold read's record rides beneath it, so the first entry of a
+ * build's history is the plan and the read that approved it.
+ */
+export function planLogLine(date: string, sha: string): string {
+  return `- ${date} — plan committed · ${sha.slice(0, 9)}`
+}
+
+/**
+ * A Log entry: the dated line and, beneath it, the record of what landed (the
+ * pause as the human approved it), blank-line separated and indented two
+ * spaces so it nests as the line's own content. Blank lines inside the record
+ * stay bare rather than carrying the indent. A null record is the bare line,
+ * which is what a hand-built step with no detail file gets.
+ */
+export function logEntry(line: string, record: string | null): string {
+  if (record === null || record.trim().length === 0) {
+    return line
+  }
+  const nested = record.split('\n').map((l) => (l.trim().length === 0 ? '' : `  ${l}`))
+  return [line, '', ...nested].join('\n')
+}
+
+/**
  * The Log line `abandon` writes for a dropped-but-kept step: the first
  * non-checkpoint event the log records. Dated, names the step (its title when
  * intent.md still carries it), and states plainly that the work stayed in the

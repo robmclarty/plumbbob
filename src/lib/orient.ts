@@ -892,6 +892,40 @@ export function parseSummary(detail: string): Summary | null {
   return { lead, highlights }
 }
 
+/** One numbered detail section: the handle, its title (the highlight), and the full story beneath it. */
+export type DetailSection = { readonly n: number; readonly title: string; readonly body: string }
+
+/**
+ * The `## <n>` sections of `.plumbbob/detail.md` with their bodies: the full
+ * story behind each highlight, in the order the model wrote them. The body is
+ * the section's prose as written, trimmed; empty when the model wrote only the
+ * title. The build-log's Log carries these beneath the step's record, so an
+ * older step's "expand" reads the ledger rather than a commit.
+ */
+export function parseSections(detail: string): ReadonlyArray<DetailSection> {
+  const lines = detail.split('\n')
+  const sections: DetailSection[] = []
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^##\s+(\d+)\s+(\S.*?)\s*$/.exec(lines[i] ?? '')
+    if (m === null) {
+      continue
+    }
+    let end = lines.findIndex((l, j) => j > i && l.startsWith('## '))
+    if (end === -1) {
+      end = lines.length
+    }
+    sections.push({
+      n: Number(m[1]),
+      title: m[2] ?? '',
+      body: lines
+        .slice(i + 1, end)
+        .join('\n')
+        .trim(),
+    })
+  }
+  return sections
+}
+
 /**
  * The `## Recommendation` section of `.plumbbob/detail.md`: the one or two
  * plain sentences a decision turn ends on, or null when the model wrote none.

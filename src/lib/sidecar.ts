@@ -361,10 +361,10 @@ export function clearHandoff(root: string, slug?: string | null): void {
 // --- The detail plane: `.plumbbob/detail.md`, one flat per-session file holding
 // the in-flight step's full detail. The model overwrites it before every pause
 // (the recap first, then numbered sections matching the highlights); checkpoint
-// folds it into the commit body and then clears it, so the durable archive is
-// the commit and no stale detail piles up. Flat like STATE/TURN, not per-build:
-// a session drives one build at a time, and a past step's expansion reads the
-// commit, never this file. ---
+// records it beneath the step's dated line in the build-log's Log and then
+// clears it, so the durable archive is the tracked ledger and no stale detail
+// piles up. Flat like STATE/TURN, not per-build: a session drives one build at
+// a time, and a past step's expansion reads the ledger, never this file. ---
 
 /**
  * detail.md: the in-flight step's full detail, at the flat sidecar root.
@@ -374,8 +374,8 @@ export function detailPath(root: string): string {
 }
 
 /**
- * Clear detail.md once checkpoint has folded it into the commit body; absent is
- * a no-op.
+ * Clear detail.md once checkpoint has recorded it in the Log; absent is a
+ * no-op.
  *
  * The rmSync lives here with the sidecar's other deletions, the same home
  * clearHandoff and clearTick keep.

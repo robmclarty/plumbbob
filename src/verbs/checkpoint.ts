@@ -11,6 +11,7 @@
 // DESIGN boundary.
 
 import { appendFileSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { relative } from 'node:path'
 import { commit, findRepoRoot, headSha, isDirty, stageAll, stagePath, stagedPaths, stagedStat } from '../lib/git.ts'
 import {
   activeBuild,
@@ -37,10 +38,10 @@ import { checkLatch } from '../lib/latch.ts'
 import { markStepDone, parseSteps } from '../lib/orient.ts'
 import { parseBuildScope, parseStepSeam, scopeDrift } from '../lib/intent.ts'
 import { conventionalSubject, subjectFromTitle, withMarker } from '../lib/commitmsg.ts'
-import { appendToSection, checkpointLogLine } from '../lib/buildlog.ts'
+import { appendToSection, checkpointLogLine, logEntry, planLogLine } from '../lib/buildlog.ts'
 import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
 import { advisory, ending, notice, transition } from '../lib/notice.ts'
-import { boundaryEnding } from './handoff.ts'
+import { boundaryEnding, planRecord, stepRecord } from './handoff.ts'
 
 /**
  * Land a step: latch, check gate, commit, record, return to the boundary.
@@ -111,6 +112,13 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
     return 1
   }
 
+  // The step's record, as the pause showed it: measured now, before the work
+  // is staged, since the seam and diff rows read the working tree the way the
+  // pause did. It lands in the build-log's Log beneath the dated line (the
+  // tracked ledger is the archive, and it rides the branch where a commit body
+  // would not survive the squash); the commit body keeps its marker and the
+  // lead prose only.
+  const record = stepRecord(root, activeBuild(root), step, readDetail(root) ?? '')
   let sha: string
   // The drift advisory is read off the index (staged, before the commit clears
   // it) but printed inside the ending below, where the fixed order puts it: the
@@ -119,18 +127,17 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   if (isDirty(root)) {
     stageAll(root)
     drift = scopeDriftNotice(root, step)
-    const lead = bodyResult.body ?? fallbackBody(root, step)
-    const body = withMarker(`plumbbob step ${step}`, foldDetail(lead, readDetail(root)))
+    const body = withMarker(`plumbbob step ${step}`, bodyResult.body ?? fallbackBody(root, step))
     sha = commit(root, messageArg(args) ?? subjectForStep(root, step), body)
-    clearDetail(root) // the detail is folded into the commit now; clear it so no stale detail rides into the next step.
   } else {
     sha = headSha(root)
   }
+  clearDetail(root) // the detail is recorded in the Log below; clear it so no stale detail rides into the next step.
 
   appendFileSync(checkpointsPath(root), `step ${step} ${sha}\n`)
   const flipNotice = flipIntent(root, step)
   stampStepStat(root, undefined, step, 'landedAt', new Date().toISOString())
-  logCheckpoint(root, step, sha)
+  const pointer = logCheckpoint(root, step, sha, record)
   // The step landed: the build-log's ☐/☑ mirror flips and its Current-step line
   // returns to the boundary, re-read from the intent.md `flipIntent` just wrote.
   // The artifact-plane whitelist keeps this build-log write from ever reading as
@@ -148,7 +155,7 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   const landed = boundaryEnding(root, activeBuild(root), step)
   process.stdout.write(
     ending({
-      lead: transition({ label: 'Checkpoint', fact: `Step ${step} complete`, detail: [sha.slice(0, 9)] }),
+      lead: transition({ label: 'Checkpoint', fact: `Step ${step} complete`, detail: leadDetail(sha, pointer) }),
       verdict: landed.verdict,
       advisories: [drift, flipNotice],
       pointer: landed.pointer,
@@ -193,6 +200,10 @@ function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
   const staged = stagePath(root, buildFolder(root))
   const sha = commit(root, planSubject(root), withMarker('plumbbob plan', bodyResult.body ?? undefined))
   appendFileSync(checkpointsPath(root), `plan ${sha}\n`)
+  // The cold read that approved the plan is the Log's first entry, beneath a
+  // dated plan line; the detail file is then spent, the same as at a step.
+  const pointer = logPlan(root, sha, planRecord(readDetail(root) ?? ''))
+  clearDetail(root)
   // Landing the plan consumes `start`'s entry stamp: a later hand-built diff
   // (no `build <n>`) must find no stale TICK and stay guidance-governed.
   clearTick(root)
@@ -200,7 +211,7 @@ function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
   // the build starts on, which is what `handoff` renders from a null step.
   process.stdout.write(
     ending({
-      lead: transition({ label: 'Plan', fact: 'committed', detail: [sha.slice(0, 9)] }),
+      lead: transition({ label: 'Plan', fact: 'committed', detail: leadDetail(sha, pointer) }),
       advisories: staged
         ? []
         : [
@@ -319,24 +330,53 @@ function flipIntent(root: string, step: number): string {
 }
 
 /**
- * Append a dated line to the build-log's `## Log` section.
+ * The lead line's trailing parenthetical: the short SHA, and where the Log
+ * entry landed when one did, as the same `details:` clause Next Up carries.
+ */
+function leadDetail(sha: string, pointer: string | null): string[] {
+  return pointer === null ? [sha.slice(0, 9)] : [sha.slice(0, 9), `details: \`${pointer}\``]
+}
+
+/**
+ * Append the step's entry to the build-log's `## Log` section: the dated line,
+ * and beneath it the record of the pause when the model wrote one.
  *
  * The build's history accrues at each checkpoint instead of being reconstructed
  * at finish; the step's title is lifted from intent.md when still present.
  * Best-effort: a missing or odd build-log never blocks a checkpoint; the
- * `checkpoints` SHA is the source of truth.
+ * `checkpoints` SHA is the source of truth. Returns where the line landed, as
+ * `path:line` from the repo root, or null when nothing was written.
  */
-function logCheckpoint(root: string, step: number, sha: string): void {
+function logCheckpoint(root: string, step: number, sha: string, record: string | null): string | null {
+  const date = new Date().toISOString().slice(0, 10)
+  return appendLog(root, checkpointLogLine(date, step, sha, titleForStep(root, step), statsSuffix(root, step)), record)
+}
+
+/**
+ * Append the plan's entry to the Log: a dated `plan committed` line, and
+ * beneath it the cold read that approved the plan when the model wrote one.
+ */
+function logPlan(root: string, sha: string, record: string | null): string | null {
+  return appendLog(root, planLogLine(new Date().toISOString().slice(0, 10), sha), record)
+}
+
+/**
+ * Write one Log entry and say where its dated line landed (`path:line` from
+ * the repo root), or null when the section is missing or the write failed.
+ */
+function appendLog(root: string, line: string, record: string | null): string | null {
   try {
     const path = buildLogPath(root)
-    const date = new Date().toISOString().slice(0, 10)
-    const line = checkpointLogLine(date, step, sha, titleForStep(root, step), statsSuffix(root, step))
-    const updated = appendToSection(readFileSync(path, 'utf8'), 'Log', line)
-    if (updated !== null) {
-      writeFileSync(path, updated)
+    const updated = appendToSection(readFileSync(path, 'utf8'), 'Log', logEntry(line, record))
+    if (updated === null) {
+      return null
     }
+    writeFileSync(path, updated)
+    const at = updated.split('\n').lastIndexOf(line)
+    return at === -1 ? null : `${relative(root, path)}:${at + 1}`
   } catch {
     // best-effort ledger; never fail a checkpoint over the build-log.
+    return null
   }
 }
 
@@ -448,8 +488,8 @@ function fallbackBody(root: string, step: number): string | undefined {
  * is absent or empty.
  *
  * The model overwrites it before every pause; checkpoint reads it once here for
- * the fold, and the caller clears it afterward. A missing or blank file folds
- * nothing.
+ * the Log's record, and the caller clears it afterward. A missing or blank file
+ * records nothing.
  */
 function readDetail(root: string): string | null {
   try {
@@ -458,19 +498,6 @@ function readDetail(root: string): string | null {
   } catch {
     return null
   }
-}
-
-/**
- * Fold the detail beneath the lead prose for the commit body.
- *
- * The lead (an explicit `--body`, else the deterministic fallback) leads and the
- * detail file's content follows, joined by a blank line so git keeps them as
- * separate paragraphs. Either part may be absent; an all-empty fold returns
- * undefined so `withMarker` leaves just the marker line.
- */
-function foldDetail(lead: string | undefined, detail: string | null): string | undefined {
-  const parts = [lead, detail].filter((part): part is string => part !== undefined && part !== null && part.length > 0)
-  return parts.length > 0 ? parts.join('\n\n') : undefined
 }
 
 /**

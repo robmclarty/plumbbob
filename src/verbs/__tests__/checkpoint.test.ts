@@ -1,10 +1,10 @@
 import { execFileSync } from 'node:child_process'
 import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { checkpoint } from '../checkpoint.ts'
 import { start } from '../start.ts'
-import { buildLogPath, checkpointsPath, grantPath, handoffPath, hasSession, intentPath, readStats, stampStepStat, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
+import { buildLogPath, checkpointsPath, detailPath, grantPath, handoffPath, hasSession, intentPath, readStats, stampStepStat, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
 import { gitPath } from '../../lib/git.ts'
 import { advisory, ending, notice, transition } from '../../lib/notice.ts'
 import { setLocalSetting, settingsPath } from '../../lib/settings.ts'
@@ -32,6 +32,46 @@ function ledgerSha(dir: string, label: string): string {
   return (new RegExp(`${label} ([0-9a-f]{40})`).exec(readFileSync(checkpointsPath(dir), 'utf8'))?.[1] ?? '').slice(0, 9)
 }
 
+/** The `details:` pointer the lead line carries: the Log line holding `label`, as `path:line` from the repo root. */
+function logPointer(dir: string, label: string): string {
+  const at = readFileSync(buildLogPath(dir), 'utf8').split('\n').findIndex((l) => l.includes(label))
+  return `${relative(dir, buildLogPath(dir))}:${at + 1}`
+}
+
+// A pause's detail file for step 1: the three judgment rows under the header
+// rule, the Summary lead, one section, and the recommendation.
+const DETAIL = `# Detail · Step 1 · First
+
+── recap · step 1 of 1 ──
+done-when    met
+decisions    none exercised
+constraints  all honored
+
+## Summary
+
+A works now.
+
+## 1 The first move
+
+The whole story.
+
+## Recommendation
+
+Approve it. Nothing is off.
+`
+
+// A plan pause's detail file: the cold read's one finding and its recommendation.
+const PLAN_DETAIL = `# Detail · Plan · Checkpoint test
+
+## 1 The done-when names no test
+
+Nothing in the seam is a test file.
+
+## Recommendation
+
+Sharpen step 1 first. Its done-when names no test.
+`
+
 async function startedGreen(): Promise<string> {
   const dir = makeTempRepo()
   await captureIoAsync(() => start(dir, ['Checkpoint test', '--slug', 'checkpoint-test']))
@@ -56,7 +96,7 @@ describe('checkpoint', () => {
     // stray advisory rides too, and the Verdict wears the rung it earned.
     expect(stdout).toBe(
       ending({
-        lead: transition({ label: 'Checkpoint', fact: 'Step 1 complete', detail: [ledgerSha(dir, 'step 1')] }),
+        lead: transition({ label: 'Checkpoint', fact: 'Step 1 complete', detail: [ledgerSha(dir, 'step 1'), `details: \`${logPointer(dir, 'step 1 checkpointed')}\``] }),
         verdict: '**Verdict**: ◐ A hair off (staged outside the seam)',
         advisories: [
           advisory({
@@ -192,6 +232,43 @@ describe('checkpoint', () => {
     await captureIoAsync(() => checkpoint(dir, ['1']))
     const log = readFileSync(buildLogPath(dir), 'utf8')
     expect(log).toMatch(/- \d{4}-\d{2}-\d{2} — step 1 checkpointed · [0-9a-f]{9} — First/)
+  })
+
+  it("records the pause beneath the Log line — Summary, Readout, Verdict, Recommendation, the stories — and clears the detail file", async () => {
+    const dir = await startedGreen()
+    mkdirSync(join(dir, 'src'), { recursive: true })
+    writeFileSync(join(dir, 'src', 'a.ts'), 'in seam\n')
+    writeFileSync(detailPath(dir), DETAIL)
+    const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(code).toBe(0)
+    const log = readFileSync(buildLogPath(dir), 'utf8')
+    // The record nests under the dated line as its own content, two spaces in,
+    // in the order the pause showed it; the detail bracket is gone because the
+    // record is where the detail now lives.
+    expect(log).toMatch(/- \d{4}-\d{2}-\d{2} — step 1 checkpointed · [0-9a-f]{9} — First\n\n  \*\*Summary\*\*: A works now\.\n\n  1\. The first move\n/)
+    expect(log).toContain('  **Readout**: Step 1 - First\n\n  ```text\n')
+    expect(log).toContain('  done-when    met\n')
+    expect(log).toContain('  **Verdict**: ')
+    expect(log).toContain('  **Recommendation**: Approve it. Nothing is off.\n\n  **1.** The first move\n\n  The whole story.')
+    expect(log).not.toContain('(details:')
+    expect(existsSync(detailPath(dir))).toBe(false)
+    // The lead line points at the entry; the commit body keeps its marker and
+    // the lead prose only, since the ledger is the archive now.
+    expect(stdout).toContain(`details: \`${logPointer(dir, 'step 1 checkpointed')}\``)
+    const body = execFileSync('git', ['log', '-1', '--format=%b'], { cwd: dir, encoding: 'utf8' })
+    expect(body).not.toContain('The whole story')
+  })
+
+  it('records the cold read beneath a plan line in the Log and clears the detail file', async () => {
+    const dir = await startedGreen()
+    writeFileSync(detailPath(dir), PLAN_DETAIL)
+    const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
+    expect(code).toBe(0)
+    const log = readFileSync(buildLogPath(dir), 'utf8')
+    expect(log).toMatch(/- \d{4}-\d{2}-\d{2} — plan committed · [0-9a-f]{9}\n\n  \*\*Recommendation\*\*: Sharpen step 1 first\./)
+    expect(log).toContain('  **1.** The done-when names no test\n\n  Nothing in the seam is a test file.')
+    expect(existsSync(detailPath(dir))).toBe(false)
+    expect(stdout).toContain(`details: \`${logPointer(dir, 'plan committed')}\``)
   })
 
   it('whitelists its own staged artifact writes — no scope-drift warning (step 7)', async () => {
@@ -398,7 +475,7 @@ describe('checkpoint', () => {
       expect(code).toBe(0)
       expect(stdout).toBe(
         ending({
-          lead: transition({ label: 'Plan', fact: 'committed', detail: [ledgerSha(dir, 'plan')] }),
+          lead: transition({ label: 'Plan', fact: 'committed', detail: [ledgerSha(dir, 'plan'), `details: \`${logPointer(dir, 'plan committed')}\``] }),
           pointer: '**Next Up**: Step 1 of 1 - First (details: `.plumbbob/builds/checkpoint-test/intent.md:5`)',
         }),
       ) // short SHA, not the full 40
@@ -453,7 +530,7 @@ describe('checkpoint', () => {
       // pointer closes: one stdout block, in the order every ending is written.
       expect(stdout).toBe(
         ending({
-          lead: transition({ label: 'Plan', fact: 'committed', detail: [ledgerSha(dir, 'plan')] }),
+          lead: transition({ label: 'Plan', fact: 'committed', detail: [ledgerSha(dir, 'plan'), `details: \`${logPointer(dir, 'plan committed')}\``] }),
           advisories: [
             advisory({
               fact: 'the plan rides the commit message',

@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { cleanupFixtures, makeFixtureRepo, runCli, sidecarExists, writeSidecar } from './helpers/fixture-repo.ts'
@@ -15,12 +15,17 @@ function startWithSteps(dir: string, stepsBody: string, check = 'true'): void {
   writeSidecar(dir, 'intent.md', `# Detail test\n\n## Steps\n\n${stepsBody}\n`)
 }
 
-// The last commit's body (the marker + folded prose), read straight from git.
+// The last commit's body (the marker + the lead prose), read straight from git.
 function commitBody(dir: string): string {
   return execFileSync('git', ['-C', dir, 'log', '-1', '--format=%b'], { encoding: 'utf8' })
 }
 
-describe('the detail-file lifecycle — D9 (latest-detail-file)', () => {
+// The build-log the ledger entry lands in: the archive now, not the commit body.
+function buildLog(dir: string): string {
+  return readFileSync(join(dir, '.plumbbob', 'builds', 'detail-test', 'build-log.md'), 'utf8')
+}
+
+describe('the detail-file lifecycle — D81 (detail-file)', () => {
   it('git-excludes .plumbbob/detail.md so it is untracked and never rides a step commit', () => {
     const dir = makeFixtureRepo()
     startWithSteps(dir, '1. [ ] first — **done when:** ok')
@@ -35,7 +40,7 @@ describe('the detail-file lifecycle — D9 (latest-detail-file)', () => {
     expect(tracked).not.toContain('.plumbbob/detail.md')
   })
 
-  it('folds detail.md into the commit body beneath the --body lead, then truncates it', () => {
+  it('records detail.md beneath the Log line and truncates it; the --body lead is the whole commit body', () => {
     const dir = makeFixtureRepo()
     startWithSteps(dir, '1. [ ] first — **done when:** ok')
     writeSidecar(dir, 'detail.md', '## 1 the first highlight\n\nthe full story of what moved\n')
@@ -45,22 +50,27 @@ describe('the detail-file lifecycle — D9 (latest-detail-file)', () => {
     const body = commitBody(dir)
     expect(body).toContain('plumbbob step 1') // marker leads
     expect(body).toContain('Proportional prose.') // the --body lead
-    expect(body).toContain('the full story of what moved') // detail folded in beneath it
-    expect(body.indexOf('Proportional prose.')).toBeLessThan(body.indexOf('the full story'))
-    // truncated once folded: no stale detail carries into the next step.
+    expect(body).not.toContain('the full story of what moved') // the ledger is the archive, not the body
+    // The record nests under the dated line, the section's handle in bold, and
+    // the lead line points at it.
+    expect(buildLog(dir)).toContain('step 1 checkpointed')
+    expect(buildLog(dir)).toContain('  **1.** the first highlight\n\n  the full story of what moved')
+    expect(res.stdout).toContain('details: `.plumbbob/builds/detail-test/build-log.md:')
+    // truncated once recorded: no stale detail carries into the next step.
     expect(sidecarExists(dir, 'detail.md')).toBe(false)
   })
 
-  it('folds detail beneath the deterministic fallback body when no --body arrives', () => {
+  it('records an off-wire detail file verbatim, so nothing the model wrote is lost with it', () => {
     const dir = makeFixtureRepo()
     startWithSteps(dir, '1. [ ] first — **done when:** it works\n   - seam: `x.txt`')
     writeSidecar(dir, 'detail.md', 'detail-only-content\n')
     writeFileSync(join(dir, 'x.txt'), 'x\n')
     expect(runCli(dir, ['checkpoint']).status).toBe(0)
     const body = commitBody(dir)
-    expect(body).toContain('done when: it works') // the fallback lead
-    expect(body).toContain('detail-only-content') // detail folded after it
-    expect(body.indexOf('done when: it works')).toBeLessThan(body.indexOf('detail-only-content'))
+    expect(body).toContain('done when: it works') // the fallback lead still leads the body
+    expect(body).not.toContain('detail-only-content')
+    expect(buildLog(dir)).toContain('\n\n  detail-only-content')
+    expect(sidecarExists(dir, 'detail.md')).toBe(false)
   })
 
   it('checkpoints normally when no detail file is present', () => {
@@ -82,7 +92,7 @@ describe('the detail-file lifecycle — D9 (latest-detail-file)', () => {
     expect(commitBody(dir).trimEnd().endsWith('Just the lead.')).toBe(true)
   })
 
-  it('leaves detail.md alone when the tree is already clean (no commit to fold into)', () => {
+  it('records and clears detail.md even when the tree is already clean: the ledger, not the commit, is the archive', () => {
     const dir = makeFixtureRepo()
     startWithSteps(dir, '1. [ ] a — **done when:** ok')
     // Commit the scaffold so the tree is genuinely clean, as the human's own
@@ -91,8 +101,9 @@ describe('the detail-file lifecycle — D9 (latest-detail-file)', () => {
     execFileSync('git', ['-C', dir, 'commit', '-q', '-m', 'commit the plan scaffold'])
     writeSidecar(dir, 'detail.md', 'lingering detail\n')
     expect(runCli(dir, ['checkpoint']).status).toBe(0)
-    // No new commit was made, so there was no body to fold into; the file is
-    // left for the next step's overwrite rather than dropped without an archive.
-    expect(sidecarExists(dir, 'detail.md')).toBe(true)
+    // No new commit was made, and none was needed: the step landed, its record
+    // went to the Log, and the file is spent.
+    expect(buildLog(dir)).toContain('\n\n  lingering detail')
+    expect(sidecarExists(dir, 'detail.md')).toBe(false)
   })
 })

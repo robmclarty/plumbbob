@@ -53,6 +53,7 @@ import {
   type CheckSummary,
   type Ladder,
   type RecapRow,
+  type DetailSection,
   type RecapRowName,
   type SpentInputs,
   type Step,
@@ -65,6 +66,7 @@ import {
   parseLastCheckpoint,
   parseRecap,
   parseRecommendation,
+  parseSections,
   parseSteps,
   parseSummary,
   recapLines,
@@ -226,6 +228,84 @@ export function boundaryEnding(root: string, slug: string | null, step: number |
 
 /** A boundary ending's CLI-rendered parts: the Verdict, where one was measured, and the pointer. */
 export type BoundaryEnding = { readonly verdict: string | null; readonly pointer: string }
+
+/**
+ * The step's record for the build-log's Log: the pause as the human approved
+ * it, with the full story behind each highlight beneath. The Summary and its
+ * highlights, the Readout fence, the Verdict, the recommendation, then the
+ * numbered sections' bodies, blank-line separated and unindented; the caller
+ * nests it under the Log's dated line.
+ *
+ * Measured, not recalled: the check, seam, and diff rows are read the same way
+ * the pause read them, so this has to be built before the work is staged (the
+ * seam and diff rows read the working tree). Null when the detail file carries
+ * nothing to record, so a hand-built step with no detail gets the bare dated
+ * line it always did.
+ */
+export function stepRecord(root: string, slug: string | null, step: number, detail: string): string | null {
+  const summary = parseSummary(detail)
+  const recommendation = parseRecommendation(detail)
+  const sections = parseSections(detail)
+  if (summary === null && recommendation === null && sections.length === 0 && parseRecap(detail) === null) {
+    // Nothing on the wire's shape: a blank file records nothing, and anything
+    // else the model wrote is kept verbatim rather than lost with the file.
+    const raw = detail.trim()
+    return raw.length === 0 ? null : raw
+  }
+  const intent = readOr(intentPath(root, slug))
+  const { rows, work, summary: check } = measured(root, slug, intent, detail, step)
+  const { ladder, worst } = foldVerdict(rows, accruedStats(root, slug, step))
+  const readout = recapLines(rows, {
+    diff: diffRowValue(countDiff(work), false),
+    spent: spentRowValue(spentInputs(root, slug, step, check)),
+    constraints: parseConstraintCount(intent),
+  })
+  const parts: string[] = []
+  if (summary !== null) {
+    parts.push(recordSummary(summary))
+  }
+  if (readout.length > 0) {
+    parts.push([readoutLabel(step, parseSteps(intent)), '', ...fence('text', readout)].join('\n'))
+  }
+  parts.push(verdictLine(ladder, worst))
+  return [...withRecommendation(parts, recommendation), ...sectionBlocks(sections)].join('\n\n')
+}
+
+/**
+ * The plan's record for the Log: the cold read's recommendation and the
+ * findings behind it. Nothing is measured at the plan pause, so no Readout and
+ * no Verdict ride here. Null when the detail file carries neither.
+ */
+export function planRecord(detail: string): string | null {
+  const recommendation = parseRecommendation(detail)
+  const sections = parseSections(detail)
+  if (recommendation === null && sections.length === 0) {
+    return null
+  }
+  return [...withRecommendation([], recommendation), ...sectionBlocks(sections)].join('\n\n')
+}
+
+/**
+ * The record's opening block: the Summary lead without the `(details: …)`
+ * bracket, since the record is where the detail now lives, then the
+ * highlights under their own handles.
+ */
+function recordSummary(summary: Summary): string {
+  const lead = `**Summary**: ${summary.lead}`
+  if (summary.highlights.length === 0) {
+    return lead
+  }
+  return [lead, '', ...summary.highlights.map((h) => `${h.n}. ${h.title}`)].join('\n')
+}
+
+/**
+ * The full story behind each highlight, one block per section: the handle in
+ * bold, the title, then the body as the model wrote it. A section with no body
+ * is just its line.
+ */
+function sectionBlocks(sections: ReadonlyArray<DetailSection>): string[] {
+  return sections.map((s) => (s.body.length === 0 ? `**${s.n}.** ${s.title}` : `**${s.n}.** ${s.title}\n\n${s.body}`))
+}
 
 /**
  * The driver turn's pointer: back at the step still open, at the spike raised
