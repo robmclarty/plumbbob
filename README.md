@@ -10,7 +10,7 @@
   <a href="https://robmclarty.github.io/plumbbob/api.html">API reference</a>
 </p>
 
-PlumbBob is a Claude Code plugin (fourteen skills and a small CLI) that runs
+PlumbBob is a Claude Code plugin (fifteen skills and a small CLI) that runs
 LLM-assisted coding as a loop you control. You and the model settle the plan in a file
 *before* any code; then the model builds one small step at a time and **stops after
 each one**, waiting for you to read the diff and approve it before anything is
@@ -145,7 +145,7 @@ You drive the whole loop from your IDE with `/plumbbob:*` skills: no step number
 remember, no raw CLI to type. Every skill is `disable-model-invocation`, so *you* fire
 every move, and `/plumbbob:status` always names your next one. (Claude Code namespaces
 them under the plugin, so the command is `/plumbbob:plan`. The bare `/plan` reaches it
-too, but only where nothing else owns that name, and four of the fourteen share one with
+too, but only where nothing else owns that name, and four of the fifteen share one with
 a Claude Code built-in, so these docs write the full form.)
 
 **The happy path**: the three moves every session makes; many sessions need
@@ -165,7 +165,7 @@ nothing else:
 | `/plumbbob:refine` | attack the frame for holes, or repair a drifted plan |
 | `/plumbbob:spike` | throwaway worktree experiment for a fork the plan can't settle |
 
-**Helpers**: orient, verify, recover, diagnose:
+**Helpers**: orient, verify, recover, diagnose, source:
 
 | Skill <img alt="" width="110" height="1"> | Does |
 | ------------------------------------ | ------ |
@@ -175,6 +175,7 @@ nothing else:
 | `/plumbbob:abandon` | drop the in-flight step, keep its work in the tree; the step stays planned |
 | `/plumbbob:recover` | reconcile the session's own state when the dashboard looks wrong |
 | `/plumbbob:doctor` | check the install from inside a session |
+| `/plumbbob:find-candidates` | before there is a plan: shortlist an issue tracker team's backlog into what's worth planning and who git history says to talk to, no session needed |
 
 **Capture**: the park/harvest loop for mid-build ideas:
 
@@ -183,7 +184,7 @@ nothing else:
 | `/plumbbob:park` | capture a mid-build idea without chasing it |
 | `/plumbbob:harvest` | triage parked ideas between steps (blocker / tangent / pivot) |
 
-All fourteen, with inputs and effects, are in
+All fifteen, with inputs and effects, are in
 [`docs/skills-reference.md`](docs/skills-reference.md).
 
 Under the skills ships a lean `plumbbob` CLI (the mechanical verbs the
@@ -241,7 +242,7 @@ modes, spec kits, native checkpoints), and that convergence is evidence *for* th
 premise. PlumbBob is deliberately thin against that future: the artifacts are
 plain markdown and ordinary git commits in your own repo, the CLI is lean
 (node builtins plus one deliberate dependency), and nothing locks you in. The
-investment is small (fourteen
+investment is small (fifteen
 skills over a plain-markdown sidecar, learnable in an afternoon), and what you're
 actually learning is the method: decisions before code, one verified step at a
 time, capture instead of chase. That transfers to whatever tool wins. If
@@ -290,7 +291,7 @@ Each doc answers one question (in rough reading order for a new user):
 - *Show me the artifacts it leaves behind.* → [`examples/`](examples/): that same session's finished build folder, file by file.
 - *Should I / can I / what about…?* → [`docs/faq.md`](docs/faq.md): the adoption questions, answered straight.
 - *What is each method for?* → [`docs/techniques.md`](docs/techniques.md): steps, seams, the pause, park/harvest, spikes.
-- *What does each skill do?* → [`docs/skills-reference.md`](docs/skills-reference.md): all fourteen skills: inputs, effects, when to reach for each.
+- *What does each skill do?* → [`docs/skills-reference.md`](docs/skills-reference.md): all fifteen skills: inputs, effects, when to reach for each.
 - *How do I plug in my own agent?* → [`docs/agents.md`](docs/agents.md): the subprocess envelope, the manifest, `harness.json`, and working examples (including a local-model reviewer via Ollama).
 - *How do I get a local model reviewing my steps?* → [`docs/local-model-review.md`](docs/local-model-review.md): the ollama-reviewer example walked end to end, install to every-pause review.
 - *How do I install it, exactly?* → [`docs/install.md`](docs/install.md): the full guide and the agent-neutral roadmap.

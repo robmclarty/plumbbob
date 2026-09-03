@@ -1,6 +1,6 @@
 # Skills reference
 
-The fourteen skills are the surface you actually drive; the CLI underneath
+The fifteen skills are the surface you actually drive; the CLI underneath
 ([`cli-reference.md`](cli-reference.md)) is what they shell out to. This page is the
 reference for that surface: what each skill is for, what it takes, what it reads and
 writes, and when to reach for it.
@@ -33,6 +33,7 @@ Two ground rules apply to all of them:
 | [`/plumbbob:spike`](#spike) | `<slug> \| done` | throwaway worktree experiment for a fork the plan can't settle |
 | [`/plumbbob:recover`](#recover) | `[--fix]` | reconcile the session's own state when the dashboard looks wrong |
 | [`/plumbbob:doctor`](#doctor) | none | check the install from inside a session |
+| [`/plumbbob:find-candidates`](#find-candidates) | `[team] [assignee]` | shortlist an issue tracker team's backlog into what's worth planning and who to talk to; no session needed |
 
 ## The loop skills
 
@@ -195,6 +196,27 @@ git. Leftover spike worktrees are named with their removal commands but never de
 they sit outside the repo and may hold the only copy of what the spike learned. Recovering
 reconciles bookkeeping; it never restores lost work (that is [`revert`](#revert), and it is
 destructive by design).
+
+## Sourcing
+
+### find-candidates
+
+Answers what comes *before* `/plumbbob:plan`: out of a team's backlog, what is actually
+worth a plan. It lists a team's tickets from whatever issue-tracker MCP is connected
+(a team argument and an optional assignee filter, defaulting to unassigned), drops what
+cannot be planned (completed, canceled, duplicate), then hydrates and checks the rest:
+before calling anything a strong candidate, it greps the current repo for the files and
+functions the ticket cites and says whether they still resolve. Every remaining ticket
+lands in one of three buckets, one line of reasoning each: a strong candidate (a scoped
+fix with a clear done-when), one that needs a decision first (real, but the ticket
+leaves a choice unmade), or not a good fit (blocked, no root cause yet, or the actual
+diff is trivial regardless of the ticket's own estimate). For the tickets that land in
+one of the two actionable buckets, it also reads `git shortlog`/`git log` on the files
+it already confirmed, and reports who has the most commits there and who touched it
+last: a pointer ("git history points to"), never a summons, since a top committer may
+have moved off the area or the team since. Unlike every other skill, it touches no
+`.plumbbob/` state and shells no `plumbbob` verb: read-only against the tracker and the
+repo alike, so there is nothing to refuse and no session required.
 
 ## Install
 

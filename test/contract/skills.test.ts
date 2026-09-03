@@ -585,6 +585,54 @@ describe('doctor — a headless-safe thin driver for `plumbbob doctor`', () => {
   })
 })
 
+describe('find-candidates — sourcing: no session, no plumbbob verb, read-only both ways', () => {
+  const { data, body } = parseSkill('find-candidates')
+
+  it('names itself, disables model invocation, inherits the session model — D63 (no-model-pins)', () => {
+    expect(data.name).toBe('find-candidates')
+    expect(data['disable-model-invocation']).toBe('true')
+    expect(data.model).toBeUndefined()
+  })
+
+  it('takes a team and an optional assignee, defaulting to unassigned', () => {
+    expect(data['argument-hint']).toContain('[team] [assignee]')
+    expect(body).toMatch(/default.*unassigned/is)
+  })
+
+  it('is the one skill that shells no plumbbob verb and touches no .plumbbob state', () => {
+    expect(body).not.toMatch(/plumbbob (status|start|checkpoint|build|verify|park|recover|revert|abandon|spike|doctor|finish)\b/)
+    expect(data['allowed-tools']).not.toMatch(/Bash\(plumbbob/)
+    expect(body).toMatch(/no session/i)
+  })
+
+  it('carries no Edit and no Write: sourcing is not building', () => {
+    expect(data['allowed-tools']).not.toMatch(/\bEdit\b/)
+    expect(data['allowed-tools']).not.toMatch(/\bWrite\b/)
+  })
+
+  it('never writes back to the tracker', () => {
+    expect(body).toMatch(/never create,\s+update,\s+comment on, assign/i)
+  })
+
+  it('checks a cited file or function against the repo before calling something a strong candidate', () => {
+    expect(body).toMatch(/grep the current repo/i)
+    expect(body).toMatch(/strong candidate/i)
+  })
+
+  it('looks up who to talk to via git history, scoped to the shortlist only', () => {
+    expect(data['allowed-tools']).toMatch(/Bash\(git log:\*\)/)
+    expect(data['allowed-tools']).toMatch(/Bash\(git shortlog:\*\)/)
+    expect(body).toMatch(/git shortlog/)
+    expect(body).toMatch(/never for one dropped as not a good\s+fit/i)
+  })
+
+  it('reports the git-history pointer as a pointer, never an assignment', () => {
+    expect(body).toMatch(/git history points to/i)
+    expect(body).toMatch(/never as who is\s+responsible or who should be pinged/i)
+    expect(body).toMatch(/may have moved off this\s+area or the team/i)
+  })
+})
+
 // plumbbob-report and plumbbob-docs were folded into /plumbbob:finish — D9 (finish-no-gate) — and removed.
 // plumbbob-interrogate was renamed /plumbbob:refine and broadened (attack + repair);
 // report/docs do not survive.
