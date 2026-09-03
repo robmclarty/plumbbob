@@ -4,7 +4,7 @@ description: "Compose one tidy tagged park line, get the human's OK in-turn, the
 argument-hint: "[idea]"
 disable-model-invocation: true
 model: haiku
-allowed-tools: Bash(plumbbob status:*), Bash(plumbbob park:*), Bash(plumbbob handoff:*)
+allowed-tools: Bash(plumbbob status:*), Bash(plumbbob park:*)
 ---
 
 # PlumbBob: park an idea (capture, don't chase)
@@ -40,13 +40,13 @@ Then:
    confirm it as-is or edit the wording.
 2. **Only after** that approval, capture it by running `plumbbob park "<the
    approved line>"` via Bash.
-3. **Relay the capture, then get back to the step.** `plumbbob park` prints
-   `**Parked**: <text> (tag)`; relay that line verbatim, then relay `plumbbob handoff --driver`'s
-   next-up line, which points back at the step in flight ("Next Up: Back to step N"). Park
-   is a driver turn (the [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)):
-   the verb's line plus that one pointer are the whole turn, and the pointer is handoff's to
-   render, never yours to compose from the dashboard. The capture is a one-beat
-   interruption; the step keeps its focus.
+3. **Relay the block, then get back to the step.** `plumbbob park` prints its whole
+   ending: `**Parked**: <text> (tag)`, a blank line, and the pointer back at the step in
+   flight (`**Next Up**: Back to Step N`). Relay that output verbatim and run no second
+   command. Park is a driver turn (the [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)):
+   the capture plus that one pointer are the whole turn, and both are the CLI's to render,
+   never yours to compose from the dashboard. The capture is a one-beat interruption; the
+   step keeps its focus.
 
 ## The one hard contract
 

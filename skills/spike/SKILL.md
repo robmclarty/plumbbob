@@ -4,21 +4,21 @@ description: "Human-triggered driver for `plumbbob spike`: open a throwaway work
 argument-hint: "<slug> | report <slug> | done"
 disable-model-invocation: true
 model: haiku
-allowed-tools: Bash(plumbbob status:*), Bash(plumbbob spike:*), Bash(plumbbob handoff:*)
+allowed-tools: Bash(plumbbob status:*), Bash(plumbbob spike:*)
 ---
 
 # PlumbBob: spike an experiment (driver)
 
 Current session state (injected when this skill runs): !`plumbbob status 2>/dev/null || echo "plumbbob CLI not on PATH in this session. Marketplace install: confirm the plugin is enabled in /plugin, then /reload-plugins. Skills-dir/global install: npm i -g plumbbob && plumbbob init."`
 
-This is a **driver skill**: a chat-side trigger for the mechanical `plumbbob spike` verb, so the whole workflow runs from the agent window instead of a terminal. It is `disable-model-invocation: true`: only the human fires it. It carries **no Edit and no Write tool**; it shells the verb, relays its output verbatim (including any refusal), and on a successful transition relays `plumbbob handoff`'s next-up pointer for the turn. The CLI is the source of truth: never retry a refused transition, and never edit a file to work around one.
+This is a **driver skill**: a chat-side trigger for the mechanical `plumbbob spike` verb, so the whole workflow runs from the agent window instead of a terminal. It is `disable-model-invocation: true`: only the human fires it. It carries **no Edit and no Write tool**; it shells the verb and relays its output verbatim, refusal included. A successful transition prints its whole ending, pointer and all, so one command is the whole turn. The CLI is the source of truth: never retry a refused transition, and never edit a file to work around one.
 
 ## What it does
 
 1. Read the spike target from the way you were invoked: a slug to open one (for example `/plumbbob:spike redis-cache`), `report <slug>` to scaffold a report without worktrees (`/plumbbob:spike report auth-store`), or the literal `done` to tear the current spike down (`/plumbbob:spike done`). If none is present, ask which and run nothing.
 2. Run `plumbbob spike "<slug>"`, `plumbbob spike report "<slug>"`, or `plumbbob spike done` via Bash.
-3. Report the verb's output verbatim: the worktree it created or removed, the spike report it scaffolded, or any refusal. When the verb names a `spike-NN-<slug>.md` report, point the human at it; when `spike done` nudges that a verdict is unrecorded, relay that nudge verbatim.
-4. On a successful transition, relay `plumbbob handoff --driver`'s next-up line as the turn's pointer (the driver tier of the [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)): handoff renders it, aimed back at the step still in flight while a spike is live and forward from the boundary once `spike done` closes it. A refusal is not a transition; relay it and stop, with no pointer.
+3. Report the verb's output verbatim: the worktree it created or removed, the spike report it scaffolded, or any refusal. When the verb names a `spike-NN-<slug>.md` report, point the human at it; when `spike done` nudges that a verdict is unrecorded, that nudge is already inside the block, so relay it there rather than restating it.
+4. A successful transition prints its own ending (the driver tier of the [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)): the lead line, any nudge, and the pointer, which names closing the spike while one is live and points forward from the boundary once `spike done` closes it. Relay that block whole and run no second command. A refusal is not a transition; it carries no pointer, so relay it and stop.
 
 ## The spike report ([D70 (spike-reports)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d70))
 

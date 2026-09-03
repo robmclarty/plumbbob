@@ -33,6 +33,7 @@
 import { readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { commitsSince, diffNumstat, diffPatch, findRepoRoot } from '../lib/git.ts'
+import { blocks } from '../lib/notice.ts'
 import { isArtifactPath, parseStepSeam } from '../lib/intent.ts'
 import {
   checkpointsPath,
@@ -90,7 +91,7 @@ const PLAN_COMMIT_MARKER = '^plumbbob plan$'
 // renders as space. The blank line above it matters: `---` flush under a text
 // line turns that line into a heading (the underline form), not a rule. The
 // step pause needs none: handoff renders that whole turn, Summary included.
-const SEAM_RULE = ['', '---', '']
+const SEAM_RULE = '\n---'
 
 /**
  * Print the resolved build's turn ending; return the exit code.
@@ -131,7 +132,7 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     // renders; the pointer and the moves both aim at the first undone step. A
     // decision turn still ends on the model's recommendation when it wrote one.
     const first = steps.find((s) => !s.done)
-    const plan = [...SEAM_RULE, nextUpLine(first, steps.length, where), '', planCallBlock(first)]
+    const plan = [SEAM_RULE, nextUpLine(first, steps.length, where), planCallBlock(first)]
     return emit(withRecommendation(plan, parseRecommendation(detail)))
   }
 
@@ -155,10 +156,7 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     // (a step exit: a revert, an abandon, a spike closed at the boundary) the
     // ordinary forward pointer stands, and no Verdict rides above it: nothing
     // landed to measure.
-    const driver = inSpike(root, slug)
-      ? spikeNextUpLine(inFlight)
-      : driverNextUpLine(steps, inFlight, steps.length)
-    return emit([driver ?? nextUpLine(nextUp, steps.length, where)])
+    return emit([driverPointer(root, slug)])
   }
 
   if (current === null) {
@@ -166,9 +164,116 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     return emit([nextUpLine(nextUp, steps.length, where)])
   }
 
-  // Assemble the rows once and let the fence and the fold read the same set:
-  // the model's attested rows, with the check and seam rows replaced by the
-  // CLI's own measurements where one exists (measured beats attested).
+  if (inFlight === null) {
+    // The boundary: the orientation-tier ending, the state word and the forward
+    // pointer, no decision pending and so no Your Call. The same two parts the
+    // checkpoint printed for itself, from the same call.
+    const landed = boundaryEnding(root, slug, current)
+    return emit([landed.verdict, landed.pointer])
+  }
+
+  // The pause: the whole turn as one contiguous block, each part a labeled line
+  // with one blank line between, and the only fence the readout's own (plus the
+  // inline diff when the change is small enough). It opens on the Summary the
+  // model wrote into the detail file, so there is no seam left to rule off.
+  const { rows, work, summary, checkGreen } = measured(root, slug, intent, detail, current)
+  const { ladder, worst } = foldVerdict(rows, accruedStats(root, slug, current))
+  const verdict = verdictLine(ladder, worst)
+  const counts = countDiff(work)
+  const changed = counts.added + counts.removed
+  const inline = changed > 0 && changed <= INLINE_DIFF_MAX
+  const readout = recapLines(rows, {
+    diff: diffRowValue(counts, inline),
+    spent: spentRowValue(spentInputs(root, slug, current, summary)),
+    constraints: parseConstraintCount(intent),
+  })
+  const parts: string[] = [summaryBlock(parseSummary(detail), relative(root, detailPath(root)))]
+  if (readout.length > 0) {
+    parts.push([readoutLabel(current, steps), '', ...fence('text', readout)].join('\n'))
+  }
+  if (inline) {
+    const patch = diffPatch(
+      root,
+      work.map((e) => e.path),
+    )
+    if (patch.length > 0) {
+      parts.push(fence('diff', patch.split('\n')).join('\n'))
+    }
+  }
+  parts.push(verdict, nextUpLine(nextUp, steps.length, where), yourCallBlock(current, checkGreen))
+  return emit(withRecommendation(parts, parseRecommendation(detail)))
+}
+
+/**
+ * The two CLI-rendered parts of a boundary ending: the Verdict folded from
+ * everything measurable right now, and the pointer at the step to come.
+ *
+ * `step` is the step that just landed, or null at a plan commit, where nothing
+ * was measured and the Verdict vanishes. A transition verb prints these beneath
+ * its own lead line, so a boundary reads identically whether `checkpoint`
+ * emitted it or a later `handoff` did; the paths a stray advisory named are the
+ * one part that does not survive, and the commit holds those.
+ */
+export function boundaryEnding(root: string, slug: string | null, step: number | null): BoundaryEnding {
+  const intent = readOr(intentPath(root, slug))
+  const steps = parseSteps(intent)
+  const nextUp = steps.find((s) => !s.done && s.n !== step)
+  return {
+    verdict: step === null ? null : landedVerdict(root, slug, intent, step),
+    pointer: nextUpLine(nextUp, steps.length, relative(root, intentPath(root, slug))),
+  }
+}
+
+/** A boundary ending's CLI-rendered parts: the Verdict, where one was measured, and the pointer. */
+export type BoundaryEnding = { readonly verdict: string | null; readonly pointer: string }
+
+/**
+ * The driver turn's pointer: back at the step still open, at the spike raised
+ * over it, or forward from the boundary when the step has already exited.
+ *
+ * A park or a spike interrupts a step without ending it, so nothing landed and
+ * no Verdict rides above this line.
+ */
+export function driverPointer(root: string, slug: string | null): string {
+  const intent = readOr(intentPath(root, slug))
+  const steps = parseSteps(intent)
+  const inFlight = readMarker(stepPath(root, slug))
+  const driver = inSpike(root, slug) ? spikeNextUpLine(inFlight) : driverNextUpLine(steps, inFlight, steps.length)
+  // The forward fallback skips the step just landed as well as the one open, so
+  // a checkpoint whose `[x]` flip failed still points on rather than back at
+  // work already recorded.
+  const landed = parseLastCheckpoint(readOr(checkpointsPath(root, slug)))?.n ?? null
+  const forward = steps.find((s) => !s.done && s.n !== (inFlight ?? landed))
+  return driver ?? nextUpLine(forward, steps.length, relative(root, intentPath(root, slug)))
+}
+
+/**
+ * The Verdict for a step that just landed: the assembled rows folded worst-of
+ * with the step's accrued stats, rendered as the line.
+ */
+function landedVerdict(root: string, slug: string | null, intent: string, step: number): string {
+  const { rows } = measured(root, slug, intent, readOr(detailPath(root)), step)
+  const { ladder, worst } = foldVerdict(rows, accruedStats(root, slug, step))
+  return verdictLine(ladder, worst)
+}
+
+/** The measured inputs a Verdict and a readout are both built from. */
+type Measured = {
+  readonly rows: Partial<Record<RecapRowName, RecapRow>>
+  readonly work: ReadonlyArray<{ readonly path: string; readonly added: number; readonly removed: number }>
+  readonly summary: CheckSummary | null
+  readonly checkGreen: boolean
+}
+
+/**
+ * Assemble the rows once, so the fence and the fold read the same set: the
+ * model's attested rows, with the check and seam rows replaced by the CLI's own
+ * measurements where one exists (measured beats attested).
+ *
+ * `checkGreen` reports the *measured* check alone. A move offered on an
+ * attested green would be a move the gate then refuses.
+ */
+function measured(root: string, slug: string | null, intent: string, detail: string, step: number): Measured {
   const summary = readCheckSummary(root)
   const measuredCheck = summary === null ? null : summaryCheckRow(summary)
   const work = diffNumstat(root).filter((e) => !isArtifactPath(e.path))
@@ -178,61 +283,22 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   }
   const measuredSeam = seamRowFromDiff(
     work.map((e) => e.path),
-    seamTokens(root, slug, intent, current),
+    seamTokens(root, slug, intent, step),
   )
   if (measuredSeam !== null) {
     rows.seam = measuredSeam
   }
-  const { ladder, worst } = foldVerdict(rows, accruedStats(root, slug, current))
-  const verdict = verdictLine(ladder, worst)
-
-  if (inFlight === null) {
-    // The boundary: the orientation-tier ending, the state word and the forward
-    // pointer, no decision pending and so no Your Call.
-    return emit([verdict, '', nextUpLine(nextUp, steps.length, where)])
-  }
-
-  // The pause: the whole turn as one contiguous block, each part a labeled line
-  // with one blank line between, and the only fence the readout's own (plus the
-  // inline diff when the change is small enough). It opens on the Summary the
-  // model wrote into the detail file, so there is no seam left to rule off.
-  const counts = countDiff(work)
-  const changed = counts.added + counts.removed
-  const inline = changed > 0 && changed <= INLINE_DIFF_MAX
-  const readout = recapLines(rows, {
-    diff: diffRowValue(counts, inline),
-    spent: spentRowValue(spentInputs(root, slug, current, summary)),
-    constraints: parseConstraintCount(intent),
-  })
-  const lines: string[] = []
-  const opening = summaryBlock(parseSummary(detail), relative(root, detailPath(root)))
-  if (opening.length > 0) {
-    lines.push(...opening, '')
-  }
-  if (readout.length > 0) {
-    lines.push(readoutLabel(current, steps), '', ...fence('text', readout), '')
-  }
-  if (inline) {
-    const patch = diffPatch(
-      root,
-      work.map((e) => e.path),
-    )
-    if (patch.length > 0) {
-      lines.push(...fence('diff', patch.split('\n')), '')
-    }
-  }
-  lines.push(verdict, '', nextUpLine(nextUp, steps.length, where), '', yourCallBlock(current, measuredCheck?.verdict === 'true'))
-  return emit(withRecommendation(lines, parseRecommendation(detail)))
+  return { rows, work, summary, checkGreen: measuredCheck?.verdict === 'true' }
 }
 
 /**
  * Write an ending to stdout and return handoff's exit code.
  *
- * Every ending closes with a trailing blank line: it is the turn's last text,
- * and one flush against the next output cannot read as an ending.
+ * The parts are stacked by the same assembly a transition verb prints its own
+ * ending through, so the block reads the same whichever command emitted it.
  */
-function emit(lines: ReadonlyArray<string>): number {
-  process.stdout.write(`${lines.join('\n')}\n\n`)
+function emit(parts: ReadonlyArray<string | null>): number {
+  process.stdout.write(blocks(parts))
   return 0
 }
 
@@ -259,15 +325,15 @@ function verdictLine(ladder: Ladder, worst: string | null): string {
  * when the detail file carries no lead: a Summary that says nothing vanishes
  * rather than labeling nothing.
  */
-function summaryBlock(summary: Summary | null, where: string): string[] {
+function summaryBlock(summary: Summary | null, where: string): string {
   if (summary === null) {
-    return []
+    return ''
   }
   const lead = `**Summary**: ${summary.lead} (details: \`${where}\`)`
   if (summary.highlights.length === 0) {
-    return [lead]
+    return lead
   }
-  return [lead, '', ...summary.highlights.map((h) => `${h.n}. ${h.title}`)]
+  return [lead, '', ...summary.highlights.map((h) => `${h.n}. ${h.title}`)].join('\n')
 }
 
 /**
@@ -345,19 +411,20 @@ const RECOMMENDATION_LABEL = '**Recommendation**: '
  * label is the CLI's: it announces what the last text is before the eye
  * reads it, and a label the model typed would be one more line to drift.
  */
-function withRecommendation(lines: ReadonlyArray<string>, recommendation: string | null): string[] {
-  return recommendation === null ? [...lines] : [...lines, '', `${RECOMMENDATION_LABEL}${recommendation}`]
+function withRecommendation(parts: ReadonlyArray<string>, recommendation: string | null): string[] {
+  return recommendation === null ? [...parts] : [...parts, `${RECOMMENDATION_LABEL}${recommendation}`]
 }
 
 /**
- * The step's accrued stats (red checks, reverts) plus commits that landed
- * since the last ledger entry outside plumbbob's checkpoints: the advisory
- * inputs to the Verdict's third fold rung.
+ * The step's accrued stats (seam strays, red checks, reverts) plus commits that
+ * landed since the last ledger entry outside plumbbob's checkpoints: the
+ * advisory inputs to the Verdict's third fold rung.
  */
 function accruedStats(root: string, slug: string | null, step: number): AccruedStats {
   const stats = readStats(root, slug)[String(step)] ?? {}
   const anchor = lastLedgerSha(readOr(checkpointsPath(root, slug)))
   return {
+    driftWarnings: stats.driftWarnings ?? 0,
     redChecks: stats.redChecks ?? 0,
     reverts: stats.reverts ?? 0,
     outOfBand: anchor === null ? 0 : commitsSince(root, anchor, PLAN_COMMIT_MARKER),
@@ -393,7 +460,7 @@ function readCheckSummary(root: string): CheckSummary | null {
 function yourCallBlock(step: number, checkGreen: boolean): string {
   const moves: string[] = []
   if (checkGreen) {
-    moves.push(callLine('`looks good`', `I checkpoint step ${step}; back to the boundary`))
+    moves.push(callLine('`looks good`', `I checkpoint Step ${step}; back to the boundary`))
   }
   moves.push(callLine('`expand`, or any question', 'I show more of what is there; nothing changes'))
   moves.push(callLine('anything that reads as direction', 'I take it as what to change; nothing lands until you approve'))
@@ -413,11 +480,11 @@ function callLine(move: string, outcome: string): string {
 /**
  * The plan pause's Your Call block: the same shape with the moves that apply
  * there. Nothing is recorded yet, so `revert` has nothing to wind back to and
- * vanishes; `looks good` names the step the plan starts at, which is step 1 at
+ * vanishes; `looks good` names the step the plan starts at, which is Step 1 at
  * the plan pause and the first undone step after a mid-build refine.
  */
 function planCallBlock(first: Step | undefined): string {
-  const starts = first === undefined ? '' : `; /plumbbob:build starts step ${first.n}`
+  const starts = first === undefined ? '' : `; /plumbbob:build starts Step ${first.n}`
   return [
     '**Your Call**:',
     '',
@@ -442,7 +509,7 @@ function driverNextUpLine(steps: ReadonlyArray<Step>, inFlight: number | null, t
   // The progress count rides every tier's pointer, but only where the plan
   // actually holds the step: "step 9 of 3" would be worse than no count.
   const progress = open === undefined ? '' : ` of ${total}`
-  return `**Next Up**: Back to step ${inFlight}${progress}${title}`
+  return `**Next Up**: Back to Step ${inFlight}${progress}${title}`
 }
 
 /**
@@ -455,7 +522,7 @@ function driverNextUpLine(steps: ReadonlyArray<Step>, inFlight: number | null, t
  * opened at the boundary) the clause vanishes and the move stands alone.
  */
 function spikeNextUpLine(inFlight: number | null): string {
-  const back = inFlight === null ? '' : `, then back to step ${inFlight}`
+  const back = inFlight === null ? '' : `, then back to Step ${inFlight}`
   return `**Next Up**: Close the spike - /plumbbob:spike done${back}`
 }
 

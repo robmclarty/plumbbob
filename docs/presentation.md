@@ -80,7 +80,7 @@ spent        88 min · 3 turns · 63s gate · green first run
 
 **Your Call**:
 
-- `looks good` → I checkpoint step 2; back to the boundary
+- `looks good` → I checkpoint Step 2; back to the boundary
 - `expand`, or any question → I show more of what is there; nothing changes
 - anything that reads as direction → I take it as what to change; nothing lands until you approve
 - `revert` → I wind the work back to the last checkpoint
@@ -346,12 +346,21 @@ can never disagree. The fold, from worst down:
 2. Any row failing (`red`, `not met`, `bent`, `strayed`) →
    `○ Out of plumb`, named `<row> <verdict>`, first failing row in row order.
 3. All rows true but advisories accrued → `◐ A hair off`, naming the first
-   advisory in a fixed order: red check runs before green (`2 red runs before
-   green`), reverts on this step (`1 revert on this step`), commits outside
-   the ledger (`3 commits outside the ledger`).
+   advisory in a fixed order: a staged path outside the seam (`staged outside
+   the seam`), red check runs before green (`2 red runs before green`),
+   reverts on this step (`1 revert on this step`), commits outside the ledger
+   (`3 commits outside the ledger`).
 4. Otherwise → `● Plumb`.
 
-That third rung counts only commits that are not plumbbob's own. A
+The stray leads that order because it is the one advisory that asks a
+question of the plan rather than of the work: the seam it reached past is a
+line the human drew, and the move it invites is `/plumbbob:step`. It is also the
+one rung that carries no count. The stat behind it bumps once per checkpoint
+rather than once per path, so a number there would size the wrong thing; the
+paths themselves ride the advisory the checkpoint prints beside the Verdict,
+and after that the commit holds them.
+
+That last rung counts only commits that are not plumbbob's own. A
 `chore(plan)` harvest lands between nearly every step, and an advisory that
 trips on routine housekeeping stops meaning anything within three steps, so
 handoff excludes commits carrying the `plumbbob plan` body marker from the
@@ -373,9 +382,9 @@ full:
 
 **Next Up**: Step 3 of 3 - Make the limit configurable via env (details: `.plumbbob/builds/rate-limit/intent.md:41`)
 
-**Next Up**: Back to step 2 of 3 - Wire the limiter into POST /login
+**Next Up**: Back to Step 2 of 3 - Wire the limiter into POST /login
 
-**Next Up**: Close the spike - /plumbbob:spike done, then back to step 2
+**Next Up**: Close the spike - /plumbbob:spike done, then back to Step 2
 
 **Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish
 
@@ -385,7 +394,7 @@ full:
 The progress count rides Next Up in every tier, because Next Up is the one
 line present at the pause, at the boundary, and on a driver turn. It is
 dropped only where it would lie: a driver pointer back at a step the plan no
-longer holds says `Back to step 9` and no count, and an open spike outranks
+longer holds says `Back to Step 9` and no count, and an open spike outranks
 the step it interrupted, so the move named is closing it and the step to come
 back to rides as a trailing clause. The last shape is `plumbbob finish`'s own:
 finish clears the session the pointer would be read from, so it prints the
@@ -406,7 +415,7 @@ and states what happens next, exactly:
 ```text
 **Your Call**:
 
-- `looks good` → I checkpoint step 2; back to the boundary
+- `looks good` → I checkpoint Step 2; back to the boundary
 - `expand`, or any question → I show more of what is there; nothing changes
 - anything that reads as direction → I take it as what to change; nothing lands until you approve
 - `revert` → I wind the work back to the last checkpoint
@@ -442,7 +451,7 @@ At the plan pause the block keeps the shape with the moves that apply there
 ```text
 **Your Call**:
 
-- `looks good` → I mark the plan decided; /plumbbob:build starts step 1
+- `looks good` → I mark the plan decided; /plumbbob:build starts Step 1
 - `expand`, or any question → I show more of what is there; nothing changes
 - anything that reads as direction → I take it as what to sharpen; the plan is cheap to change now
 ```
@@ -490,7 +499,7 @@ plan": each state asks a different move of the human.
 | state | it means | your move |
 | --- | --- | --- |
 | `● Plumb` | every measure true; the diff matches the plan and the gate agrees | read the diff; approving is safe |
-| `◐ A hair off` | green, with advisories accrued on the way (red runs, reverts, out-of-band commits) | read the named advisory, then judge |
+| `◐ A hair off` | green, with advisories accrued on the way (a staged path outside the seam, red runs, reverts, out-of-band commits) | read the named advisory, then judge |
 | `○ Out of plumb` | a measure failing now: red check, a missed done-when, a bent decision or constraint, a strayed seam | send fixes; truing the diff fixes it |
 | `✗ Not standing` | truing the diff will not fix it; a readout row says `drift` | repair the plan (`/plumbbob:refine`), or revert |
 
@@ -502,8 +511,8 @@ scales down with the turn:
 | tier | turns | the ending renders |
 | --- | --- | --- |
 | decision | the build/verify pause, the plan pause, an auto halt | the whole block: the Summary and its highlights, the Readout, the inline diff when small, the Verdict, Next Up, Your Call, and the recommendation. The plan pause judges no diff, so it renders the pointer, the moves, and the recommendation alone |
-| orientation | status, the checkpoint boundary, finish | the verb's own output, then the Verdict and Next Up; no Your Call block, no recommendation |
-| driver | park, spike, use, recover, revert, agent runs | the CLI's line verbatim, then Next Up; nothing else |
+| orientation | status, the checkpoint boundary, finish | the transition's lead line, the Verdict, any advisories, and Next Up; no Your Call block, no recommendation |
+| driver | park, spike, use, recover, revert, agent runs | the transition's lead line, any advisories, and Next Up; no Verdict, since nothing landed |
 
 A boundary turn, whole:
 
@@ -520,13 +529,24 @@ A driver turn, whole (a mid-step park):
 ```text
 **Parked**: should /password-reset get the same throttle? (tangent)
 
-**Next Up**: Back to step 2 of 3 - Wire the limiter into POST /login
+**Next Up**: Back to Step 2 of 3 - Wire the limiter into POST /login
 ```
+
+**One command emits each of those, and the verb that made the transition is
+that command.** `checkpoint` prints its own Verdict and its own pointer,
+`park` prints the pointer back at the step it interrupted, and a skill relays
+the block whole. handoff still renders both parts and still stands alone for
+a turn where no verb ran (`status`, the pause, a re-read of the boundary),
+but a transition no longer needs a second call to finish its sentence. The
+boundary that taught this ran two commands and, between them, two grammars:
+the advisory came out prefixed and butted against the lead line while the
+Verdict beside it read Plumb, because the stray was a fact only the
+checkpoint knew and the fold never saw it. A block one command emits cannot
+be relayed out of order, and it cannot disagree with itself.
 
 The same positional rule governs every tier: the CLI's lines are relayed
 whole, and the model writes nothing around them. A boundary turn is the
-checkpoint's line and the card; a driver turn is the verb's line and the
-pointer.
+checkpoint's block; a driver turn is the verb's.
 
 ### The one-liners
 
@@ -544,9 +564,9 @@ the reference the shape was read from:
 checkride green in 3.6s ✔ (10 checks, without test, slowest: spell in 1.8s)
 ```
 
-A line states its fact and never the move, and the stream it is written to
-picks its head. An ending's own lead line goes to stdout, where it wears a
-bold label like every other part of the ending:
+A line states its fact and never the move, and where it sits picks its head.
+An ending goes to stdout as one block, and its lead line wears a bold label
+like every other part of it:
 
 ```text
 **Checkpoint**: Step 15 complete (2d917cde7)
@@ -558,18 +578,31 @@ The label names the transition: the artifact that landed (`Checkpoint`,
 `Session`, `Active build`). The fact reads on from the label instead of
 repeating it, which is why `checkpointed` is no longer a word the CLI says;
 the noun is the artifact. A capture's tag rides the tail, so the line printed
-and the line written to the ledger read the same.
+and the line written to the ledger read the same. `Step N` is a proper noun
+throughout an ending, in the lead line and inside the sentences under it:
+`**Abandoned**: Step 16`, `Staged paths reach outside Step 16's seam`.
 
-An advisory or a refusal goes to stderr, and there the head is the prefix:
+An advisory belongs to the ending it qualifies, so it rides stdout with the
+rest of the block, unprefixed and opening on a capital letter, as the
+sentence it is:
+
+```text
+Staged paths reach outside Step 16's seam ⚠ (test/integration/spike.test.ts)
+  → the checkpoint captures them, so revise the plan with /plumbbob:step
+```
+
+A refusal is not an ending. Nothing landed, there is no block for it to join,
+and it goes to stderr, where the head is the prefix:
 
 ```text
 plumbbob: <subject> <state> (<detail>)
 ```
 
 The one colon is spent on that prefix, which earns it by naming the speaker:
-those are the lines that land beside checkride's output and git's in one
-terminal result, and scrollback is grepped for that word. The split falls
-exactly on the stream, so nothing has to judge which head a line wants.
+a refusal is the line that lands beside checkride's output and git's in one
+terminal result, and scrollback is grepped for that word. An ending has one
+speaker already, so naming it again inside the block is the machine noise
+this register exists to kill.
 
 The detail is one trailing parenthetical, comma-separated, and it degrades by
 count the way a readout row does: a list that overruns 80 columns drops from
@@ -577,31 +610,41 @@ the tail and says how many it left (`and 2 others`), keeping two named so the
 count sizes something the reader can see. One or two items never degrade,
 because a notice wraps where a fence row cannot.
 
-No pointer rides a notice. Every ending closes on the card's Next Up line, so
-a verb that carried its own tail (`Back at the boundary.`, `` `status` to
-orient. ``) was a second seam in a turn that has one.
+No pointer rides a single line. Every ending closes on its Next Up line
+instead, so a verb that carried its own tail (`Back at the boundary.`,
+`` `status` to orient. ``) was a second seam in a turn that has one. The one
+exception is `start`, which ends on its remedy line: the plan skill owns the
+turn that follows, and there is no step yet to aim at.
 
-An advisory is one line, printed after the primary line it qualifies, one per
-line, the warning glyph trailing the fact:
+An advisory is one line, one per line, the warning glyph trailing the fact,
+and beneath it a single indented `→` line carrying the remedy. A refusal
+spends that same line on what unblocks it. The `heads-up` and `note` labels
+are retired, because the glyph table already gives `⚠` to a warning and `→`
+to what happens next.
+
+The order of an ending is fixed: the lead line, the Verdict where one was
+measured, the advisories, and the pointer, one blank line between each. So a
+relay never has to work out which line leads, and a stray a checkpoint alone
+can see lands under the Verdict it just earned a rung on:
 
 ```text
-plumbbob: this repo gitignores .plumbbob/ ⚠ (the build folder cannot ride the branch)
-  → unignore .plumbbob/builds/ before the first checkpoint
+**Checkpoint**: Step 16 complete (f2b83e17c)
+
+**Verdict**: ◐ A hair off (staged outside the seam)
+
+Staged paths reach outside Step 16's seam ⚠ (test/integration/spike.test.ts, test/integration/use.test.ts)
+  → the checkpoint captures them, so revise the plan with /plumbbob:step if that is real scope drift
+
+**Next Up**: Step 17 of 18 - feat(ending): every transition prints its whole ending (model: **Opus**, details: `.plumbbob/builds/presentation/intent.md:512`)
 ```
 
-That `→` line is the remedy, indented and singular, and a refusal spends the
-same line on what unblocks it. The `heads-up` and `note` labels are retired: a
-chained label is the machine noise this register exists to kill, and the glyph
-table already gives `⚠` to a warning and `→` to what happens next. The order
-of an ending is fixed, labeled line, then advisories, then a blank line, then
-the card, so a relay never has to work out which line leads.
-
 Every one of these lines is rendered by one formatter in `src/lib/notice.ts`:
-`transition()` for the labeled head, `notice()` for the prefixed one, and a
-single assembly under both for the fact, the detail list, and the remedy. A
-verb composes those parts and never a string, so moving the shape is one edit
-here and one there rather than a sweep across the verbs, and the tests assert
-through the same renderer.
+`transition()` for the labeled head, `advisory()` for the bare one,
+`notice()` for the prefixed one, a single assembly under all three for the
+fact, the detail list, and the remedy, and `ending()` for the order they
+stack in. A verb composes those parts and never a string, so moving the shape
+is one edit here and one there rather than a sweep across the verbs, and the
+tests assert through the same renderer.
 
 ## The glyph vocabulary
 

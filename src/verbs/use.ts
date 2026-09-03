@@ -12,7 +12,8 @@
 import { existsSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { activeBuild, hasSession, intentPath, listBuilds, setActiveBuild, stepPath } from '../lib/sidecar.ts'
-import { notice, transition } from '../lib/notice.ts'
+import { advisory, ending, notice, transition } from '../lib/notice.ts'
+import { driverPointer } from './handoff.ts'
 
 /**
  * Switch the active-build cursor to the named build.
@@ -46,24 +47,28 @@ export function use(cwd: string, args: ReadonlyArray<string>): number {
 
   setActiveBuild(root, target)
 
-  // The primary line first, then the advisory it qualifies: one fixed order for
-  // every ending, so the relay never has to guess which line leads.
+  // The lead line, then the advisory it qualifies, then the pointer into the
+  // build just switched to: one fixed order for every ending, so the relay never
+  // has to guess which line leads.
   process.stdout.write(
-    transition({
-      label: 'Active build',
-      fact: target,
-      detail: existsSync(stepPath(root, target)) ? ['a step is in flight'] : [],
+    ending({
+      lead: transition({
+        label: 'Active build',
+        fact: target,
+        detail: existsSync(stepPath(root, target)) ? ['a step is in flight'] : [],
+      }),
+      advisories:
+        left === null
+          ? []
+          : [
+              advisory({
+                fact: `build "${left}" has a step in flight`,
+                detail: ['its in-flight state is preserved'],
+                remedy: `plumbbob use ${left} to pick it back up`,
+              }),
+            ],
+      pointer: driverPointer(root, target),
     }),
   )
-  if (left !== null) {
-    process.stderr.write(
-      notice({
-        fact: `build "${left}" has a step in flight`,
-        advisory: true,
-        detail: ['its in-flight state is preserved'],
-        remedy: `plumbbob use ${left} to pick it back up`,
-      }),
-    )
-  }
   return 0
 }

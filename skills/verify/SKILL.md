@@ -173,18 +173,17 @@ this skill verifies it the same way: **it reads the diff, not the author**
    overriding the title-derived default for this one commit; unpresented, the CLI's
    deterministic subject stands.
 7. **Hand off with the next model** *(once the checkpoint lands)*. `plumbbob checkpoint`
-   prints `**Checkpoint**: Step N complete (<sha>)` and returns to DESIGN; then
-   run `plumbbob handoff` and relay its card. The turn is those two outputs and nothing
-   written around them. With the step gone from in-flight the card drops to its
-   orientation-tier form (the Verdict and Next Up only; no Your Call block, no
-   recommendation)
-   and points at the **next undone step**, carrying that step's `- model:` recommendation
-   (the plan's smallest-model-that-fits call) so the human knows which `/model` to select
-   before running `/plumbbob:build` again. This matters most across a context boundary: a fresh
-   window inherits the *session's* model, not the plan's suggestion, so this line is what
-   carries the recommendation over. The CLI owns the card, so it can't drift from what
-   `plumbbob status` reports; no `- model:` line means any model will do. Guidance, never a
-   gate.
+   returns to DESIGN and prints the whole boundary ending itself: `**Checkpoint**: Step N
+   complete (<sha>)`, the Verdict the step earned, any advisory (a staged path outside the
+   seam is the common one), and Next Up. Relay that block whole, run no second command,
+   and write nothing around it. It is the orientation tier (no Your Call block, no
+   recommendation), and it points at the **next undone step**, carrying that step's
+   `- model:` recommendation (the plan's smallest-model-that-fits call) so the human knows
+   which `/model` to select before running `/plumbbob:build` again. This matters most across a
+   context boundary: a fresh window inherits the *session's* model, not the plan's
+   suggestion, so this line is what carries the recommendation over. The CLI owns the
+   block, so it can't drift from what `plumbbob status` reports; no `- model:` line means
+   any model will do. Guidance, never a gate.
 
 ## The latch makes the pause real
 
@@ -222,8 +221,8 @@ instead.**
   handoff`, paste its block, **end the turn there**, and let the human's next message
   re-tick it. Never route around it with a
   raw `git commit`; the latch guards the record, not the work.
-- **Close with the next model.** After the checkpoint lands, run `plumbbob handoff` and
-  relay its card with nothing written around it; it cites the completed step and the next
-  undone step, and surfaces that next step's `- model:` recommendation when it has one,
-  which is what a fresh context window needs to pick the right `/model`. Guidance, never a
-  gate.
+- **Close with the next model.** When the checkpoint lands it prints the whole boundary
+  ending; relay it with nothing written around it and no second command. It cites the
+  completed step and the next undone step, and surfaces that next step's `- model:`
+  recommendation when it has one, which is what a fresh context window needs to pick the
+  right `/model`. Guidance, never a gate.

@@ -24,7 +24,8 @@ import { findRepoRoot, resetHard, untrackedPaths } from '../lib/git.ts'
 import { bumpStepStat, checkpointsPath, hasSession, resolveBuild, seamPath, sidecarDir, stepPath } from '../lib/sidecar.ts'
 import { isArtifactPath, matchesSeam } from '../lib/intent.ts'
 import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
-import { notice, transition } from '../lib/notice.ts'
+import { ending, notice, transition } from '../lib/notice.ts'
+import { driverPointer } from './handoff.ts'
 
 /**
  * Rewind to a recorded checkpoint and return the build to the boundary.
@@ -90,8 +91,17 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
   // Best-effort, like every build-log write.
   syncBuildLogState(root, slug, AT_BOUNDARY)
 
+  // A step exit: nothing landed, so no Verdict rides above the pointer, and with
+  // the markers cleared it aims forward from the boundary.
   process.stdout.write(
-    transition({ label: 'Reverted', fact: `to ${sha.slice(0, 9)}`, detail: ['park lines and intent edits preserved'] }),
+    ending({
+      lead: transition({
+        label: 'Reverted',
+        fact: `to ${sha.slice(0, 9)}`,
+        detail: ['park lines and intent edits preserved'],
+      }),
+      pointer: driverPointer(root, slug),
+    }),
   )
   return 0
 }

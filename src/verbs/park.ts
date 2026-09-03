@@ -3,14 +3,17 @@
 // build-log.md (the build's human-facing ledger). Capture stays dumb by design:
 // a grep-readable append, no markdown parsing, no model turn (wording the line
 // well is /plumbbob:park's job); triage waits for a step boundary, via harvest.
+// The capture prints its whole ending, the line and the pointer back at the
+// step it interrupted, so the relay is one command.
 // Capture is not a state transition, so it runs in any context (terminal or
 // in-session).
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
-import { hasSession, buildLogPath } from '../lib/sidecar.ts'
+import { activeBuild, hasSession, buildLogPath } from '../lib/sidecar.ts'
 import { appendToSection } from '../lib/buildlog.ts'
-import { notice, transition } from '../lib/notice.ts'
+import { ending, notice, transition } from '../lib/notice.ts'
+import { driverPointer } from './handoff.ts'
 
 /**
  * Append the given text as one unchecked `- [ ]` line to the build-log's Park list.
@@ -46,6 +49,10 @@ export function park(cwd: string, args: ReadonlyArray<string>): number {
     return 1
   }
   writeFileSync(path, updated)
-  process.stdout.write(transition({ label: 'Parked', fact: text }))
+  // A park interrupts a step without ending it, so the ending is the capture
+  // and the pointer back at what was interrupted.
+  process.stdout.write(
+    ending({ lead: transition({ label: 'Parked', fact: text }), pointer: driverPointer(root, activeBuild(root)) }),
+  )
   return 0
 }

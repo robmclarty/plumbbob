@@ -55,14 +55,14 @@ record.
    always reads stdin. Under an agent harness that stdin is a socket, and `--body` now
    refuses rather than blocking on one; the refusal names this exact heredoc form. Omit
    `--body` entirely and the commit carries the `plumbbob finish` marker subject only.
-3. **Point at the next goal.** Relay both of `plumbbob finish`'s lines verbatim, the
-   blank line between them included: its own line, which names the branch the tracked
-   folder now rides into the PR, then `**Next Up**: Nothing planned - /plumbbob:plan`.
-   That is the orientation tier's close (the
+3. **Point at the next goal.** Relay `plumbbob finish`'s output verbatim, blank lines
+   included: its lead line, which names the branch the tracked folder now rides into the
+   PR, any advisory beneath it, and `**Next Up**: Nothing planned - /plumbbob:plan`. That
+   is the orientation tier's close (the
    [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)):
-   the verb's own line, then the forward pointer. `finish` prints that pointer itself,
-   the one ending `plumbbob handoff` cannot render, because finish has just cleared the
-   session handoff reads. Relay the two lines and write nothing after them.
+   the lead line, then the forward pointer. `finish` renders that pointer itself rather
+   than leaving it to `plumbbob handoff`, because finish has just cleared the session
+   handoff would read one from. Relay the block and write nothing after it.
 
 ## The hard contracts
 

@@ -25,7 +25,7 @@ import {
   stampTick,
 } from '../lib/sidecar.ts'
 import { settingsPath } from '../lib/settings.ts'
-import { notice, transition } from '../lib/notice.ts'
+import { advisory, ending, notice, transition } from '../lib/notice.ts'
 
 /**
  * Human-readable echo of the default check gate, stamped into the templates'
@@ -55,6 +55,9 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
   const local = args.includes('--local')
   const title = (positionals[0] ?? '').trim()
   const slug = (flagValue(args, '--slug') ?? datedSlug(title)).trim()
+  // Every advisory the session accrues on its way open, collected rather than
+  // printed: they belong inside the one ending below, in the order found.
+  const advisories: string[] = []
 
   if (title.length === 0) {
     process.stderr.write(
@@ -99,10 +102,9 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
       )
       return 1
     }
-    process.stderr.write(
-      notice({
+    advisories.push(
+      advisory({
         fact: 'recording HEAD as the baseline with a dirty tree',
-        advisory: true,
         detail: ['--allow-dirty'],
         remedy: 'a later revert to baseline will DISCARD the uncommitted work',
       }),
@@ -183,14 +185,6 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
   setGrant(root, null)
   stampTick(root, local ? null : slug)
 
-  process.stdout.write(
-    transition({
-      label: 'Session',
-      fact: `started "${title}"`,
-      detail: [`baseline ${sha.slice(0, 9)}`],
-      remedy: `frame and decide in ${intentLocation}, then build a step`,
-    }),
-  )
 
   // The tracked layout plants `builds/<slug>/` to ride the branch into the PR,
   // but a repo whose own `.gitignore` excludes `.plumbbob/` overrides that, and
@@ -202,10 +196,9 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
   // Guidance only, and the session is already open: a probe hiccup stays silent
   // rather than half-crashing a scaffolded session.
   if (!local && sidecarIsIgnored(root, slug)) {
-    process.stderr.write(
-      notice({
+    advisories.push(
+      advisory({
         fact: 'this repo gitignores .plumbbob/',
-        advisory: true,
         detail: ['the build folder cannot ride the branch', 'plan and finish commits will be record-only'],
         remedy: 'unignore .plumbbob/builds/ before the first checkpoint to keep the record in the tree',
       }),
@@ -219,15 +212,29 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
   // exit code, and a configured `check` or a probe hiccup stays silent.
   const gate = await detectGate(root)
   if (gate.configured === null && !gate.detected) {
-    process.stderr.write(
-      notice({
+    advisories.push(
+      advisory({
         fact: 'the check gate sees no code checks in this repo',
-        advisory: true,
         detail: ['checkride detected no tools', 'checkpoints gate on it and would green vacuously'],
         remedy: 'add {"check": "npm test"} to .plumbbob/settings.json while you are still planning',
       }),
     )
   }
+
+  // No pointer: the plan skill owns the turn that follows, and there is no step
+  // yet to aim at, so the ending closes on the remedy line that says where to
+  // frame the build.
+  process.stdout.write(
+    ending({
+      lead: transition({
+        label: 'Session',
+        fact: `started "${title}"`,
+        detail: [`baseline ${sha.slice(0, 9)}`],
+        remedy: `frame and decide in ${intentLocation}, then build a step`,
+      }),
+      advisories,
+    }),
+  )
   return 0
 }
 

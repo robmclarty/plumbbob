@@ -198,14 +198,13 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    is needs-work: take it as what to change, and nothing lands until the human says
    `looks good`.
 
-   **Then hand off with the next model.** Once the checkpoint lands in the approval turn,
-   `plumbbob checkpoint` prints `**Checkpoint**: Step N complete (<sha>)`; then
-   run `plumbbob handoff` and relay its card. The turn is those two outputs and nothing
-   written around them. With the step gone from in-flight the card drops to its
-   orientation-tier form (the Verdict and Next Up only; no Your Call block, no
-   recommendation)
-   and points at the next undone step, carrying that step's `- model:` recommendation (the
-   plan's smallest-model-that-fits call) so the human knows which `/model` to select before
+   **Then hand off with the next model.** `plumbbob checkpoint` prints the whole boundary
+   ending itself: `**Checkpoint**: Step N complete (<sha>)`, the Verdict the step earned,
+   any advisory (a staged path outside the seam is the common one), and Next Up. Relay
+   that block whole, run no second command, and write nothing around it. It is the
+   orientation tier (no Your Call block, no recommendation), and it points at the next
+   undone step carrying that step's `- model:` recommendation (the plan's
+   smallest-model-that-fits call) so the human knows which `/model` to select before
    running `/plumbbob:build` again. It is what carries the plan's suggestion across a fresh
    context window, which inherits the session model, not the plan's. No `- model:` line
    means any model will do. Guidance, never a gate.
@@ -318,8 +317,8 @@ just the one more entry already in the halt list above.
   into a settings file yourself to unlock a checkpoint. A grant you mint is no grant (the
   latch ignores it; [D67 (auto-not-a-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d67)); ask the human to type
   `/plumbbob:build --auto` again instead.**
-- **Close with the next model.** When a step lands, run `plumbbob handoff` and relay its
-  card with nothing written around it; it cites the completed step and the next undone
-  step, and names that next step's `- model:` recommendation if it has one, which is what
-  a fresh context window needs to pick the right `/model` before the next run. Guidance,
-  never a gate.
+- **Close with the next model.** When a step lands, `plumbbob checkpoint` prints the whole
+  boundary ending; relay it with nothing written around it and no second command. It cites
+  the completed step and the next undone step, and names that next step's `- model:`
+  recommendation if it has one, which is what a fresh context window needs to pick the
+  right `/model` before the next run. Guidance, never a gate.

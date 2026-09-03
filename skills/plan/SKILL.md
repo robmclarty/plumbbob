@@ -160,6 +160,11 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
      session runs `start` *before* the turn hook has ever ticked, so that single
      commit predates the ledger and stays guidance-governed; it lands without a
      refusal.)
+   - **The plan commit prints its own close.** `plumbbob checkpoint --plan` emits the
+     whole boundary ending: `**Plan**: committed (<sha>)`, any advisory, and the pointer at
+     the step the build starts on. Relay that block whole and run no second command; the
+     plan-pause card above is the one place `handoff` is still called, because no verb has
+     run yet there.
    - **Say what the commit publishes.** The close-out line names the tracked folder:
      `.plumbbob/builds/<slug>/` now rides this branch into the PR, so teammates will
      see the plan and build record in review. In the same breath, offer the way out:

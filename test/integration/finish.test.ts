@@ -53,7 +53,7 @@ describe('plumbbob finish — the close-out, D9 (finish-no-gate)/D29 (finish-rep
     runCli(dir, ['start', 'No report here', '--slug', 'no-report-here'])
     const res = runCli(dir, ['finish'])
     expect(res.status).toBe(0) // the defining choice: no refuse-without-report gate
-    expect(res.stderr).toContain('no report.md found')
+    expect(res.stdout).toContain('No report.md found ⚠')
     expect(existsSync(join(dir, '.plumbbob', 'builds', 'no-report-here', 'report.md'))).toBe(false)
     expect(headSubject(dir)).toBe('chore(no-report-here): finish')
   })

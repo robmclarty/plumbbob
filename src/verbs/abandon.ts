@@ -31,7 +31,8 @@ import {
 import { checkLatch } from '../lib/latch.ts'
 import { abandonLogLine, appendToSection } from '../lib/buildlog.ts'
 import { parseSteps } from '../lib/orient.ts'
-import { notice, transition } from '../lib/notice.ts'
+import { ending, notice, transition } from '../lib/notice.ts'
+import { driverPointer } from './handoff.ts'
 
 /**
  * Drop the in-flight step while keeping its work: latch, clear the markers,
@@ -77,8 +78,17 @@ export function abandon(cwd: string, args: ReadonlyArray<string>): number {
   bumpStepStat(root, slug, step, 'abandons')
   logAbandon(root, slug, step)
 
+  // A step exit: with the step back at `[ ]` and its markers gone, the pointer
+  // aims forward from the boundary, at the very step just dropped.
   process.stdout.write(
-    transition({ label: 'Abandoned', fact: `step ${step}`, detail: ['work kept in the tree', 'the step stays planned'] }),
+    ending({
+      lead: transition({
+        label: 'Abandoned',
+        fact: `Step ${step}`,
+        detail: ['work kept in the tree', 'the step stays planned'],
+      }),
+      pointer: driverPointer(root, slug),
+    }),
   )
   return 0
 }

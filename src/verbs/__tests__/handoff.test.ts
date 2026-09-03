@@ -126,7 +126,7 @@ describe('handoff', () => {
         '',
         '**Your Call**:',
         '',
-        '- `looks good` → I checkpoint step 2; back to the boundary',
+        '- `looks good` → I checkpoint Step 2; back to the boundary',
         '- `expand`, or any question → I show more of what is there; nothing changes',
         '- anything that reads as direction → I take it as what to change; nothing lands until you approve',
         '- `revert` → I wind the work back to the last checkpoint',
@@ -236,6 +236,19 @@ describe('handoff', () => {
     expect(code).toBe(0)
     expect(stdout).toContain('**Verdict**: ◐ A hair off (2 red runs before green)')
     expect(stdout).not.toContain('Step 2 of 3') // the identity renders once, on the Readout and Next Up
+  })
+
+  it('leads the advisory rung with the seam stray, uncounted, ahead of red runs — D43 (verb-prints-its-ending)', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(detailPath(dir), GREEN_RECAP)
+    writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
+    // Both accrued; the stray outranks the red runs, and its rung carries no
+    // count, because the stat bumps once per checkpoint, not once per path.
+    writeFileSync(statsPath(dir), JSON.stringify({ '2': { driftWarnings: 2, redChecks: 2 } }))
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).toContain('**Verdict**: ◐ A hair off (staged outside the seam)')
   })
 
   it('folds a strayed seam row into an out-of-plumb verdict naming the seam', async () => {
@@ -363,7 +376,7 @@ describe('handoff', () => {
     expect(code).toBe(0)
     expect(stdout).not.toContain('Plumb')
     expect(stdout.startsWith('\n---\n\n**Next Up**: Step 1 of 3 - First')).toBe(true) // the one tier that still opens on the seam rule: the plan is presented above it
-    expect(stdout).toContain('- `looks good` → I mark the plan decided; /plumbbob:build starts step 1')
+    expect(stdout).toContain('- `looks good` → I mark the plan decided; /plumbbob:build starts Step 1')
     expect(stdout).toContain('- `expand`, or any question → I show more of what is there; nothing changes')
     expect(stdout).toContain('- anything that reads as direction → I take it as what to sharpen; the plan is cheap to change now')
     expect(stdout).not.toContain('revert')
@@ -376,7 +389,7 @@ describe('handoff', () => {
     const { code, stdout } = captureIo(() => handoff(dir, ['--plan']))
     expect(code).toBe(0)
     expect(stdout).toContain('**Next Up**: Step 2 of 3 - Second')
-    expect(stdout).toContain('/plumbbob:build starts step 2')
+    expect(stdout).toContain('/plumbbob:build starts Step 2')
   })
 
   it('renders the driver next-up line under --driver, pointing back at the step still in flight', async () => {
@@ -384,7 +397,7 @@ describe('handoff', () => {
     writeFileSync(stepPath(dir), '2\n')
     const { code, stdout } = captureIo(() => handoff(dir, ['--driver']))
     expect(code).toBe(0)
-    expect(stdout.trim()).toBe('**Next Up**: Back to step 2 of 3 - Second') // no seam rule: nothing of the model's precedes a driver pointer
+    expect(stdout.trim()).toBe('**Next Up**: Back to Step 2 of 3 - Second') // no seam rule: nothing of the model's precedes a driver pointer
     expect(stdout.endsWith('\n\n')).toBe(true)
   })
 
@@ -403,7 +416,7 @@ describe('handoff', () => {
     const { code, stdout } = captureIo(() => handoff(dir, ['--driver']))
     expect(code).toBe(0)
     // The spike outranks the step it interrupted, so it is the move the pointer names.
-    expect(stdout.trim()).toBe('**Next Up**: Close the spike - /plumbbob:spike done, then back to step 2')
+    expect(stdout.trim()).toBe('**Next Up**: Close the spike - /plumbbob:spike done, then back to Step 2')
   })
 
   it('names closing the spike alone when one was opened at the boundary', async () => {
@@ -431,7 +444,7 @@ describe('handoff', () => {
     writeFileSync(stepPath(dir), '9\n') // a step the plan does not contain
     const { code, stdout } = captureIo(() => handoff(dir, ['--driver']))
     expect(code).toBe(0)
-    expect(stdout.trim()).toBe('**Next Up**: Back to step 9') // no "of 3": the count would be a lie
+    expect(stdout.trim()).toBe('**Next Up**: Back to Step 9') // no "of 3": the count would be a lie
   })
 
   it('computes the diff row from numstat and rides a small change inline', async () => {

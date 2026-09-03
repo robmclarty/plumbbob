@@ -32,7 +32,8 @@ import {
   stepPath,
 } from '../lib/sidecar.ts'
 import { readTemplate, stampTemplate } from '../lib/templates.ts'
-import { notice, transition } from '../lib/notice.ts'
+import { advisory, blocks, ending, notice, transition } from '../lib/notice.ts'
+import { driverPointer } from './handoff.ts'
 
 // Worktree/branch names when the caller lists none: a fork defaults to two arms.
 const DEFAULT_OPTIONS: ReadonlyArray<string> = ['a', 'b']
@@ -86,11 +87,14 @@ function spikeReport(root: string, buildSlug: string | null, positionals: Readon
   const via = inFlight !== null ? `step ${inFlight}` : '/plumbbob:spike'
   const path = scaffoldSpikeReport(root, buildSlug, slug, via)
   process.stdout.write(
-    transition({
-      label: 'Spike report',
-      fact: 'scaffolded',
-      detail: [relative(root, path)],
-      remedy: 'record Findings and the Verdict there, which is what closes a spike step',
+    ending({
+      lead: transition({
+        label: 'Spike report',
+        fact: 'scaffolded',
+        detail: [relative(root, path)],
+        remedy: 'record Findings and the Verdict there, which is what closes a spike step',
+      }),
+      pointer: driverPointer(root, buildSlug),
     }),
   )
   return 0
@@ -178,21 +182,26 @@ function spikeStart(root: string, buildSlug: string | null, positionals: Readonl
   // Scaffold the report NOW, while the worktrees live: findings accrue during the
   // experiment, not from memory after the teardown. Provenance names the worktrees.
   const report = scaffoldSpikeReport(root, buildSlug, slug, `/plumbbob:spike — worktrees (${options.join(', ')})`)
-  // The notice states the fact; the throwaway worktrees are a list, so they ride
-  // as a readout beneath it rather than crowding the line.
+  // The lead states the fact; the throwaway worktrees are a list, so they ride
+  // as a readout beneath it rather than crowding the line, and the report the
+  // spike scaffolded is a second landing under the same lead.
   process.stdout.write(
-    transition({
-      label: 'Spike',
-      fact: 'opened',
-      detail: ['the main tree stays put', `${created.length} throwaway worktree${created.length === 1 ? '' : 's'}`],
-    }) +
-      `${created.map((path) => `  ${path}`).join('\n')}\n` +
-      transition({
-        label: 'Spike report',
-        fact: 'scaffolded',
-        detail: [relative(root, report)],
-        remedy: 'record findings and the Verdict there, then run plumbbob spike done',
-      }),
+    ending({
+      lead: blocks([
+        transition({
+          label: 'Spike',
+          fact: 'opened',
+          detail: ['the main tree stays put', `${created.length} throwaway worktree${created.length === 1 ? '' : 's'}`],
+        }) + created.map((path) => `  ${path}`).join('\n'),
+        transition({
+          label: 'Spike report',
+          fact: 'scaffolded',
+          detail: [relative(root, report)],
+          remedy: 'record findings and the Verdict there, then run plumbbob spike done',
+        }),
+      ]),
+      pointer: driverPointer(root, buildSlug),
+    }),
   )
   return 0
 }
@@ -222,20 +231,26 @@ function spikeDone(root: string, buildSlug: string | null): number {
   }
   clearSpike(root, buildSlug)
 
-  process.stdout.write(transition({ label: 'Spike', fact: 'closed', detail: ['worktrees and branches removed'] }))
   // Guidance, not a gate: a missing verdict is a nudge, and the spike still
   // closes. It follows the line it qualifies, and names the reports so the
-  // human knows where to write the call.
-  if (unfilled.length > 0) {
-    process.stderr.write(
-      notice({
-        fact: 'no verdict recorded',
-        advisory: true,
-        detail: unfilled,
-        remedy: 'record which option won, and why, now the worktrees are gone',
-      }),
-    )
-  }
+  // human knows where to write the call. The pointer, read once the marker is
+  // cleared, aims back at the step the spike interrupted, or forward.
+  process.stdout.write(
+    ending({
+      lead: transition({ label: 'Spike', fact: 'closed', detail: ['worktrees and branches removed'] }),
+      advisories:
+        unfilled.length === 0
+          ? []
+          : [
+              advisory({
+                fact: 'no verdict recorded',
+                detail: unfilled,
+                remedy: 'record which option won, and why, now the worktrees are gone',
+              }),
+            ],
+      pointer: driverPointer(root, buildSlug),
+    }),
+  )
   return 0
 }
 

@@ -34,7 +34,7 @@ import {
 } from '../lib/sidecar.ts'
 import { conventionalSubject, withMarker } from '../lib/commitmsg.ts'
 import { parseBuildScope } from '../lib/intent.ts'
-import { notice, transition } from '../lib/notice.ts'
+import { advisory, ending, notice, transition } from '../lib/notice.ts'
 
 // The pointer finish leaves the turn on. Every other one is `handoff`'s, but a
 // finished session has no state left to render from, and past a closed build
@@ -103,25 +103,31 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   setGrant(root, null)
   rmSync(join(sidecarDir(root), 'STATE'), { force: true })
 
+  // The whole ending in the fixed order: the lead line, the advisory that
+  // qualifies it (finishing without a report is guidance, never a gate; the
+  // session is already closed by the time it prints), and the pointer, which is
+  // the turn's last text. finish renders that pointer itself: it just cleared
+  // the session `handoff` would read one from.
   const where = slug === null ? '.plumbbob/' : `.plumbbob/builds/${slug}/`
   process.stdout.write(
-    transition({ label: 'Session', fact: 'finished', detail: [sha.slice(0, 9), `${where} rides your branch into the PR`] }),
-  )
-  // The advisory follows the line it qualifies. Finishing without a report is
-  // guidance, never a gate: the session is already closed by the time it prints.
-  if (!reported) {
-    process.stderr.write(
-      notice({
-        fact: 'no report.md found',
-        advisory: true,
-        detail: ['finished without one', 'no gate here by design'],
-        remedy: '/plumbbob:finish normally writes the report first',
+    ending({
+      lead: transition({
+        label: 'Session',
+        fact: 'finished',
+        detail: [sha.slice(0, 9), `${where} rides your branch into the PR`],
       }),
-    )
-  }
-  // Last, under the fixed order of every ending: the verb's own line, its
-  // advisories, a blank line, then the pointer, which is the turn's last text.
-  process.stdout.write(`\n${NEXT_UP}\n\n`)
+      advisories: reported
+        ? []
+        : [
+            advisory({
+              fact: 'no report.md found',
+              detail: ['finished without one', 'no gate here by design'],
+              remedy: '/plumbbob:finish normally writes the report first',
+            }),
+          ],
+      pointer: NEXT_UP,
+    }),
+  )
   return 0
 }
 

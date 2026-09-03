@@ -177,7 +177,7 @@ spent        22 min · 2 turns · 41s gate · green first run
 
 **Your Call**:
 
-- `looks good` → I checkpoint step 1; back to the boundary
+- `looks good` → I checkpoint Step 1; back to the boundary
 - `expand`, or any question → I show more of what is there; nothing changes
 - anything that reads as direction → I take it as what to change; nothing lands until you approve
 - `revert` → I wind the work back to the last checkpoint
@@ -211,8 +211,10 @@ direction is taken as what to fix, and still nothing lands until you say `looks 
 
 You approve. Only then does it checkpoint: committing the work, recording the SHA,
 flipping the step to `[x]`, and returning to the `DESIGN` boundary, where it **stops**.
-The boundary turn scales the anatomy down to what a landed step needs: the verb's line,
+The boundary turn scales the anatomy down to what a landed step needs: the lead line,
 then the Verdict and Next Up, with no Your Call block, because no decision is pending.
+`plumbbob checkpoint` prints all three itself, as one block, so what the agent relays is
+one command's output:
 
 ```text
 **Checkpoint**: Step 1 complete (a1b2c3d4e)
@@ -261,13 +263,14 @@ to `/plumbbob:park`, inline or bare:
 
 `/plumbbob:park` never writes the line blind: it **composes one tidy, tagged line and shows it to
 you for a quick OK** (confirm it as-is or tweak the wording), then captures it by shelling
-`plumbbob park` under the hood. A park is a driver turn: the verb's line, then one
-pointer back at the step it interrupted, and nothing else.
+`plumbbob park` under the hood. A park is a driver turn: the capture, then one pointer
+back at the step it interrupted, and nothing else. The verb prints both, so the relay is
+one command's output here too.
 
 ```text
 **Parked**: should /password-reset get the same throttle? (tangent)
 
-**Next Up**: Back to step 2 of 3 - Wire the limiter into POST /login
+**Next Up**: Back to Step 2 of 3 - Wire the limiter into POST /login
 ```
 
 It's on the list, out of your head, and the step in flight stays protected. The

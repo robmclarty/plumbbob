@@ -51,12 +51,14 @@ silently ignored token, so a typo cannot fall through into a commit. `turn` and 
 two exceptions to the refusal: `turn` is a hook that must never wedge a prompt, and `park`'s
 argument is free text.
 
-The stream a line goes to picks its shape ([the turn anatomy](presentation.md)). A verb's
-own lead line goes to stdout wearing a bold label (`**Checkpoint**: Step 15 complete
-(2d917cde7)`), because it is the first part of the ending the skill relays; the advisories
-and refusals that follow go to stderr keeping the `plumbbob:` prefix, which names the
-speaker where checkride's output and git's share one result. One formatter in
-`src/lib/notice.ts` renders both.
+Where a line sits picks its shape ([the turn anatomy](presentation.md)). A transition
+prints its whole ending to stdout as one block: the lead line wearing a bold label
+(`**Checkpoint**: Step 15 complete (2d917cde7)`), the Verdict where one is measured, the
+advisories as bare capitalized sentences with their `→` remedies, and the Next Up pointer,
+one blank line between each. A refusal is not an ending, so it goes to stderr keeping the
+`plumbbob:` prefix, which names the speaker where checkride's output and git's share one
+result. One formatter in `src/lib/notice.ts` renders all three heads and the order they
+stack in.
 
 ## Session verbs
 
@@ -160,6 +162,12 @@ than as prose in the skills keeps them from drifting out of sync with `status`, 
 renders the same next-step detail. Refuses (exit 1) with no session, or with `--plan` and
 `--driver` together.
 
+Every transition verb prints its own ending through this same code, so `checkpoint`,
+`park`, `revert`, `abandon`, `spike`, `use`, and `finish` each emit the Verdict (where one
+is measured) and the pointer for themselves, and a skill relays one command's output rather
+than two. `handoff` stays the way to render an ending where no verb ran: a build pause, a
+re-read of the boundary, the plan pause, or a driver turn a skill drove some other way.
+
 ### check
 
 ```text
@@ -206,7 +214,11 @@ flips the step to `[x]`, and clears `SEAM`/`STEP`, dropping the dashboard back t
 proportional); without it a deterministic fallback carries done-when + seam + diffstat
 ([**D68 (conventional-subjects)**](decisions.md#d68)/[**D35 (fallback-body)**](decisions.md#d35)). `--plan` instead commits *only* the build's artifact folder as
 `chore(<scope>): plan` and records a `plan <sha>` line, giving the plan its own commit so
-the first step's diff doesn't absorb the scaffold ([**D36 (plan-commit)**](decisions.md#d36)). Refuses (exit 1) with no session,
+the first step's diff doesn't absorb the scaffold ([**D36 (plan-commit)**](decisions.md#d36)). Either form closes on its
+whole ending, `handoff`-rendered and printed here: the lead line, the Verdict the step just
+earned (the plan commit measures nothing, so it has none), any advisory, and the pointer.
+Staged paths outside the step's seam are an advisory, never a gate, and the stray they name
+puts a `staged outside the seam` rung under that Verdict. Refuses (exit 1) with no session,
 no resolvable step, or a red check.
 
 ### revert
@@ -318,9 +330,10 @@ plumbbob use <slug>
 
 Re-points the active-build cursor at the named build and resumes it: the one verb for both
 switching between builds and picking one back up ([**D30 (use-to-switch)**](decisions.md#d30)). Validates that
-`builds/<slug>/` exists, then rewrites the cursor in `STATE` (leaving the session sentinel intact). It warns (but
+`builds/<slug>/` exists, then rewrites the cursor in `STATE` (leaving the session sentinel intact). It advises (but
 allows) leaving a build that still has a step in flight: that surviving `STEP`/`SEAM` is the
-payoff of per-build markers. Refuses (exit 1) with an empty slug or a slug with no build
+payoff of per-build markers. The advisory rides the ending, between the lead line and the
+pointer into the build just switched to. Refuses (exit 1) with an empty slug or a slug with no build
 folder; `status` with no cursor lists the available builds instead of refusing.
 
 ### finish

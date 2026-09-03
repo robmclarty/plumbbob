@@ -39,7 +39,8 @@ import { parseBuildScope, parseStepSeam, scopeDrift } from '../lib/intent.ts'
 import { conventionalSubject, subjectFromTitle, withMarker } from '../lib/commitmsg.ts'
 import { appendToSection, checkpointLogLine } from '../lib/buildlog.ts'
 import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
-import { notice, transition } from '../lib/notice.ts'
+import { advisory, ending, notice, transition } from '../lib/notice.ts'
+import { boundaryEnding } from './handoff.ts'
 
 /**
  * Land a step: latch, check gate, commit, record, return to the boundary.
@@ -112,8 +113,8 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
 
   let sha: string
   // The drift advisory is read off the index (staged, before the commit clears
-  // it) but printed after the boundary line, so every ending reads in the one
-  // fixed order: the fact, then what qualifies it.
+  // it) but printed inside the ending below, where the fixed order puts it: the
+  // fact, the Verdict it earned a rung on, then what qualifies it.
   let drift = ''
   if (isDirty(root)) {
     stageAll(root)
@@ -140,8 +141,19 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   clearHandoff(root) // the agent-run handoff ledger is step-scoped; clear it with the markers.
   clearTick(root) // the step's entry stamp is spent; the next `build <n>` re-stamps.
 
-  process.stdout.write(transition({ label: 'Checkpoint', fact: `Step ${step} complete`, detail: [sha.slice(0, 9)] }))
-  process.stderr.write(drift + flipNotice)
+  // The whole ending, one block: the lead line, the Verdict folded over what
+  // just landed, the advisories this checkpoint alone can state, and the
+  // pointer. Read after the flip and the ledger append, so the fold and the
+  // pointer both see the boundary the human is standing at.
+  const landed = boundaryEnding(root, activeBuild(root), step)
+  process.stdout.write(
+    ending({
+      lead: transition({ label: 'Checkpoint', fact: `Step ${step} complete`, detail: [sha.slice(0, 9)] }),
+      verdict: landed.verdict,
+      advisories: [drift, flipNotice],
+      pointer: landed.pointer,
+    }),
+  )
   return 0
 }
 
@@ -184,17 +196,23 @@ function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
   // Landing the plan consumes `start`'s entry stamp: a later hand-built diff
   // (no `build <n>`) must find no stale TICK and stay guidance-governed.
   clearTick(root)
-  process.stdout.write(transition({ label: 'Plan', fact: 'committed', detail: [sha.slice(0, 9)] }))
-  if (!staged) {
-    process.stderr.write(
-      notice({
-        fact: 'the plan rides the commit message',
-        advisory: true,
-        detail: ['record-only', '.plumbbob/ is gitignored, so the files stay untracked'],
-        remedy: 'unignore .plumbbob/builds/ to keep the record in the tree',
-      }),
-    )
-  }
+  // No Verdict: the plan commit measures nothing. The pointer aims at the step
+  // the build starts on, which is what `handoff` renders from a null step.
+  process.stdout.write(
+    ending({
+      lead: transition({ label: 'Plan', fact: 'committed', detail: [sha.slice(0, 9)] }),
+      advisories: staged
+        ? []
+        : [
+            advisory({
+              fact: 'the plan rides the commit message',
+              detail: ['record-only', '.plumbbob/ is gitignored, so the files stay untracked'],
+              remedy: 'unignore .plumbbob/builds/ to keep the record in the tree',
+            }),
+          ],
+      pointer: boundaryEnding(root, activeBuild(root), null).pointer,
+    }),
+  )
   return 0
 }
 
@@ -236,7 +254,8 @@ function resolveStep(root: string, args: ReadonlyArray<string>): number | null {
  * The advisory (never a refusal) for a staged tree that reaches beyond the
  * step's seam, or '' when it held.
  *
- * Guidance, not a gate: the checkpoint captures the drift and says so. The seam
+ * Guidance, not a gate: the checkpoint captures the drift and says so, and the
+ * bumped stat puts a `staged outside the seam` rung under the Verdict. The seam
  * (the step's edit grant: exact paths or `dir/` prefixes) comes from the
  * in-flight SEAM file when a build is live, else the step's declared seam in
  * intent.md. Plumbbob's own artifact plane is whitelisted inside `scopeDrift`,
@@ -247,10 +266,9 @@ function scopeDriftNotice(root: string, step: number): string {
   const seam = seamTokens(root, step)
   const outside = scopeDrift(stagedPaths(root), seam)
   if (outside.length === 0) return ''
-  bumpStepStat(root, undefined, step, 'driftWarnings') // accrues into the build-log's stats receipt
-  return notice({
-    fact: `staged paths reach outside step ${step}'s seam`,
-    advisory: true,
+  bumpStepStat(root, undefined, step, 'driftWarnings') // accrues into the build-log's stats receipt, and into the Verdict's third rung
+  return advisory({
+    fact: `staged paths reach outside Step ${step}'s seam`,
     detail: outside,
     remedy: 'the checkpoint captures them, so revise the plan with /plumbbob:step if that is real scope drift',
   })
@@ -285,17 +303,16 @@ function seamTokens(root: string, step: number): ReadonlyArray<string> {
  * Best-effort bookkeeping (the checkpoint SHA is the source of truth) but the
  * dashboard reads intent.md, so a swallowed failure here would make orientation
  * lie; the catch returns the advisory asking for a hand flip, which the caller
- * prints after the boundary line. Returns '' on the happy path.
+ * folds into the ending. Returns '' on the happy path.
  */
 function flipIntent(root: string, step: number): string {
   try {
     writeFileSync(intentPath(root), markStepDone(readFileSync(intentPath(root), 'utf8'), step))
     return ''
   } catch {
-    return notice({
-      fact: `could not flip step ${step} to [x] in intent.md`,
-      advisory: true,
-      detail: ['the checkpoint is recorded', `the dashboard still shows step ${step} as next`],
+    return advisory({
+      fact: `could not flip Step ${step} to [x] in intent.md`,
+      detail: ['the checkpoint is recorded', `the dashboard still shows Step ${step} as next`],
       remedy: 'flip the checkbox by hand',
     })
   }

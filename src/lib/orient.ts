@@ -516,6 +516,7 @@ export type VerdictFold = { readonly ladder: Ladder; readonly worst: string | nu
 
 /** A step's accrued stats, the advisory inputs to the fold's third rung. */
 export type AccruedStats = {
+  readonly driftWarnings: number
   readonly redChecks: number
   readonly reverts: number
   readonly outOfBand: number
@@ -524,7 +525,8 @@ export type AccruedStats = {
 /**
  * Fold the recap's measuring rows worst-of with the step's accrued stats:
  * drift beats a live failure beats an advisory beats plumb, and each rung
- * names the one component that earned it.
+ * names the one component that earned it. The advisory rung runs in a fixed
+ * order, the seam stray first.
  */
 export function foldVerdict(rows: Readonly<Partial<Record<RecapRowName, RecapRow>>>, stats: AccruedStats): VerdictFold {
   for (const name of RECAP_ROW_NAMES) {
@@ -537,6 +539,12 @@ export function foldVerdict(rows: Readonly<Partial<Record<RecapRowName, RecapRow
     if (row !== undefined && row.verdict === 'failing') {
       return { ladder: OUT_OF_PLUMB, worst: `${name} ${row.word}` }
     }
+  }
+  if (stats.driftWarnings > 0) {
+    // First of the advisory rung, and uncounted: the stat bumps once per
+    // checkpoint rather than once per stray path, and this is the one advisory
+    // that asks a question of the plan rather than of the work.
+    return { ladder: A_HAIR_OFF, worst: 'staged outside the seam' }
   }
   if (stats.redChecks > 0) {
     return { ladder: A_HAIR_OFF, worst: `${stats.redChecks} red run${stats.redChecks === 1 ? '' : 's'} before green` }

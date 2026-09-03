@@ -424,6 +424,44 @@ a boundary or driver turn, top to bottom
   and not on the ending's own lead. `checkpointed` retires as a verb; the noun
   is the artifact (Rob's call, 2026-09-02). Amends
   [D28 (fact-not-move)](#d28).
+- <a id="d43"></a>**D43 (verb-prints-its-ending)**: a transition verb emits
+  its whole ending as one block on stdout, every part blank-line separated
+  like the rest of the anatomy: the labeled lead line, the Verdict where one
+  is measured (the checkpoint boundary), the advisories as unprefixed
+  sentences with their `→` remedy beneath, and the Next Up pointer, all
+  rendered by the code `plumbbob handoff` uses:
+
+  ```text
+  **Checkpoint**: Step 16 complete (f2b83e17c)
+
+  **Verdict**: ◐ A hair off (staged outside the seam)
+
+  Staged paths reach outside Step 16's seam ⚠ (test/integration/spike.test.ts, test/integration/use.test.ts)
+    → the checkpoint captures them, so revise the plan with /plumbbob:step if that is real scope drift
+
+  **Next Up**: Step 17 of 18 - feat(ending): every transition prints its whole ending (model: **Opus**, details: `…/intent.md:…`)
+  ```
+
+  *because* the boundary turn ran two commands and two grammars: the advisory
+  butted prefixed against the lead line while the Verdict beside it read
+  Plumb, the checkpoint-time stray is a fact only checkpoint knows, and a
+  block one command emits cannot be relayed out of order (Rob's call,
+  2026-09-02). The advisory changes stream because it joins the ending, so
+  [D42 (transitions-wear-the-label)](#d42)'s rule stands as written, stdout
+  unprefixed and stderr prefixed; a refusal is not an ending and keeps its
+  prefix on stderr. The Verdict's third rung learns the seam stray from
+  `driftWarnings`, named `staged outside the seam` and placed first in the
+  fixed order, ahead of red runs, reverts, and out-of-band commits, *because*
+  it is the one advisory that asks a question of the plan; the count stays
+  off it, since the stat bumps once per checkpoint, not once per path. A
+  later `handoff` at the same boundary renders the rung without the paths,
+  which the commit holds. `Step N` is a proper noun throughout the ending
+  (`Step 16's seam`, `**Abandoned**: Step 16`). `start` ends on its remedy
+  line, since the plan skill owns the turn that follows and no step exists to
+  point at. Resolves [Q12 (stray-in-banner)](#q12); amends
+  [D29 (advisory-glyph)](#d29)'s order and
+  [D32 (handoff-owns-every-pointer)](#d32): handoff renders the pointer, and
+  the verb prints it, so the driver skills drop their second command.
 
 ## Constraints
 
@@ -595,7 +633,7 @@ a boundary or driver turn, top to bottom
    tests assert each pointer
    - seam: `src/verbs/handoff.ts`, `src/verbs/finish.ts`, `src/verbs/__tests__/handoff.test.ts`, `src/verbs/__tests__/finish.test.ts`, `skills/finish/SKILL.md`
    - model: sonnet (two pointer branches and one printed line, each with a test)
-16. [ ] feat(notices): the ending's lead line wears its label, **done when:**
+16. [x] feat(notices): the ending's lead line wears its label, **done when:**
    every transition renders as a labeled line through the one formatter in
    `src/lib/notice.ts`, advisories and refusals keep the `plumbbob:` prefix,
    and the eleven stdout sites across checkpoint, park, revert, abandon, spike,
@@ -607,7 +645,24 @@ a boundary or driver turn, top to bottom
    formatter's fixtures
    - seam: `src/lib/notice.ts`, `src/lib/__tests__/notice.test.ts`, `src/verbs/checkpoint.ts`, `src/verbs/park.ts`, `src/verbs/revert.ts`, `src/verbs/abandon.ts`, `src/verbs/spike.ts`, `src/verbs/use.ts`, `src/verbs/start.ts`, `src/verbs/finish.ts`, `src/verbs/__tests__/`, `docs/presentation.md`, `docs/happy-path.md`, `docs/cli-reference.md`, `skills/`
    - model: sonnet (mechanical once the decision fixes the shapes; the spec section wants a careful read)
-17. [ ] test(evals): run the eval tier against the new anatomy, **done when:**
+17. [ ] feat(ending): every transition prints its whole ending, **done when:**
+   `plumbbob checkpoint` (step and plan), `park`, `revert`, `abandon`, `spike`
+   (open, close, report), `use`, and `finish` each emit one stdout block: the
+   labeled lead line, the Verdict at the checkpoint boundary (its third rung
+   naming `staged outside the seam` from `driftWarnings`, first in the fixed
+   order), the advisories as unprefixed capitalized sentences with their `→`
+   remedies, and the Next Up line, every part blank-line separated and
+   rendered through the code `plumbbob handoff` uses; `start` ends on its
+   remedy line; `Step N` is capitalized throughout; refusals stay prefixed on
+   stderr ([D43 (verb-prints-its-ending)](#d43)); the build, verify, plan,
+   park, spike, revert, abandon, use, and finish skills relay the verb's block
+   and run no second command; `docs/presentation.md`'s Verdict rung list,
+   one-liners section, and tier examples, `docs/happy-path.md`, and
+   `docs/cli-reference.md` match; the verb tests assert each block through
+   the formatter's fixtures
+   - seam: `src/lib/notice.ts`, `src/lib/orient.ts`, `src/verbs/handoff.ts`, `src/verbs/checkpoint.ts`, `src/verbs/park.ts`, `src/verbs/revert.ts`, `src/verbs/abandon.ts`, `src/verbs/spike.ts`, `src/verbs/use.ts`, `src/verbs/start.ts`, `src/verbs/finish.ts`, `src/lib/__tests__/`, `src/verbs/__tests__/`, `test/integration/`, `docs/presentation.md`, `docs/happy-path.md`, `docs/cli-reference.md`, `skills/`
+   - model: opus (the ending renderer moves between modules, and nine skills' relay prose changes)
+18. [ ] test(evals): run the eval tier against the new anatomy, **done when:**
    the c-series contracts read the new turn shapes, the driver runs green,
    and a fresh receipt lands in `docs/evals/`
    - seam: `test/evals/contracts/`, `test/evals/helpers/`, `docs/evals/`
@@ -645,12 +700,11 @@ a boundary or driver turn, top to bottom
 - <a id="q11"></a>**Q11 (expand-addressing)**: *resolved:* 2026-08-28, bare
   numbers bind to the latest card
   ([D16 (latest-card-addressing)](#d16)).
-- <a id="q12"></a>**Q12 (stray-in-banner)**: a checkpoint-time seam stray
-  already bumps a stat; should it fold into the boundary banner's third rung
-  instead of printing an advisory, so one stray is one fact
-  ([D19 (cli-does-what-it-can)](#d19))? Open until the shape has been lived
-  with. [D41 (own-commits-not-out-of-band)](#d41) takes plan commits out of
-  the count; the stray itself is still the open question.
+- <a id="q12"></a>**Q12 (stray-in-banner)**: *resolved:* 2026-09-02, lived
+  with at the step-16 boundary, where the advisory said two paths strayed and
+  the Verdict beside it read Plumb. Both, in order: the rung names the stray
+  and the advisory keeps the paths, printed by checkpoint as one block
+  ([D43 (verb-prints-its-ending)](#d43)).
 - <a id="q13"></a>**Q13 (two-pointer-vocabularies)**: the dashboard's
   `next →` line and the card's `**Next Up**:` say one thing in two shapes;
   leave both, or converge? Not a step-14 item; the next place the format
@@ -753,6 +807,13 @@ a boundary or driver turn, top to bottom
   every highlight, the one-sentence limit on the Summary. Two new steps, 11
   for the rendering and 12 for the wire; happy-path, notices, pointers, and
   evals shift to 13 through 16; Q14 resolved.
+- 2026-09-02: step-16 boundary, the ending's order → Rob read the boundary
+  turn and re-cut it: the lead line, the Verdict, the advisory as an
+  unprefixed sentence, the pointer, one blank line between each, all printed
+  by the verb as one block (D43 (verb-prints-its-ending)); the Verdict's
+  third rung learns the seam stray, resolving Q12. Deleted: the Verdict-only
+  fix (it left the advisory butted against the lead line and the two-command
+  relay in place). One new step, 17; the evals shift to 18.
 
 ## Research digest
 
