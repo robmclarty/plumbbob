@@ -309,6 +309,17 @@ describe('handoff', () => {
     )
   })
 
+  it('measures an override gate the same way: a one-check summary reads green: 1 of 1 checks and offers looks good', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(detailPath(dir), GREEN_RECAP)
+    writeCheckSummary(dir, true, [{ name: 'npm test', ok: true, output_file: 'check.stdout.txt' }])
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).toContain('check        green: 1 of 1 checks')
+    expect(stdout).toContain('`looks good`')
+  })
+
   it('omits the model clause when the next step has no recommendation, keeping the details pointer', async () => {
     const noModel = INTENT.replace('   - model: sonnet — mechanical\n', '')
     const dir = await started(noModel)

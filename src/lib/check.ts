@@ -4,7 +4,9 @@
 //     settings.local.json, the untracked personal overlay → settings.json, the
 //     tracked project defaults) is a shell command → spawn it verbatim, so any
 //     repo can gate through anything (test fixtures point it at `true`/`false`
-//     to keep throwaway repos deterministic);
+//     to keep throwaway repos deterministic), and leave the same
+//     `.check/summary.json` checkride would, so the pause's readout can
+//     measure the gate whichever path ran it;
 //   - no setting at all → checkride, our sibling package, imported
 //     programmatically rather than spawned: the typed summary comes back
 //     in-process, failing slots are reported with their `.check/` raw-output
@@ -14,7 +16,9 @@
 // green, 1 is red, 2 means the harness itself broke: reported distinctly,
 // because a misconfigured gate must not read as broken code (both still block).
 
-import { spawnSync } from 'node:child_process'
+import { spawn } from 'node:child_process'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { runChecks, runDoctor } from 'checkride'
 import type { DoctorCheck, Summary } from 'checkride'
 import { gateIsRunningFor, withGateMarker } from './reentry.ts'
@@ -139,19 +143,87 @@ export async function runCheck(root: string, flags: CheckFlags = {}, commandFlag
   return withGateMarker(root, () => (command.length > 0 ? runCommand(root, command, flags) : runCheckride(root, flags)))
 }
 
+/** Where the configured command's combined output lands, relative to `.check/`. */
+const OVERRIDE_OUTPUT = 'check.stdout.txt'
+
+/** The longest a command may run as the summary's check name before it is cut with an ellipsis. */
+const OVERRIDE_NAME_BUDGET = 40
+
 /**
  * The spawn override: stream the configured command's own output to the
- * terminal and return its exit code: the command is trusted verbatim, no
- * interpretation.
+ * terminal as it arrives, keep a copy under `.check/`, and return its exit
+ * code. The command is trusted verbatim, no interpretation.
+ *
+ * The run leaves the same `summary.json` checkride would, with the command as
+ * its one check: the pause's readout measures its `check` row from that file
+ * and offers `looks good` only on a measured green, so a gate that left no
+ * summary rendered no row and withheld the move at every pause in a repo that
+ * gates through its own command.
  */
-function runCommand(root: string, command: string, flags: CheckFlags): number {
+function runCommand(root: string, command: string, flags: CheckFlags): Promise<number> {
   if (hasFlags(flags)) {
     process.stderr.write(
       `plumbbob: check flags only narrow the checkride gate — ignored for the configured command '${command}'.\n`,
     )
   }
-  const result = spawnSync(command, { cwd: root, shell: true, stdio: 'inherit' })
-  return result.status ?? 1
+  const started = Date.now()
+  return new Promise((resolve) => {
+    const chunks: Buffer[] = []
+    const child = spawn(command, { cwd: root, shell: true, stdio: ['inherit', 'pipe', 'pipe'] })
+    child.stdout.on('data', (chunk: Buffer) => {
+      chunks.push(chunk)
+      process.stdout.write(chunk)
+    })
+    child.stderr.on('data', (chunk: Buffer) => {
+      chunks.push(chunk)
+      process.stderr.write(chunk)
+    })
+    child.on('error', () => resolve(1))
+    child.on('close', (code) => {
+      const exitCode = code ?? 1
+      writeOverrideSummary(root, command, exitCode, Date.now() - started, Buffer.concat(chunks))
+      resolve(exitCode)
+    })
+  })
+}
+
+/**
+ * Record a configured command's run as a one-check summary under `.check/`,
+ * beside its captured output, in the shape checkride writes for its own runs.
+ *
+ * A summary that cannot be written is reported, never fatal: the gate's
+ * verdict is the command's exit code, and a full disk must not turn a green
+ * run red.
+ */
+function writeOverrideSummary(root: string, command: string, exitCode: number, durationMs: number, output: Buffer): void {
+  const ok = exitCode === 0
+  const summary: Summary = {
+    schema_version: 1,
+    timestamp: new Date().toISOString(),
+    ok,
+    checks_run: 1,
+    total_duration_ms: durationMs,
+    checks: [
+      {
+        name: command.length <= OVERRIDE_NAME_BUDGET ? command : `${command.slice(0, OVERRIDE_NAME_BUDGET - 1)}…`,
+        adapter: null,
+        description: `the configured "check" command: ${command}`,
+        ok,
+        exit_code: exitCode,
+        duration_ms: durationMs,
+        output_file: OVERRIDE_OUTPUT,
+      },
+    ],
+  }
+  try {
+    const dir = join(root, '.check')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, OVERRIDE_OUTPUT), output)
+    writeFileSync(join(dir, 'summary.json'), `${JSON.stringify(summary, null, 2)}\n`)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    process.stderr.write(`plumbbob: could not record the check summary under .check/ (${message}).\n`)
+  }
 }
 
 /**
