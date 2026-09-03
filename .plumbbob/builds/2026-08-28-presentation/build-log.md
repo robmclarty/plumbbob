@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: presentation
 
-**Current step:** 17 — feat(ending): every transition prints its whole ending
+**Current step:** 18 — test(evals): run the eval tier against the new anatomy
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -39,7 +39,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 14. feat(notices): every relayed line states its fact through one formatter
 - ☑ 15. feat(handoff): point past an open spike and out of a finished session
 - ☑ 16. feat(notices): the ending's lead line wears its label
-- ☐ 17. feat(ending): every transition prints its whole ending
+- ☑ 17. feat(ending): every transition prints its whole ending
 - ☐ 18. test(evals): run the eval tier against the new anatomy
 
 ## Park list
@@ -59,6 +59,9 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [x] plumbbob's own boundary and driver lines (checkpoint's 'step N checkpointed — sha. Back at the boundary.', park's 'parked: tag: text') do not meet the one-colon, no-dash notice register presentation.md now states; a src sweep of those strings, outside step 8's docs seam
 - [ ] the shared rate-limit example's step titles ('Add a token-bucket limiter') are not Conventional-Commit subjects, which the plan skill and D68 (conventional-subjects) mandate; upgrading them is a cross-doc sweep of happy-path.md, techniques.md, and presentation.md's worked example, so it was left out of step 13's two-file seam
 - [x] the two new pointer shapes (close the spike, finish's /plumbbob:plan) are missing from presentation.md's Next Up list and the happy-path finish fence (doc-gap)
+- [ ] the readout's seam and diff rows read `git diff --numstat`, which sees neither untracked nor staged files, so a step whose product is a new file renders no seam row and no diff row and the Verdict folds without either (surfaced by the eval fixtures, whose steps all create files)
+- [ ] a repo that gates through a configured `check` command gets no `.check/summary.json`, so the pause renders no check row and withholds `looks good` from the Your Call block; worse, the Verdict folds with no gate input at all, so a RED gate reads as `● Plumb` (a c3 run watched handoff print Plumb and point at step 3 while `plumbbob check` had just exited 1). Only the checkride path writes the summary the row reads; surfaced by the eval fixtures, which all gate on `node check.js`
+- [ ] the 2026-09-03 receipt measures the anatomy landing about half the time in a live turn: prose after the relay in c2/c3/c4/c5/c7/c8 (the dominant defect), c6 wrapping the whole block in a fence of its own both runs (the nesting D33 (labeled-lines) forbids), c5's park turn dropping Next Up for its own pointer prose, and c8's plan pause not relaying handoff --plan at all in one run; the skills teach the positional rule but nothing measures it per turn
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -167,3 +170,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-09-02 — step 14 checkpointed · bb095523a — feat(notices): every relayed line states its fact through one formatter (1 drift, 40m)
 - 2026-09-02 — step 15 checkpointed · 2d917cde7 — feat(handoff): point past an open spike and out of a finished session (26m)
 - 2026-09-02 — step 16 checkpointed · f2b83e17c — feat(notices): the ending's lead line wears its label (1 drift, 14m)
+- 2026-09-03 — step 17 checkpointed · 8a86f9790 — feat(ending): every transition prints its whole ending (90m)

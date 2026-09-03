@@ -207,7 +207,13 @@ export type BulletLabel = {
 // Folding the shape into one regex would make `D4 (defaultWaves):` read as an
 // unlabelled bullet — losing the distinction between "not a decision" and
 // "a decision glossed the wrong way", which is the finding worth reporting.
-const BULLET_LABEL = /^([DCQ])(\d+)(?:\s*\(([^)]*)\))?:\s/
+//
+// The opener now carries the anchor and the bold that templates/intent.md
+// teaches (`<a id="d1"></a>**D1 (slug)**:`), both optional so the older bare
+// form still parses. Reading only the bare form is what made a live sweep
+// score a perfectly authored plan as `invalid`: every bullet was anchored, so
+// none of them looked like a decision at all.
+const BULLET_LABEL = /^(?:<a id="[^"]*"><\/a>\s*)?(?:\*\*)?([DCQ])(\d+)(?:\s*\(([^)]*)\))?(?:\*\*)?:\s/
 const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 export function bulletLabel(bullet: string): BulletLabel | null {
@@ -230,9 +236,14 @@ export function bulletLabel(bullet: string): BulletLabel | null {
 // a live sweep flagged exactly that as a false placeholder. A placeholder is
 // prose the human was meant to replace, never code.
 export function hasTemplatePlaceholder(bullet: string): boolean {
-  const prose = bullet.replace(/`[^`]*`/g, '')
+  const prose = bullet.replace(/`[^`]*`/g, '').replace(ANCHOR, '')
   return bullet.includes('slug-here') || /<[^>`]+>/.test(prose)
 }
+
+// The reference anchor templates/intent.md tells the author to keep. It is
+// angle-bracketed markup, not prose the human was meant to replace, so it is
+// stripped before the placeholder test the same way a code span is.
+const ANCHOR = /<a id="[^"]*"><\/a>/g
 
 // The decay probe: `D4`/`C6`/`Q2` tokens that are NOT followed by their gloss,
 // anywhere in the text — a reference site where the slug was dropped. Two
@@ -242,8 +253,8 @@ export function hasTemplatePlaceholder(bullet: string): boolean {
 export function bareRefs(text: string): ReadonlyArray<string> {
   const found: string[] = []
   for (const raw of text.split('\n')) {
-    const line = raw.trim().replace(/[DCQ]\d+\s*[–—-]\s*[DCQ]?\d+/g, '')
-    if (/^-\s*[DCQ]\d+\b/.test(line)) continue
+    const line = raw.trim().replace(ANCHOR, '').replace(/[DCQ]\d+\s*[–—-]\s*[DCQ]?\d+/g, '')
+    if (/^-\s*\*{0,2}[DCQ]\d+\b/.test(line)) continue
     for (const m of line.matchAll(/\b([DCQ]\d+)\b(?!\s*\()/g)) found.push(m[1] ?? '')
   }
   return found

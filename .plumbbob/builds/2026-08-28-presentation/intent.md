@@ -645,7 +645,7 @@ a boundary or driver turn, top to bottom
    formatter's fixtures
    - seam: `src/lib/notice.ts`, `src/lib/__tests__/notice.test.ts`, `src/verbs/checkpoint.ts`, `src/verbs/park.ts`, `src/verbs/revert.ts`, `src/verbs/abandon.ts`, `src/verbs/spike.ts`, `src/verbs/use.ts`, `src/verbs/start.ts`, `src/verbs/finish.ts`, `src/verbs/__tests__/`, `docs/presentation.md`, `docs/happy-path.md`, `docs/cli-reference.md`, `skills/`
    - model: sonnet (mechanical once the decision fixes the shapes; the spec section wants a careful read)
-17. [ ] feat(ending): every transition prints its whole ending, **done when:**
+17. [x] feat(ending): every transition prints its whole ending, **done when:**
    `plumbbob checkpoint` (step and plan), `park`, `revert`, `abandon`, `spike`
    (open, close, report), `use`, and `finish` each emit one stdout block: the
    labeled lead line, the Verdict at the checkpoint boundary (its third rung

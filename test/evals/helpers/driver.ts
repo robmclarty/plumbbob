@@ -55,7 +55,11 @@ export type TurnOptions = {
 
 export type TurnResult = {
   readonly prompt: string // the pinned constant that fired this session (C3)
-  readonly content: string // the final assistant text (informational probes only, C1)
+  // Every assistant text part of the session, concatenated: fascicle accumulates
+  // them into one string, so a tool-call preamble arrives glued to what followed
+  // it. The anatomy readers take the tail for that reason (informational probes
+  // only, C1).
+  readonly content: string
   readonly finishReason: string
   readonly costUsd: number | null // fascicle's estimate; 0/null under OAuth-trivial turns
   readonly inputTokens: number

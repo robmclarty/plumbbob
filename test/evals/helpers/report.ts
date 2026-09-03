@@ -118,7 +118,7 @@ export function renderReport(date: string): string {
     '`latched` runs the shipped plugin. Behavioral failures are never retried.',
     '',
     '| # | Contract | baseline | latched |',
-    '|---|----------|----------|---------|',
+    '| - | -------- | -------- | ------- |',
     ...contracts.map(([id, title]) => {
       const b = baseline.filter((r) => r.contract === id)
       const l = latched.filter((r) => r.contract === id)
@@ -128,10 +128,12 @@ export function renderReport(date: string): string {
     `Estimated cost: $${cost(baseline).toFixed(2)} baseline · $${cost(latched).toFixed(2)} latched · ` +
       `${all.filter((r) => r.infraRetries > 0).length} run(s) needed an infra retry.`,
     '',
+    ...renderOneSided(baseline, latched),
     '## Non-pass runs',
     '',
     ...renderNonPasses(all),
     '',
+    ...renderAnatomy(baseline, latched),
     '## Method footnotes',
     '',
     '- Each scripted "human turn" is a fresh `claude -p` session; plumbbob\'s turn',
@@ -149,6 +151,15 @@ export function renderReport(date: string): string {
     '- Contracts 5 and 6 are prose-governed by design — [D10 (pause-not-lock)](../decisions.md#d10) and',
     '  [D13 (no-edit-guards)](../decisions.md#d13): their numbers are the honest guidance-only rates.',
     '  The latch does not reach them.',
+    '- The `check` row cannot render in these fixtures. They gate through a',
+    '  configured `check` command, and only the checkride path writes the',
+    '  `.check/summary.json` that row reads, so the gate-verdict probe reads 0 by',
+    '  construction here rather than by anything the model did. The same absence',
+    '  withholds `looks good` from the Your Call block it measures.',
+    '- The turn-anatomy probes never gate a contract. A run that paused exactly',
+    '  as its contract demands, in a shape a hair off the spec, is still a pass of',
+    '  that contract; folding the two together would make one rate answer two',
+    '  questions and break comparability with every receipt already written.',
     '- Contract 8 is prose-governed the same way: the glossed-reference style',
     '  (`D1 (in-memory-bucket):`) ships only in templates/intent.md and the plan',
     '  skill, so nothing enforces it and baseline should track latched. Its',
@@ -156,6 +167,84 @@ export function renderReport(date: string): string {
     '',
   ]
   return lines.join('\n')
+}
+
+// The turn shapes docs/presentation.md specifies, tallied off the anatomy
+// probes each contract folds into its checks. They are informational by design,
+// so they never move a contract's rate and never appear beside a failure above:
+// whether a turn paused is the contract's verdict, and whether it paused in the
+// right shape is the separate question this table answers. The unit is a probe,
+// not a run, because a contract that reads two turns contributes two.
+function renderAnatomy(
+  baseline: ReadonlyArray<LedgerRun>,
+  latched: ReadonlyArray<LedgerRun>,
+): string[] {
+  const names = [
+    ...new Set(
+      [...baseline, ...latched].flatMap((r) =>
+        r.checks.filter((c) => c.name.startsWith(ANATOMY_PREFIX)).map((c) => c.name),
+      ),
+    ),
+  ].sort(byProbeOrder)
+  if (names.length === 0) return []
+  return [
+    '## Turn anatomy',
+    '',
+    'Every ending in this sweep, read against the shape it owes',
+    '([the turn anatomy](../presentation.md)): the parts it rendered, the order they',
+    'stood in, whether the gate verdict rode the readout fence, and whether the relay',
+    'was the last thing the turn said. A driver session accumulates every text part,',
+    'so the ending is read from the tail: prose before the relay is the model working,',
+    'prose after it is the defect the positional rule exists to catch.',
+    '',
+    '| probe | baseline | latched |',
+    '| ----- | -------- | ------- |',
+    ...names.map((name) => {
+      const label = name.slice(ANATOMY_PREFIX.length)
+      return `| ${label} | ${probeRate(baseline, name)} | ${probeRate(latched, name)} |`
+    }),
+    '',
+  ]
+}
+
+const ANATOMY_PREFIX = 'anatomy: '
+
+// The table reads in the spec's own order — the tiers first, then the probes
+// that cut across all of them — rather than alphabetically, which files
+// "nothing outside the block" between two tiers that have nothing to do with it.
+const PROBE_ORDER: ReadonlyArray<string> = [
+  'decision ending renders whole',
+  'plan ending renders whole',
+  'boundary ending renders whole',
+  'driver ending renders whole',
+  'the gate verdict rides the check row',
+  'recommendation is the last text',
+  'nothing after the relay',
+]
+
+function byProbeOrder(a: string, b: string): number {
+  const rank = (name: string): number => {
+    const i = PROBE_ORDER.indexOf(name.slice(ANATOMY_PREFIX.length))
+    return i < 0 ? PROBE_ORDER.length : i
+  }
+  return rank(a) - rank(b) || a.localeCompare(b)
+}
+
+// A sweep that ran one arm says so. An empty column is a measurement nobody
+// took, and a dash alone cannot tell that apart from a run that found nothing.
+function renderOneSided(
+  baseline: ReadonlyArray<LedgerRun>,
+  latched: ReadonlyArray<LedgerRun>,
+): string[] {
+  const missing = baseline.length === 0 ? 'baseline' : latched.length === 0 ? 'latched' : null
+  if (missing === null) return []
+  return [`The \`${missing}\` arm was not run on this date, so its column is empty.`, '']
+}
+
+function probeRate(runs: ReadonlyArray<LedgerRun>, name: string): string {
+  const probes = runs.flatMap((r) => r.checks.filter((c) => c.name === name))
+  if (probes.length === 0) return '—'
+  return `${probes.filter((c) => c.pass).length}/${probes.length}`
 }
 
 function renderNonPasses(all: ReadonlyArray<LedgerRun>): string[] {

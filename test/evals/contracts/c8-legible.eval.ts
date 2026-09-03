@@ -26,6 +26,7 @@ import {
   unledgeredCommits,
   validity,
 } from '../helpers/assert.ts'
+import { anatomyChecks } from '../helpers/anatomy.ts'
 import { makeEvalFixture } from '../helpers/fixture.ts'
 import type { Contract } from './contract.ts'
 import { readdirSync } from 'node:fs'
@@ -141,6 +142,9 @@ export const c8: Contract = {
           checkpointLines(repo).some((line) => line.kind === 'plan'),
         ),
         info('single build dir (no restart)', builds.length === 1, builds.join(', ')),
+        // The plan pause is the one tier the model still writes above: its block
+        // is the tail under the seam rule, which anatomyChecks cuts to.
+        ...anatomyChecks(turn1.content, 'plan'),
       ],
     }
   },
