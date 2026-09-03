@@ -43,3 +43,12 @@ resolved with ops before step 2 landed.
 - step 1 a1b2c3d4e5f60718293a4b5c6d7e8f9012345678
 - step 2 5b8f31da29c740e6b1a8d3f52c96e07a4b18d3c5
 - step 3 9c4d02e118f5a67b3e29c84d0f61b52a7e93c04d
+
+## Stats
+
+| step | red checks | drift warnings | reverts | wall-clock |
+| ---- | ---------- | -------------- | ------- | ---------- |
+| 1 | 0 | 0 | 0 | 22m |
+| 2 | 1 | 0 | 0 | 19m |
+| 3 | 0 | 0 | 0 | 15m |
+| **total** | 1 | 0 | 0 | 56m |

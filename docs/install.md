@@ -14,6 +14,26 @@ missing or too-old Node is the only thing that stops the binary from running; no
 here installs Node for you. Everything the CLI itself needs is bundled, including the
 `checkride` check gate, so there is no separate build, config, or API key to set up.
 
+## Before your first session
+
+Install scope is global, but a session lives in one repo, and four things have to hold
+there before `/plumbbob:plan` can open one:
+
+- **A git repository with at least one commit.** `start` records `HEAD` as the baseline
+  every checkpoint and revert measures from.
+- **A clean working tree.** Commit or stash first, or pass `--allow-dirty` and accept
+  that a revert to baseline discards the uncommitted work.
+- **Something for the gate to check.** checkride runs whatever tools the repo configures
+  (a `tsconfig.json`, a `vitest.config.ts`, a linter config); with none, it refuses to
+  call an empty run green, and `start` says so up front. A repo that gates some other
+  way sets `"check"` in `.plumbbob/settings.json`, for example `"check": "npm test"`.
+- **A model you would plan with.** Planning is where a frontier model earns its cost;
+  the plan can then recommend a smaller one per step, and `/plumbbob:status` shows the
+  recommendation before each build.
+
+The words the loop uses (steps, seams, the pause, the latch) are one line each in
+[`glossary.md`](glossary.md).
+
 ## The marketplace plugin
 
 The marketplace entry resolves to the published `plumbbob` npm package, so Claude
@@ -84,6 +104,8 @@ the first, first-class target.
 ```sh
 plumbbob doctor
 ```
+
+![/plumbbob:doctor on a healthy install](media/doctor.svg)
 
 `doctor` works for either install path: it confirms a marketplace plugin, or checks
 that the skills-dir link resolves to the plugin manifest, the skills, and the hooks

@@ -16,6 +16,8 @@ run for you by `/plumbbob:plan`), and
 > The example goal: **rate-limit the login endpoint**, a small feature touching a
 > couple of modules, big enough to show the full cycle.
 
+![A whole session, plan to finish](media/full-session.svg)
+
 ---
 
 ## 0. Plan the whole goal: `/plumbbob:plan`
@@ -74,6 +76,41 @@ seam**:
    - seam: `src/limiter.ts`, `src/config.ts`, `test/limiter.config.test.ts`
 ```
 
+The plan pause is a decision turn like the build pause. The skill presents the framed
+plan, gives it a cold read (one adversarial pass under `/plumbbob:refine`'s lens,
+surfacing holes without writing any), and writes that read into `.plumbbob/detail.md`;
+then it relays the CLI's plan-pause card (`plumbbob handoff --plan`), which opens on a
+rule because the plan itself sits above it. Nothing is measured yet, so it carries no
+Verdict, and nothing has landed, so `revert` is not among the moves. The recommendation
+is the cold read's verdict: `Approve it`, or `Sharpen <the worst hole> first` with
+refine named for the rest:
+
+```text
+---
+
+**Next Up**: Step 1 of 3 - Add a token-bucket limiter (model: **Opus**, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:17`)
+
+**Your Call**:
+
+- `looks good` → I mark the plan decided; /plumbbob:build starts Step 1
+- `expand`, or any question → I show more of what is there; nothing changes
+- anything that reads as direction → I take it as what to sharpen; the plan is cheap to change now
+
+**Recommendation**: Approve it. Every step carries a done-when a test can measure, the seams name files that exist, and each Decision states its because.
+```
+
+![The plan pause under the framed plan](media/plan-pause.svg)
+
+On `looks good` the skill commits the plan on its own (`plumbbob checkpoint --plan`), so
+the first step's diff stays clean and history reads baseline, plan, steps. The commit
+prints its own close:
+
+```text
+**Plan**: committed (7d2e94fb0)
+
+**Next Up**: Step 1 of 3 - Add a token-bucket limiter (model: **Opus**, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:17`)
+```
+
 > **Plan as far as you can see clearly.** Later steps may be fuzzier than the first;
 > that's fine; they get sharpened just-in-time when you reach them. Before building,
 > you can hand the frame to `/plumbbob:refine` to attack it for holes (or repair the plan
@@ -104,6 +141,8 @@ parked 0 · open questions 0
 
 next → build step 1 — `/plumbbob:build` (or `/plumbbob:step` to revise it first)
 ```
+
+![The dashboard with a step in flight](media/status-dashboard.svg)
 
 ---
 
@@ -185,6 +224,8 @@ spent        22 min · 2 turns · 41s gate · green first run
 **Recommendation**: Approve it. The gate is green, the seam held, and every call the step made is one the plan already decided.
 ````
 
+![The pause as Claude Code renders it](media/pause.svg)
+
 Every deterministic line there is measured, not composed: the check row comes from the
 gate's own summary, the seam row from the declared seam against `git diff`, the diff and
 `spent` rows from git and the step's receipts, and the Verdict is the worst of them all.
@@ -223,6 +264,8 @@ one command's output:
 
 **Next Up**: Step 2 of 3 - Wire the limiter into POST /login (model: **Sonnet**, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:20`)
 ```
+
+![The boundary after looks good](media/checkpoint-boundary.svg)
 
 That Next Up line is what carries the plan's model recommendation across a context
 window: a fresh window inherits the session's model rather than the plan's suggestion, so
@@ -272,6 +315,8 @@ one command's output here too.
 
 **Next Up**: Back to Step 2 of 3 - Wire the limiter into POST /login
 ```
+
+![A park and its pointer back at the step](media/park.svg)
 
 It's on the list, out of your head, and the step in flight stays protected. The
 dashboard now counts it:

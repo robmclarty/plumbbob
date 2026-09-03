@@ -13,7 +13,8 @@ implement what is written here; a change to the shape is a change to this
 file first.
 
 **Whatever can be deterministic is rendered by the CLI and relayed verbatim;
-the model composes only judgment, under an exact template.** The hand-off
+the model composes only judgment, under an exact template.**
+([D80 (cli-renders-model-relays)](decisions.md#d80)) The hand-off
 block proved the mechanism: the CLI took it over at 0.8.5 and it has not
 drifted since, while every model-composed section around it kept mutating.
 This spec pushes that split to its limit. If the CLI can compute or render a
@@ -164,7 +165,8 @@ by two things the reader was going to look at anyway.
 
 ## The readout
 
-The readout is the step's instrument: labeled rows inside one fence, assembled
+The readout is the step's instrument ([D82 (readout-ladder)](decisions.md#d82)):
+labeled rows inside one fence, assembled
 and emitted by `plumbbob handoff` under the label `**Readout**: Step <N> -
 <title>`. Rows, not a retelling. The label carries the step's identity so the
 fence does not have to, which is what lets the identity render once in a turn.
@@ -310,7 +312,8 @@ in the next check row as `· without test` and nowhere else.
 
 ## The footer card
 
-The card is the ending's three closing parts, CLI-rendered by `plumbbob
+The card is the ending's three closing parts
+([D83 (card-teaches-itself)](decisions.md#d83)), CLI-rendered by `plumbbob
 handoff` and relayed verbatim: the Verdict, the Next Up line, and the Your
 Call block, one blank line between each so the eye gets rungs to land on.
 Its fence is gone. Each part is a labeled line now, and a fence around three
@@ -488,7 +491,13 @@ file was written; the model should write it as sentences anyway, never
 hard-wrapped to 72 or 80 columns, because unfenced prose carrying a fence's
 line breaks reads as machine noise. Every decision turn ends on it: the
 build/verify pause, the plan pause, and an auto halt. Orientation and driver
-turns carry none, since nothing is pending there.
+turns carry none, since nothing is pending there. At the plan pause the
+recommendation is the model's cold read of the plan it just framed: one
+bounded adversarial pass under `/plumbbob:refine`'s lens, surfacing without
+appending, written into the detail file as findings and a recommendation and
+nothing else. It reads `Approve it.` or `Sharpen <the worst hole> first.`, and
+it names refine when the read found more than one, because refine is where
+the real adversary looks and the recommendation is an estimate.
 
 ## The ladder
 
@@ -550,7 +559,8 @@ checkpoint's block; a driver turn is the verb's.
 
 ### The one-liners
 
-The register governs one-liners, and only those: the transitions, the
+The register ([D84 (one-liner-register)](decisions.md#d84)) governs one-liners,
+and only those: the transitions, the
 captures, the advisories, and the refusals, each a single line a skill relays
 into a turn. A readout keeps its own shape, glyphs and list intact (the
 dashboard, `recover`'s check lines, the worktree paths under a spike's
@@ -676,7 +686,8 @@ is the next best thing to zero for policing.
 
 ## The detail plane
 
-Detail floods the picture, so the default turn carries none of it. Two
+Detail floods the picture ([D81 (detail-file)](decisions.md#d81)), so the
+default turn carries none of it. Two
 levels of disclosure, never more: the turn body is level one, and level two
 is one file plus git.
 

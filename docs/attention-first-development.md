@@ -130,7 +130,7 @@ built it, and mean it.
 ---
 
 *PlumbBob is one concrete instantiation of this posture for small-to-medium work:
-a small CLI and a dozen skills that hold the deciding-and-executing
+a small CLI and fourteen skills that hold the deciding-and-executing
 boundary with a pause you advance — guidance you fall into rather than a lock you
 fight, and structure — banks against the flood — rather than willpower. The concept
 does not depend on it. Any

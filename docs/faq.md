@@ -51,14 +51,49 @@ gate through something else set the `"check"` key in `.plumbbob/settings.json` (
 prints exactly how the gate will resolve. A run where every slot skipped **refuses**
 rather than passing vacuously.
 
+## What do I say at the pause?
+
+One of four things, and the block names them every time. `looks good` lands the step as a
+checkpoint. `expand` (with a number, `expand 2`, or any question at all) shows more of
+what is there and changes nothing; the answer comes from the step's detail file, the diff,
+or `git show`, never from memory. Anything that reads as direction is taken as what to
+change, and nothing lands until you say `looks good`. `revert` winds the work back to the
+last checkpoint. The shape of the whole block, and why it never varies, is in
+[`presentation.md`](presentation.md).
+
 ## Can't the model just blow through the pause?
 
-Yes, and that's a deliberate trade ([D10 (pause-not-lock)](decisions.md#d10)/[D13 (no-edit-guards)](decisions.md#d13) in [`decisions.md`](decisions.md)). A hard
-lock buys ritual, not control: a determined model routes around it. PlumbBob enforces
-deterministically where determinism works (`checkpoint` refuses on a red check, `revert`
-restores only recorded SHAs), and when guidance does get blown through, the checkpoint
-record makes recovery one command. Cheap recovery, not prevention, is the control that
-matters.
+On the **work** plane, yes, and that is a deliberate trade ([D10 (pause-not-lock)](decisions.md#d10)/[D13 (no-edit-guards)](decisions.md#d13) in
+[`decisions.md`](decisions.md)): a hard lock on every edit buys ritual, not control,
+because a determined model routes around it. The **record** is a different plane, and
+there the tick is latched ([D64 (approval-latch)](decisions.md#d64)): `checkpoint` refuses
+to land a step until a human turn has landed since the step began, so the model cannot
+commit its own work past you, and the one grant it could once forge (an `auto` in a
+settings file) no longer counts ([D67 (auto-not-a-grant)](decisions.md#d67)). PlumbBob
+enforces deterministically where determinism works (`checkpoint` refuses on a red check,
+`revert` restores only recorded SHAs), and when guidance does get blown through on the
+work plane, the checkpoint record makes recovery one command. The latch's effect is
+measured rather than claimed; the receipts are under [`evals/`](evals/).
+
+## My repo has no tests or linters. Does the gate still work?
+
+Not vacuously. The gate is checkride, which runs whatever tools the repo configures; a
+repo where it finds nothing refuses to call an empty run green, and `start` warns you the
+moment you open the session. Either give it something to check (a `tsconfig.json`, a
+`vitest.config.ts`, any tool it detects; `plumbbob doctor` prints the table) or set
+`"check"` in `.plumbbob/settings.json` to your own command (`"check": "npm test"`). An
+override is measured the same way as checkride: its exit code and captured output land
+under `.check/`, so the pause's readout still carries a `check` row (`green: 1 of 1
+checks`) and offers the `looks good` move.
+
+## Which model should I run?
+
+Whichever you like; the plan may suggest one per step. `/plumbbob:plan` writes an advisory
+`model:` line under a step when the signal is clear (a small model for mechanical wiring,
+a frontier one for test authoring or design), `/plumbbob:status` and every `**Next Up**`
+line surface it, and switching is your `/model` call before the next `/plumbbob:build`.
+Nothing switches for you and nothing refuses a step on the wrong model
+([D62 (model-recommendation)](decisions.md#d62)).
 
 ## Can I work on more than one goal at once?
 

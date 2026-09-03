@@ -51,7 +51,8 @@ silently ignored token, so a typo cannot fall through into a commit. `turn` and 
 two exceptions to the refusal: `turn` is a hook that must never wedge a prompt, and `park`'s
 argument is free text.
 
-Where a line sits picks its shape ([the turn anatomy](presentation.md)). A transition
+Where a line sits picks its shape ([the turn anatomy](presentation.md);
+[**D84 (one-liner-register)**](decisions.md#d84)). A transition
 prints its whole ending to stdout as one block: the lead line wearing a bold label
 (`**Checkpoint**: Step 15 complete (2d917cde7)`), the Verdict where one is measured, the
 advisories as bare capitalized sentences with their `→` remedies, and the Next Up pointer,
@@ -120,8 +121,8 @@ paths or `dir/` grants, never globs; [**D23 (no-glob-seams)**](decisions.md#d23)
 plumbbob handoff [<n>] [--plan] [--driver] [--build <slug>]
 ```
 
-Prints the whole CLI-rendered **ending of a turn** ([the turn anatomy](presentation.md))
-as one contiguous block, closed by a trailing blank line so nothing that follows can clobber
+Prints the whole CLI-rendered **ending of a turn** ([the turn anatomy](presentation.md);
+[**D80 (cli-renders-model-relays)**](decisions.md#d80)) as one contiguous block, closed by a trailing blank line so nothing that follows can clobber
 it. Read-only, no state change. Every part outside the readout fence is a bold label, a
 colon, and text that wraps, with one blank line between blocks and no fence but the
 readout's own (plus the inline diff's).
@@ -138,7 +139,8 @@ At a build pause it renders the turn entire, in this order:
   the detail file. Green rows collapse to a count, red rows name the one offender.
 - a `diff` fence, when the change is 20 lines or fewer.
 - `**Verdict**:` the ladder rung, computed worst-of over those same rows plus the step's
-  accrued stats, naming its worst component in a trailing parenthetical.
+  accrued stats, naming its worst component in a trailing parenthetical
+  ([**D82 (readout-ladder)**](decisions.md#d82)).
 - `**Next Up**:` the next undone step, its progress count, and a bracket carrying the
   step's `- model:` recommendation and where to read it in full.
 - `**Your Call**:` the moves a human actually makes at a pause, each with its outcome.
@@ -189,8 +191,9 @@ path. `checkpoint`'s gate takes no flags: the commit gate is always the full run
 That full run is the only gate plumbbob has. A repo may *also* install checkride's own
 Stop hook, which gates the code at the end of every file-touching turn under whatever
 narrowed profile its `gate` key names: a separate gate on a separate plane, and one that
-never stands in for this one ([**D75 (two-gates)**](decisions.md#d75)). This repo runs
-both; [`../CONTRIBUTING.md`](../CONTRIBUTING.md) describes the pair.
+never stands in for this one ([**D75 (two-gates)**](decisions.md#d75)). This repo ran
+both until 0.11.0 and now runs the full gate alone; [`../CONTRIBUTING.md`](../CONTRIBUTING.md)
+says why.
 
 Exits with the check's code: **0** green, **1** red (including a run where every slot
 skipped, which refuses rather than passing vacuously), and **2** when the gate itself
@@ -349,8 +352,10 @@ commit (subject `chore(<scope>): finish`, mirroring the step-checkpoint Conventi
 leads with a `plumbbob finish` marker, then an optional `--body` heredoc), and clears
 the control state (`STATE`, the cursor, the in-flight markers). No separate archive copy: the
 tracked build folder already *is* the record and merges into `main` with the branch, so it
-rides into the PR ([**D26 (build-folders)**](decisions.md#d26)). **No** refuse-without-report gate stands in the way. Refuses (exit 1) only
-with no session.
+rides into the PR ([**D26 (build-folders)**](decisions.md#d26)). **No** refuse-without-report gate stands in the way. It closes on its own ending: the
+lead line naming the folder that now rides the branch, then `**Next Up**: Nothing planned -
+/plumbbob:plan`, printed here because finish has just cleared the session `handoff` would
+read one from. Refuses (exit 1) only with no session.
 
 ### turn
 
@@ -464,9 +469,11 @@ stays git-excluded; a session is live iff `STATE` is present.
 ```text
 .plumbbob/
   STATE                    # untracked — session sentinel (presence = live) AND the active-build cursor (its content — D28 (state-cursor))
-  detail.md                # untracked — the in-flight step's full detail; the wire handoff renders a turn from, folded into the commit body and truncated at checkpoint — D9 (latest-detail-file)
-  settings.json            # tracked   — project defaults: {"check": "…", "auto": false}
-  settings.local.json      # untracked — personal overlay only: {"auto": true, …} (no cursor — that lives in STATE)
+  TURN                     # untracked — the human-turn counter the approval latch reads, ticked by the UserPromptSubmit hook
+  GRANT                    # untracked — a one-turn self-approval, minted only from a typed --auto or step range
+  detail.md                # untracked — the in-flight step's full detail: the wire handoff renders a turn from, folded into the commit body and truncated at checkpoint — D81 (detail-file)
+  settings.json            # tracked   — project defaults: {} (or {"check": "…"}); start seeds it empty
+  settings.local.json      # untracked — personal overlay only, e.g. a per-worktree {"check": "…"} (no cursor — that lives in STATE)
   agents/                  # tracked   — optional: user-authored agents, one dir per agent (D41 (agent-resolution); see agents.md)
     <name>/agent.json      #            — the manifest; personal agents live under ~/.plumbbob/agents/
   builds/
@@ -480,6 +487,7 @@ stays git-excluded; a session is live iff `STATE` is present.
       STEP                 # untracked — the in-flight step number (its presence is the BUILD phase)
       SEAM                 # untracked — the in-flight step's declared paths (awareness, not a lock)
       SPIKE                # untracked — marker, present while a spike fork is open
+      TICK                 # untracked — the TURN value stamped when the step was entered; with TURN, the latch's whole state
       handoff.json         # untracked — step-scoped agent-run ledger, cleared at checkpoint or abandon — D47 (handoff-ledger)
 ```
 
@@ -490,9 +498,7 @@ root, the whole `.plumbbob/` excluded) for repos that will not track tool folder
 A repo scaffolded by a pre-restructure plumbbob keeps that legacy flat layout until
 `plumbbob doctor --migrate` moves it here ([**D31 (doctor-migrate)**](decisions.md#d31)).
 
-The control plane also carries the latch's flat files at the sidecar root: `TURN` (the
-human-turn counter) and `GRANT` (a one-turn self-approval), plus each build's `TICK` entry
-stamp. What every one of them holds, how they are git-excluded, and why they are not in
+What every control-plane file holds, how they are git-excluded, and why they are not in
 `.gitignore` or your home directory: [`state-and-git.md`](state-and-git.md).
 
 ## Settings
@@ -502,19 +508,22 @@ Settings resolve through a four-rung ladder ([**D27 (settings-ladder)**](decisio
 default. The known keys:
 
 ```jsonc
-// settings.json  (tracked — shared project defaults)
-{ "auto": false }                        // no "check" key: checkride is the gate — D32 (checkride-gate)
-{ "check": "npm test", "auto": false }   // or override the gate with any shell command
+// settings.json  (tracked — shared project defaults; start seeds it empty)
+{}                                       // all defaults: no "check" key means checkride is the gate — D32 (checkride-gate)
+{ "check": "npm test" }                  // or override the gate with any shell command
 { "agents": { "after": ["reviewer"] } }  // project-wide slot bindings — the bottom of the ladder — D57 (merge-ladder)
 { "agentTimeout": 120 }                  // kill a user-authored agent after N seconds (0/absent = off — D51 (agent-timeout))
 
 // settings.local.json  (untracked — personal, per-worktree)
-{ "auto": true }
+{ "check": "pnpm check --only types,lint" }   // the same keys, overriding the tracked file in this worktree only
 ```
 
 `check` overrides the heavy gate (a shell command run in the repo root; its exit code is
-the result); **absent, the gate is checkride** ([**D24 (configurable-check)**](decisions.md#d24)/[**D32 (checkride-gate)**](decisions.md#d32)). `auto` is whether the
-agent approves in your place. The per-worktree active-build cursor is **not** a setting: it
+the result); **absent, the gate is checkride** ([**D24 (configurable-check)**](decisions.md#d24)/[**D32 (checkride-gate)**](decisions.md#d32)). `auto` is a legacy key
+the latch no longer honors ([**D67 (auto-not-a-grant)**](decisions.md#d67)): set, it is
+named at the pause and by `doctor`, and it grants nothing, since self-approval comes only
+from a typed `/plumbbob:build --auto` or step range. The per-worktree active-build cursor
+is **not** a setting: it
 is `STATE`'s content, so plumbbob never rewrites this hand-editable overlay ([**D28 (state-cursor)**](decisions.md#d28)). `agents` sets
 project-wide slot bindings for [user-authored agents](agents.md): the bottom rung under a
 build's `harness.json` and the `--agent` flag ([**D57 (merge-ladder)**](decisions.md#d57)). `agentTimeout` (seconds) arms a

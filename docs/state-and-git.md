@@ -60,7 +60,8 @@ branch.
 | `.plumbbob/STATE` | Session sentinel (its *presence* means a session is live), and its content is the active-build cursor ([D28 (state-cursor)](decisions.md#d28): the cursor lives in STATE, not settings) | `start` | `finish` |
 | `.plumbbob/TURN` | Monotonic count of human turns in this repo | the `UserPromptSubmit` hook | never (it's a counter) |
 | `.plumbbob/GRANT` | A one-turn self-approval, minted only when *you* typed `/build --auto` or a step range | the same hook | the next turn |
-| `.plumbbob/settings.local.json` | Your personal settings overlay (for example `{"auto": true}`) | you, by hand | you |
+| `.plumbbob/settings.local.json` | Your personal settings overlay (for example a per-worktree `"check"` command) | you, by hand | you |
+| `.plumbbob/detail.md` | The in-flight step's full detail, written by the model before each pause; `handoff` renders the turn from it ([D81 (detail-file)](decisions.md#d81)) | the model | `checkpoint`, which folds it into the commit body first |
 | `builds/<slug>/STEP` | The step number in flight; its presence *is* the BUILD phase | `build` | `checkpoint` / `revert` / `abandon` |
 | `builds/<slug>/SEAM` | The step's declared paths, one per line (awareness, not a lock) | `build` | `checkpoint` / `revert` / `abandon` |
 | `builds/<slug>/SPIKE` | Marker: a spike fork is open | `spike` | `spike done` |
@@ -106,6 +107,7 @@ Here is the complete block it appends:
 .plumbbob/settings.local.json
 .plumbbob/TURN
 .plumbbob/GRANT
+.plumbbob/detail.md
 .plumbbob/builds/*/STEP
 .plumbbob/builds/*/SEAM
 .plumbbob/builds/*/SPIKE
@@ -121,8 +123,8 @@ visible to git, because they're meant to be committed.
 `doctor --migrate` rewrites it when converting a legacy flat layout. `checkpoint` and
 `finish` then re-apply it on their way into `git add -A`,
 which self-heals the one gap that could bite: a PlumbBob upgraded *mid-build* can introduce a
-control file the running session's exclude list never learned about (`TICK`, `GRANT`, and
-`handoff.json` all arrived that way in earlier versions), and staging with `-A` would sweep
+control file the running session's exclude list never learned about (`TICK`, `GRANT`,
+`handoff.json`, and `detail.md` all arrived that way in earlier versions), and staging with `-A` would sweep
 it into a commit. Every one of those calls appends only what's missing, so the common case
 is a read and no write.
 

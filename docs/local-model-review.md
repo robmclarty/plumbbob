@@ -16,6 +16,8 @@ This is one worked path through the general agent machinery; the contract behind
 > walkthrough; everything below applies to `reviewer` with `provider: "ollama"` set, and its
 > [README](../examples/agents/reviewer/README.md) has the full provider matrix.
 
+![A local model reviewing a step at the pause](media/local-reviewer.svg)
+
 ## One-time setup
 
 **1. Install the agent into a repo.** Copy the directory into the project tier and install

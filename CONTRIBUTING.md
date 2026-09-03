@@ -41,20 +41,27 @@ plumbbob's one runtime dependency), which runs the tools this repo configures, i
 | `docs` | `markdownlint-cli2` | the docs |
 | `links` | built-in | relative markdown links resolve |
 | `refs` | `scripts/check-refs.ts` | every `D#` / `C#` citation is linked and glossed (see below) |
+| `prose` | `vale` | the voice: no em-dashes, no minted dialect, no generated-prose fingerprints, anchored to `docs/voice/` |
+| `spell` | `cspell` | spelling, against the project lexicon in `cspell.json` |
+| `build` | `tsc -p tsconfig.build.json` | the publish artifact still emits |
 
 Raw tool output lands in `.check/` (`summary.json` is the index). Narrow the loop while
 iterating: `pnpm check --bail`, `pnpm check --only types,lint`. An opt-in `mutation` slot
 (Stryker) audits test quality (`pnpm check --include mutation`) and is kept out of the
-default gate so the loop stays fast. This repo has no CI yet:
-**run `pnpm check` locally** before opening a pull request.
+default gate so the loop stays fast. CI runs the same `pnpm check` and then the build on
+every push and pull request (`.github/workflows/ci.yaml`, on the Node floor and the current
+major), but it is the slow confirmation: **run `pnpm check` locally** before opening a pull
+request.
 
-**A second gate runs faster, and it is not this one.** checkride's Stop hook runs at
-the end of every turn that touched a file, under the narrowed profile in
-`checkride.config.json`'s `gate` key: everything above except `test`, back in about two
-seconds. It catches a broken build while you are still in the conversation that broke it;
-it is not the full check and never claims to be. `pnpm check` (what `plumbbob checkpoint`
-also refuses on) stays the binding one ([**D75 (two-gates)**](docs/decisions.md#d75)). If a
-turn ends red, that hook will say so before you get a chance to forget.
+**A faster second gate exists, and this repo keeps it off.** checkride ships a Stop hook
+that runs the narrowed profile under `checkride.config.json`'s `gate` key (everything above
+except `test`, back in about two seconds) at the end of every turn that touched a file. It
+is a separate gate on a separate plane and never stands in for this one
+([**D75 (two-gates)**](docs/decisions.md#d75)). This repo ran it until 0.11.0 and turned it
+off: its notice landed right under the turn ending the presentation build exists to keep
+clean, and its narrowed run overwrote the summary the pause's `check` row reads. Re-arm it
+in `.claude/settings.json` if you want it; the narrow commands above are the tight loop
+meanwhile.
 
 ## Code conventions
 
@@ -117,7 +124,13 @@ Docs are hand-written markdown under `docs/` (plus this file and the `README`).
 `markdownlint-cli2` enforces structure; line length is intentionally unrestricted, so wrap prose
 naturally. If you change a verb's behavior or output, update
 [`docs/cli-reference.md`](docs/cli-reference.md), and check whether
-[`docs/happy-path.md`](docs/happy-path.md) shows the affected output.
+[`docs/happy-path.md`](docs/happy-path.md) shows the affected output. The shape of a turn
+(what prints, in what order, owned by whom) is specified in
+[`docs/presentation.md`](docs/presentation.md); a change to the shape is a change to that
+file first, and the verbs, the skills, and the happy path follow it. Before writing prose,
+read the exemplars in [`docs/voice/`](docs/voice/) and match that register; the `prose`
+slot enforces the mechanical half. Screenshots and recordings live under
+[`docs/media/`](docs/media/), whose README is the shot list.
 
 ## Commits and releases
 
