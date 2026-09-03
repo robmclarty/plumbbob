@@ -662,7 +662,7 @@ a boundary or driver turn, top to bottom
    the formatter's fixtures
    - seam: `src/lib/notice.ts`, `src/lib/orient.ts`, `src/verbs/handoff.ts`, `src/verbs/checkpoint.ts`, `src/verbs/park.ts`, `src/verbs/revert.ts`, `src/verbs/abandon.ts`, `src/verbs/spike.ts`, `src/verbs/use.ts`, `src/verbs/start.ts`, `src/verbs/finish.ts`, `src/lib/__tests__/`, `src/verbs/__tests__/`, `test/integration/`, `docs/presentation.md`, `docs/happy-path.md`, `docs/cli-reference.md`, `skills/`
    - model: opus (the ending renderer moves between modules, and nine skills' relay prose changes)
-18. [ ] test(evals): run the eval tier against the new anatomy, **done when:**
+18. [x] test(evals): run the eval tier against the new anatomy, **done when:**
    the c-series contracts read the new turn shapes, the driver runs green,
    and a fresh receipt lands in `docs/evals/`
    - seam: `test/evals/contracts/`, `test/evals/helpers/`, `docs/evals/`

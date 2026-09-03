@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: presentation
 
-**Current step:** 18 — test(evals): run the eval tier against the new anatomy
+**Current step:** none (at the boundary)
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -40,7 +40,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 15. feat(handoff): point past an open spike and out of a finished session
 - ☑ 16. feat(notices): the ending's lead line wears its label
 - ☑ 17. feat(ending): every transition prints its whole ending
-- ☐ 18. test(evals): run the eval tier against the new anatomy
+- ☑ 18. test(evals): run the eval tier against the new anatomy
 
 ## Park list
 
@@ -171,3 +171,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-09-02 — step 15 checkpointed · 2d917cde7 — feat(handoff): point past an open spike and out of a finished session (26m)
 - 2026-09-02 — step 16 checkpointed · f2b83e17c — feat(notices): the ending's lead line wears its label (1 drift, 14m)
 - 2026-09-03 — step 17 checkpointed · 8a86f9790 — feat(ending): every transition prints its whole ending (90m)
+- 2026-09-03 — step 18 checkpointed · 485d17669 — test(evals): run the eval tier against the new anatomy (1 drift, 62m)
