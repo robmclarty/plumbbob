@@ -212,12 +212,19 @@ commits any pending work (or records the existing `HEAD` if the tree is already 
 CLI-owned Conventional subject `<type>(<scope>): <description>` (scope from the build slug, type
 from the step title; author prefix honored, else `feat`), appends `step <n> <sha>` to `checkpoints`,
 flips the step to `[x]`, and clears `SEAM`/`STEP`, dropping the dashboard back to the
-`DESIGN` boundary. `-m <msg>` overrides the subject. The commit **body** leads with a
+`DESIGN` boundary. It also appends the step's entry to the build-log's `## Log`: the dated
+line, and beneath it the pause as the human approved it (the Summary and highlights, the
+Readout, the Verdict, the recommendation, and the full story behind each highlight), read
+from `.plumbbob/detail.md`, which it then truncates ([**D81 (detail-file)**](decisions.md#d81));
+the lead line's bracket carries a `details:` pointer at that entry. `-m <msg>` overrides
+the subject. The commit **body** leads with a
 `plumbbob step N` marker, then a `--body` heredoc on stdin (skill-composed,
 proportional); without it a deterministic fallback carries done-when + seam + diffstat
 ([**D68 (conventional-subjects)**](decisions.md#d68)/[**D35 (fallback-body)**](decisions.md#d35)). `--plan` instead commits *only* the build's artifact folder as
 `chore(<scope>): plan` and records a `plan <sha>` line, giving the plan its own commit so
-the first step's diff doesn't absorb the scaffold ([**D36 (plan-commit)**](decisions.md#d36)). Either form closes on its
+the first step's diff doesn't absorb the scaffold ([**D36 (plan-commit)**](decisions.md#d36));
+it records the plan pause's cold read the same way, beneath a `plan committed` line in
+the Log. Either form closes on its
 whole ending, `handoff`-rendered and printed here: the lead line, the Verdict the step just
 earned (the plan commit measures nothing, so it has none), any advisory, and the pointer.
 Staged paths outside the step's seam are an advisory, never a gate, and the stray they name
@@ -471,7 +478,7 @@ stays git-excluded; a session is live iff `STATE` is present.
   STATE                    # untracked — session sentinel (presence = live) AND the active-build cursor (its content — D28 (state-cursor))
   TURN                     # untracked — the human-turn counter the approval latch reads, ticked by the UserPromptSubmit hook
   GRANT                    # untracked — a one-turn self-approval, minted only from a typed --auto or step range
-  detail.md                # untracked — the in-flight step's full detail: the wire handoff renders a turn from, folded into the commit body and truncated at checkpoint — D81 (detail-file)
+  detail.md                # untracked — the in-flight step's full detail: the wire handoff renders a turn from, recorded under the build-log's Log and truncated at checkpoint — D81 (detail-file)
   settings.json            # tracked   — project defaults: {} (or {"check": "…"}); start seeds it empty
   settings.local.json      # untracked — personal overlay only, e.g. a per-worktree {"check": "…"} (no cursor — that lives in STATE)
   agents/                  # tracked   — optional: user-authored agents, one dir per agent (D41 (agent-resolution); see agents.md)

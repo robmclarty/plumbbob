@@ -106,7 +106,7 @@ the first step's diff stays clean and history reads baseline, plan, steps. The c
 prints its own close:
 
 ```text
-**Plan**: committed (7d2e94fb0)
+**Plan**: committed (7d2e94fb0, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md:38`)
 
 **Next Up**: Step 1 of 3 - Add a token-bucket limiter (model: **Opus**, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:17`)
 ```
@@ -258,7 +258,7 @@ then the Verdict and Next Up, with no Your Call block, because no decision is pe
 one command's output:
 
 ```text
-**Checkpoint**: Step 1 complete (a1b2c3d4e)
+**Checkpoint**: Step 1 complete (a1b2c3d4e, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md:44`)
 
 **Verdict**: ● Plumb
 
@@ -266,6 +266,10 @@ one command's output:
 ```
 
 ![The boundary after looks good](media/checkpoint-boundary.svg)
+
+The `details:` pointer is where the pause's record went: `checkpoint` writes the block
+you approved beneath the step's dated line in `build-log.md`'s Log, so an older step's
+detail is a scroll, and the record rides the branch into the PR.
 
 That Next Up line is what carries the plan's model recommendation across a context
 window: a fresh window inherits the session's model rather than the plan's suggestion, so

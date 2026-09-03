@@ -182,7 +182,7 @@ In Claude Code, inside any git repo with a clean tree:
    and returns to the boundary with the same three lines every landed step gets:
 
    ```text
-   **Checkpoint**: Step 1 complete (a1b2c3d4e)
+   **Checkpoint**: Step 1 complete (a1b2c3d4e, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md:44`)
 
    **Verdict**: ● Plumb
 

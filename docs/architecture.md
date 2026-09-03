@@ -59,8 +59,9 @@ into one block, and the skill pastes that block as the whole turn. A transition 
 (`checkpoint`, `park`, `revert`, `abandon`, `spike`, `use`, `finish`) prints its own
 ending the same way, through the one formatter in `lib/notice.ts`, so a boundary or a
 driver turn is one command's output and cannot disagree with itself. The detail file is
-the wire and git is the archive: `checkpoint` folds it into the commit body and truncates
-it.
+the wire and the build log is the archive: `checkpoint` records it beneath the step's
+dated line in `build-log.md`'s Log and truncates it, so the record rides the branch into
+the PR.
 
 ## The two planes ([D17 (two-planes)](decisions.md#d17)/[D26 (build-folders)](decisions.md#d26))
 

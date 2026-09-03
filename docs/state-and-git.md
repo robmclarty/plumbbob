@@ -61,7 +61,7 @@ branch.
 | `.plumbbob/TURN` | Monotonic count of human turns in this repo | the `UserPromptSubmit` hook | never (it's a counter) |
 | `.plumbbob/GRANT` | A one-turn self-approval, minted only when *you* typed `/build --auto` or a step range | the same hook | the next turn |
 | `.plumbbob/settings.local.json` | Your personal settings overlay (for example a per-worktree `"check"` command) | you, by hand | you |
-| `.plumbbob/detail.md` | The in-flight step's full detail, written by the model before each pause; `handoff` renders the turn from it ([D81 (detail-file)](decisions.md#d81)) | the model | `checkpoint`, which folds it into the commit body first |
+| `.plumbbob/detail.md` | The in-flight step's full detail, written by the model before each pause; `handoff` renders the turn from it ([D81 (detail-file)](decisions.md#d81)) | the model | `checkpoint`, which records it in the build log's Log first |
 | `builds/<slug>/STEP` | The step number in flight; its presence *is* the BUILD phase | `build` | `checkpoint` / `revert` / `abandon` |
 | `builds/<slug>/SEAM` | The step's declared paths, one per line (awareness, not a lock) | `build` | `checkpoint` / `revert` / `abandon` |
 | `builds/<slug>/SPIKE` | Marker: a spike fork is open | `spike` | `spike done` |

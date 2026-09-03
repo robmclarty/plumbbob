@@ -56,7 +56,7 @@ rather than passing vacuously.
 One of four things, and the block names them every time. `looks good` lands the step as a
 checkpoint. `expand` (with a number, `expand 2`, or any question at all) shows more of
 what is there and changes nothing; the answer comes from the step's detail file, the diff,
-or `git show`, never from memory. Anything that reads as direction is taken as what to
+or the build log's entry for an older step, never from memory. Anything that reads as direction is taken as what to
 change, and nothing lands until you say `looks good`. `revert` winds the work back to the
 last checkpoint. The shape of the whole block, and why it never varies, is in
 [`presentation.md`](presentation.md).

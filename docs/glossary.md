@@ -37,7 +37,7 @@ word up without reading the others first. Each entry points at the page that own
   build log, checkpoints, stats, and the report. It rides the branch into the PR.
   → [`state-and-git.md`](state-and-git.md)
 - **Build log** (`build-log.md`): the live ledger: the step mirror, the park list, the
-  harvest, and a dated log line per landed step.
+  harvest, and a dated entry per landed step carrying the pause as you approved it.
 - **Boundary**: the settled state between steps, with nothing in flight. The dashboard
   calls it `DESIGN`; a step in flight is `BUILD`; an open spike is `SPIKE`. Phase is
   derived from files on disk, never stored.
@@ -101,8 +101,8 @@ are its parts.
 - **Expand** (`expand 2`): the question that opens one highlight's full story from the detail
   file, changing nothing.
 - **Detail file** (`.plumbbob/detail.md`): where the model writes its judgment before a
-  pause; `handoff` renders the turn from it, and `checkpoint` folds it into the commit
-  body. The file is the wire, and git is the archive.
+  pause; `handoff` renders the turn from it, and `checkpoint` records it beneath the
+  step's line in the build log's Log. The file is the wire, and the ledger is the archive.
 - **Footer card**: the ending's last three parts (Verdict, Next Up, Your Call),
   CLI-rendered and relayed verbatim.
 - **Tiers**: a *decision* turn (a pause) carries the whole block; an *orientation* turn

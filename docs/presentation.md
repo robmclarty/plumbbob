@@ -435,8 +435,8 @@ outcome clause after the arrow opens with a capital letter. The block names
 `expand` bare, as the label of the move: what follows it is the human's
 choice, a number (`expand 2` opens that highlight's section) or a phrase
 ("explain that thing about the seam", "what does 'xyz' even mean?"), and it
-is answered from the detail file, the diff, or `git show`, never from
-recall. An expand turn ends on the Your Call block again, so the
+is answered from the detail file, the diff, or the build-log's Log for an
+older step, never from recall. An expand turn ends on the Your Call block again, so the
 pause stays legible however many questions it takes.
 
 The `looks good` line renders only while the measured check is green: on red,
@@ -497,7 +497,9 @@ bounded adversarial pass under `/plumbbob:refine`'s lens, surfacing without
 appending, written into the detail file as findings and a recommendation and
 nothing else. It reads `Approve it.` or `Sharpen <the worst hole> first.`, and
 it names refine when the read found more than one, because refine is where
-the real adversary looks and the recommendation is an estimate.
+the real adversary looks and the recommendation is an estimate. The plan
+commit records the read beneath a `plan committed` line in the Log, the
+build's first entry.
 
 ## The ladder
 
@@ -526,7 +528,7 @@ scales down with the turn:
 A boundary turn, whole:
 
 ```text
-**Checkpoint**: Step 2 complete (b4c5d6e7f)
+**Checkpoint**: Step 2 complete (b4c5d6e7f, details: `.plumbbob/builds/rate-limit/build-log.md:52`)
 
 **Verdict**: ● Plumb
 
@@ -638,7 +640,7 @@ relay never has to work out which line leads, and a stray a checkpoint alone
 can see lands under the Verdict it just earned a rung on:
 
 ```text
-**Checkpoint**: Step 16 complete (f2b83e17c)
+**Checkpoint**: Step 16 complete (f2b83e17c, details: `.plumbbob/builds/presentation/build-log.md:97`)
 
 **Verdict**: ◐ A hair off (staged outside the seam)
 
@@ -736,15 +738,19 @@ handoff measures for itself, and the constraints row it renders from the
 count declared in intent.md, whatever the model attested. The header rule
 keeps the word `recap`: it is the wire's parse anchor rather than a
 rendering, and what a reader sees is the `**Readout**:` label above the
-fence. At checkpoint the CLI folds the file into the commit
-body (the explicit `--body` text leads, the detail follows) and then
-truncates it: the checkpoint commit is the durable archive, commentary in the
-body, the diff in the tree.
+fence. At checkpoint the CLI records the file beneath the step's dated line
+in the build-log's `## Log` (the Summary and highlights, the Readout, the
+Verdict, the recommendation, then the full story behind each highlight, as
+the pause showed them) and then truncates it: the tracked ledger is the
+durable archive, and it rides the branch into the PR where a commit body
+would not survive the squash-merge. The commit body keeps its marker and the
+`--body` prose only, the diff stays in the tree and the commit, and the lead
+line's bracket points at the entry (`details: \`…/build-log.md:412\``).
 
 Expansion is a lookup, never a recall. "expand 2" binds to the latest card,
 the move the Your Call block names, and is answered by reading the detail
 file's `## 2`; an older step takes its
-step number or sha and is answered from `git show`. The diff itself never
+step number and is answered from its entry in the Log. The diff itself never
 rides the detail file: at the pause it is the working tree (`git diff`), and
 after the checkpoint it is the commit.
 
