@@ -80,7 +80,7 @@ Under `## Steps`, the plan is a numbered list where **every step carries two thi
 **done-when** and a **seam**.
 
 ```markdown
-1. [ ] Add a token-bucket limiter — **done when:** `test/limiter.test.ts` passes
+1. [ ] feat(limiter): add a token-bucket limiter — **done when:** `test/limiter.test.ts` passes
    - seam: `src/limiter.ts`, `test/limiter.test.ts`
 ```
 

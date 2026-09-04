@@ -112,9 +112,9 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
     return 1
   }
 
-  // The step's record, as the pause showed it: measured now, before the work
-  // is staged, since the seam and diff rows read the working tree the way the
-  // pause did. It lands in the build-log's Log beneath the dated line (the
+  // The step's record, as the pause showed it: built here, before the work is
+  // staged, though both measures now run against HEAD, so staging no longer
+  // moves them. It lands in the build-log's Log beneath the dated line (the
   // tracked ledger is the archive, and it rides the branch where a commit body
   // would not survive the squash); the commit body keeps its marker and the
   // lead prose only.

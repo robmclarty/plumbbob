@@ -133,11 +133,12 @@ At a build pause it renders the turn entire, in this order:
   section, with the `(details: …)` bracket appended, then the `## <n>` section titles
   beneath it as the numbered highlights.
 - `**Readout**:` the step and its title, then the fence: the `check` row measured from
-  `.check/summary.json`, `seam` from the SEAM marker against the work-plane diff, `diff`
-  and `spent` from `git diff --numstat`, `stats.json`, and the turn ledger, folded with
-  the three judgment rows (`done-when`, `decisions`, `constraints`) the model wrote into
-  the detail file. Green rows collapse to a count, red rows name the one offender.
-- a `diff` fence, when the change is 20 lines or fewer.
+  `.check/summary.json`, `seam` and `diff` from the SEAM marker against the step's whole
+  product (everything changed since HEAD, staged or not, plus each non-ignored new file),
+  and `spent` from `stats.json` and the turn ledger, folded with the three judgment rows
+  (`done-when`, `decisions`, `constraints`) the model wrote into the detail file. Green
+  rows collapse to a count, red rows name the one offender.
+- a `diff` fence, when the change is 20 lines or fewer and a patch could be produced.
 - `**Verdict**:` the ladder rung, computed worst-of over those same rows plus the step's
   accrued stats, naming its worst component in a trailing parenthetical
   ([**D82 (readout-ladder)**](decisions.md#d82)).

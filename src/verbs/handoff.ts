@@ -15,12 +15,12 @@
 // it cannot narrate into.
 //
 // If the CLI can compute a recap row, the CLI does: the check row comes from
-// the last run's summary, the seam row from the SEAM marker against the
-// work-plane diff, the diff row from `git diff --numstat`. The model's part
-// (`.plumbbob/detail.md`) supplies only what takes judgment: the Summary, the
-// three judgment rows, and the recommendation; the Verdict folds the same
-// assembled rows worst-of with the step's accrued stats, so the fence shows
-// exactly what the fold saw.
+// the last run's summary, the seam and diff rows from the SEAM marker against
+// the step's whole product (everything changed since HEAD, staged or not, plus
+// each non-ignored new file). The model's part (`.plumbbob/detail.md`) supplies
+// only what takes judgment: the Summary, the three judgment rows, and the
+// recommendation; the Verdict folds the same assembled rows worst-of with the
+// step's accrued stats, so the fence shows exactly what the fold saw.
 //
 // Every tier's ending is emitted here, so no skill has to fake the furniture in
 // prose: `--plan` renders the plan-pause ending and `--driver` the driver
@@ -32,7 +32,7 @@
 
 import { readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
-import { commitsSince, diffNumstat, diffPatch, findRepoRoot } from '../lib/git.ts'
+import { type NumstatEntry, commitsSince, diffNumstat, diffPatch, findRepoRoot } from '../lib/git.ts'
 import { blocks } from '../lib/notice.ts'
 import { isArtifactPath, parseStepSeam } from '../lib/intent.ts'
 import {
@@ -183,7 +183,11 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   const verdict = verdictLine(ladder, worst)
   const counts = countDiff(work)
   const changed = counts.added + counts.removed
-  const inline = changed > 0 && changed <= INLINE_DIFF_MAX
+  // The patch comes first so `· inline below` is a promise the fence keeps: a
+  // small change git can still print nothing for (a vanished path) falls back
+  // to the bare counts rather than pointing at a fence that never arrives.
+  const patch = changed > 0 && changed <= INLINE_DIFF_MAX ? diffPatch(root, work) : ''
+  const inline = patch.length > 0
   const readout = recapLines(rows, {
     diff: diffRowValue(counts, inline),
     spent: spentRowValue(spentInputs(root, slug, current, summary)),
@@ -194,13 +198,7 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     parts.push([readoutLabel(current, steps), '', ...fence('text', readout)].join('\n'))
   }
   if (inline) {
-    const patch = diffPatch(
-      root,
-      work.map((e) => e.path),
-    )
-    if (patch.length > 0) {
-      parts.push(fence('diff', patch.split('\n')).join('\n'))
-    }
+    parts.push(fence('diff', patch.split('\n')).join('\n'))
   }
   parts.push(verdict, nextUpLine(nextUp, steps.length, where), yourCallBlock(current, checkGreen))
   return emit(withRecommendation(parts, parseRecommendation(detail)))
@@ -237,10 +235,10 @@ export type BoundaryEnding = { readonly verdict: string | null; readonly pointer
  * nests it under the Log's dated line.
  *
  * Measured, not recalled: the check, seam, and diff rows are read the same way
- * the pause read them, so this has to be built before the work is staged (the
- * seam and diff rows read the working tree). Null when the detail file carries
- * nothing to record, so a hand-built step with no detail gets the bare dated
- * line it always did.
+ * the pause read them. Both measures run against HEAD, so staging no longer
+ * moves the counts and the caller's build-then-stage order is a nicety rather
+ * than a requirement. Null when the detail file carries nothing to record, so a
+ * hand-built step with no detail gets the bare dated line it always did.
  */
 export function stepRecord(root: string, slug: string | null, step: number, detail: string): string | null {
   const summary = parseSummary(detail)
@@ -340,7 +338,7 @@ function landedVerdict(root: string, slug: string | null, intent: string, step: 
 /** The measured inputs a Verdict and a readout are both built from. */
 type Measured = {
   readonly rows: Partial<Record<RecapRowName, RecapRow>>
-  readonly work: ReadonlyArray<{ readonly path: string; readonly added: number; readonly removed: number }>
+  readonly work: ReadonlyArray<NumstatEntry>
   readonly summary: CheckSummary | null
   readonly checkGreen: boolean
 }

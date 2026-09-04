@@ -248,6 +248,10 @@ describe('checkpoint', () => {
     expect(log).toMatch(/- \d{4}-\d{2}-\d{2} — step 1 checkpointed · [0-9a-f]{9} — First\n\n  \*\*Summary\*\*: A works now\.\n\n  1\. The first move\n/)
     expect(log).toContain('  **Readout**: Step 1 - First\n\n  ```text\n')
     expect(log).toContain('  done-when    met\n')
+    // Measured, not recalled, and the measure sees a new file: src/a.ts is the
+    // step's whole product and git has never seen it before.
+    expect(log).toContain('  diff         +1 -0 across 1 file\n')
+    expect(log).toContain('  seam         held: 1 of 1 declared, no strays\n')
     expect(log).toContain('  **Verdict**: ')
     expect(log).toContain('  **Recommendation**: Approve it. Nothing is off.\n\n  **1.** The first move\n\n  The whole story.')
     expect(log).not.toContain('(details:')

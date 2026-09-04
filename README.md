@@ -145,7 +145,7 @@ In Claude Code, inside any git repo with a clean tree:
    1. The bucket lives in memory, keyed by IP, refilling five tokens a minute.
    2. The clock is injected, so the test advances time instead of sleeping on it.
 
-   **Readout**: Step 1 - Add a token-bucket limiter
+   **Readout**: Step 1 - feat(limiter): add a token-bucket limiter
 
    ```text
    check        green: 7 of 7 checks
@@ -159,7 +159,7 @@ In Claude Code, inside any git repo with a clean tree:
 
    **Verdict**: ● Plumb
 
-   **Next Up**: Step 2 of 3 - Wire the limiter into POST /login (model: **Sonnet**, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:20`)
+   **Next Up**: Step 2 of 3 - feat(login): wire the limiter into POST /login (model: **Sonnet**, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:20`)
 
    **Your Call**:
 
@@ -186,7 +186,7 @@ In Claude Code, inside any git repo with a clean tree:
 
    **Verdict**: ● Plumb
 
-   **Next Up**: Step 2 of 3 - Wire the limiter into POST /login (model: **Sonnet**, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:20`)
+   **Next Up**: Step 2 of 3 - feat(login): wire the limiter into POST /login (model: **Sonnet**, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:20`)
    ```
 
    ![The boundary after looks good](docs/media/checkpoint-boundary.svg)

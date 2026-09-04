@@ -25,12 +25,16 @@ history reads as the build's spine:
 
 ```text
 f3e9a1b2c chore(rate-limit-the-login-endpoint): finish
-9c4d02e11 feat(rate-limit-the-login-endpoint): make the limit configurable via env
-5b8f31da2 feat(rate-limit-the-login-endpoint): wire the limiter into POST /login
-a1b2c3d4e feat(rate-limit-the-login-endpoint): add a token-bucket limiter
+9c4d02e11 feat(config): make the limit configurable via env
+5b8f31da2 feat(login): wire the limiter into POST /login
+a1b2c3d4e feat(limiter): add a token-bucket limiter
 7d2e94fb0 chore(rate-limit-the-login-endpoint): plan
 3a1f2b0c1 (baseline — wherever the branch stood when the session opened)
 ```
+
+The three step subjects carry a scope each, because each step title was authored with one;
+`plan` and `finish` fall back to the build's slug with its date prefix stripped, so one log
+shows two rungs of D68's scope chain.
 
 A normal squash-merge collapses these markers at PR time, while the build folder itself
 lands in `main` — the record outlives the branch.

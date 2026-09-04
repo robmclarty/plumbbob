@@ -63,7 +63,7 @@ The whole turn, rendered (the running example is
 2. Misses count against the bucket and successes do not reset it, as planned.
 3. `test/login.rate.test.ts` covers the 6th-request case red-to-green.
 
-**Readout**: Step 2 - Wire the limiter into POST /login
+**Readout**: Step 2 - feat(login): wire the limiter into POST /login
 
 ```text
 check        green: 3 of 3 checks
@@ -77,7 +77,7 @@ spent        88 min · 3 turns · 63s gate · green first run
 
 **Verdict**: ● Plumb
 
-**Next Up**: Step 3 of 3 - Make the limit configurable via env (model: **Sonnet**, details: `.plumbbob/builds/rate-limit/intent.md:41`)
+**Next Up**: Step 3 of 3 - feat(config): make the limit configurable via env (model: **Sonnet**, details: `.plumbbob/builds/rate-limit/intent.md:41`)
 
 **Your Call**:
 
@@ -174,8 +174,9 @@ fence does not have to, which is what lets the identity render once in a turn.
 Ownership splits by nature. If the CLI can measure a row, the CLI does, because
 every row the model attests is one it can pad or get wrong, and determinism is
 what earns the readout its trust. The `check` row comes from the last run's
-`.check/summary.json`, the `seam` row from the SEAM marker against `git diff
---numstat`, the `diff` row from the same numstat, and the `spent` row from
+`.check/summary.json`, the `seam` and `diff` rows from the SEAM marker against
+the step's whole product (everything changed since HEAD, staged or not, plus
+each non-ignored new file counted as all-added lines), and the `spent` row from
 `stats.json` and the turn ledger. The model writes only the three rows that
 take judgment (`done-when`, `decisions`, `constraints`), into the detail file,
 under the header rule that file's wire opens with; handoff parses them there,
@@ -242,7 +243,7 @@ The rules the rows follow:
   good state is meaningful collapses to it. Silence and absence are different
   signals, and the readout keeps them apart.
 - The `diff` row is information, not a measure: `+<added> -<removed> across
-  <N> files`, counted as `git diff --numstat` sums them. It never folds into
+  <N> files`, counted against HEAD with new files included. It never folds into
   the Verdict, and it vanishes when nothing changed.
 - Every fence line fits 80 columns: the 13-character label pad leaves 67 for
   the value. The CLI's rows conform by counted degradation, never a silent
@@ -392,11 +393,11 @@ recommendation when the step has one (advisory metadata,
 full:
 
 ```text
-**Next Up**: Step 3 of 3 - Make the limit configurable via env (model: **Sonnet**, details: `.plumbbob/builds/rate-limit/intent.md:41`)
+**Next Up**: Step 3 of 3 - feat(config): make the limit configurable via env (model: **Sonnet**, details: `.plumbbob/builds/rate-limit/intent.md:41`)
 
-**Next Up**: Step 3 of 3 - Make the limit configurable via env (details: `.plumbbob/builds/rate-limit/intent.md:41`)
+**Next Up**: Step 3 of 3 - feat(config): make the limit configurable via env (details: `.plumbbob/builds/rate-limit/intent.md:41`)
 
-**Next Up**: Back to Step 2 of 3 - Wire the limiter into POST /login
+**Next Up**: Back to Step 2 of 3 - feat(login): wire the limiter into POST /login
 
 **Next Up**: Close the spike - /plumbbob:spike done, then back to Step 2
 
@@ -533,7 +534,7 @@ scales down with the turn:
 | tier | turns | the ending renders |
 | --- | --- | --- |
 | decision | the build/verify pause, the plan pause, an auto halt | the whole block: the Summary and its highlights, the Readout, the inline diff when small, the Verdict, Next Up, Your Call, and the recommendation. The plan pause judges no diff, so it renders the pointer, the moves, and the recommendation alone |
-| orientation | status, the checkpoint boundary, finish | the transition's lead line, the Verdict, any advisories, and Next Up; no Your Call block, no recommendation |
+| orientation | the checkpoint boundary, finish, status | the transition's lead line, the Verdict, any advisories, and Next Up; no Your Call block, no recommendation. `status` is the exception: it renders the dashboard and nothing else, and the dashboard's last line is its own pointer |
 | driver | park, spike, use, recover, revert, agent runs | the transition's lead line, any advisories, and Next Up; no Verdict, since nothing landed |
 
 A boundary turn, whole:
@@ -543,7 +544,7 @@ A boundary turn, whole:
 
 **Verdict**: ● Plumb
 
-**Next Up**: Step 3 of 3 - Make the limit configurable via env (model: **Sonnet**, details: `.plumbbob/builds/rate-limit/intent.md:41`)
+**Next Up**: Step 3 of 3 - feat(config): make the limit configurable via env (model: **Sonnet**, details: `.plumbbob/builds/rate-limit/intent.md:41`)
 ```
 
 A driver turn, whole (a mid-step park):
@@ -551,7 +552,7 @@ A driver turn, whole (a mid-step park):
 ```text
 **Parked**: should /password-reset get the same throttle? (tangent)
 
-**Next Up**: Back to Step 2 of 3 - Wire the limiter into POST /login
+**Next Up**: Back to Step 2 of 3 - feat(login): wire the limiter into POST /login
 ```
 
 **One command emits each of those, and the verb that made the transition is
@@ -578,7 +579,17 @@ captures, the advisories, and the refusals, each a single line a skill relays
 into a turn. A readout keeps its own shape, glyphs and list intact (the
 dashboard, `recover`'s check lines, the worktree paths under a spike's
 notice), and the sentinel headers (`NO ACTIVE SESSION`, `NO ACTIVE BUILD`)
-stay exactly as they are. So does `plumbbob check`'s console trailer, which is
+stay exactly as they are.
+
+That exemption leaves two pointer vocabularies standing, and they stay that
+way. Every ending closes on `**Next Up**: Step 1 of 3 - <title>`, which states
+a fact and leaves the move to the human. The dashboard closes on `next → build
+step 1 — /plumbbob:build`, which names the move in the imperative, because the
+dashboard is the one surface a human reads while deciding what to type next,
+and it is read inside a `text` fence where a bold label would be literal
+characters. Converging them would either put markdown inside that fence or
+repeat, in a Next Up line, the step title the dashboard's own step list is
+already showing. So does `plumbbob check`'s console trailer, which is
 never relayed: the gate verdict this register cites is checkride's Stop-hook
 notice, and the check row above is where it lands. checkride's own verdict is
 the reference the shape was read from:
@@ -712,7 +723,7 @@ It is also the wire: the only path by which the model's judgment reaches the
 turn at all. Its shape:
 
 ```markdown
-# Detail · Step 2 · Wire the limiter into POST /login
+# Detail · Step 2 · feat(login): wire the limiter into POST /login
 
 ── recap · step 2 of 3 ──
 done-when    met
@@ -762,18 +773,20 @@ Expansion is a lookup, never a recall. "expand 2" binds to the latest card,
 the move the Your Call block names, and is answered by reading the detail
 file's `## 2`; an older step takes its
 step number and is answered from its entry in the Log. The diff itself never
-rides the detail file: at the pause it is the working tree (`git diff`), and
-after the checkpoint it is the commit.
+rides the detail file: at the pause it is the working tree against HEAD, new
+files included, and after the checkpoint it is the commit.
 
 ## The thresholds
 
 The numeric lines, in one place:
 
 - **Twenty lines.** A diff of 20 changed lines or fewer (added plus removed,
-  as `git diff --numstat` sums them) rides inline at the pause, in a `diff`
-  fence below the readout, and the diff row says so:
+  counted against HEAD with new files included) rides inline at the pause, in a
+  `diff` fence below the readout, and the diff row says so:
   `+14 -2 across 1 file · inline below`. At 21 the whole diff stays in the
-  working tree behind the diffstat row. Code is the single largest source of
+  working tree behind the diffstat row. The `· inline below` pointer prints only
+  when the fence follows it; when no patch could be produced the row keeps its
+  bare counts. Code is the single largest source of
   visual flood, and the counted row already says what moved.
 - **Five highlights.** More means the step's story has not been compressed;
   the overflow belongs in the detail file, behind the `expand` move.

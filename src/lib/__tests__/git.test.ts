@@ -1,10 +1,12 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import {
   commit,
   commitsSince,
+  diffNumstat,
+  diffPatch,
   findRepoRoot,
   gitPath,
   hasCommit,
@@ -19,6 +21,101 @@ import {
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 
 afterAll(cleanupTempRepos)
+
+// Run git directly in a fixture, for the states the exported helpers cannot set
+// up themselves (a staged-only change, a rename).
+function git(dir: string, ...args: string[]): void {
+  execFileSync('git', ['-C', dir, ...args], { stdio: 'ignore' })
+}
+
+describe('diffNumstat', () => {
+  it('counts an unstaged edit against HEAD as tracked', () => {
+    const dir = makeTempRepo()
+    writeFileSync(join(dir, 'README.md'), '# fixture\nmore\n')
+    expect(diffNumstat(dir)).toEqual([{ added: 1, removed: 0, path: 'README.md', untracked: false }])
+  })
+
+  it('counts a file staged and then edited again once, as its net change', () => {
+    const dir = makeTempRepo()
+    writeFileSync(join(dir, 'README.md'), '# fixture\none\n')
+    git(dir, 'add', '-A')
+    writeFileSync(join(dir, 'README.md'), '# fixture\none\ntwo\n')
+    expect(diffNumstat(dir)).toEqual([{ added: 2, removed: 0, path: 'README.md', untracked: false }])
+  })
+
+  it('lists a non-ignored untracked file with its line count, flagged untracked', () => {
+    const dir = makeTempRepo()
+    writeFileSync(join(dir, 'new.txt'), 'a\nb\nc')
+    expect(diffNumstat(dir)).toEqual([{ added: 3, removed: 0, path: 'new.txt', untracked: true }])
+  })
+
+  it('counts an untracked binary file 0/0, the way numstat prints `-`', () => {
+    const dir = makeTempRepo()
+    writeFileSync(join(dir, 'logo.png'), Buffer.from([0x89, 0x50, 0x00, 0x4e, 0x47]))
+    expect(diffNumstat(dir)).toEqual([{ added: 0, removed: 0, path: 'logo.png', untracked: true }])
+  })
+
+  it('leaves gitignored untracked files out', () => {
+    const dir = makeTempRepo()
+    writeFileSync(join(dir, '.gitignore'), 'secret.txt\n')
+    git(dir, 'add', '-A')
+    git(dir, 'commit', '-q', '-m', 'ignore')
+    writeFileSync(join(dir, 'secret.txt'), 'shh\n')
+    expect(diffNumstat(dir)).toEqual([])
+  })
+
+  it('splits a staged rename into two plain paths, never an arrow', () => {
+    const dir = makeTempRepo()
+    git(dir, 'mv', 'README.md', 'DOCS.md')
+    const paths = diffNumstat(dir).map((e) => e.path).sort()
+    expect(paths).toEqual(['DOCS.md', 'README.md'])
+    expect(paths.join(' ')).not.toContain('=>')
+  })
+
+  it('is empty on a clean tree and outside a repo', () => {
+    expect(diffNumstat(makeTempRepo())).toEqual([])
+    expect(diffNumstat(makeTempDir())).toEqual([])
+  })
+
+  it('still lists untracked files when HEAD is unborn', () => {
+    const dir = makeTempRepo({ commit: false })
+    writeFileSync(join(dir, 'new.txt'), 'a\n')
+    expect(diffNumstat(dir)).toEqual([{ added: 1, removed: 0, path: 'new.txt', untracked: true }])
+  })
+})
+
+describe('diffPatch', () => {
+  it('renders a staged new file and an untracked new file in one patch', () => {
+    const dir = makeTempRepo()
+    writeFileSync(join(dir, 'staged.txt'), 'one\n')
+    git(dir, 'add', '-A')
+    writeFileSync(join(dir, 'loose.txt'), 'two\n')
+    const patch = diffPatch(dir, diffNumstat(dir))
+    expect(patch).toContain('+++ b/staged.txt')
+    expect(patch).toContain('+++ b/loose.txt')
+    expect(patch.match(/new file mode/g)).toHaveLength(2)
+    expect(patch).toContain('+one')
+    expect(patch).toContain('+two')
+  })
+
+  it('is empty for no entries and for a path that has vanished', () => {
+    const dir = makeTempRepo()
+    expect(diffPatch(dir, [])).toBe('')
+    writeFileSync(join(dir, 'gone.txt'), 'x\n')
+    const entries = diffNumstat(dir)
+    rmSync(join(dir, 'gone.txt'))
+    expect(diffPatch(dir, entries)).toBe('')
+  })
+
+  it('shows a rename as a delete plus an add', () => {
+    const dir = makeTempRepo()
+    git(dir, 'mv', 'README.md', 'DOCS.md')
+    const patch = diffPatch(dir, diffNumstat(dir))
+    expect(patch).toContain('--- a/README.md')
+    expect(patch).toContain('+++ b/DOCS.md')
+    expect(patch).not.toContain('rename from')
+  })
+})
 
 describe('findRepoRoot', () => {
   it('returns the toplevel when cwd is inside a repo', () => {

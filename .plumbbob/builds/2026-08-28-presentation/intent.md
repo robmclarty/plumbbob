@@ -705,10 +705,13 @@ a boundary or driver turn, top to bottom
   the Verdict beside it read Plumb. Both, in order: the rung names the stray
   and the advisory keeps the paths, printed by checkpoint as one block
   ([D43 (verb-prints-its-ending)](#d43)).
-- <a id="q13"></a>**Q13 (two-pointer-vocabularies)**: the dashboard's
-  `next →` line and the card's `**Next Up**:` say one thing in two shapes;
-  leave both, or converge? Not a step-14 item; the next place the format
-  may feel thin.
+- <a id="q13"></a>**Q13 (two-pointer-vocabularies)**: *resolved:* 2026-09-04,
+  both stand. The dashboard names the move because it is read while choosing
+  what to type, and it renders inside a `text` fence; every ending states the
+  fact and leaves the move to the human
+  ([D84 (one-liner-register)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d84),
+  which promoted [D28 (fact-not-move)](#d28) and
+  [D30 (register-is-one-liners)](#d30)).
 - <a id="q14"></a>**Q14 (boundary-word-home)**: *resolved:* 2026-09-02, the
   labeled Verdict line is the state word's home at the boundary, pure state
   plus worst component ([D33 (labeled-lines)](#d33),

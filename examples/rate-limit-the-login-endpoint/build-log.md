@@ -14,9 +14,9 @@ step boundaries. The antidote to "my plan got lost in the noise."
 is done only after a checkpoint — check green + checkpoint taken, via `/plumbbob:verify` or
 `/plumbbob:build`.)*
 
-- ☒ 1. Add a token-bucket limiter
-- ☒ 2. Wire the limiter into POST /login
-- ☒ 3. Make the limit configurable via env
+- ☒ 1. feat(limiter): add a token-bucket limiter
+- ☒ 2. feat(login): wire the limiter into POST /login
+- ☒ 3. feat(config): make the limit configurable via env
 
 ## Park list
 
@@ -54,8 +54,8 @@ you point at to say "I did that — the LLM helped, but those were my calls."
 `/plumbbob:finish` reads this for the report; `plumbbob finish` commits it with the build
 folder, so it rides the branch into the PR.)*
 
-- 2026-07-03 — step 1 checkpointed · a1b2c3d4e — Add a token-bucket limiter
+- 2026-07-03 — step 1 checkpointed · a1b2c3d4e — feat(limiter): add a token-bucket limiter
 - 2026-07-03 — parked mid-step-2: /password-reset throttle (captured, not chased)
-- 2026-07-03 — step 2 checkpointed · 5b8f31da2 — Wire the limiter into POST /login
-- 2026-07-03 — step 3 checkpointed · 9c4d02e11 — Make the limit configurable via env
+- 2026-07-03 — step 2 checkpointed · 5b8f31da2 — feat(login): wire the limiter into POST /login
+- 2026-07-03 — step 3 checkpointed · 9c4d02e11 — feat(config): make the limit configurable via env
 - 2026-07-03 — harvest: 1 parked → tangent/defer (see Harvest above)

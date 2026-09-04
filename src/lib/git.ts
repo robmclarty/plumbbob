@@ -6,6 +6,7 @@
 // history-rewriting operation on anything pushed.
 
 import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { isAbsolute, join } from 'node:path'
 
 /**
@@ -100,20 +101,43 @@ export function commitsSince(root: string, sha: string, excluding?: string): num
   }
 }
 
-/** One changed file in the working tree: its added/removed line counts and path. */
-export type NumstatEntry = { readonly added: number; readonly removed: number; readonly path: string }
+/**
+ * One changed file in the step's product: its added/removed line counts, its
+ * path, and whether git has never seen it before.
+ */
+export type NumstatEntry = {
+  readonly added: number
+  readonly removed: number
+  readonly path: string
+  readonly untracked: boolean
+}
 
 /**
- * The working tree's changes against the index, one entry per file, as
- * `git diff --numstat` reports them; a binary file counts 0/0.
+ * The step's whole product, one entry per file: everything changed since HEAD,
+ * staged or not, plus every non-ignored untracked file counted as all-added
+ * lines.
+ *
+ * That universe is the one `checkpoint`'s drift warning already uses after it
+ * stages, so the pause and the boundary measure the same thing. `diff HEAD`
+ * (rather than a working-tree diff merged with a cached one) nets a file
+ * staged and then edited again into a single row; `--no-renames` keeps a
+ * staged `git mv` as two plain paths instead of one `{old => new}` arrow,
+ * which is also the shape the seam row wants.
  *
  * This feeds the recap's `diff` and `seam` rows at the pause: information,
  * never a gate, so it is best-effort and never throws ([] on any failure).
  */
 export function diffNumstat(root: string): ReadonlyArray<NumstatEntry> {
+  return [...trackedNumstat(root), ...untrackedNumstat(root)]
+}
+
+/**
+ * The tracked half of `diffNumstat`: what differs from HEAD, index included.
+ */
+function trackedNumstat(root: string): ReadonlyArray<NumstatEntry> {
   let out: string
   try {
-    out = runGit(root, ['diff', '--numstat'])
+    out = runGit(root, ['diff', '--numstat', '--no-renames', 'HEAD'])
   } catch {
     return []
   }
@@ -122,8 +146,58 @@ export function diffNumstat(root: string): ReadonlyArray<NumstatEntry> {
   }
   return out.split('\n').map((line) => {
     const [added, removed, ...path] = line.split('\t')
-    return { added: toCount(added), removed: toCount(removed), path: path.join('\t') }
+    return { added: toCount(added), removed: toCount(removed), path: path.join('\t'), untracked: false }
   })
+}
+
+/**
+ * The untracked half of `diffNumstat`: every non-ignored new file, counted as
+ * all-added lines.
+ *
+ * The count is read in node rather than spawned per file: the alternative
+ * (`git diff --no-index --numstat /dev/null <path>`) exits 1 by design and
+ * prints the path in rename shape, so it needs an exit-1 catch and an arrow
+ * parser for every file. The trade-off, accepted: gitattributes are not
+ * consulted for a file git has never seen.
+ */
+function untrackedNumstat(root: string): ReadonlyArray<NumstatEntry> {
+  let paths: ReadonlyArray<string>
+  try {
+    paths = untrackedPaths(root)
+  } catch {
+    return []
+  }
+  return paths.map((path) => ({ added: addedLines(join(root, path)), removed: 0, path, untracked: true }))
+}
+
+/**
+ * The line count a numstat row would carry for a whole new file: newlines, plus
+ * one for an unterminated last line, the way git counts it.
+ *
+ * A NUL byte in the first 8000 bytes means binary, which numstat prints as `-`
+ * and `toCount` reads as 0. An unreadable file counts 0 as well, and the caller
+ * keeps its path either way: the seam row still has to see it.
+ */
+function addedLines(absolute: string): number {
+  let buffer: Buffer
+  try {
+    buffer = readFileSync(absolute)
+  } catch {
+    return 0
+  }
+  if (buffer.subarray(0, 8000).includes(0)) {
+    return 0
+  }
+  if (buffer.length === 0) {
+    return 0
+  }
+  let lines = 0
+  for (const byte of buffer) {
+    if (byte === 0x0a) {
+      lines += 1
+    }
+  }
+  return buffer[buffer.length - 1] === 0x0a ? lines : lines + 1
 }
 
 /**
@@ -136,21 +210,53 @@ function toCount(field: string | undefined): number {
 }
 
 /**
- * The raw `git diff` patch for `paths` (working tree against the index), or ''
- * when nothing differs or git refuses.
+ * The raw patch for `entries` (everything since HEAD, new files included), or
+ * '' when nothing differs or git refuses.
+ *
+ * Tracked paths come through one `git diff HEAD`; an untracked file has no
+ * blob to diff, so each goes through `git diff --no-index` against /dev/null,
+ * which prints the same `new file mode` header a staged new file gets. That
+ * form implies `--exit-code`, so a patch arrives as a thrown status 1 with the
+ * text on `stdout`. Entries counted at 0 added lines are skipped: they would
+ * produce nothing, and skipping them caps the spawns at the inline threshold.
  *
  * Only the pause's inline-diff fence reads this, and only after the numstat
  * count came in at 20 changed lines or fewer, so the patch is always small.
  * Best-effort like diffNumstat: information, never a gate.
  */
-export function diffPatch(root: string, paths: ReadonlyArray<string>): string {
-  if (paths.length === 0) {
-    return ''
+export function diffPatch(root: string, entries: ReadonlyArray<NumstatEntry>): string {
+  const tracked = entries.filter((e) => !e.untracked).map((e) => e.path)
+  const pieces: string[] = []
+  if (tracked.length > 0) {
+    try {
+      pieces.push(runGit(root, ['diff', '--no-renames', 'HEAD', '--', ...tracked]))
+    } catch {
+      // best-effort: a path git refuses drops out of the fence, the rest stays.
+    }
   }
+  for (const entry of entries) {
+    if (!entry.untracked || entry.added === 0) {
+      continue
+    }
+    pieces.push(noIndexPatch(root, entry.path))
+  }
+  return pieces.filter((piece) => piece.length > 0).join('\n')
+}
+
+/**
+ * One untracked file's patch, `git diff --no-index` against /dev/null.
+ *
+ * The path stays repo-relative so the header reads `+++ b/src/new.ts`, the same
+ * shape `diff HEAD` prints for a staged new file. `--no-index` implies
+ * `--exit-code`: status 1 is the success case, and `encoding` is set on the
+ * spawn, so git's output arrives as a string on the error.
+ */
+function noIndexPatch(root: string, path: string): string {
   try {
-    return runGit(root, ['diff', '--', ...paths])
-  } catch {
-    return ''
+    return runGit(root, ['diff', '--no-index', '--', '/dev/null', path])
+  } catch (error) {
+    const failure = error as { status?: number; stdout?: string }
+    return failure.status === 1 && typeof failure.stdout === 'string' ? failure.stdout.trim() : ''
   }
 }
 

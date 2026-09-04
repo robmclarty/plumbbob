@@ -474,6 +474,69 @@ describe('handoff', () => {
     expect(stdout).toContain('+changed')
   })
 
+  it('measures a step whose product is a new file, seam row and fence included', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(seamPath(dir), 'src/new.ts\n')
+    mkdirSync(join(dir, 'src'), { recursive: true })
+    writeFileSync(join(dir, 'src', 'new.ts'), 'const a = 1\nconst b = 2\nconst c = 3\n')
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).toContain('seam         held: 1 of 1 declared, no strays')
+    expect(stdout).toContain('diff         +3 -0 across 1 file · inline below')
+    expect(stdout).toContain('```diff')
+    expect(stdout).toContain('+++ b/src/new.ts')
+  })
+
+  it('sees a change that has already been staged', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(seamPath(dir), 'README.md\n')
+    writeFileSync(join(dir, 'README.md'), '# fixture\nchanged\n')
+    git(dir, ['add', 'README.md'])
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).toContain('seam         held: 1 of 1 declared, no strays')
+    expect(stdout).toContain('diff         +1 -0 across 1 file · inline below')
+    expect(stdout).toContain('+changed')
+  })
+
+  it('counts a file staged and then edited again once', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(seamPath(dir), 'README.md\n')
+    writeFileSync(join(dir, 'README.md'), '# fixture\none\n')
+    git(dir, ['add', 'README.md'])
+    writeFileSync(join(dir, 'README.md'), '# fixture\none\ntwo\n')
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).toContain('diff         +2 -0 across 1 file')
+  })
+
+  it('counts an untracked binary at 0/0, so no fence is promised', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(seamPath(dir), 'logo.png\n')
+    writeFileSync(join(dir, 'logo.png'), Buffer.from([0x89, 0x50, 0x00, 0x4e, 0x47]))
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).toContain('diff         +0 -0 across 1 file')
+    expect(stdout).not.toContain('inline below')
+    expect(stdout).not.toContain('```diff')
+  })
+
+  it('renders no diff or seam row when the step has touched nothing', async () => {
+    // The artifact-plane filter, now that untracked files count: the build's own
+    // tracked artifacts are untracked until the plan commit, and they are not work.
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(seamPath(dir), 'README.md\n')
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).not.toContain('diff  ')
+    expect(stdout).not.toContain('seam  ')
+  })
+
   it('keeps a diff past 20 lines out of the block, behind its counted row', async () => {
     const dir = await started()
     writeFileSync(stepPath(dir), '2\n')

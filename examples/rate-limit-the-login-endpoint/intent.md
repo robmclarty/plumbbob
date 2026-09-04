@@ -39,11 +39,11 @@ request → [ limiter (per-IP token bucket) ] → login handler
 
 ## Steps
 
-1. [x] Add a token-bucket limiter — **done when:** `test/limiter.test.ts` passes
+1. [x] feat(limiter): add a token-bucket limiter — **done when:** `test/limiter.test.ts` passes
    - seam: `src/limiter.ts`, `test/limiter.test.ts`
-2. [x] Wire the limiter into POST /login — **done when:** the 6th request in 60s returns 429
+2. [x] feat(login): wire the limiter into POST /login — **done when:** the 6th request in 60s returns 429
    - seam: `src/routes/login.ts`, `test/login.rate.test.ts`
-3. [x] Make the limit configurable via env — **done when:** `RATE_LIMIT_MAX` overrides the default in a test
+3. [x] feat(config): make the limit configurable via env — **done when:** `RATE_LIMIT_MAX` overrides the default in a test
    - seam: `src/limiter.ts`, `src/config.ts`, `test/limiter.config.test.ts`
 
 ## Open questions

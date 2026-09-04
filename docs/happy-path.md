@@ -66,13 +66,13 @@ seam**:
 - <a id="c1"></a>**C1 (no-new-deps)**: no new runtime dependencies.
 
 ## Steps
-1. [ ] Add a token-bucket limiter, **done when:** `test/limiter.test.ts` passes
+1. [ ] feat(limiter): add a token-bucket limiter, **done when:** `test/limiter.test.ts` passes
    - seam: `src/limiter.ts`, `test/limiter.test.ts`
    - model: opus (strong-assertion test authoring)
-2. [ ] Wire the limiter into POST /login, **done when:** the 6th request in 60s returns 429
+2. [ ] feat(login): wire the limiter into POST /login, **done when:** the 6th request in 60s returns 429
    - seam: `src/routes/login.ts`, `test/login.rate.test.ts`
    - model: sonnet (mechanical wiring, fully specified)
-3. [ ] Make the limit configurable via env, **done when:** `RATE_LIMIT_MAX` overrides the default in a test
+3. [ ] feat(config): make the limit configurable via env, **done when:** `RATE_LIMIT_MAX` overrides the default in a test
    - seam: `src/limiter.ts`, `src/config.ts`, `test/limiter.config.test.ts`
 ```
 
@@ -88,7 +88,7 @@ refine named for the rest:
 ```text
 ---
 
-**Next Up**: Step 1 of 3 - Add a token-bucket limiter (model: **Opus**, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:17`)
+**Next Up**: Step 1 of 3 - feat(limiter): add a token-bucket limiter (model: **Opus**, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:17`)
 
 **Your Call**:
 
@@ -108,7 +108,7 @@ prints its own close:
 ```text
 **Plan**: committed (7d2e94fb0, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md:38`)
 
-**Next Up**: Step 1 of 3 - Add a token-bucket limiter (model: **Opus**, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:17`)
+**Next Up**: Step 1 of 3 - feat(limiter): add a token-bucket limiter (model: **Opus**, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:17`)
 ```
 
 > **Plan as far as you can see clearly.** Later steps may be fuzzier than the first;
@@ -129,12 +129,12 @@ recommendation), and names the single next move:
 PlumbBob — Rate-limit the login endpoint   [DESIGN]
 
   steps  0/3 done
-  ▸ 1  Add a token-bucket limiter   ← next
+  ▸ 1  feat(limiter): add a token-bucket limiter   ← next
         done when: `test/limiter.test.ts` passes
         seam: src/limiter.ts, test/limiter.test.ts
         model: opus (strong-assertion test authoring)
-    2  Wire the limiter into POST /login
-    3  Make the limit configurable via env
+    2  feat(login): wire the limiter into POST /login
+    3  feat(config): make the limit configurable via env
 
 last checkpoint  none yet
 parked 0 · open questions 0
@@ -198,7 +198,7 @@ agent pastes the result and writes nothing around it (the
 2. The clock is injected, so the test advances time instead of sleeping on it.
 3. `test/limiter.test.ts` covers refill, exhaustion, and the per-IP split.
 
-**Readout**: Step 1 - Add a token-bucket limiter
+**Readout**: Step 1 - feat(limiter): add a token-bucket limiter
 
 ```text
 check        green: 7 of 7 checks
@@ -212,7 +212,7 @@ spent        22 min · 2 turns · 41s gate · green first run
 
 **Verdict**: ● Plumb
 
-**Next Up**: Step 2 of 3 - Wire the limiter into POST /login (model: **Sonnet**, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:20`)
+**Next Up**: Step 2 of 3 - feat(login): wire the limiter into POST /login (model: **Sonnet**, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:20`)
 
 **Your Call**:
 
@@ -262,7 +262,7 @@ one command's output:
 
 **Verdict**: ● Plumb
 
-**Next Up**: Step 2 of 3 - Wire the limiter into POST /login (model: **Sonnet**, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:20`)
+**Next Up**: Step 2 of 3 - feat(login): wire the limiter into POST /login (model: **Sonnet**, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:20`)
 ```
 
 ![The boundary after looks good](media/checkpoint-boundary.svg)
@@ -280,12 +280,12 @@ next step and pulls up to its own pause: *re-firing `/plumbbob:build` is itself 
 tick*. The dashboard tracks the march:
 
 ```text
-  ✓ 1  Add a token-bucket limiter
-  ▸ 2  Wire the limiter into POST /login   ← next
+  ✓ 1  feat(limiter): add a token-bucket limiter
+  ▸ 2  feat(login): wire the limiter into POST /login   ← next
         done when: the 6th request in 60s returns 429
         seam: src/routes/login.ts, test/login.rate.test.ts
         model: sonnet (mechanical wiring, fully specified)
-    3  Make the limit configurable via env
+    3  feat(config): make the limit configurable via env
 ```
 
 > **Unattended option: `/plumbbob:build --auto`.** When you'd rather not approve each step
@@ -317,7 +317,7 @@ one command's output here too.
 ```text
 **Parked**: should /password-reset get the same throttle? (tangent)
 
-**Next Up**: Back to Step 2 of 3 - Wire the limiter into POST /login
+**Next Up**: Back to Step 2 of 3 - feat(login): wire the limiter into POST /login
 ```
 
 ![A park and its pointer back at the step](media/park.svg)

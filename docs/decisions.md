@@ -701,7 +701,11 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   pause as well as the boundary, never to `○ Out of plumb`, because the seam is awareness rather than a
   lock ([**D13 (no-edit-guards)**](#d13)) and the pause's card was offering `looks good` beneath a
   Verdict that said fix the work; `strayed` is the row's advisory word, a fourth class beside true,
-  failing, and drift, and both tiers name the rung `seam strayed`.) Promoted from the 2026-08-28
+  failing, and drift, and both tiers name the rung `seam strayed`.) (Revised 2026-09-04: the `seam` and
+  `diff` rows measure the step's whole product, everything changed since HEAD with new files counted as
+  all-added lines, because the previous measure was the working tree against the index and so went blind on
+  exactly the step whose product is a new file: no seam row, no diff row, and a Verdict folded without
+  either.) Promoted from the 2026-08-28
   presentation build, merging its locals
   `readout-and-summary`, `collapse-to-count`, `vanish-or-collapse`, `worst-of-banner`, `circle-ladder`,
   `plumb-when-natural`, `verdict-in-the-row`, `narrowing-named-not-shouted`, `recap-width-budget`,
@@ -749,7 +753,11 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   follows and no step exists to aim at. The register governs one-liners only: the dashboard, `recover`'s
   check lines, and the sentinel headers keep their shape. Glyphs are a closed set of text-presentation
   codepoints, each always paired with its word, because renderers differ, fonts drop glyphs to tofu, and
-  screen readers speak Unicode names. Promoted from the 2026-08-28 presentation build, merging its locals
+  screen readers speak Unicode names. (Revised 2026-09-04, settling Q13 (two-pointer-vocabularies) from the
+  2026-08-28 presentation build: the dashboard's `next → build step 1 — /plumbbob:build` keeps naming the
+  move while every ending's `**Next Up**` keeps stating the fact, because the dashboard is the one surface
+  read while choosing what to type, and it renders inside a `text` fence where a bold label would be
+  literal characters.) Promoted from the 2026-08-28 presentation build, merging its locals
   `own-lines-one-colon`, `fact-not-move`, `advisory-glyph`, `register-is-one-liners`,
   `transitions-wear-the-label`, `word-carries-meaning`, and `text-glyphs-only`. *Tagged in*
   `docs/presentation.md` and `docs/cli-reference.md`.
