@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.2] - 2026-09-03
+
+- **Fixed:** a strayed seam folds to `◐ A hair off` at the pause, never to `○ Out of plumb`.
+  The pause's Verdict classed a stray as a failing row, the same rung as a red check, while
+  the checkpoint, the skills, and the seam's own design treat it as awareness rather than a
+  lock; a stray with a green gate read out of plumb beneath a Your Call block that still
+  offered `looks good` and a recommendation that said approve it. `strayed` is now the seam
+  row's advisory word, a fourth class beside true, failing, and drift, and both the pause
+  and the boundary name the rung `seam strayed`, so a stray earns the same rung whichever
+  command rendered it. D82 (readout-ladder) is revised to match.
+
 ## [0.11.1] - 2026-09-02
 
 - **Added:** the plan pause ends on a recommendation, drawn from a cold read. Before relaying
