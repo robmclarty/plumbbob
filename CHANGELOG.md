@@ -5,6 +5,29 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.3] - 2026-09-04
+
+- **Fixed:** the `seam` and `diff` rows see a step whose product is a new file. Both rows
+  were measured from the working tree against the index, which is blind to untracked and
+  staged files, so a step that created rather than edited rendered no `seam` row and no
+  `diff` row, the Verdict folded without either, and a small new file could print
+  `· inline below` above a fence that never came. Both rows now measure the step's whole
+  product: everything changed since HEAD, staged or not, plus each non-ignored untracked
+  file counted as all-added lines. That is the universe `checkpoint`'s drift warning
+  already used, so the pause and the boundary agree, and the inline fence is computed
+  before its row, so the pointer prints only when the fence follows it. D82
+  (readout-ladder) is revised to match.
+- **Changed:** the rate-limit example's step titles read as Conventional subjects
+  (`feat(limiter): add a token-bucket limiter`), because the plan skill and D68
+  (conventional-subjects) teach that the step title is the commit subject, while the
+  running example demonstrated bare prose. The example's commit log now shows two rungs of
+  D68's scope chain, per-title scopes on the steps and the build slug on `plan` and
+  `finish`.
+- **Changed:** the two pointer vocabularies are settled and documented rather than
+  converged. The dashboard's `next → build step 1` keeps naming the move because it is the
+  one surface read while choosing what to type, and every ending's `**Next Up**` keeps
+  stating the fact; D84 (one-liner-register) carries the reasoning.
+
 ## [0.11.2] - 2026-09-03
 
 - **Fixed:** a strayed seam folds to `◐ A hair off` at the pause, never to `○ Out of plumb`.
