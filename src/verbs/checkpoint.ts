@@ -266,7 +266,9 @@ function resolveStep(root: string, args: ReadonlyArray<string>): number | null {
  * step's seam, or '' when it held.
  *
  * Guidance, not a gate: the checkpoint captures the drift and says so, and the
- * bumped stat puts a `staged outside the seam` rung under the Verdict. The seam
+ * bumped stat puts a `seam strayed` rung under the Verdict, the same rung the
+ * pause's measured seam row gave it, since the row vanishes once the tree is
+ * committed and the stat is what carries the stray past that point. The seam
  * (the step's edit grant: exact paths or `dir/` prefixes) comes from the
  * in-flight SEAM file when a build is live, else the step's declared seam in
  * intent.md. Plumbbob's own artifact plane is whitelisted inside `scopeDrift`,

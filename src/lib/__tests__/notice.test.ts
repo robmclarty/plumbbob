@@ -146,7 +146,7 @@ describe('ending — D43 (verb-prints-its-ending)', () => {
     expect(
       ending({
         lead: transition({ label: 'Checkpoint', fact: 'Step 16 complete', detail: ['f2b83e17c'] }),
-        verdict: '**Verdict**: ◐ A hair off (staged outside the seam)',
+        verdict: '**Verdict**: ◐ A hair off (seam strayed)',
         advisories: [advisory({ fact: 'staged paths reach outside Step 16\'s seam', detail: ['test/a.ts'] })],
         pointer: '**Next Up**: Step 17 of 18 - feat(ending): every transition prints its whole ending',
       }),
@@ -154,7 +154,7 @@ describe('ending — D43 (verb-prints-its-ending)', () => {
       [
         '**Checkpoint**: Step 16 complete (f2b83e17c)',
         '',
-        '**Verdict**: ◐ A hair off (staged outside the seam)',
+        '**Verdict**: ◐ A hair off (seam strayed)',
         '',
         "Staged paths reach outside Step 16's seam ⚠ (test/a.ts)",
         '',

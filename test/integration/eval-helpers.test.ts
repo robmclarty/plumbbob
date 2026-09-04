@@ -746,7 +746,7 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
     const boundary = [
       '**Checkpoint**: Step 16 complete (f2b83e17c)',
       '',
-      '**Verdict**: ◐ A hair off (staged outside the seam)',
+      '**Verdict**: ◐ A hair off (seam strayed)',
       '',
       'Staged paths reach outside Step 16’s seam ⚠ (test/integration/spike.test.ts)',
       '  → the checkpoint captures them, so revise the plan with /plumbbob:step',

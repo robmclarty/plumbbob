@@ -248,10 +248,10 @@ describe('handoff', () => {
     writeFileSync(statsPath(dir), JSON.stringify({ '2': { driftWarnings: 2, redChecks: 2 } }))
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('**Verdict**: ◐ A hair off (staged outside the seam)')
+    expect(stdout).toContain('**Verdict**: ◐ A hair off (seam strayed)')
   })
 
-  it('folds a strayed seam row into an out-of-plumb verdict naming the seam', async () => {
+  it('folds a strayed seam row to a hair off, never out of plumb, and keeps looks good on the card', async () => {
     const dir = await started()
     writeFileSync(stepPath(dir), '2\n')
     writeFileSync(
@@ -261,7 +261,11 @@ describe('handoff', () => {
     writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('**Verdict**: ○ Out of plumb (seam strayed)')
+    // The seam is awareness, not a lock: the stray takes the advisory rung and
+    // the card still offers the approve move, so the Verdict and the Your Call
+    // block cannot disagree about it.
+    expect(stdout).toContain('**Verdict**: ◐ A hair off (seam strayed)')
+    expect(stdout).toContain('`looks good`')
   })
 
   it('folds a drifted done-when row into a not-standing verdict', async () => {
@@ -503,7 +507,7 @@ describe('handoff', () => {
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
     expect(stdout).toContain('seam         strayed: 1 path outside the seam\n             → README.md')
-    expect(stdout).toContain('**Verdict**: ○ Out of plumb (seam strayed)')
+    expect(stdout).toContain('**Verdict**: ◐ A hair off (seam strayed)')
   })
 
   it('lists two or more strays under the row instead of naming one', async () => {

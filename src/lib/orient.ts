@@ -378,8 +378,13 @@ export function orient(input: OrientInput): Orientation {
 // accrued stats; this section only decides which ladder state and worst
 // component result. ---
 
-/** One measuring row's classification: holding, failing now, or the plan itself is wrong. */
-export type RecapVerdict = 'true' | 'failing' | 'drift'
+/**
+ * One measuring row's classification: holding, failing now, the plan itself
+ * is wrong, or an advisory. Only the seam row can be advisory: the seam is
+ * awareness rather than a lock, so a stray folds no lower than the Verdict's
+ * third rung.
+ */
+export type RecapVerdict = 'true' | 'failing' | 'drift' | 'advisory'
 
 /**
  * One measuring row of the readout: its verdict, the leading word that earned
@@ -441,7 +446,7 @@ function classifyRecapRow(name: RecapRowName, value: string): { readonly verdict
         test(/^drift\b/, 'drift')
       )
     case 'seam':
-      return test(/^held\b/, 'true') ?? test(/^strayed\b/, 'failing') ?? test(/^drift\b/, 'drift')
+      return test(/^held\b/, 'true') ?? test(/^strayed\b/, 'advisory') ?? test(/^drift\b/, 'drift')
   }
 }
 
@@ -527,6 +532,13 @@ export type AccruedStats = {
  * drift beats a live failure beats an advisory beats plumb, and each rung
  * names the one component that earned it. The advisory rung runs in a fixed
  * order, the seam stray first.
+ *
+ * A strayed seam is an advisory, never a failure: a path outside the seam
+ * says either that the work wandered or that the line was drawn too tight,
+ * and truing the diff fixes neither. At the pause the measured seam row
+ * carries the stray; at the boundary the tree is clean, the row has vanished,
+ * and the stat the checkpoint bumped carries it instead. Both name it
+ * `seam strayed`, so the rung does not change between the two.
  */
 export function foldVerdict(rows: Readonly<Partial<Record<RecapRowName, RecapRow>>>, stats: AccruedStats): VerdictFold {
   for (const name of RECAP_ROW_NAMES) {
@@ -540,11 +552,17 @@ export function foldVerdict(rows: Readonly<Partial<Record<RecapRowName, RecapRow
       return { ladder: OUT_OF_PLUMB, worst: `${name} ${row.word}` }
     }
   }
+  for (const name of RECAP_ROW_NAMES) {
+    const row = rows[name]
+    if (row !== undefined && row.verdict === 'advisory') {
+      return { ladder: A_HAIR_OFF, worst: `${name} ${row.word}` }
+    }
+  }
   if (stats.driftWarnings > 0) {
     // First of the advisory rung, and uncounted: the stat bumps once per
     // checkpoint rather than once per stray path, and this is the one advisory
     // that asks a question of the plan rather than of the work.
-    return { ladder: A_HAIR_OFF, worst: 'staged outside the seam' }
+    return { ladder: A_HAIR_OFF, worst: 'seam strayed' }
   }
   if (stats.redChecks > 0) {
     return { ladder: A_HAIR_OFF, worst: `${stats.redChecks} red run${stats.redChecks === 1 ? '' : 's'} before green` }
@@ -633,10 +651,12 @@ export function summaryCheckRow(summary: CheckSummary): RecapRow {
  * (the row then vanishes, or the model's attested row stands).
  *
  * Green sizes the declared seam: how many of its tokens the diff actually
- * touched, and that nothing landed outside them. Red states the size of the
- * problem and lets the paths themselves be the evidence: one stray is the `→`
- * pointer, and several break onto `- ` lines. `paths` are work-plane changes,
- * artifacts already filtered by the caller.
+ * touched, and that nothing landed outside them. A stray states the size of
+ * the problem and lets the paths themselves be the evidence: one stray is the
+ * `→` pointer, and several break onto `- ` lines. It is an advisory, not a
+ * failure (the seam is awareness, not a lock), so the fold puts it on the
+ * third rung, never the second. `paths` are work-plane changes, artifacts
+ * already filtered by the caller.
  */
 export function seamRowFromDiff(paths: ReadonlyArray<string>, seam: ReadonlyArray<string>): RecapRow | null {
   if (seam.length === 0 || paths.length === 0) {
@@ -650,8 +670,8 @@ export function seamRowFromDiff(paths: ReadonlyArray<string>, seam: ReadonlyArra
   const evidence = `strayed: ${outside.length} path${outside.length === 1 ? '' : 's'} outside the seam`
   const only = outside[0]
   return outside.length === 1 && only !== undefined
-    ? { verdict: 'failing', word: 'strayed', evidence, pointer: only }
-    : { verdict: 'failing', word: 'strayed', evidence, items: outside }
+    ? { verdict: 'advisory', word: 'strayed', evidence, pointer: only }
+    : { verdict: 'advisory', word: 'strayed', evidence, items: outside }
 }
 
 /** The summed working-tree change: line counts and the file count. */

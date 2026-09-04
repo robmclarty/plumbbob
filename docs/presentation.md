@@ -227,6 +227,11 @@ The rules the rows follow:
   slot's raw output under `check`, the explaining detail section under a bent
   `decisions` or `constraints`, the stray path under `seam`. A green row
   carries no arrow, so a plumb readout has none.
+- The `seam` row's red word is an advisory, not a failure. The seam is
+  awareness, not a lock ([D13 (no-edit-guards)](decisions.md#d13)), and a
+  stray cannot say whether the work wandered or the line was drawn too tight,
+  so `strayed` folds no lower than `◐ A hair off` (see the Verdict). The row
+  still names its paths, the same as any red row.
 - A cited tag always carries its slug, `D2 (five-per-minute)`, never a bare
   `D2`, the same gloss rule prose follows
   ([D74 (glossed-citations)](decisions.md#d74)).
@@ -330,8 +335,8 @@ nothing is off:
 
 ```text
 **Verdict**: ● Plumb
-**Verdict**: ◐ A hair off (2 red runs before green)
-**Verdict**: ○ Out of plumb (seam strayed)
+**Verdict**: ◐ A hair off (seam strayed)
+**Verdict**: ○ Out of plumb (check red)
 **Verdict**: ✗ Not standing (done-when drifted)
 ```
 
@@ -346,22 +351,28 @@ rows) worst-of with the step's accrued stats, so the readout and the verdict
 can never disagree. The fold, from worst down:
 
 1. Any row saying `drift` → `✗ Not standing`, named `<row> drifted`.
-2. Any row failing (`red`, `not met`, `bent`, `strayed`) →
-   `○ Out of plumb`, named `<row> <verdict>`, first failing row in row order.
-3. All rows true but advisories accrued → `◐ A hair off`, naming the first
-   advisory in a fixed order: a staged path outside the seam (`staged outside
-   the seam`), red check runs before green (`2 red runs before green`),
-   reverts on this step (`1 revert on this step`), commits outside the ledger
-   (`3 commits outside the ledger`).
+2. Any row failing (`red`, `not met`, `bent`) → `○ Out of plumb`, named
+   `<row> <verdict>`, first failing row in row order.
+3. No row failing but advisories accrued → `◐ A hair off`, naming the first
+   advisory in a fixed order: a strayed seam (`seam strayed`), red check runs
+   before green (`2 red runs before green`), reverts on this step (`1 revert
+   on this step`), commits outside the ledger (`3 commits outside the
+   ledger`).
 4. Otherwise → `● Plumb`.
 
-The stray leads that order because it is the one advisory that asks a
-question of the plan rather than of the work: the seam it reached past is a
-line the human drew, and the move it invites is `/plumbbob:step`. It is also the
-one rung that carries no count. The stat behind it bumps once per checkpoint
-rather than once per path, so a number there would size the wrong thing; the
-paths themselves ride the advisory the checkpoint prints beside the Verdict,
-and after that the commit holds them.
+A strayed seam folds to the advisory rung, never to `○ Out of plumb`. A path
+outside the seam says either that the work wandered or that the line was
+drawn too tight, and the readout cannot tell those apart; truing the diff
+fixes neither without undoing an edit the step may have needed. So the move a
+stray asks for is the advisory rung's own: read the named path, then judge,
+and widen the seam with `/plumbbob:step` if the plan was wrong. The stray
+leads the advisory order because it is the one advisory that asks a question
+of the plan rather than of the work, and it is the one rung that carries no
+count. At the pause the measured `seam` row carries it and names the paths
+itself; at the boundary the working tree is clean, the row has vanished, and
+the stat the checkpoint bumped once carries it instead, the paths riding the
+advisory printed beside the Verdict. Both wear the same words, `seam
+strayed`, so a stray earns the same rung whichever command rendered it.
 
 That last rung counts only commits that are not plumbbob's own. A
 `chore(plan)` harvest lands between nearly every step, and an advisory that
@@ -510,8 +521,8 @@ plan": each state asks a different move of the human.
 | state | it means | your move |
 | --- | --- | --- |
 | `● Plumb` | every measure true; the diff matches the plan and the gate agrees | read the diff; approving is safe |
-| `◐ A hair off` | green, with advisories accrued on the way (a staged path outside the seam, red runs, reverts, out-of-band commits) | read the named advisory, then judge |
-| `○ Out of plumb` | a measure failing now: red check, a missed done-when, a bent decision or constraint, a strayed seam | send fixes; truing the diff fixes it |
+| `◐ A hair off` | green, with advisories accrued on the way (a strayed seam, red runs, reverts, out-of-band commits) | read the named advisory, then judge |
+| `○ Out of plumb` | a measure failing now: red check, a missed done-when, a bent decision or constraint | send fixes; truing the diff fixes it |
 | `✗ Not standing` | truing the diff will not fix it; a readout row says `drift` | repair the plan (`/plumbbob:refine`), or revert |
 
 ## The three tiers
@@ -642,7 +653,7 @@ can see lands under the Verdict it just earned a rung on:
 ```text
 **Checkpoint**: Step 16 complete (f2b83e17c, details: `.plumbbob/builds/presentation/build-log.md:97`)
 
-**Verdict**: ◐ A hair off (staged outside the seam)
+**Verdict**: ◐ A hair off (seam strayed)
 
 Staged paths reach outside Step 16's seam ⚠ (test/integration/spike.test.ts, test/integration/use.test.ts)
   → the checkpoint captures them, so revise the plan with /plumbbob:step if that is real scope drift

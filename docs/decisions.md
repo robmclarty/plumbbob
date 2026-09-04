@@ -697,7 +697,12 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   earns the fourth rung is "fix the work" against "fix the plan". The step identity renders once per turn:
   the progress count rides Next Up, so the Verdict says only the one thing it says; and the out-of-band
   rung excludes plumbbob's own plan commits, because an advisory that trips on routine housekeeping stops
-  meaning anything within three steps. Promoted from the 2026-08-28 presentation build, merging its locals
+  meaning anything within three steps. (Revised 2026-09-03: a strayed seam folds to `◐ A hair off` at the
+  pause as well as the boundary, never to `○ Out of plumb`, because the seam is awareness rather than a
+  lock ([**D13 (no-edit-guards)**](#d13)) and the pause's card was offering `looks good` beneath a
+  Verdict that said fix the work; `strayed` is the row's advisory word, a fourth class beside true,
+  failing, and drift, and both tiers name the rung `seam strayed`.) Promoted from the 2026-08-28
+  presentation build, merging its locals
   `readout-and-summary`, `collapse-to-count`, `vanish-or-collapse`, `worst-of-banner`, `circle-ladder`,
   `plumb-when-natural`, `verdict-in-the-row`, `narrowing-named-not-shouted`, `recap-width-budget`,
   `progress-on-next-up`, `spent-row`, and `own-commits-not-out-of-band`. *Tagged in*

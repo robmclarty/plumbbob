@@ -97,7 +97,7 @@ describe('checkpoint', () => {
     expect(stdout).toBe(
       ending({
         lead: transition({ label: 'Checkpoint', fact: 'Step 1 complete', detail: [ledgerSha(dir, 'step 1'), `details: \`${logPointer(dir, 'step 1 checkpointed')}\``] }),
-        verdict: '**Verdict**: ◐ A hair off (staged outside the seam)',
+        verdict: '**Verdict**: ◐ A hair off (seam strayed)',
         advisories: [
           advisory({
             fact: "staged paths reach outside Step 1's seam",

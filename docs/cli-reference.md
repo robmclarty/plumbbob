@@ -228,7 +228,8 @@ the Log. Either form closes on its
 whole ending, `handoff`-rendered and printed here: the lead line, the Verdict the step just
 earned (the plan commit measures nothing, so it has none), any advisory, and the pointer.
 Staged paths outside the step's seam are an advisory, never a gate, and the stray they name
-puts a `staged outside the seam` rung under that Verdict. Refuses (exit 1) with no session,
+puts a `seam strayed` rung under that Verdict, the same rung the pause's measured seam row
+gave it. Refuses (exit 1) with no session,
 no resolvable step, or a red check.
 
 ### revert
