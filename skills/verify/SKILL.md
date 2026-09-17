@@ -163,7 +163,10 @@ this skill verifies it the same way: **it reads the diff, not the author**
    Redirect the heredoc *into* the command (`--body <<'BODY'`). Do **not** pass it as
    an argument value (`--body "$(cat <<'BODY'…)"`): `--body` ignores an argument and
    always reads stdin. Under an agent harness that stdin is a socket, and `--body` now
-   refuses rather than blocking on one; the refusal names this exact heredoc form.
+   refuses rather than blocking on one; the refusal names this exact heredoc form. End
+   that line at `<<'BODY'`, with no `2>&1` after it: Claude Code's permission checker
+   cannot analyze the extra redirect, so it blocks the command or stops to ask instead of
+   letting this skill's allowance cover it.
 
    Do **not** run a TIL scan or reach for a separate commit skill; the body is yours to
    write in one breath. Omit `--body` entirely and the CLI writes a deterministic body

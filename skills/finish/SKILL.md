@@ -53,8 +53,11 @@ record.
    Redirect the heredoc *into* the command (`--body <<'BODY'`). Do **not** pass it as
    an argument value (`--body "$(cat <<'BODY'…)"`): `--body` ignores an argument and
    always reads stdin. Under an agent harness that stdin is a socket, and `--body` now
-   refuses rather than blocking on one; the refusal names this exact heredoc form. Omit
-   `--body` entirely and the commit carries the `plumbbob finish` marker subject only.
+   refuses rather than blocking on one; the refusal names this exact heredoc form. End
+   that line at `<<'BODY'`, with no `2>&1` after it: Claude Code's permission checker
+   cannot analyze the extra redirect, so it blocks the command or stops to ask instead of
+   letting this skill's allowance cover it. Omit `--body` entirely and the commit carries
+   the `plumbbob finish` marker subject only.
 3. **Point at the next goal.** Relay `plumbbob finish`'s output verbatim, blank lines
    included: its lead line, which names the branch the tracked folder now rides into the
    PR, any advisory beneath it, and `**Next Up**: Nothing planned - /plumbbob:plan`. That

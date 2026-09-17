@@ -142,7 +142,8 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
    a `plan <sha>` line in
    `checkpoints`. This keeps the first step's diff clean, so history reads
    baseline → plan → steps. Pass a proportional `--body` (the single-quoted stdin
-   heredoc) when the rationale is worth carrying; skip it for a small plan. Do this
+   heredoc, with nothing after `<<'BODY'` on its line, not even `2>&1`) when the
+   rationale is worth carrying; skip it for a small plan. Do this
    only on the human's approval; the plan is their convergence.
    - **The plan pause is a decision turn.** Present the framed plan for the human's call,
      then give it the cold read (**§ The cold read**), write the result into
