@@ -471,8 +471,9 @@ At the plan pause the block keeps the shape with the moves that apply there
 - anything that reads as direction → I take it as what to sharpen; the plan is cheap to change now
 ```
 
-An auto halt renders the standard card; the Verdict's worst component is the
-halt reason.
+An auto halt on trouble renders the standard card; the Verdict's worst
+component is the halt reason. A clean halt renders no card at all: its step
+has landed, and nothing is left for the human to decide.
 
 ## The recommendation
 
@@ -502,8 +503,8 @@ out, so the recommendation wraps at the renderer's width however the detail
 file was written; the model should write it as sentences anyway, never
 hard-wrapped to 72 or 80 columns, because unfenced prose carrying a fence's
 line breaks reads as machine noise. Every decision turn ends on it: the
-build/verify pause, the plan pause, and an auto halt. Orientation and driver
-turns carry none, since nothing is pending there. At the plan pause the
+build/verify pause, the plan pause, and an auto halt on trouble. Orientation
+and driver turns carry none, since nothing is pending there. At the plan pause the
 recommendation is the model's cold read of the plan it just framed: one
 bounded adversarial pass under `/plumbbob:refine`'s lens, surfacing without
 appending, written into the detail file as findings and a recommendation and
@@ -533,9 +534,20 @@ scales down with the turn:
 
 | tier | turns | the ending renders |
 | --- | --- | --- |
-| decision | the build/verify pause, the plan pause, an auto halt | the whole block: the Summary and its highlights, the Readout, the inline diff when small, the Verdict, Next Up, Your Call, and the recommendation. The plan pause judges no diff, so it renders the pointer, the moves, and the recommendation alone |
-| orientation | the checkpoint boundary, finish, status | the transition's lead line, the Verdict, any advisories, and Next Up; no Your Call block, no recommendation. `status` is the exception: it renders the dashboard and nothing else, and the dashboard's last line is its own pointer |
+| decision | the build/verify pause, the plan pause, an auto halt on trouble | the whole block: the Summary and its highlights, the Readout, the inline diff when small, the Verdict, Next Up, Your Call, and the recommendation. The plan pause judges no diff, so it renders the pointer, the moves, and the recommendation alone |
+| orientation | the checkpoint boundary (a clean halt's included), finish, status | the transition's lead line, the Verdict, any advisories, and Next Up; no Your Call block, no recommendation. `status` is the exception: it renders the dashboard and nothing else, and the dashboard's last line is its own pointer |
 | driver | park, spike, use, recover, revert, agent runs | the transition's lead line, any advisories, and Next Up; no Verdict, since nothing landed |
+
+**An auto halt takes the tier of what it leaves behind**
+([D85 (range-top-lands)](decisions.md#d85)). A halt on trouble (a red check,
+a mismatch, a blocked agent) stops with a step still in flight and a call
+pending on it, so it is a decision turn. A clean halt (the top of a typed
+range, or an `--auto` run that reaches the end of the plan) lands its last
+step first, and its ending is that checkpoint's block, because there is
+nothing left to decide. The rule used to send every halt through `handoff`,
+which renders the pause only while a step is open, and models read it as an
+order to hold a range's top step open: the eval tier caught it in 2 of 4
+runs.
 
 A boundary turn, whole:
 

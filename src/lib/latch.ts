@@ -135,7 +135,7 @@ export function checkLatch(root: string, step: number | null): LatchDecision {
 /**
  * The current GRANT, or null when the file is absent or unparseable.
  */
-function readGrant(root: string): Grant | null {
+export function readGrant(root: string): Grant | null {
   try {
     return parseGrant(readFileSync(grantPath(root), 'utf8'))
   } catch {

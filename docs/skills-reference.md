@@ -85,8 +85,9 @@ the `before`-slot ones for context, delegates the diff to a `build`-slot agent i
 bound, and fires an agent mid-build when a manifest's `when` prose calls for it. `--auto`
 lets the agent self-approve and chain step after step until the plan is done, halting the
 moment a check goes red, the self-review finds a mismatch, or a bound agent returns
-`blocked`/`drift`. A step range like `1-3` is a bounded `--auto`: it self-approves
-through step 3, then pauses. At the pause it writes its judgment into `.plumbbob/detail.md`,
+`blocked`/`drift`. A step range like `1-3` is a bounded `--auto`: it self-approves and
+lands steps 1 through 3, then ends on step 3's checkpoint block. At a pause (the default
+path, or a halt on a red check or a mismatch) it writes its judgment into `.plumbbob/detail.md`,
 runs `plumbbob handoff`, and pastes the block; you reply with one of the four moves the
 block names (`looks good`, `expand`, a direction, `revert`), and on `looks good` the
 checkpoint prints the boundary block for it to relay.

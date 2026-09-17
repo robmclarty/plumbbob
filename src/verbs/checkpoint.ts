@@ -35,7 +35,7 @@ import {
 import { runCheck } from '../lib/check.ts'
 import { readCommitBody } from '../lib/commitbody.ts'
 import { checkLatch } from '../lib/latch.ts'
-import { markStepDone, parseSteps } from '../lib/orient.ts'
+import { markStepDone, parseDetailStep, parseSteps } from '../lib/orient.ts'
 import { parseBuildScope, parseStepSeam, scopeDrift } from '../lib/intent.ts'
 import { conventionalSubject, subjectFromTitle, withMarker } from '../lib/commitmsg.ts'
 import { appendToSection, checkpointLogLine, logEntry, planLogLine } from '../lib/buildlog.ts'
@@ -118,7 +118,7 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   // tracked ledger is the archive, and it rides the branch where a commit body
   // would not survive the squash); the commit body keeps its marker and the
   // lead prose only.
-  const record = stepRecord(root, activeBuild(root), step, readDetail(root) ?? '')
+  const record = stepRecord(root, activeBuild(root), step, readDetail(root, step) ?? '')
   let sha: string
   // The drift advisory is read off the index (staged, before the commit clears
   // it) but printed inside the ending below, where the fixed order puts it: the
@@ -202,7 +202,7 @@ function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
   appendFileSync(checkpointsPath(root), `plan ${sha}\n`)
   // The cold read that approved the plan is the Log's first entry, beneath a
   // dated plan line; the detail file is then spent, the same as at a step.
-  const pointer = logPlan(root, sha, planRecord(readDetail(root) ?? ''))
+  const pointer = logPlan(root, sha, planRecord(readDetail(root, null) ?? ''))
   clearDetail(root)
   // Landing the plan consumes `start`'s entry stamp: a later hand-built diff
   // (no `build <n>`) must find no stale TICK and stay guidance-governed.
@@ -487,16 +487,23 @@ function fallbackBody(root: string, step: number): string | undefined {
 
 /**
  * The in-flight step's detail from `.plumbbob/detail.md`, or null when the file
- * is absent or empty.
+ * is absent, empty, or written for another step.
  *
  * The model overwrites it before every pause; checkpoint reads it once here for
  * the Log's record, and the caller clears it afterward. A missing or blank file
- * records nothing.
+ * records nothing, and so does one whose header names a different step: that
+ * file is a leftover, written after its own step had already landed, and
+ * recording it would file one step's story under another. The plan commit
+ * passes no step and takes the file as it is.
  */
-function readDetail(root: string): string | null {
+function readDetail(root: string, step: number | null): string | null {
   try {
     const raw = readFileSync(detailPath(root), 'utf8').trim()
-    return raw.length > 0 ? raw : null
+    if (raw.length === 0) {
+      return null
+    }
+    const written = step === null ? null : parseDetailStep(raw)
+    return written === null || written === step ? raw : null
   } catch {
     return null
   }

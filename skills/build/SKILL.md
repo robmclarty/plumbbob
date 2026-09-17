@@ -1,6 +1,6 @@
 ---
 name: build
-description: "The default engine: read the next planned step from intent, implement it (its done-when, seam, Decisions, Constraints), then verify it through to the approval pause. Swappable: build by hand/vibed/another harness and run /plumbbob:verify instead. `--auto` self-approves and chains to done; a step range like `1-3` self-approves through step 3, then pauses."
+description: "The default engine: read the next planned step from intent, implement it (its done-when, seam, Decisions, Constraints), then verify it through to the approval pause. Swappable: build by hand/vibed/another harness and run /plumbbob:verify instead. `--auto` self-approves and chains to done; a step range like `1-3` self-approves through step 3, then stops."
 argument-hint: "[step-number | step-range] [--auto]"
 disable-model-invocation: true
 allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob park:*), Bash(plumbbob agent:*), Bash(plumbbob spike:*), Bash(git diff:*)
@@ -36,8 +36,8 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
 
 1. **Pick the step.** Use the number you were invoked with (for example `/plumbbob:build 4`), or,
    if you were given a range like `/plumbbob:build 1-3`, start at the first number and treat
-   the second as the auto-approve ceiling (see the range note under `--auto`). With no
-   argument, don't resolve the next step yourself; the CLI does: bare `plumbbob build`
+   the second as the last step you approve and land yourself (see the range note under
+   `--auto`). With no argument, don't resolve the next step yourself; the CLI does: bare `plumbbob build`
    (step 2) enters the next undone step and refuses with a `/plumbbob:step` nudge when every
    step is checkpointed.
 2. **Enter the step.** Run `plumbbob build <n>`, or bare `plumbbob build` to enter the
@@ -256,30 +256,42 @@ and approves in the human's place**, and it **chains**:
   self-review finds no done-when / Decision / Constraint mismatch, checkpoint** and move
   straight on to the next planned step. Repeat. `--auto` adds no new machinery; the
   `after`-agent output simply feeds the *existing* self-review halt condition.
-- **Stop and hand back to the human** the moment any of these is true: the check is red,
-  the self-review finds a mismatch (surface exactly what, and do not checkpoint it), a
-  bound agent returns `blocked` or `drift` (unblock-and-re-run, or `/plumbbob:refine`; an
-  agent cannot advance the loop), a new decision is needed, no planned steps
-  remain, or the top of a requested range is reached. **When `--auto` halts back to the
-  human, end on the same turn the default pause does**: write the detail file, run
-  `plumbbob handoff`, and paste its block: the step just completed, the next undone step,
-  and that next step's `- model:` recommendation if it has one, so a fresh context window
-  knows which `/model` to select.
+- **Stop and hand back to the human** the moment a halt arrives, and end the turn by the
+  kind of halt it is
+  ([D85 (range-top-lands)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d85)):
+  - **A halt on trouble leaves a step unlanded.** The check is red, the self-review finds
+    a mismatch (surface exactly what, and do not checkpoint it), a bound agent returns
+    `blocked` or `drift` (unblock-and-re-run, or `/plumbbob:refine`; an agent cannot
+    advance the loop), or a new decision is needed. The step is still in flight and the
+    human has a call to make about it, so end on the same turn the default pause does:
+    write the detail file, run `plumbbob handoff`, and paste its block.
+  - **A clean halt lands its step first.** The top of a requested range is reached, or no
+    planned steps remain. That step checkpoints like every step before it, and its
+    checkpoint's block is the whole ending: relay it with nothing written around it, then
+    end the turn. Write no detail file and run no `handoff`, because nothing is pending.
+    The block already carries the Verdict the step earned and a Next Up pointing at what
+    comes next (the next undone step and its `- model:` recommendation, or the finish),
+    which is what a fresh context window needs to pick the right `/model`.
 
 `--auto` and a step range are the only paths that checkpoint without a human pause, and
-only because the human asked for it by name; a range re-imposes the pause at its top.
-The default (no flag, no range) always ends at the pause.
+only because the human asked for it by name. A range hands the clock back once its top
+step has landed: the step after it waits for the human's next run. The default (no flag,
+no range) always ends at the pause.
 
 ### A step range (`N-M`) is a bounded `--auto`
 
-`/plumbbob:build 1-3` self-approves steps 1 through 3 exactly as `--auto` does, then **pauses
-after step 3** instead of chaining to done. The range *is* the opt-in; you do not also
-pass `--auto`. Run it as the `--auto` loop with one extra halt: **stop before building
-any next step whose plan number is past the top of the range.** It adds no machinery:
-just the one more entry already in the halt list above.
+`/plumbbob:build 1-3` self-approves steps 1 through 3 exactly as `--auto` does, then **stops
+once step 3 has landed** instead of chaining to done. The range *is* the opt-in; you do not
+also pass `--auto`. Run it as the `--auto` loop with one extra halt: **stop before building
+any next step whose plan number is past the top of the range.** It adds no machinery: just
+the one more entry already in the halt list above, and it is a clean halt, so the top step
+is never held back for approval. The human approved it by typing the range, and
+`plumbbob build` says so as it enters that step:
+`step 3 is the top of the range you granted`.
 
-- **`N-M` with N ≤ M**: build N…M, self-approving and checkpointing each, then pause at
-  M. `N-N` is just the single step `N` (which already ends at the pause).
+- **`N-M` with N ≤ M**: build N…M, self-approving and checkpointing each, M included, then
+  relay M's checkpoint block and end the turn. `N-N` is a range like any other: it builds
+  and lands the single step `N`. Only a bare `/plumbbob:build N` ends at the pause.
 - **N > M** (for example `3-1`): that is not a range you can walk; report it and stop rather
   than guess the intent.
 - **M past the last planned step** (for example `1-9` with three steps): build through the
@@ -302,7 +314,7 @@ just the one more entry already in the halt list above.
 - **Default ends at the pause.** Implement → verify → wait for approval; never
   checkpoint without it. Only an explicit `--auto` or a step range lets the agent approve
   in your place, and it still halts on a red check or any mismatch; a range also stops
-  at its top.
+  once its top step lands.
 - **Agents feed the beat; they never advance it**. `before` loads context,
   `build` writes the diff, `after` is advisory; none can checkpoint, flip a step, or
   chain. `blocked` → unblock and re-run; `drift` → `/plumbbob:refine`. You are still the one

@@ -11,6 +11,7 @@ import { hasSession, intentPath, resolveBuild, seamPath, stampStepStat, stampTic
 import { parseStepSeam } from '../lib/intent.ts'
 import { parseSteps } from '../lib/orient.ts'
 import { stepLabel, syncBuildLogState } from '../lib/buildlogsync.ts'
+import { readGrant } from '../lib/latch.ts'
 import { notice } from '../lib/notice.ts'
 
 /**
@@ -18,8 +19,9 @@ import { notice } from '../lib/notice.ts'
  *
  * Refuses a missing session, a malformed step argument, an `N-M` range (a
  * `/plumbbob:build` skill feature, not a CLI one), and a seam that fails to parse.
- * On entry it stamps the turn ledger and the step's start time, and re-renders
- * the build-log's Current step line.
+ * On entry it stamps the turn ledger and the step's start time, re-renders the
+ * build-log's Current step line, and says so when the step is the top of a
+ * range the human typed.
  */
 export function build(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
@@ -31,13 +33,14 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
   const { build: slug, rest } = resolveBuild(root, args)
   const raw = rest.find((a) => !a.startsWith('--'))
   // A step range like `1-3` is a `/plumbbob:build` skill affordance (auto-approve
-  // through the range, then pause), not a CLI capability: the CLI records one
-  // in-flight step at a time. Name it rather than bounce off the generic usage.
+  // every step through the range's top, then stop), not a CLI capability: the CLI
+  // records one in-flight step at a time. Name it rather than bounce off the
+  // generic usage.
   if (raw !== undefined && /^\d+-\d*$/.test(raw)) {
     process.stderr.write(
       notice({
         fact: 'build takes one step number',
-        detail: [`\`${raw}\` is a /plumbbob:build range, which auto-approves through it and then pauses`],
+        detail: [`\`${raw}\` is a /plumbbob:build range, which auto-approves through its top and then stops`],
         remedy: `plumbbob build ${raw.split('-')[0]}`,
       }),
     )
@@ -108,10 +111,24 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
       : skipped > 0
         ? ['explicitly requested', `skips ${skipped} undone step${skipped === 1 ? '' : 's'}`]
         : []
-  // Two lines, one colon each, then the seam as a plain readout beneath the
-  // notice that frames it: the paths are a list, and a list is not a one-liner.
+  // The top step of a typed range lands like every step under it, and the turn
+  // ends on its checkpoint. Saying so as the step is entered puts that fact in
+  // front of the model before it chooses between landing the step and holding
+  // it at a pause, which is the choice a range kept getting wrong.
+  const grant = readGrant(root)
+  const top =
+    grant?.kind === 'range' && grant.ceiling === step
+      ? notice({
+          fact: `step ${step} is the top of the range you granted`,
+          remedy: 'land it on green, then stop at the boundary',
+        })
+      : ''
+  // Two lines (three at a range's top), one colon each, then the seam as a
+  // plain readout beneath the notice that frames it: the paths are a list, and
+  // a list is not a one-liner.
   process.stdout.write(
     notice({ fact: `building step ${step}`, detail: picked }) +
+      top +
       notice({
         fact: 'the seam is orientation, not a lock',
         detail: [`${parsed.seam.length} path${parsed.seam.length === 1 ? '' : 's'}`],

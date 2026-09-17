@@ -61,7 +61,12 @@ type LedgerRun = {
   readonly sweep: string
   readonly outcome: string
   readonly model: string
-  readonly checks: ReadonlyArray<{ readonly name: string; readonly pass: boolean; readonly kind: string }>
+  readonly checks: ReadonlyArray<{
+    readonly name: string
+    readonly pass: boolean
+    readonly kind: string
+    readonly detail?: string | null
+  }>
   readonly costUsd: number
   readonly durationMs: number
   readonly infraRetries: number
@@ -158,6 +163,11 @@ export function renderReport(date: string): string {
     '  numbers are not comparable across that line. The rate tracks the',
     '  decision-ending rate exactly, because the row rides the fence and the fence',
     '  rides the ending: where the check row is missing, the whole readout is.',
+    '- Contract 4 reads its last turn as a boundary ending. A range lands its',
+    '  top step ([D85 (range-top-lands)](../decisions.md#d85)), so that turn ends',
+    '  on the step\'s own checkpoint block rather than a pause. Receipts through',
+    '  2026-09-05 read the same turn against the decision tier, so contract 4\'s',
+    '  anatomy rows are not comparable across that line.',
     '- The turn-anatomy probes never gate a contract. A run that paused exactly',
     '  as its contract demands, in a shape a hair off the spec, is still a pass of',
     '  that contract; folding the two together would make one rate answer two',
@@ -232,6 +242,14 @@ function byProbeOrder(a: string, b: string): number {
   return rank(a) - rank(b) || a.localeCompare(b)
 }
 
+// A check's detail can quote what the model wrote (a plan bullet, say), and the
+// receipt is committed prose that the markdown and prose slots both read. Inside
+// a code span none of it reads as markdown and the prose rules skip it; a
+// backtick of its own would close the span early, so it becomes a quote mark.
+function codeSpan(text: string): string {
+  return `\`${text.replace(/`/g, "'").replace(/\s+/g, ' ').trim()}\``
+}
+
 // A sweep that ran one arm says so. An empty column is a measurement nobody
 // took, and a dash alone cannot tell that apart from a run that found nothing.
 function renderOneSided(
@@ -253,9 +271,11 @@ function renderNonPasses(all: ReadonlyArray<LedgerRun>): string[] {
   const bad = all.filter((r) => r.outcome !== 'pass')
   if (bad.length === 0) return ['(none)']
   return bad.map((r) => {
+    // A failed check carries its detail beside its name: the value it compared
+    // is what says why the run fell short, and a bare name only says that it did.
     const failed = r.checks
       .filter((c) => !c.pass && c.kind !== 'info')
-      .map((c) => c.name)
+      .map((c) => (c.detail === undefined || c.detail === null || c.detail.trim() === '' ? c.name : `${c.name} (${codeSpan(c.detail)})`))
       .join('; ')
     // A run that died before any check ran carries only its error — name it, so
     // five bare "invalid" lines don't read as five unexplained model failures.

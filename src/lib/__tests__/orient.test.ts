@@ -5,6 +5,7 @@ import {
   markStepDone,
   orient,
   parseConstraintCount,
+  parseDetailStep,
   parseLastCheckpoint,
   parseOpenQuestions,
   parseParked,
@@ -579,6 +580,20 @@ describe('parseRequestedStep', () => {
     // through literally; that must degrade to "no ask", not a step.
     expect(parseRequestedStep('$ARGUMENTS')).toBe(null)
     expect(parseRequestedStep('0')).toBe(null)
+  })
+})
+
+describe('parseDetailStep', () => {
+  it("reads the step a detail file's header names", () => {
+    expect(parseDetailStep('# Detail · Step 2 · Add the farewell module\n\n## Summary\n\nDone.')).toBe(2)
+    expect(parseDetailStep('\n# Detail · Step 14 · fix(step): mention Step 3 in passing\n')).toBe(14)
+  })
+
+  it('reads no step off a plan header, a missing header, or a header past the first line', () => {
+    expect(parseDetailStep('# Detail · Plan · Checkpoint test\n\n## Recommendation\n\nApprove it.')).toBe(null)
+    expect(parseDetailStep('## Summary\n\nStep 2 is done.')).toBe(null)
+    expect(parseDetailStep('notes\n# Detail · Step 2 · Late header')).toBe(null)
+    expect(parseDetailStep('')).toBe(null)
   })
 })
 

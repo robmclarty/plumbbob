@@ -263,6 +263,31 @@ describe('checkpoint', () => {
     expect(body).not.toContain('The whole story')
   })
 
+  it('records no leftover detail written for another step, and clears it anyway — D81 (detail-file)', async () => {
+    // A detail file whose header names a step that already landed: a clean
+    // halt once wrote one after its own checkpoint, and the next step to land
+    // must not inherit that story as its record.
+    const dir = await startedGreen()
+    mkdirSync(join(dir, 'src'), { recursive: true })
+    writeFileSync(join(dir, 'src', 'a.ts'), 'in seam\n')
+    writeFileSync(detailPath(dir), DETAIL.replace('# Detail · Step 1 · First', '# Detail · Step 7 · Elsewhere'))
+    const { code } = await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(code).toBe(0)
+    const log = readFileSync(buildLogPath(dir), 'utf8')
+    expect(log).toMatch(/- \d{4}-\d{2}-\d{2} — step 1 checkpointed · [0-9a-f]{9} — First/)
+    expect(log).not.toContain('A works now')
+    expect(log).not.toContain('**Recommendation**')
+    expect(existsSync(detailPath(dir))).toBe(false)
+  })
+
+  it('still records a detail file that names no step at all', async () => {
+    const dir = await startedGreen()
+    writeFileSync(detailPath(dir), DETAIL.replace('# Detail · Step 1 · First\n\n', ''))
+    const { code } = await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(code).toBe(0)
+    expect(readFileSync(buildLogPath(dir), 'utf8')).toContain('  **Summary**: A works now.')
+  })
+
   it('records the cold read beneath a plan line in the Log and clears the detail file', async () => {
     const dir = await startedGreen()
     writeFileSync(detailPath(dir), PLAN_DETAIL)

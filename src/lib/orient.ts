@@ -957,6 +957,17 @@ export function parseRecommendation(detail: string): string | null {
 }
 
 /**
+ * The step `.plumbbob/detail.md` was written for, read off its
+ * `# Detail · Step <n> · <title>` header, or null when the first line is not a
+ * step header (a plan pause's detail, or a file the model wrote without one).
+ */
+export function parseDetailStep(detail: string): number | null {
+  const first = detail.trimStart().split('\n', 1)[0] ?? ''
+  const m = /^#\s+Detail\b.*?\bStep\s+(\d+)\b/.exec(first)
+  return m === null ? null : Number(m[1])
+}
+
+/**
  * Render an Orientation as the plain-text dashboard `status` prints.
  */
 export function formatOrientation(o: Orientation): string {

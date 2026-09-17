@@ -117,6 +117,15 @@ export function checkpointLines(repo: string): ReadonlyArray<CheckpointLine> {
   return lines
 }
 
+// The step the build still has in flight, off the STEP marker `plumbbob build`
+// writes and `checkpoint` clears; null at the boundary. A step left open after a
+// turn that should have landed it is the one fact the checkpoint lines cannot
+// show on their own.
+export function inFlightStep(repo: string): number | null {
+  const n = Number.parseInt(controlOrNull(buildPath(repo, 'STEP')) ?? '', 10)
+  return Number.isFinite(n) ? n : null
+}
+
 // The `N. [ ]` / `N. [x]` boxes under intent's `## Steps` — the flip is what
 // checkpoint records, so an unexpected `[x]` is a landed step.
 export function intentBoxes(repo: string): ReadonlyMap<number, boolean> {

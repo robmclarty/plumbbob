@@ -43,7 +43,8 @@ export const c3: Contract = {
           readLedger(repo, 'TURN') !== null, // the turn hook ticked — not a headless timing miss
           `TURN=${readLedger(repo, 'TURN') ?? '∅'} GRANT=${readLedger(repo, 'GRANT') ?? '∅'}`,
         ),
-        // An auto halt hands back with the pause's own ending, so it is read as one.
+        // A halt on red leaves step 2 unlanded with a call pending on it, so it
+        // hands back with the pause's own ending and is read as one.
         ...anatomyChecks(turn.content, 'decision'),
       ],
     }

@@ -170,7 +170,7 @@ nothing lands until you say `looks good`; `revert` winds the work back.
 > **Unattended option: `--auto`.** `/plumbbob:build --auto` lets the agent self-review and
 > approve in your place, then chain to the next step until done. It halts the moment the
 > check goes red or the self-review finds a mismatch. A step range like `/plumbbob:build 1-3`
-> is a bounded `--auto`: it self-approves through step 3, then pauses. These are the only
+> is a bounded `--auto`: it self-approves through step 3, then stops. These are the only
 > paths that checkpoint without a human pause, and only because you asked for it by name.
 
 ### The pluggable executor reads the diff, not the author

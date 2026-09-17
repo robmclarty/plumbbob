@@ -1,10 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { build } from '../build.ts'
 import { notice } from '../../lib/notice.ts'
 import { start } from '../start.ts'
-import { buildDir, buildLogPath, intentPath, readStats, seamPath, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
+import { buildDir, buildLogPath, grantPath, intentPath, readStats, seamPath, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
@@ -158,6 +158,44 @@ describe('build', () => {
     const { code } = captureIo(() => build(dir, ['2']))
     expect(code).toBe(0)
     expect(existsSync(tickPath(dir))).toBe(false)
+  })
+})
+
+describe('build — the top of a typed range — D85 (range-top-lands)', () => {
+  const TOP = notice({
+    fact: 'step 2 is the top of the range you granted',
+    remedy: 'land it on green, then stop at the boundary',
+  })
+
+  it('names the top step as it enters it, between the entry line and the seam', async () => {
+    const dir = await startedWithSteps()
+    writeFileSync(intentPath(dir), INTENT.replace('1. [ ]', '1. [x]'))
+    writeFileSync(grantPath(dir), 'range 2\n')
+    const { code, stdout } = captureIo(() => build(dir, ['2']))
+    expect(code).toBe(0)
+    // The step still lands like the rest; the line only says where the range
+    // ends, before the model decides whether to land the step or hold it.
+    expect(stdout).toContain(
+      notice({ fact: 'building step 2' }) + TOP + notice({ fact: 'the seam is orientation, not a lock', detail: ['2 paths'] }),
+    )
+  })
+
+  it('names it on a bare build too, since the grant speaks to the step and not to how it was picked', async () => {
+    const dir = await startedWithSteps()
+    writeFileSync(intentPath(dir), INTENT.replace('1. [ ]', '1. [x]'))
+    writeFileSync(grantPath(dir), 'range 2\n')
+    const { stdout } = captureIo(() => build(dir, []))
+    expect(stdout).toContain(notice({ fact: 'building step 2', detail: ['next undone'] }) + TOP)
+  })
+
+  it('stays quiet below the top, under an `auto` grant, and with no grant at all', async () => {
+    const dir = await startedWithSteps()
+    writeFileSync(grantPath(dir), 'range 2\n')
+    expect(captureIo(() => build(dir, ['1'])).stdout).not.toContain('top of the range')
+    writeFileSync(grantPath(dir), 'auto\n')
+    expect(captureIo(() => build(dir, ['2'])).stdout).not.toContain('top of the range')
+    rmSync(grantPath(dir))
+    expect(captureIo(() => build(dir, ['2'])).stdout).not.toContain('top of the range')
   })
 })
 

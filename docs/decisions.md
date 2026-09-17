@@ -316,7 +316,9 @@ below.)
   condition, so the default path (everything lands at the pause) stays unchanged. A
   step range `N-M` rides the same seam: it is `--auto` with one more halt of the same
   kind (stop before any step past M), re-imposing the pause at the top of the range:
-  still zero new machinery. *Tagged in* the `build` skill.
+  still zero new machinery. (Revised 2026-09-16 by [**D85 (range-top-lands)**](#d85): step M
+  lands like every step before it, so the pause the range re-imposes belongs to the step
+  after M, and M itself is never held for approval.) *Tagged in* the `build` skill.
 - <a id="d57"></a>**D57 (merge-ladder): The bindings merge ladder.** For one step and slot: an explicit name or `--agent`
   flag beats the per-step harness entry, which beats the harness `defaults`, which beat the
   settings-level `agents` key (the first level that names the slot wins, **replace, not
@@ -665,7 +667,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   the lead line's bracket points at the entry. The plan commit records the cold read the same way,
   beneath a `plan committed` line. "expand 2" at the pause is a lookup of the file's `## 2`, an older
   step takes its number and is answered from its Log entry, and neither is ever a recall. (Revised
-  2026-09-02, before release: the archive moved from the commit body to the ledger, Rob's call.) Hidden detail is always counted and pointed at (the
+  2026-09-02, before release: the archive moved from the commit body to the ledger, Rob's call.) (Revised
+  2026-09-16: `checkpoint` records the file only when its `# Detail · Step N` header names the step
+  landing, or names no step, because a detail written after its own step had landed would otherwise
+  ride into the next step's entry; it clears the file either way.) Hidden detail is always counted and pointed at (the
   visible highlights carry the count, the `expand` move the affordance), because a silent cut reads as
   coverage. Code stays out of the default turn with one exception: a diff of 20 changed lines or fewer rides
   inline below the readout, and anything larger stays in the working tree behind the diffstat row, because
@@ -729,7 +734,9 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   verify pause, the plan pause, an auto halt) carries the whole block, an orientation turn (status, the
   boundary, finish) the lead line, the Verdict, and Next Up, a driver turn (park, spike, use, recover,
   revert, agent runs) the lead line and Next Up, because the Your Call block belongs only where a decision
-  is pending. Next Up carries the progress count and the plan's model recommendation
+  is pending. (Revised 2026-09-16 by [**D85 (range-top-lands)**](#d85): the auto halt in that first list is
+  a halt on trouble, which leaves a step unlanded; a clean halt lands its step and ends on the boundary.)
+  Next Up carries the progress count and the plan's model recommendation
   ([**D62 (model-recommendation)**](#d62)), the one token besides the label a line may bold, because it is the
   token the human acts on before the next run. Promoted from the 2026-08-28 presentation build, merging its
   locals `labeled-lines`, `instructive-choice`, `real-moves`, `verdict-last`, `recommendation-last`,
@@ -761,6 +768,25 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   `own-lines-one-colon`, `fact-not-move`, `advisory-glyph`, `register-is-one-liners`,
   `transitions-wear-the-label`, `word-carries-meaning`, and `text-glyphs-only`. *Tagged in*
   `docs/presentation.md` and `docs/cli-reference.md`.
+
+- <a id="d85"></a>**D85 (range-top-lands): A range lands its top step, and a halt takes the tier of what it
+  leaves behind.** `/plumbbob:build N-M` self-approves N through M, M included, and hands back once M has
+  landed, because a typed range is the human asking for exactly those steps and the latch already allows a
+  checkpoint at or under the ceiling, refusing only past it ([**D65 (human-typed-grants)**](#d65)). An
+  `--auto` or range halt comes in two kinds. A halt on trouble (a red check, a self-review mismatch, a
+  `blocked` or `drift` envelope, a new decision) stops with a step still in flight and a call pending on
+  it, so it is a decision turn: the detail file, `handoff`, the whole block. A clean halt (the top of the
+  range, or no planned step left) lands its last step first, so nothing is pending, and its ending is that
+  checkpoint's own block, relayed whole, with no detail file and no `handoff`. `N-N` is a range like any
+  other and lands step N; only a bare `/plumbbob:build N` ends at the pause. `plumbbob build` names the top
+  step as it enters it, because the choice between landing a step and holding it is made before
+  `checkpoint` ever runs. The halt rule used to send every halt through `handoff`, and since the
+  presentation build `handoff` renders the approval pause for an open step and only a Verdict and Next Up
+  at the boundary, so the one reading that made the old rule work was to leave M open. The eval tier's
+  range contract caught models taking it: the top step sat at a pause in 2 of 4 runs across the
+  2026-09-03 and 2026-09-05 sweeps, where 0.9.0 had landed it in 5 of 5. Amends
+  [**D56 (auto-composes)**](#d56) and [**D83 (card-teaches-itself)**](#d83). *Tagged in* the `build`
+  skill, `docs/presentation.md`, and `docs/cli-reference.md`.
 
 ### Superseded
 

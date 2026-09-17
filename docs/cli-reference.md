@@ -111,7 +111,10 @@ plumbbob build [<n>] [--build <slug>]
 
 Reads step `n`'s seam from `intent.md` and writes `SEAM` (the path list) and `STEP` (the
 number); the `STEP` file is what makes the dashboard read `BUILD`. The seam is
-orientation, not a lock. Refuses (exit 1)
+orientation, not a lock. When the turn's `GRANT` is a typed range whose top is this step,
+it adds one line saying so (`step 3 is the top of the range you granted`, with the remedy
+beneath it), because that step lands like the rest and the turn ends on its checkpoint
+([**D85 (range-top-lands)**](decisions.md#d85)). Refuses (exit 1)
 with no session, a non-numeric or `< 1` step, or a seam it cannot parse (seams are exact
 paths or `dir/` grants, never globs; [**D23 (no-glob-seams)**](decisions.md#d23)).
 
@@ -217,7 +220,9 @@ flips the step to `[x]`, and clears `SEAM`/`STEP`, dropping the dashboard back t
 line, and beneath it the pause as the human approved it (the Summary and highlights, the
 Readout, the Verdict, the recommendation, and the full story behind each highlight), read
 from `.plumbbob/detail.md`, which it then truncates ([**D81 (detail-file)**](decisions.md#d81));
-the lead line's bracket carries a `details:` pointer at that entry. `-m <msg>` overrides
+the lead line's bracket carries a `details:` pointer at that entry. A detail file whose
+header names a different step is a leftover from a step that already landed, so it is
+cleared without being recorded. `-m <msg>` overrides
 the subject. The commit **body** leads with a
 `plumbbob step N` marker, then a `--body` heredoc on stdin (skill-composed,
 proportional); without it a deterministic fallback carries done-when + seam + diffstat
