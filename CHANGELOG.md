@@ -5,6 +5,38 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-09-16
+
+- **Fixed:** a step range lands its top step. `/plumbbob:build 1-2` self-approves and
+  checkpoints both steps, then ends on step 2's checkpoint block. Since 0.11.0 the skill's
+  halt rule sent every halt through `plumbbob handoff`, which renders the approval pause
+  for an open step, so models read it as an order to hold the top step open, and the eval
+  tier's range contract failed that way in 2 of 4 runs. Halts now come in two kinds: a
+  halt on trouble (a red check, a self-review mismatch, a blocked agent) still ends on the
+  approval pause, and a clean halt (the top of a range, or the end of the plan) ends on the
+  landed step's checkpoint block, with no detail file and no `handoff`. `N-N` is a range
+  like any other and lands step N. D85 (range-top-lands) records the rule and amends D56
+  (auto-composes) and D83 (card-teaches-itself); a targeted re-run measured the range
+  contract at 5 of 5 and the red halt at 2 of 2.
+- **Added:** `plumbbob build` names the top step of a typed range as it enters it
+  (`step 2 is the top of the range you granted`, with `land it on green, then stop at the
+  boundary` beneath), because the model chooses between landing that step and holding it
+  before `checkpoint` ever runs.
+- **Fixed:** `checkpoint` no longer records a detail file written for a different step. A
+  `.plumbbob/detail.md` whose `# Detail · Step N` header names another step is a leftover
+  from a step that already landed, and it would have been filed as the landing step's Log
+  entry; it is now cleared without being recorded. D81 (detail-file) is revised to match.
+- **Fixed:** the build, verify, finish, and plan skills end a `--body <<'BODY'` line at
+  the heredoc marker. Claude Code's permission checker cannot analyze a `2>&1` after it,
+  so the command fell outside the skill's allowed tools and was blocked, or stopped for a
+  permission prompt; in the eval runs every such checkpoint was blocked and every one
+  without it went through.
+- **Changed:** the eval tier's range contract reads its last turn as a boundary ending and
+  names any step it left open, and a receipt's non-pass list prints each failed check's
+  detail in a code span. The 2026-09-05 receipt (`docs/evals/2026-09-05.md`) is committed,
+  with a footnote marking the `check` row as rendering in the fixtures since 0.11.1, so
+  every earlier receipt's zero for that probe was by construction.
+
 ## [0.11.3] - 2026-09-04
 
 - **Fixed:** the `seam` and `diff` rows see a step whose product is a new file. Both rows
