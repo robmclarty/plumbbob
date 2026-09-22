@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url'
 import { start } from './verbs/start.ts'
 import { status } from './verbs/status.ts'
 import { park } from './verbs/park.ts'
+import { order } from './verbs/order.ts'
 import { build } from './verbs/build.ts'
 import { handoff } from './verbs/handoff.ts'
 import { check } from './verbs/check.ts'
@@ -176,6 +177,15 @@ const VERBS: ReadonlyArray<Verb> = [
     args: [{ name: '<text>', gloss: 'the note to park (free text; quote it)' }],
     tolerateUnknownFlags: true,
     notes: 'Refuses (exit 1) with no session, empty text, or no `## Park list` section.',
+  },
+  {
+    name: 'order',
+    description: 'set the build order: the undone steps in the sequence to build them',
+    synopsis: ['order <n> [<n>…]', 'order --reset'],
+    args: [{ name: '<n>…', gloss: 'undone step numbers in the sequence to build them; the rest follow in document order' }],
+    flags: [{ name: '--reset', gloss: 'drop the line, so the plan reads in document order again' }],
+    notes:
+      'Writes the one numeric line under `## Build order` in intent.md, which status, build, checkpoint, and handoff all read. Refuses (exit 1) with no session, no numbers, a number the plan lacks, a repeat, or a step already checkpointed.',
   },
   {
     name: 'spike',
@@ -381,6 +391,8 @@ async function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>):
       return status(cwd, rest)
     case 'park':
       return park(cwd, rest)
+    case 'order':
+      return order(cwd, rest)
     case 'build':
       return build(cwd, rest)
     case 'handoff':

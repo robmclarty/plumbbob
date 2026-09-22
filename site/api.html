@@ -239,7 +239,7 @@
       <sc-if value="{{ isSkills }}" hint-placeholder-val="{{ true }}">
         <div>
           <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:3px; color:#5A32C8; margin-bottom:14px;">THE SURFACE YOU DRIVE · START HERE</div>
-          <h1 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:60px; line-height:1; margin:0 0 20px;">The fourteen skills</h1>
+          <h1 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:60px; line-height:1; margin:0 0 20px;">The fifteen skills</h1>
           <p style="font-size:18px; line-height:1.6; color:#2E2A44; max-width:680px;">This is the interface you actually use. Every skill is <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">disable-model-invocation</span> — <em>you</em> fire every move. Claude Code namespaces them under the plugin, so the command is <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">/plumbbob:plan</span>; the bare <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">/plan</span> reaches it only where nothing else owns that name. The <span onClick="{{ goVerbs }}" style="cursor:pointer; color:#5A32C8; font-weight:700; border-bottom:2px solid #5A32C8;">CLI verbs</span> are the lower-level layer these shell out to — reach for them only to script the loop or drive it from another host.</p>
 
           <div style="margin-top:32px; display:flex; flex-direction:column; gap:12px;">
@@ -296,7 +296,7 @@ class Component extends DCLogic {
   renderVals() {
     const sec = this.state.section;
     const navDef = [
-      { title: 'SKILLS · START HERE', items: [['skills', 'The fourteen skills']] },
+      { title: 'SKILLS · START HERE', items: [['skills', 'The fifteen skills']] },
       { title: 'THE SIDECAR', items: [['sidecar', 'The .plumbbob/ layout'], ['settings', 'Settings']] },
       { title: 'CLI · ADVANCED', items: [['commands', 'Verbs'], ['flags', 'Flags'], ['exit-codes', 'Exit codes']] },
     ];
@@ -335,6 +335,8 @@ class Component extends DCLogic {
         'The third exit from an in-flight step: checkpoint lands it, revert destroys the work, and abandon drops the attempt but keeps the working-tree diff. Clears the in-flight markers (STEP, SEAM, TICK, handoff.json), logs the abandon to the build-log, and records it in stats.json, touching neither the working tree, git, nor the intent checkbox, so the step stays planned and re-buildable. A step exit is a boundary crossing, so it honors the same approval latch as checkpoint and refuses until a human turn intervenes.'],
       ['park', 'plumbbob park "<text>"',
         'The dumb capture path — appends <text> under ## Park list in build-log.md and prints its ending: **Parked**: <text>, then **Next Up** pointing back at the step in flight. Composing the tidy tagged line (tag at the tail) is the /plumbbob:park skill\'s job. Refuses on no session, empty text, or no ## Park list section.'],
+      ['order', 'plumbbob order <n> [<n>…]\nplumbbob order --reset',
+        'Writes the build order: the one numeric line under ## Build order in intent.md, the undone steps in the sequence to build them (the numbers given first, every other undone step following in document order). A step keeps its number for life; the line is where the sequence lives once a refine appends a step that has to land before an existing one, and status, a bare build, checkpoint, and handoff all read it. Prints **Build order**: 7, 8, 5, 10, 6 and the Next Up pointer. The reset flag drops the line. Refuses on no session, no numbers, a number the plan lacks, a repeat, or a step already checkpointed.'],
       ['spike', 'plumbbob spike "<slug>" [opt…] [--build <slug>]\nplumbbob spike report "<slug>"\nplumbbob spike done',
         'For a genuine fork the plan can\'t settle: opens a sibling worktree and branch per option (default a and b), created outside the repo root, and drops the SPIKE marker; "done" tears every spike worktree and branch down. The deliverable is the verdict, recorded back in intent.md — not the spike code.'],
       ['agent', 'plumbbob agent list\nplumbbob agent run <name> [--step N]\n  [--mode before|build|after] [--agent <path>] [--build <slug>]',
@@ -408,6 +410,8 @@ class Component extends DCLogic {
         'Revises the next undone step just-in-time — the steps were all planned up front, so this is a sharpening tool, not where steps are born. Fired bare, it re-reads what the build has already taught you and syncs the step\'s done-when and seam to reality; given <what-changed>, it makes that directed revision (tighten, re-cut, split, or add a step). One step at a time, written back into ## Steps only on your approval. Most steps need nothing — skip straight to /plumbbob:build.'],
       ['/plumbbob:refine', 'plan-shaping', '[focus]', 'Attack the plan for holes, or repair a plan that drifted from the code.',
         'Keeps intent.md honest, in two modes. Attack: a cold, adversarial read of the Frame and Decisions that surfaces holes as one-line Open questions — never as Decisions, because resolving a hole is your call. Repair: when the plan has drifted from what the code actually does, it proposes the edits that bring it back, before/after, written only on your approval. Where /plumbbob:step sharpens one step, refine works the whole plan.'],
+      ['/plumbbob:order', 'plan-shaping', '[steps in sequence]', 'Set the build order: the undone steps in the sequence to build them.',
+        'A step keeps its number for life, so once a refine appends a step that has to land before an existing one, the sequence stops being the numbering. Give it the full sequence or a relative one ("7 and 8 before 5"); it composes every undone step in order, shows it for a quick OK, then writes it by shelling plumbbob order, never by editing intent.md. The dashboard\'s next marker, a bare /plumbbob:build, and the card\'s Next Up all follow the line it writes.'],
       ['/plumbbob:spike', 'plan-shaping', '<slug> | done', 'Throwaway worktree experiment for a fork the plan can\'t settle.',
         'For a genuine fork the plan can\'t settle on paper: /plumbbob:spike <slug> opens a throwaway sibling worktree and branch per option (spike/<slug>-a, -b by default) outside the repo; /plumbbob:spike done tears them all down. The deliverable is the verdict recorded back in intent.md, not the spike code.'],
       ['/plumbbob:status', 'helper', '—', 'Orient — where you are, the next step\'s done-when and seam, and the next move.',

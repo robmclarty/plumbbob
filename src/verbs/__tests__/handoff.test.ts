@@ -4,7 +4,7 @@ import { join, relative } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { handoff } from '../handoff.ts'
 import { start } from '../start.ts'
-import { checkpointsPath, detailPath, intentPath, seamPath, spikePath, statsPath, stepPath } from '../../lib/sidecar.ts'
+import { buildLogPath, checkpointsPath, detailPath, intentPath, seamPath, spikePath, statsPath, stepPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
@@ -744,5 +744,118 @@ describe('handoff', () => {
     const { code, stderr } = captureIo(() => handoff(makeTempRepo(), []))
     expect(code).toBe(1)
     expect(stderr).toContain('no active session')
+  })
+})
+
+// Four steps, 1 done, and a build order putting 4 ahead of 3: what the plan
+// reads once `plumbbob order 4 3` has run against it. Step 4 opens on line 11.
+const REORDERED = `# Handoff order test
+
+## Steps
+
+1. [x] First — **done when:** a works.
+   - seam: \`src/a.ts\`
+2. [ ] Second — **done when:** b works.
+   - seam: \`src/b.ts\`
+3. [ ] Third — **done when:** c works.
+   - seam: \`src/c.ts\`
+4. [ ] Fourth — **done when:** d works.
+   - seam: \`src/d.ts\`
+
+## Build order
+
+4, 3
+`
+
+const FOURTH_STEP_LINE = 11
+
+// Two parks open and one harvested: `parked 2 of 3 open`.
+const PARKS = '# Build log\n\n## Park list\n\n- [ ] one idea\n- [ ] another\n- [x] harvested already\n\n## Harvest\n\n- (none yet)\n'
+
+/** The `details:` target Next Up points at for step 4 of REORDERED. */
+function fourthStepPointer(dir: string): string {
+  return `${relative(dir, intentPath(dir))}:${FOURTH_STEP_LINE}`
+}
+
+describe('handoff — the note beneath Next Up', () => {
+  it('rides the build order and the park count beneath the pointer as one indented line', async () => {
+    const dir = await started(REORDERED)
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(buildLogPath(dir), PARKS)
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    // The order starts at the step the pointer names and leaves out the one in
+    // flight; the indent keeps the line inside the Next Up part.
+    expect(stdout).toContain(
+      `**Next Up**: Step 4 of 4 - Fourth (details: \`${fourthStepPointer(dir)}\`)\n  · build order 4, 3 · parked 2 of 3 open\n\n**Your Call**:`,
+    )
+  })
+
+  it('omits the order segment when the sequence is the numbering, keeping the parks', async () => {
+    const dir = await started(REORDERED.replace('4, 3', '3, 4'))
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(buildLogPath(dir), PARKS)
+    const { stdout } = captureIo(() => handoff(dir, []))
+    expect(stdout).toContain('**Next Up**: Step 3 of 4 - Third')
+    expect(stdout).toContain(')\n  · parked 2 of 3 open\n\n**Your Call**:')
+    expect(stdout).not.toContain('build order')
+  })
+
+  it('renders the pointer alone with nothing re-sequenced and nothing parked, as before', async () => {
+    const dir = await started(REORDERED.replace('4, 3', '3, 4'))
+    writeFileSync(stepPath(dir), '2\n')
+    const { stdout } = captureIo(() => handoff(dir, []))
+    expect(stdout).toContain('**Next Up**: Step 3 of 4 - Third (details: `')
+    expect(stdout).not.toContain('  · ')
+  })
+
+  it('caps the order at five and counts the rest', async () => {
+    const eight = [
+      '# Long plan',
+      '',
+      '## Steps',
+      '',
+      ...Array.from({ length: 8 }, (_, i) => `${i + 1}. [ ] Step ${i + 1} — **done when:** ok.\n   - seam: \`src/s${i + 1}.ts\``),
+      '',
+      '## Build order',
+      '',
+      '8, 7, 6, 5, 4, 3, 2',
+      '',
+    ].join('\n')
+    const dir = await started(eight)
+    writeFileSync(stepPath(dir), '1\n')
+    const { stdout } = captureIo(() => handoff(dir, []))
+    expect(stdout).toContain('**Next Up**: Step 8 of 8 - Step 8 (details: `')
+    expect(stdout).toContain('\n  · build order 8, 7, 6, 5, 4 (and 2 more)\n')
+  })
+
+  it('still counts the parks when nothing is planned', async () => {
+    const dir = await started(INTENT.replace('2. [ ]', '2. [x]').replace('3. [ ]', '3. [x]'))
+    writeFileSync(checkpointsPath(dir), 'step 3 abc1234\n')
+    writeFileSync(buildLogPath(dir), PARKS)
+    const { stdout } = captureIo(() => handoff(dir, []))
+    expect(stdout).toContain('**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish\n  · parked 2 of 3 open\n')
+  })
+
+  it('points --plan at the first step in build order, and the plan moves agree', async () => {
+    const dir = await started(REORDERED)
+    const { stdout } = captureIo(() => handoff(dir, ['--plan']))
+    expect(stdout).toContain(
+      `**Next Up**: Step 4 of 4 - Fourth (details: \`${fourthStepPointer(dir)}\`)\n  · build order 4, 3, 2\n`,
+    )
+    expect(stdout).toContain('/plumbbob:build starts Step 4')
+  })
+
+  it('rides the note on the boundary pointer, and keeps the driver pointer to one line', async () => {
+    const dir = await started(REORDERED.replace('2. [ ]', '2. [x]'))
+    writeFileSync(checkpointsPath(dir), 'step 2 abc1234\n')
+    const boundary = captureIo(() => handoff(dir, [])).stdout
+    expect(boundary).toContain('**Verdict**')
+    expect(boundary).toContain(
+      `**Next Up**: Step 4 of 4 - Fourth (details: \`${fourthStepPointer(dir)}\`)\n  · build order 4, 3\n`,
+    )
+    // The driver line follows the order for its pick and carries no note.
+    const driver = captureIo(() => handoff(dir, ['--driver'])).stdout
+    expect(driver.trim()).toBe(`**Next Up**: Step 4 of 4 - Fourth (details: \`${fourthStepPointer(dir)}\`)`)
   })
 })

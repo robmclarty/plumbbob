@@ -788,3 +788,32 @@ describe('checkpoint — the self-use stats receipt (research/07 2b)', () => {
     expect(log).toMatch(/step 1 checkpointed · [0-9a-f]{9} — First\n/)
   })
 })
+
+describe('checkpoint — the fallback step follows the build order', () => {
+  it('resolves the first undone step in build order when none is given', async () => {
+    const dir = await startedGreen()
+    writeFileSync(
+      intentPath(dir),
+      [
+        '# Ordered',
+        '',
+        '## Steps',
+        '',
+        '1. [ ] First — **done when:** a works.',
+        '   - seam: `src/a.ts`',
+        '2. [ ] Second — **done when:** b works.',
+        '   - seam: `src/b.ts`',
+        '',
+        '## Build order',
+        '',
+        '2, 1',
+        '',
+      ].join('\n'),
+    )
+    const { code } = await captureIoAsync(() => checkpoint(dir, []))
+    expect(code).toBe(0)
+    const intent = readFileSync(intentPath(dir), 'utf8')
+    expect(intent).toContain('2. [x]')
+    expect(intent).toContain('1. [ ]')
+  })
+})

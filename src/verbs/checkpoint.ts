@@ -3,7 +3,7 @@
 // `/plumbbob:build` run, your own hands, a vibe session, or another harness all
 // checkpoint identically. It does NOT require a STEP marker (the flat control
 // file recording the step in flight): the step is whatever you pass, else the
-// in-flight STEP, else the next undone step in intent.md. It evaluates the
+// in-flight STEP, else the next undone step in intent.md's build order. It evaluates the
 // approval latch, gates on a green check, commits any pending work (or records
 // the existing HEAD when the tree is already clean: the human's commit skill
 // may have committed first), records the SHA, flips the intent checkbox to
@@ -35,7 +35,7 @@ import {
 import { runCheck } from '../lib/check.ts'
 import { readCommitBody } from '../lib/commitbody.ts'
 import { checkLatch } from '../lib/latch.ts'
-import { markStepDone, parseDetailStep, parseSteps } from '../lib/orient.ts'
+import { markStepDone, parseDetailStep, parseOrderedSteps, parseSteps } from '../lib/orient.ts'
 import { parseBuildScope, parseStepSeam, scopeDrift } from '../lib/intent.ts'
 import { conventionalSubject, subjectFromTitle, withMarker } from '../lib/commitmsg.ts'
 import { appendToSection, checkpointLogLine, logEntry, planLogLine } from '../lib/buildlog.ts'
@@ -241,7 +241,7 @@ function planSubject(root: string): string {
 /**
  * Resolve the step being checkpointed, or null when none can be determined.
  *
- * Explicit arg > in-flight STEP file > first undone step in intent.md. A `-m`
+ * Explicit arg > in-flight STEP file > first undone step in build order. A `-m`
  * value is a message, never a step: `checkpoint -m "2"` must not read as
  * step 2.
  */
@@ -255,7 +255,7 @@ function resolveStep(root: string, args: ReadonlyArray<string>): number | null {
     return inFlight
   }
   try {
-    return parseSteps(readFileSync(intentPath(root), 'utf8')).find((s) => !s.done)?.n ?? null
+    return parseOrderedSteps(readFileSync(intentPath(root), 'utf8')).find((s) => !s.done)?.n ?? null
   } catch {
     return null
   }

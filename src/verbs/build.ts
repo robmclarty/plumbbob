@@ -9,7 +9,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { hasSession, intentPath, resolveBuild, seamPath, stampStepStat, stampTick, stepPath } from '../lib/sidecar.ts'
 import { parseStepSeam } from '../lib/intent.ts'
-import { parseSteps, type Step } from '../lib/orient.ts'
+import { parseOrderedSteps, skippedBefore, type Step } from '../lib/orient.ts'
 import { stepLabel, syncBuildLogState } from '../lib/buildlogsync.ts'
 import { readGrant, type Grant } from '../lib/latch.ts'
 import { notice } from '../lib/notice.ts'
@@ -54,7 +54,9 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
   }
 
   const intent = readFileSync(intentPath(root, slug), 'utf8')
-  const steps = parseSteps(intent)
+  // In build order: the sequence `## Build order` declares when a refined plan
+  // has one, else the numbering, so this pick and the dashboard's agree.
+  const steps = parseOrderedSteps(intent)
 
   // No argument ⇒ enter the next undone step in intent.md (the same idiom
   // `checkpoint` uses), so a bare `plumbbob build` advances the loop without the
@@ -102,9 +104,10 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
   syncBuildLogState(root, slug, stepLabel(step, title))
 
   // An explicit jump past undone work says so out loud: the entered step and
-  // the count it skips read back to the human (and to the transcript), so a
-  // deliberate `build 22` and a confused one look different on the page.
-  const skipped = raw === undefined ? 0 : steps.filter((s) => !s.done && s.n < step).length
+  // the count it skips (the undone steps ahead of it in build order) read back
+  // to the human (and to the transcript), so a deliberate `build 22` and a
+  // confused one look different on the page.
+  const skipped = raw === undefined ? 0 : skippedBefore(steps, step).length
   const picked =
     raw === undefined
       ? ['next undone']
@@ -135,7 +138,9 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
  * front of the model before it chooses between landing the step and holding it
  * at a pause, which is the choice a clean halt kept getting wrong. A range
  * reaches its top, or the last undone step under its top when the plan ends
- * first; `--auto` reaches the plan's last undone step.
+ * first, or when the build order puts a number past the top ahead of the rest
+ * (a range names plan numbers, and the skill halts before one past its top);
+ * `--auto` reaches the plan's last undone step.
  */
 function lastGrantedNotice(grant: Grant | null, steps: ReadonlyArray<Step>, step: number): string {
   if (grant === null) {
@@ -146,7 +151,8 @@ function lastGrantedNotice(grant: Grant | null, steps: ReadonlyArray<Step>, step
     if (step === grant.ceiling) {
       return notice({ fact: `step ${step} is the top of the range you granted`, remedy })
     }
-    const more = steps.some((s) => !s.done && s.n > step && s.n <= grant.ceiling)
+    const after = steps.slice(steps.findIndex((s) => s.n === step) + 1).find((s) => !s.done)
+    const more = after !== undefined && after.n <= grant.ceiling
     return step < grant.ceiling && !more
       ? notice({ fact: `step ${step} is the last undone step in the range you granted`, remedy })
       : ''

@@ -50,7 +50,10 @@ content: the highlights under the Summary, the rows under the Readout, the
 moves under Your Call. One blank line separates every block. The pause used
 to run five visual grammars at once (a bare headline, a list, a label, two
 fences) when only the columnar rows need a fence, and a label announces what
-a line is before the eye reads it.
+a line is before the eye reads it. The one line that wears no label of its
+own is the note beneath Next Up: indented two spaces, it continues the part
+above it, the way an advisory's remedy line does, and it renders only when
+there is something to remind of.
 
 The whole turn, rendered (the running example is
 [`happy-path.md`](happy-path.md)'s rate limiter, at step 2's pause):
@@ -421,6 +424,26 @@ recommendation lives on the dashboard, and the choice stays the human's. A
 title long enough to push the line past the width budget wraps; it is never
 truncated.
 
+Beneath the pointer, one indented line carries what the human would otherwise
+hold in their head, and only when there is something to hold:
+
+```text
+**Next Up**: Step 7 of 10 - feat(x): title (model: **Sonnet**, details: `.plumbbob/builds/x/intent.md:22`)
+  · build order 7, 8, 5, 10, 6 (and 2 more) · parked 2 of 7 open
+```
+
+The build-order segment is the remaining sequence from the step the pointer
+names, five steps and then a count, and it renders only when `## Build order`
+re-sequences the plan away from its numbering
+([D86 (build-order)](decisions.md#d86)): a plan nobody re-sequenced already
+carries its sequence in the numbers. The parks segment is the open count
+against everything ever parked, whenever anything has been parked; it rides
+even under `Nothing planned`, where an unharvested list is the one reminder
+that matters. With neither, the line vanishes. The indent is what keeps it
+inside the part: a reader of the anatomy files an indented line under the
+label above it and a flush one as a stray. The driver pointer carries no note;
+a one-line register stays one line.
+
 ### The Your Call block
 
 The card has to teach itself; a bare "looks good / needs work" assumes the
@@ -535,8 +558,8 @@ scales down with the turn:
 | tier | turns | the ending renders |
 | --- | --- | --- |
 | decision | the build/verify pause, the plan pause, an auto halt on trouble | the whole block: the Summary and its highlights, the Readout, the inline diff when small, the Verdict, Next Up, Your Call, and the recommendation. The plan pause judges no diff, so it renders the pointer, the moves, and the recommendation alone |
-| orientation | the checkpoint boundary (a clean halt's included), finish, status | the transition's lead line, the Verdict, any advisories, and Next Up; no Your Call block, no recommendation. `status` is the exception: it renders the dashboard and nothing else, and the dashboard's last line is its own pointer |
-| driver | park, spike, use, recover, revert, agent runs | the transition's lead line, any advisories, and Next Up; no Verdict, since nothing landed |
+| orientation | the checkpoint boundary (a clean halt's included), finish, status | the transition's lead line, the Verdict, any advisories, and Next Up with its note; no Your Call block, no recommendation. `status` is the exception: it renders the dashboard and nothing else, and the dashboard's last line is its own pointer |
+| driver | park, order, spike, use, recover, revert, agent runs | the transition's lead line, any advisories, and Next Up alone, no note beneath it; no Verdict, since nothing landed |
 
 **An auto halt takes the tier of what it leaves behind**
 ([D85 (range-top-lands)](decisions.md#d85)). A halt on trouble (a red check,

@@ -780,3 +780,28 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
     ])
   })
 })
+
+describe('turn-anatomy readers — the note beneath Next Up', () => {
+  it('keeps an indented continuation inside the Next Up part, where a flush one is a stray', () => {
+    // The indent is load-bearing: the reader files an unindented line as a
+    // stray, which fails the "nothing after the relay" probe on every tier.
+    const pointer = '**Next Up**: Step 7 of 10 - Seventh (details: `x/intent.md:22`)'
+    const note = '· build order 7, 8, 5, 10, 6 (and 2 more) · parked 2 of 7 open'
+    const indented = readAnatomy(['**Verdict**: ● Plumb', '', pointer, `  ${note}`, ''].join('\n'))
+    expect(indented.strays).toEqual([])
+    expect(indented.endsOn).toBe('Next Up')
+    expect(endingRenders(indented, 'boundary')).toBe(true)
+    expect(readAnatomy(['**Verdict**: ● Plumb', '', pointer, note, ''].join('\n')).strays).toEqual([note])
+  })
+
+  it('reads the shipped note the same way, park count and all', () => {
+    const { repo } = makeEvalFixture({ steps: TWO_STEPS, gate: 'green' })
+    runCli(repo, ['park', 'should farewell get the same shape? (tangent)'])
+    const { stdout } = runCli(repo, ['handoff'])
+    expect(stdout).toContain('\n  · parked 1 of 1 open\n')
+    const a = readAnatomy(stdout)
+    expect(a.strays).toEqual([])
+    expect(a.labels).toEqual(['Next Up'])
+    expect(a.endsOn).toBe('Next Up')
+  })
+})

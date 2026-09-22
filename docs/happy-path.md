@@ -326,7 +326,7 @@ It's on the list, out of your head, and the step in flight stays protected. The
 dashboard now counts it:
 
 ```text
-parked 1 · open questions 0
+parked 1 of 1 open · open questions 0
 ```
 
 ---

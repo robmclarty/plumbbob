@@ -243,3 +243,27 @@ describe('recover — what --fix must never touch', () => {
     expect(existsSync(seamPath(dir))).toBe(true)
   })
 })
+
+describe('recover — the build order names the plan', () => {
+  it('flags a build order naming a step the plan lacks, and never rewrites the plan', async () => {
+    const dir = await started()
+    const intent = `${INTENT}\n## Build order\n\n2, 5\n`
+    writeFileSync(intentPath(dir), intent)
+    const { code, stdout } = captureIo(() => recover(dir, ['--fix']))
+    expect(code).toBe(1)
+    expect(stdout).toContain('the build order names step 5, which the plan does not hold (planned: 1, 2)')
+    expect(stdout).toContain('plumbbob order --reset')
+    // intent.md is a tracked artifact: reported, never repaired.
+    expect(readFileSync(intentPath(dir), 'utf8')).toBe(intent)
+  })
+
+  it('reads a build order the plan holds as consistent, and a plan with none as nothing to say', async () => {
+    const dir = await started()
+    writeFileSync(intentPath(dir), `${INTENT}\n## Build order\n\n2, 1\n`)
+    const ordered = captureIo(() => recover(dir, []))
+    expect(ordered.code).toBe(0)
+    expect(ordered.stdout).toContain('✓ build order: every step it lists is planned (2, 1)')
+    writeFileSync(intentPath(dir), INTENT)
+    expect(captureIo(() => recover(dir, [])).stdout).not.toContain('build order')
+  })
+})

@@ -254,3 +254,56 @@ describe('build — the wall-clock receipt (research/07 2b)', () => {
     expect(started).toMatch(/^\d{4}-\d{2}-\d{2}T/)
   })
 })
+
+// Three undone steps and a build order putting 3 ahead of 2: what the plan
+// reads once `plumbbob order 1 3 2` has run against it.
+const REORDERED = `# Build order test
+
+## Steps
+
+1. [ ] First — **done when:** a works.
+   - seam: \`src/a.ts\`
+2. [ ] Second — **done when:** b works.
+   - seam: \`src/b.ts\`
+3. [ ] Third — **done when:** c works.
+   - seam: \`src/c.ts\`
+
+## Build order
+
+1, 3, 2
+`
+
+describe('build — the build order', () => {
+  it('with no argument, enters the first undone step in build order', async () => {
+    const dir = await startedWithSteps()
+    writeFileSync(intentPath(dir), REORDERED.replace('1. [ ]', '1. [x]'))
+    const { code, stdout } = captureIo(() => build(dir, []))
+    expect(code).toBe(0)
+    expect(readFileSync(stepPath(dir), 'utf8').trim()).toBe('3')
+    expect(stdout).toContain('building step 3 (next undone)')
+  })
+
+  it('counts what an explicit jump skips by build order, not by number', async () => {
+    const dir = await startedWithSteps()
+    writeFileSync(intentPath(dir), REORDERED.replace('1. [ ]', '1. [x]'))
+    // Step 2 sits behind step 3 in the order, so building 2 skips one; building
+    // 3 skips nothing, though its number is the higher.
+    expect(captureIo(() => build(dir, ['2'])).stdout).toContain(
+      notice({ fact: 'building step 2', detail: ['explicitly requested', 'skips 1 undone step'] }),
+    )
+    rmSync(stepPath(dir), { force: true })
+    expect(captureIo(() => build(dir, ['3'])).stdout).toContain(notice({ fact: 'building step 3' }))
+  })
+
+  it('names the last step a range reaches by build order — D85 (range-top-lands)', async () => {
+    // Range 1-2 over the order 1, 3, 2: step 3 comes next and is past the top,
+    // so step 1 is the last the range reaches, though step 2 is undone.
+    const dir = await startedWithSteps()
+    writeFileSync(intentPath(dir), REORDERED)
+    writeFileSync(grantPath(dir), 'range 2\n')
+    const { stdout } = captureIo(() => build(dir, ['1']))
+    expect(stdout).toContain(
+      notice({ fact: 'step 1 is the last undone step in the range you granted', remedy: 'land it on green, then stop at the boundary' }),
+    )
+  })
+})

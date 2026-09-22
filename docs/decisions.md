@@ -91,7 +91,9 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   in* `sidecar.ts`.
 - <a id="d6"></a>**D6 (parseable-steps): Steps are the parseable build plan; roadmap prose lives elsewhere.** Only
   `## Steps` carries the numbered, machine-read increments; narrative roadmap text stays
-  out of it. *Tagged in* `orient.ts`.
+  out of it. (Revised 2026-09-22 by [**D86 (build-order)**](#d86): `## Build order` is the
+  second machine-read section, one line of step numbers, the sequence to build them in.)
+  *Tagged in* `orient.ts`.
 - <a id="d7"></a>**D7 (park-then-harvest): Capture then triage (park → harvest).** Parking is a dumb flat-line append the
   hooks can read with a grep (no markdown parsing); triage happens later, at a step
   boundary. *Tagged in* `sidecar.ts`, the `park` and `harvest` skills.
@@ -738,7 +740,9 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   a halt on trouble, which leaves a step unlanded; a clean halt lands its step and ends on the boundary.)
   Next Up carries the progress count and the plan's model recommendation
   ([**D62 (model-recommendation)**](#d62)), the one token besides the label a line may bold, because it is the
-  token the human acts on before the next run. Promoted from the 2026-08-28 presentation build, merging its
+  token the human acts on before the next run. (Revised 2026-09-22 by [**D86 (build-order)**](#d86): Next Up
+  may carry one indented line beneath it, the build order and the park count, the one continuation outside
+  a fence that wears no label of its own.) Promoted from the 2026-08-28 presentation build, merging its
   locals `labeled-lines`, `instructive-choice`, `real-moves`, `verdict-last`, `recommendation-last`,
   `labeled-recommendation`, and `three-tier-anatomy`. *Tagged in* `docs/presentation.md` and
   `docs/skills-reference.md`.
@@ -789,6 +793,30 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   because the end of the plan is the other clean halt, and the eval tier's contract 9 measures it.) Amends
   [**D56 (auto-composes)**](#d56) and [**D83 (card-teaches-itself)**](#d83). *Tagged in* the `build`
   skill, `docs/presentation.md`, and `docs/cli-reference.md`.
+
+- <a id="d86"></a>**D86 (build-order): A step keeps its number for life, and the sequence to build the rest
+  lives on one line the CLI writes.** `## Build order` in `intent.md` holds the undone step numbers in the
+  sequence to build them (`7, 8, 5, 10, 6`); `plumbbob order` writes it, the numbers given first and every
+  other undone step following in document order, so the line is the whole remaining sequence; and every
+  next-step pick reads it through one merge (`orderSteps`): the dashboard's `← next`, a bare
+  `plumbbob build`, `checkpoint`'s fallback, and the card's Next Up. A refined plan appends a step whose
+  number says nothing about when it lands, so the human was carrying the permutation in their head and
+  typing it into every `build`, and a picker that disagrees with the reminder is worse than no reminder.
+  The plan is where the line lives, not a sidecar file, because the plan is already the tracked,
+  human-readable document the step and refine skills edit, the section parser already reads it, and a plan
+  without the section reads in document order with no migration. The verb is the write path, because it
+  validates what a hand edit cannot (every number an undone step, none twice), while a hand edit still
+  parses. The card reminds beneath Next Up on one indented line, only when the sequence departs from the
+  numbering (five steps, then a count), and carries the park count as `parked 2 of 7 open` whenever
+  anything was parked, because a reminder that repeats the numbering is noise and an indented line is the
+  one continuation the anatomy reads as part of the label above it; the dashboard shows the same two, the
+  order whole. Numbering stays the plan's own: nothing renumbers, a range grant still names plan numbers
+  ([**D85 (range-top-lands)**](#d85)), and `recover` reports a line naming a step the plan lacks without
+  rewriting it. Amends [**D6 (parseable-steps)**](#d6) (a second machine-read section) and
+  [**D83 (card-teaches-itself)**](#d83) (the one unlabeled continuation under Next Up). *Tagged in*
+  `orient.ts`, `order.ts`, `build.ts`, `checkpoint.ts`, `handoff.ts`, `recover.ts`, the `order`, `step`,
+  `refine`, and `harvest` skills, `templates/intent.md`, `docs/presentation.md`, and
+  `docs/cli-reference.md`.
 
 ### Superseded
 

@@ -36,6 +36,7 @@ import { type NumstatEntry, commitsSince, diffNumstat, diffPatch, findRepoRoot }
 import { blocks } from '../lib/notice.ts'
 import { isArtifactPath, parseStepSeam } from '../lib/intent.ts'
 import {
+  buildLogPath,
   checkpointsPath,
   detailPath,
   hasSession,
@@ -58,18 +59,24 @@ import {
   type SpentInputs,
   type Step,
   type Summary,
+  buildOrderPhrase,
   countDiff,
   diffRowValue,
   foldVerdict,
   lastLedgerSha,
+  parkedPhrase,
+  parseBuildOrder,
   parseConstraintCount,
   parseLastCheckpoint,
+  parseOrderedSteps,
+  parseParkTotals,
   parseRecap,
   parseRecommendation,
   parseSections,
   parseSteps,
   parseSummary,
   recapLines,
+  remainingOrder,
   seamRowFromDiff,
   spentRowValue,
   summaryCheckRow,
@@ -124,7 +131,10 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     return 1
   }
   const intent = readOr(intentPath(root, slug))
-  const steps = parseSteps(intent)
+  // In build order, so the pointer names the step a bare `plumbbob build`
+  // would enter; the build-log feeds the park count beneath it.
+  const steps = parseOrderedSteps(intent)
+  const buildLog = readOr(buildLogPath(root, slug))
   const inFlight = readMarker(stepPath(root, slug))
   const detail = readOr(detailPath(root))
   // Where a pointer sends the reader to read the step itself: the intent file
@@ -136,7 +146,11 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     // renders; the pointer and the moves both aim at the first undone step. A
     // decision turn still ends on the model's recommendation when it wrote one.
     const first = steps.find((s) => !s.done)
-    const plan = [SEAM_RULE, nextUpLine(first, steps.length, where), planCallBlock(first)]
+    const plan = [
+      SEAM_RULE,
+      nextUpBlock(first, steps.length, where, nextUpNote(intent, buildLog, null)),
+      planCallBlock(first),
+    ]
     return emit(withRecommendation(plan, parseRecommendation(detail)))
   }
 
@@ -165,7 +179,7 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
 
   if (current === null) {
     // Nothing measured yet (a fresh session): no Verdict, just the forward pointer.
-    return emit([nextUpLine(nextUp, steps.length, where)])
+    return emit([nextUpBlock(nextUp, steps.length, where, nextUpNote(intent, buildLog, current))])
   }
 
   // A step is pending, and its hand-off is the pause, while it is in flight.
@@ -208,7 +222,11 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   if (inline) {
     parts.push(fence('diff', patch.split('\n')).join('\n'))
   }
-  parts.push(verdict, nextUpLine(nextUp, steps.length, where), yourCallBlock(current, checkGreen))
+  parts.push(
+    verdict,
+    nextUpBlock(nextUp, steps.length, where, nextUpNote(intent, buildLog, current)),
+    yourCallBlock(current, checkGreen),
+  )
   return emit(withRecommendation(parts, parseRecommendation(detail)))
 }
 
@@ -224,11 +242,12 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
  */
 export function boundaryEnding(root: string, slug: string | null, step: number | null): BoundaryEnding {
   const intent = readOr(intentPath(root, slug))
-  const steps = parseSteps(intent)
+  const steps = parseOrderedSteps(intent)
   const nextUp = steps.find((s) => !s.done && s.n !== step)
+  const note = nextUpNote(intent, readOr(buildLogPath(root, slug)), step)
   return {
     verdict: step === null ? null : landedVerdict(root, slug, intent, step),
-    pointer: nextUpLine(nextUp, steps.length, relative(root, intentPath(root, slug))),
+    pointer: nextUpBlock(nextUp, steps.length, relative(root, intentPath(root, slug)), note),
   }
 }
 
@@ -322,7 +341,9 @@ function sectionBlocks(sections: ReadonlyArray<DetailSection>): string[] {
  */
 export function driverPointer(root: string, slug: string | null): string {
   const intent = readOr(intentPath(root, slug))
-  const steps = parseSteps(intent)
+  // The forward fallback follows the build order like every other pick; the
+  // driver line itself stays one line, with no note beneath it.
+  const steps = parseOrderedSteps(intent)
   const inFlight = readMarker(stepPath(root, slug))
   const driver = inSpike(root, slug) ? spikeNextUpLine(inFlight) : driverNextUpLine(steps, inFlight, steps.length)
   // The forward fallback skips the step just landed as well as the one open, so
@@ -612,6 +633,41 @@ function spikeNextUpLine(inFlight: number | null): string {
   return `**Next Up**: Close the spike - /plumbbob:spike done${back}`
 }
 
+// The card's cap on the build-order reminder: the next five steps, the rest a
+// count. The line is a reminder; the dashboard holds the whole sequence.
+const ORDER_CAP = 5
+
+/**
+ * The line beneath the forward pointer: the build order from the step it
+ * names, when `## Build order` re-sequences the plan away from its numbering,
+ * and the park count, when anything has been parked; '' when neither says
+ * anything, so a plan nobody re-sequenced with an empty park list renders the
+ * pointer alone, as before.
+ *
+ * Indented two spaces, because an indented line continues the part above it
+ * to every reader of the anatomy (the advisory's `→` remedy line is the
+ * precedent), where a flush one would open a stray. The parks ride even under
+ * `Nothing planned`: an unharvested list at the end of the plan is the one
+ * reminder that matters there.
+ */
+function nextUpNote(intent: string, buildLog: string, exclude: number | null): string {
+  const parks = parseParkTotals(buildLog)
+  const segments = [
+    buildOrderPhrase(remainingOrder(parseSteps(intent), parseBuildOrder(intent), exclude), ORDER_CAP),
+    parks.total > 0 ? parkedPhrase(parks) : '',
+  ].filter((s) => s.length > 0)
+  return segments.length === 0 ? '' : `  · ${segments.join(' · ')}`
+}
+
+/**
+ * The forward pointer with its note beneath, as one part: `blocks` keeps a
+ * part's own newlines, so the note rides flush under the line it qualifies.
+ */
+function nextUpBlock(nextUp: Step | undefined, total: number, where: string, note: string): string {
+  const line = nextUpLine(nextUp, total, where)
+  return note.length === 0 ? line : `${line}\n${note}`
+}
+
 /**
  * The forward pointer: the next undone step with the progress count, its
  * title, and a closing bracket carrying its advisory `- model:` recommendation
@@ -621,7 +677,8 @@ function spikeNextUpLine(inFlight: number | null): string {
  * The model is the second bold token the line spends, because it is the one
  * the human acts on (a `/model` call) before the next run; the path is a bare
  * `path:line` in a code span, the one link form that opens in a host and still
- * reads as a path in a PR diff.
+ * reads as a path in a PR diff. The line alone is the driver tier's pointer;
+ * every other tier rides `nextUpNote` beneath it, through `nextUpBlock`.
  */
 function nextUpLine(nextUp: Step | undefined, total: number, where: string): string {
   if (nextUp === undefined) {

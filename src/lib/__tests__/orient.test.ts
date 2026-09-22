@@ -1,20 +1,30 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildOrderPhrase,
+  clearBuildOrder,
   formatOrientation,
   lastLedgerSha,
   markStepDone,
+  orderSteps,
   orient,
+  parkedPhrase,
+  parseBuildOrder,
   parseConstraintCount,
   parseDetailStep,
   parseLastCheckpoint,
   parseOpenQuestions,
+  parseOrderedSteps,
   parseParked,
+  parseParkTotals,
   parseRecap,
   parseRequestedStep,
   parseSteps,
   parseTitle,
+  remainingOrder,
   recapLines,
   seamRowFromDiff,
+  setBuildOrder,
+  skippedBefore,
   spentRowValue,
   summaryCheckRow,
 } from '../orient.ts'
@@ -482,7 +492,7 @@ describe('formatOrientation', () => {
     expect(out).toContain('← next')
     expect(out).toContain('1/3 done')
     expect(out).toContain('step 1 · abc1234')
-    expect(out).toContain('parked 2 · open questions 2')
+    expect(out).toContain('parked 2 of 2 open · open questions 2')
     expect(out).toContain('next →')
   })
 
@@ -509,7 +519,7 @@ describe('formatOrientation', () => {
         '    3  Third step',
         '',
         'last checkpoint  step 1 · abc1234',
-        'parked 2 · open questions 2',
+        'parked 2 of 2 open · open questions 2',
         '',
         'next → build step 2 — `/plumbbob:build` (or `/plumbbob:step` to revise it first)',
       ].join('\n')
@@ -661,7 +671,7 @@ describe('formatOrientation with an explicitly requested step', () => {
         '  ▸ 3  Third step   ← requested',
         '',
         'last checkpoint  step 1 · abc1234',
-        'parked 2 · open questions 2',
+        'parked 2 of 2 open · open questions 2',
         '',
         'next → build step 3 — explicitly requested (skips 1 undone step; still unplanned: `/plumbbob:step` it first)',
       ].join('\n'),
@@ -807,5 +817,159 @@ describe('the readout rows', () => {
 
   it('recapLines is empty when no row survived, so the caller can drop the fence and its label', () => {
     expect(recapLines({}, { diff: null, spent: null, constraints: 0 })).toEqual([])
+  })
+})
+
+// INTENT with a build order putting step 3 ahead of step 2: what the plan
+// reads once `plumbbob order 3 2` has run against it.
+const ORDERED = `${INTENT}
+## Build order
+
+3, 2
+`
+
+describe('the build order', () => {
+  it('parseBuildOrder reads the comma line, tolerating spaces and a trailing comma', () => {
+    expect(parseBuildOrder('## Build order\n\n 3 ,2, 10,\n')).toEqual([3, 2, 10])
+    expect(parseBuildOrder(ORDERED)).toEqual([3, 2])
+  })
+
+  it('parseBuildOrder returns [] with no section, an empty one, or guidance alone', () => {
+    expect(parseBuildOrder(INTENT)).toEqual([])
+    expect(parseBuildOrder('## Build order\n\n')).toEqual([])
+    expect(parseBuildOrder('## Build order\n\n*(the sequence, such as `1, 2, 3`)*\n')).toEqual([])
+    // The scaffold ships the section with guidance only, so a fresh build reads
+    // in document order.
+    expect(parseBuildOrder(readTemplate('intent.md'))).toEqual([])
+  })
+
+  it('parseBuildOrder reads the first numeric line only, verbatim, repeats and unknowns included', () => {
+    expect(parseBuildOrder('## Build order\n\n2, 2, 9\n3\n\n## Open questions\n')).toEqual([2, 2, 9])
+  })
+
+  it('orderSteps puts the listed steps first, then the rest in document order', () => {
+    const steps = parseSteps(INTENT)
+    expect(orderSteps(steps, [3]).map((s) => s.n)).toEqual([3, 1, 2])
+    expect(orderSteps(steps, [3, 2]).map((s) => s.n)).toEqual([3, 2, 1])
+  })
+
+  it('orderSteps drops an unknown number, keeps the first of a repeat, and is the identity for an empty order', () => {
+    const steps = parseSteps(INTENT)
+    expect(orderSteps(steps, [9, 2, 2]).map((s) => s.n)).toEqual([2, 1, 3])
+    expect(orderSteps(steps, [])).toEqual(steps)
+    // The steps themselves are untouched: only the sequence moves.
+    expect(orderSteps(steps, [3, 2])[0]).toBe(steps[2])
+  })
+
+  it('parseOrderedSteps merges the two reads', () => {
+    expect(parseOrderedSteps(ORDERED).map((s) => s.n)).toEqual([3, 2, 1])
+    expect(parseOrderedSteps(INTENT).map((s) => s.n)).toEqual([1, 2, 3])
+  })
+
+  it('skippedBefore counts the undone steps ahead in build order, not the lower numbers', () => {
+    const ordered = parseOrderedSteps(ORDERED)
+    expect(skippedBefore(ordered, 2).map((s) => s.n)).toEqual([3])
+    expect(skippedBefore(ordered, 3)).toEqual([])
+    expect(skippedBefore(ordered, 9)).toEqual([])
+  })
+
+  it('remainingOrder is the undone sequence when it departs from document order, else empty', () => {
+    const steps = parseSteps(INTENT)
+    expect(remainingOrder(steps, [3, 2], null)).toEqual([3, 2])
+    expect(remainingOrder(steps, [], null)).toEqual([])
+    expect(remainingOrder(steps, [2, 3], null)).toEqual([]) // the numbering already carries it
+    // With step 3 in flight and excluded, nothing is left to re-sequence.
+    expect(remainingOrder(steps, [3, 2], 3)).toEqual([])
+  })
+
+  it('buildOrderPhrase caps the sequence and folds the rest to a count', () => {
+    expect(buildOrderPhrase([7, 8, 5, 10, 6, 9, 11], 5)).toBe('build order 7, 8, 5, 10, 6 (and 2 more)')
+    expect(buildOrderPhrase([7, 8], 5)).toBe('build order 7, 8')
+    expect(buildOrderPhrase([7, 8, 5, 10, 6, 9, 11])).toBe('build order 7, 8, 5, 10, 6, 9, 11')
+    expect(buildOrderPhrase([])).toBe('')
+  })
+
+  it('setBuildOrder opens the section right after ## Steps when the plan has none', () => {
+    expect(setBuildOrder(INTENT, [3, 2])).toContain('3. [ ] Third step\n\n## Build order\n\n3, 2\n\n## Open questions')
+    // No ## Steps at all: the section lands at the end.
+    expect(setBuildOrder('# T\n', [3, 2])).toBe('# T\n\n## Build order\n\n3, 2\n')
+  })
+
+  it('setBuildOrder replaces the line in place, and fills a section that holds guidance only', () => {
+    const replaced = setBuildOrder(ORDERED, [2, 3])
+    expect(replaced).toContain('## Build order\n\n2, 3\n')
+    expect(replaced).not.toContain('3, 2')
+    const guided = '# T\n\n## Steps\n\n1. [ ] a\n\n## Build order\n\n*(guidance)*\n\n## Open questions\n'
+    expect(setBuildOrder(guided, [1])).toBe('# T\n\n## Steps\n\n1. [ ] a\n\n## Build order\n\n*(guidance)*\n\n1\n\n## Open questions\n')
+  })
+
+  it('clearBuildOrder drops the line, drops an emptied section, and leaves a plan with no line alone', () => {
+    expect(clearBuildOrder(ORDERED)).toBe(INTENT)
+    const guided = '# T\n\n## Steps\n\n1. [ ] a\n\n## Build order\n\n*(guidance)*\n\n1\n\n## Open questions\n'
+    expect(clearBuildOrder(guided)).toBe('# T\n\n## Steps\n\n1. [ ] a\n\n## Build order\n\n*(guidance)*\n\n## Open questions\n')
+    expect(clearBuildOrder(INTENT)).toBe(INTENT)
+  })
+
+  it('the next move follows the build order', () => {
+    // Step 3 carries no done-when, so the move is to plan it: the order put it first.
+    expect(orient({ ...base, intent: ORDERED }).next).toBe('plan step 3 — `/plumbbob:step`')
+  })
+
+  it("a requested step's skip count reads the build order", () => {
+    expect(orient({ ...base, intent: ORDERED, requested: 2 }).next).toBe(
+      'build step 2 — explicitly requested (skips 1 undone step)',
+    )
+    expect(orient({ ...base, intent: ORDERED, requested: 3 }).next).toBe(
+      'build step 3 — explicitly requested (still unplanned: `/plumbbob:step` it first)',
+    )
+  })
+
+  it('renders the whole dashboard exactly with a build order row', () => {
+    // The marker follows the order, the step block keeps document order, and
+    // the row sits between the checkpoint and the counts.
+    expect(formatOrientation(orient({ ...base, intent: ORDERED }))).toBe(
+      [
+        'PlumbBob — My Feature   [DESIGN]',
+        '',
+        '  steps  1/3 done',
+        '  ✓ 1  First step',
+        '    2  Second step',
+        '  ▸ 3  Third step   ← next',
+        '',
+        'last checkpoint  step 1 · abc1234',
+        'build order  3, 2',
+        'parked 2 of 2 open · open questions 2',
+        '',
+        'next → plan step 3 — `/plumbbob:step`',
+      ].join('\n'),
+    )
+  })
+
+  it('the build order row vanishes when the order is the numbering', () => {
+    const out = formatOrientation(orient({ ...base, intent: `${INTENT}\n## Build order\n\n2, 3\n` }))
+    expect(out).not.toContain('build order')
+    expect(out).toContain('▸ 2  Second step   ← next')
+  })
+})
+
+describe('the park counts', () => {
+  it('parseParkTotals counts the open items and every item; parseParked keeps its open count', () => {
+    expect(parseParkTotals(BUILDLOG)).toEqual({ open: 2, total: 2 })
+    expect(parseParkTotals('## Park list\n- [ ] still open\n- [x] already harvested\n## Harvest\n')).toEqual({ open: 1, total: 2 })
+    expect(parseParkTotals('## Park list\n- (none yet)\n## Harvest\n')).toEqual({ open: 0, total: 0 })
+    expect(parseParked('## Park list\n- [ ] still open\n- [x] already harvested\n## Harvest\n')).toBe(1)
+  })
+
+  it('parkedPhrase reads N of M open once anything was parked, and a bare 0 before', () => {
+    expect(parkedPhrase({ open: 0, total: 0 })).toBe('parked 0')
+    expect(parkedPhrase({ open: 2, total: 7 })).toBe('parked 2 of 7 open')
+  })
+
+  it('the dashboard reads N of M open once a park is harvested', () => {
+    const buildLog = '## Park list\n- [ ] still open\n- [x] already harvested\n## Harvest\n'
+    const o = orient({ ...base, buildLog })
+    expect(o.parked).toBe(1)
+    expect(o.parkedTotal).toBe(2)
+    expect(formatOrientation(o)).toContain('parked 1 of 2 open · open questions 2')
   })
 })

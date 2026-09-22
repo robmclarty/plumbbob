@@ -38,6 +38,10 @@ word up without reading the others first. Each entry points at the page that own
   → [`state-and-git.md`](state-and-git.md)
 - **Build log** (`build-log.md`): the live ledger: the step mirror, the park list, the
   harvest, and a dated entry per landed step carrying the pause as you approved it.
+- **Build order** (`## Build order` in `intent.md`): the sequence to build the undone
+  steps in, once it stops being their numbering. One line of step numbers, written by
+  `plumbbob order`; every next-step pick follows it, and the card reminds you of the
+  next five when it departs from the numbering.
 - **Boundary**: the settled state between steps, with nothing in flight. The dashboard
   calls it `DESIGN`; a step in flight is `BUILD`; an open spike is `SPIKE`. Phase is
   derived from files on disk, never stored.
@@ -93,7 +97,8 @@ are its parts.
   `◐ A hair off` (green, with advisories on the way), `○ Out of plumb` (fix the work),
   `✗ Not standing` (fix the plan).
 - **Next Up**: the forward pointer: the next step, its progress count, and its model
-  recommendation.
+  recommendation, with one indented line beneath it carrying the build order and the
+  park count when either has something to say.
 - **Your Call**: the four replies a human makes at a pause, each with its outcome:
   `looks good`, `expand` (or any question), a direction, `revert`.
 - **Recommendation**: the model's own call, the turn's last words: the move, then the

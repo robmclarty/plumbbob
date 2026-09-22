@@ -28,6 +28,7 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 | `revert` | `revert [--to <n>] [--build <slug>]` | `git reset --hard` to a checkpoint SHA |
 | `abandon` | `abandon [--build <slug>]` | drop the in-flight step, keep its work in the tree |
 | `park` | `park <text>` | append a line to the park list |
+| `order` | `order <n> [<n>…]` \| `order --reset` | set the build order: the undone steps in the sequence to build them |
 | `spike` | `spike <slug> [opt…] [--build <slug>]` \| `spike report <slug>` \| `spike done` | throwaway worktree experiment |
 | `agent` | `agent list` \| `agent run <name> [--step N] [--mode …] [--agent <path>] [--build <slug>]` | list user-authored agents, or run one through the doorway |
 | `use` | `use <slug>` | re-point the active-build cursor and resume that build |
@@ -92,7 +93,9 @@ plumbbob status [--build <slug>] [--invoked "<args>"]
 ```
 
 Prints the orientation dashboard (title, the derived phase, the step list with the next
-step's done-when and seam, the last checkpoint, and the parked / open-question counts), then a
+step's done-when and seam, the last checkpoint, the build order when it departs from the
+numbering, and the parked / open-question counts, where `parked 2 of 7 open` is the open
+items against everything ever parked), then a
 single suggested next move ([**D8 (status-dashboard)**](decisions.md#d8) / [**D15 (one-next-move)**](decisions.md#d15)). Read-only; prints `NO ACTIVE SESSION` and
 exits 0 when there is no session.
 
@@ -111,7 +114,10 @@ plumbbob build [<n>] [--build <slug>]
 
 Reads step `n`'s seam from `intent.md` and writes `SEAM` (the path list) and `STEP` (the
 number); the `STEP` file is what makes the dashboard read `BUILD`. The seam is
-orientation, not a lock. When this step is the last one the turn's `GRANT` reaches (a
+orientation, not a lock. With no `n`, it enters the next undone step in build order (the
+`## Build order` line when the plan has one, else the numbering;
+[**D86 (build-order)**](decisions.md#d86)), and an explicit `n` says how many undone steps
+it skips ahead of in that order. When this step is the last one the turn's `GRANT` reaches (a
 typed range's top, the last undone step under it when the plan ends first, or the plan's
 last undone step under `--auto`), it adds one line saying so, such as
 `step 3 is the top of the range you granted` with the remedy beneath it, because that
@@ -148,8 +154,12 @@ At a build pause it renders the turn entire, in this order:
 - `**Verdict**:` the ladder rung, computed worst-of over those same rows plus the step's
   accrued stats, naming its worst component in a trailing parenthetical
   ([**D82 (readout-ladder)**](decisions.md#d82)).
-- `**Next Up**:` the next undone step, its progress count, and a bracket carrying the
-  step's `- model:` recommendation and where to read it in full.
+- `**Next Up**:` the next undone step in build order, its progress count, and a bracket
+  carrying the step's `- model:` recommendation and where to read it in full. Beneath it,
+  indented, one line of reminders when there is something to remind of: the build order from
+  that step on (only when `## Build order` departs from the numbering; five steps, then a
+  count) and the park count (`parked 2 of 7 open`, whenever anything has been parked). The
+  driver tier's pointer carries no such line ([**D86 (build-order)**](decisions.md#d86)).
 - `**Your Call**:` the moves a human actually makes at a pause, each with its outcome.
 - `**Recommendation**:` the model's own call, read from the detail file's
   `## Recommendation` section behind a CLI-prepended label. It is the ending's last text,
@@ -216,7 +226,7 @@ plumbbob checkpoint --plan  [--body …]
 ```
 
 The executor-agnostic commit tick ([**D3 (author-blind-executor)**](decisions.md#d3)). Resolves the step (explicit `<n>`, else the
-in-flight `STEP`, else the first undone step in `intent.md`), then gates on a green check,
+in-flight `STEP`, else the first undone step in build order), then gates on a green check,
 commits any pending work (or records the existing `HEAD` if the tree is already clean) with a
 CLI-owned Conventional subject `<type>(<scope>): <description>` (scope from the build slug, type
 from the step title; author prefix honored, else `feat`), appends `step <n> <sha>` to `checkpoints`,
@@ -284,6 +294,27 @@ Appends `<text>` as a raw line under `## Park list` in `build-log.md` and prints
 `**Parked**: <text>` ([**D7 (park-then-harvest)**](decisions.md#d7)). This is the dumb capture path: composing the tidy line,
 tag at the tail, is the `/plumbbob:park` skill's job. Refuses (exit 1) with no session, empty text, or no
 `## Park list` section.
+
+### order
+
+```text
+plumbbob order <n> [<n>…]
+plumbbob order --reset
+```
+
+Writes the build order: the one numeric line under `## Build order` in `intent.md`, the
+undone steps in the sequence to build them ([**D86 (build-order)**](decisions.md#d86)). The
+numbers given come first, in that sequence, and every other undone step follows in document
+order, so the line is the whole remaining sequence and a cold reader needs nothing else. A
+step keeps its number for life; the line is where the sequence lives once a refine has
+appended a step that has to land before an existing one. `status`, a bare `build`,
+`checkpoint`'s fallback, and `handoff`'s Next Up all read it, so the dashboard's `← next`,
+the step a bare `/plumbbob:build` enters, and the card agree. Prints its ending,
+`**Build order**: 7, 8, 5, 10, 6` and then the pointer (back at the step in flight, or
+forward to the first step in the new sequence). `--reset` drops the line, and the plan reads
+in document order again. Refuses (exit 1) with no session, no numbers, a number the plan
+lacks, a repeat, or a step already checkpointed. Composing a relative instruction ("7 and 8
+before 5") into the full sequence is the `/plumbbob:order` skill's job.
 
 ### spike
 
@@ -461,6 +492,10 @@ switched away mid-step. What it checks:
   the spike and hides the step. A `STEP` the plan no longer contains means a `refine`
   rewrote `## Steps` underneath it. Both are reported, never auto-resolved: which one is
   real is a judgment call.
+- **The build order names the plan.** A `## Build order` line naming a step the plan does
+  not hold is reported with the numbers and never rewritten: `intent.md` is a tracked
+  artifact, and the sequence is a judgment call (`plumbbob order` rewrites it, or
+  `--reset` drops it).
 - **Nothing is left over.** An orphaned `handoff.json` would thread a finished step's agent
   output into the next step's context; a `TICK` stranded at the boundary arms the approval
   latch against a pause that already closed; a `GRANT` with no turn ledger to clear it

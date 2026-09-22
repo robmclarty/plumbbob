@@ -29,8 +29,17 @@ export type Orientation = {
   readonly steps: ReadonlyArray<Step>
   readonly lastCheckpoint: Checkpoint | null
   readonly parked: number
+  // Every item ever parked, harvested ones included: the denominator behind
+  // `parked 2 of 7 open`, so a harvest shows as the gap between the two.
+  readonly parkedTotal: number
   readonly openQuestions: number
   readonly next: string
+  // The first undone step in build order (null with none left): the step the
+  // `← next` marker and the detail rows follow when nothing is requested.
+  readonly nextUndone: number | null
+  // The undone steps in build order, when `## Build order` re-sequences them
+  // away from their numbering; empty otherwise, and the dashboard's row vanishes.
+  readonly buildOrder: ReadonlyArray<number>
   // The explicitly requested step (from `status --invoked`), but only when that
   // step exists in the plan; null otherwise. When set, the dashboard's marker,
   // detail rows, and next move all point here instead of at the next undone
@@ -89,11 +98,16 @@ function sectionLines(content: string, heading: string): Section {
   if (start === -1) {
     return { offset: 0, lines: [] }
   }
-  let end = lines.findIndex((l, i) => i > start && l.startsWith('## '))
-  if (end === -1) {
-    end = lines.length
-  }
-  return { offset: start + 1, lines: lines.slice(start + 1, end) }
+  return { offset: start + 1, lines: lines.slice(start + 1, sectionEnd(lines, start)) }
+}
+
+/**
+ * The index of the line that ends the section opened at `heading`: the next
+ * `## ` heading, or one past the last line when none follows.
+ */
+function sectionEnd(lines: ReadonlyArray<string>, heading: number): number {
+  const end = lines.findIndex((l, i) => i > heading && l.startsWith('## '))
+  return end === -1 ? lines.length : end
 }
 
 /**
@@ -147,6 +161,180 @@ export function parseSteps(intent: string): Step[] {
   })
 }
 
+// A build-order line: step numbers and commas, nothing else. A trailing comma
+// is tolerated, since a hand edit leaves one behind.
+const BUILD_ORDER_LINE = /^\d+(?:\s*,\s*\d+)*\s*,?$/
+
+/**
+ * The build order declared under `## Build order`: the step numbers on the
+ * first line that is nothing but numbers and commas, in the sequence written.
+ *
+ * The line is the plan's own statement of what to build next once the
+ * numbering stops carrying it (a refined plan appends a step 7 that has to
+ * land before step 5), and `plumbbob order` is the verb that writes it. The
+ * template's guidance, a comment, and an absent section all read as `[]`,
+ * which every picker takes to mean document order. Numbers come back
+ * verbatim, repeats and unknowns included: `orderSteps` does the cleaning, and
+ * `recover` wants the raw read to say which number the plan lacks.
+ */
+export function parseBuildOrder(intent: string): number[] {
+  const line = sectionLines(intent, '## Build order')
+    .lines.map((l) => l.trim())
+    .find((l) => BUILD_ORDER_LINE.test(l))
+  if (line === undefined) {
+    return []
+  }
+  return line
+    .split(',')
+    .map((n) => n.trim())
+    .filter((n) => n.length > 0)
+    .map(Number)
+}
+
+/**
+ * The steps in build order: the numbers `order` lists first, in that sequence,
+ * then every step it leaves out, in document order.
+ *
+ * A listed number takes the first step in document order that carries it, and
+ * a repeat of the number is ignored, so a doubled entry cannot double a step; a
+ * number no step carries is dropped. An empty order is the identity, which is
+ * what a plan with no `## Build order` section reads as. The steps themselves
+ * never change, only the sequence, so `n`, `line`, and `done` stay what
+ * `parseSteps` read.
+ */
+export function orderSteps(steps: ReadonlyArray<Step>, order: ReadonlyArray<number>): Step[] {
+  const taken = new Set<Step>()
+  const ordered: Step[] = []
+  for (const n of order) {
+    const step = steps.find((s) => s.n === n)
+    if (step !== undefined && !taken.has(step)) {
+      taken.add(step)
+      ordered.push(step)
+    }
+  }
+  return [...ordered, ...steps.filter((s) => !taken.has(s))]
+}
+
+/**
+ * The plan's steps in build order: `parseSteps` merged with `parseBuildOrder`.
+ *
+ * The one call every next-step picker makes, so the dashboard's `← next`, a
+ * bare `plumbbob build`, `checkpoint`'s fallback, and the card's Next Up
+ * cannot disagree about which step comes next.
+ */
+export function parseOrderedSteps(intent: string): Step[] {
+  return orderSteps(parseSteps(intent), parseBuildOrder(intent))
+}
+
+/**
+ * The undone steps that come before step `n` in `ordered`: what an explicit
+ * `build n` skips. Empty when `n` is not in the list.
+ */
+export function skippedBefore(ordered: ReadonlyArray<Step>, n: number): Step[] {
+  const at = ordered.findIndex((s) => s.n === n)
+  return at === -1 ? [] : ordered.slice(0, at).filter((s) => !s.done)
+}
+
+/**
+ * The reminder the card and the dashboard render: the undone step numbers
+ * (minus `exclude`, the step a pause is about) in build order, when that
+ * sequence departs from document order; `[]` when the numbering already
+ * carries it, so a plan nobody re-sequenced renders nothing new.
+ */
+export function remainingOrder(
+  steps: ReadonlyArray<Step>,
+  order: ReadonlyArray<number>,
+  exclude: number | null,
+): number[] {
+  const left = (list: ReadonlyArray<Step>): number[] => list.filter((s) => !s.done && s.n !== exclude).map((s) => s.n)
+  const byOrder = left(orderSteps(steps, order))
+  const byDocument = left(steps)
+  return byOrder.some((n, i) => n !== byDocument[i]) ? byOrder : []
+}
+
+/**
+ * The build order as a phrase: the next `cap` step numbers in sequence, the
+ * rest folded to a count (`and 2 more`), the way a long detail degrades on
+ * every one-liner; '' for an empty order. With no cap, the whole sequence,
+ * which is the dashboard's row.
+ */
+export function buildOrderPhrase(order: ReadonlyArray<number>, cap?: number): string {
+  if (order.length === 0) {
+    return ''
+  }
+  const shown = cap === undefined ? order : order.slice(0, cap)
+  const rest = order.length - shown.length
+  return `build order ${shown.join(', ')}${rest > 0 ? ` (and ${rest} more)` : ''}`
+}
+
+/**
+ * Write `order` as the one numeric line under `## Build order`: in place of
+ * the line already there, else last in the section, else in a new section
+ * opened right after `## Steps`, so the sequence sits beside the steps it
+ * sequences. Mechanical bookkeeping for `plumbbob order`, the way
+ * `markStepDone` is for `checkpoint`.
+ */
+export function setBuildOrder(intent: string, order: ReadonlyArray<number>): string {
+  const lines = intent.split('\n')
+  const text = order.join(', ')
+  const heading = lines.findIndex((l) => l.trim() === '## Build order')
+  if (heading !== -1) {
+    const end = sectionEnd(lines, heading)
+    const at = lines.findIndex((l, i) => i > heading && i < end && BUILD_ORDER_LINE.test(l.trim()))
+    if (at !== -1) {
+      lines[at] = text
+      return lines.join('\n')
+    }
+    insertAfterContent(lines, heading, end, [text])
+    return lines.join('\n')
+  }
+  const steps = lines.findIndex((l) => l.trim() === '## Steps')
+  const end = steps === -1 ? lines.length : sectionEnd(lines, steps)
+  insertAfterContent(lines, steps, end, ['## Build order', '', text])
+  return lines.join('\n')
+}
+
+/**
+ * Splice `block` in after the last non-blank line before `end` (and after
+ * `from`), one blank line on each side, without doubling a blank that is
+ * already there.
+ */
+function insertAfterContent(lines: string[], from: number, end: number, block: ReadonlyArray<string>): void {
+  let last = end - 1
+  while (last > from && (lines[last] ?? '').trim() === '') {
+    last -= 1
+  }
+  const at = last + 1
+  const followed = at < lines.length && (lines[at] ?? '').trim() === ''
+  lines.splice(at, 0, '', ...block, ...(followed ? [] : ['']))
+}
+
+/**
+ * Drop the numeric line under `## Build order`, and the section itself when
+ * nothing but blank lines is left in it, so the plan reads in document order
+ * again. A plan with no line is returned unchanged.
+ */
+export function clearBuildOrder(intent: string): string {
+  const lines = intent.split('\n')
+  const heading = lines.findIndex((l) => l.trim() === '## Build order')
+  if (heading === -1) {
+    return intent
+  }
+  const at = lines.findIndex((l, i) => i > heading && i < sectionEnd(lines, heading) && BUILD_ORDER_LINE.test(l.trim()))
+  if (at === -1) {
+    return intent
+  }
+  lines.splice(at, 1)
+  if ((lines[at - 1] ?? '').trim() === '' && (at >= lines.length || (lines[at] ?? '').trim() === '')) {
+    lines.splice(at - 1, 1)
+  }
+  const body = lines.slice(heading + 1, sectionEnd(lines, heading))
+  if (body.every((l) => l.trim() === '')) {
+    lines.splice(heading, body.length + 1)
+  }
+  return lines.join('\n')
+}
+
 /**
  * Flip step N's `[ ]` checkbox to `[x]` within the `## Steps` section.
  *
@@ -196,16 +384,49 @@ export function parseOpenQuestions(intent: string): number {
   }).length
 }
 
+/** The park list's counts: the items still open, and every item ever parked. */
+export type ParkTotals = { readonly open: number; readonly total: number }
+
 /**
- * Count the open parked items: `- [ ]` lines under `## Park list`.
+ * Count the park list: the `- [ ]` lines still open, and every checklist line
+ * under `## Park list`, harvested `- [x]` ones included.
  *
  * A parked item is a mid-build idea the `park` verb appends as a flat checklist
- * line for later triage; `/plumbbob:harvest` flips a triaged one to `- [x]` and it
- * stops counting. The `(none yet)` placeholder and the blockquote instructions
- * never match.
+ * line for later triage; `/plumbbob:harvest` flips a triaged one to `- [x]`, so
+ * the pair reads `parked 2 of 7 open` and a harvest shows as the gap between
+ * the two. The `(none yet)` placeholder and the blockquote instructions never
+ * match.
+ */
+export function parseParkTotals(buildLog: string): ParkTotals {
+  let open = 0
+  let total = 0
+  for (const line of sectionLines(buildLog, '## Park list').lines) {
+    const m = /^-\s+\[([ xX])\]\s+\S/.exec(line.trim())
+    if (m === null) {
+      continue
+    }
+    total += 1
+    if (m[1] === ' ') {
+      open += 1
+    }
+  }
+  return { open, total }
+}
+
+/**
+ * Count the open parked items alone: `- [ ]` lines under `## Park list`.
  */
 export function parseParked(buildLog: string): number {
-  return sectionLines(buildLog, '## Park list').lines.filter((l) => /^-\s+\[ \]\s+\S/.test(l.trim())).length
+  return parseParkTotals(buildLog).open
+}
+
+/**
+ * The park count as both surfaces say it: `parked 2 of 7 open` once anything
+ * has been parked, the open count against everything ever parked; `parked 0`
+ * with nothing on the list yet.
+ */
+export function parkedPhrase(totals: ParkTotals): string {
+  return totals.total === 0 ? 'parked 0' : `parked ${totals.open} of ${totals.total} open`
 }
 
 /**
@@ -315,7 +536,7 @@ function nextMove(
     if (target.done) {
       return `build step ${target.n} — explicitly requested (already checkpointed)`
     }
-    const skipped = steps.filter((s) => !s.done && s.n < target.n).length
+    const skipped = skippedBefore(steps, target.n).length
     const notes: string[] = []
     if (skipped > 0) {
       notes.push(`skips ${skipped} undone step${skipped === 1 ? '' : 's'}`)
@@ -347,13 +568,19 @@ function nextMove(
  */
 export function orient(input: OrientInput): Orientation {
   const steps = parseSteps(input.intent)
-  const parked = parseParked(input.buildLog)
+  // The build order re-sequences the picks and nothing else: the step block
+  // still renders in document order, with the marker showing where the
+  // sequence actually goes.
+  const order = parseBuildOrder(input.intent)
+  const ordered = orderSteps(steps, order)
+  const parks = parseParkTotals(input.buildLog)
   // The target the dashboard details: the explicitly requested step when it
   // exists in the plan, else the next undone. A requested number that names no
   // planned step carries nothing here; the next-move line reports the mismatch
   // while the rest of the dashboard renders as usual.
   const requestedStep = input.requested === null ? undefined : steps.find((s) => s.n === input.requested)
-  const target = requestedStep ?? steps.find((s) => !s.done)
+  const nextUndone = ordered.find((s) => !s.done)
+  const target = requestedStep ?? nextUndone
   const seamParse = target === undefined ? null : parseStepSeam(input.intent, target.n)
   const phase = input.spiking ? 'SPIKE' : input.inFlight !== null ? 'BUILD' : 'DESIGN'
   return {
@@ -361,9 +588,12 @@ export function orient(input: OrientInput): Orientation {
     phase,
     steps,
     lastCheckpoint: parseLastCheckpoint(input.checkpoints),
-    parked,
+    parked: parks.open,
+    parkedTotal: parks.total,
     openQuestions: parseOpenQuestions(input.intent),
-    next: nextMove(input.spiking, steps, input.inFlight, parked, input.requested),
+    next: nextMove(input.spiking, ordered, input.inFlight, parks.open, input.requested),
+    nextUndone: nextUndone?.n ?? null,
+    buildOrder: remainingOrder(steps, order, null),
     requested: requestedStep?.n ?? null,
     nextDoneWhen: target?.doneWhen ?? null,
     nextSeam: seamParse !== null && seamParse.ok ? seamParse.seam : [],
@@ -972,10 +1202,10 @@ export function parseDetailStep(detail: string): number | null {
  */
 export function formatOrientation(o: Orientation): string {
   const doneCount = o.steps.filter((s) => s.done).length
-  const nextUndone = o.steps.find((s) => !s.done)
+  const nextUndone = o.nextUndone === null ? undefined : o.steps.find((s) => s.n === o.nextUndone)
   // One arrow, always: an explicitly requested step takes the marker and the
   // detail rows, so the injected state never argues with the invocation. With
-  // no (valid) request the next undone step keeps them, as ever.
+  // no (valid) request the next undone step in build order keeps them, as ever.
   const requestedStep = o.requested === null ? undefined : o.steps.find((s) => s.n === o.requested)
   const marked = requestedStep ?? nextUndone
   const stepLines = o.steps.map((s) => {
@@ -1013,6 +1243,10 @@ export function formatOrientation(o: Orientation): string {
       ? [`${o.outOfBand} commit${o.outOfBand === 1 ? '' : 's'} since the last checkpoint landed outside plumbbob's ledger.`]
       : []
 
+  // The build order, whole, only when it departs from the numbering: the
+  // dashboard is the reference surface, so nothing is folded to a count here.
+  const orderRow = o.buildOrder.length > 0 ? [`build order  ${o.buildOrder.join(', ')}`] : []
+
   return [
     `PlumbBob — ${o.title ?? '(untitled)'}   [${o.phase}]`,
     '',
@@ -1020,7 +1254,8 @@ export function formatOrientation(o: Orientation): string {
     '',
     cpLine,
     ...receipts,
-    `parked ${o.parked} · open questions ${o.openQuestions}`,
+    ...orderRow,
+    `${parkedPhrase({ open: o.parked, total: o.parkedTotal })} · open questions ${o.openQuestions}`,
     '',
     `next → ${o.next}`,
   ].join('\n')

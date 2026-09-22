@@ -19,7 +19,7 @@
 
 import { existsSync, readFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
-import { parseSteps } from '../lib/orient.ts'
+import { parseBuildOrder, parseSteps } from '../lib/orient.ts'
 import {
   activeBuild,
   checkpointsPath,
@@ -133,8 +133,39 @@ function sessionFindings(root: string): ReadonlyArray<Finding> {
 
   const stepInFlight = existsSync(stepPath(root, slug))
   findings.push(...phaseFindings(root, slug, stepInFlight))
+  findings.push(...orderFindings(root, slug))
   findings.push(...leftoverFindings(root, slug, stepInFlight))
   return findings
+}
+
+/**
+ * A build order naming a step the plan does not hold.
+ *
+ * The line under `## Build order` is hand-editable, and a refine can renumber
+ * or drop the step it names; every picker just skips the number, so the plan
+ * quietly builds in a sequence nobody wrote down. Reported, never repaired:
+ * intent.md is a tracked artifact, and the sequence is a judgment call. Silent
+ * while the plan declares no order at all.
+ */
+function orderFindings(root: string, slug: string): ReadonlyArray<Finding> {
+  const intent = readOr(intentPath(root, slug))
+  const order = parseBuildOrder(intent)
+  if (order.length === 0) {
+    return []
+  }
+  const planned = parseSteps(intent).map((s) => s.n)
+  const unknown = order.filter((n) => !planned.includes(n))
+  if (unknown.length === 0) {
+    return [{ name: 'build order', ok: true, detail: `every step it lists is planned (${order.join(', ')})` }]
+  }
+  return [
+    {
+      name: 'build order',
+      ok: false,
+      detail: `the build order names step${unknown.length === 1 ? '' : 's'} ${unknown.join(', ')}, which the plan does not hold (planned: ${planned.join(', ')})`,
+      hint: 'rewrite the line with plumbbob order <n>…, or plumbbob order --reset to read the plan in document order',
+    },
+  ]
 }
 
 /**
