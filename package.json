@@ -69,7 +69,7 @@
     "vitest": "4.1.10"
   },
   "dependencies": {
-    "checkride": "0.12.2"
+    "checkride": "0.12.5"
   },
   "bundleDependencies": [
     "checkride"

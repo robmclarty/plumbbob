@@ -1,4 +1,4 @@
-<!-- checkride:begin hash=v1d4baf8a2dc6c8ae7 -->
+<!-- checkride:begin hash=v10d8761710828dfc0 -->
 
 ## Checkride: the definition of done
 
@@ -22,9 +22,9 @@ If a stop-gate hook is configured (`.claude/settings.json` or `.cursor/hooks.jso
 it runs the check when a turn ends — so while iterating, prefer the narrow commands
 above rather than running the full check yourself every loop. Read the gate's verdict
 rather than assuming it covered everything: a repo can narrow the gate with `gate` in
-`checkride.config.json`, and a narrowed one prints `NOT the full check` in every
-verdict. That green is not the "done" defined above; run `pnpm check` in full before you
-claim the work is finished.
+`checkride.config.json`, and a narrowed one names its narrowing (`only …`, `without …`,
+`affected-only`) in every verdict. That green is not the "done" defined above; run
+`pnpm check` in full before you claim the work is finished.
 
 ### Baseline
 
@@ -48,6 +48,6 @@ They are hand-written and human-owned: never edit, rewrite, or add to them, and
 never generate new ones. When your draft and an exemplar disagree about how a
 sentence should sound, the exemplar wins.
 
-Active checks in this repo: lint, struct, dead, links, refs, types, docs, prose, test.
+Active checks in this repo: lint, struct, dead, links, refs, types, docs, spell, prose, build, test.
 
 <!-- checkride:end -->
