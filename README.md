@@ -10,7 +10,7 @@
   <a href="https://robmclarty.github.io/plumbbob/api.html">API reference</a>
 </p>
 
-PlumbBob is a Claude Code plugin (fourteen skills and a small CLI) that runs
+PlumbBob is a Claude Code plugin (fifteen skills and a small CLI) that runs
 LLM-assisted coding as a loop you control. You and the model settle the plan in a file
 *before* any code; then the model builds one small step at a time and **stops after
 each one**, waiting for you to read the diff and approve it before anything is
@@ -346,7 +346,7 @@ Each doc answers one question (in rough reading order for a new user):
 - *Show me the artifacts it leaves behind.* → [`examples/`](examples/): that same session's finished build folder, file by file.
 - *Should I / can I / what about…?* → [`docs/faq.md`](docs/faq.md): the adoption questions, answered straight.
 - *What is each method for?* → [`docs/techniques.md`](docs/techniques.md): steps, seams, the pause, park/harvest, spikes.
-- *What does each skill do?* → [`docs/skills-reference.md`](docs/skills-reference.md): all fourteen skills: inputs, effects, when to reach for each.
+- *What does each skill do?* → [`docs/skills-reference.md`](docs/skills-reference.md): all fifteen skills: inputs, effects, when to reach for each.
 - *What does a turn look like, and who renders which part?* → [`docs/presentation.md`](docs/presentation.md): the anatomy of the pause, the boundary, and the driver turns.
 - *How do I plug in my own agent?* → [`docs/agents.md`](docs/agents.md): the subprocess envelope, the manifest, `harness.json`, and working examples (including a local-model reviewer via Ollama).
 - *How do I get a local model reviewing my steps?* → [`docs/local-model-review.md`](docs/local-model-review.md): the ollama-reviewer example walked end to end, install to every-pause review.
