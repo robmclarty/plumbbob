@@ -148,6 +148,11 @@ describe('stepInFlightContext — the park nudge, D64 (approval-latch) amended: 
     expect(parsed.hookSpecificOutput.additionalContext).toContain('step 2 is in flight')
     expect(parsed.hookSpecificOutput.additionalContext).toContain('plumbbob park "')
     expect(parsed.hookSpecificOutput.additionalContext).toContain('plumbbob checkpoint 2')
+    // A tangent that reaches the session as chat never loads the park skill, so
+    // the nudge carries the driver-turn rule itself: the park's block is the turn.
+    expect(parsed.hookSpecificOutput.additionalContext).toContain(
+      'relay the block it prints whole, with nothing written around it',
+    )
   })
 
   it('goes quiet again once the step checkpoints (STEP marker gone)', async () => {

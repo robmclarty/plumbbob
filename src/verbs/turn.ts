@@ -39,10 +39,10 @@ export function turn(cwd: string, _args: ReadonlyArray<string>): number {
  *
  * A step is in flight when a STEP marker (the flat control file recording the
  * step between `build` and `checkpoint`) is present. Guidance only: it reminds a
- * fresh session that a tangent is a park (not an edit) and how the step lands,
- * since the build prose may not be in context after compaction or on a
- * scripted turn. Exported because an in-process test cannot read the hook's
- * real stdout.
+ * fresh session that a tangent is a park (not an edit), that the park's own
+ * block is the whole turn, and how the step lands, since neither the build nor
+ * the park prose may be in context after compaction or on a scripted turn.
+ * Exported because an in-process test cannot read the hook's real stdout.
  */
 export function stepInFlightContext(cwd: string): string | null {
   const root = findSessionRoot(cwd)
@@ -51,8 +51,9 @@ export function stepInFlightContext(cwd: string): string | null {
   if (step === null) return null
   const text =
     `plumbbob: step ${step} is in flight — a new idea or tangent is a park, not an edit: ` +
-    `capture it with \`plumbbob park "<one line>"\`, then stay on the step. ` +
-    `It lands when you run \`plumbbob checkpoint ${step}\` after approval.`
+    `capture it with \`plumbbob park "<one line>"\` and relay the block it prints whole, ` +
+    `with nothing written around it, since that block is the whole turn. ` +
+    `The step stays open and lands when you run \`plumbbob checkpoint ${step}\` after approval.`
   return `${JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: text } })}\n`
 }
 
