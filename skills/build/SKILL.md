@@ -268,7 +268,9 @@ and approves in the human's place**, and it **chains**:
     human has a call to make about it, so end on the same turn the default pause does:
     write the detail file, run `plumbbob handoff`, and paste its block.
   - **A clean halt lands its step first.** The top of a requested range is reached, or no
-    planned steps remain. That step checkpoints like every step before it, and its
+    planned steps remain, and `plumbbob build` names that step as it enters it (for
+    example `step 3 is the last undone step in the plan`). That step checkpoints like
+    every step before it, and its
     checkpoint's block is the whole ending: relay it with nothing written around it, then
     end the turn. Write no detail file and run no `handoff`, because nothing is pending.
     The block already carries the Verdict the step earned and a Next Up pointing at what
@@ -289,7 +291,8 @@ any next step whose plan number is past the top of the range.** It adds no machi
 the one more entry already in the halt list above, and it is a clean halt, so the top step
 is never held back for approval. The human approved it by typing the range, and
 `plumbbob build` says so as it enters that step:
-`step 3 is the top of the range you granted`.
+`step 3 is the top of the range you granted`, or, when the plan ends first,
+`the last undone step in the range you granted`.
 
 - **`N-M` with N ≤ M**: build N…M, self-approving and checkpointing each, M included, then
   relay M's checkpoint block and end the turn. `N-N` is a range like any other: it builds

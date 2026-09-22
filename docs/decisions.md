@@ -784,7 +784,9 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   presentation build `handoff` renders the approval pause for an open step and only a Verdict and Next Up
   at the boundary, so the one reading that made the old rule work was to leave M open. The eval tier's
   range contract caught models taking it: the top step sat at a pause in 2 of 4 runs across the
-  2026-09-03 and 2026-09-05 sweeps, where 0.9.0 had landed it in 5 of 5. Amends
+  2026-09-03 and 2026-09-05 sweeps, where 0.9.0 had landed it in 5 of 5. (Revised 2026-09-16, after
+  0.12.0: the `build` line also names the last step an `--auto` run or an overlong range reaches,
+  because the end of the plan is the other clean halt, and the eval tier's contract 9 measures it.) Amends
   [**D56 (auto-composes)**](#d56) and [**D83 (card-teaches-itself)**](#d83). *Tagged in* the `build`
   skill, `docs/presentation.md`, and `docs/cli-reference.md`.
 

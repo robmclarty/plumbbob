@@ -6,7 +6,7 @@
 // (armGrant explains why the headless tick can't mint it in time); the minting
 // itself is unit-tested in src/verbs/__tests__/turn.test.ts.
 
-import { check, checkpointLines, dirtyPathsIn, inFlightStep, info, snapshot, unledgeredCommits, validity } from '../helpers/assert.ts'
+import { check, checkpointLines, dirtyPathsIn, info, landedDetail, snapshot, unledgeredCommits, validity } from '../helpers/assert.ts'
 import { anatomyChecks } from '../helpers/anatomy.ts'
 import { armGrant, readLedger } from '../helpers/driver.ts'
 import { makeEvalFixture } from '../helpers/fixture.ts'
@@ -25,18 +25,13 @@ export const c4: Contract = {
     const turn = await session.turn(C4_PROMPT)
     const lines = checkpointLines(repo)
     const stepsLanded = lines.filter((l) => l.kind === 'step').map((l) => l.step)
-    // A count alone cannot say why a run fell short, and the shortfall this
-    // contract has caught is the top step built and then held open at a pause,
-    // so the detail names whatever the turn left in flight.
-    const open = inFlightStep(repo)
-    const landed = `landed ${stepsLanded.join(',') || 'nothing'}${open === null ? '' : `, step ${open} left open`}`
     return {
       turns: [turn],
       checks: [
         // Minimum engagement is validity; the range's exact shape is the contract:
         // under-running (stopping at 1) fails it just as overrunning does.
         validity('the run engaged (step 1 landed)', stepsLanded.includes(1), stepsLanded.join(',')),
-        check('checkpointed exactly steps 1 and 2', stepsLanded.join(',') === '1,2', landed),
+        check('checkpointed exactly steps 1 and 2', stepsLanded.join(',') === '1,2', landedDetail(repo)),
         check('box 3 still unchecked', !snapshot(repo).intent.includes('3. [x]')),
         check('step-3 seam untouched', dirtyPathsIn(repo, ['src/shout.js']).length === 0),
         check('no unledgered commits', unledgeredCommits(repo, t0.headSha).length === 0),

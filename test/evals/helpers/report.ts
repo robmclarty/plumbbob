@@ -20,7 +20,7 @@ export const REPORTS_DIR = join(REPO_ROOT, 'reports', 'evals')
 export const RECEIPTS_DIR = join(REPO_ROOT, 'docs', 'evals')
 
 export type Stamps = {
-  readonly plumbbob: { readonly version: string; readonly sha: string }
+  readonly plumbbob: { readonly version: string; readonly sha: string; readonly dirty: boolean }
   readonly claudeCli: string
   readonly fascicle: string
 }
@@ -37,11 +37,25 @@ export function stamps(): Stamps {
     plumbbob: {
       version: pkg.version,
       sha: execFileSync('git', ['-C', REPO_ROOT, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+      dirty: uncommitted(),
     },
     claudeCli: execFileSync('claude', ['--version'], { encoding: 'utf8' }).trim(),
     fascicle: fascicle.version,
   }
   return cachedStamps
+}
+
+// Whether the checkout under test differs from its HEAD. A sweep can run before
+// its code is committed, and a stamp that named HEAD alone would credit that
+// commit with code it does not contain. The receipts and the raw ledgers are
+// left out, because writing them is part of the sweep itself.
+function uncommitted(): boolean {
+  const status = execFileSync(
+    'git',
+    ['-C', REPO_ROOT, 'status', '--porcelain', '--', '.', ':!docs/evals', ':!reports'],
+    { encoding: 'utf8' },
+  )
+  return status.trim().length > 0
 }
 
 function jsonlPath(date: string, sweep: string): string {
@@ -114,7 +128,8 @@ export function renderReport(date: string): string {
   const lines = [
     `# Skill-eval sweep — ${date}`,
     '',
-    `Model: ${models} · plumbbob ${s.plumbbob.version} (\`${s.plumbbob.sha.slice(0, 9)}\`) · ` +
+    `Model: ${models} · plumbbob ${s.plumbbob.version} ` +
+      `(\`${s.plumbbob.sha.slice(0, 9)}\`${s.plumbbob.dirty ? ' with uncommitted changes' : ''}) · ` +
       `claude CLI ${s.claudeCli.replace(' (Claude Code)', '')} · fascicle ${s.fascicle}`,
     '',
     'Each run is one scripted headless session sequence against a fresh fixture repo;',
@@ -145,7 +160,7 @@ export function renderReport(date: string): string {
     '  ledger is per-worktree filesystem state, so cross-session turns are real',
     '  human turns. A warmup turn arms the ledger first (the headless',
     '  `UserPromptSubmit` tick lands at ~session end, unlike interactive mode).',
-    '- For the auto/range contracts (c3, c4) the driver pre-arms the GRANT file:',
+    '- For the auto/range contracts (c3, c4, c9) the driver pre-arms the GRANT file:',
     '  interactive Claude Code mints it before the turn; headless ticks cannot.',
     '  The minting logic itself is deterministically tested in src/verbs/__tests__/turn.test.ts.',
     '- `git commit` is deliberately allowed in both sweeps: contract 2 measures',
@@ -167,7 +182,9 @@ export function renderReport(date: string): string {
     '  top step ([D85 (range-top-lands)](../decisions.md#d85)), so that turn ends',
     '  on the step\'s own checkpoint block rather than a pause. Receipts through',
     '  2026-09-05 read the same turn against the decision tier, so contract 4\'s',
-    '  anatomy rows are not comparable across that line.',
+    '  anatomy rows are not comparable across that line. Contract 9 reads the',
+    '  other clean halt, an `--auto` run reaching the end of the plan, the same',
+    '  way, and no receipt before 0.12.0 measured it.',
     '- The turn-anatomy probes never gate a contract. A run that paused exactly',
     '  as its contract demands, in a shape a hair off the spec, is still a pass of',
     '  that contract; folding the two together would make one rate answer two',

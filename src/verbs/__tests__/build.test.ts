@@ -161,11 +161,9 @@ describe('build', () => {
   })
 })
 
-describe('build — the top of a typed range — D85 (range-top-lands)', () => {
-  const TOP = notice({
-    fact: 'step 2 is the top of the range you granted',
-    remedy: 'land it on green, then stop at the boundary',
-  })
+describe('build — the last step a grant reaches — D85 (range-top-lands)', () => {
+  const REMEDY = 'land it on green, then stop at the boundary'
+  const TOP = notice({ fact: 'step 2 is the top of the range you granted', remedy: REMEDY })
 
   it('names the top step as it enters it, between the entry line and the seam', async () => {
     const dir = await startedWithSteps()
@@ -188,14 +186,42 @@ describe('build — the top of a typed range — D85 (range-top-lands)', () => {
     expect(stdout).toContain(notice({ fact: 'building step 2', detail: ['next undone'] }) + TOP)
   })
 
-  it('stays quiet below the top, under an `auto` grant, and with no grant at all', async () => {
+  it('names the last undone step when a range runs past the end of the plan', async () => {
+    // `1-9` over a two-step plan: the plan ends first, so step 2 is the clean
+    // halt even though the range's own top is never reached.
     const dir = await startedWithSteps()
-    writeFileSync(grantPath(dir), 'range 2\n')
-    expect(captureIo(() => build(dir, ['1'])).stdout).not.toContain('top of the range')
+    writeFileSync(intentPath(dir), INTENT.replace('1. [ ]', '1. [x]'))
+    writeFileSync(grantPath(dir), 'range 9\n')
+    const { stdout } = captureIo(() => build(dir, ['2']))
+    expect(stdout).toContain(
+      notice({ fact: 'step 2 is the last undone step in the range you granted', remedy: REMEDY }),
+    )
+  })
+
+  it("names the plan's last undone step under `--auto`, the other clean halt", async () => {
+    const dir = await startedWithSteps()
+    writeFileSync(intentPath(dir), INTENT.replace('1. [ ]', '1. [x]'))
     writeFileSync(grantPath(dir), 'auto\n')
-    expect(captureIo(() => build(dir, ['2'])).stdout).not.toContain('top of the range')
-    rmSync(grantPath(dir))
-    expect(captureIo(() => build(dir, ['2'])).stdout).not.toContain('top of the range')
+    const { stdout } = captureIo(() => build(dir, ['2']))
+    expect(stdout).toContain(notice({ fact: 'step 2 is the last undone step in the plan', remedy: REMEDY }))
+  })
+
+  it('stays quiet wherever work is left under the grant, and with no grant at all', async () => {
+    const dir = await startedWithSteps() // steps 1 and 2 both undone
+    const quiet = (grant: string | null, step: string): void => {
+      if (grant === null) {
+        rmSync(grantPath(dir), { force: true })
+      } else {
+        writeFileSync(grantPath(dir), `${grant}\n`)
+      }
+      expect(captureIo(() => build(dir, [step])).stdout).not.toContain(REMEDY)
+    }
+    quiet('range 2', '1') // below the top
+    quiet('range 9', '1') // step 2 is still ahead inside the range
+    quiet('range 1', '2') // past the top: the checkpoint refuses it, so nothing to announce
+    quiet('auto', '1') // step 2 is still ahead
+    quiet('auto', '2') // step 1 is still undone behind it
+    quiet(null, '2')
   })
 })
 

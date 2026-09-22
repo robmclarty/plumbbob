@@ -111,10 +111,13 @@ plumbbob build [<n>] [--build <slug>]
 
 Reads step `n`'s seam from `intent.md` and writes `SEAM` (the path list) and `STEP` (the
 number); the `STEP` file is what makes the dashboard read `BUILD`. The seam is
-orientation, not a lock. When the turn's `GRANT` is a typed range whose top is this step,
-it adds one line saying so (`step 3 is the top of the range you granted`, with the remedy
-beneath it), because that step lands like the rest and the turn ends on its checkpoint
-([**D85 (range-top-lands)**](decisions.md#d85)). Refuses (exit 1)
+orientation, not a lock. When this step is the last one the turn's `GRANT` reaches (a
+typed range's top, the last undone step under it when the plan ends first, or the plan's
+last undone step under `--auto`), it adds one line saying so, such as
+`step 3 is the top of the range you granted` with the remedy beneath it, because that
+step lands like the rest and the turn ends on its checkpoint
+([**D85 (range-top-lands)**](decisions.md#d85)).
+Refuses (exit 1)
 with no session, a non-numeric or `< 1` step, or a seam it cannot parse (seams are exact
 paths or `dir/` grants, never globs; [**D23 (no-glob-seams)**](decisions.md#d23)).
 

@@ -334,7 +334,7 @@ that matters.
 > under [`docs/evals/`](docs/evals/): the route the latch owns (*no checkpoint over a red
 > check under pressure*) went from **2/5 prose-only to 5/5 latched** on the first sweep
 > ([2026-07-11](docs/evals/2026-07-11.md)), every sweep since has held it and closed the
-> two gaps that one surfaced, and the latest ([2026-09-03](docs/evals/2026-09-03.md))
+> two gaps that one surfaced, and the latest ([2026-09-17](docs/evals/2026-09-17.md))
 > scores the shape of the turn itself.
 
 ## Documentation

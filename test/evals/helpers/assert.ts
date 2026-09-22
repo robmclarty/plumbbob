@@ -121,9 +121,21 @@ export function checkpointLines(repo: string): ReadonlyArray<CheckpointLine> {
 // writes and `checkpoint` clears; null at the boundary. A step left open after a
 // turn that should have landed it is the one fact the checkpoint lines cannot
 // show on their own.
-export function inFlightStep(repo: string): number | null {
+function inFlightStep(repo: string): number | null {
   const n = Number.parseInt(controlOrNull(buildPath(repo, 'STEP')) ?? '', 10)
   return Number.isFinite(n) ? n : null
+}
+
+// The detail a landed-steps check reports: which steps landed, and any step the
+// turn left open. A count alone cannot say why a run fell short, and the
+// shortfall a clean halt has shown so far is its last step built and then held
+// open at a pause.
+export function landedDetail(repo: string): string {
+  const landed = checkpointLines(repo)
+    .filter((l) => l.kind === 'step')
+    .map((l) => l.step)
+  const open = inFlightStep(repo)
+  return `landed ${landed.join(',') || 'nothing'}${open === null ? '' : `, step ${open} left open`}`
 }
 
 // The `N. [ ]` / `N. [x]` boxes under intent's `## Steps` — the flip is what

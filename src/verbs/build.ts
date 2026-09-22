@@ -9,9 +9,9 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { hasSession, intentPath, resolveBuild, seamPath, stampStepStat, stampTick, stepPath } from '../lib/sidecar.ts'
 import { parseStepSeam } from '../lib/intent.ts'
-import { parseSteps } from '../lib/orient.ts'
+import { parseSteps, type Step } from '../lib/orient.ts'
 import { stepLabel, syncBuildLogState } from '../lib/buildlogsync.ts'
-import { readGrant } from '../lib/latch.ts'
+import { readGrant, type Grant } from '../lib/latch.ts'
 import { notice } from '../lib/notice.ts'
 
 /**
@@ -20,8 +20,8 @@ import { notice } from '../lib/notice.ts'
  * Refuses a missing session, a malformed step argument, an `N-M` range (a
  * `/plumbbob:build` skill feature, not a CLI one), and a seam that fails to parse.
  * On entry it stamps the turn ledger and the step's start time, re-renders the
- * build-log's Current step line, and says so when the step is the top of a
- * range the human typed.
+ * build-log's Current step line, and names the step when it is the last one a
+ * self-approval grant reaches.
  */
 export function build(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
@@ -111,24 +111,12 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
       : skipped > 0
         ? ['explicitly requested', `skips ${skipped} undone step${skipped === 1 ? '' : 's'}`]
         : []
-  // The top step of a typed range lands like every step under it, and the turn
-  // ends on its checkpoint. Saying so as the step is entered puts that fact in
-  // front of the model before it chooses between landing the step and holding
-  // it at a pause, which is the choice a range kept getting wrong.
-  const grant = readGrant(root)
-  const top =
-    grant?.kind === 'range' && grant.ceiling === step
-      ? notice({
-          fact: `step ${step} is the top of the range you granted`,
-          remedy: 'land it on green, then stop at the boundary',
-        })
-      : ''
-  // Two lines (three at a range's top), one colon each, then the seam as a
-  // plain readout beneath the notice that frames it: the paths are a list, and
-  // a list is not a one-liner.
+  // Two lines (three on the last step a grant reaches), one colon each, then
+  // the seam as a plain readout beneath the notice that frames it: the paths
+  // are a list, and a list is not a one-liner.
   process.stdout.write(
     notice({ fact: `building step ${step}`, detail: picked }) +
-      top +
+      lastGrantedNotice(readGrant(root), steps, step) +
       notice({
         fact: 'the seam is orientation, not a lock',
         detail: [`${parsed.seam.length} path${parsed.seam.length === 1 ? '' : 's'}`],
@@ -136,4 +124,33 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
       `${parsed.seam.map((path) => `  ${path}`).join('\n')}\n`,
   )
   return 0
+}
+
+/**
+ * The line naming the last step a self-approval grant reaches this turn, or ''
+ * for any other step and when no grant is live.
+ *
+ * That step lands like every step before it, and then the turn ends on its
+ * checkpoint: a clean halt. Saying so as the step is entered puts the fact in
+ * front of the model before it chooses between landing the step and holding it
+ * at a pause, which is the choice a clean halt kept getting wrong. A range
+ * reaches its top, or the last undone step under its top when the plan ends
+ * first; `--auto` reaches the plan's last undone step.
+ */
+function lastGrantedNotice(grant: Grant | null, steps: ReadonlyArray<Step>, step: number): string {
+  if (grant === null) {
+    return ''
+  }
+  const remedy = 'land it on green, then stop at the boundary'
+  if (grant.kind === 'range') {
+    if (step === grant.ceiling) {
+      return notice({ fact: `step ${step} is the top of the range you granted`, remedy })
+    }
+    const more = steps.some((s) => !s.done && s.n > step && s.n <= grant.ceiling)
+    return step < grant.ceiling && !more
+      ? notice({ fact: `step ${step} is the last undone step in the range you granted`, remedy })
+      : ''
+  }
+  const more = steps.some((s) => !s.done && s.n !== step)
+  return more ? '' : notice({ fact: `step ${step} is the last undone step in the plan`, remedy })
 }
