@@ -5,6 +5,42 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.1] - 2026-09-22
+
+- **Added:** a build order. A refined plan appends a step whose number says nothing about
+  when it lands, so the sequence to build the rest (`4, 7, 8, 5, 10, 6`) lived in your head
+  and had to be typed into every build. `plumbbob order 7 8 5` now writes it as one line
+  under `## Build order` in `intent.md` (the numbers given first, every other undone step
+  following in document order), and every next-step pick reads it: the dashboard's
+  `← next`, a bare `plumbbob build`, `checkpoint`'s fallback, and the card's Next Up. A
+  plan without the section reads in document order, `--reset` drops the line, and
+  `recover` reports a line naming a step the plan lacks. D86 (build-order) records the
+  rule.
+- **Added:** `/plumbbob:order`, the fifteenth skill, turns a full or relative instruction
+  ("7 and 8 before 5") into the whole sequence and shells the verb; the step, refine, and
+  harvest skills run the same verb for an appended step that has to land before an
+  existing one, so a step keeps its number for life and nothing renumbers.
+- **Added:** one indented line beneath the card's Next Up, and the same two rows on the
+  dashboard: the build order from that step on (five steps, then a count), only when the
+  sequence departs from the numbering, and the park count as `parked 2 of 7 open` (the
+  open items against everything ever parked) whenever anything has been parked. The
+  driver-tier pointer stays one line.
+- **Added:** `plumbbob build` names the last step any grant reaches, not only a range's
+  top: an `--auto` run reaching the plan's last undone step, or a range typed past the
+  plan's end, hears `land it on green, then stop at the boundary` as the step is entered.
+  The eval tier's contract 9 measures the `--auto` halt the way contract 4 measures the
+  range, and a receipt now says when a sweep ran on an uncommitted checkout.
+- **Fixed:** `plumbbob handoff <n>` renders the pause for a named step that has not
+  landed. `/plumbbob:verify` on a diff built outside `/plumbbob:build` finds no STEP
+  marker, so a bare `handoff` read the moment as a boundary and printed no Your Call
+  block; the human was never asked. The verify skill passes the step number everywhere it
+  runs `handoff`.
+- **Fixed:** the turn hook's park nudge says how a park ends: its block is the whole turn,
+  relayed whole, and the step stays open through it. A tangent that arrives as chat never
+  loads the park skill, so the nudge was the only prose in front of the model.
+- **Changed:** checkride 0.12.5, with the `AGENTS.md` stanza regenerated: a narrowed gate
+  names its narrowing in its verdict, and the active-checks line lists `spell` and `build`.
+
 ## [0.12.0] - 2026-09-16
 
 - **Fixed:** a step range lands its top step. `/plumbbob:build 1-2` self-approves and
