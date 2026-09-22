@@ -101,8 +101,10 @@ const SEAM_RULE = '\n---'
  * Requires an active session (the STATE sentinel under `.plumbbob/`). The step
  * tiers are derived, not passed: a step in flight yields the full
  * decision-tier ending (the Readout and its fence, the inline diff when small
- * enough, the Verdict, Next Up, Your Call, and the Recommendation), a landed
- * step yields the orientation-tier ending (Verdict and Next Up, no Your Call),
+ * enough, the Verdict, Next Up, Your Call, and the Recommendation), and so does
+ * a named step that has not landed when nothing is in flight (a hand-built diff
+ * under verify), a landed step yields the orientation-tier ending (Verdict and
+ * Next Up, no Your Call),
  * and a fresh session with nothing to report yields only
  * the forward pointer. The two endings no session state can distinguish are
  * named by a flag: `--plan` is the plan pause (a decision turn about the plan,
@@ -166,7 +168,13 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     return emit([nextUpLine(nextUp, steps.length, where)])
   }
 
-  if (inFlight === null) {
+  // A step is pending, and its hand-off is the pause, while it is in flight.
+  // With nothing in flight, a step the turn names that has not landed is
+  // pending too: a diff built outside `/plumbbob:build` reaches
+  // `/plumbbob:verify` with no STEP marker, and the number is how the skill says
+  // which pause to render.
+  const pending = inFlight !== null || (explicit !== undefined && steps.some((s) => s.n === current && !s.done))
+  if (!pending) {
     // The boundary: the orientation-tier ending, the state word and the forward
     // pointer, no decision pending and so no Your Call. The same two parts the
     // checkpoint printed for itself, from the same call.

@@ -113,8 +113,11 @@ this skill verifies it the same way: **it reads the diff, not the author**
    `## Log` and then truncates it (the detail plane in the
    [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)).
 
-   *Paste the turn.* Run `plumbbob handoff` and paste its output whole, verbatim, at top
-   level, trailing blank line included, then end the turn. Never nest it inside a fence of
+   *Paste the turn.* Run `plumbbob handoff <n>`, naming the step you reviewed, and paste
+   its output whole, verbatim, at top level, trailing blank line included, then end the
+   turn. The number is what lets a diff built outside `/plumbbob:build` reach its pause:
+   nothing is in flight for that diff, and a bare `handoff` would read the moment as a
+   boundary and render no Your Call block. Never nest it inside a fence of
    your own; it carries fences of its own and they cannot nest. It prints the Summary and
    its highlights, the Readout fence (its measured `check`, `seam`, `diff`, and `spent`
    rows folded with your three), a `diff` fence when the change is 20 lines or fewer, the
@@ -130,8 +133,8 @@ this skill verifies it the same way: **it reads the diff, not the author**
 
    *Then read the reply as an ask or a direction.* A message that **asks** ("expand 2",
    "what does that mean?", "why did the seam row flag that?") is an expand: answer it from the detail file, from
-   `git diff`, or from the build-log's `## Log` for an older step, never from recall, then run `plumbbob handoff` again and
-   paste it. The step is still in flight, so it renders the same pause, and the Your Call
+   `git diff`, or from the build-log's `## Log` for an older step, never from recall, then run `plumbbob handoff <n>` again and
+   paste it. The step has not landed, so it renders the same pause, and the Your Call
    block stays the CLI's to render rather than yours to retype. A message that **directs**
    is needs-work: take it as what to change, and nothing lands until the human says
    `looks good`.
@@ -194,7 +197,7 @@ When this session runs under plumbbob's turn hook, `plumbbob checkpoint` **refus
 land a step in the same turn it was entered**, and that refusal **is** this pause, not
 an error to route around. If the checkpoint prints `checkpoint refused — no human turn
 since this step began`, you have reached the pause the hard way: write the file, run
-`plumbbob handoff`, paste its block as step 5 says, **end the turn there**, and the
+`plumbbob handoff <n>`, paste its block as step 5 says, **end the turn there**, and the
 human's next message is the tick that lets
 the checkpoint land when you run it again. **Never reach for a raw `git commit` to force the
 land**; that forges the very record the latch exists to keep honest, and the
@@ -220,8 +223,8 @@ instead.**
   self-review; checkride gates, the human approves. `blocked` → unblock and re-run;
   `drift` → `/plumbbob:refine` before checkpointing. No code path makes them blocking.
 - **A refused checkpoint is the pause, never a workaround.** Under the turn
-  hook a same-turn checkpoint is refused *by design*: write the file, run `plumbbob
-  handoff`, paste its block, **end the turn there**, and let the human's next message
+  hook a same-turn checkpoint is refused *by design*: write the file, run
+  `plumbbob handoff <n>`, paste its block, **end the turn there**, and let the human's next message
   re-tick it. Never route around it with a
   raw `git commit`; the latch guards the record, not the work.
 - **Close with the next model.** When the checkpoint lands it prints the whole boundary

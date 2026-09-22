@@ -353,6 +353,33 @@ describe('handoff', () => {
     expect(stdout).toContain('**Next Up**: Step 2 of 3 - Second')
   })
 
+  it('renders the pause for a named step that has not landed, with nothing in flight (a hand-built diff under verify)', async () => {
+    // `/plumbbob:verify` on a diff built outside `/plumbbob:build` finds no STEP
+    // marker; naming the step is how it asks for that step's pause.
+    const dir = await started() // step 1 landed; 2 and 3 undone; nothing in flight
+    writeFileSync(
+      detailPath(dir),
+      `# Detail · Step 2 · Second\n\n${GREEN_RECAP}${SUMMARY}\n## Recommendation\n\nApprove it. It does what step 2 asks.\n`,
+    )
+    const { code, stdout } = captureIo(() => handoff(dir, ['2']))
+    expect(code).toBe(0)
+    expect(stdout).toContain('**Summary**: The limiter runs before credentials are checked.')
+    expect(stdout).toContain('**Readout**: Step 2 - Second')
+    expect(stdout).toContain('**Next Up**: Step 3 of 3 - Third')
+    expect(stdout).toContain('**Your Call**:')
+    expect(stdout).toContain('**Recommendation**: Approve it. It does what step 2 asks.')
+  })
+
+  it('keeps the boundary for a named step that has landed, or one the plan does not hold, with nothing in flight', async () => {
+    const dir = await started()
+    writeFileSync(checkpointsPath(dir), 'step 1 abc1234\n')
+    const landed = captureIo(() => handoff(dir, ['1'])).stdout
+    expect(landed).toContain('**Verdict**:')
+    expect(landed).not.toContain('**Your Call**')
+    expect(landed).not.toContain('**Readout**')
+    expect(captureIo(() => handoff(dir, ['9'])).stdout).not.toContain('**Your Call**')
+  })
+
   it('with no step in flight and no checkpoint yet, emits only the forward pointer and no verdict', async () => {
     // Fresh session (planned, nothing built): there is nothing measured, so the
     // ending degrades to the "Next Up" line alone.

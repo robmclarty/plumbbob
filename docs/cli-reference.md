@@ -159,7 +159,9 @@ The tiers below it are derived, not passed. A landed step with none in flight yi
 orientation-tier ending (the Verdict and Next Up only: no Your Call, no recommendation),
 and a fresh session with nothing measured yields the forward pointer alone. An explicit
 `<n>` overrides which step it reports on; otherwise it uses the in-flight step, else the
-last checkpointed one.
+last checkpointed one. With nothing in flight, an explicit `<n>` naming a step that has not
+landed renders that step's pause, which is how `/plumbbob:verify` reaches the pause for a
+diff built outside `/plumbbob:build`.
 
 Two endings no session state can tell apart from those take a flag, so every tier's ending
 is emitted here rather than faked in a skill's prose: `--plan` renders the plan-pause
