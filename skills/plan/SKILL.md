@@ -85,7 +85,9 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
    Every step needs a **done-when** `/plumbbob:verify` can check and a **seam** (the exact
    paths it touches). Later steps may be fuzzier than the first (that's fine); they get
    sharpened just-in-time when you reach them with `/plumbbob:step`. Keep each small enough to
-   verify in one review pass.
+   verify in one review pass. Number them in the sequence you expect to build them and
+   leave `## Build order` alone: it is for later, when a refine appends a step that has to
+   land before an existing one (`plumbbob order`).
 
    **The title *is* the commit subject; author it as one**
    ([D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68)): write each

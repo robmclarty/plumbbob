@@ -2,7 +2,7 @@
 name: harvest
 description: "Triage the park list at a step boundary: propose one class (blocker/tangent/pivot) per parked item, write only after the human confirms each, record under ## Harvest, and fold a confirmed blocker into intent."
 disable-model-invocation: true
-allowed-tools: Read, Edit, Bash(plumbbob status:*)
+allowed-tools: Read, Edit, Bash(plumbbob status:*), Bash(plumbbob order:*)
 ---
 
 # PlumbBob: harvest the park list
@@ -45,5 +45,8 @@ one line of reasoning, then **wait for the human to confirm or override**. Write
 - A confirmed **blocker** also folds its decision into `intent.md`, slugged at birth
   like any Decision, anchored the same way
   (`- <a id="d5"></a>**D5 (retry-cap)**: <the call>, *because* <why>`), never a bare `D5`.
+  A blocker that becomes a new step takes the next free number under `## Steps` and,
+  when it has to land before an existing undone step, its place in the sequence through
+  `plumbbob order 7 8 5` (the `## Build order` line), never by renumbering.
 - Never reclassify or resolve an item the human hasn't confirmed, and default every
   uncertain item to **tangent**, never to blocker.

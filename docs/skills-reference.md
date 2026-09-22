@@ -1,6 +1,6 @@
 # Skills reference
 
-The fourteen skills are the surface you actually drive; the CLI underneath
+The fifteen skills are the surface you actually drive; the CLI underneath
 ([`cli-reference.md`](cli-reference.md)) is what they shell out to. This page is the
 reference for that surface: what each skill is for, what it takes, what it reads and
 writes, and when to reach for it.
@@ -28,6 +28,7 @@ Three ground rules apply to all of them:
 | [`/plumbbob:build`](#build) | `[step-number \| step-range] [--auto]` | implement the next planned step, then verify it to the pause |
 | [`/plumbbob:verify`](#verify) | none | the tick: check → self-review → validate → **PAUSE** → checkpoint |
 | [`/plumbbob:park`](#park) | `[idea]` | capture a mid-build idea without chasing it |
+| [`/plumbbob:order`](#order) | `[steps in sequence]` | set the build order: the undone steps in the sequence to build them |
 | [`/plumbbob:status`](#status) | none | orient: where you are, the next step, the next move |
 | [`/plumbbob:harvest`](#harvest) | none | triage parked ideas at a boundary (blocker / tangent / pivot) |
 | [`/plumbbob:finish`](#finish) | none | write the report, make the final commit, clear for a fresh goal |
@@ -70,7 +71,9 @@ Revises the **next undone step** just-in-time: the steps were all planned up fro
 this is a sharpening tool, not where steps are born. Fired bare, it re-reads what the
 build has already taught you and syncs the step's done-when and seam to reality; given
 `<what-changed>`, it makes that directed revision (tighten, re-cut, split, or add a step).
-One step at a time, written back into `## Steps` only on your approval. It can also sharpen
+One step at a time, written back into `## Steps` only on your approval. An added step that
+has to land before an existing one is placed by sequence (`plumbbob order`, the
+[build order](#order)), never by renumbering. It can also sharpen
 that step's [harness bindings](#the-harness-slots) just-in-time when the agents it wants
 have drifted. Most steps need nothing; skip straight to `/plumbbob:build`.
 
@@ -112,11 +115,25 @@ a quick OK, then appends it via `plumbbob park`, never by editing the file itsel
 relays the verb's two lines: the capture, and the pointer back at the step in flight. The
 step stays protected; the list gets triaged later by `/plumbbob:harvest`.
 
+### order
+
+A step keeps its number for life, so once `/plumbbob:step` or `/plumbbob:refine` appends a
+step that has to land before an existing one, the sequence to build them stops being the
+numbering (`4, 7, 8, 5, 10, 6`) and used to live in your head. Give it the full sequence
+or a relative one ("7 and 8 before 5"); it composes every undone step in order, shows it
+for a quick OK, then writes it by shelling `plumbbob order`, never by editing `intent.md`.
+The `## Build order` line it writes is what the dashboard's `← next`, a bare
+`/plumbbob:build`, `checkpoint`'s fallback, and the card's Next Up all follow, and the card
+reminds you of the next five beneath Next Up whenever the sequence departs from the
+numbering. `--reset` drops the line. Step, refine, and harvest shell the same verb when
+they append a step that has to land early, so you rarely need to fire this yourself.
+
 ### status
 
 The orientation move: a thin trigger for `plumbbob status`. Prints the dashboard (title,
 phase, the step list with the next step's done-when, seam, and advisory model
-recommendation, last checkpoint, parked and open-question counts) and names the single
+recommendation, last checkpoint, the build order when it departs from the numbering,
+`parked 2 of 7 open`, and the open-question count) and names the single
 next move. The model line is the plan's suggestion of the smallest model that can carry
 the next step: switch before building, or ignore it; guidance, never a gate. Read-only;
 fire it any time you lose the thread.
@@ -127,7 +144,9 @@ Triage, at a **boundary** only, never mid-step. Walks the park list and proposes
 one class per item: **blocker** (the plan was wrong; fold into intent and handle now),
 **tangent** (different, not clearly better: the default; defer or kill), or **pivot
 signal** (the approach is wrong; stop and replan). You call each one; confirmed items are
-recorded under `## Harvest` and a confirmed blocker is folded into `intent.md`.
+recorded under `## Harvest` and a confirmed blocker is folded into `intent.md`, placed in
+the [build order](#order) with `plumbbob order` when it becomes a step that has to land
+early.
 
 ### finish
 

@@ -3,7 +3,7 @@ name: refine
 description: "Keep intent.md true: attack the plan for holes (append as Open questions) and refine or repair the Frame, Decisions, Constraints, and Steps to match reality. Usable at any point; you propose, the human approves."
 argument-hint: "[focus]"
 disable-model-invocation: true
-allowed-tools: Read, Edit, Bash(plumbbob status:*)
+allowed-tools: Read, Edit, Bash(plumbbob status:*), Bash(plumbbob order:*)
 ---
 
 # PlumbBob: refine the plan
@@ -51,7 +51,11 @@ is fine; refining is always available.
   load-bearing detail (file paths, module names) in `seam` and `done-when`,
   **never jammed into the title**; the checkpoint body pass then reconciles and lands
   that subject at the verify pause.
-  Show the before/after for each, and **write only what the human approves**.
+  Show the before/after for each, and **write only what the human approves**. A repair
+  that inserts a step, or moves one ahead of another, keeps every number where it is and
+  writes the sequence instead: shell `plumbbob order 7 8 5` with the undone steps in the
+  sequence to build them, and the `## Build order` line it writes is what every next-step
+  pick follows. Never renumber, and never edit that line by hand.
 
 ## The hard contracts
 

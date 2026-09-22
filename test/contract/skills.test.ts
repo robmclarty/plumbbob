@@ -90,6 +90,7 @@ const DRIVER_VERB: Record<string, string> = {
   'spike': 'spike',
   'recover': 'recover',
   'abandon': 'abandon',
+  'order': 'order',
 }
 
 describe('driver skills — the human fires the transition from the chat', () => {
@@ -588,3 +589,14 @@ describe('doctor — a headless-safe thin driver for `plumbbob doctor`', () => {
 // plumbbob-report and plumbbob-docs were folded into /plumbbob:finish — D9 (finish-no-gate) — and removed.
 // plumbbob-interrogate was renamed /plumbbob:refine and broadened (attack + repair);
 // report/docs do not survive.
+
+describe('the build order — step, refine, and harvest re-sequence through the verb, never by renumbering', () => {
+  for (const dir of ['step', 'refine', 'harvest'] as const) {
+    it(`${dir} grants and shells plumbbob order`, () => {
+      const { data, body } = parseSkill(dir)
+      expect(data['allowed-tools']).toMatch(/Bash\(plumbbob order/)
+      expect(body).toContain('plumbbob order')
+      expect(body).toContain('## Build order')
+    })
+  }
+})

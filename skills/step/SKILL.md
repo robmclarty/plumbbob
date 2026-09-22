@@ -3,7 +3,7 @@ name: step
 description: "Revise the next increment just-in-time: sharpen the next undone step against what's now true, or (with input) re-cut, split, or add a step. Empty input runs an automatic sharpen. One at a time; the human approves."
 argument-hint: "[what-changed]"
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob agent list:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob order:*), Bash(plumbbob agent list:*)
 ---
 
 # PlumbBob: revise the next step (the single-increment move)
@@ -48,7 +48,11 @@ grew, but its everyday job is to sharpen, not to invent.
    `**Scope:**` header; drop the scope and it falls back to that default → build slug →
    bare, and the type to `feat` ([D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68)). Aim for a soft
    ≤72 chars, no gate. Revise the existing step in place; only append when you are
-   genuinely adding an increment.
+   genuinely adding an increment. An appended step keeps the next free number for life;
+   when it has to land before an existing undone step, place it by sequence, never by
+   renumbering: shell `plumbbob order 7 8 5` with every undone step in the sequence to
+   build them, and the `## Build order` line it writes is what `status`, a bare
+   `/plumbbob:build`, and the card's Next Up then follow.
 4. **Revise the step's harness bindings if they drifted too** *(optional)*. If the
    build carries a `harness.json` (beside `intent.md`) and the reality that moved the
    step also changed which agents it wants, sharpen that step's slot bindings
@@ -63,7 +67,8 @@ grew, but its everyday job is to sharpen, not to invent.
 - **One verifiable increment.** Each step carries a done-when `/plumbbob:verify` can check
   and a seam small enough to review in one pass.
 - **Edit `## Steps` only**, in the standard format `status` and `build` parse: never
-  the Roadmap, never loose prose. A done step (`[x]`) is history; do not rewrite it.
+  the Roadmap, never loose prose. A done step (`[x]`) is history; do not rewrite it. The
+  `## Build order` line is `plumbbob order`'s to write, never yours to edit.
 - **Cite the plan's own numbers in the linked form.** A `D`/`C`/`Q` you write into a
   step's done-when, seam, or notes reads `[D4 (default-waves)](#d4)`; the slug travels
   with the number, and the link lands on the `<a id="d4">` anchor minted where the item

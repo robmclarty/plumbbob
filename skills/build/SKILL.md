@@ -24,7 +24,7 @@ the diff appeared. When you do run it, it reads the plan, writes the step, and
 carries straight through to the verify pause.
 
 Since `/plumbbob:plan` lays down the whole step list up front, the happy path is to run
-`/plumbbob:build` once per step until done: each run builds the next undone step and stops
+`/plumbbob:build` once per step until done: each run builds the next undone step in build order and stops
 at the pause for your approval. **Running `/plumbbob:build` again is itself the clock tick.**
 
 A model note: this skill **inherits the session model**; nothing pins or switches
@@ -38,7 +38,8 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    if you were given a range like `/plumbbob:build 1-3`, start at the first number and treat
    the second as the last step you approve and land yourself (see the range note under
    `--auto`). With no argument, don't resolve the next step yourself; the CLI does: bare `plumbbob build`
-   (step 2) enters the next undone step and refuses with a `/plumbbob:step` nudge when every
+   (step 2) enters the next undone step in build order (the `## Build order` line when the
+   plan has one, else the numbering) and refuses with a `/plumbbob:step` nudge when every
    step is checkpointed.
 2. **Enter the step.** Run `plumbbob build <n>`, or bare `plumbbob build` to enter the
    next undone step (records the in-flight STEP + SEAM so `/plumbbob:status` shows the step in
@@ -308,6 +309,10 @@ is never held back for approval. The human approved it by typing the range, and
 - **N is above the next undone step**: you are jumping over earlier planned work; note
   that you are skipping the steps before N, then proceed (the same latitude as a
   single-number jump like `/plumbbob:build 4`).
+- **The build order puts a number past the top ahead of the rest** (the order reads
+  `1, 4, 2, 3` under `/plumbbob:build 1-3`): a range names plan numbers, so the halt above
+  fires before step 4 and `plumbbob build` names step 1 as the last undone step in the
+  range. Build a re-sequenced stretch step by step, or grant `--auto`.
 
 ## The hard contracts
 
