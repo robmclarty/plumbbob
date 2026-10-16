@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Said once, said whole
 
-**Current step:** 1 — fix(status): count out-of-band commits the way handoff does
+**Current step:** 2 — fix(skills): put a blank line under each detail heading
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -23,7 +23,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 line above. Only ONE step is in flight; a step is done only after a checkpoint:
 check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
-- ☐ 1. fix(status): count out-of-band commits the way handoff does
+- ☑ 1. fix(status): count out-of-band commits the way handoff does
 - ☐ 2. fix(skills): put a blank line under each detail heading
 - ☐ 3. fix(handoff): put blank lines around the detail file's headings
 - ☐ 4. test(markdown): lint the detail file a pause leaves on disk
@@ -95,3 +95,5 @@ folder, so it rides the branch into the PR.)*
   Step 5 rewrites the `expand` move in all three Your Call blocks and step 7 places it at `handoff.ts:572` and `:599`, but `presentation.md:493` and `:599` (`planCallBlock`) are the plan pause's block, which the Frame and step 7's own note leave alone. Step 6's seam lacks `test/integration/eval-helpers.test.ts`, which runs in `pnpm check` and asserts the card's labels equal the decision tier's parts exactly (`:636`, `:694`), so a `**Now**` label fails it; and `src/verbs/__tests__/checkpoint.test.ts:249`, which pins the record's `**Readout**: Step 1 - First`, built by the same `readoutLabel`. Copies of the card's expand move at `site/index.html:175` and `site/docs.html:181` sit outside every seam. Closing it: drop the plan block from steps 5 and 7, add both tests to step 6 with a call on whether the record keeps naming its step, and widen step 8's seam to the `site/` copies.
 
   Settled in refine (Q4 (record-readout) and the repairs): the plan pause's block is out of steps 5 and 7; the record follows the card (D18 (record-follows-card)), and step 6 takes `checkpoint.test.ts`, `eval-helpers.test.ts`, `anatomy.ts`, and `docs/cli-reference.md`; step 8 takes the `site/` pages and the three docs that carry the expand prose.
+
+- 2026-10-16 — step 1 checkpointed · 4ab52c820 — fix(status): count out-of-band commits the way handoff does (5m)

@@ -144,6 +144,7 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    paragraph when the step needs explaining>
 
    ## 1 <the first highlight: one sentence, one move>
+
    <the full story: what moved, why, what was tried and dropped>
 
    ## 2 ...

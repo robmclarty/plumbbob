@@ -771,6 +771,7 @@ constraints  all honored
 <the lead: the outcome, one sentence or a short paragraph>
 
 ## 1 <the first highlight>
+
 <the full story: what moved, why, what was tried and discarded>
 
 ## 2 ...

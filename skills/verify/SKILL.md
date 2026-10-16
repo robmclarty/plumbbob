@@ -76,6 +76,7 @@ this skill verifies it the same way: **it reads the diff, not the author**
    short paragraph when the step needs explaining>
 
    ## 1 <the first highlight: one sentence, one move>
+
    <the full story: what moved, why, what was tried and dropped>
 
    ## 2 ...

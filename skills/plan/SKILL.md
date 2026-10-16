@@ -207,6 +207,7 @@ left, the findings first and the recommendation last:
 # Detail · Plan · <the title>
 
 ## 1 <the first hole: one sentence, naming where it sits in intent.md>
+
 <what it is, and what closing it would take>
 
 ## 2 ...
