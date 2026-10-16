@@ -396,7 +396,12 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   the ledger, *because* prevention where it's free (the `ask`-hook), detection where it isn't (the
   receipts line). The latch is a ratchet against completion-drive, not a cage against a forger: every
   forge stays loud (transcript, `status`, the eval tier), so `doctor` also reports the latch
-  live/dormant to make a missing turn hook visible. *Tagged in* `git.ts`, `orient.ts`, `status.ts`,
+  live/dormant to make a missing turn hook visible. (Revised 2026-10-16, closing issue #4: the count
+  is one quantity on both surfaces. `PLAN_COMMIT_MARKER` moved into `git.ts` and `status` now passes it
+  as `handoff` always did, so a hand-made plan commit that carries it drops out of the receipts line
+  as well as the Verdict. Two mechanisms keep plumbbob's own commits out of the count: a commit any
+  plumbbob verb makes is recorded in the ledger and starts the range, and the marker drops a hand-made
+  plan commit.) *Tagged in* `git.ts`, `orient.ts`, `status.ts`,
   `doctor.ts`, `hooks/pre-bash-commit.sh`.
 - <a id="d67"></a>**D67 (auto-not-a-grant): Self-approval is human-typed only; the standing settings `auto` is retired.**
   The latch no longer honors an `auto` in a settings file: the one row of [**D64 (approval-latch)**](#d64)'s matrix that

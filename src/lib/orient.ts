@@ -58,7 +58,10 @@ export type Orientation = {
   // Commits on HEAD since the last checkpoint that landed outside plumbbob's
   // checkpoints ledger (the per-build file recording baseline, plan, and step
   // SHAs): surfaced as one neutral reconciliation line, never blocked; the
-  // human commits freely. 0 renders nothing.
+  // human commits freely. Two mechanisms keep plumbbob's own commits out: a
+  // commit any plumbbob verb makes is recorded in the ledger and starts the
+  // range, and a plan commit made by hand carries the `plumbbob plan` body
+  // marker, which drops it from the count. 0 renders nothing.
   readonly outOfBand: number
 }
 
@@ -76,11 +79,13 @@ export type OrientInput = {
   // null when the run carried no explicit ask. The dashboard repoints at it so
   // the injected state and the human's typed step never disagree.
   readonly requested: number | null
-  // The out-of-band commit count: commits since the last checkpoint's SHA that
-  // the ledger didn't record. Only `status` can measure it (it needs git);
-  // orient stays pure/fs-free, so the caller computes it and passes it in. 0
-  // when there is no checkpoint to reconcile against, or the tree is clean at
-  // the last checkpoint.
+  // The out-of-band commit count: commits since the last ledger SHA that no
+  // plumbbob verb recorded, less the hand-made plan commits that carry the
+  // `plumbbob plan` body marker. Only a caller with git can measure it
+  // (`status` and `handoff` both do, from one marker); orient stays
+  // pure/fs-free, so the caller computes it and passes it in. 0 when there is
+  // no checkpoint to reconcile against, or the tree is clean at the last
+  // checkpoint.
   readonly outOfBand: number
 }
 
@@ -1237,7 +1242,10 @@ export function formatOrientation(o: Orientation): string {
 
   // A neutral reconciliation note, only when there is something to reconcile:
   // commits landed since the last checkpoint that plumbbob's ledger didn't
-  // record. Informational: the human commits freely, so this never gates.
+  // record. A commit a plumbbob verb makes starts the range, and a hand-made
+  // plan commit drops out on its `plumbbob plan` body marker, so the count is
+  // the same one `handoff` folds into its Verdict. Informational: the human
+  // commits freely, so this never gates.
   const receipts =
     o.outOfBand > 0
       ? [`${o.outOfBand} commit${o.outOfBand === 1 ? '' : 's'} since the last checkpoint landed outside plumbbob's ledger.`]

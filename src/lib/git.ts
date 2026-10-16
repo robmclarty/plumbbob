@@ -75,17 +75,30 @@ export function isDirty(root: string): boolean {
 }
 
 /**
+ * The body line that marks a plan commit made by hand (a `chore(plan)`
+ * harvest). A harvest lands between nearly every step, so counting it as
+ * out-of-band would trip the advisory on routine housekeeping and stop meaning
+ * anything within three steps. `status` and `handoff` both pass it to
+ * `commitsSince`, which is what keeps the two counts one quantity.
+ */
+export const PLAN_COMMIT_MARKER = '^plumbbob plan$'
+
+/**
  * The number of commits on HEAD not reachable from `sha`: `git rev-list
  * --count --first-parent <sha>..HEAD`.
  *
- * `status` reads this for its receipts line: one neutral note when commits
- * landed since the last checkpoint outside plumbbob's ledger (out-of-band
- * commits are surfaced, never blocked). `--first-parent` keeps the count on
- * the branch's own line: merging upstream reads as the one merge commit, not
- * the dozens it carried; those didn't land "outside the ledger" in any sense
- * the receipt should nag about. `excluding` is a commit-message pattern whose
- * matches are left out of the count, which is how a caller drops plumbbob's own
- * commits from a tally of what landed around them.
+ * `status` and `handoff` both read this for their out-of-band count: one
+ * neutral note when commits landed since the last checkpoint outside
+ * plumbbob's ledger (out-of-band commits are surfaced, never blocked). Two
+ * mechanisms keep plumbbob's own commits out of that count. A commit any
+ * plumbbob verb makes is recorded in the ledger and becomes the anchor, so the
+ * range starts after it. A plan commit made by hand carries
+ * `PLAN_COMMIT_MARKER` on a line of its body, and both callers pass it as
+ * `excluding` so the range drops it. `--first-parent` keeps the count on the
+ * branch's own line: merging upstream reads as the one merge commit, not the
+ * dozens it carried; those didn't land "outside the ledger" in any sense the
+ * receipt should nag about. `excluding` is a commit-message pattern whose
+ * matches are left out of the count.
  *
  * Best-effort and never throws: 0 when the range is empty, `sha` is unknown to
  * the repo, or HEAD is unborn: the count is informational (the human commits

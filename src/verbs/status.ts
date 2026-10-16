@@ -7,7 +7,7 @@
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { commitsSince, findRepoRoot } from '../lib/git.ts'
+import { PLAN_COMMIT_MARKER, commitsSince, findRepoRoot } from '../lib/git.ts'
 import {
   SLOTS,
   type HarnessBindings,
@@ -103,7 +103,7 @@ export function status(cwd: string, args: ReadonlyArray<string> = []): number {
     inFlight: /^\d+$/.test(inFlightRaw) ? Number(inFlightRaw) : null,
     spiking: inSpike(root, slug),
     requested: parseRequestedStep(invoked),
-    outOfBand: anchor === null ? 0 : commitsSince(root, anchor),
+    outOfBand: anchor === null ? 0 : commitsSince(root, anchor, PLAN_COMMIT_MARKER),
   })
   const lines = [formatOrientation(orientation), ...harnessSection(root, slug)]
   process.stdout.write(`${lines.join('\n')}\n`)

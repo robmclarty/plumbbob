@@ -221,6 +221,10 @@ It never rewrites pushed history: no `push`, no `rebase`, no `--amend`. That's
 machine-enforced: `rules/additive-git-only.yml` fails the build if a history-rewriting git
 token appears in the source at all, and `resetHard` is importable by exactly one file.
 
+A plan commit you make by hand declares itself with a `plumbbob plan` line in its body, and
+`status` and `handoff` both leave such a commit out of the count of commits that landed
+outside the ledger ([D66 (oob-commits-surfaced)](decisions.md#d66)).
+
 ## Removing everything
 
 ```sh

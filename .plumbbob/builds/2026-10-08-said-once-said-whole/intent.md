@@ -40,6 +40,20 @@ model relays ─► Stop ─► plumbbob relay: did the turn close on RELAY?    
 
 **The order is load-bearing.** Wave 1 is bug fixes with no design in them, and any of its steps could ship alone. Wave 2 lands before the hook because it changes what a question turn ends on: a check written against today's rule would enforce the repetition #6 removes, and then need rewriting. Wave 3 measures with Wave 2 in place, so the numbers describe the turn the hook will actually check. Wave 4 opens on a spike because three of the proposal's assumptions about Stop are unverified: whether the final text is readable at Stop, whether Stop accepts `additionalContext` at all, and whether `TURN` has ticked by then under `claude -p`. The numbering is the build order, so `## Build order` stays empty.
 
+## Build runs
+
+How to drive the build with as few stops as possible (suggested 2026-10-16). Three stops are real decisions: at step 5, after step 12, and after step 16. A range self-approves through its last step, so the only pauses are the two single-step builds and the end of each range. Each run takes the strongest model any step inside it recommends.
+
+| Run | Model | Where it stops, and why |
+| --- | ----- | ----------------------- |
+| `/plumbbob:build 1-4` | Sonnet | After step 4. Wave 1 is bug fixes with no design in them, and step 1's commit closes #4. The stop is only because step 5 needs another model and your call. |
+| `/plumbbob:build 5` | Fable | Pauses on the card. **Decision:** the `**Now**` label, how the reminder renders, and the `expand` move's new wording. Steps 6 to 9 all render what this settles. |
+| `/plumbbob:build 6-11` | Opus | After step 11. These steps carry out step 5's spec, close #6 at step 9, then add the c10 contract and run the sweep. Nothing downstream branches on the sweep's numbers. |
+| `/plumbbob:build 12` | Opus | Pauses on the card. **Decision:** the spike's evidence can reopen [D16 (block-once)](#d16), move the final-text read to a stdin field, or break [D13 (gate-on-the-turn)](#d13) under `claude -p`. Be at the keyboard: question (3) asks what you see when a block lands, and only you can answer it. |
+| `/plumbbob:build 13-16` | Fable | After step 16, then `/plumbbob:finish`. Records step 12's decision, builds `RELAY` and the Stop check, runs the A/B, and closes #5 at step 16. **Decision:** a block on an ending that was already whole reopens [D16 (block-once)](#d16). |
+
+Two optional splits. `6-11` includes the ten-contract latched sweep, a full set of real `claude -p` sessions that takes a while and costs money, so run `6-10` and then `11` to check that c10 reads turns correctly before paying for it. `13-16` takes Fable only because step 13 writes the decision entry, so run `13` on Fable and then `14-16` on Opus if you'd rather not pay Fable rates for the mechanical steps.
+
 ## Decisions
 
 - <a id="d1"></a>**D1 (one-marker)**: `PLAN_COMMIT_MARKER` moves to `src/lib/git.ts` beside `commitsSince`, exported, and `status` passes it, *because* both surfaces have to measure one quantity, and a module-local const is why they could not.

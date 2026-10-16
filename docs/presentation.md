@@ -381,8 +381,9 @@ strayed`, so a stray earns the same rung whichever command rendered it.
 That last rung counts only commits that are not plumbbob's own. A
 `chore(plan)` harvest lands between nearly every step, and an advisory that
 trips on routine housekeeping stops meaning anything within three steps, so
-handoff excludes commits carrying the `plumbbob plan` body marker from the
-count.
+both surfaces, handoff's Verdict and the receipts line on `status`, drop the
+commits carrying the `plumbbob plan` body marker from the count. They share the
+marker, so the same history gives the same number on either.
 
 The Verdict names one component, the hunt-saver; the readout above it holds
 the rest. A fresh session with nothing measured renders no Verdict at all.

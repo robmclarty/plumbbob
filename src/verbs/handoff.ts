@@ -32,7 +32,7 @@
 
 import { readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
-import { type NumstatEntry, commitsSince, diffNumstat, diffPatch, findRepoRoot } from '../lib/git.ts'
+import { type NumstatEntry, PLAN_COMMIT_MARKER, commitsSince, diffNumstat, diffPatch, findRepoRoot } from '../lib/git.ts'
 import { blocks } from '../lib/notice.ts'
 import { isArtifactPath, parseStepSeam } from '../lib/intent.ts'
 import {
@@ -86,12 +86,6 @@ import {
 // fewer the patch rides the turn; at 21 it stays in the working tree behind
 // the counted diff row.
 const INLINE_DIFF_MAX = 20
-
-// plumbbob's own plan commits carry this marker on a line of their body. A
-// `chore(plan)` harvest lands between nearly every step, so counting them as
-// out-of-band would trip the advisory rung on routine housekeeping and stop
-// meaning anything within three steps.
-const PLAN_COMMIT_MARKER = '^plumbbob plan$'
 
 // The seam rule, and the one tier that still has a seam to mark: at the plan
 // pause the model presents the framed plan above the relay, so the rule keeps

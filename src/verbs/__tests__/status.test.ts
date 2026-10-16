@@ -2,8 +2,9 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { status } from '../status.ts'
+import { handoff } from '../handoff.ts'
 import { start } from '../start.ts'
-import { buildDir, checkpointsPath, sidecarDir } from '../../lib/sidecar.ts'
+import { buildDir, checkpointsPath, detailPath, sidecarDir, stepPath } from '../../lib/sidecar.ts'
 import { commit, headSha, stageAll } from '../../lib/git.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
@@ -157,6 +158,27 @@ describe('status — out-of-band receipts — D66 (oob-commits-surfaced)', () =>
     const { code, stdout } = captureIo(() => status(dir))
     expect(code).toBe(0)
     expect(stdout).toContain('2 commits since the last checkpoint landed outside plumbbob\'s ledger.')
+  })
+
+  it('leaves a hand-made plan commit out of the count, the way handoff does', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Plan Marker']))
+    writeFileSync(checkpointsPath(dir), `step 1 ${headSha(dir)}\n`)
+    // One commit declaring itself a plan commit in its body, one that does not:
+    // the pair a harvest and a human's own commit leave behind.
+    for (const [name, body] of [['plan', 'plumbbob plan'], ['plain', undefined]] as const) {
+      writeFileSync(join(dir, `${name}.txt`), `${name}\n`)
+      stageAll(dir)
+      commit(dir, `chore: ${name}`, body)
+    }
+    const { stdout } = captureIo(() => status(dir))
+    expect(stdout).toContain("1 commit since the last checkpoint landed outside plumbbob's ledger.")
+
+    // The Verdict counts that same one commit: both surfaces drop the marker.
+    writeFileSync(stepPath(dir), '1\n')
+    writeFileSync(detailPath(dir), '# Detail · Step 1 · Plan Marker\n\n## Summary\n\nDone.\n')
+    const { stdout: pause } = captureIo(() => handoff(dir, []))
+    expect(pause).toContain('(1 commit outside the ledger)')
   })
 
   it('stays quiet when HEAD is the last checkpoint (a clean ledger)', async () => {
