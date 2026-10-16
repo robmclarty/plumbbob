@@ -1147,6 +1147,46 @@ export function parseSummary(detail: string): Summary | null {
   return { lead, highlights }
 }
 
+/**
+ * `.plumbbob/detail.md` with a blank line around every heading, and everything
+ * else as written.
+ *
+ * A model copying the detail template can run a heading straight into its body
+ * or its predecessor, and markdownlint's MD022 fails that file wherever
+ * `.plumbbob/` is linted, which turns a downstream checkpoint red. Heading lines
+ * inside a fenced block are content, not headings, so a fence is left whole.
+ * Pure and idempotent: text that already has its blank lines comes back byte for
+ * byte, so a caller can compare the result to the input to learn whether
+ * anything needed fixing.
+ */
+export function normalizeDetailHeadings(detail: string): string {
+  const out: string[] = []
+  let fence: { readonly char: string; readonly length: number } | null = null
+  let afterHeading = false
+  for (const line of detail.split('\n')) {
+    if (fence !== null) {
+      const close = /^ {0,3}(`{3,}|~{3,})\s*$/.exec(line)?.[1]
+      if (close !== undefined && close.startsWith(fence.char) && close.length >= fence.length) {
+        fence = null
+      }
+      out.push(line)
+      continue
+    }
+    const heading = /^ {0,3}#{1,6}(\s|$)/.test(line)
+    const prior = out[out.length - 1]
+    if ((heading || afterHeading) && line.trim() !== '' && prior !== undefined && prior.trim() !== '') {
+      out.push('')
+    }
+    const open = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1]
+    if (open !== undefined) {
+      fence = { char: open.charAt(0), length: open.length }
+    }
+    out.push(line)
+    afterHeading = heading
+  }
+  return out.join('\n')
+}
+
 /** One numbered detail section: the handle, its title (the highlight), and the full story beneath it. */
 export type DetailSection = { readonly n: number; readonly title: string; readonly body: string }
 

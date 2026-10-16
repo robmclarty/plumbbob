@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Said once, said whole
 
-**Current step:** 2 — fix(skills): put a blank line under each detail heading
+**Current step:** 3 — fix(handoff): put blank lines around the detail file's headings
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -24,7 +24,7 @@ line above. Only ONE step is in flight; a step is done only after a checkpoint:
 check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
 - ☑ 1. fix(status): count out-of-band commits the way handoff does
-- ☐ 2. fix(skills): put a blank line under each detail heading
+- ☑ 2. fix(skills): put a blank line under each detail heading
 - ☐ 3. fix(handoff): put blank lines around the detail file's headings
 - ☐ 4. test(markdown): lint the detail file a pause leaves on disk
 - ☐ 5. docs(presentation): show a pause once and name the step it is on
@@ -45,6 +45,8 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 > Mid-step, every new problem / idea / "ooh what if" lands HERE, untouched, and you
 > go straight back to the step. Acting the instant an idea arrives is the disease.
 > Capture is one line (`/plumbbob:park` composes it). Harvest happens only at the boundary.
+
+- [ ] docs/cli-reference.md:25 still calls handoff read-only; step 3 makes a pause rewrite .plumbbob/detail.md, so fix the row in step 7, whose seam holds the file (docs)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -97,3 +99,4 @@ folder, so it rides the branch into the PR.)*
   Settled in refine (Q4 (record-readout) and the repairs): the plan pause's block is out of steps 5 and 7; the record follows the card (D18 (record-follows-card)), and step 6 takes `checkpoint.test.ts`, `eval-helpers.test.ts`, `anatomy.ts`, and `docs/cli-reference.md`; step 8 takes the `site/` pages and the three docs that carry the expand prose.
 
 - 2026-10-16 — step 1 checkpointed · 4ab52c820 — fix(status): count out-of-band commits the way handoff does (5m)
+- 2026-10-16 — step 2 checkpointed · 31f533529 — fix(skills): put a blank line under each detail heading (4m)

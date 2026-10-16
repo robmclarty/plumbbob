@@ -1,5 +1,6 @@
 // `plumbbob handoff`: emit the CLI-owned ending of a turn as one contiguous
-// block (docs/presentation.md). Read-only, no state change. Every part outside
+// block (docs/presentation.md). Changes no state but one: at a pause it leaves
+// the detail file with a blank line around each heading. Every part outside
 // the readout fence is a bold label, a colon, and text that wraps, one blank
 // line between blocks and no fence but the readout's own. It derives the moment
 // from the session: a step in flight ⇒ the decision-tier ending (the labeled
@@ -30,7 +31,7 @@
 // closed at the boundary) finds nothing in flight and points forward, with no
 // Verdict either way, since nothing landed.
 
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { type NumstatEntry, PLAN_COMMIT_MARKER, commitsSince, diffNumstat, diffPatch, findRepoRoot } from '../lib/git.ts'
 import { blocks } from '../lib/notice.ts'
@@ -64,6 +65,7 @@ import {
   diffRowValue,
   foldVerdict,
   lastLedgerSha,
+  normalizeDetailHeadings,
   parkedPhrase,
   parseBuildOrder,
   parseConstraintCount,
@@ -130,7 +132,7 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   const steps = parseOrderedSteps(intent)
   const buildLog = readOr(buildLogPath(root, slug))
   const inFlight = readMarker(stepPath(root, slug))
-  const detail = readOr(detailPath(root))
+  const rawDetail = readOr(detailPath(root))
   // Where a pointer sends the reader to read the step itself: the intent file
   // as the human would type it, relative to the repo root.
   const where = relative(root, intentPath(root, slug))
@@ -140,6 +142,7 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     // renders; the pointer and the moves both aim at the first undone step. A
     // decision turn still ends on the model's recommendation when it wrote one.
     const first = steps.find((s) => !s.done)
+    const detail = settleDetail(root, rawDetail)
     const plan = [
       SEAM_RULE,
       nextUpBlock(first, steps.length, where, nextUpNote(intent, buildLog, null)),
@@ -194,6 +197,7 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   // with one blank line between, and the only fence the readout's own (plus the
   // inline diff when the change is small enough). It opens on the Summary the
   // model wrote into the detail file, so there is no seam left to rule off.
+  const detail = settleDetail(root, rawDetail)
   const { rows, work, summary, checkGreen } = measured(root, slug, intent, detail, current)
   const { ladder, worst } = foldVerdict(rows, accruedStats(root, slug, current))
   const verdict = verdictLine(ladder, worst)
@@ -222,6 +226,27 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     yourCallBlock(current, checkGreen),
   )
   return emit(withRecommendation(parts, parseRecommendation(detail)))
+}
+
+/**
+ * The detail file's text with a blank line around each heading, written back to
+ * disk when that changed anything, so the file the gate lints before
+ * `checkpoint` clears it is clean whatever the model typed.
+ *
+ * The render goes out on the normalized text either way. A failed write costs
+ * only the lint guard: stdout and the exit code are the same as if it had
+ * landed.
+ */
+function settleDetail(root: string, raw: string): string {
+  const clean = normalizeDetailHeadings(raw)
+  if (clean !== raw) {
+    try {
+      writeFileSync(detailPath(root), clean)
+    } catch {
+      // Read-only tree or a vanished directory: the pause still renders.
+    }
+  }
+  return clean
 }
 
 /**

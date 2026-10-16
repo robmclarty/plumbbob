@@ -5,6 +5,7 @@ import {
   formatOrientation,
   lastLedgerSha,
   markStepDone,
+  normalizeDetailHeadings,
   orderSteps,
   orient,
   parkedPhrase,
@@ -604,6 +605,40 @@ describe('parseDetailStep', () => {
     expect(parseDetailStep('## Summary\n\nStep 2 is done.')).toBe(null)
     expect(parseDetailStep('notes\n# Detail · Step 2 · Late header')).toBe(null)
     expect(parseDetailStep('')).toBe(null)
+  })
+})
+
+describe('normalizeDetailHeadings', () => {
+  it('puts a blank line between a heading and the body that runs into it, and before the next heading', () => {
+    const tight = '## 1 First\nThe story.\n## 2 Second\nMore.\n## Recommendation\nApprove it.\n'
+    expect(normalizeDetailHeadings(tight)).toBe(
+      '## 1 First\n\nThe story.\n\n## 2 Second\n\nMore.\n\n## Recommendation\n\nApprove it.\n',
+    )
+  })
+
+  it('leaves a detail that already has its blank lines exactly as it was', () => {
+    const clean = '# Detail · Step 2 · Title\n\n── recap · step 2 of 3 ──\ndone-when    met\n\n## Summary\n\nDone.\n\n## 1 First\n\nThe story.\n'
+    expect(normalizeDetailHeadings(clean)).toBe(clean)
+    expect(normalizeDetailHeadings(normalizeDetailHeadings('## 1 First\nThe story.'))).toBe('## 1 First\n\nThe story.')
+    expect(normalizeDetailHeadings('')).toBe('')
+  })
+
+  it('leaves a heading-shaped line inside a fenced block alone', () => {
+    const fenced = '## 1 First\n\n```markdown\n## 2 not a heading\ntext\n```\nAfter the fence.\n'
+    expect(normalizeDetailHeadings(fenced)).toBe(fenced)
+    const tilde = '~~~\n# comment\nbody\n~~~\n'
+    expect(normalizeDetailHeadings(tilde)).toBe(tilde)
+  })
+
+  it('keeps a longer fence open past a shorter fence line, and gaps a fence that opens right under a heading', () => {
+    const nested = '````\n```\n## inside\nbody\n```\n````\n'
+    expect(normalizeDetailHeadings(nested)).toBe(nested)
+    expect(normalizeDetailHeadings('## 1 First\n```\ncode\n```\n')).toBe('## 1 First\n\n```\ncode\n```\n')
+  })
+
+  it('does not take a hash that is not a heading for one', () => {
+    const prose = 'Use #hashtags freely.\n#nospace\nindented code:\n\n    # not a heading\n'
+    expect(normalizeDetailHeadings(prose)).toBe(prose)
   })
 })
 

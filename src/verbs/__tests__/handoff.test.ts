@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { handoff } from '../handoff.ts'
@@ -710,6 +710,59 @@ describe('handoff', () => {
     commitWith(dir, 'other.txt', 'fix: something the human did', 'no marker here')
     const { stdout: noisy } = captureIo(() => handoff(dir, []))
     expect(noisy).toContain('**Verdict**: ◐ A hair off (1 commit outside the ledger)')
+  })
+
+  it('leaves the detail file with a blank line around each heading after a step pause', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    const tight = `${GREEN_RECAP}## Summary\nThe limiter runs first.\n## 1 It limits.\nThe full story.\n## Recommendation\nApprove it. The gate is green.\n`
+    writeFileSync(detailPath(dir), tight)
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(readFileSync(detailPath(dir), 'utf8')).toBe(
+      `${GREEN_RECAP}\n## Summary\n\nThe limiter runs first.\n\n## 1 It limits.\n\nThe full story.\n\n## Recommendation\n\nApprove it. The gate is green.\n`,
+    )
+    // The render reads the normalized text: the lead and the recommendation still come through.
+    expect(stdout).toContain('**Summary**: The limiter runs first.')
+    expect(stdout).toContain('**Recommendation**: Approve it. The gate is green.')
+  })
+
+  it('leaves the detail file with a blank line around each heading after a plan pause', async () => {
+    const dir = await started(INTENT.replace('1. [x] First', '1. [ ] First'))
+    writeFileSync(detailPath(dir), '# Detail · Plan · Handoff test\n\n## 1 A hole.\nWhat closing it takes.\n## Recommendation\nSharpen it.\n')
+    const { code, stdout } = captureIo(() => handoff(dir, ['--plan']))
+    expect(code).toBe(0)
+    expect(readFileSync(detailPath(dir), 'utf8')).toBe(
+      '# Detail · Plan · Handoff test\n\n## 1 A hole.\n\nWhat closing it takes.\n\n## Recommendation\n\nSharpen it.\n',
+    )
+    expect(stdout).toContain('**Recommendation**: Sharpen it.')
+  })
+
+  it('writes nothing when the detail file is already clean or absent', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    const { code } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(() => readFileSync(detailPath(dir), 'utf8')).toThrow() // no file made out of nothing
+    const clean = `${GREEN_RECAP}${SUMMARY}\n## Recommendation\n\nApprove it.\n`
+    writeFileSync(detailPath(dir), clean)
+    captureIo(() => handoff(dir, []))
+    expect(readFileSync(detailPath(dir), 'utf8')).toBe(clean)
+  })
+
+  it.skipIf(process.getuid?.() === 0)('renders the same pause when the normalized detail cannot be written back', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    const tight = `${GREEN_RECAP}## Summary\nThe limiter runs first.\n## Recommendation\nApprove it.\n`
+    const render = (): { code: number; stdout: string } => captureIo(() => handoff(dir, []))
+    writeFileSync(detailPath(dir), tight)
+    chmodSync(detailPath(dir), 0o444)
+    const locked = render()
+    chmodSync(detailPath(dir), 0o644)
+    writeFileSync(detailPath(dir), tight)
+    const open = render()
+    expect(locked.code).toBe(0)
+    expect(locked).toEqual(open)
   })
 
   it('unwraps a hard-wrapped recommendation so it flows at the renderer width', async () => {
