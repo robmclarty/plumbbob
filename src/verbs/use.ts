@@ -12,7 +12,7 @@
 import { existsSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { activeBuild, hasSession, intentPath, listBuilds, setActiveBuild, stepPath } from '../lib/sidecar.ts'
-import { advisory, ending, notice, transition } from '../lib/notice.ts'
+import { advisory, ending, notice, printEnding, transition } from '../lib/notice.ts'
 import { driverPointer } from './handoff.ts'
 
 /**
@@ -50,8 +50,10 @@ export function use(cwd: string, args: ReadonlyArray<string>): number {
   // The lead line, then the advisory it qualifies, then the pointer into the
   // build just switched to: one fixed order for every ending, so the relay never
   // has to guess which line leads.
-  process.stdout.write(
-    ending({
+  printEnding(root, {
+    tier: 'driver',
+    render: 'use',
+    text: ending({
       lead: transition({
         label: 'Active build',
         fact: target,
@@ -69,6 +71,6 @@ export function use(cwd: string, args: ReadonlyArray<string>): number {
             ],
       pointer: driverPointer(root, target),
     }),
-  )
+  })
   return 0
 }

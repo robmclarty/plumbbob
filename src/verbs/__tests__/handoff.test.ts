@@ -1,18 +1,22 @@
 import { execFileSync } from 'node:child_process'
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { abandon } from '../abandon.ts'
 import { checkpoint } from '../checkpoint.ts'
 import { handoff } from '../handoff.ts'
+import { park } from '../park.ts'
 import { revert } from '../revert.ts'
 import { start } from '../start.ts'
 import {
+  activeBuild,
   buildLogPath,
   checkpointsPath,
   detailPath,
   intentPath,
   pausePath,
+  readRelay,
+  relayPath,
   seamPath,
   spikePath,
   statsPath,
@@ -1096,5 +1100,147 @@ describe('handoff — a pause shown once', () => {
     expect(first.code).toBe(0)
     expect(isCard(first.stdout)).toBe(true)
     expect(render(dir)).toEqual(first) // never the reminder, never an error
+  })
+})
+
+/** Tick the turn ledger to `turn`, the way the UserPromptSubmit hook would. */
+function atTurn(dir: string, turn: number): void {
+  writeFileSync(turnPath(dir), `${turn}\n`)
+}
+
+describe('handoff — the ending it records for the relay check', () => {
+  it('records the step card with its tier, its render, the command that reprints it, the turn, and the text it printed', async () => {
+    const dir = await paused()
+    atTurn(dir, 7)
+    const { stdout } = render(dir)
+    expect(isCard(stdout)).toBe(true)
+    expect(readRelay(dir)).toEqual({
+      turn: 7,
+      tier: 'decision',
+      render: 'card',
+      command: 'plumbbob handoff --full',
+      text: stdout,
+    })
+  })
+
+  it('records the reminder as a decision ending that plain handoff reprints', async () => {
+    const dir = await paused()
+    atTurn(dir, 7)
+    render(dir)
+    atTurn(dir, 8) // the human asked a question: a new turn at the same pause
+    expect(render(dir).stdout).toBe(REMINDER)
+    expect(readRelay(dir)).toEqual({
+      turn: 8,
+      tier: 'decision',
+      render: 'reminder',
+      command: 'plumbbob handoff',
+      text: REMINDER,
+    })
+  })
+
+  it('carries the step number a verify pause was named by, so the retry lands on the same pause', async () => {
+    const dir = await paused()
+    writeFileSync(stepPath(dir), '') // a hand-built diff: nothing in flight, the step named instead
+    atTurn(dir, 3)
+    const card = render(dir, ['2'])
+    expect(readRelay(dir)).toMatchObject({ render: 'card', command: 'plumbbob handoff --full 2', text: card.stdout })
+    render(dir, ['2'])
+    expect(readRelay(dir)).toMatchObject({ render: 'reminder', command: 'plumbbob handoff 2', text: REMINDER })
+  })
+
+  it('carries a build named by flag, since the cursor may point at another', async () => {
+    const dir = await paused()
+    const slug = activeBuild(dir) ?? ''
+    atTurn(dir, 3)
+    render(dir, ['--build', slug])
+    expect(readRelay(dir)?.command).toBe(`plumbbob handoff --full --build ${slug}`)
+  })
+
+  it('records the plan card as a decision ending that --plan reprints', async () => {
+    const dir = await started()
+    atTurn(dir, 2)
+    const { stdout } = render(dir, ['--plan'])
+    expect(readRelay(dir)).toEqual({
+      turn: 2,
+      tier: 'decision',
+      render: 'plan',
+      command: 'plumbbob handoff --plan',
+      text: stdout,
+    })
+  })
+
+  it('records the boundary, the fresh pointer, and the driver pointer with no command, since none is a pause', async () => {
+    const dir = await started()
+    atTurn(dir, 4)
+    const pointer = render(dir).stdout
+    expect(readRelay(dir)).toEqual({ turn: 4, tier: 'orientation', render: 'pointer', text: pointer })
+    writeFileSync(checkpointsPath(dir), 'step 1 abc1234\n')
+    const boundary = render(dir).stdout
+    expect(boundary).toContain('**Verdict**')
+    expect(readRelay(dir)).toEqual({ turn: 4, tier: 'orientation', render: 'boundary', text: boundary })
+    const driver = render(dir, ['--driver']).stdout
+    expect(readRelay(dir)).toEqual({ turn: 4, tier: 'driver', render: 'driver', text: driver })
+  })
+
+  it('keeps the last ending a turn printed, so a park after the pause is what the turn is judged by', async () => {
+    const dir = await paused()
+    atTurn(dir, 5)
+    render(dir)
+    const parked = captureIo(() => park(dir, ['should the reminder name the check?']))
+    expect(parked.code).toBe(0)
+    expect(parked.stdout).toContain('**Parked**: should the reminder name the check?')
+    expect(readRelay(dir)).toEqual({ turn: 5, tier: 'driver', render: 'park', text: parked.stdout })
+  })
+
+  it('records a revert and an abandon as driver endings, each the text it printed', async () => {
+    for (const exit of ['revert', 'abandon'] as const) {
+      const dir = await paused()
+      atTurn(dir, 6)
+      render(dir)
+      const { code, stdout } = captureIo(() => (exit === 'revert' ? revert(dir, []) : abandon(dir, [])))
+      expect(code).toBe(0)
+      expect(readRelay(dir)).toEqual({ turn: 6, tier: 'driver', render: exit, text: stdout })
+    }
+  })
+
+  it('records nothing without a turn ledger, since there is no turn to check the ending against', async () => {
+    const dir = await paused()
+    expect(isCard(render(dir).stdout)).toBe(true)
+    expect(existsSync(relayPath(dir))).toBe(false)
+  })
+
+  it('prints the same ending and exits 0 when the record cannot be written', async () => {
+    const dir = await paused()
+    atTurn(dir, 9)
+    mkdirSync(relayPath(dir)) // a directory where the record goes: every write fails
+    const failed = render(dir)
+    expect(failed.code).toBe(0)
+    expect(isCard(failed.stdout)).toBe(true)
+    rmSync(relayPath(dir), { recursive: true })
+    const recorded = render(dir, ['--full'])
+    expect(recorded).toEqual(failed)
+    expect(readRelay(dir)?.text).toBe(recorded.stdout)
+    // A transition verb's ending is just as untouched by a failed record.
+    rmSync(relayPath(dir))
+    mkdirSync(relayPath(dir))
+    const parked = captureIo(() => park(dir, ['a tangent']))
+    expect(parked).toEqual({ code: 0, stdout: '**Parked**: a tangent\n\n**Next Up**: Back to Step 2 of 3 - Second\n\n', stderr: '' })
+  })
+
+  it('keeps the record out of git, so no step commit sweeps it in', async () => {
+    const dir = await paused()
+    atTurn(dir, 1)
+    render(dir)
+    expect(() => git(dir, ['check-ignore', '-q', relative(dir, relayPath(dir))])).not.toThrow()
+  })
+
+  it('reads a record whose header does not parse as no record', async () => {
+    const dir = await started()
+    writeFileSync(relayPath(dir), 'turn seven\ntier decision\nrender card\n\n**Next Up**: x\n\n')
+    expect(readRelay(dir)).toBeNull()
+    writeFileSync(relayPath(dir), 'turn 7\ntier loud\nrender card\n\n**Next Up**: x\n\n')
+    expect(readRelay(dir)).toBeNull()
+    writeFileSync(relayPath(dir), 'turn 7\ntier decision\nrender card') // no blank line, no text
+    expect(readRelay(dir)).toBeNull()
   })
 })

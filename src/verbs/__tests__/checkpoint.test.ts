@@ -4,7 +4,7 @@ import { join, relative } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { checkpoint } from '../checkpoint.ts'
 import { start } from '../start.ts'
-import { buildLogPath, checkpointsPath, detailPath, grantPath, handoffPath, hasSession, intentPath, readStats, stampStepStat, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
+import { buildLogPath, checkpointsPath, detailPath, grantPath, handoffPath, hasSession, intentPath, readRelay, readStats, stampStepStat, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
 import { gitPath } from '../../lib/git.ts'
 import { advisory, ending, notice, transition } from '../../lib/notice.ts'
 import { setLocalSetting, settingsPath } from '../../lib/settings.ts'
@@ -787,6 +787,35 @@ describe('checkpoint — the self-use stats receipt (research/07 2b)', () => {
     await captureIoAsync(() => checkpoint(dir, ['1']))
     const log = readFileSync(buildLogPath(dir), 'utf8')
     expect(log).toMatch(/step 1 checkpointed · [0-9a-f]{9} — First\n/)
+  })
+})
+
+describe('checkpoint — the ending it records for the relay check', () => {
+  it('records the boundary it printed as an orientation ending, stamped with the turn, and no command', async () => {
+    const dir = await startedGreen()
+    writeFileSync(turnPath(dir), '12\n') // a hooked host; no entry stamp, so the latch stays out of it
+    writeFileSync(join(dir, 'work.txt'), 'pending\n')
+    const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(code).toBe(0)
+    expect(stdout).toContain('**Checkpoint**: Step 1 complete')
+    expect(readRelay(dir)).toEqual({ turn: 12, tier: 'orientation', render: 'checkpoint', text: stdout })
+  })
+
+  it('records the plan commit the same way', async () => {
+    const dir = await startedGreen()
+    writeFileSync(turnPath(dir), '2\n')
+    const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
+    expect(code).toBe(0)
+    expect(readRelay(dir)).toEqual({ turn: 2, tier: 'orientation', render: 'plan-commit', text: stdout })
+  })
+
+  it('records nothing when it refuses, so the ending a turn printed last still stands', async () => {
+    const dir = await startedGreen()
+    writeFileSync(turnPath(dir), '3\n')
+    writeFileSync(settingsPath(dir), JSON.stringify({ check: 'false' }))
+    const { code } = await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(code).toBe(1)
+    expect(readRelay(dir)).toBeNull()
   })
 })
 

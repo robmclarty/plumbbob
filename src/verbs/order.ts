@@ -15,7 +15,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { activeBuild, hasSession, intentPath } from '../lib/sidecar.ts'
 import { clearBuildOrder, orderSteps, parseSteps, setBuildOrder } from '../lib/orient.ts'
-import { ending, notice, transition } from '../lib/notice.ts'
+import { ending, notice, printEnding, transition } from '../lib/notice.ts'
 import { driverPointer } from './handoff.ts'
 
 /**
@@ -40,12 +40,14 @@ export function order(cwd: string, args: ReadonlyArray<string>): number {
 
   if (args.includes('--reset')) {
     writeFileSync(path, clearBuildOrder(intent))
-    process.stdout.write(
-      ending({
+    printEnding(root, {
+      tier: 'driver',
+      render: 'order',
+      text: ending({
         lead: transition({ label: 'Build order', fact: 'document order' }),
         pointer: driverPointer(root, activeBuild(root)),
       }),
-    )
+    })
     return 0
   }
 
@@ -109,11 +111,13 @@ export function order(cwd: string, args: ReadonlyArray<string>): number {
   // The pointer reads the plan back from disk, so it already follows the
   // order just written: back at the step in flight, or forward from the
   // boundary to the first step in the new sequence.
-  process.stdout.write(
-    ending({
+  printEnding(root, {
+    tier: 'driver',
+    render: 'order',
+    text: ending({
       lead: transition({ label: 'Build order', fact: full.join(', ') }),
       pointer: driverPointer(root, activeBuild(root)),
     }),
-  )
+  })
   return 0
 }

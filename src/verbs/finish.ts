@@ -34,7 +34,7 @@ import {
 } from '../lib/sidecar.ts'
 import { conventionalSubject, withMarker } from '../lib/commitmsg.ts'
 import { parseBuildScope } from '../lib/intent.ts'
-import { advisory, ending, notice, transition } from '../lib/notice.ts'
+import { advisory, ending, notice, printEnding, transition } from '../lib/notice.ts'
 
 // The pointer finish leaves the turn on. Every other one is `handoff`'s, but a
 // finished session has no state left to render from, and past a closed build
@@ -109,8 +109,10 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   // the turn's last text. finish renders that pointer itself: it just cleared
   // the session `handoff` would read one from.
   const where = slug === null ? '.plumbbob/' : `.plumbbob/builds/${slug}/`
-  process.stdout.write(
-    ending({
+  printEnding(root, {
+    tier: 'orientation',
+    render: 'finish',
+    text: ending({
       lead: transition({
         label: 'Session',
         fact: 'finished',
@@ -127,7 +129,7 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
           ],
       pointer: NEXT_UP,
     }),
-  )
+  })
   return 0
 }
 

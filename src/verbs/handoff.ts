@@ -1,7 +1,8 @@
 // `plumbbob handoff`: emit the CLI-owned ending of a turn as one contiguous
-// block (docs/presentation.md). Changes no state but two: at a pause it leaves
-// the detail file with a blank line around each heading, and at a step pause it
-// stamps what the card showed in `PAUSE`. Every part outside
+// block (docs/presentation.md). Changes no state but three: at a pause it
+// leaves the detail file with a blank line around each heading, at a step pause
+// it stamps what the card showed in `PAUSE`, and every render it prints is
+// recorded in `RELAY` for the check at the turn's end. Every part outside
 // the readout fence is a bold label, a colon, and text that wraps, one blank
 // line between blocks and no fence but the readout's own. It derives the moment
 // from the session: a step in flight ⇒ the decision-tier ending (the Now line
@@ -41,7 +42,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { type NumstatEntry, PLAN_COMMIT_MARKER, commitsSince, diffNumstat, diffPatch, findRepoRoot } from '../lib/git.ts'
-import { blocks } from '../lib/notice.ts'
+import { blocks, printEnding } from '../lib/notice.ts'
 import { isArtifactPath, parseStepSeam } from '../lib/intent.ts'
 import {
   buildLogPath,
@@ -51,6 +52,7 @@ import {
   inSpike,
   intentPath,
   pausePath,
+  type Relay,
   readStats,
   readTurn,
   resolveBuild,
@@ -137,6 +139,9 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     process.stderr.write('plumbbob: handoff: --plan and --driver name different tiers; pass one.\n')
     return 1
   }
+  // A build named by flag rides any command that reprints this ending, since
+  // the cursor may point elsewhere.
+  const named = args.includes('--build') ? slug : null
   const intent = readOr(intentPath(root, slug))
   // In build order, so the pointer names the step a bare `plumbbob build`
   // would enter; the build-log feeds the park count beneath it.
@@ -159,7 +164,8 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
       nextUpBlock(first, steps.length, where, nextUpNote(intent, buildLog, null)),
       planCallBlock(first),
     ]
-    return emit(withRecommendation(plan, parseRecommendation(detail)))
+    const command = reprintCommand('--plan', undefined, named)
+    return emit(root, { tier: 'decision', render: 'plan', command }, withRecommendation(plan, parseRecommendation(detail)))
   }
 
   const explicit = rest.find((a) => /^\d+$/.test(a))
@@ -182,12 +188,14 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     // (a step exit: a revert, an abandon, a spike closed at the boundary) the
     // ordinary forward pointer stands, and no Verdict rides above it: nothing
     // landed to measure.
-    return emit([driverPointer(root, slug)])
+    return emit(root, { tier: 'driver', render: 'driver' }, [driverPointer(root, slug)])
   }
 
   if (current === null) {
     // Nothing measured yet (a fresh session): no Verdict, just the forward pointer.
-    return emit([nextUpBlock(nextUp, steps.length, where, nextUpNote(intent, buildLog, current))])
+    return emit(root, { tier: 'orientation', render: 'pointer' }, [
+      nextUpBlock(nextUp, steps.length, where, nextUpNote(intent, buildLog, current)),
+    ])
   }
 
   // A step is pending, and its hand-off is the pause, while it is in flight.
@@ -201,7 +209,7 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     // pointer, no decision pending and so no Your Call. The same two parts the
     // checkpoint printed for itself, from the same call.
     const landed = boundaryEnding(root, slug, current)
-    return emit([landed.verdict, landed.pointer])
+    return emit(root, { tier: 'orientation', render: 'boundary' }, [landed.verdict, landed.pointer])
   }
 
   // The pause: the whole turn as one contiguous block, each part a labeled line
@@ -227,7 +235,10 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   if (!rest.includes('--full') && readOr(pausePath(root, slug)).trim() === stamp) {
     // The pause the human already read, unchanged: the answer above this line
     // is what they asked for, and the card would push it off the screen.
-    return emit([`**Next Up**: Back to ${stepPhrase(current, steps)}`])
+    const command = reprintCommand(null, explicit, named)
+    return emit(root, { tier: 'decision', render: 'reminder', command }, [
+      `**Next Up**: Back to ${stepPhrase(current, steps)}`,
+    ])
   }
   writePause(root, slug, stamp)
   const readout = recapLines(rows, {
@@ -250,7 +261,8 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     nextUpBlock(nextUp, steps.length, where, nextUpNote(intent, buildLog, current)),
     yourCallBlock(current, checkGreen),
   )
-  return emit(withRecommendation(parts, parseRecommendation(detail)))
+  const command = reprintCommand('--full', explicit, named)
+  return emit(root, { tier: 'decision', render: 'card', command }, withRecommendation(parts, parseRecommendation(detail)))
 }
 
 /**
@@ -492,14 +504,26 @@ function measured(root: string, slug: string | null, intent: string, detail: str
 }
 
 /**
- * Write an ending to stdout and return handoff's exit code.
+ * Print an ending, record it for the relay check, and return handoff's exit
+ * code.
  *
  * The parts are stacked by the same assembly a transition verb prints its own
  * ending through, so the block reads the same whichever command emitted it.
  */
-function emit(parts: ReadonlyArray<string | null>): number {
-  process.stdout.write(blocks(parts))
+function emit(root: string, kind: Omit<Relay, 'text'>, parts: ReadonlyArray<string | null>): number {
+  printEnding(root, { ...kind, text: blocks(parts) })
   return 0
+}
+
+/**
+ * The command that prints a decision ending again, for the retry the relay
+ * check asks for: handoff in the form that printed it, with the step a verify
+ * pause was named by and the build a flag named, so the retry lands on the
+ * same pause with nothing in flight and the cursor elsewhere.
+ */
+function reprintCommand(form: '--full' | '--plan' | null, step: string | undefined, build: string | null): string {
+  const parts = ['plumbbob handoff', form, step, build === null ? null : `--build ${build}`]
+  return parts.filter((p) => p !== null && p !== undefined).join(' ')
 }
 
 /**

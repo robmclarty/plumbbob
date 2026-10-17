@@ -12,7 +12,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { activeBuild, hasSession, buildLogPath } from '../lib/sidecar.ts'
 import { appendToSection } from '../lib/buildlog.ts'
-import { ending, notice, transition } from '../lib/notice.ts'
+import { ending, notice, printEnding, transition } from '../lib/notice.ts'
 import { driverPointer } from './handoff.ts'
 
 /**
@@ -51,8 +51,10 @@ export function park(cwd: string, args: ReadonlyArray<string>): number {
   writeFileSync(path, updated)
   // A park interrupts a step without ending it, so the ending is the capture
   // and the pointer back at what was interrupted.
-  process.stdout.write(
-    ending({ lead: transition({ label: 'Parked', fact: text }), pointer: driverPointer(root, activeBuild(root)) }),
-  )
+  printEnding(root, {
+    tier: 'driver',
+    render: 'park',
+    text: ending({ lead: transition({ label: 'Parked', fact: text }), pointer: driverPointer(root, activeBuild(root)) }),
+  })
   return 0
 }

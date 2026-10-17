@@ -32,7 +32,7 @@ import {
 import { checkLatch } from '../lib/latch.ts'
 import { abandonLogLine, appendToSection } from '../lib/buildlog.ts'
 import { parseSteps } from '../lib/orient.ts'
-import { ending, notice, transition } from '../lib/notice.ts'
+import { ending, notice, printEnding, transition } from '../lib/notice.ts'
 import { driverPointer } from './handoff.ts'
 
 /**
@@ -82,8 +82,10 @@ export function abandon(cwd: string, args: ReadonlyArray<string>): number {
 
   // A step exit: with the step back at `[ ]` and its markers gone, the pointer
   // aims forward from the boundary, at the very step just dropped.
-  process.stdout.write(
-    ending({
+  printEnding(root, {
+    tier: 'driver',
+    render: 'abandon',
+    text: ending({
       lead: transition({
         label: 'Abandoned',
         fact: `Step ${step}`,
@@ -91,7 +93,7 @@ export function abandon(cwd: string, args: ReadonlyArray<string>): number {
       }),
       pointer: driverPointer(root, slug),
     }),
-  )
+  })
   return 0
 }
 

@@ -32,7 +32,7 @@ import {
   stepPath,
 } from '../lib/sidecar.ts'
 import { readTemplate, stampTemplate } from '../lib/templates.ts'
-import { advisory, blocks, ending, notice, transition } from '../lib/notice.ts'
+import { advisory, blocks, ending, notice, printEnding, transition } from '../lib/notice.ts'
 import { driverPointer } from './handoff.ts'
 
 // Worktree/branch names when the caller lists none: a fork defaults to two arms.
@@ -86,8 +86,10 @@ function spikeReport(root: string, buildSlug: string | null, positionals: Readon
   const inFlight = readInFlightStep(root, buildSlug)
   const via = inFlight !== null ? `step ${inFlight}` : '/plumbbob:spike'
   const path = scaffoldSpikeReport(root, buildSlug, slug, via)
-  process.stdout.write(
-    ending({
+  printEnding(root, {
+    tier: 'driver',
+    render: 'spike-report',
+    text: ending({
       lead: transition({
         label: 'Spike report',
         fact: 'scaffolded',
@@ -96,7 +98,7 @@ function spikeReport(root: string, buildSlug: string | null, positionals: Readon
       }),
       pointer: driverPointer(root, buildSlug),
     }),
-  )
+  })
   return 0
 }
 
@@ -185,8 +187,10 @@ function spikeStart(root: string, buildSlug: string | null, positionals: Readonl
   // The lead states the fact; the throwaway worktrees are a list, so they ride
   // as a readout beneath it rather than crowding the line, and the report the
   // spike scaffolded is a second landing under the same lead.
-  process.stdout.write(
-    ending({
+  printEnding(root, {
+    tier: 'driver',
+    render: 'spike-open',
+    text: ending({
       lead: blocks([
         transition({
           label: 'Spike',
@@ -202,7 +206,7 @@ function spikeStart(root: string, buildSlug: string | null, positionals: Readonl
       ]),
       pointer: driverPointer(root, buildSlug),
     }),
-  )
+  })
   return 0
 }
 
@@ -235,8 +239,10 @@ function spikeDone(root: string, buildSlug: string | null): number {
   // closes. It follows the line it qualifies, and names the reports so the
   // human knows where to write the call. The pointer, read once the marker is
   // cleared, aims back at the step the spike interrupted, or forward.
-  process.stdout.write(
-    ending({
+  printEnding(root, {
+    tier: 'driver',
+    render: 'spike-done',
+    text: ending({
       lead: transition({ label: 'Spike', fact: 'closed', detail: ['worktrees and branches removed'] }),
       advisories:
         unfilled.length === 0
@@ -250,7 +256,7 @@ function spikeDone(root: string, buildSlug: string | null): number {
             ],
       pointer: driverPointer(root, buildSlug),
     }),
-  )
+  })
   return 0
 }
 

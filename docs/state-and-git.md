@@ -1,7 +1,7 @@
 # State files and git
 
 PlumbBob keeps a handful of small files under `.plumbbob/` that are deliberately never
-committed, and it keeps them out of your commits by appending a dozen lines to one local
+committed, and it keeps them out of your commits by appending about a dozen lines to one local
 git file. This page is the full account: what those files hold, why they have to exist,
 exactly what gets written inside `.git`, and the honest answers to the objections that
 follow, including "why are you touching my git at all?"
@@ -62,6 +62,7 @@ branch.
 | `.plumbbob/GRANT` | A one-turn self-approval, minted only when *you* typed `/build --auto` or a step range | the same hook | the next turn |
 | `.plumbbob/settings.local.json` | Your personal settings overlay (for example a per-worktree `"check"` command) | you, by hand | you |
 | `.plumbbob/detail.md` | The in-flight step's full detail, written by the model before each pause; `handoff` renders the turn from it ([D81 (detail-file)](decisions.md#d81)) | the model | `checkpoint`, which records it in the build log's Log first (unless its header names another step) |
+| `.plumbbob/RELAY` | The ending the CLI printed last: its tier, its render, the command that reprints a pause, the `TURN` it printed in, and the text itself, so the `Stop` check can tell whether the turn closed on it ([D89 (block-once)](decisions.md#d89)). Written only while `TURN` keeps a count | `handoff` and every verb that prints an ending | never; the next ending overwrites it |
 | `builds/<slug>/STEP` | The step number in flight; its presence *is* the BUILD phase | `build` | `checkpoint` / `revert` / `abandon` |
 | `builds/<slug>/SEAM` | The step's declared paths, one per line (awareness, not a lock) | `build` | `checkpoint` / `revert` / `abandon` |
 | `builds/<slug>/SPIKE` | Marker: a spike fork is open | `spike` | `spike done` |
@@ -109,6 +110,7 @@ Here is the complete block it appends:
 .plumbbob/TURN
 .plumbbob/GRANT
 .plumbbob/detail.md
+.plumbbob/RELAY
 .plumbbob/builds/*/STEP
 .plumbbob/builds/*/SEAM
 .plumbbob/builds/*/SPIKE

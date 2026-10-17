@@ -11,7 +11,11 @@
 // the edge, and an optional indented arrow line carrying what to do next. One
 // shape, so moving it is one edit rather than a sweep. The pointer at the next
 // step is not a line's job: `handoff` renders one, and the verb prints it as
-// the ending's last part. Pure string assembly, no fs, no gate.
+// the ending's last part. The formatters are pure string assembly, no fs, no
+// gate; `printEnding` is the one function here that writes, and every ending
+// a verb prints goes through it so the relay check knows what was said.
+
+import { type Relay, writeRelay } from './sidecar.ts'
 
 /** The column budget a notice line aims to fit, matching the readout fence. */
 const WIDTH = 80
@@ -150,6 +154,18 @@ export function ending(e: Ending): string {
 export function blocks(parts: ReadonlyArray<string | null>): string {
   const kept = parts.filter((p): p is string => p !== null && p.trim().length > 0)
   return `${kept.map((p) => p.replace(/\n+$/, '')).join('\n\n')}\n\n`
+}
+
+/**
+ * Print an ending to stdout and record it in RELAY, for the Stop check that
+ * the turn closed on it.
+ *
+ * Stdout first, and the record never throws: a failed write leaves the
+ * printed ending and the verb's exit code exactly as they would have been.
+ */
+export function printEnding(root: string, relay: Relay): void {
+  process.stdout.write(relay.text)
+  writeRelay(root, relay)
 }
 
 /**

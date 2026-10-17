@@ -644,6 +644,117 @@ export function readTurn(root: string): number | null {
   }
 }
 
+// --- The relay record: `.plumbbob/RELAY`, the ending the CLI printed last, so a
+// Stop hook can check that the turn closed on it. The verb that prints an
+// ending records it here: it knows what it printed, where a hook scraping
+// stdout would have to guess which command ran. Flat like TURN, because the
+// turn it is checked against is the session's, not a build's. A later ending
+// overwrites an earlier one, so a turn is judged by the last thing it printed. ---
+
+// The tiers of docs/presentation.md, which decide how a turn has to carry an
+// ending: a decision ending closes the turn, an orientation ending appears in
+// it, and a driver ending is recorded only so that the last ending wins.
+const RELAY_TIERS = ['decision', 'orientation', 'driver'] as const
+
+// Which ending printed: handoff's six forms first, then one per transition. It
+// is what the check's reason names when the ending went missing.
+const RELAY_RENDERS = [
+  'card',
+  'reminder',
+  'plan',
+  'boundary',
+  'pointer',
+  'driver',
+  'checkpoint',
+  'plan-commit',
+  'park',
+  'revert',
+  'abandon',
+  'spike-open',
+  'spike-report',
+  'spike-done',
+  'use',
+  'order',
+  'finish',
+  'start',
+] as const
+
+/** The tier an ending belongs to. */
+export type RelayTier = (typeof RELAY_TIERS)[number]
+
+/** Which ending printed. */
+export type RelayRender = (typeof RELAY_RENDERS)[number]
+
+/** One ending as a verb printed it: its tier, its render, and the text itself. */
+export type Relay = {
+  readonly tier: RelayTier
+  readonly render: RelayRender
+  // The command that prints a decision ending again, for a retry to run
+  // (`plumbbob handoff --full`). A stored decision ending goes stale once the
+  // model keeps working, so the retry reprints it; an orientation or driver
+  // ending reports something already done, so it has none.
+  readonly command?: string
+  // Exactly what went to stdout, trailing blank line included.
+  readonly text: string
+}
+
+/** A recorded ending, stamped with the TURN it printed in. */
+export type RelayRecord = Relay & { readonly turn: number }
+
+/**
+ * RELAY: the ending the CLI printed last, at the flat sidecar root.
+ */
+export function relayPath(root: string): string {
+  return join(root, DIRNAME, 'RELAY')
+}
+
+/**
+ * Record an ending in RELAY, stamped with the current TURN: a header of
+ * `key value` lines, a blank line, then the text exactly as it printed.
+ *
+ * Written only while TURN holds a count, the same dormancy `stampTick` keeps: a
+ * host with no turn hook has no turn to check the ending against. Best-effort
+ * by contract, since the ending has already reached stdout and a failed record
+ * must not change it or the exit code.
+ */
+export function writeRelay(root: string, relay: Relay): void {
+  const turn = readTurn(root)
+  if (turn === null) return
+  const header = [`turn ${turn}`, `tier ${relay.tier}`, `render ${relay.render}`]
+  if (relay.command !== undefined) header.push(`command ${relay.command}`)
+  try {
+    writeFileSync(relayPath(root), `${header.join('\n')}\n\n${relay.text}`)
+  } catch {
+    // A read-only tree or a directory in the way: the ending already printed.
+  }
+}
+
+/**
+ * The recorded ending, or null when RELAY is absent or its header does not
+ * parse: a record the check cannot read is no record.
+ */
+export function readRelay(root: string): RelayRecord | null {
+  let raw: string
+  try {
+    raw = readFileSync(relayPath(root), 'utf8')
+  } catch {
+    return null
+  }
+  const split = raw.indexOf('\n\n')
+  if (split === -1) return null
+  const fields = new Map<string, string>()
+  for (const line of raw.slice(0, split).split('\n')) {
+    const space = line.indexOf(' ')
+    if (space > 0) fields.set(line.slice(0, space), line.slice(space + 1))
+  }
+  const turn = /^\d+$/.test(fields.get('turn') ?? '') ? Number(fields.get('turn')) : null
+  const tier = RELAY_TIERS.find((t) => t === fields.get('tier'))
+  const render = RELAY_RENDERS.find((r) => r === fields.get('render'))
+  if (turn === null || tier === undefined || render === undefined) return null
+  const command = fields.get('command')
+  return { turn, tier, render, ...(command === undefined ? {} : { command }), text: raw.slice(split + 2) }
+}
+
 /**
  * Walk up from `cwd` to the nearest ancestor with an active session (a
  * `.plumbbob/STATE` file), or null when there is none.
@@ -711,6 +822,9 @@ export function excludeControl(root: string): void {
     // Log and then clears it, so its archive is the tracked ledger, never this
     // path; excluding it keeps stageAll from ever sweeping it into a step commit.
     `${DIRNAME}/detail.md`,
+    // The ending the CLI printed last, for the Stop check: per-worktree
+    // control, rewritten by every ending, and never a step commit's to carry.
+    `${DIRNAME}/RELAY`,
     `${DIRNAME}/builds/*/STEP`,
     `${DIRNAME}/builds/*/SEAM`,
     `${DIRNAME}/builds/*/SPIKE`,

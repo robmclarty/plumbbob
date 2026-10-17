@@ -25,7 +25,7 @@ import {
   stampTick,
 } from '../lib/sidecar.ts'
 import { settingsPath } from '../lib/settings.ts'
-import { advisory, ending, notice, transition } from '../lib/notice.ts'
+import { advisory, ending, notice, printEnding, transition } from '../lib/notice.ts'
 
 /**
  * Human-readable echo of the default check gate, stamped into the templates'
@@ -224,8 +224,10 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
   // No pointer: the plan skill owns the turn that follows, and there is no step
   // yet to aim at, so the ending closes on the remedy line that says where to
   // frame the build.
-  process.stdout.write(
-    ending({
+  printEnding(root, {
+    tier: 'driver',
+    render: 'start',
+    text: ending({
       lead: transition({
         label: 'Session',
         fact: `started "${title}"`,
@@ -234,7 +236,7 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
       }),
       advisories,
     }),
-  )
+  })
   return 0
 }
 

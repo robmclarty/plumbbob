@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Said once, said whole
 
-**Current step:** 13 — docs(decisions): record the relay check and its tier
+**Current step:** 14 — feat(handoff): remember the ending each turn has to close on
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -35,7 +35,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 10. test(evals): add a contract for a question asked at the pause
 - ☑ 11. chore(evals): sweep the relay after the pause change
 - ☑ 12. chore(hooks): spike what a Stop hook can read and do
-- ☐ 13. docs(decisions): record the relay check and its tier
+- ☑ 13. docs(decisions): record the relay check and its tier
 - ☐ 14. feat(handoff): remember the ending each turn has to close on
 - ☐ 15. feat(hooks): check at a turn's end that it closed on its relay
 - ☐ 16. chore(evals): measure the relay check with and without the hook
@@ -53,6 +53,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [x] report.ts sorts contract ids as strings, so c10 lands between c1 and c2 in the receipt table, and its method footnotes say nothing of c10's fresh-session question turns (evals)
 - [x] eval sessions inherit the account's claude.ai connectors, and 3 of 5 c7 runs in the 2026-10-17 sweep mentioned them after the relay; the driver could pin an empty MCP config so the account's environment stays out of the anatomy rates (evals)
 - [x] driver.ts and every receipt's method footnote say the headless UserPromptSubmit tick lands at about session end, but on Claude Code 2.1.283 it ticks before the first tool call (spike-01), so armGrant and the warmup's stated reason may be stale (evals)
+- [ ] recover and agent run print driver-tier output without recording RELAY, so a turn that ends on either after a pause is judged by the pause; step 14's seam held them out (relay)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -271,3 +272,45 @@ folder, so it rides the branch into the PR.)*
   **5.** `TURN` has ticked before Stop under `claude -p`, so D13 (gate-on-the-turn) holds, and I parked the receipts' note saying otherwise
 
   Four sessions in a row read `TURN` at their first tool call and at Stop, and both readings were always already ticked. That held with the prompt sent as an argument and with it sent on stdin, the way the driver sends it. UserPromptSubmit does not fire again on a block's continuation. The verbs can't see `prompt_id`, so `TURN` stays the key `RELAY` stamps. `driver.ts` and every receipt's footnote say the tick lands at about session end, which is now stale on 2.1.283; that note is outside this seam, so it is parked.
+
+- 2026-10-17 — step 13 checkpointed · 9cb1e2ef2 — docs(decisions): record the relay check and its tier (38m)
+
+  **Summary**: `docs/decisions.md` now records the relay check as D89 (block-once). It holds a turn that missed its relay open once, it is the first plumbbob hook to hold a turn open at all, and the spike's evidence changed two of the plan's mechanics on the way in. One of those changes picks a channel you didn't get to weigh in on, so it is the call this pause is for.
+
+  1. The relay check speaks through `additionalContext`, not `decision: "block"`, and that is your call to confirm
+  2. "Once" is counted per `TURN` in plumbbob's own record, not by `stop_hook_active`
+  3. Beside the latch, the commit hook, and checkride's gate, the relay check holds a fourth thing, the ending
+  4. The entry's rate comes from the 2026-10-17 sweep, and the key's provenance line now runs to D89 (block-once)
+
+  **Readout**:
+
+  ```text
+  check        green: 1 of 1 checks
+  done-when    met
+  decisions    bent: D16 (block-once)
+               → once counted per TURN, sent as additionalContext
+  constraints  7 of 7 honored
+  seam         held: 1 of 1 declared, no strays
+  diff         +42 -1 across 1 file
+  spent        38 min · 1 turn · 113s gate · green first run
+  ```
+
+  **Verdict**: ○ Out of plumb (decisions bent)
+
+  **Recommendation**: Approve with `additionalContext` as the channel. A missed relay is not something the human has to fix, so the screen shouldn't label it an error, and nothing downstream depends on the choice until step 15 writes the hook's output line.
+
+  **1.** The relay check speaks through `additionalContext`, not `decision: "block"`, and that is your call to confirm
+
+  You approved step 12 without saying how the `Stop hook error` label read to you, so I picked a channel and recorded it. Both channels hold the turn open, set `stop_hook_active`, and count toward the harness's cap of eight continuations. What differs is the screen: a block prints `Stop hook error` and an error footer, while `additionalContext` prints `Stop hook feedback` and no footer. A missed relay is the model's slip, and the human has nothing to fix, so calling it an error tells the human the wrong thing. It is also the channel plumbbob's other two model-facing hooks already use (`turn`'s nudge, and the light tier in `post-edit.sh`). The case for a block is that the plan's D16 (block-once) named it and checkride's gate uses it. The slug `block-once` fits either way, because the harness itself calls an `additionalContext` continuation a block (run F's cap message: "A hook blocked the turn from ending 9 consecutive times"). Switching to a block is one clause in D89 (block-once) and no change to any later step's seam.
+
+  **2.** "Once" is counted per `TURN` in plumbbob's own record, not by `stop_hook_active`
+
+  The plan's D16 (block-once) let `stop_hook_active` mark the retry. The spike showed the flag is shared and names nobody: checkride's gate re-blocks on every Stop while red (run R1), and a check that trusted the flag went quiet for the rest of that turn and let a retry ending on a question through. So D89 (block-once) stamps the `TURN` it held and holds at most once per `TURN`. That works because `TURN` has ticked before Stop under `claude -p`, and no UserPromptSubmit fires on a continuation, so it holds still across a retry. This is the `bent` row on D16 (block-once), and it is what step 15 builds.
+
+  **3.** Beside the latch, the commit hook, and checkride's gate, the relay check holds a fourth thing, the ending
+
+  The work plane stays guidance (D10 (pause-not-lock), D13 (no-edit-guards)). The record is latched (D64 (approval-latch)). A raw commit gets a question (D66 (oob-commits-surfaced)). checkride's gate holds a red turn open until the code is green (D75 (two-gates)). The relay check lets go after one try, because a second miss is already on the human's screen and in the eval tier's count, and a check that kept holding would make the hook the clock. It owes the gate it runs beside two things: never cancel its block (so no `continue: false`, which ended the turn over a sibling's block in run P5), and never fall silent under it (so it keeps its own count).
+
+  **4.** The entry's rate comes from the 2026-10-17 sweep, and the key's provenance line now runs to D89 (block-once)
+
+  D89 (block-once) cites step 11's numbers (31 of 35 decision endings whole, 10 of 10 boundaries, 51 of 55 with nothing after the relay), which still come to about one ending in ten, as 2026-09-17 did. The key's opening paragraph now credits this build with D87 (pause-once) through D89 (block-once). The entry cites no plan-local tag, because the refs slot would read `D16` as this key's D16 (check-plus-self-review), so the plan's locals appear only as the backticked slug `block-once`. Its last line points at the spike report rather than a code file, since the hook lands in steps 14 and 15. Step 16 adds the receipt citation its done-when asks for.

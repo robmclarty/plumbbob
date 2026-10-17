@@ -24,7 +24,7 @@ import { findRepoRoot, resetHard, untrackedPaths } from '../lib/git.ts'
 import { bumpStepStat, checkpointsPath, clearPause, hasSession, resolveBuild, seamPath, sidecarDir, stepPath } from '../lib/sidecar.ts'
 import { isArtifactPath, matchesSeam } from '../lib/intent.ts'
 import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
-import { ending, notice, transition } from '../lib/notice.ts'
+import { ending, notice, printEnding, transition } from '../lib/notice.ts'
 import { driverPointer } from './handoff.ts'
 
 /**
@@ -95,8 +95,10 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
 
   // A step exit: nothing landed, so no Verdict rides above the pointer, and with
   // the markers cleared it aims forward from the boundary.
-  process.stdout.write(
-    ending({
+  printEnding(root, {
+    tier: 'driver',
+    render: 'revert',
+    text: ending({
       lead: transition({
         label: 'Reverted',
         fact: `to ${sha.slice(0, 9)}`,
@@ -104,7 +106,7 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
       }),
       pointer: driverPointer(root, slug),
     }),
-  )
+  })
   return 0
 }
 

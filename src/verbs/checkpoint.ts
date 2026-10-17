@@ -41,7 +41,7 @@ import { parseBuildScope, parseStepSeam, scopeDrift } from '../lib/intent.ts'
 import { conventionalSubject, subjectFromTitle, withMarker } from '../lib/commitmsg.ts'
 import { appendToSection, checkpointLogLine, logEntry, planLogLine } from '../lib/buildlog.ts'
 import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
-import { advisory, ending, notice, transition } from '../lib/notice.ts'
+import { advisory, ending, notice, printEnding, transition } from '../lib/notice.ts'
 import { boundaryEnding, planRecord, stepRecord } from './handoff.ts'
 
 /**
@@ -155,14 +155,16 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   // pointer. Read after the flip and the ledger append, so the fold and the
   // pointer both see the boundary the human is standing at.
   const landed = boundaryEnding(root, activeBuild(root), step)
-  process.stdout.write(
-    ending({
+  printEnding(root, {
+    tier: 'orientation',
+    render: 'checkpoint',
+    text: ending({
       lead: transition({ label: 'Checkpoint', fact: `Step ${step} complete`, detail: leadDetail(sha, pointer) }),
       verdict: landed.verdict,
       advisories: [drift, flipNotice],
       pointer: landed.pointer,
     }),
-  )
+  })
   return 0
 }
 
@@ -211,8 +213,10 @@ function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
   clearTick(root)
   // No Verdict: the plan commit measures nothing. The pointer aims at the step
   // the build starts on, which is what `handoff` renders from a null step.
-  process.stdout.write(
-    ending({
+  printEnding(root, {
+    tier: 'orientation',
+    render: 'plan-commit',
+    text: ending({
       lead: transition({ label: 'Plan', fact: 'committed', detail: leadDetail(sha, pointer) }),
       advisories: staged
         ? []
@@ -225,7 +229,7 @@ function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
           ],
       pointer: boundaryEnding(root, activeBuild(root), null).pointer,
     }),
-  )
+  })
   return 0
 }
 
