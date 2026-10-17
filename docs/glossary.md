@@ -88,8 +88,9 @@ word up without reading the others first. Each entry points at the page that own
 The shape every turn ends in is specified in [`presentation.md`](presentation.md); these
 are its parts.
 
-- **Summary**: the turn's opening line: the outcome, not the activity, then up to five
-  numbered **highlights**, each a handle `expand` can open.
+- **Now**: the line a step pause opens on: the step in flight, its count, and its title.
+- **Summary**: the outcome, not the activity, then up to five numbered **highlights**,
+  each a handle `expand` can open.
 - **Readout**: the fenced rows of measured facts: `check`, `done-when`, `decisions`,
   `constraints`, `seam`, `diff`, `spent`. Green collapses to a count; red names one
   offender.
@@ -104,7 +105,9 @@ are its parts.
 - **Recommendation**: the model's own call, the turn's last words: the move, then the
   reason.
 - **Expand** (`expand 2`): the question that opens one highlight's full story from the detail
-  file, changing nothing.
+  file, changing nothing. The answer closes on the **reminder**, one line pointing back at
+  the step, because a pause renders its block once; `show the pause` brings the block
+  back.
 - **Detail file** (`.plumbbob/detail.md`): where the model writes its judgment before a
   pause; `handoff` renders the turn from it, and `checkpoint` records it beneath the
   step's line in the build log's Log. The file is the wire, and the ledger is the archive.

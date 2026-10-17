@@ -166,7 +166,7 @@ In Claude Code, inside any git repo with a clean tree:
    **Your Call**:
 
    - `looks good` → I checkpoint Step 1; back to the boundary
-   - `expand`, or any question → I show more of what is there; nothing changes
+   - `expand`, or any question → I show more of what is there; nothing changes, and `show the pause` brings all of this back
    - anything that reads as direction → I take it as what to change; nothing lands until you approve
    - `revert` → I wind the work back to the last checkpoint
 
@@ -194,8 +194,10 @@ In Claude Code, inside any git repo with a clean tree:
    ![The boundary after looks good](docs/media/checkpoint-boundary.svg)
 
    Ask instead (`expand 2`, or any question) and it shows more of what is there and
-   changes nothing; direct it and it takes that as the fix, and nothing lands until you
-   say `looks good`. Then fire `/plumbbob:build` again for the next step: re-firing it
+   changes nothing. The answer closes on one line pointing back at the step, not on the
+   whole block again, since you have already read it; say `show the pause` to see the
+   block again. Direct it and it takes that as the fix, and nothing lands until you say
+   `looks good`. Then fire `/plumbbob:build` again for the next step: re-firing it
    *is* the clock tick. Whenever you lose the thread, `/plumbbob:status` shows where you
    are and names the next move.
 4. **Finish.** When the last step is done, `/plumbbob:finish` writes a report of what shipped

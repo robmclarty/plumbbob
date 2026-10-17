@@ -219,7 +219,7 @@ spent        22 min · 2 turns · 41s gate · green first run
 **Your Call**:
 
 - `looks good` → I checkpoint Step 1; back to the boundary
-- `expand`, or any question → I show more of what is there; nothing changes
+- `expand`, or any question → I show more of what is there; nothing changes, and `show the pause` brings all of this back
 - anything that reads as direction → I take it as what to change; nothing lands until you approve
 - `revert` → I wind the work back to the last checkpoint
 
@@ -235,8 +235,17 @@ Only the Summary, the three judgment rows, and the recommendation are the agent'
 they reach the turn through the detail file rather than the chat.
 
 The four moves are the ones you actually make. `expand 2` (or any question at all) opens
-the matching section of the detail file and changes nothing; anything that reads as
-direction is taken as what to fix, and still nothing lands until you say `looks good`.
+the matching section of the detail file and changes nothing. The answer closes on one
+line, not on the whole block again, because you have already read the block and 40
+lines beneath an answer push it off the screen:
+
+```text
+**Next Up**: Back to Step 1 of 3 - feat(limiter): add a token-bucket limiter
+```
+
+Say `show the pause` and the whole block comes back; it also comes back on its own once
+the work, the check, or the detail behind it changes. Anything that reads as direction is taken as what to fix, and
+still nothing lands until you say `looks good`.
 
 > **This pause is the product.** You read the diff and say "yes, this matches what I
 > intended." It reads the *diff, not the author*: a step you wrote by hand or vibed in

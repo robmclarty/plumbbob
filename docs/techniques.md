@@ -157,14 +157,15 @@ because a wall refuses you, but because the system stops and waits for you to be
 Re-firing the next build *is* the clock tick.
 
 What the loop pulls up to has a fixed shape ([the turn anatomy](presentation.md)): a
-**Summary** with numbered highlights, a **Readout** of measured rows (the check, the
+**Now** line naming the step in flight, a **Summary** with numbered highlights, a **Readout** of measured rows (the check, the
 done-when, the decisions and constraints, the seam, the diff, what the step spent), a
 **Verdict** on a four-rung ladder (`● Plumb`, `◐ A hair off`, `○ Out of plumb`,
 `✗ Not standing`), a **Next Up** pointer, the **Your Call** block naming the replies, and
 the model's **Recommendation** last. The CLI measures whatever can be measured and the
 model supplies only the judgment, so the block reads the same from any model on any day.
 You reply with one of four moves: `looks good` lands the step; `expand` (or any question)
-shows more and changes nothing; anything that reads as direction is taken as the fix, and
+shows more and changes nothing, closing on a one-line reminder rather than the whole block
+again (`show the pause` brings it back); anything that reads as direction is taken as the fix, and
 nothing lands until you say `looks good`; `revert` winds the work back.
 
 > **Unattended option: `--auto`.** `/plumbbob:build --auto` lets the agent self-review and

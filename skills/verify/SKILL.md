@@ -119,26 +119,42 @@ this skill verifies it the same way: **it reads the diff, not the author**
    turn. The number is what lets a diff built outside `/plumbbob:build` reach its pause:
    nothing is in flight for that diff, and a bare `handoff` would read the moment as a
    boundary and render no Your Call block. Never nest it inside a fence of
-   your own; it carries fences of its own and they cannot nest. It prints the Summary and
-   its highlights, the Readout fence (its measured `check`, `seam`, `diff`, and `spent`
-   rows folded with your three), a `diff` fence when the change is 20 lines or fewer, the
-   Verdict folded worst-of from the same rows, Next Up, Your Call, and your recommendation
-   last. At the pause the check row reads green, since a red one stopped you back at step
-   1. The gate verdict's one home is that row: no standalone verdict line exists, and you
-   never restate the verdict in prose. A narrowed run names the slots it skipped there
-   (`· without test`), and that named narrowing is the whole disclosure. The notice
-   checkride's Stop hook appends after your turn is not yours to relay or repeat; the
-   trailing blank line you kept is what lands it on its own line. Relayed CLI strings keep
-   their em-dashes; your own lines never use one, the write-versus-relay line of
+   your own; it carries fences of its own and they cannot nest. It prints the Now line
+   naming the step you reviewed, the Summary and its highlights, the Readout fence (its
+   measured `check`, `seam`, `diff`, and `spent` rows folded with your three), a `diff`
+   fence when the change is 20 lines or fewer, the Verdict folded worst-of from the same
+   rows, Next Up, Your Call, and your recommendation last. Run it once: a second run at an
+   unchanged pause prints the one-line reminder instead of the card, so if that line comes
+   back where the card belongs (you ran handoff earlier in this turn), run
+   `plumbbob handoff <n> --full` and paste that. At the pause the check row reads green,
+   since a red one stopped you back at step 1. The gate verdict's one home is that row:
+   no standalone verdict line exists, and you never restate the verdict in prose. A
+   narrowed run names the slots it skipped there (`· without test`), and that named
+   narrowing is the whole disclosure. The notice checkride's Stop hook appends after your
+   turn is not yours to relay or repeat; the trailing blank line you kept is what lands it
+   on its own line. Relayed CLI strings keep their em-dashes; your own lines never use
+   one, the write-versus-relay line of
    [D78 (em-dash-ban)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d78).
 
    *Then read the reply as an ask or a direction.* A message that **asks** ("expand 2",
-   "what does that mean?", "why did the seam row flag that?") is an expand: answer it from the detail file, from
-   `git diff`, or from the build-log's `## Log` for an older step, never from recall, then run `plumbbob handoff <n>` again and
-   paste it. The step has not landed, so it renders the same pause, and the Your Call
-   block stays the CLI's to render rather than yours to retype. A message that **directs**
-   is needs-work: take it as what to change, and nothing lands until the human says
-   `looks good`.
+   "what does that mean?", "why did the seam row flag that?") is an expand: answer it from
+   the detail file, from `git diff`, or from the build-log's `## Log` for an older step,
+   never from recall, then run `plumbbob handoff <n>` and paste its output beneath your
+   answer, whole and verbatim. The turn is your answer, then that output, and nothing after
+   it. The pause renders its card once
+   ([D87 (pause-once)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d87)):
+   while nothing about it has changed, handoff prints one line,
+   `**Next Up**: Back to Step <N> of <M> - <title>`, in place of the card the human already
+   read, so your answer stays on screen. The CLI picks the form, never you: paste whichever
+   one it prints, and never retype the card or reach for `--full` to put it beneath an
+   answer.
+
+   Two moments bring the whole card back, and in both you run `plumbbob handoff <n> --full`
+   and paste its output whole, with nothing written around it: the human asks to see the
+   pause (`show the pause`, or any wording of it), or the card is not in this conversation
+   (a fresh session, or one after `/clear`, that finds the step still at its pause). A
+   message that **directs** is needs-work: take it as what to change, and nothing lands
+   until the human says `looks good`.
 
    - **Reconcile a drifted subject here, in the open.** The planned title *is* the
      checkpoint subject ([D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68)). If the diff drifted from it (the

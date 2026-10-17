@@ -93,7 +93,9 @@ lands steps 1 through 3, then ends on step 3's checkpoint block. At a pause (the
 path, or a halt on a red check or a mismatch) it writes its judgment into `.plumbbob/detail.md`,
 runs `plumbbob handoff`, and pastes the block; you reply with one of the four moves the
 block names (`looks good`, `expand`, a direction, `revert`), and on `looks good` the
-checkpoint prints the boundary block for it to relay.
+checkpoint prints the boundary block for it to relay. An `expand` is answered above one
+line pointing back at the step, since the block renders once per pause, and
+`show the pause` has the skill run `plumbbob handoff --full` to bring it back.
 
 ### verify
 
