@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Said once, said whole
 
-**Current step:** 12 — chore(hooks): spike what a Stop hook can read and do
+**Current step:** 13 — docs(decisions): record the relay check and its tier
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -34,7 +34,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 9. fix(turn): let a park sit beside an answer in a mixed message
 - ☑ 10. test(evals): add a contract for a question asked at the pause
 - ☑ 11. chore(evals): sweep the relay after the pause change
-- ☐ 12. chore(hooks): spike what a Stop hook can read and do
+- ☑ 12. chore(hooks): spike what a Stop hook can read and do
 - ☐ 13. docs(decisions): record the relay check and its tier
 - ☐ 14. feat(handoff): remember the ending each turn has to close on
 - ☐ 15. feat(hooks): check at a turn's end that it closed on its relay
@@ -52,7 +52,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [x] the in-flight nudge carries no rule for a plain question at a pause, so a fresh session (c10's turns 2 and 3, or a host after compaction) has no prose telling it to end on handoff or to reach for --full; widen the nudge if c10 reads low (turn.ts)
 - [x] report.ts sorts contract ids as strings, so c10 lands between c1 and c2 in the receipt table, and its method footnotes say nothing of c10's fresh-session question turns (evals)
 - [x] eval sessions inherit the account's claude.ai connectors, and 3 of 5 c7 runs in the 2026-10-17 sweep mentioned them after the relay; the driver could pin an empty MCP config so the account's environment stays out of the anatomy rates (evals)
-- [ ] driver.ts and every receipt's method footnote say the headless UserPromptSubmit tick lands at about session end, but on Claude Code 2.1.283 it ticks before the first tool call (spike-01), so armGrant and the warmup's stated reason may be stale (evals)
+- [x] driver.ts and every receipt's method footnote say the headless UserPromptSubmit tick lands at about session end, but on Claude Code 2.1.283 it ticks before the first tool call (spike-01), so armGrant and the warmup's stated reason may be stale (evals)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -96,6 +96,14 @@ Harvest results this boundary:
   of step 16's arms and blurs the nothing-after-the-relay comparison; the fix lives in
   `driver.ts`, outside step 16's seam, so it needs `/plumbbob:step` or a small harness
   commit first.
+- 2026-10-17, at the step 12 boundary: one parked item, classified tangent.
+- **tangent** (deferred to before step 16, with the MCP-config fix): `driver.ts` and every
+  receipt's method footnote say the headless tick lands at about session end, and on
+  2.1.283 it lands before the first tool call (spike-01). It blocks nothing: D13
+  (gate-on-the-turn) holds on the spike's evidence, and step 11's sweep ran c3, c4, and
+  c9 cleanly with `armGrant` in place. What it costs is a false method note, which
+  `report.ts:162` would print into step 16's receipt from outside that step's seam. The
+  warmup stays either way, since it also runs the version guard.
 
 ## Log
 
@@ -220,3 +228,46 @@ folder, so it rides the branch into the PR.)*
 - 2026-10-17 — step 9 checkpointed · ed5629d7b — fix(turn): let a park sit beside an answer in a mixed message (5m)
 - 2026-10-17 — step 10 checkpointed · db9e032ef — test(evals): add a contract for a question asked at the pause (1 drift, 19m)
 - 2026-10-17 — step 11 checkpointed · 0f9754ec1 — chore(evals): sweep the relay after the pause change (49m)
+- 2026-10-17 — step 12 checkpointed · ffcc0d214 — chore(hooks): spike what a Stop hook can read and do (40m)
+
+  **Summary**: All six questions have answers, backed by hook payloads captured on Claude Code 2.1.283 in throwaway repos and written up in `spike-01-stop-hook.md`. The Stop check is viable: the final text is readable at Stop and `TURN` has ticked by then. But checkride's gate shares the `stop_hook_active` flag that D16 (block-once) relies on, so step 13 has two calls to make before step 15 builds anything.
+
+  1. Stop's stdin carries the turn's final text, so the check should read that field instead of the transcript, which lags behind it
+  2. Stop accepts `additionalContext` and continues the turn on it, just as it does on a block
+  3. A block puts a "Stop hook error" row, with the full reason, between the text that already streamed and the retry
+  4. checkride re-blocks while red and sets the same `stop_hook_active` flag, so the guard D16 (block-once) describes would silence the relay check
+  5. `TURN` has ticked before Stop under `claude -p`, so D13 (gate-on-the-turn) holds, and I parked the receipts' note saying otherwise
+
+  **Readout**: Step 12 - chore(hooks): spike what a Stop hook can read and do
+
+  ```text
+  check        green: 1 of 1 checks
+  done-when    met
+  decisions    2 of 2 honored
+  constraints  7 of 7 honored
+  spent        40 min · 1 turn · 171s gate · green first run
+  ```
+
+  **Verdict**: ● Plumb
+
+  **Recommendation**: Run the repro in the report's finding 3 to watch a block land in your own terminal, then approve. How the "Stop hook error" label reads to you is what step 13 needs in order to choose between a block and `additionalContext`, and the spike could only capture it as text.
+
+  **1.** Stop's stdin carries the turn's final text, so the check should read that field instead of the transcript, which lags behind it
+
+  The payload has `last_assistant_message`, which holds the final message's raw markdown, both interactively and under `-p`. When the hook fires, the transcript has every entry except that final message: run A's snapshot had no assistant entry even though the entry is stamped 65 ms before the hook started, and it was on disk 1.5 s later. The hooks reference now says the same thing and recommends the field. The field covers only the last message, so D15 (tier-picks-the-match)'s boundary tier still reads earlier messages from the transcript, scoped by `prompt_id`. Separately, the harness now turns a silent ending into a forced reply before Stop fires (run N-opus), so a missed relay shows up as some text, never as none.
+
+  **2.** Stop accepts `additionalContext` and continues the turn on it, just as it does on a block
+
+  `decision: "block"`, exit 2, and `additionalContext` all keep the turn going, all set `stop_hook_active` on the next Stop, and all count toward the harness cap. The cap is eight continuations in a row, which run F hit when it returned context every time. `systemMessage` shows `Stop says:` and continues nothing. `continue: false` does nothing to its own turn, but it cancels a sibling hook's block.
+
+  **3.** A block puts a "Stop hook error" row, with the full reason, between the text that already streamed and the retry
+
+  The interactive capture (run I2) shows the first reply, then `Ran 1 stop hook`, then `⎿ Stop hook error: <reason>`, then the retry, and a footer reading `Stop hook error occurred · ctrl+o to see` while it runs. With `additionalContext` the row says `Stop hook feedback:` and the footer never appears. In the transcript, the reason is a `user` entry with `isMeta: true` that carries the turn's `promptId`. This is a flattened pty log, not a rendering, and Zed's agent panel was not probed, so the plan's note that only you can answer question 3 still holds. The report's finding 3 has a three-line repro that runs in a workspace kept in `/tmp`.
+
+  **4.** checkride re-blocks while red and sets the same `stop_hook_active` flag, so the guard D16 (block-once) describes would silence the relay check
+
+  The payload never says which hook blocked. When the real gate was red (run R1), it blocked twice, because its script honors the flag only when it could not run. Round two closed on a question instead of the relay, and the plumbbob-shaped hook let it through because the flag was set. The fix keeps D16's tier and moves its "once" into plumbbob's own record: stamp `RELAY` with the `TURN` the check blocked in, and block at most once per `TURN`. When both hooks block in the same round, the harness runs a single continuation that carries both reasons (run P2).
+
+  **5.** `TURN` has ticked before Stop under `claude -p`, so D13 (gate-on-the-turn) holds, and I parked the receipts' note saying otherwise
+
+  Four sessions in a row read `TURN` at their first tool call and at Stop, and both readings were always already ticked. That held with the prompt sent as an argument and with it sent on stdin, the way the driver sends it. UserPromptSubmit does not fire again on a block's continuation. The verbs can't see `prompt_id`, so `TURN` stays the key `RELAY` stamps. `driver.ts` and every receipt's footnote say the tick lands at about session end, which is now stale on 2.1.283; that note is outside this seam, so it is parked.

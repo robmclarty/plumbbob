@@ -18,7 +18,7 @@ lands; [**D33 (info-exclude)**](#d33)–[**D38 (cli-owns-slugs)**](#d38) below c
 [**D74 (glossed-citations)**](#d74)–[**D75 (two-gates)**](#d75) from the 2026-07-31 citations build, and
 [**D76 (resolved-on-opener)**](#d76)–[**D77 (placeholder-uncounted)**](#d77) from the 2026-07-18
 intent-legibility build, and [**D80 (cli-renders-model-relays)**](#d80)–[**D84 (one-liner-register)**](#d84)
-from the 2026-08-28 presentation build, and [**D87 (pause-once)**](#d87)–[**D88 (current-step-shown)**](#d88)
+from the 2026-08-28 presentation build, and [**D87 (pause-once)**](#d87)–[**D89 (block-once)**](#d89)
 from the 2026-10-08 said-once-said-whole build.)
 
 ## Constraints (C)
@@ -862,6 +862,47 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   from the 2026-10-08 said-once-said-whole build, where Q2 (reminder-shape) settled it with the human's
   addition, merging its locals `current-step-shown` and `record-follows-card`. *Tagged in*
   `docs/presentation.md`.
+
+- <a id="d89"></a>**D89 (block-once): A turn that printed a pause or a boundary and did not relay it is held
+  open once, and plumbbob counts the once itself.** A `Stop` hook checks the turn's text against the ending
+  plumbbob last printed in that turn (a pause has to close the turn; a boundary has to appear in it), and on
+  a miss it answers once, with a one-line reason the model acts on and the human reads in full, naming the
+  command that reprints the ending; the retried turn then ends whatever it holds. Holding the turn open beats
+  surfacing the miss in a `systemMessage`, because surfacing leaves the human to ask for the block, one round
+  trip per miss, and the relay misses often enough for that to add up: the 2026-10-17 sweep found 31 of 35
+  decision endings whole and 10 of 10 boundaries, with nothing after the relay in 51 of 55, so about one
+  ending in ten still slips, as it did on 2026-09-17. The hold cannot hide a miss, since `Stop` fires after
+  the turn has streamed and the broken text stays on screen above the retry, but once
+  [**D87 (pause-once)**](#d87) shrinks a repeat to one line it costs one stray paragraph at most. The
+  mechanics come from a spike on Claude Code 2.1.283. The check reads the final message from
+  `last_assistant_message` on `Stop`'s stdin, never from the transcript, which does not yet hold that
+  message when the hook fires (one run's snapshot had no assistant entry, though the entry is stamped 65 ms
+  before the hook ran); the transcript still supplies the turn's earlier messages, which a boundary's check
+  needs, and a payload without the field comes from a host too old to check, so the hook exits 0 and says
+  nothing. It speaks through `additionalContext` rather than `decision: "block"`. Both hold the turn open,
+  set `stop_hook_active`, and count toward the harness's cap of eight continuations in a row (the harness
+  calls either one a block), but a block prints `Stop hook error` and an error footer on the human's screen,
+  and a missed relay is the model's slip rather than an error the human has to act on, so the human reads
+  `Stop hook feedback` instead, in the channel `turn`'s nudge and the light tier
+  ([**D25 (light-then-heavy)**](#d25)) already speak in. **It is the first plumbbob hook that holds a turn
+  open, and what it holds is the ending.** The work stays guidance, no edit blocked
+  ([**D10 (pause-not-lock)**](#d10), [**D13 (no-edit-guards)**](#d13)); the record is latched, a verb
+  refused until a human turn ([**D64 (approval-latch)**](#d64)); a raw commit is a question, never a denial
+  ([**D66 (oob-commits-surfaced)**](#d66)); and the code is checkride's, whose gate holds a red turn open
+  until it goes green ([**D75 (two-gates)**](#d75)). The relay check lets go after one try where that gate
+  holds on, because a red check is a fault in the code that the model can fix, while a second miss is
+  already on the human's screen and in the eval tier's count, and a check that held on would make the hook
+  the clock instead of the human. It runs beside that gate on identical payloads, and owes it two things.
+  It never cancels the gate's block, so it never sends `continue: false`, which ends the turn over a sibling
+  hook's block in the same round. And it never falls silent under the gate, so it counts its once in its
+  own record, by the `TURN` it held, never by `stop_hook_active`, which is shared and names nobody: the gate
+  re-blocks on every `Stop` while red, and a probe that trusted the flag went quiet for the rest of a red
+  turn and let a retry that closed on a question through. `TURN` holds as the key, since it has ticked
+  before `Stop` even under `claude -p` and stands still across a continuation, which fires no
+  `UserPromptSubmit`. The build's closing A/B measures the check, and a hold on an ending that was already
+  whole reopens this entry. Promoted from the 2026-10-08 said-once-said-whole build, where Q1
+  (relay-check-tier) settled the tier and the spike settled the mechanics, merging its local `block-once`.
+  *Evidence in* `.plumbbob/builds/2026-10-08-said-once-said-whole/spike-01-stop-hook.md`.
 
 ### Superseded
 
