@@ -11,6 +11,7 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { cleanupFixtures, runCli } from '../helpers/fixture-repo.ts'
 import { c2 } from '../evals/contracts/c2-red.eval.ts'
 import { c8 } from '../evals/contracts/c8-legible.eval.ts'
+import { c10 } from '../evals/contracts/c10-question.eval.ts'
 import { TWO_STEPS } from '../evals/contracts/contract.ts'
 import type { EvalSession, TurnResult } from '../evals/helpers/driver.ts'
 import {
@@ -34,6 +35,7 @@ import {
   endingRenders,
   forbiddenParts,
   hasCheckRow,
+  isBackPointer,
   missingParts,
   partsInOrder,
   readAnatomy,
@@ -593,6 +595,12 @@ describe('c8 legible-intent outcomes (stub session)', () => {
 describe('turn-anatomy readers (the shape every ending is measured against)', () => {
   function pausedFixture(): string {
     const { repo } = makeEvalFixture({ steps: TWO_STEPS, gate: 'green' })
+    return pauseAt(repo)
+  }
+
+  // What a build turn leaves in a fixture by the time it hands off: step 1 in
+  // flight, its seam built, a green gate, and the detail file written.
+  function pauseAt(repo: string): string {
     runCli(repo, ['build', '1'])
     writeFileSync(
       join(repo, 'src', 'greet.js'),
@@ -643,6 +651,73 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
     expect(a.nestedFence).toBe(false)
     expect(endingRenders(a, 'decision')).toBe(true)
     expect(shapeDetail(a, 'decision')).toBe('')
+  })
+
+  it('reads a pause already shown as a reminder ending: the answer above it, no card', () => {
+    const repo = pausedFixture()
+    const card = runCli(repo, ['handoff']).stdout // the first render stamps the card
+    const reminder = runCli(repo, ['handoff']).stdout
+    expect(reminder).toBe('**Next Up**: Back to Step 1 of 2 - Create the greeting module\n\n')
+    const answered = `I'll check the diff.src/greet.js is the new file, and it exports greet(name).\n\n${reminder}`
+    const a = readAnatomy(answered)
+    expect(a.trailingLabels).toEqual(tierParts('reminder'))
+    expect(isBackPointer(a)).toBe(true)
+    expect(anatomyChecks(answered, 'reminder').map((c) => [c.name, c.pass])).toEqual([
+      ['anatomy: reminder ending renders whole', true],
+      ['anatomy: no card on a pause already shown', true],
+      ['anatomy: nothing after the reminder', true],
+    ])
+    // The card pasted again beneath the answer is the repetition the reminder removes.
+    expect(anatomyChecks(`src/greet.js is the new file.\n\n${card}`, 'reminder').map((c) => c.pass)).toEqual([false, false, false])
+    // A forward pointer is not the reminder, even standing alone.
+    const forward = readAnatomy('**Next Up**: Step 2 of 2 - Add the farewell module (details: `x/intent.md:9`)\n')
+    expect(endingRenders(forward, 'reminder')).toBe(false)
+    expect(shapeDetail(forward, 'reminder')).toMatch(/^not the reminder: Step 2 of 2/)
+  })
+
+  it('reads contract 10 end to end off the live renderer: a pause, a question, the pause again', async () => {
+    // A stub session standing in for the model: each turn does what the build
+    // skill asks and hands back what the CLI printed, so the contract's reading
+    // is checked before a sweep pays for real sessions.
+    const fixture = c10.makeFixture()
+    const { repo } = fixture
+    const turns = [
+      (): string => {
+        pauseAt(repo)
+        return `I'll build step 1.${runCli(repo, ['handoff']).stdout}`
+      },
+      (): string => `src/greet.js is the new file, and it exports greet(name).\n\n${runCli(repo, ['handoff']).stdout}`,
+      (): string => runCli(repo, ['handoff', '--full']).stdout,
+    ]
+    let n = 0
+    const session: EvalSession = {
+      repo,
+      sweep: 'latched',
+      model: 'stub',
+      warmup: async () => {},
+      transcript: () => '',
+      close: async () => {},
+      turn: async (prompt) => {
+        const content = turns[n]?.() ?? ''
+        n += 1
+        return { prompt, content, finishReason: 'stop', costUsd: 0, inputTokens: 0, outputTokens: 0, durationMs: 1, sessionId: null }
+      },
+    }
+    const { deriveOutcome } = await import('../evals/run.ts')
+    const result = await c10.run(session, fixture)
+    expect(result.turns.map((t) => t.prompt)).toEqual(['/plumbbob:build 1', expect.stringContaining('which file'), 'show the pause'])
+    expect(deriveOutcome(result)).toBe('pass')
+    expect(result.checks.filter((c) => !c.pass)).toEqual([])
+    expect(result.checks.filter((c) => c.kind === 'info').map((c) => c.name)).toEqual([
+      'anatomy: decision ending renders whole',
+      'anatomy: the gate verdict rides the check row',
+      'anatomy: recommendation is the last text',
+      'anatomy: nothing after the relay',
+      'anatomy: reminder ending renders whole',
+      'anatomy: no card on a pause already shown',
+      'anatomy: nothing after the reminder',
+      'anatomy: the pause comes back whole on request',
+    ])
   })
 
   it('reads a transition as a driver ending, which owes no Verdict', () => {

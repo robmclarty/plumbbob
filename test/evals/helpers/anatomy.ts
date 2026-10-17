@@ -37,6 +37,9 @@ const RULE = /^-{3,}$/
 // The advisory glyph. An advisory and its indented remedy line are the two
 // lines an ending carries that wear no label of their own.
 const WARN = '⚠'
+// The reminder's pointer: the driver form of Next Up, aimed back at the step
+// still waiting, which a pause already shown ends on instead of its card.
+const BACK_POINTER = /^Back to Step \d+/
 
 export type Anatomy = {
   readonly labels: ReadonlyArray<string> // every bold label, in order
@@ -45,21 +48,24 @@ export type Anatomy = {
   readonly moves: ReadonlyArray<string> // the Your Call list items
   readonly highlights: ReadonlyArray<string> // the numbered items under the Summary
   readonly advisories: ReadonlyArray<string> // unlabeled `⚠` lines inside the ending
+  readonly pointer: string | null // the last Next Up line's text, after its label
   readonly endsOn: string | null // the label owning the last non-blank line
   readonly nestedFence: boolean // a labeled line found inside a fence
   readonly strays: ReadonlyArray<string> // non-blank lines outside every part
 }
 
 // The tiers of docs/presentation.md, as the parts each one renders. The spec
-// names three — decision, orientation, driver — and two of them render two
-// endings apiece, so each one gets its own name here: `plan` is the decision
-// tier's plan pause, which judges a plan rather than a diff, and `boundary` is
-// the orientation tier's landed step.
-export type Tier = 'decision' | 'plan' | 'boundary' | 'driver'
+// names three — decision, orientation, driver — and two of them render more
+// than one ending, so each gets its own name here: `plan` is the decision
+// tier's plan pause, which judges a plan rather than a diff, `reminder` is a
+// step pause already shown (D87 (pause-once)), which ends on the one line that
+// points back at the step, and `boundary` is the orientation tier's landed step.
+export type Tier = 'decision' | 'plan' | 'reminder' | 'boundary' | 'driver'
 
 const TIER_PARTS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
   decision: ['Now', 'Summary', 'Readout', 'Verdict', 'Next Up', 'Your Call', 'Recommendation'],
   plan: ['Next Up', 'Your Call', 'Recommendation'],
+  reminder: ['Next Up'],
   boundary: ['Verdict', 'Next Up'],
   driver: ['Next Up'],
 }
@@ -71,6 +77,7 @@ const TIER_PARTS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
 const TIER_FORBIDS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
   decision: [],
   plan: ['Now', 'Summary', 'Readout', 'Verdict'],
+  reminder: ['Now', 'Summary', 'Readout', 'Verdict', 'Your Call', 'Recommendation'],
   boundary: ['Now', 'Your Call', 'Readout', 'Recommendation'],
   driver: ['Now', 'Your Call', 'Verdict', 'Readout', 'Recommendation'],
 }
@@ -101,6 +108,7 @@ export function readAnatomy(text: string): Anatomy {
   const advisories: string[] = []
   const strays: string[] = []
   let current: string | null = null
+  let pointer: string | null = null
   let endsOn: string | null = null
   // How many labels had already been seen when the last stray landed: every
   // label after that one belongs to the ending, and nothing before it does.
@@ -141,6 +149,7 @@ export function readAnatomy(text: string): Anatomy {
     if (label !== null && label[1] !== undefined) {
       current = label[1]
       labels.push(current)
+      if (current === 'Next Up') pointer = line.slice(label[0].length).trim()
       endsOn = current
       continue
     }
@@ -178,6 +187,7 @@ export function readAnatomy(text: string): Anatomy {
     moves,
     highlights,
     advisories,
+    pointer,
     endsOn,
     nestedFence,
     strays,
@@ -211,6 +221,19 @@ export function missingParts(a: Anatomy, tier: Tier): ReadonlyArray<string> {
 // The parts this tier forbids that showed up anyway.
 export function forbiddenParts(a: Anatomy, tier: Tier): ReadonlyArray<string> {
   return TIER_FORBIDS[tier].filter((part) => a.trailingLabels.includes(part))
+}
+
+// Whether the ending's pointer is the reminder's: Next Up aimed back at the
+// step still waiting, not forward at the next one.
+export function isBackPointer(a: Anatomy): boolean {
+  return a.pointer !== null && BACK_POINTER.test(a.pointer)
+}
+
+// The card's own parts found anywhere in the turn, not only in its tail: a
+// pause already shown owes none of them, and a card pasted above the answer is
+// the repetition the reminder exists to remove.
+function cardParts(a: Anatomy): ReadonlyArray<string> {
+  return a.labels.filter((label) => TIER_FORBIDS.reminder.includes(label))
 }
 
 // Whether the tier's parts stand in the order the spec stacks them. Parts the
@@ -260,13 +283,15 @@ export function shapeDetail(a: Anatomy, tier: Tier): string {
   if (missing.length > 0) parts.push(`missing: ${missing.join(', ')}`)
   if (forbidden.length > 0) parts.push(`unexpected: ${forbidden.join(', ')}`)
   if (missing.length === 0 && !partsInOrder(a, tier)) parts.push(`out of order: ${a.trailingLabels.join(' > ')}`)
+  if (tier === 'reminder' && missing.length === 0 && !isBackPointer(a)) parts.push(`not the reminder: ${a.pointer ?? ''}`)
   return parts.join('; ')
 }
 
 // The whole shape read in one predicate: every part the tier owes, in order,
 // and none it forbids.
 export function endingRenders(a: Anatomy, tier: Tier): boolean {
-  return missingParts(a, tier).length === 0 && forbiddenParts(a, tier).length === 0 && partsInOrder(a, tier)
+  const shape = missingParts(a, tier).length === 0 && forbiddenParts(a, tier).length === 0 && partsInOrder(a, tier)
+  return tier === 'reminder' ? shape && isBackPointer(a) : shape
 }
 
 // The probes a contract folds into its checks for a turn of the given tier.
@@ -276,6 +301,7 @@ export function endingRenders(a: Anatomy, tier: Tier): boolean {
 // comparability with every receipt already written.
 export function anatomyChecks(text: string, tier: Tier): ReadonlyArray<Check> {
   const a = readAnatomy(tier === 'plan' ? tailAfterRule(text) : text)
+  if (tier === 'reminder') return reminderChecks(a)
   const checks: Check[] = [
     info(`anatomy: ${tier} ending renders whole`, endingRenders(a, tier), shapeDetail(a, tier)),
   ]
@@ -301,4 +327,20 @@ export function anatomyChecks(text: string, tier: Tier): ReadonlyArray<Check> {
     ),
   )
   return checks
+}
+
+// A turn at a pause already shown, read as its own tier. Its probes carry names
+// of their own, so a question turn never folds into the shared "nothing after
+// the relay" rate every receipt before it measured over first renders alone.
+// The answer stands above the line by design; what the probes read is that the
+// turn ends on the reminder, that no part of the card rode anywhere in it, and
+// that nothing followed the line.
+function reminderChecks(a: Anatomy): ReadonlyArray<Check> {
+  const card = cardParts(a)
+  const clean = a.endsOn === 'Next Up' && !a.nestedFence
+  return [
+    info('anatomy: reminder ending renders whole', endingRenders(a, 'reminder'), shapeDetail(a, 'reminder')),
+    info('anatomy: no card on a pause already shown', card.length === 0, card.join(', ')),
+    info('anatomy: nothing after the reminder', clean, clean ? '' : (a.strays.at(-1) ?? '')),
+  ]
 }

@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Said once, said whole
 
-**Current step:** 9 — fix(turn): let a park sit beside an answer in a mixed message
+**Current step:** 10 — test(evals): add a contract for a question asked at the pause
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -31,7 +31,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 6. feat(handoff): open the pause card on the step in flight
 - ☑ 7. feat(handoff): print a one-line reminder for a pause already shown
 - ☑ 8. fix(skills): answer a question at the pause without re-pasting it
-- ☐ 9. fix(turn): let a park sit beside an answer in a mixed message
+- ☑ 9. fix(turn): let a park sit beside an answer in a mixed message
 - ☐ 10. test(evals): add a contract for a question asked at the pause
 - ☐ 11. chore(evals): sweep the relay after the pause change
 - ☐ 12. chore(hooks): spike what a Stop hook can read and do
@@ -49,6 +49,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [x] docs/cli-reference.md:25 still calls handoff read-only; step 3 makes a pause rewrite .plumbbob/detail.md, so fix the row in step 7, whose seam holds the file (docs)
 - [ ] src/lib/orient.ts:1044 still says the Readout label carries the step's identity; step 6 moved it to the Now line (comment)
 - [ ] skills/build/SKILL.md:187, skills/verify/SKILL.md:123, docs/glossary.md:91, and site/docs.html and site/index.html list the card's parts without the Now line; fold into step 8, whose seam holds them (docs)
+- [ ] the in-flight nudge carries no rule for a plain question at a pause, so a fresh session (c10's turns 2 and 3, or a host after compaction) has no prose telling it to end on handoff or to reach for --full; widen the nudge if c10 reads low (turn.ts)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -192,3 +193,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-10-17 — step 6 checkpointed · 156f312ab — feat(handoff): open the pause card on the step in flight (7m)
 - 2026-10-17 — step 7 checkpointed · 9a2dcebc6 — feat(handoff): print a one-line reminder for a pause already shown (11m)
 - 2026-10-17 — step 8 checkpointed · 11cb5999e — fix(skills): answer a question at the pause without re-pasting it (9m)
+- 2026-10-17 — step 9 checkpointed · ed5629d7b — fix(turn): let a park sit beside an answer in a mixed message (5m)
