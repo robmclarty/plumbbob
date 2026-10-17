@@ -81,10 +81,13 @@ Two tiers with different jobs. The **heavy** gate runs inside the verify tick:
 runtime dependency), or the `"check"` shell command from the settings ladder as the
 override. Exit codes are the contract: 0 green, 1 red, 2 the-gate-itself-broke. The
 **light** tier is the post-edit hook: file-scoped, non-blocking lint feedback injected into
-the model's context, gated on an active build. Two more hooks ride beside it, neither a
-gate: a `git commit` ask-hook that turns a raw commit into a permission question while a
-step is in flight ([D66 (oob-commits-surfaced)](decisions.md#d66)), and the `UserPromptSubmit`
-hook that ticks the turn ledger the latch reads.
+the model's context, gated on an active build. Three more hooks ride beside it, none a
+gate on the code: a `git commit` ask-hook that turns a raw commit into a permission
+question while a step is in flight ([D66 (oob-commits-surfaced)](decisions.md#d66)), the
+`UserPromptSubmit` hook that ticks the turn ledger the latch reads, and the `Stop` relay
+check. That last one is the only hook that holds a turn open, and what it holds is the
+ending: a turn that printed a pause or a boundary and did not carry it gets one retry
+([D89 (block-once)](decisions.md#d89)).
 
 ## Distribution
 

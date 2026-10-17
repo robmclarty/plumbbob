@@ -53,9 +53,10 @@ is the repo you add, `robmclarty` is the marketplace it declares.)
 
 Reload (`/reload-plugins`) or restart Claude Code to activate; that is the whole
 setup, with nothing left to wire. The CLI is then on PATH *inside the Claude Code
-session* (for a plain terminal `plumbbob`, use the npm route below), and all three
-hooks (the post-edit lint, the `git commit` ask-hook, and the `UserPromptSubmit`
-turn-ledger hook that powers the approval latch) auto-register from `hooks.json`, so
+session* (for a plain terminal `plumbbob`, use the npm route below), and all four
+hooks (the post-edit lint, the `git commit` ask-hook, the `UserPromptSubmit`
+turn-ledger hook that powers the approval latch, and the `Stop` relay check)
+auto-register from `hooks.json`, so
 the latch is live out of the box, no manual step. Confirm it in the session with
 **`/plumbbob:doctor`**.
 
@@ -71,8 +72,8 @@ plumbbob init          # link it into Claude Code; --uninstall to undo
 
 `init` symlinks the package into `~/.claude/skills/plumbbob`, where Claude Code loads
 it as a plugin; the hooks auto-register from `hooks.json` (the post-edit lint, the
-`git commit` ask-hook, and the `UserPromptSubmit` turn-ledger hook behind the approval
-latch). Because it's a symlink, a later `npm i -g plumbbob@latest` stays live with no
+`git commit` ask-hook, the `UserPromptSubmit` turn-ledger hook behind the approval
+latch, and the `Stop` relay check). Because it's a symlink, a later `npm i -g plumbbob@latest` stays live with no
 re-link. If a
 marketplace plumbbob is already installed, `plumbbob init` refuses rather than create
 the collision (`--force` overrides), and `plumbbob doctor` flags a double-install.

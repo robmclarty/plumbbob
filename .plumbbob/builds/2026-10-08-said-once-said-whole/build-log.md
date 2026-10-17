@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Said once, said whole
 
-**Current step:** 17 — feat(relay): hold a relay on its parts and measured facts, not every line
+**Current step:** none (at the boundary)
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -39,7 +39,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 14. feat(handoff): remember the ending each turn has to close on
 - ☑ 15. feat(hooks): check at a turn's end that it closed on its relay
 - ☑ 16. chore(evals): measure the relay check with and without the hook
-- ☐ 17. feat(relay): hold a relay on its parts and measured facts, not every line
+- ☑ 17. feat(relay): hold a relay on its parts and measured facts, not every line
 
 ## Park list
 
@@ -57,7 +57,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [x] recover and agent run print driver-tier output without recording RELAY, so a turn that ends on either after a pause is judged by the pause; step 14's seam held them out (relay)
 - [x] README, docs/install.md, and docs/architecture.md still count three hooks; the Stop relay check makes four, so name it beside the turn ledger (relay)
 - [x] docs/presentation.md states the positional rule but not that a Stop hook now checks it; one sentence beside 'relayed whole' citing D89 (block-once) would close the spec gap (relay)
-- [ ] report.ts's Relay holds paragraph says the check compares line for line; since step 17 it reads parts and facts, so the next receipt would print a stale method sentence (evals)
+- [x] report.ts's Relay holds paragraph says the check compares line for line; since step 17 it reads parts and facts, so the next receipt would print a stale method sentence (evals)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -123,6 +123,12 @@ Harvest results this boundary:
 - **tangent** (deferred until D89 (block-once) is settled): `docs/presentation.md` does
   not say a Stop hook checks the positional rule. The sentence would describe how
   strictly the check compares a relay, which is what the A/B reopened.
+- 2026-10-17, at the step 17 boundary: one parked item, classified tangent.
+- **tangent** (deferred to before the next sweep): `report.ts`'s Relay holds paragraph
+  says the check compares line for line. The 2026-10-17 receipt is accurate as written,
+  since it measured that check, and no sweep is scheduled. The fix should point at D89
+  (block-once) rather than describe the comparison, or re-rendering the 2026-10-17
+  receipt would describe a check it never measured.
 
 ## Log
 
@@ -336,3 +342,48 @@ folder, so it rides the branch into the PR.)*
 - 2026-10-17 — step 14 checkpointed · a1b57d950 — feat(handoff): remember the ending each turn has to close on (531m)
 - 2026-10-17 — step 15 checkpointed · c67286827 — feat(hooks): check at a turn's end that it closed on its relay (1 red, 1 drift, 21m)
 - 2026-10-17 — step 16 checkpointed · a292bc9a9 — chore(evals): measure the relay check with and without the hook (1 drift)
+- 2026-10-17 — step 17 checkpointed · 3491cdfa7 — feat(relay): hold a relay on its parts and measured facts, not every line (19m)
+
+  **Summary**: The relay check now reads a relay by its parts and compares only the Readout table and the Verdict line exactly. Replayed against the eight relays the A/B held, it lets the five one-line changes through and still holds the three real misses, and it holds a relay that keeps every part but turns a red check green. Building it showed that step 16's account of those three misses was wrong, and D89 (block-once) now says what actually happened.
+
+  1. The check reads a card's labeled parts in order and compares only the measured facts exactly
+  2. A paragraph written inside a card is a miss too, which widened two clauses of the done-when
+  3. Step 16 got two of the three misses wrong, and D89 (block-once) now records them correctly
+  4. The eight fixtures are the A/B's own relays, pulled from the session transcripts
+  5. One new park: the next receipt would describe the old comparison
+
+  **Readout**: Step 17 - feat(relay): hold a relay on its parts and measured facts, not every line
+
+  ```text
+  check        green: 1 of 1 checks
+  done-when    met
+  decisions    2 of 2 honored
+  constraints  7 of 7 honored
+  seam         held: 5 of 5 declared, no strays
+  diff         +293 -15 across 5 files
+  spent        19 min · 1 turn · 107s gate · green first run
+  ```
+
+  **Verdict**: ● Plumb
+
+  **Recommendation**: Approve it, then run `/plumbbob:finish`. The comparison does what the table promised on the eight real cases, and the gate is green.
+
+  **1.** The check reads a card's labeled parts in order and compares only the measured facts exactly
+
+  `relay.ts` splits an ending into parts at every line that opens with a bold label and a colon, outside a fence, and takes the expected parts from the printed block itself, so the plan card, the reminder, and the boundary need no special case. A decision ending is read from the last place the final message opens the block's first part, which also handles a card relayed twice in one message. Only the `text` fence under Readout and the Verdict line are compared, whitespace aside. The hook can't import the eval's anatomy reader, which is test code, so this is its own small reader of about 90 lines. A relay wrapped in a fence of its own now reads as missed, because its labels no longer open lines of the turn.
+
+  **2.** A paragraph written inside a card is a miss too, which widened two clauses of the done-when
+
+  As first written, the done-when held a decision ending only for text after its last part. The replay showed c8 run 1 relayed the plan card with a paragraph wedged between Your Call and the Recommendation, which the receipt counts as a miss. So the check now counts paragraphs in every part: a part may have no more than the printed block has there. For a boundary, every part but the last is counted, since an answer may follow a checkpoint block. I widened both clauses of step 17's done-when to say so. Your choice of parts and order was a choice of the anatomy reader's rule, and that rule already counts a stray between parts.
+
+  **3.** Step 16 got two of the three misses wrong, and D89 (block-once) now records them correctly
+
+  I had written that two plan cards were never relayed and that a pause card came back cut short through `head`. The transcripts say otherwise. c7 run 2 never relayed its card. c8 run 1 put a paragraph inside the card, and c8 run 4 wrote two paragraphs after it, one of them the claude.ai connector notice. All three came back whole on the retry. c7's retry card lacked a Summary and a Recommendation because that turn wrote no detail file, not because of `head`. D89 is corrected in place and carries the dated revision note for the new comparison. Step 16's commit body (`a292bc9a9`) still has the wrong account, and it can't be amended; this step's commit body says so.
+
+  **4.** The eight fixtures are the A/B's own relays, pulled from the session transcripts
+
+  `src/verbs/__tests__/fixtures/relay-holds.json` holds, for each hold the latched ledger names, the block `handoff` printed before the hold and the text the model relayed in its place. One exception: c7 run 2 piped `handoff` through `head -30`, so its fixture uses the retry's `handoff --full` render of the same pause. A test pins the five-and-three split, so the fixtures can't drift from what the receipt measured.
+
+  **5.** One new park: the next receipt would describe the old comparison
+
+  `report.ts` prints a Relay holds paragraph saying the check compares line for line. That's true of the 2026-10-17 receipt, which stays as written, but not of the next one. The file is outside this step's seam, so it's parked.

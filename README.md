@@ -258,9 +258,10 @@ All fourteen, with inputs and effects, are in
 [`docs/skills-reference.md`](docs/skills-reference.md).
 
 Under the skills ships a lean `plumbbob` CLI (the mechanical verbs the
-skills shell out to), three hooks (a non-blocking post-edit lint, a `git commit`
-ask-hook while a step is in flight, and the per-prompt turn ledger the approval latch
-reads), and a `.plumbbob/` sidecar you can open and edit by hand at any time: a tracked
+skills shell out to), four hooks (a non-blocking post-edit lint, a `git commit`
+ask-hook while a step is in flight, the per-prompt turn ledger the approval latch
+reads, and a check at each turn's end that the turn relayed the ending plumbbob
+printed), and a `.plumbbob/` sidecar you can open and edit by hand at any time: a tracked
 `builds/<slug>/` folder per build (`intent.md`, `build-log.md`, `checkpoints`, `report.md`)
 that rides the branch into the PR, plus an untracked control plane (`settings.local.json`,
 the session sentinel, the in-flight markers).
