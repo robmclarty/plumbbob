@@ -45,7 +45,9 @@ import {
   transitionLabel,
 } from '../evals/helpers/anatomy.ts'
 import { EVAL_SLUG, makeEvalFixture, seedFlawedGreeting } from '../evals/helpers/fixture.ts'
-import { REPO_ROOT, resolvePluginDir, stripLatchHooks } from '../evals/helpers/plugin.ts'
+import { holdsIn } from '../evals/helpers/holds.ts'
+import { REPO_ROOT, resolvePluginDir, stripLatchHooks, stripRelayHook } from '../evals/helpers/plugin.ts'
+import { renderHolds } from '../evals/helpers/report.ts'
 
 afterAll(cleanupFixtures)
 
@@ -91,6 +93,119 @@ describe('plugin-dir resolution (baseline strips the latch, nothing else)', () =
 
   it('resolves the same baseline copy on repeated calls (built once)', () => {
     expect(resolvePluginDir('baseline')).toBe(resolvePluginDir('baseline'))
+  })
+
+  it('no-relay copy lacks only the Stop hook, keeping the latch and the light tier', () => {
+    const dir = resolvePluginDir('no-relay')
+    expect(dir).not.toBe(REPO_ROOT)
+    expect(dir).not.toBe(resolvePluginDir('baseline'))
+    const hooks = JSON.parse(readFileSync(join(dir, 'hooks', 'hooks.json'), 'utf8')) as {
+      hooks: Record<string, unknown>
+    }
+    expect(Object.keys(hooks.hooks).sort()).toEqual(['PostToolUse', 'PreToolUse', 'UserPromptSubmit'])
+    expect(existsSync(join(dir, 'dist', 'cli.js'))).toBe(true)
+    expect(resolvePluginDir('no-relay')).toBe(dir)
+  })
+
+  it('stripRelayHook removes exactly the Stop event', () => {
+    const stripped = stripRelayHook({
+      hooks: { UserPromptSubmit: [1], PreToolUse: [2], PostToolUse: [3], Stop: [4] },
+    })
+    expect(Object.keys(stripped.hooks).sort()).toEqual(['PostToolUse', 'PreToolUse', 'UserPromptSubmit'])
+  })
+})
+
+/** A fixture paused on step 1 with a green gate and a detail file, for the holds tests' live card. */
+function pausedFixtureForHolds(): string {
+  const { repo } = makeEvalFixture({ steps: TWO_STEPS, gate: 'green' })
+  runCli(repo, ['build', '1'])
+  writeFileSync(join(repo, 'src', 'greet.js'), 'module.exports = { greet: (n) => `Hello, ${n}!` }\n')
+  mkdirSync(join(repo, '.check'), { recursive: true })
+  writeFileSync(
+    join(repo, '.check', 'summary.json'),
+    JSON.stringify({ schema_version: 1, ok: true, checks_run: 1, total_duration_ms: 1200, checks: [{ name: 'check', ok: true }] }),
+  )
+  writeFileSync(
+    join(repo, '.plumbbob', 'detail.md'),
+    '── recap · step 1 of 2 ──\ndone-when    met\n\n## Summary\n\nIt greets.\n\n## 1 greet exists\n\nThe story.\n\n## Recommendation\n\nApprove it.\n',
+  )
+  return repo
+}
+
+describe('relay holds (read from a session transcript, judged by the anatomy probes)', () => {
+  // A session's transcript as the harness writes it: the prompt, the model's
+  // text, and, where the Stop hook held the turn, its context and the retry.
+  function transcript(parts: ReadonlyArray<{ text?: string; context?: string; hook?: string }>): string {
+    const lines: unknown[] = [{ type: 'user', promptId: 'p', message: { role: 'user', content: 'build step 1' } }]
+    for (const part of parts) {
+      if (part.text !== undefined) {
+        lines.push({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: part.text }] } })
+      }
+      if (part.context !== undefined) {
+        lines.push({
+          type: 'attachment',
+          attachment: { type: 'hook_additional_context', content: [part.context], hookName: part.hook ?? 'Stop', hookEvent: 'Stop' },
+        })
+      }
+    }
+    return lines.map((l) => JSON.stringify(l)).join('\n')
+  }
+
+  const CARD_REASON =
+    'plumbbob: the turn did not close on the pause card it printed. Run `plumbbob handoff --full` and end the turn on its output, whole, with nothing after it.'
+
+  it('counts a hold over a paraphrase as a true hold, judged on the text before it', () => {
+    const { stdout: card } = runCli(pausedFixtureForHolds(), ['handoff'])
+    const holds = holdsIn(transcript([{ text: 'Step 1 is built and green. Approve?' }, { context: CARD_REASON }, { text: card }]))
+    expect(holds).toEqual([{ reason: CARD_REASON, tier: 'decision', whole: false }])
+  })
+
+  it('flags a hold over a card the turn had already relayed whole as a false hold', () => {
+    const { stdout: card } = runCli(pausedFixtureForHolds(), ['handoff'])
+    const holds = holdsIn(transcript([{ text: `I built step 1.\n\n${card}` }, { context: CARD_REASON }, { text: card }]))
+    expect(holds.map((h) => h.whole)).toEqual([true])
+  })
+
+  it('reads the tier off each reason, and skips context that is not the relay check\'s', () => {
+    const plan = 'plumbbob: the turn did not close on the plan card it printed. Run `plumbbob handoff --plan` and end the turn on its output, whole, with nothing after it.'
+    const boundary = 'plumbbob: the turn did not relay the block `plumbbob checkpoint` printed. Paste that block whole.'
+    const holds = holdsIn(
+      transcript([
+        { text: 'a' },
+        { context: 'checkride: the gate is red' },
+        { context: plan },
+        { context: CARD_REASON, hook: 'UserPromptSubmit' },
+        { context: boundary },
+      ]),
+    )
+    expect(holds.map((h) => h.tier)).toEqual(['plan', 'boundary'])
+    expect(holdsIn('')).toEqual([])
+    expect(holdsIn('not json\n')).toEqual([])
+  })
+
+  it('renders the holds per arm, listing each one, and nothing for a ledger from before the check', () => {
+    const run = (sweep: string, n: number, holds?: ReadonlyArray<{ tier: string | null; whole: boolean }>) => ({
+      contract: 'c7',
+      title: 'pressure',
+      run: n,
+      sweep,
+      outcome: 'pass',
+      model: 'opus',
+      checks: [],
+      costUsd: 0,
+      durationMs: 0,
+      infraRetries: 0,
+      turns: [holds === undefined ? {} : { relayHolds: holds }],
+    })
+    const lines = renderHolds([
+      { sweep: 'no-relay', ran: '', runs: [run('no-relay', 1, [])] },
+      { sweep: 'latched', ran: '', runs: [run('latched', 1, [{ tier: 'decision', whole: false }]), run('latched', 2, [{ tier: 'plan', whole: true }])] },
+    ])
+    expect(lines).toContain('| no-relay | 0 | 0 |')
+    expect(lines).toContain('| latched | 2 | 1 |')
+    expect(lines).toContain('- c7 run 1 (latched): held over a pause card the turn had not carried whole')
+    expect(lines).toContain('- c7 run 2 (latched): held over a plan card the turn had already carried whole')
+    expect(renderHolds([{ sweep: 'latched', ran: '', runs: [run('latched', 1)] }])).toEqual([])
   })
 })
 

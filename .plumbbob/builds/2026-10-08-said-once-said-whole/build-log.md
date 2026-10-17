@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Said once, said whole
 
-**Current step:** 15 — feat(hooks): check at a turn's end that it closed on its relay
+**Current step:** none (at the boundary)
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -37,7 +37,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 12. chore(hooks): spike what a Stop hook can read and do
 - ☑ 13. docs(decisions): record the relay check and its tier
 - ☑ 14. feat(handoff): remember the ending each turn has to close on
-- ☐ 15. feat(hooks): check at a turn's end that it closed on its relay
+- ☑ 15. feat(hooks): check at a turn's end that it closed on its relay
 - ☐ 16. chore(evals): measure the relay check with and without the hook
 
 ## Park list
@@ -318,3 +318,4 @@ folder, so it rides the branch into the PR.)*
   D89 (block-once) cites step 11's numbers (31 of 35 decision endings whole, 10 of 10 boundaries, 51 of 55 with nothing after the relay), which still come to about one ending in ten, as 2026-09-17 did. The key's opening paragraph now credits this build with D87 (pause-once) through D89 (block-once). The entry cites no plan-local tag, because the refs slot would read `D16` as this key's D16 (check-plus-self-review), so the plan's locals appear only as the backticked slug `block-once`. Its last line points at the spike report rather than a code file, since the hook lands in steps 14 and 15. Step 16 adds the receipt citation its done-when asks for.
 
 - 2026-10-17 — step 14 checkpointed · a1b57d950 — feat(handoff): remember the ending each turn has to close on (531m)
+- 2026-10-17 — step 15 checkpointed · c67286827 — feat(hooks): check at a turn's end that it closed on its relay (1 red, 1 drift, 21m)

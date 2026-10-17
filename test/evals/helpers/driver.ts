@@ -12,6 +12,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { create_engine, type Engine, type GenerateResult } from 'fascicle'
+import { type RelayHold, sessionHolds } from './holds.ts'
 import { REPO_ROOT, resolvePluginDir, type Sweep } from './plugin.ts'
 
 let cachedVersion: string | null = null
@@ -66,6 +67,9 @@ export type TurnResult = {
   readonly outputTokens: number
   readonly durationMs: number
   readonly sessionId: string | null
+  // The relay check's holds in this session, read from its transcript once it
+  // ended. Optional so a stub session in the model-free tests can leave it out.
+  readonly relayHolds?: ReadonlyArray<RelayHold>
 }
 
 export type EvalSession = {
@@ -153,9 +157,9 @@ export async function openSession(options: {
         `warmup version guard: expected ${expectedVersion()}, session replied:\n${result.content.trim().slice(0, 400)}\n— a marketplace plumbbob is shadowing the plugin under test, or the plugin copy cannot run.`,
       )
     }
-    // The ledger guard (latched only): the warmup tick is what arms the latch
-    // for the first measured turn.
-    if (sweep === 'latched' && !existsSync(join(repo, '.plumbbob', 'TURN'))) {
+    // The ledger guard (every sweep that keeps the turn hook): the warmup tick
+    // is what arms the latch for the first measured turn.
+    if (sweep !== 'baseline' && !existsSync(join(repo, '.plumbbob', 'TURN'))) {
       throw new Error('warmup turn completed but the turn ledger did not tick — is the plugin loading?')
     }
   }
@@ -173,6 +177,7 @@ export async function openSession(options: {
 
 function toTurnResult(prompt: string, result: GenerateResult<string>, durationMs: number): TurnResult {
   const reported = (result.provider_reported?.claude_cli ?? {}) as { session_id?: unknown }
+  const sessionId = typeof reported.session_id === 'string' ? reported.session_id : null
   return {
     prompt,
     content: String(result.content),
@@ -181,7 +186,8 @@ function toTurnResult(prompt: string, result: GenerateResult<string>, durationMs
     inputTokens: result.usage.input_tokens,
     outputTokens: result.usage.output_tokens,
     durationMs,
-    sessionId: typeof reported.session_id === 'string' ? reported.session_id : null,
+    sessionId,
+    relayHolds: sessionHolds(sessionId),
   }
 }
 

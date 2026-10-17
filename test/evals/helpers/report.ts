@@ -72,6 +72,7 @@ export function appendRun(date: string, sweep: string, record: unknown): void {
 type LedgerRun = {
   readonly contract: string
   readonly title: string
+  readonly run: number
   readonly sweep: string
   readonly outcome: string
   readonly model: string
@@ -85,7 +86,21 @@ type LedgerRun = {
   readonly durationMs: number
   readonly infraRetries: number
   readonly error?: string
+  // Absent on every ledger written before the relay check shipped.
+  readonly turns?: ReadonlyArray<{
+    readonly relayHolds?: ReadonlyArray<{ readonly tier: string | null; readonly whole: boolean }>
+  }>
 }
+
+// The arms a receipt can compare, in the order its columns read, each with the
+// clause that says what it ran.
+const ARMS: ReadonlyArray<{ readonly sweep: string; readonly ran: string }> = [
+  { sweep: 'baseline', ran: 'runs the plugin with the latch hooks stripped (prose only)' },
+  { sweep: 'no-relay', ran: 'runs the shipped plugin with its `Stop` hook stripped (no relay check)' },
+  { sweep: 'latched', ran: 'runs the shipped plugin' },
+]
+
+type Arm = { readonly sweep: string; readonly ran: string; readonly runs: ReadonlyArray<LedgerRun> }
 
 function readLedger(date: string, sweep: string): ReadonlyArray<LedgerRun> {
   let raw = ''
@@ -113,12 +128,15 @@ function cost(runs: ReadonlyArray<LedgerRun>): number {
   return runs.reduce((sum, r) => sum + (Number.isFinite(r.costUsd) ? r.costUsd : 0), 0)
 }
 
-// Render the day's baseline-vs-latched table from the JSONL ledgers. Returns
-// the markdown; the caller writes it (run.ts --report).
+// Render the day's arms side by side from the JSONL ledgers. Returns the
+// markdown; the caller writes it (run.ts --report). A receipt shows baseline
+// beside latched, as every one before the relay check did, unless the
+// no-relay arm ran: then it shows the arms that ran, and nothing else.
 export function renderReport(date: string): string {
-  const baseline = readLedger(date, 'baseline')
-  const latched = readLedger(date, 'latched')
-  const all = [...baseline, ...latched]
+  const arms: ReadonlyArray<Arm> = ARMS.map((arm) => ({ ...arm, runs: readLedger(date, arm.sweep) }))
+  const relayed = arms.some((a) => a.sweep === 'no-relay' && a.runs.length > 0)
+  const shown = relayed ? arms.filter((a) => a.runs.length > 0) : arms.filter((a) => a.sweep !== 'no-relay')
+  const all = shown.flatMap((a) => a.runs)
   if (all.length === 0) return `# Skill-eval sweep — ${date}\n\nNo runs recorded for this date.\n`
 
   const s = stamps()
@@ -134,26 +152,25 @@ export function renderReport(date: string): string {
     '',
     'Each run is one scripted headless session sequence against a fresh fixture repo;',
     'every assertion is a mechanical read of git + sidecar state (no LLM judging).',
-    '`baseline` runs the plugin with the latch hooks stripped (prose only);',
-    '`latched` runs the shipped plugin. Behavioral failures are never retried.',
+    ...shown.map((a, i) => `\`${a.sweep}\` ${a.ran}${i < shown.length - 1 ? ';' : '. Behavioral failures are never retried.'}`),
     '',
-    '| # | Contract | baseline | latched |',
-    '| - | -------- | -------- | ------- |',
+    `| # | Contract | ${shown.map((a) => a.sweep).join(' | ')} |`,
+    `| - | -------- | ${shown.map((a) => '-'.repeat(a.sweep.length)).join(' | ')} |`,
     ...contracts.map(([id, title]) => {
-      const b = baseline.filter((r) => r.contract === id)
-      const l = latched.filter((r) => r.contract === id)
-      return `| ${id} | ${title} | ${rate(b)} | ${rate(l)} |`
+      const rates = shown.map((a) => rate(a.runs.filter((r) => r.contract === id)))
+      return `| ${id} | ${title} | ${rates.join(' | ')} |`
     }),
     '',
-    `Estimated cost: $${cost(baseline).toFixed(2)} baseline · $${cost(latched).toFixed(2)} latched · ` +
+    `Estimated cost: ${shown.map((a) => `$${cost(a.runs).toFixed(2)} ${a.sweep}`).join(' · ')} · ` +
       `${all.filter((r) => r.infraRetries > 0).length} run(s) needed an infra retry.`,
     '',
-    ...renderOneSided(baseline, latched),
+    ...renderOneSided(shown),
     '## Non-pass runs',
     '',
     ...renderNonPasses(all),
     '',
-    ...renderAnatomy(baseline, latched),
+    ...renderAnatomy(shown),
+    ...renderHolds(shown),
     '## Method footnotes',
     '',
     '- Each scripted "human turn" is a fresh `claude -p` session; plumbbob\'s turn',
@@ -193,9 +210,62 @@ export function renderReport(date: string): string {
     '  (`D1 (in-memory-bucket):`) ships only in templates/intent.md and the plan',
     '  skill, so nothing enforces it and baseline should track latched. Its',
     '  number measures whether that guidance actually lands in authored intent.',
+    ...(relayed
+      ? [
+          '- `no-relay` and `latched` ran at one commit and differ in one hook: the',
+          '  `no-relay` copy strips the `Stop` entry from hooks.json and keeps the',
+          '  latch, so the product grows no switch and the gap between the two',
+          '  columns is the relay check\'s ([D89 (block-once)](../decisions.md#d89)).',
+        ]
+      : []),
     '',
   ]
   return lines.join('\n')
+}
+
+// The relay check's holds, per arm, read from the ledger's per-turn record of
+// each session's transcript. Rendered only where an arm's ledger carries that
+// record, so a receipt from before the check re-renders as it was written.
+export function renderHolds(arms: ReadonlyArray<Arm>): string[] {
+  const measured = arms.filter((a) => a.runs.some((r) => r.turns?.some((t) => t.relayHolds !== undefined) === true))
+  if (measured.length === 0) return []
+  const heldIn = (a: Arm): ReadonlyArray<{ run: LedgerRun; tier: string | null; whole: boolean }> =>
+    a.runs.flatMap((run) => (run.turns ?? []).flatMap((t) => (t.relayHolds ?? []).map((h) => ({ run, ...h }))))
+  const lines = [
+    '## Relay holds',
+    '',
+    'The turns the relay check held open ([D89 (block-once)](../decisions.md#d89)),',
+    'read from each session\'s transcript. A hold fell on an ending that was already',
+    'whole when the text before it already carried that ending whole by the probes',
+    'above: a false hold, and the one result that reopens the decision. Those probes',
+    'read the parts an ending owes and their order, while the check compares the',
+    'relay with the block line for line, so a relay that moved or restyled one line',
+    'inside a part reads as whole here and is still held.',
+    '',
+    '| arm | holds | on an ending already whole |',
+    '| --- | ----- | -------------------------- |',
+    ...measured.map((a) => {
+      const holds = heldIn(a)
+      return `| ${a.sweep} | ${holds.length} | ${holds.filter((h) => h.whole).length} |`
+    }),
+    '',
+  ]
+  const listed = measured.flatMap((a) =>
+    heldIn(a).map(
+      (h) =>
+        `- ${h.run.contract} run ${h.run.run} (${a.sweep}): held over ${HELD_ENDING[h.tier ?? ''] ?? 'an ending'} ` +
+        `${h.whole ? 'the turn had already carried whole' : 'the turn had not carried whole'}`,
+    ),
+  )
+  return listed.length === 0 ? lines : [...lines, ...listed, '']
+}
+
+// What a hold's ending is called in its line, by the tier the reason named.
+const HELD_ENDING: Readonly<Record<string, string>> = {
+  decision: 'a pause card',
+  reminder: 'a pause reminder',
+  plan: 'a plan card',
+  boundary: 'a boundary block',
 }
 
 // The turn shapes docs/presentation.md specifies, tallied off the anatomy
@@ -204,13 +274,10 @@ export function renderReport(date: string): string {
 // whether a turn paused is the contract's verdict, and whether it paused in the
 // right shape is the separate question this table answers. The unit is a probe,
 // not a run, because a contract that reads two turns contributes two.
-function renderAnatomy(
-  baseline: ReadonlyArray<LedgerRun>,
-  latched: ReadonlyArray<LedgerRun>,
-): string[] {
+function renderAnatomy(arms: ReadonlyArray<Arm>): string[] {
   const names = [
     ...new Set(
-      [...baseline, ...latched].flatMap((r) =>
+      arms.flatMap((a) => a.runs).flatMap((r) =>
         r.checks.filter((c) => c.name.startsWith(ANATOMY_PREFIX)).map((c) => c.name),
       ),
     ),
@@ -226,11 +293,11 @@ function renderAnatomy(
     'so the ending is read from the tail: prose before the relay is the model working,',
     'prose after it is the defect the positional rule exists to catch.',
     '',
-    '| probe | baseline | latched |',
-    '| ----- | -------- | ------- |',
+    `| probe | ${arms.map((a) => a.sweep).join(' | ')} |`,
+    `| ----- | ${arms.map((a) => '-'.repeat(a.sweep.length)).join(' | ')} |`,
     ...names.map((name) => {
       const label = name.slice(ANATOMY_PREFIX.length)
-      return `| ${label} | ${probeRate(baseline, name)} | ${probeRate(latched, name)} |`
+      return `| ${label} | ${arms.map((a) => probeRate(a.runs, name)).join(' | ')} |`
     }),
     '',
   ]
@@ -269,13 +336,10 @@ function codeSpan(text: string): string {
 
 // A sweep that ran one arm says so. An empty column is a measurement nobody
 // took, and a dash alone cannot tell that apart from a run that found nothing.
-function renderOneSided(
-  baseline: ReadonlyArray<LedgerRun>,
-  latched: ReadonlyArray<LedgerRun>,
-): string[] {
-  const missing = baseline.length === 0 ? 'baseline' : latched.length === 0 ? 'latched' : null
-  if (missing === null) return []
-  return [`The \`${missing}\` arm was not run on this date, so its column is empty.`, '']
+function renderOneSided(arms: ReadonlyArray<Arm>): string[] {
+  const missing = arms.find((a) => a.runs.length === 0)
+  if (missing === undefined) return []
+  return [`The \`${missing.sweep}\` arm was not run on this date, so its column is empty.`, '']
 }
 
 function probeRate(runs: ReadonlyArray<LedgerRun>, name: string): string {

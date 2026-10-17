@@ -2,8 +2,12 @@
 // is a pass RATE plus a cost ledger, and `pnpm test` must be structurally
 // unable to reach this. Sequential runs (deterministic, rate-limit-friendly).
 //
-//   node test/evals/run.ts --sweep latched [--contract c1] [--n 5] [--model opus]
-//   node test/evals/run.ts --report [--date YYYY-MM-DD]
+//   node test/evals/run.ts --sweep latched [--contract c1] [--n 5] [--model opus] [--date KEY]
+//   node test/evals/run.ts --report [--date KEY]
+//
+// The date is the receipt's key, today's UTC date unless `--date` names another:
+// a second receipt on a day that already has one takes a suffixed key
+// (`2026-10-17-relay`) so its ledgers never mix with the first's.
 //
 // Outcomes per run: pass (validity holds, every required check passes), fail
 // (validity holds, a required check fails), invalid (a validity precondition
@@ -163,6 +167,7 @@ function toLedgerLine(record: RunRecord, date: string): unknown {
       outputTokens: t.outputTokens,
       durationMs: t.durationMs,
       sessionId: t.sessionId,
+      relayHolds: t.relayHolds ?? [],
       // The final text rides along so string probes are auditable later; capped
       // so a chatty run cannot bloat the ledger.
       contentHead: t.content.slice(0, 2000),
@@ -211,10 +216,10 @@ async function main(): Promise<number> {
   }
 
   const sweepArg = flagValue(argv, '--sweep') ?? process.env.PLUMBBOB_EVAL_SWEEP
-  if (sweepArg !== 'baseline' && sweepArg !== 'latched') {
+  if (sweepArg !== 'baseline' && sweepArg !== 'no-relay' && sweepArg !== 'latched') {
     process.stderr.write(
-      'usage: node test/evals/run.ts --sweep baseline|latched [--contract cN] [--n N] [--model m]\n' +
-        '       node test/evals/run.ts --report [--date YYYY-MM-DD]\n',
+      'usage: node test/evals/run.ts --sweep baseline|no-relay|latched [--contract cN] [--n N] [--model m] [--date KEY]\n' +
+        '       node test/evals/run.ts --report [--date KEY]\n',
     )
     return 1
   }
@@ -222,7 +227,7 @@ async function main(): Promise<number> {
   const only = flagValue(argv, '--contract')
   const n = Number.parseInt(flagValue(argv, '--n') ?? String(EVAL_N), 10)
   const model = flagValue(argv, '--model') ?? EVAL_MODEL
-  const date = today()
+  const date = flagValue(argv, '--date') ?? today()
   const contracts = CONTRACTS.filter((c) => only === undefined || c.id === only)
   if (contracts.length === 0) {
     process.stderr.write(`no contract matches "${only}" — known: ${CONTRACTS.map((c) => c.id).join(', ')}\n`)
