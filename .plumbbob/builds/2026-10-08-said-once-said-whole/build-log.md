@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Said once, said whole
 
-**Current step:** 4 — test(markdown): lint the detail file a pause leaves on disk
+**Current step:** 5 — docs(presentation): show a pause once and name the step it is on
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -26,7 +26,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 1. fix(status): count out-of-band commits the way handoff does
 - ☑ 2. fix(skills): put a blank line under each detail heading
 - ☑ 3. fix(handoff): put blank lines around the detail file's headings
-- ☐ 4. test(markdown): lint the detail file a pause leaves on disk
+- ☑ 4. test(markdown): lint the detail file a pause leaves on disk
 - ☐ 5. docs(presentation): show a pause once and name the step it is on
 - ☐ 6. feat(handoff): open the pause card on the step in flight
 - ☐ 7. feat(handoff): print a one-line reminder for a pause already shown
@@ -46,7 +46,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 > go straight back to the step. Acting the instant an idea arrives is the disease.
 > Capture is one line (`/plumbbob:park` composes it). Harvest happens only at the boundary.
 
-- [ ] docs/cli-reference.md:25 still calls handoff read-only; step 3 makes a pause rewrite .plumbbob/detail.md, so fix the row in step 7, whose seam holds the file (docs)
+- [x] docs/cli-reference.md:25 still calls handoff read-only; step 3 makes a pause rewrite .plumbbob/detail.md, so fix the row in step 7, whose seam holds the file (docs)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -64,7 +64,11 @@ from sprawling across branches.
 
 Harvest results this boundary:
 
-- (none yet)
+- 2026-10-16, at the step 4 boundary: one parked item, classified.
+- **tangent** (deferred to step 7): `docs/cli-reference.md:25` still calls `handoff`
+  read-only. It blocks nothing in steps 5 and 6, and step 7 rewrites that same row (it gains
+  `--full`, and the `PAUSE` stamp makes "read-only" wrong a second time) with the file
+  already in its seam.
 
 ## Log
 
@@ -101,3 +105,38 @@ folder, so it rides the branch into the PR.)*
 - 2026-10-16 — step 1 checkpointed · 4ab52c820 — fix(status): count out-of-band commits the way handoff does (5m)
 - 2026-10-16 — step 2 checkpointed · 31f533529 — fix(skills): put a blank line under each detail heading (4m)
 - 2026-10-16 — step 3 checkpointed · 83e7f8c3b — fix(handoff): put blank lines around the detail file's headings (8m)
+- 2026-10-17 — step 4 checkpointed · 8b7b4e4d9 — test(markdown): lint the detail file a pause leaves on disk (22m)
+
+  **Summary**: The generated-markdown test now lints the `.plumbbob/detail.md` a real `handoff` pause leaves behind, and fails on MD022 if step 3's normalization is taken out.
+
+  1. The new case drives the real pause and lints what it leaves.
+  2. I checked that it fails without step 3.
+  3. The range's self-approval lapsed, so this last step waits on you.
+
+  **Readout**: Step 4 - test(markdown): lint the detail file a pause leaves on disk
+
+  ```text
+  check        green: 1 of 1 checks
+  done-when    met
+  decisions    1 of 1 honored
+  constraints  7 of 7 honored
+  seam         held: 1 of 1 declared, no strays
+  diff         +32 -1 across 1 file
+  spent        22 min · 2 turns · 183s gate · green first run
+  ```
+
+  **Verdict**: ● Plumb
+
+  **Recommendation**: Say `looks good` and I will land step 4, which closes Wave 1. The new case fails without step 3's normalization and passes with it, and the full gate is green.
+
+  **1.** The new case drives the real pause and lints what it leaves.
+
+  It writes a detail file whose headings run into their bodies, and first lints that file to prove the fixture is tight (it fails MD022). It then runs a real `handoff` pause and lints the file again under the test's consumer-strict rules, which come back clean. It reuses the file's existing `RULES` and `lintFindings`, so nothing new was added to the harness.
+
+  **2.** I checked that it fails without step 3.
+
+  I swapped `handoff`'s normalization for a pass-through, ran the file, and saw MD022 at every heading in `.plumbbob/detail.md`. I then restored `handoff.ts`; nothing under `src/verbs/handoff.ts` differs from step 3's commit.
+
+  **3.** The range's self-approval lapsed, so this last step waits on you.
+
+  Steps 1 to 3 landed under your typed `1-4`. The checkpoint for step 4 was refused as "no human turn since this step began", which is the latch working as designed, so I wrote this detail and stopped here rather than route around it. My guess is that the background-task notifications that arrived while step 3's gate ran counted as turns and cleared the one-turn grant. I have not verified that.

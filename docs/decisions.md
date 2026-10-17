@@ -18,7 +18,8 @@ lands; [**D33 (info-exclude)**](#d33)–[**D38 (cli-owns-slugs)**](#d38) below c
 [**D74 (glossed-citations)**](#d74)–[**D75 (two-gates)**](#d75) from the 2026-07-31 citations build, and
 [**D76 (resolved-on-opener)**](#d76)–[**D77 (placeholder-uncounted)**](#d77) from the 2026-07-18
 intent-legibility build, and [**D80 (cli-renders-model-relays)**](#d80)–[**D84 (one-liner-register)**](#d84)
-from the 2026-08-28 presentation build.)
+from the 2026-08-28 presentation build, and [**D87 (pause-once)**](#d87)–[**D88 (current-step-shown)**](#d88)
+from the 2026-10-08 said-once-said-whole build.)
 
 ## Constraints (C)
 
@@ -734,7 +735,11 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   any question; anything that reads as direction; `revert` last, since a destructive move is named rather
   than discovered), because nobody types "needs work" and the move made most, zeroing in on one part before
   approving, was not on the card at all; `looks good` renders only while the measured check is green, since
-  offering a move the checkpoint would refuse teaches a false ceremony. The recommendation follows the card
+  offering a move the checkpoint would refuse teaches a false ceremony. (Revised 2026-10-16 by
+  [**D87 (pause-once)**](#d87) and [**D88 (current-step-shown)**](#d88): a step pause's block opens on a
+  seventh label, `**Now**:`, naming the step in flight with its count, and the Readout label stops
+  repeating it; the block renders once per pause, a later turn at a pause nothing has changed ends on the
+  one-line reminder, and the `expand` move's outcome clause says how the block comes back.) The recommendation follows the card
   behind a label the CLI prepends, the move as its own sentence and then the reason, because the card
   teaches the moves without saying which to take, and a pause that leaves the human deciding unassisted is a
   defect, not a missing nicety. Three tiers scale the ending to the turn: a decision turn (the build and
@@ -822,6 +827,41 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   `orient.ts`, `order.ts`, `build.ts`, `checkpoint.ts`, `handoff.ts`, `recover.ts`, the `order`, `step`,
   `refine`, and `harvest` skills, `templates/intent.md`, `docs/presentation.md`, and
   `docs/cli-reference.md`.
+
+- <a id="d87"></a>**D87 (pause-once): A step pause renders its whole block once; a later turn at the same
+  pause ends on one reminder line, and the block comes back on `--full` or when the pause changes.** The
+  turn that reaches a pause is the block and nothing else; a turn at the same pause with nothing about it
+  changed is the model's answer and then the driver pointer `handoff` already renders,
+  `**Next Up**: Back to Step 2 of 3 - <title>`, the line a park closes on, so a question and a tangent at
+  the same pause end on the same line, because the answer is what the human asked for, and about 40 lines
+  beneath it push it off the screen (issue #6: every reply during a pause carried the whole block under an
+  answer of a sentence or two). The CLI picks the form from a stamp of its last render (the step number,
+  the detail file, and the measured `check`, `seam`, and `diff` rows; never `spent`, which counts turns
+  and would make every render look new), because a deterministic line is the CLI's to render
+  ([**D80 (cli-renders-model-relays)**](#d80)) and one rule for every pause turn keeps the skills' ending a
+  single relay. The block returns when the pause changes (the detail file, a file in the seam, the check
+  row) and on request: `plumbbob handoff --full` prints it whatever the stamp says, the `expand` move names
+  the phrase that asks for it (`show the pause`), and a session without the block in front of it (a fresh
+  window, or after `/clear`) asks the same way; `checkpoint`, `revert`, and `abandon` clear the stamp.
+  Promoted from the 2026-10-08 said-once-said-whole build, merging its locals `pause-once`,
+  `cli-picks-the-form`, and `stamp-skips-spent`. *Tagged in* `docs/presentation.md`.
+
+- <a id="d88"></a>**D88 (current-step-shown): A step pause's block opens on the step in flight with its
+  count, under the label `Now`, and the Readout label stops repeating it.** Every step pause at the
+  decision tier (the build and verify pauses, and an auto halt on trouble) opens on
+  `**Now**: Step 2 of 3 - <title>`, written the way Next Up writes the step to come, and the reminder a
+  pause already shown ends on names the same step (`Back to Step 2 of 3`), because the step was named only
+  in the Readout label, mid-block and without its count, while the one `Step N of M` the eye found was
+  Next Up's, a step ahead, and the human kept asking which step they were on and working it out by
+  subtraction. The label is `Now` because it pairs with `Next Up`, the two lines bracketing the block, and
+  it states the fact and no move ([**D84 (one-liner-register)**](#d84)). The Readout label collapses to the
+  bare `**Readout**:`, on the block and in the build-log record alike, because the record's dated Log line
+  already names the step and one `readoutLabel` stays one function; the count is the plan's own, the step
+  number over the total, the way Next Up counts, so the two lines agree under a re-sequenced build order
+  ([**D86 (build-order)**](#d86)). The plan pause has no step in flight and renders no `Now` line. Promoted
+  from the 2026-10-08 said-once-said-whole build, where Q2 (reminder-shape) settled it with the human's
+  addition, merging its locals `current-step-shown` and `record-follows-card`. *Tagged in*
+  `docs/presentation.md`.
 
 ### Superseded
 

@@ -36,7 +36,7 @@ there.
 | what | whose judgment | how it reaches the turn |
 | --- | --- | --- |
 | the Summary lead, the numbered highlights, the `done-when`, `decisions`, and `constraints` rows, the recommendation | the model | written into `.plumbbob/detail.md`, read back and rendered by handoff |
-| the Readout's other rows, the inline diff when the change is small, the Verdict, Next Up, Your Call | the CLI | measured from the session, the gate, and git |
+| the Now line, the Readout's other rows, the inline diff when the change is small, the Verdict, Next Up, Your Call | the CLI | measured from the session, the gate, and git |
 
 The model authors nothing in the turn but the relay. Every defect the build
 that wrote this spec found in a live turn sat in the region the model was
@@ -59,6 +59,8 @@ The whole turn, rendered (the running example is
 [`happy-path.md`](happy-path.md)'s rate limiter, at step 2's pause):
 
 ````markdown
+**Now**: Step 2 of 3 - feat(login): wire the limiter into POST /login
+
 **Summary**: The 6th login attempt inside a minute now gets 429. (details: `.plumbbob/detail.md`)
 
 1. `POST /login` runs the limiter before credentials are checked; over-limit
@@ -66,7 +68,7 @@ The whole turn, rendered (the running example is
 2. Misses count against the bucket and successes do not reset it, as planned.
 3. `test/login.rate.test.ts` covers the 6th-request case red-to-green.
 
-**Readout**: Step 2 - feat(login): wire the limiter into POST /login
+**Readout**:
 
 ```text
 check        green: 3 of 3 checks
@@ -85,7 +87,7 @@ spent        88 min · 3 turns · 63s gate · green first run
 **Your Call**:
 
 - `looks good` → I checkpoint Step 2; back to the boundary
-- `expand`, or any question → I show more of what is there; nothing changes
+- `expand`, or any question → I show more of what is there; nothing changes, and `show the pause` brings all of this back
 - anything that reads as direction → I take it as what to change; nothing lands until you approve
 - `revert` → I wind the work back to the last checkpoint
 
@@ -131,6 +133,71 @@ only rule in the anatomy and the only seam left in it. The step pause, the
 boundary, and a driver turn carry none, because nothing of the model's
 precedes their lines.
 
+### One pause, rendered once
+
+The block renders once per pause ([D87 (pause-once)](decisions.md#d87)). The
+turn that reaches a pause is the block and nothing else; a later turn at the
+same pause, with nothing about it changed, is the model's answer and then one
+line:
+
+```text
+**Next Up**: Back to Step 2 of 3 - feat(login): wire the limiter into POST /login
+```
+
+That is the driver pointer, the line a park already closes on, so a question
+and a tangent at the same pause end on the same line. It names the step still
+waiting, with its count, and no move: the moves are on the block, one screen
+up, and a lead line states its fact and leaves the move to the human
+([D84 (one-liner-register)](decisions.md#d84)). The answer is what the rule
+protects. A reply during a pause used to carry the whole block, about 40
+lines, beneath an answer of a sentence or two, and the answer the human asked
+for was pushed off the screen by a block they had already read. So the expand
+turn is the one turn where the model's prose stands above the CLI's line, and
+the line still closes it: the positional rule holds, because the CLI's line is
+still the last text.
+
+The CLI chooses the form, never the model. `plumbbob handoff` keeps a stamp of
+what it last rendered for the step (the step number, the detail file, and its
+measured `check`, `seam`, and `diff` rows; never `spent`, which counts turns
+and would make every render look new) and prints the reminder while the stamp
+still matches. The block comes back two ways. It comes back on its own the
+moment the pause changes: a rewritten detail file, a touched file in the
+seam, a check that went red or came back green. And it comes back on request:
+`plumbbob handoff --full` prints the block whatever the stamp says, the
+`expand` move on the Your Call block names the phrase that asks for it
+(`show the pause`), and a session that no longer has the block in front of it
+(a fresh window, or one after `/clear`) asks the same way. A checkpoint, a
+revert, or an abandon clears the stamp, so the next pause renders whole.
+
+## The Now line
+
+The block opens on the step in flight: its count, then its title behind a
+plain hyphen, written the way Next Up writes the step to come:
+
+```text
+**Now**: Step 2 of 3 - feat(login): wire the limiter into POST /login
+```
+
+The step used to be named once on the block, in the Readout label, mid-block
+and without its count, while the one `Step N of M` the eye found was Next
+Up's, a step ahead; a human who asked "which step am I on?" was answering it
+by subtraction. So the identity moves to the top of the block with its count,
+and the Readout label stops repeating it
+([D88 (current-step-shown)](decisions.md#d88)). The label is `Now` because it
+pairs with `Next Up`: the two lines bracket the block, what is on the bench
+and what comes after it, and a reader who has learned one reads the other.
+It states the fact and no move, the register every lead line keeps
+([D84 (one-liner-register)](decisions.md#d84)). The count is the plan's own,
+the step number over the total, the way Next Up counts, so the two lines
+agree under a re-sequenced build order too: a step keeps its number for life
+([D86 (build-order)](decisions.md#d86)).
+
+The line renders on every step pause at the decision tier (the build and
+verify pauses, and an auto halt on trouble), and the reminder a pause already
+shown ends on names the same step, `Back to Step 2 of 3`. The plan pause has
+no step in flight and renders none; the boundary's lead line already names
+the step that landed.
+
 ## The Summary and the highlights
 
 The turn opens on `**Summary**:`. Its lead states the outcome, not the
@@ -170,9 +237,10 @@ by two things the reader was going to look at anyway.
 
 The readout is the step's instrument ([D82 (readout-ladder)](decisions.md#d82)):
 labeled rows inside one fence, assembled
-and emitted by `plumbbob handoff` under the label `**Readout**: Step <N> -
-<title>`. Rows, not a retelling. The label carries the step's identity so the
-fence does not have to, which is what lets the identity render once in a turn.
+and emitted by `plumbbob handoff` under the bare label `**Readout**:`. Rows,
+not a retelling. The label used to carry the step's identity; the Now line
+carries it now, with its count, and a label that repeated it would put the
+step on the block twice ([D88 (current-step-shown)](decisions.md#d88)).
 
 Ownership splits by nature. If the CLI can measure a row, the CLI does, because
 every row the model attests is one it can pad or get wrong, and determinism is
@@ -344,10 +412,10 @@ nothing is off:
 **Verdict**: ✗ Not standing (done-when drifted)
 ```
 
-No step segment rides here. The identity renders once per turn: the Readout
-label names the step, Next Up carries the progress count, and the Verdict is
-left saying the one thing only it says. The card used to render "Step 10 of
-14" twice.
+No step segment rides here. The identity renders once per turn: the Now line
+names the step in flight with its count, Next Up names the step to come with
+its own, and the Verdict is left saying the one thing only it says. The card
+used to render "Step 10 of 14" twice.
 
 The Verdict is computed, never composed: handoff folds the same assembled
 rows the fence shows (its measured check and seam, the model's three judgment
@@ -410,14 +478,15 @@ full:
 **Next Up**: Nothing planned - /plumbbob:plan
 ```
 
-The progress count rides Next Up in every tier, because Next Up is the one
-line present at the pause, at the boundary, and on a driver turn. It is
-dropped only where it would lie: a driver pointer back at a step the plan no
-longer holds says `Back to Step 9` and no count, and an open spike outranks
-the step it interrupted, so the move named is closing it and the step to come
-back to rides as a trailing clause. The last shape is `plumbbob finish`'s own:
-finish clears the session the pointer would be read from, so it prints the
-line itself, and the only move left is a fresh plan.
+The `Back to` form is the pointer a park closes on, and the reminder a pause
+already shown ends on. The progress count rides Next Up in every tier,
+because Next Up is the one line present at the pause, at the boundary, and on
+a driver turn. It is dropped only where it would lie: a driver pointer back at
+a step the plan no longer holds says `Back to Step 9` and no count, and an
+open spike outranks the step it interrupted, so the move named is closing it
+and the step to come back to rides as a trailing clause. The last shape is
+`plumbbob finish`'s own: finish clears the session the pointer would be read
+from, so it prints the line itself, and the only move left is a fresh plan.
 
 The model is the second bold token the line spends, because it is the one the
 human acts on (a `/model` call) before the next run. The rationale behind the
@@ -455,7 +524,7 @@ and states what happens next, exactly:
 **Your Call**:
 
 - `looks good` → I checkpoint Step 2; back to the boundary
-- `expand`, or any question → I show more of what is there; nothing changes
+- `expand`, or any question → I show more of what is there; nothing changes, and `show the pause` brings all of this back
 - anything that reads as direction → I take it as what to change; nothing lands until you approve
 - `revert` → I wind the work back to the last checkpoint
 ```
@@ -472,8 +541,11 @@ outcome clause after the arrow opens with a capital letter. The block names
 choice, a number (`expand 2` opens that highlight's section) or a phrase
 ("explain that thing about the seam", "what does 'xyz' even mean?"), and it
 is answered from the detail file, the diff, or the build-log's Log for an
-older step, never from recall. An expand turn ends on the Your Call block again, so the
-pause stays legible however many questions it takes.
+older step, never from recall. An expand turn ends on the one-line reminder,
+not on the Your Call block again ([D87 (pause-once)](decisions.md#d87)): the
+answer is what the human asked for, and about 40 lines beneath it push it off
+the screen. The `expand` move is where the block says how it comes back, so
+the reminder never has to.
 
 The `looks good` line renders only while the measured check is green: on red,
 or with no run to measure, the checkpoint would refuse, and offering a move
@@ -558,7 +630,7 @@ scales down with the turn:
 
 | tier | turns | the ending renders |
 | --- | --- | --- |
-| decision | the build/verify pause, the plan pause, an auto halt on trouble | the whole block: the Summary and its highlights, the Readout, the inline diff when small, the Verdict, Next Up, Your Call, and the recommendation. The plan pause judges no diff, so it renders the pointer, the moves, and the recommendation alone |
+| decision | the build/verify pause, the plan pause, an auto halt on trouble | the whole block: the Now line, the Summary and its highlights, the Readout, the inline diff when small, the Verdict, Next Up, Your Call, and the recommendation, rendered once per pause; a later turn at the same pause ends on the one-line reminder. The plan pause judges no diff and has no step in flight, so it renders the pointer, the moves, and the recommendation alone |
 | orientation | the checkpoint boundary (a clean halt's included), finish, status | the transition's lead line, the Verdict, any advisories, and Next Up with its note; no Your Call block, no recommendation. `status` is the exception: it renders the dashboard and nothing else, and the dashboard's last line is its own pointer |
 | driver | park, order, spike, use, recover, revert, agent runs | the transition's lead line, any advisories, and Next Up alone, no note beneath it; no Verdict, since nothing landed |
 
