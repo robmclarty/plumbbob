@@ -629,7 +629,7 @@ describe('doctor — plugin link (HOME pinned)', () => {
     expect(stdout).toContain(`✓ linked (${linkPath(home)} → ${CHECKOUT})`)
     expect(stdout).toContain('✓ plugin manifest present (.claude-plugin/plugin.json)')
     expect(stdout).toMatch(/✓ skills present \(\d+\) — load as \/plumbbob:\*/)
-    expect(stdout).toContain('✓ post-edit hook present')
+    expect(stdout).toContain('✓ hooks present (hooks/hooks.json: PreToolUse, PostToolUse, UserPromptSubmit, Stop; auto-registers)')
   })
 
   it('flags a copied dir missing manifest and hook, counting only real skills', async () => {

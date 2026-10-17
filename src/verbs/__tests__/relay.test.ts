@@ -1,0 +1,349 @@
+import { chmodSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { afterAll, describe, expect, it } from 'vitest'
+import { handoff } from '../handoff.ts'
+import { park } from '../park.ts'
+import { relayCheck } from '../relay.ts'
+import { start } from '../start.ts'
+import { detailPath, intentPath, readRelay, relayPath, seamPath, stepPath, turnPath, writeRelay } from '../../lib/sidecar.ts'
+import { ending, transition } from '../../lib/notice.ts'
+import { formatHelp } from '../../cli-core.ts'
+import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
+import { cleanupFixtures, runCli } from '../../../test/helpers/fixture-repo.ts'
+import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
+
+afterAll(cleanupTempRepos)
+afterAll(cleanupFixtures)
+
+const INTENT = `# Relay test
+
+## Steps
+
+1. [x] First — **done when:** a works.
+   - seam: \`src/a.ts\`
+2. [ ] Second — **done when:** b works.
+   - seam: \`README.md\`
+3. [ ] Third — **done when:** c works.
+   - seam: \`src/c.ts\`
+`
+
+const DETAIL = `── recap · step 2 of 3 ──
+done-when    met
+decisions    none exercised
+constraints  all honored
+
+## Summary
+
+The second step works.
+
+## 1 It does the thing
+
+The whole story.
+
+## Recommendation
+
+Approve it.
+`
+
+const PROMPT_ID = 'prompt-1'
+
+/** A session at turn 4 with step 2 at its pause: a change in its seam and a detail file. */
+async function paused(): Promise<string> {
+  const dir = makeTempRepo()
+  await captureIoAsync(() => start(dir, ['Relay test']))
+  writeFileSync(intentPath(dir), INTENT)
+  writeFileSync(stepPath(dir), '2\n')
+  writeFileSync(seamPath(dir), 'README.md\n')
+  writeFileSync(join(dir, 'README.md'), '# fixture\nchanged\n')
+  writeFileSync(detailPath(dir), DETAIL)
+  writeFileSync(turnPath(dir), '4\n')
+  return dir
+}
+
+/** Print an ending the way the turn did, and return what it printed. */
+function printed(dir: string, args: ReadonlyArray<string> = []): string {
+  return captureIo(() => handoff(dir, args)).stdout
+}
+
+/** A boundary block as `checkpoint` prints it, recorded at the current turn. */
+function recordBoundary(dir: string): string {
+  const text = ending({
+    lead: transition({ label: 'Checkpoint', fact: 'Step 2 complete', detail: ['b4c5d6e7f'] }),
+    verdict: '**Verdict**: ● Plumb',
+    pointer: '**Next Up**: Step 3 of 3 - Third',
+  })
+  writeRelay(dir, { tier: 'orientation', render: 'checkpoint', text })
+  return text
+}
+
+type Payload = { last?: string; active?: boolean; transcript?: string | null }
+
+/** A Stop payload for the session, the way the harness sends it on stdin. */
+function stop(dir: string, p: Payload): string {
+  return JSON.stringify({
+    session_id: 'session-1',
+    transcript_path: p.transcript === null ? undefined : (p.transcript ?? join(dir, 'missing.jsonl')),
+    cwd: dir,
+    prompt_id: PROMPT_ID,
+    hook_event_name: 'Stop',
+    stop_hook_active: p.active ?? false,
+    ...(p.last === undefined ? {} : { last_assistant_message: p.last }),
+  })
+}
+
+/** A transcript holding one turn: the human prompt, then each assistant text in order. */
+function transcript(dir: string, texts: ReadonlyArray<string>): string {
+  const path = join(dir, 'transcript.jsonl')
+  const lines = [
+    { type: 'user', promptId: 'prompt-0', message: { role: 'user', content: 'an earlier turn' } },
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'earlier text' }] } },
+    { type: 'user', promptId: PROMPT_ID, message: { role: 'user', content: 'looks good' } },
+    ...texts.flatMap((text) => [
+      { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text }] } },
+      { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: 'Bash' }] } },
+      { type: 'user', promptId: PROMPT_ID, message: { role: 'user', content: [{ type: 'tool_result' }] } },
+    ]),
+  ]
+  writeFileSync(path, `${lines.map((l) => JSON.stringify(l)).join('\n')}\n`)
+  return path
+}
+
+/** The reason a hold carries, or null when the check let the turn end. */
+function held(output: string | null): string | null {
+  if (output === null) return null
+  const parsed = JSON.parse(output) as { hookSpecificOutput: { hookEventName: string; additionalContext: string } }
+  expect(Object.keys(parsed)).toEqual(['hookSpecificOutput']) // never `decision`, never `continue: false`
+  expect(parsed.hookSpecificOutput.hookEventName).toBe('Stop')
+  return parsed.hookSpecificOutput.additionalContext
+}
+
+describe('relay — a decision ending has to close the turn', () => {
+  it('lets a turn end that closed on its whole relay, with an answer above it', async () => {
+    const dir = await paused()
+    const card = printed(dir)
+    expect(held(relayCheck(dir, stop(dir, { last: `Here is the pause.\n\n${card}` })))).toBeNull()
+  })
+
+  it('matches a relay whose whitespace moved: a rewrapped line, a dropped trailing blank', async () => {
+    const dir = await paused()
+    const card = printed(dir)
+    const rewrapped = card.replace('**Summary**: ', '**Summary**:\n').trimEnd()
+    expect(held(relayCheck(dir, stop(dir, { last: rewrapped })))).toBeNull()
+  })
+
+  it('holds a paraphrased step card once, naming `plumbbob handoff --full`', async () => {
+    const dir = await paused()
+    printed(dir)
+    const reason = held(relayCheck(dir, stop(dir, { last: 'Step 2 is done and the check is green. Approve?' })))
+    expect(reason).toBe(
+      'plumbbob: the turn did not close on the pause card it printed. ' +
+        'Run `plumbbob handoff --full` and end the turn on its output, whole, with nothing after it.',
+    )
+    expect(readRelay(dir)?.held).toBe(4)
+  })
+
+  it('names the step a verify pause was asked about in the command', async () => {
+    const dir = await paused()
+    writeFileSync(stepPath(dir), '')
+    printed(dir, ['2'])
+    expect(held(relayCheck(dir, stop(dir, { last: 'Approve?' })))).toContain('Run `plumbbob handoff --full 2`')
+  })
+
+  it('holds a missed plan card, naming `plumbbob handoff --plan`', async () => {
+    const dir = await paused()
+    printed(dir, ['--plan'])
+    const reason = held(relayCheck(dir, stop(dir, { last: 'The plan is ready for review.' })))
+    expect(reason).toContain('the plan card it printed')
+    expect(reason).toContain('Run `plumbbob handoff --plan`')
+  })
+
+  it('accepts a plan card relayed without its leading rule', async () => {
+    const dir = await paused()
+    const plan = printed(dir, ['--plan'])
+    expect(plan.startsWith('\n---\n')).toBe(true)
+    expect(held(relayCheck(dir, stop(dir, { last: plan })))).toBeNull()
+    expect(held(relayCheck(dir, stop(dir, { last: `The plan.\n\n${plan.replace('\n---\n', '')}` })))).toBeNull()
+  })
+
+  it('holds a turn with no text', async () => {
+    const dir = await paused()
+    printed(dir)
+    expect(held(relayCheck(dir, stop(dir, { last: '' })))).toContain('did not close on the pause card')
+  })
+
+  it('holds text written after the relay', async () => {
+    const dir = await paused()
+    const card = printed(dir)
+    expect(held(relayCheck(dir, stop(dir, { last: `${card}Let me know what you think!` })))).not.toBeNull()
+  })
+
+  it('lets an answer followed by the reminder end the turn', async () => {
+    const dir = await paused()
+    printed(dir)
+    writeFileSync(turnPath(dir), '5\n') // the human asked a question
+    const reminder = printed(dir)
+    expect(reminder).toBe('**Next Up**: Back to Step 2 of 3 - Second\n\n')
+    const last = `The limiter runs first because a miss has to count.\n\n${reminder}`
+    expect(held(relayCheck(dir, stop(dir, { last })))).toBeNull()
+  })
+
+  it('holds a missed reminder, naming plain `plumbbob handoff`', async () => {
+    const dir = await paused()
+    printed(dir)
+    printed(dir)
+    expect(held(relayCheck(dir, stop(dir, { last: 'It runs first.' })))).toContain(
+      'the pause reminder it printed. Run `plumbbob handoff` and',
+    )
+  })
+})
+
+describe('relay — an orientation ending has to appear in the turn', () => {
+  it('lets a boundary block followed by an answer end the turn', async () => {
+    const dir = await paused()
+    const block = recordBoundary(dir)
+    const last = `${block}And yes, the limiter counts misses.`
+    expect(held(relayCheck(dir, stop(dir, { last })))).toBeNull()
+  })
+
+  it('finds a boundary block relayed in an earlier message of the same turn', async () => {
+    const dir = await paused()
+    const block = recordBoundary(dir)
+    const path = transcript(dir, [block])
+    expect(held(relayCheck(dir, stop(dir, { last: 'Anything else?', transcript: path })))).toBeNull()
+  })
+
+  it('holds a boundary the turn never relayed, pointing at the block as it printed', async () => {
+    const dir = await paused()
+    recordBoundary(dir)
+    const path = transcript(dir, ['Landing it now.'])
+    expect(held(relayCheck(dir, stop(dir, { last: 'Step 2 is in.', transcript: path })))).toBe(
+      'plumbbob: the turn did not relay the block `plumbbob checkpoint` printed. ' +
+        'Paste that block whole, exactly as it printed (it is stored below the header in `.plumbbob/RELAY`).',
+    )
+  })
+
+  it('reads only the current prompt, so a block from an earlier turn does not count', async () => {
+    const dir = await paused()
+    const block = recordBoundary(dir)
+    const path = transcript(dir, ['Landing it now.'])
+    // The block sits before this prompt in the transcript, not in its turn.
+    const lines = readFileSync(path, 'utf8').replace('earlier text', block.replace(/\n/g, '\\n'))
+    writeFileSync(path, lines)
+    expect(held(relayCheck(dir, stop(dir, { last: 'Step 2 is in.', transcript: path })))).not.toBeNull()
+  })
+
+  it('judges nothing when the transcript cannot be read and the final message lacks the block', async () => {
+    const dir = await paused()
+    recordBoundary(dir)
+    expect(relayCheck(dir, stop(dir, { last: 'Step 2 is in.' }))).toBeNull() // the path does not exist
+    expect(relayCheck(dir, stop(dir, { last: 'Step 2 is in.', transcript: null }))).toBeNull() // no path at all
+    const garbled = join(dir, 'garbled.jsonl')
+    writeFileSync(garbled, 'not json\n{"type":"assistant"}\n')
+    expect(relayCheck(dir, stop(dir, { last: 'Step 2 is in.', transcript: garbled }))).toBeNull() // no prompt in it
+    expect(readRelay(dir)?.held).toBeUndefined()
+  })
+})
+
+describe('relay — what it never judges', () => {
+  it('lets a park after a handoff end the turn on the park, since the last ending wins', async () => {
+    const dir = await paused()
+    printed(dir)
+    const parked = captureIo(() => park(dir, ['a tangent'])).stdout
+    expect(readRelay(dir)?.render).toBe('park')
+    expect(held(relayCheck(dir, stop(dir, { last: parked })))).toBeNull()
+    expect(held(relayCheck(dir, stop(dir, { last: 'Parked it.' })))).toBeNull() // a driver ending is not checked
+  })
+
+  it('ignores a RELAY from an earlier turn', async () => {
+    const dir = await paused()
+    printed(dir)
+    writeFileSync(turnPath(dir), '5\n') // a new human turn that printed nothing
+    expect(relayCheck(dir, stop(dir, { last: 'Sure, here is the answer.' }))).toBeNull()
+  })
+
+  it('judges nothing from a host too old to send the final message', async () => {
+    const dir = await paused()
+    printed(dir)
+    expect(relayCheck(dir, stop(dir, {}))).toBeNull()
+  })
+
+  it('judges nothing outside a session, or with no ending recorded', async () => {
+    const dir = makeTempRepo()
+    expect(relayCheck(dir, stop(dir, { last: 'Hello.' }))).toBeNull()
+    const session = await paused()
+    expect(relayCheck(session, stop(session, { last: 'Hello.' }))).toBeNull()
+  })
+})
+
+describe('relay — it holds a turn open once', () => {
+  it('holds once per turn, even after the retry reprinted the card and missed again', async () => {
+    const dir = await paused()
+    printed(dir)
+    expect(held(relayCheck(dir, stop(dir, { last: 'Approve?' })))).not.toBeNull()
+    printed(dir, ['--full']) // the retry runs the command the reason named, rewriting RELAY
+    expect(readRelay(dir)?.held).toBe(4) // the spent hold rides the rewrite
+    expect(relayCheck(dir, stop(dir, { last: 'Approve now?', active: true }))).toBeNull()
+  })
+
+  it('still holds a miss when `stop_hook_active` was set by another hook', async () => {
+    // checkride's gate re-blocks on every red Stop: the shared flag names no
+    // hook, so the check counts its own hold instead of trusting it.
+    const dir = await paused()
+    printed(dir)
+    expect(held(relayCheck(dir, stop(dir, { last: 'Approve?', active: true })))).not.toBeNull()
+  })
+
+  it('holds again on the next turn, whose ending is a new one', async () => {
+    const dir = await paused()
+    printed(dir)
+    relayCheck(dir, stop(dir, { last: 'Approve?' }))
+    writeFileSync(turnPath(dir), '5\n')
+    printed(dir, ['--full'])
+    expect(readRelay(dir)?.held).toBeUndefined()
+    expect(held(relayCheck(dir, stop(dir, { last: 'Approve?' })))).not.toBeNull()
+  })
+
+  it('holds nothing when it cannot record the hold, since an uncounted hold could repeat', async () => {
+    const dir = await paused()
+    printed(dir)
+    chmodSync(relayPath(dir), 0o444) // readable, so the miss is seen; the stamp cannot land
+    try {
+      expect(relayCheck(dir, stop(dir, { last: 'Approve?' }))).toBeNull()
+      expect(readRelay(dir)?.held).toBeUndefined()
+    } finally {
+      chmodSync(relayPath(dir), 0o644)
+    }
+  })
+})
+
+describe('relay — the hook', () => {
+  it('exits 0 with no output on a payload it cannot read', async () => {
+    const dir = await paused()
+    printed(dir)
+    for (const input of ['', 'not json', '[]', '{"last_assistant_message": 7}']) {
+      expect(runCli(dir, ['relay'], {}, input)).toEqual({ stdout: '', stderr: '', status: 0 })
+    }
+  })
+
+  it('prints the hold on stdout and exits 0 when the turn missed its ending', async () => {
+    const dir = await paused()
+    printed(dir)
+    const result = runCli(dir, ['relay'], {}, stop(dir, { last: 'Approve?' }))
+    expect(result.status).toBe(0)
+    expect(held(result.stdout)).toContain('Run `plumbbob handoff --full`')
+  })
+
+  it('lists relay in help, marked as machinery, not a user verb', async () => {
+    expect(formatHelp()).toMatch(/relay.*machinery/)
+  })
+
+  it('wires the Stop event to `plumbbob relay`', async () => {
+    const path = fileURLToPath(new URL('../../../hooks/hooks.json', import.meta.url))
+    const hooks = JSON.parse(readFileSync(path, 'utf8')) as {
+      hooks: { Stop?: ReadonlyArray<{ hooks: ReadonlyArray<{ command: string }> }> }
+    }
+    const commands = (hooks.hooks.Stop ?? []).flatMap((group) => group.hooks.map((h) => h.command))
+    expect(commands.some((c) => c.includes('plumbbob') && /\brelay\b/.test(c))).toBe(true)
+  })
+})

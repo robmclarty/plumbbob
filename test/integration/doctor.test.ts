@@ -42,7 +42,7 @@ describe('plumbbob doctor — global plugin link', () => {
     expect(stdout).not.toContain('✗')
     expect(stdout).toMatch(/plugin manifest present/i)
     expect(stdout).toMatch(/skills present/i)
-    expect(stdout).toMatch(/hook present/i)
+    expect(stdout).toMatch(/hooks present \(hooks\/hooks.json: .*Stop; auto-registers\)/i)
   })
 
   it('flags a link that does not resolve to a plumbbob package', () => {

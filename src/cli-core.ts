@@ -29,6 +29,7 @@ import { init } from './verbs/init.ts'
 import { doctor } from './verbs/doctor.ts'
 import { recover } from './verbs/recover.ts'
 import { agent } from './verbs/agent.ts'
+import { relay } from './verbs/relay.ts'
 import { turn } from './verbs/turn.ts'
 
 type Flag = {
@@ -56,11 +57,11 @@ type Verb = {
   readonly args?: ReadonlyArray<Arg>
   readonly flags?: ReadonlyArray<Flag>
   readonly notes?: string
-  // Opt out of the unknown-flag refusal (`--help` is still honored). Two verbs
-  // need it for unrelated reasons: park takes free text, so a `--`-prefixed
-  // word inside it is the human's content rather than a typo; turn is the
-  // UserPromptSubmit hook and returns 0 by contract, where a refusal would
-  // wedge every prompt in the session.
+  // Opt out of the unknown-flag refusal (`--help` is still honored). Three verbs
+  // need it, for two unrelated reasons: park takes free text, so a `--`-prefixed
+  // word inside it is the human's content rather than a typo; turn and relay
+  // are hooks (UserPromptSubmit and Stop) that return 0 by contract, where a
+  // refusal would wedge every prompt or every turn's end in the session.
   readonly tolerateUnknownFlags?: true
 }
 
@@ -266,6 +267,13 @@ const VERBS: ReadonlyArray<Verb> = [
     tolerateUnknownFlags: true,
     notes: 'Reads the hook payload from stdin and always exits 0 — a broken hook must never wedge a prompt.',
   },
+  {
+    name: 'relay',
+    description: 'Stop hook machinery: check that the turn carried the ending it printed (not a user verb)',
+    synopsis: ['relay'],
+    tolerateUnknownFlags: true,
+    notes: "Reads the hook payload from stdin and always exits 0: a broken hook must never wedge a turn's end.",
+  },
 ]
 
 /**
@@ -423,6 +431,8 @@ async function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>):
       return agent(cwd, rest)
     case 'turn':
       return turn(cwd, rest)
+    case 'relay':
+      return relay(cwd, rest)
     default:
       process.stderr.write(`plumbbob: unknown verb '${verb}'. Run 'plumbbob help' for the verb table.\n`)
       return 1

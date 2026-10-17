@@ -37,6 +37,7 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 | `doctor` | `doctor [--migrate]` | diagnose the plugin link; migrate a legacy flat sidecar |
 | `recover` | `recover [--fix]` | reconcile the control plane: stale markers, a cursor pointing nowhere, spike leftovers |
 | `turn` | `turn` | `UserPromptSubmit` hook machinery; not a user verb |
+| `relay` | `relay` | `Stop` hook machinery; not a user verb |
 | `help` | `help [<verb>]` \| `--help` \| `-h` | print the verb table, or one verb's flags |
 | `version` | `version` \| `--version` \| `-v` | print the CLI version |
 
@@ -48,9 +49,9 @@ the cursor's build only.
 Every verb answers `--help` (or `-h`) with its own synopsis, arguments, and flags:
 `plumbbob checkpoint --help`, or equivalently `plumbbob help checkpoint`. The flags a verb
 declares are the only ones it accepts: an unrecognized flag is a refusal (exit 1), never a
-silently ignored token, so a typo cannot fall through into a commit. `turn` and `park` are the
-two exceptions to the refusal: `turn` is a hook that must never wedge a prompt, and `park`'s
-argument is free text.
+silently ignored token, so a typo cannot fall through into a commit. `turn`, `relay`, and `park`
+are the three exceptions to the refusal: `turn` and `relay` are hooks that must never wedge a
+prompt or a turn's end, and `park`'s argument is free text.
 
 Where a line sits picks its shape ([the turn anatomy](presentation.md);
 [**D84 (one-liner-register)**](decisions.md#d84)). A transition
@@ -135,9 +136,10 @@ plumbbob handoff [<n>] [--full] [--plan] [--driver] [--build <slug>]
 
 Prints the whole CLI-rendered **ending of a turn** ([the turn anatomy](presentation.md);
 [**D80 (cli-renders-model-relays)**](decisions.md#d80)) as one contiguous block, closed by a trailing blank line so nothing that follows can clobber
-it. It writes two things and changes nothing else: at a pause it leaves `.plumbbob/detail.md`
-with a blank line around each heading, and at a step pause it stamps what the card showed in
-`builds/<slug>/PAUSE`. Every part outside the readout fence is a bold label, a
+it. It writes three things and changes nothing else: at a pause it leaves `.plumbbob/detail.md`
+with a blank line around each heading, at a step pause it stamps what the card showed in
+`builds/<slug>/PAUSE`, and every render records itself in `.plumbbob/RELAY` for
+[`relay`](#relay) to check at the turn's end. Every part outside the readout fence is a bold label, a
 colon, and text that wraps, with one blank line between blocks and no fence but the
 readout's own (plus the inline diff's).
 
@@ -443,6 +445,32 @@ checkpoint latch reads, and emits any nudge as `additionalContext` JSON on stdou
 exits 0 and never refuses an unrecognized flag: a hook that failed would wedge every prompt in
 the session.
 
+### relay
+
+```text
+plumbbob relay
+```
+
+Hook machinery, not a user verb. Registered as the `Stop` hook, it reads the hook payload from
+**stdin** and checks that the turn carried the ending plumbbob printed in it
+([**D89 (block-once)**](decisions.md#d89)). Every verb that prints an ending records it in
+`.plumbbob/RELAY` with its tier and the `TURN` it printed in, and the tier picks the match. A
+pause card, its reminder, or the plan card has to close the turn, with an answer allowed above
+it. A checkpoint's boundary, the plan commit, or finish's ending has to appear somewhere in the
+turn, since an approving message can carry a question answered after it. A driver ending (a
+park, a spike, a `use`) is never checked, and a `RELAY` from an earlier turn is ignored.
+
+On a miss it holds the turn open once, through `additionalContext`, with a one-line reason
+naming the fix: the command `RELAY` recorded for a pause (`plumbbob handoff --full`, carrying
+a verify pause's step number; `plumbbob handoff` for the reminder; `plumbbob handoff --plan`
+for the plan card), or, for a boundary, the block to paste as it printed. It counts that once
+in `RELAY` by the turn it held, never by `stop_hook_active`, which another hook's block sets
+too, and it never sends `continue: false`, which would cancel that hook's block. It reads the
+final message from the payload's `last_assistant_message` and only the turn's earlier messages
+from the transcript. It runs only inside a live session, always exits 0, and never refuses an
+unrecognized flag; anything it cannot read means no output, since a hook that failed would wedge
+every turn's end in the session.
+
 ## Install verbs
 
 PlumbBob has **two co-equal install paths**: the marketplace plugin (Claude Code installs
@@ -549,6 +577,7 @@ stays git-excluded; a session is live iff `STATE` is present.
   STATE                    # untracked — session sentinel (presence = live) AND the active-build cursor (its content — D28 (state-cursor))
   TURN                     # untracked — the human-turn counter the approval latch reads, ticked by the UserPromptSubmit hook
   GRANT                    # untracked — a one-turn self-approval, minted only from a typed --auto or step range
+  RELAY                    # untracked — the ending the CLI printed last, with its tier and the TURN it printed in, for the Stop hook — D89 (block-once)
   detail.md                # untracked — the in-flight step's full detail: the wire handoff renders a turn from, recorded under the build-log's Log and truncated at checkpoint — D81 (detail-file)
   settings.json            # tracked   — project defaults: {} (or {"check": "…"}); start seeds it empty
   settings.local.json      # untracked — personal overlay only, e.g. a per-worktree {"check": "…"} (no cursor — that lives in STATE)

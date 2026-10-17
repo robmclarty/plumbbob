@@ -2,9 +2,9 @@
 //
 // 1. The global plugin link (read-only). After `plumbbob init`, plumbbob lives as a
 //    symlink at ~/.claude/skills/plumbbob pointing at the installed package; Claude
-//    Code loads it in place as a plugin (skills `/plumbbob:*`, the post-edit hook from
+//    Code loads it in place as a plugin (skills `/plumbbob:*`, the hooks from
 //    hooks.json). doctor verifies the link resolves to a package carrying the manifest,
-//    the skills, and the hook, and names the fix for anything missing. The failure
+//    the skills, and the hooks, and names the fix for anything missing. The failure
 //    class it exists for is SILENT (a `/plumbbob:status` that opens an empty dashboard
 //    because the plugin never linked).
 //
@@ -97,7 +97,7 @@ function linkedPackage(link: string): string | null {
 }
 
 /**
- * The link-install checks: manifest, skill set, and post-edit hook, each with its fix.
+ * The link-install checks: manifest, skill set, and hooks, each with its fix.
  *
  * `shipped` is the canonical skill list read from the package itself; an installed
  * count below it means a stale or partial link, and every fix is the same re-link.
@@ -113,9 +113,29 @@ function buildChecks(link: string, pkg: string, shipped: ReadonlyArray<string>):
       ? { ok: true, label: `skills present (${installed.length}) — load as /plumbbob:*` }
       : { ok: false, label: `skills incomplete (${installed.length}/${shipped.length})`, fix: 're-link: plumbbob init' },
     existsSync(join(pkg, 'hooks', 'hooks.json'))
-      ? { ok: true, label: 'post-edit hook present (hooks/hooks.json, auto-registers)' }
+      ? { ok: true, label: hooksLabel(wiredEvents(join(pkg, 'hooks', 'hooks.json'))) }
       : { ok: false, label: 'hook missing (hooks/hooks.json)', fix: 're-link: plumbbob init' },
   ]
+}
+
+/**
+ * The hooks line's label: every event the package wires, so a link that
+ * predates a hook reads as one at a glance. A file whose events cannot be read
+ * still counts as present, the way the line read before it named any.
+ */
+function hooksLabel(events: ReadonlyArray<string>): string {
+  const named = events.length === 0 ? '' : `: ${events.join(', ')}`
+  return `hooks present (hooks/hooks.json${named}; auto-registers)`
+}
+
+/** The events a hooks.json wires, in file order, or none when it does not parse. */
+function wiredEvents(path: string): ReadonlyArray<string> {
+  try {
+    const parsed = JSON.parse(readFileSync(path, 'utf8')) as { hooks?: unknown }
+    return typeof parsed.hooks === 'object' && parsed.hooks !== null ? Object.keys(parsed.hooks) : []
+  } catch {
+    return []
+  }
 }
 
 /**

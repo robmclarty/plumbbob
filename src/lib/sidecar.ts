@@ -698,8 +698,11 @@ export type Relay = {
   readonly text: string
 }
 
-/** A recorded ending, stamped with the TURN it printed in. */
-export type RelayRecord = Relay & { readonly turn: number }
+/**
+ * A recorded ending, stamped with the TURN it printed in, and with the TURN
+ * the check held open over it, once it has.
+ */
+export type RelayRecord = Relay & { readonly turn: number; readonly held?: number }
 
 /**
  * RELAY: the ending the CLI printed last, at the flat sidecar root.
@@ -720,13 +723,36 @@ export function relayPath(root: string): string {
 export function writeRelay(root: string, relay: Relay): void {
   const turn = readTurn(root)
   if (turn === null) return
-  const header = [`turn ${turn}`, `tier ${relay.tier}`, `render ${relay.render}`]
-  if (relay.command !== undefined) header.push(`command ${relay.command}`)
+  // A hold the check already spent on this turn survives the ending the retry
+  // reprints, or a turn whose retry missed again would be held a second time.
+  const held = readRelay(root)?.held === turn ? { held: turn } : {}
   try {
-    writeFileSync(relayPath(root), `${header.join('\n')}\n\n${relay.text}`)
+    writeFileSync(relayPath(root), formatRelay({ ...relay, turn, ...held }))
   } catch {
     // A read-only tree or a directory in the way: the ending already printed.
   }
+}
+
+/**
+ * Stamp the record with the turn the check held open over it, so the check
+ * holds at most once per turn. False when the stamp could not be written, and
+ * the check then holds nothing, since a hold it cannot count could repeat.
+ */
+export function holdRelay(root: string, record: RelayRecord): boolean {
+  try {
+    writeFileSync(relayPath(root), formatRelay({ ...record, held: record.turn }))
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** A record as RELAY stores it: the header's `key value` lines, a blank line, then the text. */
+function formatRelay(record: RelayRecord): string {
+  const header = [`turn ${record.turn}`, `tier ${record.tier}`, `render ${record.render}`]
+  if (record.command !== undefined) header.push(`command ${record.command}`)
+  if (record.held !== undefined) header.push(`held ${record.held}`)
+  return `${header.join('\n')}\n\n${record.text}`
 }
 
 /**
@@ -747,12 +773,25 @@ export function readRelay(root: string): RelayRecord | null {
     const space = line.indexOf(' ')
     if (space > 0) fields.set(line.slice(0, space), line.slice(space + 1))
   }
-  const turn = /^\d+$/.test(fields.get('turn') ?? '') ? Number(fields.get('turn')) : null
+  const turn = count(fields.get('turn'))
   const tier = RELAY_TIERS.find((t) => t === fields.get('tier'))
   const render = RELAY_RENDERS.find((r) => r === fields.get('render'))
   if (turn === null || tier === undefined || render === undefined) return null
   const command = fields.get('command')
-  return { turn, tier, render, ...(command === undefined ? {} : { command }), text: raw.slice(split + 2) }
+  const held = count(fields.get('held'))
+  return {
+    turn,
+    tier,
+    render,
+    ...(command === undefined ? {} : { command }),
+    ...(held === null ? {} : { held }),
+    text: raw.slice(split + 2),
+  }
+}
+
+/** A header field read as a bare count, or null when it is absent or anything else. */
+function count(field: string | undefined): number | null {
+  return field !== undefined && /^\d+$/.test(field) ? Number(field) : null
 }
 
 /**

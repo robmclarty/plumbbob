@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Said once, said whole
 
-**Current step:** 14 — feat(handoff): remember the ending each turn has to close on
+**Current step:** 15 — feat(hooks): check at a turn's end that it closed on its relay
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -36,7 +36,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 11. chore(evals): sweep the relay after the pause change
 - ☑ 12. chore(hooks): spike what a Stop hook can read and do
 - ☑ 13. docs(decisions): record the relay check and its tier
-- ☐ 14. feat(handoff): remember the ending each turn has to close on
+- ☑ 14. feat(handoff): remember the ending each turn has to close on
 - ☐ 15. feat(hooks): check at a turn's end that it closed on its relay
 - ☐ 16. chore(evals): measure the relay check with and without the hook
 
@@ -54,6 +54,8 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [x] eval sessions inherit the account's claude.ai connectors, and 3 of 5 c7 runs in the 2026-10-17 sweep mentioned them after the relay; the driver could pin an empty MCP config so the account's environment stays out of the anatomy rates (evals)
 - [x] driver.ts and every receipt's method footnote say the headless UserPromptSubmit tick lands at about session end, but on Claude Code 2.1.283 it ticks before the first tool call (spike-01), so armGrant and the warmup's stated reason may be stale (evals)
 - [ ] recover and agent run print driver-tier output without recording RELAY, so a turn that ends on either after a pause is judged by the pause; step 14's seam held them out (relay)
+- [ ] README, docs/install.md, and docs/architecture.md still count three hooks; the Stop relay check makes four, so name it beside the turn ledger (relay)
+- [ ] docs/presentation.md states the positional rule but not that a Stop hook now checks it; one sentence beside 'relayed whole' citing D89 (block-once) would close the spec gap (relay)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -314,3 +316,5 @@ folder, so it rides the branch into the PR.)*
   **4.** The entry's rate comes from the 2026-10-17 sweep, and the key's provenance line now runs to D89 (block-once)
 
   D89 (block-once) cites step 11's numbers (31 of 35 decision endings whole, 10 of 10 boundaries, 51 of 55 with nothing after the relay), which still come to about one ending in ten, as 2026-09-17 did. The key's opening paragraph now credits this build with D87 (pause-once) through D89 (block-once). The entry cites no plan-local tag, because the refs slot would read `D16` as this key's D16 (check-plus-self-review), so the plan's locals appear only as the backticked slug `block-once`. Its last line points at the spike report rather than a code file, since the hook lands in steps 14 and 15. Step 16 adds the receipt citation its done-when asks for.
+
+- 2026-10-17 — step 14 checkpointed · a1b57d950 — feat(handoff): remember the ending each turn has to close on (531m)
