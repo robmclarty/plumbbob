@@ -47,6 +47,13 @@ Then:
    the capture plus that one pointer are the whole turn, and both are the CLI's to render,
    never yours to compose from the dashboard. The capture is a one-beat interruption; the
    step keeps its focus.
+4. **A question beside the tangent is answered first.** When the human's message also
+   asks something, answer the question, then relay the park's block after the answer,
+   and write nothing after it. A message that is only a tangent ends on the block alone.
+   Either way the block's pointer back at the step closes the turn, so run no
+   `plumbbob handoff` after it. The answer is what the human asked for; dropping it to
+   keep the block alone, or stacking a second ending under the block, are the two ways
+   this goes wrong.
 
 ## The one hard contract
 

@@ -155,6 +155,20 @@ describe('stepInFlightContext — the park nudge, D64 (approval-latch) amended: 
     )
   })
 
+  it('states both halves of answer-then-park: a tangent alone ends on the block, a question beside it is answered first', async () => {
+    const dir = await startedSession()
+    writeFileSync(stepPath(dir), '2\n')
+    const out = stepInFlightContext(dir) ?? ''
+    const context = (JSON.parse(out) as { hookSpecificOutput: { additionalContext: string } }).hookSpecificOutput.additionalContext
+    // Only a tangent: the park's block is the whole turn, the rule df9b393 set.
+    expect(context).toContain('relay the block it prints whole, with nothing written around it, since that block is the whole turn')
+    // A tangent beside a question: the answer first, the block after it, nothing after the block.
+    expect(context).toContain('a message that also asks something: answer the question first')
+    expect(context).toContain("then relay the park's block after the answer and write nothing after it")
+    // The block already ends on the pointer back at the step, so no second ending follows it.
+    expect(context).toContain('run no `plumbbob handoff` after it')
+  })
+
   it('goes quiet again once the step checkpoints (STEP marker gone)', async () => {
     const dir = await startedSession()
     writeFileSync(stepPath(dir), '2\n')

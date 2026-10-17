@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Said once, said whole
 
-**Current step:** 8 — fix(skills): answer a question at the pause without re-pasting it
+**Current step:** 9 — fix(turn): let a park sit beside an answer in a mixed message
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -30,7 +30,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 5. docs(presentation): show a pause once and name the step it is on
 - ☑ 6. feat(handoff): open the pause card on the step in flight
 - ☑ 7. feat(handoff): print a one-line reminder for a pause already shown
-- ☐ 8. fix(skills): answer a question at the pause without re-pasting it
+- ☑ 8. fix(skills): answer a question at the pause without re-pasting it
 - ☐ 9. fix(turn): let a park sit beside an answer in a mixed message
 - ☐ 10. test(evals): add a contract for a question asked at the pause
 - ☐ 11. chore(evals): sweep the relay after the pause change
@@ -191,3 +191,4 @@ folder, so it rides the branch into the PR.)*
 
 - 2026-10-17 — step 6 checkpointed · 156f312ab — feat(handoff): open the pause card on the step in flight (7m)
 - 2026-10-17 — step 7 checkpointed · 9a2dcebc6 — feat(handoff): print a one-line reminder for a pause already shown (11m)
+- 2026-10-17 — step 8 checkpointed · 11cb5999e — fix(skills): answer a question at the pause without re-pasting it (9m)

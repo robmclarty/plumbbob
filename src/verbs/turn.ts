@@ -10,7 +10,8 @@
 // could forge would be no grant). When a step is in flight it also emits ONE
 // `UserPromptSubmit` additionalContext line so a fresh session (post-compaction,
 // or a scripted `-p` turn where no skill prose is in context) still knows the
-// beat: a tangent is parked, not chased. Guidance only: it blocks nothing. It
+// beat: a tangent is parked, not chased, and a message that also asks something
+// is answered before the park's block. Guidance only: it blocks nothing. It
 // ALWAYS exits 0 and any failure degrades to no output, so neither the tick nor
 // the emit can ever wedge prompting.
 
@@ -40,8 +41,10 @@ export function turn(cwd: string, _args: ReadonlyArray<string>): number {
  * A step is in flight when a STEP marker (the flat control file recording the
  * step between `build` and `checkpoint`) is present. Guidance only: it reminds a
  * fresh session that a tangent is a park (not an edit), that the park's own
- * block is the whole turn, and how the step lands, since neither the build nor
- * the park prose may be in context after compaction or on a scripted turn.
+ * block is the whole turn when the message is only a tangent, that a message
+ * which also asks something is answered first with the block after the answer,
+ * and how the step lands, since neither the build nor the park prose may be in
+ * context after compaction or on a scripted turn.
  * Exported because an in-process test cannot read the hook's real stdout.
  */
 export function stepInFlightContext(cwd: string): string | null {
@@ -53,6 +56,9 @@ export function stepInFlightContext(cwd: string): string | null {
     `plumbbob: step ${step} is in flight — a new idea or tangent is a park, not an edit: ` +
     `capture it with \`plumbbob park "<one line>"\` and relay the block it prints whole, ` +
     `with nothing written around it, since that block is the whole turn. ` +
+    `The one exception is a message that also asks something: answer the question first, ` +
+    `then relay the park's block after the answer and write nothing after it. ` +
+    `The block's pointer back at the step closes the turn either way, so run no \`plumbbob handoff\` after it. ` +
     `The step stays open and lands when you run \`plumbbob checkpoint ${step}\` after approval.`
   return `${JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: text } })}\n`
 }
