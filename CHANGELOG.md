@@ -5,6 +5,42 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0] - 2026-10-17
+
+- **Added:** a relay check at the end of every turn. The skills tell the model to paste
+  plumbbob's ending whole, and the eval tier measured that rule slipping about one ending
+  in ten, with nothing to see it slip. Every verb that prints an ending now records it in
+  `.plumbbob/RELAY` (its tier, the command that reprints a pause, and the turn it printed
+  in), and `plumbbob relay`, wired to Claude Code's `Stop` hook, holds a turn open once when
+  it printed a pause or a boundary and did not carry it, with a one-line reason naming the
+  fix. It reads a relay by its parts in order and compares only the measured facts (the
+  Readout table and the Verdict line) exactly, so a reworded Summary passes and a check
+  row turned from red to green does not. It never holds a turn twice and never cancels
+  checkride's gate. D89 (block-once) records the tier, and the A/B behind it is
+  `docs/evals/2026-10-17-relay.md`.
+- **Added:** a pause is shown once. A second render of a pause nothing has changed prints
+  one line, `**Next Up**: Back to Step 2 of 3 - <title>`, so a question at the pause is
+  answered above that line instead of above forty lines you have already read;
+  `plumbbob handoff --full` (or `show the pause`) brings the card back, and so does any
+  change to the detail file, the diff, or the check. D87 (pause-once) records the rule.
+- **Added:** the card opens on the step in flight, `**Now**: Step 2 of 3 - <title>`, and the
+  Readout label stops repeating it, so the step you are on is never worked out from Next
+  Up. D88 (current-step-shown) records it.
+- **Added:** the eval tier measures a question at the pause (contract 10) and can run a
+  plugin copy without its `Stop` hook beside the shipped one, counting the turns the check
+  held and how many of those endings were already whole; `--date` gives a second receipt
+  on one day its own ledgers.
+- **Changed:** the turn hook's park nudge lets a park sit beside an answer: a message that
+  is only a tangent still ends on the park's block, and one that also asks something gets
+  its answer first and the block after it.
+- **Changed:** `/plumbbob:doctor`'s hooks line names every event the plugin wires, now four.
+- **Fixed:** `plumbbob status` counted plumbbob's own plan commits as landing outside the
+  ledger while the card's Verdict did not; both now leave them out through one marker
+  (#4).
+- **Fixed:** the detail file a pause leaves on disk failed MD022 in any repo that lints
+  `.plumbbob/`. The templates put a blank line under each heading, and `handoff` now
+  rewrites the file with blank lines around every heading before the gate can read it.
+
 ## [0.12.1] - 2026-09-22
 
 - **Added:** a build order. A refined plan appends a step whose number says nothing about
