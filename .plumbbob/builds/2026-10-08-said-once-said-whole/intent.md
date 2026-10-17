@@ -124,7 +124,7 @@ The steps run in the four waves above, numbered straight through so each keeps i
    - seam: `src/verbs/turn.ts`, `src/verbs/__tests__/turn.test.ts`, `skills/park/SKILL.md`
    - model: sonnet (a wording change pinned by tests)
    - note: the commit body ends `Closes #6`.
-10. [ ] test(evals): add a contract for a question asked at the pause, **done when:** a new contract builds to the pause, asks a plain question in a second human turn, and asks to see the pause in a third; its probes report whether the second turn ends on the answer and the reminder with no card, and whether the third renders the whole card; `anatomy.ts` recognizes the reminder; the contract is registered in `contracts/index.ts`; and `pnpm eval:latched --contract c10` completes
+10. [x] test(evals): add a contract for a question asked at the pause, **done when:** a new contract builds to the pause, asks a plain question in a second human turn, and asks to see the pause in a third; its probes report whether the second turn ends on the answer and the reminder with no card, and whether the third renders the whole card; `anatomy.ts` recognizes the reminder; the contract is registered in `contracts/index.ts`; and `pnpm eval:latched --contract c10` completes
     - seam: `test/evals/contracts/c10-question.eval.ts`, `test/evals/contracts/index.ts`, `test/evals/helpers/anatomy.ts`
     - model: opus (an eval that has to read the tail of a whole session's text)
     - note: the driver joins every text part of a session into one string, so the tail rule in `anatomy.ts` is what separates the answer from the reminder. Each scripted turn is a fresh `claude -p` session, armed by a warmup turn. The anatomy probes stay `info`, never gating.

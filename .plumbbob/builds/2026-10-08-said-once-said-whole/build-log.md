@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Said once, said whole
 
-**Current step:** 10 — test(evals): add a contract for a question asked at the pause
+**Current step:** 11 — chore(evals): sweep the relay after the pause change
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -32,7 +32,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 7. feat(handoff): print a one-line reminder for a pause already shown
 - ☑ 8. fix(skills): answer a question at the pause without re-pasting it
 - ☑ 9. fix(turn): let a park sit beside an answer in a mixed message
-- ☐ 10. test(evals): add a contract for a question asked at the pause
+- ☑ 10. test(evals): add a contract for a question asked at the pause
 - ☐ 11. chore(evals): sweep the relay after the pause change
 - ☐ 12. chore(hooks): spike what a Stop hook can read and do
 - ☐ 13. docs(decisions): record the relay check and its tier
@@ -50,6 +50,8 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [ ] src/lib/orient.ts:1044 still says the Readout label carries the step's identity; step 6 moved it to the Now line (comment)
 - [ ] skills/build/SKILL.md:187, skills/verify/SKILL.md:123, docs/glossary.md:91, and site/docs.html and site/index.html list the card's parts without the Now line; fold into step 8, whose seam holds them (docs)
 - [ ] the in-flight nudge carries no rule for a plain question at a pause, so a fresh session (c10's turns 2 and 3, or a host after compaction) has no prose telling it to end on handoff or to reach for --full; widen the nudge if c10 reads low (turn.ts)
+- [ ] report.ts sorts contract ids as strings, so c10 lands between c1 and c2 in the receipt table, and its method footnotes say nothing of c10's fresh-session question turns (evals)
+- [ ] eval sessions inherit the account's claude.ai connectors, and 3 of 5 c7 runs in the 2026-10-17 sweep mentioned them after the relay; the driver could pin an empty MCP config so the account's environment stays out of the anatomy rates (evals)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -194,3 +196,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-10-17 — step 7 checkpointed · 9a2dcebc6 — feat(handoff): print a one-line reminder for a pause already shown (11m)
 - 2026-10-17 — step 8 checkpointed · 11cb5999e — fix(skills): answer a question at the pause without re-pasting it (9m)
 - 2026-10-17 — step 9 checkpointed · ed5629d7b — fix(turn): let a park sit beside an answer in a mixed message (5m)
+- 2026-10-17 — step 10 checkpointed · db9e032ef — test(evals): add a contract for a question asked at the pause (1 drift, 19m)
