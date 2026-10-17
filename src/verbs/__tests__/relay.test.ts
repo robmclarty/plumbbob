@@ -317,6 +317,85 @@ describe('relay — it holds a turn open once', () => {
   })
 })
 
+/** A relay the 2026-10-17 A/B held: the block the verb printed, and what the model wrote in its place. */
+type Held = {
+  readonly run: string
+  readonly tier: 'decision' | 'plan'
+  readonly command: string
+  readonly whole: boolean
+  readonly printed: string
+  readonly relayed: string
+}
+
+const HELD = JSON.parse(readFileSync(new URL('./fixtures/relay-holds.json', import.meta.url), 'utf8')) as ReadonlyArray<Held>
+
+/** Record a held relay's printed block as this turn's ending. */
+function recordHeld(dir: string, h: Held): void {
+  writeRelay(dir, { tier: 'decision', render: h.tier === 'plan' ? 'plan' : 'card', command: h.command, text: h.printed })
+}
+
+describe('relay — the holds the 2026-10-17 A/B made, replayed — D19 (facts-exact)', () => {
+  it('replays all eight, five the receipt read as whole and three it read as missed', () => {
+    expect(HELD.map((h) => h.whole)).toEqual([true, true, true, false, false, true, false, true])
+  })
+
+  for (const h of HELD) {
+    it(`${h.whole ? 'lets through' : 'still holds'} ${h.run}, a ${h.tier === 'plan' ? 'plan card' : 'pause card'} ${h.whole ? 'relayed with one line changed' : 'never relayed'}`, async () => {
+      const dir = await paused()
+      recordHeld(dir, h)
+      expect(held(relayCheck(dir, stop(dir, { last: h.relayed }))) === null).toBe(h.whole)
+    })
+  }
+
+  it('holds a relay that keeps every part but turns the check row green', async () => {
+    const dir = await paused()
+    const h = HELD[0] as Held
+    recordHeld(dir, h)
+    expect(h.printed).toContain('check        red: node check.js failing')
+    const laundered = h.printed.replace('check        red: node check.js failing', 'check        green: 1 of 1 checks')
+    expect(held(relayCheck(dir, stop(dir, { last: laundered })))).toContain('did not close on the pause card')
+  })
+
+  it('holds a relay that keeps every part but changes the Verdict', async () => {
+    const dir = await paused()
+    const h = HELD[0] as Held
+    recordHeld(dir, h)
+    expect(h.printed).toContain('**Verdict**: ○ Out of plumb (check red)')
+    const laundered = h.printed.replace('**Verdict**: ○ Out of plumb (check red)', '**Verdict**: ● Plumb')
+    expect(held(relayCheck(dir, stop(dir, { last: laundered })))).not.toBeNull()
+  })
+
+  it('holds a relay wrapped in a fence, whose labels no longer open lines of the ending', async () => {
+    const dir = await paused()
+    const card = printed(dir)
+    expect(held(relayCheck(dir, stop(dir, { last: `\`\`\`\`markdown\n${card}\`\`\`\`\n` })))).not.toBeNull()
+  })
+
+  it('reads the last copy of a card relayed twice in one message', async () => {
+    const dir = await paused()
+    const card = printed(dir)
+    expect(held(relayCheck(dir, stop(dir, { last: `${card}${card}` })))).toBeNull()
+    expect(held(relayCheck(dir, stop(dir, { last: `${card}${card.replace('**Verdict**: ', '**Verdict**: ✗ ')}` })))).not.toBeNull()
+  })
+
+  it('lets a boundary through with its lead reworded, and holds one whose Verdict changed', async () => {
+    const dir = await paused()
+    const block = recordBoundary(dir)
+    const path = transcript(dir, ['Landing it now.'])
+    expect(held(relayCheck(dir, stop(dir, { last: block.replace('Step 2 complete', 'Step 2 landed'), transcript: path })))).toBeNull()
+    writeFileSync(turnPath(dir), '5\n')
+    recordBoundary(dir)
+    expect(held(relayCheck(dir, stop(dir, { last: block.replace('● Plumb', '○ Out of plumb'), transcript: path })))).not.toBeNull()
+  })
+
+  it('holds a paragraph written inside a pause card, between two of its parts', async () => {
+    const dir = await paused()
+    const card = printed(dir)
+    const crowded = card.replace('**Your Call**:', 'One more thing before you decide.\n\n**Your Call**:')
+    expect(held(relayCheck(dir, stop(dir, { last: crowded })))).not.toBeNull()
+  })
+})
+
 describe('relay — the hook', () => {
   it('exits 0 with no output on a payload it cannot read', async () => {
     const dir = await paused()

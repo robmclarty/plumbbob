@@ -460,6 +460,13 @@ it. A checkpoint's boundary, the plan commit, or finish's ending has to appear s
 turn, since an approving message can carry a question answered after it. A driver ending (a
 park, a spike, a `use`) is never checked, and a `RELAY` from an earlier turn is ignored.
 
+It reads a relay by its parts, not line for line: the bold labels the printed block opens its
+parts on, in the same order, with no paragraph inside a part that the block does not have there.
+Only the Readout table and the Verdict line are compared exactly, since those are the facts the
+CLI measured, so a reworded Summary or a reordered Your Call passes and a check row turned from
+red to green does not. A relay wrapped in a fence of its own reads as missed, because its
+labels no longer open lines of the turn.
+
 On a miss it holds the turn open once, through `additionalContext`, with a one-line reason
 naming the fix: the command `RELAY` recorded for a pause (`plumbbob handoff --full`, carrying
 a verify pause's step number; `plumbbob handoff` for the reminder; `plumbbob handoff --plan`

@@ -9,6 +9,14 @@
 // driver ending is never checked. A `RELAY` from an earlier turn is not this
 // turn's to carry, so the check runs only while its turn is the current one.
 //
+// It reads a relay by its parts, not line for line: the labeled parts the
+// printed block has, in its order, with no paragraph inside a part that the
+// block does not have there (for a decision ending, after the last part too).
+// Only the measured facts are compared exactly, the Readout
+// table and the Verdict line, because those are what a laundered relay would
+// change; a reworded Summary or Recommendation is the model's own prose, and a
+// reordered Your Call move still offers every move.
+//
 // On a miss it holds the turn open once, through `additionalContext`, with a
 // one-line reason the model acts on and the human reads under `Stop hook
 // feedback`: a decision ending is reprinted by the command `RELAY` recorded,
@@ -83,12 +91,123 @@ type StopPayload = {
  * cannot be read to tell.
  */
 function carriedEnding(record: RelayRecord, last: string, payload: StopPayload): boolean | null {
-  const expected = flat(record.text.replace(/^\s*---[ \t]*\n/, ''))
-  if (expected.length === 0 || record.tier === 'driver') return null
-  if (record.tier === 'decision') return flat(last).endsWith(expected)
-  if (flat(last).includes(expected)) return true
+  const printed = partsOf(record.text)
+  // A block with no labeled part is nothing this reader can match against.
+  if (printed.length === 0 || record.tier === 'driver') return null
+  if (record.tier === 'decision') return closesOn(partsOf(last), printed)
+  if (appearsIn(partsOf(last), printed)) return true
   const earlier = turnText(payload)
-  return earlier === null ? null : flat(earlier).includes(expected)
+  return earlier === null ? null : appearsIn(partsOf(earlier), printed)
+}
+
+/**
+ * Whether a final message closes on the printed block: read from the last
+ * place it opens the block's first part, it has the same parts in the same
+ * order, the same measured facts, and no paragraph in any part, the last one
+ * included, that the block does not have there.
+ */
+function closesOn(relayed: ReadonlyArray<Part>, printed: ReadonlyArray<Part>): boolean {
+  const first = printed[0]?.label
+  const start = relayed.findLastIndex((p) => p.label === first)
+  return start !== -1 && sameParts(relayed.slice(start), printed, printed.length)
+}
+
+/**
+ * Whether the printed block appears anywhere in a stretch of text: some place
+ * that opens its first part runs on through the same parts in the same order,
+ * with the same measured facts and nothing written inside them. Text after the
+ * last part is the turn's to say, so that part's paragraphs are not counted.
+ */
+function appearsIn(relayed: ReadonlyArray<Part>, printed: ReadonlyArray<Part>): boolean {
+  return relayed.some(
+    (p, i) => p.label === printed[0]?.label && sameParts(relayed.slice(i, i + printed.length), printed, printed.length - 1),
+  )
+}
+
+/**
+ * Whether two runs of parts carry the same labels in order and the same
+ * measured facts, with no more paragraphs than the printed block has in each
+ * of the first `counted` parts.
+ */
+function sameParts(relayed: ReadonlyArray<Part>, printed: ReadonlyArray<Part>, counted: number): boolean {
+  if (relayed.length !== printed.length || relayed.some((p, i) => p.label !== printed[i]?.label)) return false
+  const crowded = relayed.slice(0, counted).some((p, i) => blockCount(p) > blockCount(printed[i] as Part))
+  return !crowded && factsOf(relayed) === factsOf(printed)
+}
+
+/**
+ * The facts the CLI measured, as one comparable string: the Readout table,
+ * whitespace aside, and the Verdict line. Every other line of a block may be
+ * reworded or reordered without the relay counting as missed.
+ */
+function factsOf(parts: ReadonlyArray<Part>): string {
+  const readout = parts.find((p) => p.label === 'Readout')
+  const verdict = parts.find((p) => p.label === 'Verdict')
+  return `${flat(readout === undefined ? '' : tableOf(readout))}\n${flat(verdict?.lines[0] ?? '')}`
+}
+
+/** The `text` fence inside the Readout part, rails included, or '' when it has none. */
+function tableOf(part: Part): string {
+  const open = part.lines.findIndex((l) => /^`{3,}text\s*$/.test(l))
+  if (open === -1) return ''
+  const rail = /^`+/.exec(part.lines[open] ?? '')?.[0] ?? '```'
+  const close = part.lines.findIndex((l, i) => i > open && l.trim() === rail)
+  return part.lines.slice(open, close === -1 ? undefined : close + 1).join('\n')
+}
+
+/**
+ * How many blocks a part holds: runs of lines between blank lines, a fence
+ * counted whole, and the items of one list counted once even when a relay
+ * spaced them apart. A paragraph after a part's last block is the model
+ * talking past the ending.
+ */
+function blockCount(part: Part): number {
+  let count = 0
+  let open = false
+  let listing = false
+  let inFence = false
+  for (const line of part.lines) {
+    if (/^\s*`{3,}/.test(line)) inFence = !inFence
+    if (line.trim().length === 0 && !inFence) {
+      open = false
+      continue
+    }
+    const item = /^\s*(?:[-*]|\d+\.)\s/.test(line)
+    if (!open && !(item && listing)) count += 1
+    open = true
+    listing = item
+  }
+  return count
+}
+
+/** One labeled part of an ending: the bold label it opens on, and every line through the next. */
+type Part = { readonly label: string; readonly lines: ReadonlyArray<string> }
+
+/**
+ * An ending's labeled parts, in order: each opens on a line that starts with a
+ * bold label and a colon, outside a fence, and runs to the next. Text before
+ * the first label is not part of any.
+ */
+function partsOf(text: string): ReadonlyArray<Part> {
+  const parts: Array<{ label: string; lines: string[] }> = []
+  let rail: string | null = null
+  for (const line of text.split('\n')) {
+    const fence = /^\s*(`{3,})/.exec(line)?.[1]
+    if (rail === null && fence !== undefined) {
+      rail = fence
+    } else if (rail !== null && fence !== undefined && fence.length >= rail.length && line.trim() === fence) {
+      rail = null
+      parts.at(-1)?.lines.push(line)
+      continue
+    }
+    const label = rail === null ? /^\*\*([^*\n]+)\*\*:(?:\s|$)/.exec(line)?.[1] : undefined
+    if (label !== undefined) {
+      parts.push({ label, lines: [line] })
+    } else {
+      parts.at(-1)?.lines.push(line)
+    }
+  }
+  return parts
 }
 
 /**
@@ -190,8 +309,7 @@ function parsePayload(raw: string): StopPayload | null {
 
 /**
  * Text with every run of whitespace collapsed to one space and the ends
- * trimmed, so a relay that rewraps a line or drops a trailing blank still
- * matches the block it relayed.
+ * trimmed, so a measured fact still matches when a relay rewrapped it.
  */
 function flat(text: string): string {
   return text.replace(/\s+/g, ' ').trim()

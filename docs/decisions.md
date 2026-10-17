@@ -901,14 +901,22 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   before `Stop` even under `claude -p` and stands still across a continuation, which fires no
   `UserPromptSubmit`. The build's closing A/B measures the check, and a hold on an ending that was already
   whole reopens this entry. That A/B ran both arms at one commit on 2026-10-17, and it found exactly that.
-  The check held 8 turns open across 50 runs. Three were real misses: two plan cards a turn never relayed
-  came back whole on the retry, and a pause card came back cut short, because the model piped `handoff`
-  through `head`. The other five relays already carried every part of their ending in order, and each had
-  changed one line (two swapped a pair of Your Call moves, one put a move in backticks, one reworded the Summary
-  lead, one reworded the Recommendation). The check compares line for line, so it held a card the human
-  had already read, and the retry put it on screen twice, which is why the arm with the check read 27 of
-  35 decision endings whole against 30 of 35 without it. By this entry's own test that reopens it, on how
-  strictly the check compares rather than on whether a missed ending is held. Promoted from the
+  The check held 8 turns open across 50 runs. Three were real misses, and each came back whole on the
+  retry: a pause card the turn never relayed, and two plan cards the model wrote into, one with a
+  paragraph inside the card and one with two after it. The other five relays already carried every part
+  of their ending in order, and each had changed one line (two swapped a pair of Your Call moves, one put
+  a move in backticks, one reworded the Summary lead, one reworded the Recommendation). The check compared
+  line for line, so it held a card the human had already read, and the retry put it on screen twice,
+  which is why the arm with the check read 27 of 35 decision endings whole against 30 of 35 without it.
+  By this entry's own test that reopened it, on how strictly the check compares rather than on whether a
+  missed ending is held. (Revised 2026-10-17: the check reads a relay by its parts, in the printed
+  block's order, with no paragraph inside a part that the block does not have there and, after a decision
+  ending's last part, none at all. It compares only the Readout table and the Verdict line exactly,
+  because those are the facts the CLI measured; the Summary and the Recommendation are the model's own
+  prose, and a reordered Your Call still offers every move. Replayed against the A/B's eight holds, it
+  lets the five one-line changes through and still holds the three misses, and it holds a relay that
+  keeps every part but turns a red check row green or changes the Verdict, which parts and order alone,
+  the other choice, would have passed.) Promoted from the
   2026-10-08 said-once-said-whole build, where Q1 (relay-check-tier) settled the tier and the spike
   settled the mechanics, merging its local `block-once`. *Evidence in*
   `.plumbbob/builds/2026-10-08-said-once-said-whole/spike-01-stop-hook.md` and

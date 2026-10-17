@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Said once, said whole
 
-**Current step:** none (at the boundary)
+**Current step:** 17 — feat(relay): hold a relay on its parts and measured facts, not every line
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -38,7 +38,8 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 13. docs(decisions): record the relay check and its tier
 - ☑ 14. feat(handoff): remember the ending each turn has to close on
 - ☑ 15. feat(hooks): check at a turn's end that it closed on its relay
-- ☐ 16. chore(evals): measure the relay check with and without the hook
+- ☑ 16. chore(evals): measure the relay check with and without the hook
+- ☐ 17. feat(relay): hold a relay on its parts and measured facts, not every line
 
 ## Park list
 
@@ -53,9 +54,10 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [x] report.ts sorts contract ids as strings, so c10 lands between c1 and c2 in the receipt table, and its method footnotes say nothing of c10's fresh-session question turns (evals)
 - [x] eval sessions inherit the account's claude.ai connectors, and 3 of 5 c7 runs in the 2026-10-17 sweep mentioned them after the relay; the driver could pin an empty MCP config so the account's environment stays out of the anatomy rates (evals)
 - [x] driver.ts and every receipt's method footnote say the headless UserPromptSubmit tick lands at about session end, but on Claude Code 2.1.283 it ticks before the first tool call (spike-01), so armGrant and the warmup's stated reason may be stale (evals)
-- [ ] recover and agent run print driver-tier output without recording RELAY, so a turn that ends on either after a pause is judged by the pause; step 14's seam held them out (relay)
-- [ ] README, docs/install.md, and docs/architecture.md still count three hooks; the Stop relay check makes four, so name it beside the turn ledger (relay)
-- [ ] docs/presentation.md states the positional rule but not that a Stop hook now checks it; one sentence beside 'relayed whole' citing D89 (block-once) would close the spec gap (relay)
+- [x] recover and agent run print driver-tier output without recording RELAY, so a turn that ends on either after a pause is judged by the pause; step 14's seam held them out (relay)
+- [x] README, docs/install.md, and docs/architecture.md still count three hooks; the Stop relay check makes four, so name it beside the turn ledger (relay)
+- [x] docs/presentation.md states the positional rule but not that a Stop hook now checks it; one sentence beside 'relayed whole' citing D89 (block-once) would close the spec gap (relay)
+- [ ] report.ts's Relay holds paragraph says the check compares line for line; since step 17 it reads parts and facts, so the next receipt would print a stale method sentence (evals)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -107,6 +109,20 @@ Harvest results this boundary:
   c9 cleanly with `armGrant` in place. What it costs is a false method note, which
   `report.ts:162` would print into step 16's receipt from outside that step's seam. The
   warmup stays either way, since it also runs the version guard.
+- 2026-10-17, at the step 16 boundary: three parked items, all classified tangent.
+- **tangent** (deferred to the build that settles D89 (block-once)): `recover` and `agent
+  run` print driver-tier output without recording `RELAY`. Nothing in the normal flow
+  ends a turn on either after a pause: bound `after`-agents run before `handoff`, and
+  `recover` is a start-of-session readout. The fix is cheap, but the check may change
+  shape once the reopened decision is called.
+- **tangent** (deferred, its own commit before `/version`): the README,
+  `docs/install.md`, and `docs/architecture.md` still count three hooks. The release
+  that ships the Stop hook would otherwise ship docs saying it doesn't exist.
+  `architecture.md` also calls the hooks beside the light tier "neither a gate", and the
+  relay check holds a turn open, so that sentence needs care rather than a fourth item.
+- **tangent** (deferred until D89 (block-once) is settled): `docs/presentation.md` does
+  not say a Stop hook checks the positional rule. The sentence would describe how
+  strictly the check compares a relay, which is what the A/B reopened.
 
 ## Log
 
@@ -319,3 +335,4 @@ folder, so it rides the branch into the PR.)*
 
 - 2026-10-17 — step 14 checkpointed · a1b57d950 — feat(handoff): remember the ending each turn has to close on (531m)
 - 2026-10-17 — step 15 checkpointed · c67286827 — feat(hooks): check at a turn's end that it closed on its relay (1 red, 1 drift, 21m)
+- 2026-10-17 — step 16 checkpointed · a292bc9a9 — chore(evals): measure the relay check with and without the hook (1 drift)
