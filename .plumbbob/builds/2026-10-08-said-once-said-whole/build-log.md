@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Said once, said whole
 
-**Current step:** 3 — fix(handoff): put blank lines around the detail file's headings
+**Current step:** 4 — test(markdown): lint the detail file a pause leaves on disk
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -25,7 +25,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
 - ☑ 1. fix(status): count out-of-band commits the way handoff does
 - ☑ 2. fix(skills): put a blank line under each detail heading
-- ☐ 3. fix(handoff): put blank lines around the detail file's headings
+- ☑ 3. fix(handoff): put blank lines around the detail file's headings
 - ☐ 4. test(markdown): lint the detail file a pause leaves on disk
 - ☐ 5. docs(presentation): show a pause once and name the step it is on
 - ☐ 6. feat(handoff): open the pause card on the step in flight
@@ -100,3 +100,4 @@ folder, so it rides the branch into the PR.)*
 
 - 2026-10-16 — step 1 checkpointed · 4ab52c820 — fix(status): count out-of-band commits the way handoff does (5m)
 - 2026-10-16 — step 2 checkpointed · 31f533529 — fix(skills): put a blank line under each detail heading (4m)
+- 2026-10-16 — step 3 checkpointed · 83e7f8c3b — fix(handoff): put blank lines around the detail file's headings (8m)

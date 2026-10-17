@@ -14,8 +14,9 @@ import { start } from '../start.ts'
 import { park } from '../park.ts'
 import { finish } from '../finish.ts'
 import { checkpoint } from '../checkpoint.ts'
+import { handoff } from '../handoff.ts'
 import { appendToSection, checkpointLogLine } from '../../lib/buildlog.ts'
-import { buildLogPath, bumpStepStat, detailPath, intentPath, reportPath, stampStepStat } from '../../lib/sidecar.ts'
+import { buildLogPath, bumpStepStat, detailPath, intentPath, reportPath, stampStepStat, stepPath } from '../../lib/sidecar.ts'
 import { settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
@@ -117,6 +118,36 @@ describe('generated markdown lints clean under a consumer-strict gate', () => {
     await captureIoAsync(() => checkpoint(dir, ['1']))
     expect(readFileSync(buildLogPath(dir), 'utf8')).toContain('  **Summary**: A works now')
     expect(await lintFindings(dir, [buildLogPath(dir)])).toEqual([])
+  })
+
+  it('the detail file a pause leaves on disk: headings that ran into their bodies, settled by handoff', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Settle the detail', '--slug', 'settle-the-detail']))
+    writeFileSync(intentPath(dir), '# Settle the detail\n\n## Steps\n\n1. [ ] First — **done when:** a works.\n   - seam: `src/a.ts`\n')
+    writeFileSync(stepPath(dir, 'settle-the-detail'), '1\n')
+    // The shape a model produces when it skips the template's blank lines.
+    writeFileSync(
+      detailPath(dir),
+      [
+        '# Detail · Step 1 · First',
+        '',
+        '── recap · step 1 of 1 ──',
+        'done-when    met',
+        'decisions    none exercised',
+        'constraints  all honored',
+        '## Summary',
+        'A works now.',
+        '## 1 The first move',
+        'The whole story.',
+        '## Recommendation',
+        'Approve it. Nothing is off.',
+        '',
+      ].join('\n'),
+    )
+    expect((await lintFindings(dir, [detailPath(dir)])).some((f) => f.includes('MD022'))).toBe(true)
+    const { code } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(await lintFindings(dir, [detailPath(dir)])).toEqual([])
   })
 
   it('a plan commit with a cold read: the plan line and its record', async () => {
