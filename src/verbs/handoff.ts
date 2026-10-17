@@ -3,9 +3,10 @@
 // the detail file with a blank line around each heading. Every part outside
 // the readout fence is a bold label, a colon, and text that wraps, one blank
 // line between blocks and no fence but the readout's own. It derives the moment
-// from the session: a step in flight ⇒ the decision-tier ending (the labeled
-// Readout and its fence, the inline diff when the change is 20 lines or fewer,
-// the Verdict, Next Up, Your Call, and the Recommendation last); a landed step
+// from the session: a step in flight ⇒ the decision-tier ending (the Now line
+// naming that step, the labeled Readout and its fence, the inline diff when
+// the change is 20 lines or fewer, the Verdict, Next Up, Your Call, and the
+// Recommendation last); a landed step
 // with none in flight ⇒ the orientation-tier ending (Verdict and Next Up); a
 // fresh session with nothing yet measured ⇒ the forward pointer alone.
 //
@@ -103,8 +104,9 @@ const SEAM_RULE = '\n---'
  *
  * Requires an active session (the STATE sentinel under `.plumbbob/`). The step
  * tiers are derived, not passed: a step in flight yields the full
- * decision-tier ending (the Readout and its fence, the inline diff when small
- * enough, the Verdict, Next Up, Your Call, and the Recommendation), and so does
+ * decision-tier ending (the Now line, the Readout and its fence, the inline
+ * diff when small enough, the Verdict, Next Up, Your Call, and the
+ * Recommendation), and so does
  * a named step that has not landed when nothing is in flight (a hand-built diff
  * under verify), a landed step yields the orientation-tier ending (Verdict and
  * Next Up, no Your Call),
@@ -195,8 +197,9 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
 
   // The pause: the whole turn as one contiguous block, each part a labeled line
   // with one blank line between, and the only fence the readout's own (plus the
-  // inline diff when the change is small enough). It opens on the Summary the
-  // model wrote into the detail file, so there is no seam left to rule off.
+  // inline diff when the change is small enough). It opens on the step in
+  // flight and then the Summary the model wrote into the detail file, so there
+  // is no seam left to rule off.
   const detail = settleDetail(root, rawDetail)
   const { rows, work, summary, checkGreen } = measured(root, slug, intent, detail, current)
   const { ladder, worst } = foldVerdict(rows, accruedStats(root, slug, current))
@@ -213,9 +216,12 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     spent: spentRowValue(spentInputs(root, slug, current, summary)),
     constraints: parseConstraintCount(intent),
   })
-  const parts: string[] = [summaryBlock(parseSummary(detail), relative(root, detailPath(root)))]
+  const parts: string[] = [
+    `**Now**: ${stepPhrase(current, steps)}`,
+    summaryBlock(parseSummary(detail), relative(root, detailPath(root))),
+  ]
   if (readout.length > 0) {
-    parts.push([readoutLabel(current, steps), '', ...fence('text', readout)].join('\n'))
+    parts.push([READOUT_LABEL, '', ...fence('text', readout)].join('\n'))
   }
   if (inline) {
     parts.push(fence('diff', patch.split('\n')).join('\n'))
@@ -280,6 +286,9 @@ export type BoundaryEnding = { readonly verdict: string | null; readonly pointer
  * numbered sections' bodies, blank-line separated and unindented; the caller
  * nests it under the Log's dated line.
  *
+ * The record carries no Now line, and its Readout label stays bare like the
+ * card's: the dated Log line above it already names the step.
+ *
  * Measured, not recalled: the check, seam, and diff rows are read the same way
  * the pause read them. Both measures run against HEAD, so staging no longer
  * moves the counts and the caller's build-then-stage order is a nicety rather
@@ -309,7 +318,7 @@ export function stepRecord(root: string, slug: string | null, step: number, deta
     parts.push(recordSummary(summary))
   }
   if (readout.length > 0) {
-    parts.push([readoutLabel(step, parseSteps(intent)), '', ...fence('text', readout)].join('\n'))
+    parts.push([READOUT_LABEL, '', ...fence('text', readout)].join('\n'))
   }
   parts.push(verdictLine(ladder, worst))
   return [...withRecommendation(parts, recommendation), ...sectionBlocks(sections)].join('\n\n')
@@ -364,7 +373,7 @@ export function driverPointer(root: string, slug: string | null): string {
   // driver line itself stays one line, with no note beneath it.
   const steps = parseOrderedSteps(intent)
   const inFlight = readMarker(stepPath(root, slug))
-  const driver = inSpike(root, slug) ? spikeNextUpLine(inFlight) : driverNextUpLine(steps, inFlight, steps.length)
+  const driver = inSpike(root, slug) ? spikeNextUpLine(inFlight) : driverNextUpLine(steps, inFlight)
   // The forward fallback skips the step just landed as well as the one open, so
   // a checkpoint whose `[x]` flip failed still points on rather than back at
   // work already recorded.
@@ -432,9 +441,9 @@ function emit(parts: ReadonlyArray<string | null>): number {
  * The Verdict line from an already-folded result: the ladder rung, and the
  * worst component in a trailing parenthetical when one exists.
  *
- * No step segment rides here. The identity renders once per turn: the Readout
- * label names the step, Next Up carries the progress count, and the Verdict is
- * left saying the one thing only it says.
+ * No step segment rides here. The identity renders once per turn: the Now line
+ * names the step in flight with its count, Next Up names the step to come with
+ * its own, and the Verdict is left saying the one thing only it says.
  */
 function verdictLine(ladder: Ladder, worst: string | null): string {
   const state = `**Verdict**: ${ladder.glyph} ${ladder.state}`
@@ -462,13 +471,27 @@ function summaryBlock(summary: Summary | null, where: string): string {
   return [lead, '', ...summary.highlights.map((h) => `${h.n}. ${h.title}`)].join('\n')
 }
 
+// The Readout's label, bare on the card and in the record alike: the Now line
+// at the top of the card names the step the fence measures, and a label that
+// named it too would put the step on the card twice.
+const READOUT_LABEL = '**Readout**:'
+
 /**
- * The Readout's label: the step the fence below it measures, named once.
+ * A step named the way every pointer names it: the number, the count out of
+ * the whole plan, and the title behind a plain hyphen.
+ *
+ * The count is the plan's own, step number over total, so the Now line and
+ * Next Up agree under a re-sequenced build order. It is dropped only where it
+ * would lie: a step the plan no longer holds is its number alone, since
+ * "Step 9 of 3" would be worse than no count.
  */
-function readoutLabel(step: number, steps: ReadonlyArray<Step>): string {
-  const open = steps.find((s) => s.n === step)
-  const title = open !== undefined && open.title.length > 0 ? ` - ${open.title}` : ''
-  return `**Readout**: Step ${step}${title}`
+function stepPhrase(n: number, steps: ReadonlyArray<Step>): string {
+  const step = steps.find((s) => s.n === n)
+  if (step === undefined) {
+    return `Step ${n}`
+  }
+  const title = step.title.length > 0 ? ` - ${step.title}` : ''
+  return `Step ${n} of ${steps.length}${title}`
 }
 
 /**
@@ -626,16 +649,8 @@ function planCallBlock(first: Step | undefined): string {
  * step is already being built, so the `/model` call is behind us. Null when no
  * step is open, which is the caller's cue to fall back to the forward pointer.
  */
-function driverNextUpLine(steps: ReadonlyArray<Step>, inFlight: number | null, total: number): string | null {
-  if (inFlight === null) {
-    return null
-  }
-  const open = steps.find((s) => s.n === inFlight)
-  const title = open !== undefined && open.title.length > 0 ? ` - ${open.title}` : ''
-  // The progress count rides every tier's pointer, but only where the plan
-  // actually holds the step: "step 9 of 3" would be worse than no count.
-  const progress = open === undefined ? '' : ` of ${total}`
-  return `**Next Up**: Back to Step ${inFlight}${progress}${title}`
+function driverNextUpLine(steps: ReadonlyArray<Step>, inFlight: number | null): string | null {
+  return inFlight === null ? null : `**Next Up**: Back to ${stepPhrase(inFlight, steps)}`
 }
 
 /**

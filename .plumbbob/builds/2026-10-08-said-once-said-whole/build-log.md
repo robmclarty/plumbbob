@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Said once, said whole
 
-**Current step:** 5 — docs(presentation): show a pause once and name the step it is on
+**Current step:** 6 — feat(handoff): open the pause card on the step in flight
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -27,7 +27,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 2. fix(skills): put a blank line under each detail heading
 - ☑ 3. fix(handoff): put blank lines around the detail file's headings
 - ☑ 4. test(markdown): lint the detail file a pause leaves on disk
-- ☐ 5. docs(presentation): show a pause once and name the step it is on
+- ☑ 5. docs(presentation): show a pause once and name the step it is on
 - ☐ 6. feat(handoff): open the pause card on the step in flight
 - ☐ 7. feat(handoff): print a one-line reminder for a pause already shown
 - ☐ 8. fix(skills): answer a question at the pause without re-pasting it
@@ -47,6 +47,8 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 > Capture is one line (`/plumbbob:park` composes it). Harvest happens only at the boundary.
 
 - [x] docs/cli-reference.md:25 still calls handoff read-only; step 3 makes a pause rewrite .plumbbob/detail.md, so fix the row in step 7, whose seam holds the file (docs)
+- [ ] src/lib/orient.ts:1044 still says the Readout label carries the step's identity; step 6 moved it to the Now line (comment)
+- [ ] skills/build/SKILL.md:187, skills/verify/SKILL.md:123, docs/glossary.md:91, and site/docs.html and site/index.html list the card's parts without the Now line; fold into step 8, whose seam holds them (docs)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -140,3 +142,49 @@ folder, so it rides the branch into the PR.)*
   **3.** The range's self-approval lapsed, so this last step waits on you.
 
   Steps 1 to 3 landed under your typed `1-4`. The checkpoint for step 4 was refused as "no human turn since this step began", which is the latch working as designed, so I wrote this detail and stopped here rather than route around it. My guess is that the background-task notifications that arrived while step 3's gate ran counted as turns and cleared the one-turn grant. I have not verified that.
+
+- 2026-10-17 — step 5 checkpointed · 1ea534458 — docs(presentation): show a pause once and name the step it is on (29m)
+
+  **Summary**: `docs/presentation.md` now says a pause renders its block once and that a later turn at it ends on the `Back to Step N of M` reminder, opens every step pause on a `**Now**` line with the step and its count, and names `show the pause` as the way the block comes back; `docs/decisions.md` records the two rules as D87 (pause-once) and D88 (current-step-shown) and dates D83 (card-teaches-itself) for them.
+
+  1. The pause renders once, and a later turn at it ends on the reminder
+  2. The block opens on the step in flight, and the Readout label goes bare
+  3. The expand move names the way back
+  4. D87 and D88 join the key, and D83 carries a dated note
+  5. Two words were this step's to settle
+
+  **Readout**: Step 5 - docs(presentation): show a pause once and name the step it is on
+
+  ```text
+  check        green: 1 of 1 checks
+  done-when    met
+  decisions    5 of 5 honored
+  constraints  7 of 7 honored
+  seam         held: 2 of 2 declared, no strays
+  diff         +136 -24 across 2 files
+  spent        29 min · 1 turn · 226s gate · green first run
+  ```
+
+  **Verdict**: ● Plumb
+
+  **Recommendation**: Approve it. The gate is green, the seam held, and the two words this step had to settle, `Now` for the label and `show the pause` for the way back, are the ones steps 6 through 8 will render and teach.
+
+  **1.** The pause renders once, and a later turn at it ends on the reminder
+
+  A new `### One pause, rendered once` section sits under the shape of a turn, right after the positional rule it qualifies. It states the rule of D6 (pause-once), renders the reminder as Q2 (reminder-shape) settled it (the driver pointer `**Next Up**: Back to Step 2 of 3 - <title>`, the line a park already closes on), and says the CLI picks the form from a stamp of its last render (the step, the detail file, and the measured `check`, `seam`, and `diff` rows; never `spent`), per D7 (cli-picks-the-form) and D8 (stamp-skips-spent). The block comes back when the pause changes, on `plumbbob handoff --full`, and in a session that no longer has it in front of it. The sentence at `:474` ("An expand turn ends on the Your Call block again...") is replaced with the new rule, and the tiers table and the Next Up section each carry one sentence pointing at it.
+
+  **2.** The block opens on the step in flight, and the Readout label goes bare
+
+  `Now` is settled as the label: it pairs with `Next Up`, the two lines bracket the block, and it states the fact and no move. A new `## The Now line` section precedes the Summary's, in block order, and records why (the step was named only mid-block and without its count, so the human was subtracting one from Next Up). The running example opens on `**Now**: Step 2 of 3 - feat(login): ...` and its Readout label collapses to `**Readout**:`; the ownership table, the readout's label rule, the Verdict's identity paragraph, and the decision tier's row in the tiers table all follow. The count is the plan's own (step number over the total), the way Next Up counts, so the two lines agree under a re-sequenced build order.
+
+  **3.** The expand move names the way back
+
+  Both copies of the step pause's Your Call block (the running example and the Your Call section) now read: `` `expand`, or any question → I show more of what is there; nothing changes, and `show the pause` brings all of this back ``. The plan pause's copy stays as it was, per the step note. `show the pause` is the phrase step 8 teaches the skills to answer with `plumbbob handoff --full`, and the Q2 lean put the way back on the expand move so the reminder never has to carry it.
+
+  **4.** D87 and D88 join the key, and D83 carries a dated note
+
+  D87 (pause-once) merges the intent's D6, D7, and D8; D88 (current-step-shown) merges D17 and D18, naming the record's bare Readout label and the plan pause's missing line. D83 (card-teaches-itself) gets a "(Revised 2026-10-16 by D87 and D88: ...)" note in the house pattern, and the key's own index of promoted ranges gains the pair. Both are tagged only in `docs/presentation.md`, which is the one place citing them until steps 6 through 8 land.
+
+  **5.** Two words were this step's to settle
+
+  The plan left the label as a working name and the way back unspecified. `Now` and `show the pause` are the calls made here; steps 6, 7, and 8 render and teach them, so a different word is cheapest to change now.

@@ -103,12 +103,14 @@ describe('handoff', () => {
     expect(code).toBe(0)
     expect(stdout).toBe(
       [
+        '**Now**: Step 2 of 3 - Second',
+        '',
         '**Summary**: The limiter runs before credentials are checked. (details: `.plumbbob/detail.md`)',
         '',
         '1. `POST /login` returns 429 on the 6th attempt inside a minute.',
         '2. Misses count against the bucket; a success does not reset it.',
         '',
-        '**Readout**: Step 2 - Second',
+        '**Readout**:',
         '',
         '```text',
         'check        green: 3 of 3 checks',
@@ -136,7 +138,38 @@ describe('handoff', () => {
         '',
       ].join('\n'),
     )
-    expect(stdout).not.toContain('── recap') // the header rule left the rendering; the label carries the identity
+    expect(stdout).not.toContain('── recap') // the header rule left the rendering; the Now line carries the identity
+  })
+
+  it('opens the pause on the step in flight with the count Next Up counts by, and names it nowhere else — D88 (current-step-shown)', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(detailPath(dir), `${GREEN_RECAP}${SUMMARY}`)
+    writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout.startsWith('**Now**: Step 2 of 3 - Second\n\n**Summary**:')).toBe(true)
+    expect(stdout).toContain('\n**Readout**:\n\n```text\n') // the label goes bare
+    expect(stdout.split('Step 2 of 3')).toHaveLength(2) // once, on the Now line
+  })
+
+  it('counts the Now line by the plan, not the build order, so it agrees with Next Up', async () => {
+    // Step 4 is built ahead of step 3; both lines still count out of the four
+    // steps the plan holds, by number, because a step keeps its number for life.
+    const dir = await started(REORDERED)
+    writeFileSync(stepPath(dir), '4\n')
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout.startsWith('**Now**: Step 4 of 4 - Fourth\n\n')).toBe(true)
+    expect(stdout).toContain('**Next Up**: Step 3 of 4 - Third')
+  })
+
+  it('names a step the plan no longer holds by its number alone on the Now line', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '9\n')
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout.startsWith('**Now**: Step 9\n\n')).toBe(true) // no "of 3": the count would be a lie
   })
 
   it('numbers each highlight by its own section handle, so `expand 2` opens `## 2`', async () => {
@@ -147,7 +180,7 @@ describe('handoff', () => {
     writeFileSync(detailPath(dir), '## Summary\n\nOne line.\n\n## 1 First move\n\nthe story\n\n## 2 Second move\n\nthe rest\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout.startsWith('**Summary**: One line. (details: `.plumbbob/detail.md`)\n\n1. First move\n2. Second move\n\n')).toBe(true)
+    expect(stdout).toContain('\n**Summary**: One line. (details: `.plumbbob/detail.md`)\n\n1. First move\n2. Second move\n\n')
   })
 
   it('unwraps a hard-wrapped Summary lead, keeping its paragraph breaks', async () => {
@@ -167,7 +200,7 @@ describe('handoff', () => {
     writeFileSync(detailPath(dir), '## Summary\n\nOne line covers it.\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout.startsWith('**Summary**: One line covers it. (details: `.plumbbob/detail.md`)\n\n**Verdict**')).toBe(true)
+    expect(stdout.startsWith('**Now**: Step 2 of 3 - Second\n\n**Summary**: One line covers it. (details: `.plumbbob/detail.md`)\n\n**Verdict**')).toBe(true)
   })
 
   it('vanishes the Summary block when the detail file carries no lead', async () => {
@@ -180,15 +213,18 @@ describe('handoff', () => {
     expect(code).toBe(0)
     expect(stdout).not.toContain('**Summary**')
     expect(stdout).not.toContain('1. A move')
-    expect(stdout.startsWith('**Readout**: Step 2 - Second\n')).toBe(true)
+    expect(stdout.startsWith('**Now**: Step 2 of 3 - Second\n\n**Readout**:\n')).toBe(true)
   })
 
-  it('leaves the Summary out of the boundary and driver tiers, where nothing is pending', async () => {
+  it('leaves the Now line and the Summary out of the boundary, driver, and plan tiers, where no step pause is pending', async () => {
     const dir = await started()
     writeFileSync(checkpointsPath(dir), 'step 2 abc1234\n')
     writeFileSync(detailPath(dir), '## Summary\n\nA lead the boundary never shows.\n\n## 1 A move\n')
-    expect(captureIo(() => handoff(dir, [])).stdout).not.toContain('**Summary**')
-    expect(captureIo(() => handoff(dir, ['--driver'])).stdout).not.toContain('**Summary**')
+    for (const args of [[], ['--driver'], ['--plan']]) {
+      const { stdout } = captureIo(() => handoff(dir, args))
+      expect(stdout).not.toContain('**Summary**')
+      expect(stdout).not.toContain('**Now**')
+    }
   })
 
   it('keeps every readout line inside 80 columns', async () => {
@@ -234,8 +270,8 @@ describe('handoff', () => {
     writeFileSync(statsPath(dir), JSON.stringify({ '2': { redChecks: 2 } }))
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('**Verdict**: ◐ A hair off (2 red runs before green)')
-    expect(stdout).not.toContain('Step 2 of 3') // the identity renders once, on the Readout and Next Up
+    expect(stdout).toContain('**Verdict**: ◐ A hair off (2 red runs before green)\n')
+    expect(stdout.split('Step 2 of 3')).toHaveLength(2) // the identity renders once, on the Now line
   })
 
   it('leads the advisory rung with the seam stray, uncounted, ahead of red runs — D43 (verb-prints-its-ending)', async () => {
@@ -349,7 +385,7 @@ describe('handoff', () => {
     writeFileSync(detailPath(dir), GREEN_RECAP)
     const { code, stdout } = captureIo(() => handoff(dir, ['1'])) // …but ask about 1
     expect(code).toBe(0)
-    expect(stdout).toContain('**Readout**: Step 1 - First')
+    expect(stdout.startsWith('**Now**: Step 1 of 3 - First\n')).toBe(true)
     expect(stdout).toContain('**Next Up**: Step 2 of 3 - Second')
   })
 
@@ -364,7 +400,7 @@ describe('handoff', () => {
     const { code, stdout } = captureIo(() => handoff(dir, ['2']))
     expect(code).toBe(0)
     expect(stdout).toContain('**Summary**: The limiter runs before credentials are checked.')
-    expect(stdout).toContain('**Readout**: Step 2 - Second')
+    expect(stdout.startsWith('**Now**: Step 2 of 3 - Second\n')).toBe(true)
     expect(stdout).toContain('**Next Up**: Step 3 of 3 - Third')
     expect(stdout).toContain('**Your Call**:')
     expect(stdout).toContain('**Recommendation**: Approve it. It does what step 2 asks.')
@@ -377,6 +413,7 @@ describe('handoff', () => {
     expect(landed).toContain('**Verdict**:')
     expect(landed).not.toContain('**Your Call**')
     expect(landed).not.toContain('**Readout**')
+    expect(landed).not.toContain('**Now**')
     expect(captureIo(() => handoff(dir, ['9'])).stdout).not.toContain('**Your Call**')
   })
 

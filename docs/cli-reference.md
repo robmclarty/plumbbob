@@ -141,10 +141,15 @@ readout's own (plus the inline diff's).
 
 At a build pause it renders the turn entire, in this order:
 
+- `**Now**:` the step in flight, its count out of the whole plan, and its title, written
+  the way Next Up writes the step to come, so the two lines agree under a re-sequenced
+  build order. A step the plan no longer holds is named by its number alone
+  ([**D88 (current-step-shown)**](decisions.md#d88)).
 - `**Summary**:` the lead the model wrote as `.plumbbob/detail.md`'s `## Summary`
   section, with the `(details: …)` bracket appended, then the `## <n>` section titles
   beneath it as the numbered highlights.
-- `**Readout**:` the step and its title, then the fence: the `check` row measured from
+- `**Readout**:` the label alone, since the Now line already names the step, then the
+  fence: the `check` row measured from
   `.check/summary.json`, `seam` and `diff` from the SEAM marker against the step's whole
   product (everything changed since HEAD, staged or not, plus each non-ignored new file),
   and `spent` from `stats.json` and the turn ledger, folded with the three judgment rows

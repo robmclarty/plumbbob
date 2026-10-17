@@ -58,19 +58,21 @@ export type Anatomy = {
 export type Tier = 'decision' | 'plan' | 'boundary' | 'driver'
 
 const TIER_PARTS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
-  decision: ['Summary', 'Readout', 'Verdict', 'Next Up', 'Your Call', 'Recommendation'],
+  decision: ['Now', 'Summary', 'Readout', 'Verdict', 'Next Up', 'Your Call', 'Recommendation'],
   plan: ['Next Up', 'Your Call', 'Recommendation'],
   boundary: ['Verdict', 'Next Up'],
   driver: ['Next Up'],
 }
 
 // What each tier must NOT render. The Your Call block belongs only where a
-// decision is pending; a Verdict only where something was measured.
+// decision is pending; a Verdict only where something was measured; the Now
+// line only where a step pause is open (the plan pause has no step in flight,
+// and a boundary's lead line already names the step that landed).
 const TIER_FORBIDS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
   decision: [],
-  plan: ['Summary', 'Readout', 'Verdict'],
-  boundary: ['Your Call', 'Readout', 'Recommendation'],
-  driver: ['Your Call', 'Verdict', 'Readout', 'Recommendation'],
+  plan: ['Now', 'Summary', 'Readout', 'Verdict'],
+  boundary: ['Now', 'Your Call', 'Readout', 'Recommendation'],
+  driver: ['Now', 'Your Call', 'Verdict', 'Readout', 'Recommendation'],
 }
 
 // The row the spec makes load-bearing: the gate verdict's one home, which
@@ -228,7 +230,7 @@ export function hasCheckRow(a: Anatomy): boolean {
 
 // The lead line's label, when the ending opens on a transition rather than on
 // one of the anatomy's own parts (`Checkpoint`, `Parked`, `Plan`). Null when the
-// first label is a part, which is what a pause opens on.
+// first label is a part, which is what a pause opens on (its Now line).
 export function transitionLabel(a: Anatomy): string | null {
   const first = a.trailingLabels[0]
   if (first === undefined) return null

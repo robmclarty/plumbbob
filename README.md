@@ -140,12 +140,14 @@ In Claude Code, inside any git repo with a clean tree:
    nothing is written around it.
 
    ````markdown
+   **Now**: Step 1 of 3 - feat(limiter): add a token-bucket limiter
+
    **Summary**: A per-IP token bucket now refuses the 6th attempt inside a minute. (details: `.plumbbob/detail.md`)
 
    1. The bucket lives in memory, keyed by IP, refilling five tokens a minute.
    2. The clock is injected, so the test advances time instead of sleeping on it.
 
-   **Readout**: Step 1 - feat(limiter): add a token-bucket limiter
+   **Readout**:
 
    ```text
    check        green: 7 of 7 checks

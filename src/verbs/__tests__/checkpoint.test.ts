@@ -246,7 +246,8 @@ describe('checkpoint', () => {
     // in the order the pause showed it; the detail bracket is gone because the
     // record is where the detail now lives.
     expect(log).toMatch(/- \d{4}-\d{2}-\d{2} — step 1 checkpointed · [0-9a-f]{9} — First\n\n  \*\*Summary\*\*: A works now\.\n\n  1\. The first move\n/)
-    expect(log).toContain('  **Readout**: Step 1 - First\n\n  ```text\n')
+    expect(log).toContain('  **Readout**:\n\n  ```text\n') // bare, as on the card: the dated line above names the step
+    expect(log).not.toContain('**Now**')
     expect(log).toContain('  done-when    met\n')
     // Measured, not recalled, and the measure sees a new file: src/a.ts is the
     // step's whole product and git has never seen it before.

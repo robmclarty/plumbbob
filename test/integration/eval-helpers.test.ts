@@ -653,6 +653,7 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
     expect(a.strays).toEqual([])
     // The pause's own parts would all be unexpected here.
     expect(forbiddenParts(readAnatomy(runCli(pausedFixture(), ['handoff']).stdout), 'driver')).toEqual([
+      'Now',
       'Your Call',
       'Verdict',
       'Readout',
@@ -702,9 +703,11 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
     // row still printed a Plumb Verdict. The row is the gate verdict's one home,
     // so its absence is the probe, not a footnote.
     const noGate = [
+      '**Now**: Step 1 of 2 - First',
+      '',
       '**Summary**: it built. (details: `.plumbbob/detail.md`)',
       '',
-      '**Readout**: Step 1 - First',
+      '**Readout**:',
       '',
       '```text',
       'done-when    met',
@@ -732,8 +735,8 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
 
   it('names what a partial or reordered ending is missing rather than just failing it', () => {
     const short = ['**Summary**: it built.', '', '**Verdict**: ● Plumb', ''].join('\n')
-    expect(missingParts(readAnatomy(short), 'decision')).toEqual(['Readout', 'Next Up', 'Your Call', 'Recommendation'])
-    expect(shapeDetail(readAnatomy(short), 'decision')).toBe('missing: Readout, Next Up, Your Call, Recommendation')
+    expect(missingParts(readAnatomy(short), 'decision')).toEqual(['Now', 'Readout', 'Next Up', 'Your Call', 'Recommendation'])
+    expect(shapeDetail(readAnatomy(short), 'decision')).toBe('missing: Now, Readout, Next Up, Your Call, Recommendation')
 
     const swapped = ['**Verdict**: ● Plumb', '', '**Next Up**: Step 2 of 2 - Second', ''].join('\n')
     expect(partsInOrder(readAnatomy(swapped), 'boundary')).toBe(true)
