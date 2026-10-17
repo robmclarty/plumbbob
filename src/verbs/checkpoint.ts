@@ -22,6 +22,7 @@ import {
   checkpointsPath,
   clearDetail,
   clearHandoff,
+  clearPause,
   clearTick,
   detailPath,
   hasSession,
@@ -147,6 +148,7 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   rmSync(stepPath(root), { force: true })
   clearHandoff(root) // the agent-run handoff ledger is step-scoped; clear it with the markers.
   clearTick(root) // the step's entry stamp is spent; the next `build <n>` re-stamps.
+  clearPause(root) // the pause it stamped is over; the next step's pause renders whole.
 
   // The whole ending, one block: the lead line, the Verdict folded over what
   // just landed, the advisories this checkpoint alone can state, and the

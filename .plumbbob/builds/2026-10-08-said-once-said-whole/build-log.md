@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Said once, said whole
 
-**Current step:** 6 — feat(handoff): open the pause card on the step in flight
+**Current step:** 7 — feat(handoff): print a one-line reminder for a pause already shown
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -28,7 +28,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 3. fix(handoff): put blank lines around the detail file's headings
 - ☑ 4. test(markdown): lint the detail file a pause leaves on disk
 - ☑ 5. docs(presentation): show a pause once and name the step it is on
-- ☐ 6. feat(handoff): open the pause card on the step in flight
+- ☑ 6. feat(handoff): open the pause card on the step in flight
 - ☐ 7. feat(handoff): print a one-line reminder for a pause already shown
 - ☐ 8. fix(skills): answer a question at the pause without re-pasting it
 - ☐ 9. fix(turn): let a park sit beside an answer in a mixed message
@@ -188,3 +188,5 @@ folder, so it rides the branch into the PR.)*
   **5.** Two words were this step's to settle
 
   The plan left the label as a working name and the way back unspecified. `Now` and `show the pause` are the calls made here; steps 6, 7, and 8 render and teach them, so a different word is cheapest to change now.
+
+- 2026-10-17 — step 6 checkpointed · 156f312ab — feat(handoff): open the pause card on the step in flight (7m)

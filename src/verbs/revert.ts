@@ -21,7 +21,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { findRepoRoot, resetHard, untrackedPaths } from '../lib/git.ts'
-import { bumpStepStat, checkpointsPath, hasSession, resolveBuild, seamPath, sidecarDir, stepPath } from '../lib/sidecar.ts'
+import { bumpStepStat, checkpointsPath, clearPause, hasSession, resolveBuild, seamPath, sidecarDir, stepPath } from '../lib/sidecar.ts'
 import { isArtifactPath, matchesSeam } from '../lib/intent.ts'
 import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
 import { ending, notice, transition } from '../lib/notice.ts'
@@ -33,8 +33,9 @@ import { driverPointer } from './handoff.ts'
  * Requires an active session (the `.plumbbob/STATE` sentinel). Resolves the
  * target SHA from the checkpoints ledger (latest step, `--to n`, or the
  * baseline), resets hard while preserving plumbbob-owned paths, removes
- * untracked files inside the seam, clears the in-flight STEP/SEAM markers, and
- * re-renders the build-log. Exit 1 with a hint on any refusal.
+ * untracked files inside the seam, clears the in-flight STEP/SEAM markers and
+ * the PAUSE stamp, and re-renders the build-log. Exit 1 with a hint on any
+ * refusal.
  */
 export function revert(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
@@ -82,6 +83,7 @@ export function revert(cwd: string, args: ReadonlyArray<string>): number {
   }
   rmSync(seamPath(root, slug), { force: true })
   rmSync(stepPath(root, slug), { force: true })
+  clearPause(root, slug) // the pause it stamped is gone with the work
   if (inFlight !== null) {
     bumpStepStat(root, slug, inFlight, 'reverts')
   }

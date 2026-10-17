@@ -22,7 +22,7 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 | `start` | `start <title> [--slug <name>] [--local] [--allow-dirty]` | scaffold `builds/<slug>/`, record baseline, open the session |
 | `status` | `status [--build <slug>] [--invoked "<args>"]` | print the orientation dashboard (or `NO ACTIVE SESSION`) |
 | `build` | `build [<n>] [--build <slug>]` | write step `n`'s seam + `STEP` (goes in-flight) |
-| `handoff` | `handoff [<n>] [--plan] [--driver] [--build <slug>]` | print the turn's whole CLI-rendered ending, by tier; read-only |
+| `handoff` | `handoff [<n>] [--full] [--plan] [--driver] [--build <slug>]` | print the turn's whole CLI-rendered ending by tier, or a reminder for a pause already shown |
 | `check` | `check [--bail] [--changed] [--all] [--only a,b] [--skip a,b] [--include a,b]` | run the heavy gate; no state change |
 | `checkpoint` | `checkpoint [<n>] [--plan] [-m <msg>] [--body <<'BODY'…]` | gate on green, commit, record SHA, mark step done |
 | `revert` | `revert [--to <n>] [--build <slug>]` | `git reset --hard` to a checkpoint SHA |
@@ -130,12 +130,14 @@ paths or `dir/` grants, never globs; [**D23 (no-glob-seams)**](decisions.md#d23)
 ### handoff
 
 ```text
-plumbbob handoff [<n>] [--plan] [--driver] [--build <slug>]
+plumbbob handoff [<n>] [--full] [--plan] [--driver] [--build <slug>]
 ```
 
 Prints the whole CLI-rendered **ending of a turn** ([the turn anatomy](presentation.md);
 [**D80 (cli-renders-model-relays)**](decisions.md#d80)) as one contiguous block, closed by a trailing blank line so nothing that follows can clobber
-it. Read-only, no state change. Every part outside the readout fence is a bold label, a
+it. It writes two things and changes nothing else: at a pause it leaves `.plumbbob/detail.md`
+with a blank line around each heading, and at a step pause it stamps what the card showed in
+`builds/<slug>/PAUSE`. Every part outside the readout fence is a bold label, a
 colon, and text that wraps, with one blank line between blocks and no fence but the
 readout's own (plus the inline diff's).
 
@@ -165,7 +167,8 @@ At a build pause it renders the turn entire, in this order:
   that step on (only when `## Build order` departs from the numbering; five steps, then a
   count) and the park count (`parked 2 of 7 open`, whenever anything has been parked). The
   driver tier's pointer carries no such line ([**D86 (build-order)**](decisions.md#d86)).
-- `**Your Call**:` the moves a human actually makes at a pause, each with its outcome.
+- `**Your Call**:` the moves a human actually makes at a pause, each with its outcome. The
+  `expand` move also names the way back to the card: `show the pause`.
 - `**Recommendation**:` the model's own call, read from the detail file's
   `## Recommendation` section behind a CLI-prepended label. It is the ending's last text,
   Your Call being its last rendered block.
@@ -177,6 +180,22 @@ and a fresh session with nothing measured yields the forward pointer alone. An e
 last checkpointed one. With nothing in flight, an explicit `<n>` naming a step that has not
 landed renders that step's pause, which is how `/plumbbob:verify` reaches the pause for a
 diff built outside `/plumbbob:build`.
+
+A step pause renders its card once ([**D87 (pause-once)**](decisions.md#d87)). The stamp
+in `PAUSE` holds the step number and a hash of the detail file, the measured `check`,
+`seam`, and `diff` rows, and the patch the diff row counts, never `spent`, which counts
+turns and would make every render look new. While a later render matches it, `handoff`
+prints one line, the driver pointer back at the step:
+
+```text
+**Next Up**: Back to Step 2 of 3 - feat(login): wire the limiter into POST /login
+```
+
+The card comes back on its own once the pause changes (a rewritten detail file, a touched
+file, a check that went red or came back green), and `--full` prints it whatever the stamp
+says. `checkpoint`, `revert`, and `abandon` clear the stamp, so the next pause renders
+whole. A stamp that cannot be written costs one more full card on a later turn, never this
+turn's output or exit code. `--plan`, `--driver`, and the boundary are never stamped.
 
 Two endings no session state can tell apart from those take a flag, so every tier's ending
 is emitted here rather than faked in a skill's prose: `--plan` renders the plan-pause

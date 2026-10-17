@@ -1,6 +1,7 @@
 // `plumbbob handoff`: emit the CLI-owned ending of a turn as one contiguous
-// block (docs/presentation.md). Changes no state but one: at a pause it leaves
-// the detail file with a blank line around each heading. Every part outside
+// block (docs/presentation.md). Changes no state but two: at a pause it leaves
+// the detail file with a blank line around each heading, and at a step pause it
+// stamps what the card showed in `PAUSE`. Every part outside
 // the readout fence is a bold label, a colon, and text that wraps, one blank
 // line between blocks and no fence but the readout's own. It derives the moment
 // from the session: a step in flight ⇒ the decision-tier ending (the Now line
@@ -9,6 +10,10 @@
 // Recommendation last); a landed step
 // with none in flight ⇒ the orientation-tier ending (Verdict and Next Up); a
 // fresh session with nothing yet measured ⇒ the forward pointer alone.
+//
+// A step pause renders its card once (D87 (pause-once)). While the stamp still
+// matches, a later render is the one-line reminder, the driver pointer back at
+// the step; the card comes back when the pause changes or on `--full`.
 //
 // The whole decision turn is rendered here, its opening block included: the
 // Summary lead and the numbered highlights come out of `.plumbbob/detail.md`
@@ -32,6 +37,7 @@
 // closed at the boundary) finds nothing in flight and points forward, with no
 // Verdict either way, since nothing landed.
 
+import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { type NumstatEntry, PLAN_COMMIT_MARKER, commitsSince, diffNumstat, diffPatch, findRepoRoot } from '../lib/git.ts'
@@ -44,6 +50,7 @@ import {
   hasSession,
   inSpike,
   intentPath,
+  pausePath,
   readStats,
   readTurn,
   resolveBuild,
@@ -108,8 +115,10 @@ const SEAM_RULE = '\n---'
  * diff when small enough, the Verdict, Next Up, Your Call, and the
  * Recommendation), and so does
  * a named step that has not landed when nothing is in flight (a hand-built diff
- * under verify), a landed step yields the orientation-tier ending (Verdict and
- * Next Up, no Your Call),
+ * under verify). That card renders once: a later render of the same pause, with
+ * nothing in it changed, is the one-line reminder, and `--full` prints the card
+ * whatever the stamp says. A landed step yields the orientation-tier ending
+ * (Verdict and Next Up, no Your Call),
  * and a fresh session with nothing to report yields only
  * the forward pointer. The two endings no session state can distinguish are
  * named by a flag: `--plan` is the plan pause (a decision turn about the plan,
@@ -208,11 +217,21 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   const changed = counts.added + counts.removed
   // The patch comes first so `· inline below` is a promise the fence keeps: a
   // small change git can still print nothing for (a vanished path) falls back
-  // to the bare counts rather than pointing at a fence that never arrives.
-  const patch = changed > 0 && changed <= INLINE_DIFF_MAX ? diffPatch(root, work) : ''
+  // to the bare counts rather than pointing at a fence that never arrives. The
+  // stamp hashes it at any size, so it is read whenever there is a change.
+  const fullPatch = changed > 0 ? diffPatch(root, work) : ''
+  const patch = changed <= INLINE_DIFF_MAX ? fullPatch : ''
   const inline = patch.length > 0
+  const diffRow = diffRowValue(counts, inline)
+  const stamp = pauseStamp(current, detail, measuredLines(rows, diffRow), fullPatch)
+  if (!rest.includes('--full') && readOr(pausePath(root, slug)).trim() === stamp) {
+    // The pause the human already read, unchanged: the answer above this line
+    // is what they asked for, and the card would push it off the screen.
+    return emit([`**Next Up**: Back to ${stepPhrase(current, steps)}`])
+  }
+  writePause(root, slug, stamp)
   const readout = recapLines(rows, {
-    diff: diffRowValue(counts, inline),
+    diff: diffRow,
     spent: spentRowValue(spentInputs(root, slug, current, summary)),
     constraints: parseConstraintCount(intent),
   })
@@ -253,6 +272,52 @@ function settleDetail(root: string, raw: string): string {
     }
   }
   return clean
+}
+
+/**
+ * The stamp of a step pause: its number and a hash of everything on the card a
+ * later turn could change, so the reminder prints only while the pause is the
+ * one the human already read.
+ *
+ * Hashed: the detail file as normalized, the measured check and seam rows and
+ * the diff row as rendered, and the patch the diff row counts, so an edit that
+ * keeps the counts still reads as a touched file. Never `spent`: it counts
+ * turns, so it moves on every turn and would make every render look new.
+ */
+function pauseStamp(step: number, detail: string, rendered: ReadonlyArray<string>, patch: string): string {
+  const hash = createHash('sha256')
+  for (const part of [detail, ...rendered, patch]) {
+    hash.update(part).update('\0')
+  }
+  return `${step} ${hash.digest('hex')}`
+}
+
+/**
+ * The readout rows the CLI measured, as the card renders them: `check`,
+ * `seam`, and `diff`. The judgment rows ride the detail file, which the stamp
+ * hashes whole, and `spent` stays out of it.
+ */
+function measuredLines(rows: Partial<Record<RecapRowName, RecapRow>>, diff: string | null): string[] {
+  const measuredRows: Partial<Record<RecapRowName, RecapRow>> = {}
+  if (rows.check !== undefined) {
+    measuredRows.check = rows.check
+  }
+  if (rows.seam !== undefined) {
+    measuredRows.seam = rows.seam
+  }
+  return recapLines(measuredRows, { diff, spent: null, constraints: 0 })
+}
+
+/**
+ * Record the stamp of the card just printed. A failed write costs one more
+ * full card on a later turn, never this turn's output or its exit code.
+ */
+function writePause(root: string, slug: string | null, stamp: string): void {
+  try {
+    writeFileSync(pausePath(root, slug), `${stamp}\n`)
+  } catch {
+    // A read-only tree or a vanished build folder: the card still renders.
+  }
 }
 
 /**
@@ -602,16 +667,20 @@ function readCheckSummary(root: string): CheckSummary | null {
  *
  * Nobody types "needs work", so the block names what really happens instead:
  * a message that asks is an expand (nothing changes), and a message that
- * directs is the fix. `revert` comes last, because a destructive move is named
- * rather than discovered. `looks good` renders only while the measured check is
- * green; offering a move that would refuse teaches a false ceremony.
+ * directs is the fix. The expand move also names the way back to the card,
+ * since an expand turn ends on the reminder and the reminder states no move.
+ * `revert` comes last, because a destructive move is named rather than
+ * discovered. `looks good` renders only while the measured check is green;
+ * offering a move that would refuse teaches a false ceremony.
  */
 function yourCallBlock(step: number, checkGreen: boolean): string {
   const moves: string[] = []
   if (checkGreen) {
     moves.push(callLine('`looks good`', `I checkpoint Step ${step}; back to the boundary`))
   }
-  moves.push(callLine('`expand`, or any question', 'I show more of what is there; nothing changes'))
+  moves.push(
+    callLine('`expand`, or any question', 'I show more of what is there; nothing changes, and `show the pause` brings all of this back'),
+  )
   moves.push(callLine('anything that reads as direction', 'I take it as what to change; nothing lands until you approve'))
   moves.push(callLine('`revert`', 'I wind the work back to the last checkpoint'))
   return ['**Your Call**:', '', ...moves].join('\n')

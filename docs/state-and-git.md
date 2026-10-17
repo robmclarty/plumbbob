@@ -66,6 +66,7 @@ branch.
 | `builds/<slug>/SEAM` | The step's declared paths, one per line (awareness, not a lock) | `build` | `checkpoint` / `revert` / `abandon` |
 | `builds/<slug>/SPIKE` | Marker: a spike fork is open | `spike` | `spike done` |
 | `builds/<slug>/TICK` | The `TURN` value at the moment the step was entered | `build` | `checkpoint` / `abandon` |
+| `builds/<slug>/PAUSE` | The step number and a hash of what the pause card last showed, so a repeat prints the one-line reminder ([D87 (pause-once)](decisions.md#d87)) | `handoff` | `checkpoint` / `revert` / `abandon` |
 | `builds/<slug>/handoff.json` | Ledger of agent runs for this step, so a later call can thread earlier results ([D47 (handoff-ledger)](decisions.md#d47)) | `agent run` | `checkpoint` / `abandon` |
 | `.check/` | The check gate's raw tool output | checkride | overwritten each run |
 
@@ -112,6 +113,7 @@ Here is the complete block it appends:
 .plumbbob/builds/*/SEAM
 .plumbbob/builds/*/SPIKE
 .plumbbob/builds/*/TICK
+.plumbbob/builds/*/PAUSE
 .plumbbob/builds/*/handoff.json
 .check/
 ```

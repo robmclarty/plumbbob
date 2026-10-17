@@ -1,10 +1,26 @@
 import { execFileSync } from 'node:child_process'
-import { chmodSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
+import { abandon } from '../abandon.ts'
+import { checkpoint } from '../checkpoint.ts'
 import { handoff } from '../handoff.ts'
+import { revert } from '../revert.ts'
 import { start } from '../start.ts'
-import { buildLogPath, checkpointsPath, detailPath, intentPath, seamPath, spikePath, statsPath, stepPath } from '../../lib/sidecar.ts'
+import {
+  buildLogPath,
+  checkpointsPath,
+  detailPath,
+  intentPath,
+  pausePath,
+  seamPath,
+  spikePath,
+  statsPath,
+  stepPath,
+  tickPath,
+  turnPath,
+} from '../../lib/sidecar.ts'
+import { settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
@@ -129,7 +145,7 @@ describe('handoff', () => {
         '**Your Call**:',
         '',
         '- `looks good` → I checkpoint Step 2; back to the boundary',
-        '- `expand`, or any question → I show more of what is there; nothing changes',
+        '- `expand`, or any question → I show more of what is there; nothing changes, and `show the pause` brings all of this back',
         '- anything that reads as direction → I take it as what to change; nothing lands until you approve',
         '- `revert` → I wind the work back to the last checkpoint',
         '',
@@ -745,7 +761,7 @@ describe('handoff', () => {
     const { stdout: quiet } = captureIo(() => handoff(dir, []))
     expect(quiet).toContain('**Verdict**: ● Plumb') // routine housekeeping is not an advisory
     commitWith(dir, 'other.txt', 'fix: something the human did', 'no marker here')
-    const { stdout: noisy } = captureIo(() => handoff(dir, []))
+    const { stdout: noisy } = captureIo(() => handoff(dir, ['--full'])) // the same pause again: ask for the card
     expect(noisy).toContain('**Verdict**: ◐ A hair off (1 commit outside the ledger)')
   })
 
@@ -791,7 +807,8 @@ describe('handoff', () => {
     const dir = await started()
     writeFileSync(stepPath(dir), '2\n')
     const tight = `${GREEN_RECAP}## Summary\nThe limiter runs first.\n## Recommendation\nApprove it.\n`
-    const render = (): { code: number; stdout: string } => captureIo(() => handoff(dir, []))
+    // `--full`: the second render is the same pause, which would otherwise print the reminder.
+    const render = (): { code: number; stdout: string } => captureIo(() => handoff(dir, ['--full']))
     writeFileSync(detailPath(dir), tight)
     chmodSync(detailPath(dir), 0o444)
     const locked = render()
@@ -947,5 +964,137 @@ describe('handoff — the note beneath Next Up', () => {
     // The driver line follows the order for its pick and carries no note.
     const driver = captureIo(() => handoff(dir, ['--driver'])).stdout
     expect(driver.trim()).toBe(`**Next Up**: Step 4 of 4 - Fourth (details: \`${fourthStepPointer(dir)}\`)`)
+  })
+})
+
+const REMINDER = '**Next Up**: Back to Step 2 of 3 - Second\n\n'
+
+/** Step 2 at its pause: a one-line change in its seam, a detail file, and a green gate. */
+async function paused(): Promise<string> {
+  const dir = await started()
+  writeFileSync(stepPath(dir), '2\n')
+  writeFileSync(seamPath(dir), 'README.md\n')
+  writeFileSync(join(dir, 'README.md'), '# fixture\nchanged\n')
+  writeFileSync(detailPath(dir), `${GREEN_RECAP}${SUMMARY}\n## Recommendation\n\nApprove it.\n`)
+  writeCheckSummary(dir, true, [{ name: 'test', ok: true }], 63_000)
+  return dir
+}
+
+function render(dir: string, args: ReadonlyArray<string> = []): { code: number; stdout: string } {
+  const { code, stdout } = captureIo(() => handoff(dir, args))
+  return { code, stdout }
+}
+
+/** Whether a render is the whole card: it opens on the Now line and ends on the recommendation. */
+function isCard(stdout: string): boolean {
+  return stdout.startsWith('**Now**: Step 2 of 3 - Second\n\n**Summary**') && stdout.includes('**Your Call**:')
+}
+
+describe('handoff — a pause shown once', () => {
+  it('prints the whole card on the first render and the reminder on a second with nothing changed — D87 (pause-once)', async () => {
+    const dir = await paused()
+    const first = render(dir)
+    expect(first.code).toBe(0)
+    expect(isCard(first.stdout)).toBe(true)
+    expect(render(dir)).toEqual({ code: 0, stdout: REMINDER })
+    expect(render(dir)).toEqual({ code: 0, stdout: REMINDER }) // however many questions it takes
+  })
+
+  it('brings the card back when the detail file changes', async () => {
+    const dir = await paused()
+    render(dir)
+    writeFileSync(detailPath(dir), `${GREEN_RECAP}${SUMMARY}\n## Recommendation\n\nApprove it. The fix landed.\n`)
+    const changed = render(dir)
+    expect(isCard(changed.stdout)).toBe(true)
+    expect(changed.stdout).toContain('**Recommendation**: Approve it. The fix landed.')
+    expect(render(dir).stdout).toBe(REMINDER)
+  })
+
+  it('brings the card back when a file in the seam changes, even when its counts do not', async () => {
+    const dir = await paused()
+    render(dir)
+    writeFileSync(join(dir, 'README.md'), '# fixture\nedited\n') // still +1 -0: only the content moved
+    expect(isCard(render(dir).stdout)).toBe(true)
+    expect(render(dir).stdout).toBe(REMINDER)
+    writeFileSync(join(dir, 'README.md'), '# fixture\nedited\nagain\n')
+    expect(render(dir).stdout).toContain('diff         +2 -0 across 1 file')
+  })
+
+  it('brings the card back when the check row changes, red or green again', async () => {
+    const dir = await paused()
+    render(dir)
+    writeCheckSummary(dir, false, [{ name: 'test', ok: false, output_file: 'test.json' }], 63_000)
+    const red = render(dir)
+    expect(red.stdout).toContain('check        red: test failing')
+    expect(render(dir).stdout).toBe(REMINDER)
+    writeCheckSummary(dir, true, [{ name: 'test', ok: true }], 63_000)
+    expect(render(dir).stdout).toContain('check        green: 1 of 1 checks')
+  })
+
+  it('keeps the reminder when only the spent row moved — D8 (stamp-skips-spent)', async () => {
+    const dir = await paused()
+    render(dir)
+    // Turns ticked and the gate re-ran green in a different time: spent moves, the pause does not.
+    writeFileSync(turnPath(dir), '5\n')
+    writeFileSync(tickPath(dir), '2\n')
+    writeCheckSummary(dir, true, [{ name: 'test', ok: true }], 64_000)
+    expect(render(dir).stdout).toBe(REMINDER)
+    const full = render(dir, ['--full'])
+    expect(full.stdout).toContain('3 turns')
+    expect(full.stdout).toContain('64s gate')
+  })
+
+  it('prints the card on --full whatever the stamp says, and the reminder after it', async () => {
+    const dir = await paused()
+    const first = render(dir)
+    const full = render(dir, ['--full'])
+    expect(full).toEqual(first)
+    expect(render(dir).stdout).toBe(REMINDER)
+  })
+
+  it('names the step a verify pause was asked about, with nothing in flight', async () => {
+    const dir = await paused()
+    writeFileSync(stepPath(dir), '') // a hand-built diff: no STEP marker, the step named instead
+    expect(isCard(render(dir, ['2']).stdout)).toBe(true)
+    expect(render(dir, ['2']).stdout).toBe(REMINDER)
+  })
+
+  it('stamps only the step pause: a driver pointer and the plan card leave the next render whole', async () => {
+    const dir = await paused()
+    render(dir, ['--driver'])
+    render(dir, ['--plan'])
+    expect(existsSync(pausePath(dir))).toBe(false)
+    expect(isCard(render(dir).stdout)).toBe(true)
+  })
+
+  it('clears the stamp at a checkpoint, a revert, and an abandon, so the next pause renders whole', async () => {
+    for (const exit of ['checkpoint', 'revert', 'abandon'] as const) {
+      const dir = await paused()
+      writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true' }))
+      render(dir)
+      expect(existsSync(pausePath(dir))).toBe(true)
+      const { code } =
+        exit === 'checkpoint'
+          ? await captureIoAsync(() => checkpoint(dir, ['2']))
+          : captureIo(() => (exit === 'revert' ? revert(dir, []) : abandon(dir, [])))
+      expect(code).toBe(0)
+      expect(existsSync(pausePath(dir))).toBe(false)
+    }
+  })
+
+  it('keeps the stamp out of git, so no step commit sweeps it in', async () => {
+    const dir = await paused()
+    render(dir)
+    const stamp = relative(dir, pausePath(dir))
+    expect(() => git(dir, ['check-ignore', '-q', stamp])).not.toThrow()
+  })
+
+  it('prints the card on every render when the stamp cannot be written', async () => {
+    const dir = await paused()
+    mkdirSync(pausePath(dir)) // a directory where the stamp goes: every write fails
+    const first = render(dir)
+    expect(first.code).toBe(0)
+    expect(isCard(first.stdout)).toBe(true)
+    expect(render(dir)).toEqual(first) // never the reminder, never an error
   })
 })

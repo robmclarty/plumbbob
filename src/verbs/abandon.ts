@@ -1,11 +1,11 @@
 // `plumbbob abandon`: the third exit from an in-flight step. Checkpoint lands
 // the step and revert destroys the work; abandon drops the attempt but keeps the
 // working-tree diff exactly where it is. Its only writes are the in-flight
-// control markers it clears (STEP, SEAM, TICK, and the step-scoped handoff
-// ledger), a build-log line, and the stats receipt: it touches neither the
-// working tree nor git nor the intent checkbox, so the step stays planned and
-// re-buildable with its diff still in the tree for the human to keep, rework, or
-// commit by hand.
+// control markers it clears (STEP, SEAM, TICK, the PAUSE stamp, and the
+// step-scoped handoff ledger), a build-log line, and the stats receipt: it
+// touches neither the working tree nor git nor the intent checkbox, so the step
+// stays planned and re-buildable with its diff still in the tree for the human
+// to keep, rework, or commit by hand.
 //
 // A step exit is a boundary crossing, so abandon honors the same approval latch
 // as checkpoint. That is not decoration: abandon clears the entry stamp the
@@ -20,6 +20,7 @@ import {
   bumpStepStat,
   buildLogPath,
   clearHandoff,
+  clearPause,
   clearSeam,
   clearStep,
   clearTick,
@@ -74,6 +75,7 @@ export function abandon(cwd: string, args: ReadonlyArray<string>): number {
   clearSeam(root, slug)
   clearTick(root, slug)
   clearHandoff(root, slug)
+  clearPause(root, slug)
 
   bumpStepStat(root, slug, step, 'abandons')
   logAbandon(root, slug, step)

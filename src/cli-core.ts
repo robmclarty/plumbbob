@@ -116,15 +116,17 @@ const VERBS: ReadonlyArray<Verb> = [
   },
   {
     name: 'handoff',
-    description: 'print the footer card that ends a turn (pause, boundary, plan, or driver); read-only',
-    synopsis: ['handoff [<n>] [--plan] [--driver] [--build <slug>]'],
+    description: 'print the footer card that ends a turn (pause, boundary, plan, or driver), or a reminder for a pause already shown',
+    synopsis: ['handoff [<n>] [--full] [--plan] [--driver] [--build <slug>]'],
     args: [{ name: '<n>', gloss: 'step to report on (default: the in-flight step, else the last checkpointed one)' }],
     flags: [
+      { name: '--full', gloss: 'print the whole pause card even when that pause was already shown' },
       { name: '--plan', gloss: 'render the plan-pause card instead of a step tier' },
       { name: '--driver', gloss: "render a driver turn's pointer back at the open step" },
       BUILD_FLAG,
     ],
-    notes: 'Read-only; refuses (exit 1) with no session, or with --plan and --driver together.',
+    notes:
+      'Writes only the detail file (a blank line around each heading) and the PAUSE stamp; refuses (exit 1) with no session, or with --plan and --driver together.',
   },
   {
     name: 'check',

@@ -232,6 +232,23 @@ export function clearStep(root: string, slug?: string | null): void {
 }
 
 /**
+ * PAUSE: the stamp of the step pause `handoff` last rendered whole, the step
+ * number and a hash of what the card showed. While a later render matches it,
+ * handoff prints the one-line reminder instead of the card.
+ */
+export function pausePath(root: string, slug?: string | null): string {
+  return join(artifactDir(root, slug), 'PAUSE')
+}
+
+/**
+ * Remove the PAUSE stamp: a checkpoint, a revert, or an abandon ends the pause
+ * it recorded, so the next pause renders whole. Absent is a no-op.
+ */
+export function clearPause(root: string, slug?: string | null): void {
+  rmSync(pausePath(root, slug), { force: true })
+}
+
+/**
  * The build's `checkpoints` ledger: the recorded SHAs of landed plan and step
  * commits, one line each.
  */
@@ -690,9 +707,9 @@ export function excludeControl(root: string): void {
     `${DIRNAME}/TURN`,
     `${DIRNAME}/GRANT`,
     // The in-flight step's detail file: flat per-session control the model
-    // overwrites before every pause. checkpoint folds it into the commit body
-    // and then clears it, so its archive is the commit, never a tracked path;
-    // excluding it keeps stageAll from ever sweeping it into a step commit.
+    // overwrites before every pause. checkpoint records it in the build-log's
+    // Log and then clears it, so its archive is the tracked ledger, never this
+    // path; excluding it keeps stageAll from ever sweeping it into a step commit.
     `${DIRNAME}/detail.md`,
     `${DIRNAME}/builds/*/STEP`,
     `${DIRNAME}/builds/*/SEAM`,
@@ -700,6 +717,9 @@ export function excludeControl(root: string): void {
     // The entry stamp is in-flight control like STEP/SEAM: checkpoint's
     // stageAll must never sweep it into a step commit.
     `${DIRNAME}/builds/*/TICK`,
+    // The pause stamp is in-flight control too: what handoff last showed, so
+    // a repeat prints the reminder. It must never ride a step commit.
+    `${DIRNAME}/builds/*/PAUSE`,
     // The agent-run handoff ledger is step-scoped in-flight state, not a
     // tracked artifact: it must never ride a step commit into the PR.
     `${DIRNAME}/builds/*/handoff.json`,
