@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Build ranges
 
-**Current step:** 1 — chore(turn): spike what the prompt hook gets for a background notice
+**Current step:** 2 — fix(turn): stop a background job's notice from counting as a human turn
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -23,7 +23,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 line above. Only ONE step is in flight; a step is done only after a checkpoint:
 check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
-- ☐ 1. chore(turn): spike what the prompt hook gets for a background notice
+- ☑ 1. chore(turn): spike what the prompt hook gets for a background notice
 - ☐ 2. fix(turn): stop a background job's notice from counting as a human turn
 - ☐ 3. feat(grant): let a range list its steps, and land only those steps
 - ☐ 4. docs(build): teach the skill and the docs a range that lists its steps
@@ -92,3 +92,47 @@ folder, so it rides the branch into the PR.)*
   Next Up's bracket carries the next step's model in bold (`(model: **Sonnet**, ...)`, `src/verbs/handoff.ts:816`), the one token the card spends on what the human does before the next run. Q3's lean adds the range's model to the note beneath it as a plain `on Opus` when the two differ. A range's first step is often not its hardest (said-once's 6-11 ran on Opus while step 6 was Sonnet), so the human about to type the range reads the bold Sonnet first and the plain Opus second, and the louder of the two is the wrong one for the command they are about to type. Closing it is a call for step 5's pause: when the note suggests a range, the bracket either names the range's model, or the note leads with it in the same weight.
 
   Settled at refine as D17 (range-model): while the note suggests a range, the bracket's bold model is the range's, and the note names none.
+
+- 2026-10-17 — step 1 checkpointed · d36bd8401 — chore(turn): spike what the prompt hook gets for a background notice (33m)
+
+  **Summary**: Nothing in the hook's payload marks a background notice, but every notice opens on `<task-notification>` or `<agent-message `, so step 2 can build the fix as planned, keyed on that prefix.
+
+  1. Nothing in the payload marks a notice, but its first characters do.
+  2. Every notice ticks the turn count, clears the grant, and gets the nudge.
+  3. A notice absorbed mid-turn shares the running turn's id, so D15 needs a guard.
+  4. A notice clears a range the human typed after it arrived.
+  5. Claude Code updated mid-spike, and the subagent case changed with it.
+
+  **Readout**:
+
+  ```text
+  check        green: 1 of 1 checks
+  done-when    met
+  decisions    1 of 1 honored
+  constraints  9 of 9 honored
+  spent        33 min · 3 turns · 315s gate · green first run
+  ```
+
+  **Verdict**: ● Plumb
+
+  **Recommendation**: Say `looks good` and I will land step 1. The prefix sorted all 29 captured prompts the way the transcript does on both versions, so step 2 builds as planned, and the D15 guard is best settled at step 2's pause.
+
+  **1.** Nothing in the payload marks a notice, but its first characters do.
+
+  All 29 prompts across five probe sessions carried the same eight keys in the same order. Every notice opened at its first character on `<task-notification>` (a Bash job, a Monitor event, a Monitor's end, a subagent's task notice) or `<agent-message ` (a subagent's report). The transcript knows the difference through `origin.kind`, but the hook is never given it. The prefix sorted all 29 the way the transcript does, on 2.1.283 and 2.1.302. The payloads are in the report verbatim, paths trimmed, ready to be step 2's fixtures.
+
+  **2.** Every notice ticks the turn count, clears the grant, and gets the nudge.
+
+  All 13 notices ticked `TURN`, 9 found a `range 3` grant and cleared all 9, and all 13 got the in-flight nudge. This session did it to itself: `plumbbob build 1` stamped `TICK` at 522, two of the spike's background jobs reported back, `TURN` read 524 with no typed prompt between, and a read-only `checkLatch(root, 1)` returned `{"allow":true}`. The latch would have let step 1 land in the turn that built it. I did not land it; it waits on your approval like any step, and the spike's last four sessions ran in the foreground.
+
+  **3.** A notice absorbed mid-turn shares the running turn's id, so D15 needs a guard.
+
+  In phase 5 a background job finished while the model was mid-turn, and the hook fired under the typed prompt's own `prompt_id`, one second before that turn's only Stop. Clearing `RELAY` on a notice there, as D15 (notice-clears-relay) says, would drop the ending the turn had just printed and let its Stop pass unjudged. The report proposes a guard: the hook records the `prompt_id` of the last prompt it counted, and a notice carrying that same id leaves `RELAY` alone. That is step 2's call, so I left `intent.md` as it is.
+
+  **4.** A notice clears a range the human typed after it arrived.
+
+  In phase 6 a notice queued at 23:17:31 and a typed range at 23:17:33, while the model sat in a foreground `sleep`. The typed message fired the hook at once and minted `range 3`; the notice fired at delivery, 23:17:43, and cleared it. That is checkride's 48-57 in miniature. Each queued item fires its own hook call and the texts never merge, so a prefix test only ever sees one item.
+
+  **5.** Claude Code updated mid-spike, and the subagent case changed with it.
+
+  The CLI moved from 2.1.283 to 2.1.302 during the first session, so I reran the Monitor and subagent phases on the new version. On 2.1.283 a finished subagent sent two prompts (its report, then a task notice), each its own turn; on 2.1.302 only the report reaches the hook, and the task notice lands in the transcript without starting a turn. The rule names both frames. Headless `claude -p`, Cursor, a Monitor's timeout notice, and `/loop` wakeups were not probed.

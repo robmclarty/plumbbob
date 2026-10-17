@@ -58,8 +58,9 @@ branch.
 | File | What it holds | Written by | Cleared |
 | --- | --- | --- | --- |
 | `.plumbbob/STATE` | Session sentinel (its *presence* means a session is live), and its content is the active-build cursor ([D28 (state-cursor)](decisions.md#d28): the cursor lives in STATE, not settings) | `start` | `finish` |
-| `.plumbbob/TURN` | Monotonic count of human turns in this repo | the `UserPromptSubmit` hook | never (it's a counter) |
-| `.plumbbob/GRANT` | A one-turn self-approval, minted only when *you* typed `/build --auto` or a step range | the same hook | the next turn |
+| `.plumbbob/TURN` | Monotonic count of human turns in this repo. A background job's notice reaches the same hook and is not a turn, so it never ticks ([D90 (notice-not-turn)](decisions.md#d90)) | the `UserPromptSubmit` hook | never (it's a counter) |
+| `.plumbbob/GRANT` | A one-turn self-approval, minted only when *you* typed `/build --auto` or a step range | the same hook | your next prompt (a notice leaves it) |
+| `.plumbbob/PROMPT` | The id of the last prompt the hook saw, typed or not, so a notice folded into a running turn is told from one that starts its own ([D90 (notice-not-turn)](decisions.md#d90)) | the same hook | the next prompt overwrites it |
 | `.plumbbob/settings.local.json` | Your personal settings overlay (for example a per-worktree `"check"` command) | you, by hand | you |
 | `.plumbbob/detail.md` | The in-flight step's full detail, written by the model before each pause; `handoff` renders the turn from it ([D81 (detail-file)](decisions.md#d81)) | the model | `checkpoint`, which records it in the build log's Log first (unless its header names another step) |
 | `.plumbbob/RELAY` | The ending the CLI printed last: its tier, its render, the command that reprints a pause, the `TURN` it printed in, and the text itself, so the `Stop` check can tell whether the turn closed on it ([D89 (block-once)](decisions.md#d89)), and, once the check has held a turn open over it, that `TURN` too, so it holds at most once a turn. Written only while `TURN` keeps a count | `handoff` and every verb that prints an ending; the hold, `relay` | never; the next ending overwrites it |
@@ -109,6 +110,7 @@ Here is the complete block it appends:
 .plumbbob/settings.local.json
 .plumbbob/TURN
 .plumbbob/GRANT
+.plumbbob/PROMPT
 .plumbbob/detail.md
 .plumbbob/RELAY
 .plumbbob/builds/*/STEP

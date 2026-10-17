@@ -561,6 +561,9 @@ export function clearSpike(root: string, slug?: string | null): void {
 // `plumbbob turn` (the UserPromptSubmit hook) ticks TURN once per human prompt
 // and rewrites GRANT from the literal prompt; the checkpoint latch reads them to
 // refuse a land until a human turn has intervened since the step was entered.
+// A background job's notice reaches the same hook and ticks neither; PROMPT,
+// beside them, records the id of the last prompt the hook saw, so the hook can
+// tell a notice folded into the running turn from one that starts its own.
 // Kept in the sidecar so the lone GRANT `rmSync` stays where deletions of control
 // state are allowed. ---
 
@@ -592,6 +595,42 @@ export function setGrant(root: string, grant: string | null): void {
     rmSync(grantPath(root), { force: true })
   } else {
     writeFileSync(grantPath(root), `${grant}\n`)
+  }
+}
+
+/**
+ * PROMPT: the id of the last prompt the turn hook saw, typed or not.
+ */
+export function promptPath(root: string): string {
+  return join(root, DIRNAME, 'PROMPT')
+}
+
+/**
+ * The id of the last prompt the turn hook saw, or null when none is recorded.
+ *
+ * A notice the harness folds into a running turn arrives under that turn's id,
+ * where one that starts a turn of its own arrives under a fresh one, so the
+ * hook compares a notice's id against this one to tell the two apart.
+ */
+export function readPrompt(root: string): string | null {
+  try {
+    const id = readFileSync(promptPath(root), 'utf8').trim()
+    return id === '' ? null : id
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Record the id of the prompt the hook just saw, or clear the record when the
+ * payload carried none, so a stale id can never make a later notice look as
+ * though it joined the running turn.
+ */
+export function notePrompt(root: string, id: string | null): void {
+  if (id === null) {
+    rmSync(promptPath(root), { force: true })
+  } else {
+    writeFileSync(promptPath(root), `${id}\n`)
   }
 }
 
@@ -734,6 +773,19 @@ export function writeRelay(root: string, relay: Relay): void {
 }
 
 /**
+ * Drop the recorded ending, so the `Stop` check has nothing to judge until a
+ * verb prints another.
+ *
+ * The turn hook calls this when a background job's notice starts a turn of its
+ * own. The ending was judged when its own turn ended, and a notice leaves TURN
+ * where it was, so without this the notice's turn would read as the one that
+ * printed the ending and be held open for a card the human has already read.
+ */
+export function clearRelay(root: string): void {
+  rmSync(relayPath(root), { force: true })
+}
+
+/**
  * Stamp the record with the turn the check held open over it, so the check
  * holds at most once per turn. False when the stamp could not be written, and
  * the check then holds nothing, since a hold it cannot count could repeat.
@@ -856,6 +908,9 @@ export function excludeControl(root: string): void {
     // never writes, and never commits.
     `${DIRNAME}/TURN`,
     `${DIRNAME}/GRANT`,
+    // The id of the last prompt the turn hook saw, which tells a notice folded
+    // into the running turn from one that starts its own.
+    `${DIRNAME}/PROMPT`,
     // The in-flight step's detail file: flat per-session control the model
     // overwrites before every pause. checkpoint records it in the build-log's
     // Log and then clears it, so its archive is the tracked ledger, never this

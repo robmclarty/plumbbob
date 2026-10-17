@@ -19,7 +19,8 @@ lands; [**D33 (info-exclude)**](#d33)–[**D38 (cli-owns-slugs)**](#d38) below c
 [**D76 (resolved-on-opener)**](#d76)–[**D77 (placeholder-uncounted)**](#d77) from the 2026-07-18
 intent-legibility build, and [**D80 (cli-renders-model-relays)**](#d80)–[**D84 (one-liner-register)**](#d84)
 from the 2026-08-28 presentation build, and [**D87 (pause-once)**](#d87)–[**D89 (block-once)**](#d89)
-from the 2026-10-08 said-once-said-whole build.)
+from the 2026-10-08 said-once-said-whole build, and [**D90 (notice-not-turn)**](#d90) from the
+2026-10-17 build-ranges build.)
 
 ## Constraints (C)
 
@@ -380,8 +381,9 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   **amends [**D10 (pause-not-lock)**](#d10)'s scope** and joins the existing verb-boundary family (`checkpoint` refuses
   red [**D32 (checkride-gate)**](#d32), `start` refuses dirty [**D22 (clean-baseline)**](#d22), the agent envelope can't advance the loop
   [**C6 (no-advance-verb)**](#c6)). A host with no hooks grows no ledger and behaves exactly as before: the latch stays
-  dormant rather than wedging. *Tagged in* `latch.ts`, `checkpoint.ts`, `sidecar.ts`, `build.ts`,
-  `start.ts`, `turn.ts`, `doctor.ts`.
+  dormant rather than wedging. (Amended 2026-10-17: a background job's notice reaches the same hook
+  and is not a human turn, so it never ticks `TURN` ([**D90 (notice-not-turn)**](#d90)).) *Tagged in*
+  `latch.ts`, `checkpoint.ts`, `sidecar.ts`, `build.ts`, `start.ts`, `turn.ts`, `doctor.ts`.
 - <a id="d65"></a>**D65 (human-typed-grants): Grants come from the human's literal prompt.** One-turn self-approval is minted
   only from strings the model cannot type: `build` is `disable-model-invocation`, so a `--auto`
   flag or an `N-M` range reaches the `turn` hook only because the human typed it, *because* a grant the
@@ -389,7 +391,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   tick (minted on a match, cleared otherwise), so its lifetime is **one turn** by construction; a typed
   range beats `--auto` (bounded wins), and a `range M` refuses at the ceiling (step > M) with a
   top-of-range affordance. The `GRANT` file is the *only* self-approval: the [**D27 (settings-ladder)**](#d27) `auto`
-  settings key is not a grant ([**D67 (auto-not-a-grant)**](#d67)). *Tagged in* `turn.ts`, `latch.ts`, `sidecar.ts`.
+  settings key is not a grant ([**D67 (auto-not-a-grant)**](#d67)). (Amended 2026-10-17: the tick that
+  rewrites `GRANT` is a typed prompt's, and a background job's notice leaves the grant standing, so a
+  range survives a job that reports back partway through it ([**D90 (notice-not-turn)**](#d90)).)
+  *Tagged in* `turn.ts`, `latch.ts`, `sidecar.ts`.
 - <a id="d66"></a>**D66 (oob-commits-surfaced): Out-of-band commits are surfaced, never blocked.** The human commits freely
   ([**C5 (additive-git)**](#c5)); a raw `git commit` the model issues while a step is in flight becomes a permission
   *question* (a `PreToolUse` ask-hook that emits `ask`, never `deny`, [**D13 (no-edit-guards)**](#d13) intact), and
@@ -921,6 +926,36 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   settled the mechanics, merging its local `block-once`. *Evidence in*
   `.plumbbob/builds/2026-10-08-said-once-said-whole/spike-01-stop-hook.md` and
   [the A/B receipt](evals/2026-10-17-relay.md).
+
+- <a id="d90"></a>**D90 (notice-not-turn): A background job's notice is not a human turn: it ticks
+  nothing, keeps the grant, and clears only an ending its own turn already judged.** The harness reports
+  a finished background job through `UserPromptSubmit`, as a prompt nobody typed (a shell job, a Monitor
+  event, a subagent's task notice or its report), and the `turn` hook counted every one. That opened the
+  latch it exists to hold. A notice arriving while a step sat at its pause raised `TURN` past the step's
+  entry stamp, the one sign [**D64 (approval-latch)**](#d64) reads that a human answered, and the build
+  that settled this caught it on itself: two of its own background jobs reported back, and a read-only
+  `checkLatch` would have let step 1 land in the turn that built it. It also cut ranges short, since a
+  notice rewrote `GRANT` like any prompt: on 2026-10-16 checkride's `48-57` lost its grant at step 49 and
+  fascicle's `10-12` at step 11, each to a Stryker run that reported back partway. So a prompt that opens,
+  at its first character, on `<task-notification>` or `<agent-message from="…">` is a notice, and for one the hook
+  leaves `TURN` and `GRANT` as they were and emits no in-flight nudge. A spike on Claude Code 2.1.283 and
+  2.1.302 found nothing else that tells the two apart (all 29 captured prompts carried the same eight
+  keys), and the opening frame sorted every one of them the way the transcript does. A misread errs safe:
+  a typed prompt taken for a notice costs one tick and one grant, which only makes the latch stricter.
+  Headless `claude -p`, Cursor, a Monitor's timeout, and `/loop`'s wakeups were not probed, and a notice
+  on a frame the rule does not name still counts as a turn, as every notice did before. A notice that
+  starts a turn of its own also clears `RELAY`, because the ending in it was judged when its own turn
+  ended, and with `TURN` standing still the notice's turn would read as the one that printed it and be
+  held open for a card the human has already read ([**D89 (block-once)**](#d89)). Marking that ending as
+  held would not do, since a hold carries forward within one `TURN` and would wave through a new ending
+  printed after the notice. A notice the harness folds into a turn already running is the exception: it
+  arrives under that turn's `prompt_id`, before the turn's `Stop` has judged the ending the turn just
+  printed, so the hook keeps the id of the last prompt it saw in `.plumbbob/PROMPT` and leaves `RELAY`
+  alone for a notice that carries it. Amends [**D64 (approval-latch)**](#d64), whose human turn a notice
+  is not, and [**D65 (human-typed-grants)**](#d65), whose `GRANT` a notice leaves standing. Promoted from
+  the 2026-10-17 build-ranges build, merging its locals `notice-not-turn` and `notice-clears-relay`.
+  *Evidence in* `.plumbbob/builds/2026-10-17-build-ranges/spike-01-task-notice.md`. *Tagged in*
+  `docs/cli-reference.md` and `docs/state-and-git.md`.
 
 ### Superseded
 

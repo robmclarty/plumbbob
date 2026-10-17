@@ -441,9 +441,20 @@ plumbbob turn
 
 Hook machinery, not a user verb. Registered as the `UserPromptSubmit` hook, it reads the hook
 payload from **stdin** (it takes no arguments), ticks the human-turn ledger that the
-checkpoint latch reads, and emits any nudge as `additionalContext` JSON on stdout. It always
-exits 0 and never refuses an unrecognized flag: a hook that failed would wedge every prompt in
-the session.
+checkpoint latch reads, and emits any nudge as `additionalContext` JSON on stdout.
+
+A background job's notice is not a turn ([**D90 (notice-not-turn)**](decisions.md#d90)). The
+harness sends a finished shell job, a Monitor event, or a subagent's report through the same
+hook, as a prompt nobody typed that opens on `<task-notification>` or `<agent-message from="…">`. For
+one of those the hook leaves `TURN` and `GRANT` as they were and emits no nudge, so a range
+survives a job that reports back partway through it, and a notice that lands during a pause
+cannot pass for the human's answer. A notice that starts a turn of its own also clears
+`.plumbbob/RELAY`, whose ending was judged when its own turn ended; one folded into a turn
+already running arrives under that turn's prompt id, which the hook keeps in
+`.plumbbob/PROMPT`, and leaves `RELAY` for that turn's `Stop` to judge.
+
+It always exits 0 and never refuses an unrecognized flag: a hook that failed would wedge every
+prompt in the session.
 
 ### relay
 
@@ -584,6 +595,7 @@ stays git-excluded; a session is live iff `STATE` is present.
   STATE                    # untracked — session sentinel (presence = live) AND the active-build cursor (its content — D28 (state-cursor))
   TURN                     # untracked — the human-turn counter the approval latch reads, ticked by the UserPromptSubmit hook
   GRANT                    # untracked — a one-turn self-approval, minted only from a typed --auto or step range
+  PROMPT                   # untracked: the id of the last prompt the hook saw, so a notice folded into a running turn reads as one (D90 (notice-not-turn))
   RELAY                    # untracked — the ending the CLI printed last, with its tier and the TURN it printed in, for the Stop hook — D89 (block-once)
   detail.md                # untracked — the in-flight step's full detail: the wire handoff renders a turn from, recorded under the build-log's Log and truncated at checkpoint — D81 (detail-file)
   settings.json            # tracked   — project defaults: {} (or {"check": "…"}); start seeds it empty

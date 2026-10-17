@@ -1,5 +1,5 @@
 // `plumbbob turn`: the turn-ledger hook. Wired to the harness's
-// UserPromptSubmit event, it runs once per human prompt and maintains two of the
+// UserPromptSubmit event, it runs once per prompt and maintains two of the
 // sidecar's git-excluded control files (flat files under `.plumbbob/`): it ticks
 // `TURN`, the monotonic count of human turns the checkpoint latch compares
 // against a step's entry stamp to know a human turn intervened since the step
@@ -7,28 +7,41 @@
 // self-approval only when the human typed `/build --auto` or an `N-M` step
 // range, clearing it otherwise (those strings can only come from a human
 // keystroke, because `build` is disable-model-invocation: a grant the model
-// could forge would be no grant). When a step is in flight it also emits ONE
-// `UserPromptSubmit` additionalContext line so a fresh session (post-compaction,
-// or a scripted `-p` turn where no skill prose is in context) still knows the
-// beat: a tangent is parked, not chased, and a message that also asks something
-// is answered before the park's block. Guidance only: it blocks nothing. It
-// ALWAYS exits 0 and any failure degrades to no output, so neither the tick nor
-// the emit can ever wedge prompting.
+// could forge would be no grant). The harness also sends a background job's
+// completion notice through this event, as a prompt the human never typed, so
+// a notice ticks nothing, keeps the grant, and clears only the ending `RELAY`
+// holds from an earlier turn. When a step is in flight a typed prompt also
+// emits ONE `UserPromptSubmit` additionalContext line so a fresh session
+// (post-compaction, or a scripted `-p` turn where no skill prose is in context)
+// still knows the beat: a tangent is parked, not chased, and a message that
+// also asks something is answered before the park's block. Guidance only: it
+// blocks nothing. It ALWAYS exits 0 and any failure degrades to no output, so
+// neither the tick nor the emit can ever wedge prompting.
 
 import { readFileSync, writeFileSync } from 'node:fs'
-import { findSessionRoot, setGrant, stepPath, turnPath } from '../lib/sidecar.ts'
+import {
+  clearRelay,
+  findSessionRoot,
+  notePrompt,
+  readPrompt,
+  setGrant,
+  stepPath,
+  turnPath,
+} from '../lib/sidecar.ts'
 
 /**
- * The hook entry point: apply the tick, then emit the in-flight-step nudge.
+ * The hook entry point: apply the prompt, then emit the in-flight-step nudge
+ * when it counted as a human turn.
  *
  * Always returns 0: a broken turn must never wedge a prompt, so any failure is
  * swallowed and degrades to no output.
  */
 export function turn(cwd: string, _args: ReadonlyArray<string>): number {
   try {
-    applyTurn(cwd, readStdin())
-    const context = stepInFlightContext(cwd)
-    if (context !== null) process.stdout.write(context)
+    if (applyTurn(cwd, readStdin())) {
+      const context = stepInFlightContext(cwd)
+      if (context !== null) process.stdout.write(context)
+    }
   } catch {
     // A broken turn must never wedge a prompt: swallow and exit 0.
   }
@@ -79,18 +92,52 @@ function inFlightStep(root: string): number | null {
 }
 
 /**
- * The testable core: apply one tick given the raw hook stdin.
+ * The testable core: apply one prompt given the raw hook stdin, and say
+ * whether it counted as a human turn.
+ *
+ * A typed prompt ticks TURN and rewrites GRANT. A notice touches neither,
+ * because the latch reads TURN passing a step's entry stamp as its one sign
+ * that a human answered, and a grant the human typed has to outlive a job
+ * that reports back partway through the range. A notice that starts a turn of
+ * its own clears RELAY, whose ending was judged when its own turn ended; one
+ * the harness folds into the running turn arrives under that turn's prompt id
+ * and leaves RELAY alone, since the ending the turn just printed has yet to be
+ * judged.
  *
  * Split from the fd-0 read so the unit tests can drive it directly: an
  * in-process test cannot feed fd 0 (the same constraint checkpoint's `--body`
  * lives under).
  */
-export function applyTurn(cwd: string, raw: string): number {
+export function applyTurn(cwd: string, raw: string): boolean {
   const root = findSessionRoot(cwd)
-  if (root === null) return 0 // no active session above cwd: silent no-op.
-  writeFileSync(turnPath(root), `${readTurn(root) + 1}\n`)
-  setGrant(root, grantFromPrompt(extractPrompt(raw)))
-  return 0
+  if (root === null) return false // no active session above cwd: silent no-op.
+  const { prompt, promptId } = readPayload(raw)
+  const notice = isNotice(prompt)
+  if (notice) {
+    if (promptId === null || promptId !== readPrompt(root)) clearRelay(root)
+  } else {
+    writeFileSync(turnPath(root), `${readTurn(root) + 1}\n`)
+    setGrant(root, grantFromPrompt(prompt))
+  }
+  // Last, so a record that cannot be written never costs the tick or the grant.
+  notePrompt(root, promptId)
+  return !notice
+}
+
+/**
+ * Whether a prompt is the harness reporting on background work rather than
+ * the human typing.
+ *
+ * Nothing in the payload marks one, but every notice opens on a frame of the
+ * harness's own at its very first character: `<task-notification>` for a
+ * finished shell job, a Monitor event, or a subagent's task, and
+ * `<agent-message ` for a subagent's or another session's report. A misread
+ * errs safe: a typed prompt taken for a notice costs one tick and one grant,
+ * so the latch only grows stricter, while a notice taken for a typed prompt
+ * is a turn no human took.
+ */
+export function isNotice(prompt: string): boolean {
+  return prompt.startsWith('<task-notification>') || prompt.startsWith('<agent-message ')
 }
 
 /**
@@ -142,18 +189,23 @@ export function grantFromPrompt(prompt: string): string | null {
 }
 
 /**
- * Extract the `prompt` field from the UserPromptSubmit JSON, or '' otherwise.
+ * The `prompt` and `prompt_id` fields of the UserPromptSubmit JSON, as '' and
+ * null when either is absent.
  *
  * Absent, unparseable, or non-string input contributes nothing rather than
- * wedging the tool: the tick still lands (a human turn did occur) and the empty
- * prompt clears any GRANT; the verb never throws over bad stdin.
+ * wedging the tool: the tick still lands (a human turn did occur), the empty
+ * prompt clears any GRANT, and a missing id records none; the verb never
+ * throws over bad stdin.
  */
-function extractPrompt(raw: string): string {
+function readPayload(raw: string): { readonly prompt: string; readonly promptId: string | null } {
   try {
-    const parsed = JSON.parse(raw) as { prompt?: unknown }
-    return typeof parsed.prompt === 'string' ? parsed.prompt : ''
+    const parsed = JSON.parse(raw) as { prompt?: unknown; prompt_id?: unknown }
+    return {
+      prompt: typeof parsed.prompt === 'string' ? parsed.prompt : '',
+      promptId: typeof parsed.prompt_id === 'string' && parsed.prompt_id !== '' ? parsed.prompt_id : null,
+    }
   } catch {
-    return ''
+    return { prompt: '', promptId: null }
   }
 }
 

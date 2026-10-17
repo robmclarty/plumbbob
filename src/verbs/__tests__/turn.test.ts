@@ -1,11 +1,12 @@
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
-import { applyTurn, grantFromPrompt, stepInFlightContext, turn } from '../turn.ts'
+import { applyTurn, grantFromPrompt, isNotice, stepInFlightContext, turn } from '../turn.ts'
 import { start } from '../start.ts'
-import { grantPath, stepPath, turnPath } from '../../lib/sidecar.ts'
+import { grantPath, promptPath, readRelay, relayPath, stepPath, turnPath, writeRelay } from '../../lib/sidecar.ts'
 import { formatHelp } from '../../cli-core.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
+import { runCli } from '../../../test/helpers/fixture-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
 afterAll(cleanupTempRepos)
@@ -88,7 +89,7 @@ describe('grantFromPrompt', () => {
 describe('applyTurn', () => {
   it('creates TURN at 1 on the first tick and clears GRANT for a plain prompt', async () => {
     const dir = await startedSession()
-    expect(applyTurn(dir, hookJson('hello'))).toBe(0)
+    expect(applyTurn(dir, hookJson('hello'))).toBe(true)
     expect(readFileSync(turnPath(dir), 'utf8').trim()).toBe('1')
     expect(existsSync(grantPath(dir))).toBe(false)
   })
@@ -119,9 +120,136 @@ describe('applyTurn', () => {
 
   it('is a silent no-op with no active session — no ledger grows', async () => {
     const dir = makeTempRepo() // no `start`, so no STATE above cwd
-    expect(applyTurn(dir, hookJson('/build --auto'))).toBe(0)
+    expect(applyTurn(dir, hookJson('/build --auto'))).toBe(false)
     expect(existsSync(turnPath(dir))).toBe(false)
     expect(existsSync(grantPath(dir))).toBe(false)
+  })
+})
+
+/** One prompt the 2026-10-17 spike captured, labeled by who sent it: the probe's typed text, or the harness. */
+type Captured = { readonly from: 'human' | 'notice'; readonly payload: { readonly prompt: string; readonly prompt_id: string } }
+
+// The 29 UserPromptSubmit payloads step 1's spike captured across five
+// sessions on Claude Code 2.1.283 and 2.1.302, in the order the hook got them,
+// paths trimmed. Every prompt the probe typed opens on "Hook probe" or "Queued
+// line"; the other 13 are the harness reporting a background job.
+const CAPTURED = JSON.parse(
+  readFileSync(new URL('./fixtures/notice-payloads.json', import.meta.url), 'utf8'),
+) as ReadonlyArray<Captured>
+
+/** The captured payload whose prompt id starts with `id`, at its `nth` appearance. */
+function captured(id: string, nth = 0): Captured {
+  const found = CAPTURED.filter((c) => c.payload.prompt_id.startsWith(id))[nth]
+  if (found === undefined) throw new Error(`no captured prompt ${id}`)
+  return found
+}
+
+/** The hook's stdin for a captured prompt. */
+const raw = (c: Captured): string => JSON.stringify(c.payload)
+
+/** Record a pause card as the ending printed in the current turn. */
+function recordCard(dir: string): void {
+  writeRelay(dir, { tier: 'decision', render: 'card', command: 'plumbbob handoff --full', text: '**Now**: Step 2 of 3 - Second\n\n' })
+}
+
+describe('a background notice is not a human turn — D90 (notice-not-turn)', () => {
+  it("holds 16 typed prompts and 13 notices, the spike's whole capture", () => {
+    expect(CAPTURED).toHaveLength(29)
+    expect(CAPTURED.filter((c) => c.from === 'human')).toHaveLength(16)
+  })
+
+  it('sorts every captured prompt the way the probe sent it, by its opening frame alone', () => {
+    for (const c of CAPTURED) expect(isNotice(c.payload.prompt), c.payload.prompt.slice(0, 40)).toBe(c.from === 'notice')
+  })
+
+  it('reads a frame only at the first character, so a typed prompt that quotes one still counts', () => {
+    expect(isNotice('why did <task-notification> fire twice?')).toBe(false)
+    expect(isNotice(' <task-notification>')).toBe(false)
+    expect(isNotice('<agent-message>')).toBe(false) // the harness frame always carries a `from`
+    expect(isNotice('')).toBe(false)
+  })
+
+  it('replays the capture in order: only a typed prompt ticks TURN or rewrites GRANT', async () => {
+    const dir = await startedSession()
+    let typed = 0
+    for (const c of CAPTURED) {
+      const before = existsSync(grantPath(dir)) ? readFileSync(grantPath(dir), 'utf8') : null
+      expect(applyTurn(dir, raw(c))).toBe(c.from === 'human')
+      if (c.from === 'human') typed += 1
+      expect(readFileSync(turnPath(dir), 'utf8').trim()).toBe(String(typed))
+      const after = existsSync(grantPath(dir)) ? readFileSync(grantPath(dir), 'utf8').trim() : null
+      if (c.from === 'notice') expect(after).toBe(before === null ? null : before.trim())
+      else expect(after).toBe(grantFromPrompt(c.payload.prompt))
+    }
+    expect(typed).toBe(16)
+  })
+
+  it('keeps a range typed while a notice was queued, the field failure in miniature', async () => {
+    // Phase 6: the notice queued first, the human typed `/build 2-3` after it,
+    // and the notice's hook call came last, at delivery. Today it cleared the range.
+    const dir = await startedSession()
+    applyTurn(dir, raw(captured('71c59aa3', 0)))
+    applyTurn(dir, raw(captured('71c59aa3', 1)))
+    expect(readFileSync(grantPath(dir), 'utf8').trim()).toBe('range 3')
+    expect(applyTurn(dir, raw(captured('71c59aa3', 2)))).toBe(false)
+    expect(readFileSync(grantPath(dir), 'utf8').trim()).toBe('range 3')
+    expect(readFileSync(turnPath(dir), 'utf8').trim()).toBe('2')
+  })
+
+  it("leaves TURN where a step's entry stamp put it, so the latch still waits for the human", async () => {
+    const dir = await startedSession()
+    applyTurn(dir, raw(captured('382a3db9', 0))) // the typed prompt that started the step's turn
+    const stamp = readFileSync(turnPath(dir), 'utf8')
+    for (const id of ['859f0678', '49adbb5e', 'ce1b20d1', 'd8ae1cc7', '4729f6c4']) applyTurn(dir, raw(captured(id)))
+    expect(readFileSync(turnPath(dir), 'utf8')).toBe(stamp)
+  })
+
+  it('clears RELAY for a notice that starts a turn of its own, under a fresh prompt id', async () => {
+    const dir = await startedSession()
+    applyTurn(dir, raw(captured('8fa388a6'))) // phase 2: the typed prompt that launched the job
+    recordCard(dir)
+    applyTurn(dir, raw(captured('859f0678'))) // the job's notice, idle, so a turn of its own
+    expect(existsSync(relayPath(dir))).toBe(false)
+  })
+
+  it("leaves RELAY alone for a notice folded into the running turn, under that turn's prompt id", async () => {
+    // Phase 5: the notice fired mid-turn under the typed prompt's own id, one
+    // second before that turn's Stop, which still has the ending to judge.
+    const dir = await startedSession()
+    applyTurn(dir, raw(captured('382a3db9', 0)))
+    recordCard(dir)
+    expect(applyTurn(dir, raw(captured('382a3db9', 1)))).toBe(false)
+    expect(readRelay(dir)?.render).toBe('card')
+  })
+
+  it("reads a notice folded into a notice's own turn the same way", async () => {
+    const dir = await startedSession()
+    applyTurn(dir, hookJson('carry on'))
+    applyTurn(dir, JSON.stringify({ prompt_id: 'n-1', prompt: '<task-notification>\n</task-notification>' }))
+    recordCard(dir) // printed in the turn the notice started
+    applyTurn(dir, JSON.stringify({ prompt_id: 'n-1', prompt: '<task-notification>\n</task-notification>' }))
+    expect(readRelay(dir)?.render).toBe('card')
+  })
+
+  it('clears RELAY for a notice with no prompt id, and records none, since nothing ties it to the running turn', async () => {
+    const dir = await startedSession()
+    applyTurn(dir, JSON.stringify({ prompt_id: 'p-1', prompt: 'build it' }))
+    expect(readFileSync(promptPath(dir), 'utf8').trim()).toBe('p-1')
+    recordCard(dir)
+    applyTurn(dir, JSON.stringify({ prompt: '<task-notification>\n</task-notification>' }))
+    expect(existsSync(relayPath(dir))).toBe(false)
+    expect(existsSync(promptPath(dir))).toBe(false)
+  })
+
+  it('emits no in-flight nudge for a notice, through the real hook on stdin', async () => {
+    const dir = await startedSession()
+    writeFileSync(stepPath(dir), '2\n')
+    const notice = runCli(dir, ['turn'], {}, raw(captured('859f0678')))
+    expect(notice.status).toBe(0)
+    expect(notice.stdout).toBe('')
+    const typed = runCli(dir, ['turn'], {}, raw(captured('8fa388a6')))
+    expect(typed.stdout).toContain('step 2 is in flight')
+    expect(readFileSync(turnPath(dir), 'utf8').trim()).toBe('1')
   })
 })
 

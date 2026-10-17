@@ -6,7 +6,18 @@ import { handoff } from '../handoff.ts'
 import { park } from '../park.ts'
 import { relayCheck } from '../relay.ts'
 import { start } from '../start.ts'
-import { detailPath, intentPath, readRelay, relayPath, seamPath, stepPath, turnPath, writeRelay } from '../../lib/sidecar.ts'
+import { applyTurn } from '../turn.ts'
+import {
+  detailPath,
+  intentPath,
+  readRelay,
+  readTurn,
+  relayPath,
+  seamPath,
+  stepPath,
+  turnPath,
+  writeRelay,
+} from '../../lib/sidecar.ts'
 import { ending, transition } from '../../lib/notice.ts'
 import { formatHelp } from '../../cli-core.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -273,6 +284,42 @@ describe('relay — what it never judges', () => {
     expect(relayCheck(dir, stop(dir, { last: 'Hello.' }))).toBeNull()
     const session = await paused()
     expect(relayCheck(session, stop(session, { last: 'Hello.' }))).toBeNull()
+  })
+})
+
+/** The prompt hook's stdin for a background job's completion notice, under a given prompt id. */
+const notice = (promptId: string): string =>
+  JSON.stringify({ prompt_id: promptId, prompt: '<task-notification>\n<status>completed</status>\n</task-notification>' })
+
+describe('relay — a background notice after a pause — D90 (notice-not-turn)', () => {
+  it('lets the turn a notice starts end, instead of holding it for the card the pause already showed', async () => {
+    const dir = await paused()
+    const card = printed(dir)
+    expect(held(relayCheck(dir, stop(dir, { last: card })))).toBeNull() // the pause turn closed on its card
+    applyTurn(dir, notice('notice-1'))
+    expect(readTurn(dir)).toBe(4) // the notice ticked nothing, so the card's TURN is still the current one
+    expect(readRelay(dir)).toBeNull()
+    expect(held(relayCheck(dir, stop(dir, { last: 'The sweep finished green.' })))).toBeNull()
+  })
+
+  it('still checks an ending printed after the notice', async () => {
+    const dir = await paused()
+    printed(dir)
+    applyTurn(dir, notice('notice-1'))
+    expect(printed(dir)).toBe('**Next Up**: Back to Step 2 of 3 - Second\n\n')
+    expect(held(relayCheck(dir, stop(dir, { last: 'The sweep finished green.' })))).toContain(
+      'the pause reminder it printed',
+    )
+  })
+
+  it('holds a missed card when the notice was folded into the turn that printed it', async () => {
+    const dir = await paused()
+    applyTurn(dir, JSON.stringify({ prompt_id: PROMPT_ID, prompt: 'build step 2' }))
+    printed(dir)
+    applyTurn(dir, notice(PROMPT_ID)) // delivered mid-turn, under the running turn's id
+    expect(held(relayCheck(dir, stop(dir, { last: 'Step 2 is done. Approve?' })))).toContain(
+      'did not close on the pause card',
+    )
   })
 })
 
