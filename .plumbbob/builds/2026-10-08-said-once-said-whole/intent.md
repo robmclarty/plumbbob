@@ -128,7 +128,7 @@ The steps run in the four waves above, numbered straight through so each keeps i
     - seam: `test/evals/contracts/c10-question.eval.ts`, `test/evals/contracts/index.ts`, `test/evals/helpers/anatomy.ts`
     - model: opus (an eval that has to read the tail of a whole session's text)
     - note: the driver joins every text part of a session into one string, so the tail rule in `anatomy.ts` is what separates the answer from the reminder. Each scripted turn is a fresh `claude -p` session, armed by a warmup turn. The anatomy probes stay `info`, never gating.
-11. [ ] chore(evals): sweep the relay after the pause change, **done when:** a latched sweep of all ten contracts lands a receipt in `docs/evals/` whose turn-anatomy table includes the new contract's probes and reads beside the 2026-09-17 numbers (27/30 decision, 9/10 boundary, 44/50 nothing after the relay); `pnpm eval:report` renders it; and `pnpm check` is green
+11. [x] chore(evals): sweep the relay after the pause change, **done when:** a latched sweep of all ten contracts lands a receipt in `docs/evals/` whose turn-anatomy table includes the new contract's probes and reads beside the 2026-09-17 numbers (27/30 decision, 9/10 boundary, 44/50 nothing after the relay); `pnpm eval:report` renders it; and `pnpm check` is green
     - seam: `docs/evals/`
     - model: sonnet (runs the driver)
     - note: the receipt belongs in `docs/evals/`, never `reports/` or `research/`, both of which are ignored. It records Wave 2 in real turns and fixes the relay's numbers before any hook exists; step 16 runs its own two arms at one commit, so its comparison does not lean on this one.

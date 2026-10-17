@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Said once, said whole
 
-**Current step:** 11 — chore(evals): sweep the relay after the pause change
+**Current step:** 12 — chore(hooks): spike what a Stop hook can read and do
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -33,7 +33,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 8. fix(skills): answer a question at the pause without re-pasting it
 - ☑ 9. fix(turn): let a park sit beside an answer in a mixed message
 - ☑ 10. test(evals): add a contract for a question asked at the pause
-- ☐ 11. chore(evals): sweep the relay after the pause change
+- ☑ 11. chore(evals): sweep the relay after the pause change
 - ☐ 12. chore(hooks): spike what a Stop hook can read and do
 - ☐ 13. docs(decisions): record the relay check and its tier
 - ☐ 14. feat(handoff): remember the ending each turn has to close on
@@ -47,11 +47,12 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 > Capture is one line (`/plumbbob:park` composes it). Harvest happens only at the boundary.
 
 - [x] docs/cli-reference.md:25 still calls handoff read-only; step 3 makes a pause rewrite .plumbbob/detail.md, so fix the row in step 7, whose seam holds the file (docs)
-- [ ] src/lib/orient.ts:1044 still says the Readout label carries the step's identity; step 6 moved it to the Now line (comment)
-- [ ] skills/build/SKILL.md:187, skills/verify/SKILL.md:123, docs/glossary.md:91, and site/docs.html and site/index.html list the card's parts without the Now line; fold into step 8, whose seam holds them (docs)
-- [ ] the in-flight nudge carries no rule for a plain question at a pause, so a fresh session (c10's turns 2 and 3, or a host after compaction) has no prose telling it to end on handoff or to reach for --full; widen the nudge if c10 reads low (turn.ts)
-- [ ] report.ts sorts contract ids as strings, so c10 lands between c1 and c2 in the receipt table, and its method footnotes say nothing of c10's fresh-session question turns (evals)
-- [ ] eval sessions inherit the account's claude.ai connectors, and 3 of 5 c7 runs in the 2026-10-17 sweep mentioned them after the relay; the driver could pin an empty MCP config so the account's environment stays out of the anatomy rates (evals)
+- [x] src/lib/orient.ts:1044 still says the Readout label carries the step's identity; step 6 moved it to the Now line (comment)
+- [x] skills/build/SKILL.md:187, skills/verify/SKILL.md:123, docs/glossary.md:91, and site/docs.html and site/index.html list the card's parts without the Now line; fold into step 8, whose seam holds them (docs)
+- [x] the in-flight nudge carries no rule for a plain question at a pause, so a fresh session (c10's turns 2 and 3, or a host after compaction) has no prose telling it to end on handoff or to reach for --full; widen the nudge if c10 reads low (turn.ts)
+- [x] report.ts sorts contract ids as strings, so c10 lands between c1 and c2 in the receipt table, and its method footnotes say nothing of c10's fresh-session question turns (evals)
+- [x] eval sessions inherit the account's claude.ai connectors, and 3 of 5 c7 runs in the 2026-10-17 sweep mentioned them after the relay; the driver could pin an empty MCP config so the account's environment stays out of the anatomy rates (evals)
+- [ ] driver.ts and every receipt's method footnote say the headless UserPromptSubmit tick lands at about session end, but on Claude Code 2.1.283 it ticks before the first tool call (spike-01), so armGrant and the warmup's stated reason may be stale (evals)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -74,6 +75,27 @@ Harvest results this boundary:
   read-only. It blocks nothing in steps 5 and 6, and step 7 rewrites that same row (it gains
   `--full`, and the `PAUSE` stamp makes "read-only" wrong a second time) with the file
   already in its seam.
+- 2026-10-17, at the step 11 boundary: five parked items, all classified tangent.
+- **tangent** (deferred, its own commit): `src/lib/orient.ts:1044` still says the Readout
+  label carries the step's identity. One stale comment, and no remaining step holds the
+  file in its seam; worth a one-line fix, since a comment that misstates where a thing
+  lives is what D3 (say-the-mechanism) warns about.
+- **tangent** (resolved in step 8, `11cb599`): the skills' parts lists, the glossary, and
+  both site pages now name the Now line.
+- **tangent** (deferred, the likeliest to become a step): the in-flight nudge carries no
+  rule for a plain question at a pause. It does not block Wave 4: a fresh-session question
+  turn that never runs `handoff` writes no `RELAY`, so D13 (gate-on-the-turn) never
+  checks it, and step 16's A/B cannot move c10's 0/5 reminder rate. A step that widens
+  the nudge has a call to make first: step 8 sends a session without the card in
+  context to `--full`, while c10's probe expects the reminder, and c10's probes follow
+  whichever form it picks.
+- **tangent** (deferred): `report.ts` sorts contract ids as strings and has no c10
+  footnote. Cosmetic; receipts are derived, so a fix changes only future ones.
+- **tangent** (deferred to before step 16): eval sessions inherit the account's claude.ai
+  connectors, and 3 of 5 c7 runs mentioned them after the relay. The noise lands in both
+  of step 16's arms and blurs the nothing-after-the-relay comparison; the fix lives in
+  `driver.ts`, outside step 16's seam, so it needs `/plumbbob:step` or a small harness
+  commit first.
 
 ## Log
 
@@ -197,3 +219,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-10-17 — step 8 checkpointed · 11cb5999e — fix(skills): answer a question at the pause without re-pasting it (9m)
 - 2026-10-17 — step 9 checkpointed · ed5629d7b — fix(turn): let a park sit beside an answer in a mixed message (5m)
 - 2026-10-17 — step 10 checkpointed · db9e032ef — test(evals): add a contract for a question asked at the pause (1 drift, 19m)
+- 2026-10-17 — step 11 checkpointed · 0f9754ec1 — chore(evals): sweep the relay after the pause change (49m)
