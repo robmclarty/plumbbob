@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { checkLatch, evaluateLatch, parseGrant, type LatchInput } from '../latch.ts'
+import { checkLatch, checkStopLatch, evaluateLatch, evaluateStopLatch, parseGrant, type LatchInput } from '../latch.ts'
 import { grantPath, tickPath, turnPath } from '../sidecar.ts'
 import { setLocalSetting } from '../settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -227,5 +227,29 @@ describe('checkLatch — gathering from the worktree', () => {
     const decision = withoutTty(() => checkLatch(dir, 1))
     expect(decision.allow).toBe(false)
     if (!decision.allow) expect(decision.message).toContain('no longer a grant — D67 (auto-not-a-grant)')
+  })
+})
+
+describe('evaluateStopLatch — the stop record waits for a human turn after its card — D103 (stop-latched)', () => {
+  it('refuses in the turn the card printed, and allows once a human turn has passed', () => {
+    expect(evaluateStopLatch({ isTTY: false, turn: 4, printed: 4 })).toBe(false)
+    expect(evaluateStopLatch({ isTTY: false, turn: 5, printed: 4 })).toBe(true)
+  })
+
+  it('allows a human at the keyboard, and stays out of the way of a dormant ledger', () => {
+    expect(evaluateStopLatch({ isTTY: true, turn: 4, printed: 4 })).toBe(true)
+    expect(evaluateStopLatch({ isTTY: false, turn: null, printed: 4 })).toBe(true)
+    expect(evaluateStopLatch({ isTTY: false, turn: 4, printed: null })).toBe(true)
+  })
+
+  it('opens to no grant: a typed range or --auto in the turn the card printed still refuses', () => {
+    const dir = makeTempRepo()
+    mkdirSync(join(dir, '.plumbbob'), { recursive: true })
+    writeFileSync(turnPath(dir), '6\n')
+    for (const grant of ['auto\n', 'steps 1-9\n']) {
+      writeFileSync(grantPath(dir), grant)
+      expect(checkStopLatch(dir, 6)).toBe(false)
+    }
+    expect(checkStopLatch(dir, 5)).toBe(true)
   })
 })

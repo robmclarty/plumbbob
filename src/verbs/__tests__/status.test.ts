@@ -259,6 +259,27 @@ describe('status — --run prints the run a /plumbbob:run invocation names — D
     expect(captureIo(() => status(dir, ['--run', '3', '--build', 'runs'])).stdout).toContain('run  range 3 of 3')
   })
 
+  it('names a stop card still waiting beneath the grant, and drops the line once the record lands — D102 (settle-in-one-reply)', async () => {
+    const dir = await runSession(RUN_INTENT.replace('2. [ ] Second', '2. [x] Second').replace('3. [ ] Third', '3. [x] Third'))
+    writeFileSync(checkpointsPath(dir, 'runs'), 'step 3 abc1234\n')
+    writeFileSync(detailPath(dir), "# Detail · Range 2 · review the parser\n\n## Summary\n\nIt parses.\n")
+    expect(captureIo(() => handoff(dir, ['--stop'])).code).toBe(0)
+    const waiting = captureIo(() => status(dir, ['--run', ''])).stdout
+    expect(waiting).toContain(
+      [
+        "run  range 3 of 3 · step 4 · ends at step 4's pause",
+        "     stop: at step 4's pause, pick the label",
+        '     grant: none, as a bare range builds to its pause',
+        "     waiting: range 2 of 3's stop card, recorded before the run",
+        '',
+      ].join('\n'),
+    )
+    expect(captureIo(() => status(dir)).stdout).not.toContain('waiting:')
+    // The record clears the detail file and the stamp, so nothing waits after it.
+    rmSync(detailPath(dir), { force: true })
+    expect(captureIo(() => status(dir, ['--run', ''])).stdout).not.toContain('waiting:')
+  })
+
   it('lists the flag in the verb table', () => {
     expect(formatVerbHelp('status')).toContain('--run "<args>"')
   })

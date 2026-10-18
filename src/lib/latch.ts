@@ -154,6 +154,36 @@ export function checkLatch(root: string, step: number | null): LatchDecision {
   })
 }
 
+/** What the stop's record latch reads: a human at the keyboard, the turn count now, and the turn the stop card printed in. */
+export type StopLatchInput = {
+  readonly isTTY: boolean
+  readonly turn: number | null // null = absent (dormant ledger)
+  readonly printed: number | null // the turn the STOP stamp carries; null = a host with no turn hook
+}
+
+/**
+ * Whether a stop's record may land: a human at the keyboard, a dormant ledger,
+ * or a human turn since the stop card printed.
+ *
+ * No grant opens it. A run's long turn ends on proposals, which is where a
+ * model would carry straight on into recording its own, so neither a typed
+ * range nor `--auto` stands in for the human reading the card; the reply that
+ * settles it is always a turn after the one the card printed in.
+ */
+export function evaluateStopLatch(input: StopLatchInput): boolean {
+  if (input.isTTY) return true
+  if (input.turn === null || input.printed === null) return true
+  return input.turn > input.printed
+}
+
+/**
+ * Gather the stop latch's inputs from the worktree and evaluate, for the stop
+ * card stamped as printed in turn `printed`.
+ */
+export function checkStopLatch(root: string, printed: number | null): boolean {
+  return evaluateStopLatch({ isTTY: process.stdin.isTTY === true, turn: readCount(turnPath(root)), printed })
+}
+
 /**
  * The current GRANT, or null when the file is absent or unparseable.
  */

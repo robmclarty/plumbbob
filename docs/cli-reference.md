@@ -28,6 +28,7 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 | `revert` | `revert [--to <n>] [--build <slug>]` | `git reset --hard` to a checkpoint SHA |
 | `abandon` | `abandon [--build <slug>]` | drop the in-flight step, keep its work in the tree |
 | `park` | `park <text>` | append a line to the park list |
+| `harvest` | `harvest` | record a harvest from the detail file, and at a run's stop the range's review |
 | `order` | `order <steps>` \| `order --reset` | set the build order: the undone steps in the sequence to build them |
 | `spike` | `spike <slug> [opt…] [--build <slug>]` \| `spike report <slug>` \| `spike done` | throwaway worktree experiment |
 | `agent` | `agent list` \| `agent run <name> [--step N] [--mode …] [--agent <path>] [--build <slug>]` | list user-authored agents, or run one through the doorway |
@@ -370,6 +371,24 @@ Appends `<text>` as a raw line under `## Park list` in `build-log.md` and prints
 `**Parked**: <text>` ([**D7 (park-then-harvest)**](decisions.md#d7)). This is the dumb capture path: composing the tidy line,
 tag at the tail, is the `/plumbbob:park` skill's job. Refuses (exit 1) with no session, empty text, or no
 `## Park list` section.
+
+### harvest
+
+```text
+plumbbob harvest
+```
+
+Records a harvest from `.plumbbob/detail.md` ([**D104 (harvest-records)**](decisions.md#d104)):
+it reads the `## Harvest` proposals (`- park 6 → tangent: <the reason>`), flips each settled
+park in `build-log.md`, and appends the dated Harvest lines. When the detail is a range's,
+the stop card's wire, it also writes the range's review beneath a dated Log line
+([the stop's record](presentation.md#the-stops-record)). It clears the detail file and the
+`STOP` stamp, commits nothing, and ends on `**Stop**: Range 3 of 5 recorded (1 blocker, 2
+tangents)`, or `**Harvested**: 2 parked ideas (2 tangents)` outside a stop, then Next Up. A
+stop's record is latched ([**D103 (stop-latched)**](decisions.md#d103)): it refuses in the
+turn the stop card printed, a range's detail no stop card showed, and a range open again.
+It also refuses a proposal naming a park the list lacks or a class other than blocker,
+tangent, or pivot, and a detail file that is no range's or harvest's.
 
 ### order
 

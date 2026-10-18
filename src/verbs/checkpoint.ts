@@ -43,7 +43,8 @@ import { conventionalSubject, subjectFromTitle, withMarker } from '../lib/commit
 import { appendToSection, checkpointLogLine, logEntry, planLogLine } from '../lib/buildlog.ts'
 import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
 import { advisory, ending, notice, printEnding, transition } from '../lib/notice.ts'
-import { boundaryEnding, planRecord, stepRecord } from './handoff.ts'
+import { boundaryEnding, parseDetailRange, planRecord, stepRecord } from './handoff.ts'
+import { isHarvestDetail } from './harvest.ts'
 
 /**
  * Land a step: latch, check gate, commit, record, return to the boundary.
@@ -134,7 +135,12 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   } else {
     sha = headSha(root)
   }
-  clearDetail(root) // the detail is recorded in the Log below; clear it so no stale detail rides into the next step.
+  // The detail is recorded in the Log below; clear it so no stale detail rides
+  // into the next step. A stop's or a harvest's detail is the record's to
+  // clear, so it stays where it is.
+  if (!heldDetail(root)) {
+    clearDetail(root)
+  }
 
   appendFileSync(checkpointsPath(root), `step ${step} ${sha}\n`)
   const flipNotice = flipIntent(root, step)
@@ -506,19 +512,35 @@ function fallbackBody(root: string, step: number): string | undefined {
  * the Log's record, and the caller clears it afterward. A missing or blank file
  * records nothing, and so does one whose header names a different step: that
  * file is a leftover, written after its own step had already landed, and
- * recording it would file one step's story under another. The plan commit
- * passes no step and takes the file as it is.
+ * recording it would file one step's story under another. A range's detail
+ * and a boundary harvest's record nothing here either: they are
+ * `plumbbob harvest`'s to record. The plan commit passes no step and takes the
+ * file as it is.
  */
 function readDetail(root: string, step: number | null): string | null {
   try {
     const raw = readFileSync(detailPath(root), 'utf8').trim()
-    if (raw.length === 0) {
+    if (raw.length === 0 || (step !== null && heldDetail(root))) {
       return null
     }
     const written = step === null ? null : parseDetailStep(raw)
     return written === null || written === step ? raw : null
   } catch {
     return null
+  }
+}
+
+/**
+ * Whether the detail file is one a step's checkpoint leaves alone: a range's,
+ * the stop card's wire, or a boundary harvest's, each read off its header and
+ * each recorded and cleared by `plumbbob harvest`.
+ */
+function heldDetail(root: string): boolean {
+  try {
+    const raw = readFileSync(detailPath(root), 'utf8')
+    return parseDetailRange(raw) !== null || isHarvestDetail(raw)
+  } catch {
+    return false
   }
 }
 

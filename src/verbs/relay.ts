@@ -255,6 +255,7 @@ const DECISION_NAMES: Readonly<Record<string, string>> = {
 const ORIENTATION_VERBS: Readonly<Record<string, string>> = {
   checkpoint: 'plumbbob checkpoint',
   'plan-commit': 'plumbbob checkpoint --plan',
+  harvest: 'plumbbob harvest',
   finish: 'plumbbob finish',
 }
 

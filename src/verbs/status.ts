@@ -4,7 +4,8 @@
 // next move while printing the full picture, so you can always override.
 // Read-only, always exits 0. Skills pre-inject this output to gate their own
 // behavior, so the `NO ACTIVE SESSION` sentinel is kept exact. With `--run`, it
-// prints the run a `/plumbbob:run` invocation names above the dashboard.
+// prints the run a `/plumbbob:run` invocation names above the dashboard, and
+// beneath the run's grant, a stop card still waiting for its reply.
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -20,10 +21,12 @@ import {
   buildFolder,
   buildLogPath,
   checkpointsPath,
+  detailPath,
   hasSession,
   inSpike,
   intentPath,
   listBuilds,
+  readStop,
   resolveBuild,
   stepPath,
 } from '../lib/sidecar.ts'
@@ -33,11 +36,13 @@ import {
   formatRunDashboard,
   lastLedgerSha,
   orient,
+  parseBuildRanges,
   parseRequestedStep,
   resolveRunArgs,
   type OrientInput,
 } from '../lib/orient.ts'
 import { normalizeStepList } from '../lib/steplist.ts'
+import { parseDetailRange } from './handoff.ts'
 
 /**
  * Read a file as utf8, or '' when it is missing or unreadable.
@@ -136,10 +141,40 @@ export function status(cwd: string, args: ReadonlyArray<string> = []): number {
   const dashboard =
     run === null
       ? formatOrientation(orient(input))
-      : formatRunDashboard(input, resolveRunArgs(run, input), grantText(readGrant(root)))
+      : withWaiting(formatRunDashboard(input, resolveRunArgs(run, input), grantText(readGrant(root))), waitingStop(root, slug, input.intent))
   const lines = [dashboard, ...harnessSection(root, slug)]
   process.stdout.write(`${lines.join('\n')}\n`)
   return 0
+}
+
+/**
+ * The stop card still waiting for its reply, as the run header names it
+ * (`range 3 of 5's stop card, recorded before the run`), or null when none
+ * waits: a STOP stamp whose range the detail file still reviews. The record
+ * clears both, so the line vanishes once the stop is settled.
+ */
+function waitingStop(root: string, slug: string | null, intent: string): string | null {
+  const stamp = readStop(root, slug)
+  if (stamp === null || parseDetailRange(readOr(detailPath(root))) !== stamp.range) {
+    return null
+  }
+  const plan = parseBuildRanges(intent)
+  return `range ${stamp.range} of ${plan.ranges.length + plan.malformed.length}'s stop card, recorded before the run`
+}
+
+/**
+ * The run dashboard with the waiting line beneath the run header's grant line,
+ * the header's fourth line. A dashboard with no header (a run that refuses)
+ * has no grant line to ride, and is returned as it is.
+ */
+function withWaiting(dashboard: string, waiting: string | null): string {
+  const lines = dashboard.split('\n')
+  const grant = lines.findIndex((l) => l.startsWith('     grant: '))
+  if (waiting === null || grant === -1) {
+    return dashboard
+  }
+  lines.splice(grant + 1, 0, `     waiting: ${waiting}`)
+  return lines.join('\n')
 }
 
 /**

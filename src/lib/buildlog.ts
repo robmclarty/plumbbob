@@ -167,3 +167,87 @@ export function abandonLogLine(date: string, step: number, title: string | null)
   const head = `- ${date} — step ${step} abandoned · work kept in tree`
   return title !== null && title.length > 0 ? `${head} — ${title}` : head
 }
+
+/**
+ * Flip the parks named by `handles` from `- [ ]` to `- [x]` under `## Park
+ * list`, where a park's handle is its place in the list, counting every line
+ * ever parked, the same lines `parseParkTotals` counts. A handle already
+ * flipped, or past the end of the list, is left as it is.
+ *
+ * Returns null when the section is absent so the caller can report rather than
+ * silently corrupt the doc.
+ */
+export function flipParks(content: string, handles: ReadonlyArray<number>): string | null {
+  const lines = content.split('\n')
+  const headingIdx = lines.findIndex((l) => l.trim() === '## Park list')
+  if (headingIdx === -1) {
+    return null
+  }
+  let handle = 0
+  for (let i = headingIdx + 1; i < lines.length && !(lines[i] ?? '').startsWith('## '); i++) {
+    const line = lines[i] ?? ''
+    if (!/^-\s+\[[ xX]\]\s+\S/.test(line.trim())) {
+      continue
+    }
+    handle += 1
+    if (handles.includes(handle)) {
+      lines[i] = line.replace(/\[ \]/, '[x]')
+    }
+  }
+  return lines.join('\n')
+}
+
+/** One park a harvest settled: its handle, the class confirmed, its text, and the reason given. */
+export type SettledPark = { readonly handle: number; readonly kind: string; readonly text: string; readonly reason: string }
+
+/**
+ * The dated lines a harvest appends under `## Harvest`: one saying where it
+ * ran and how many parks it settled, then one per park, its class in bold,
+ * then its handle and text, and the reason behind the arrow the card showed it
+ * with. Empty when nothing was settled.
+ */
+export function harvestLines(date: string, where: string, settled: ReadonlyArray<SettledPark>): string[] {
+  if (settled.length === 0) {
+    return []
+  }
+  const count = `${settled.length} parked idea${settled.length === 1 ? '' : 's'}`
+  return [
+    `- ${date}, ${where}: ${count}, classified.`,
+    ...settled.map((p) => `- **${p.kind}**: park ${p.handle} · ${p.text}${p.reason.length === 0 ? '' : ` → ${p.reason}`}`),
+  ]
+}
+
+/**
+ * Append the harvest's lines to `## Harvest`, dropping the template's
+ * `- (none yet)` placeholder on the first one. Returns null when the section
+ * is absent.
+ */
+export function appendHarvest(content: string, lines: ReadonlyArray<string>): string | null {
+  const all = content.split('\n')
+  const headingIdx = all.findIndex((l) => /^## Harvest\b/.test(l.trim()))
+  if (headingIdx === -1) {
+    return null
+  }
+  const heading = (all[headingIdx] ?? '').trim().slice(3)
+  const end = all.findIndex((l, i) => i > headingIdx && l.startsWith('## '))
+  const placeholder = all.findIndex((l, i) => i > headingIdx && (end === -1 || i < end) && l.trim() === '- (none yet)')
+  if (placeholder !== -1 && lines.length > 0) {
+    // The blank above it goes too, since the first line appended brings its own.
+    const blank = (all[placeholder - 1] ?? '').trim() === '' ? 1 : 0
+    all.splice(placeholder - blank, 1 + blank)
+  }
+  let updated: string | null = all.join('\n')
+  for (const line of lines) {
+    updated = updated === null ? null : appendToSection(updated, heading, line)
+  }
+  return updated
+}
+
+/**
+ * The Log line `plumbbob harvest` writes for a stop it recorded: dated, the
+ * range over the plan's count, and the stop as the plan wrote it. The range's
+ * review rides beneath it, as a step's pause rides beneath its checkpoint.
+ */
+export function stopLogLine(date: string, range: number, count: number, stop: string): string {
+  return `- ${date} — range ${range} of ${count}'s stop recorded — ${stop}`
+}

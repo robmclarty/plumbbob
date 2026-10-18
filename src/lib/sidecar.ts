@@ -19,6 +19,7 @@
 // phase the dashboard shows (DESIGN/BUILD/SPIKE) is derived, not stored: BUILD ⇔
 // a STEP is in flight, SPIKE ⇔ the SPIKE marker is present, otherwise DESIGN.
 
+import { createHash } from 'node:crypto'
 import { existsSync, readdirSync, readFileSync, writeFileSync, appendFileSync, rmSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { gitPath } from './git.ts'
@@ -250,17 +251,27 @@ export function clearPause(root: string, slug?: string | null): void {
 
 /**
  * STOP: the stamp of the stop card `handoff --stop` last rendered whole, the
- * range it reviews, the TURN it printed in, and a hash of what the card showed.
- * While a later render matches the range and the hash, handoff prints the
- * one-line reminder; `plumbbob harvest` reads the turn, and records the stop
- * only once a human turn has read the card.
+ * range it reviews, the TURN it printed in, a hash of what the card showed,
+ * and a digest of the detail file it printed from. While a later render
+ * matches the range and the hash, handoff prints the one-line reminder;
+ * `plumbbob harvest` records the stop only from the detail the card showed,
+ * and only once a human turn has read it.
  */
 export function stopPath(root: string, slug?: string | null): string {
   return join(artifactDir(root, slug), 'STOP')
 }
 
-/** A stop card's stamp: the range it reviews, the turn it printed in (null with no turn hook), and the hash of what it showed. */
-export type StopStamp = { readonly range: number; readonly turn: number | null; readonly hash: string }
+/**
+ * A stop card's stamp: the range it reviews, the turn it printed in (null with
+ * no turn hook), the hash of what it showed, and the digest of the detail file
+ * it printed from (null on a stamp written before the digest was kept).
+ */
+export type StopStamp = {
+  readonly range: number
+  readonly turn: number | null
+  readonly hash: string
+  readonly detail: string | null
+}
 
 /**
  * The stamp of the stop card last rendered, or null when STOP is absent or
@@ -268,27 +279,44 @@ export type StopStamp = { readonly range: number; readonly turn: number | null; 
  */
 export function readStop(root: string, slug?: string | null): StopStamp | null {
   try {
-    const m = /^(\d+) (\d+|-) (\S+)$/.exec(readFileSync(stopPath(root, slug), 'utf8').trim())
+    const m = /^(\d+) (\d+|-) (\S+)(?: (\S+))?$/.exec(readFileSync(stopPath(root, slug), 'utf8').trim())
     if (m === null) return null
-    return { range: Number(m[1]), turn: m[2] === '-' ? null : Number(m[2]), hash: m[3] ?? '' }
+    return { range: Number(m[1]), turn: m[2] === '-' ? null : Number(m[2]), hash: m[3] ?? '', detail: m[4] ?? null }
   } catch {
     return null
   }
 }
 
 /**
- * Record the stamp of the stop card just printed. Best-effort: a failed write
- * costs one more full card on a later turn, never this turn's output or its
- * exit code.
+ * Record the stamp of the stop card just printed, with the digest of the
+ * detail file as it stands, which is the file the card was rendered from.
+ * Best-effort: a failed write costs one more full card on a later turn, never
+ * this turn's output or its exit code.
  */
-export function writeStop(root: string, slug: string | null | undefined, stamp: StopStamp): void {
+export function writeStop(root: string, slug: string | null | undefined, stamp: Omit<StopStamp, 'detail'>): void {
   try {
-    writeFileSync(stopPath(root, slug), `${stamp.range} ${stamp.turn ?? '-'} ${stamp.hash}\n`)
+    const detail = detailDigest(readFileSync(detailPath(root), 'utf8'))
+    writeFileSync(stopPath(root, slug), `${stamp.range} ${stamp.turn ?? '-'} ${stamp.hash} ${detail}\n`)
   } catch {
     // A read-only tree or a vanished build folder: the card still renders.
   }
 }
 
+/**
+ * Remove the STOP stamp: the stop's record ends the card it recorded. Absent
+ * is a no-op.
+ */
+export function clearStop(root: string, slug?: string | null): void {
+  rmSync(stopPath(root, slug), { force: true })
+}
+
+/**
+ * The digest a STOP stamp keeps of a detail file, so the record can tell the
+ * detail a card showed from one written after it.
+ */
+export function detailDigest(detail: string): string {
+  return createHash('sha256').update(detail).digest('hex')
+}
 
 /**
  * The build's `checkpoints` ledger: the recorded SHAs of landed plan and step
@@ -793,6 +821,7 @@ const RELAY_RENDERS = [
   'spike-done',
   'use',
   'order',
+  'harvest',
   'finish',
   'start',
 ] as const

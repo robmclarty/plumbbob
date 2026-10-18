@@ -297,6 +297,22 @@ describe('checkpoint', () => {
     expect(existsSync(detailPath(dir))).toBe(false)
   })
 
+  it("leaves a range's detail and a boundary harvest's in place, and records neither under the step — D104 (harvest-records)", async () => {
+    for (const header of ['# Detail · Range 2 · review the parser', '# Detail · Harvest']) {
+      const dir = await startedGreen()
+      mkdirSync(join(dir, 'src'), { recursive: true })
+      writeFileSync(join(dir, 'src', 'a.ts'), 'in seam\n')
+      const detail = DETAIL.replace('# Detail · Step 1 · First', header)
+      writeFileSync(detailPath(dir), detail)
+      const { code } = await captureIoAsync(() => checkpoint(dir, ['1']))
+      expect(code).toBe(0)
+      const log = readFileSync(buildLogPath(dir), 'utf8')
+      expect(log).toMatch(/- \d{4}-\d{2}-\d{2} — step 1 checkpointed · [0-9a-f]{9} — First/)
+      expect(log).not.toContain('A works now')
+      expect(readFileSync(detailPath(dir), 'utf8')).toBe(detail)
+    }
+  })
+
   it('still records a detail file that names no step at all', async () => {
     const dir = await startedGreen()
     writeFileSync(detailPath(dir), DETAIL.replace('# Detail · Step 1 · First\n\n', ''))

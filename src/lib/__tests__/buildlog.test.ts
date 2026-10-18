@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { appendToSection, checkpointLogLine, setCurrentStep, syncStepsSection } from '../buildlog.ts'
+import {
+  appendHarvest,
+  appendToSection,
+  checkpointLogLine,
+  flipParks,
+  harvestLines,
+  setCurrentStep,
+  stopLogLine,
+  syncStepsSection,
+} from '../buildlog.ts'
 import type { Step } from '../orient.ts'
 
 const step = (n: number, done: boolean, title: string): Step => ({
@@ -178,5 +187,62 @@ describe('checkpointLogLine — the compact stats receipt (research/07 2b)', () 
     expect(checkpointLogLine('2026-07-11', 2, 'a1b2c3d4e5f6', 'Wire it', '')).toBe(
       '- 2026-07-11 — step 2 checkpointed · a1b2c3d4e — Wire it',
     )
+  })
+})
+
+// The lower half of templates/build-log.md, with three parks, one harvested.
+const PARKED = `## Park list
+
+> guidance line
+
+- [ ] first idea
+- [x] second idea
+- [ ] third idea (tangent)
+
+## Harvest  *(run \`/plumbbob:harvest\` at each step boundary, after green)*
+
+Harvest results this boundary:
+
+- (none yet)
+
+## Log
+
+*(instructions)*
+`
+
+describe('the harvest record — D104 (harvest-records)', () => {
+  it('flips the parks it names by handle, counting harvested lines, and leaves the rest', () => {
+    const out = flipParks(PARKED, [1, 2, 3]) as string
+    expect(out).toContain('- [x] first idea\n- [x] second idea\n- [x] third idea (tangent)')
+    expect(flipParks(PARKED, [3])).toContain('- [ ] first idea\n- [x] second idea\n- [x] third idea (tangent)')
+    expect(flipParks(PARKED, [9])).toBe(PARKED)
+    expect(flipParks('# no park list\n', [1])).toBeNull()
+  })
+
+  it('writes one dated line for where it ran, then one per park with its class, handle, text, and reason', () => {
+    const settled = [
+      { handle: 1, kind: 'tangent', text: 'first idea', reason: 'cosmetic' },
+      { handle: 3, kind: 'blocker', text: 'third idea (tangent)', reason: '' },
+    ]
+    expect(harvestLines('2026-10-18', "at range 3 of 5's stop", settled)).toEqual([
+      "- 2026-10-18, at range 3 of 5's stop: 2 parked ideas, classified.",
+      '- **tangent**: park 1 · first idea → cosmetic',
+      '- **blocker**: park 3 · third idea (tangent)',
+    ])
+    expect(harvestLines('2026-10-18', 'at the step 9 boundary', [])).toEqual([])
+  })
+
+  it('drops the placeholder on the first harvest, and appends beneath the last one after it', () => {
+    const first = appendHarvest(PARKED, ['- one', '- two']) as string
+    expect(first).not.toContain('(none yet)')
+    expect(first).toContain('Harvest results this boundary:\n\n- one\n- two\n\n## Log')
+    const second = appendHarvest(first, ['- three']) as string
+    expect(second).toContain('- one\n- two\n- three\n\n## Log')
+    expect(appendHarvest(PARKED, [])).toBe(PARKED)
+    expect(appendHarvest('# no harvest\n', ['- one'])).toBeNull()
+  })
+
+  it("dates the range's Log line and names its stop", () => {
+    expect(stopLogLine('2026-10-18', 3, 5, 'review the card')).toBe("- 2026-10-18 — range 3 of 5's stop recorded — review the card")
   })
 })
