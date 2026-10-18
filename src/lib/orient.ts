@@ -41,6 +41,10 @@ export type Orientation = {
   // The undone steps in build order, when `## Build order` re-sequences them
   // away from their numbering; empty otherwise, and the dashboard's row vanishes.
   readonly buildOrder: ReadonlyArray<number>
+  // The plan's build ranges as the dashboard lists them; null for a plan
+  // without the section, or with only the template's placeholder under it, and
+  // the block vanishes.
+  readonly ranges: RangesView | null
   // The explicitly requested step (from `status --invoked`), but only when that
   // step exists in the plan; null otherwise. When set, the dashboard's marker,
   // detail rows, and next move all point here instead of at the next undone
@@ -345,6 +349,7 @@ export function clearBuildOrder(intent: string): string {
 /** One range under `## Build ranges`: a command the human types, and the stop that ends it. */
 export type BuildRange = {
   readonly item: number // the item's number as the plan wrote it: the handle the card counts by
+  readonly command: string // the command as the plan wrote it, for the dashboard's row
   readonly steps: StepList // the command's steps, read the way the turn hook reads a typed range
   readonly bare: boolean // a lone `N`, which builds the step to its pause rather than landing it
   readonly stop: string // the stop's text, wrapped lines joined with a space
@@ -435,6 +440,7 @@ function readRange(item: number, text: string, block: ReadonlyArray<string>, lin
   const model = /^\s*-\s*model:\s*(.+)$/im.exec(block.join('\n'))?.[1]?.trim() ?? null
   return {
     item,
+    command: (m?.[1] ?? '').trim(),
     steps: read.steps,
     bare: !read.range,
     stop,
@@ -497,15 +503,64 @@ export function rangeStanding(plan: BuildRanges, ordered: ReadonlyArray<Step>, s
   }
   const flag = drift.find((d) => d.item === holding.item && d.kind !== 'malformed')?.words ?? null
   const left = at === -1 ? [] : ordered.slice(at).filter((s) => !s.done && hasStep(holding.steps, s.n))
-  const landed = ordered[at]?.done === true && ordered.every((s) => s.done || !hasStep(holding.steps, s.n))
   return {
     count,
     holding,
     command: flag === null && left.length > 0 ? `/plumbbob:build ${leftExpression(holding, left)}` : null,
     flag,
-    completed: landed ? holding : null,
+    completed: ordered[at]?.done === true && rangeLanded(holding, ordered) ? holding : null,
     drift,
   }
+}
+
+/** Whether a range has landed: the plan holds a step it names, and every one it holds is done. */
+function rangeLanded(range: BuildRange, ordered: ReadonlyArray<Step>): boolean {
+  const held = ordered.filter((s) => hasStep(range.steps, s.n))
+  return held.length > 0 && held.every((s) => s.done)
+}
+
+/** One range as the dashboard lists it: landed, holding the next step, and what flags it. */
+export type RangeRow = {
+  readonly range: BuildRange
+  readonly landed: boolean
+  readonly next: boolean
+  readonly drift: ReadonlyArray<string> // the words flagging this range, one row each
+}
+
+/** The dashboard's ranges block: the count, a row per range, and the plan's own reports. */
+export type RangesView = {
+  readonly count: number
+  readonly rows: ReadonlyArray<RangeRow>
+  // The words for the undone steps no range names and the items that do not
+  // parse, each a row at the block's end.
+  readonly plan: ReadonlyArray<string>
+}
+
+/**
+ * The ranges block the dashboard renders, and the move it suggests: the range
+ * holding the next undone step and the command that runs what is left of it.
+ *
+ * Null for a plan without ranges, so the block vanishes. The move is null when
+ * the next step sits in no range, its range is flagged, or the step is still
+ * unplanned, which leaves the dashboard's own step move in charge.
+ */
+function rangesView(intent: string, ordered: ReadonlyArray<Step>, next: Step | undefined): { readonly view: RangesView | null; readonly move: string | null } {
+  const plan = parseBuildRanges(intent)
+  const standing = rangeStanding(plan, ordered, next?.n ?? null)
+  if (standing.count === 0) {
+    return { view: null, move: null }
+  }
+  const own = (item: number) => standing.drift.filter((d) => d.item === item && d.kind !== 'malformed')
+  const rows = plan.ranges.map((range) => ({
+    range,
+    landed: rangeLanded(range, ordered),
+    next: range === standing.holding,
+    drift: own(range.item).map((d) => d.words),
+  }))
+  const view = { count: standing.count, rows, plan: standing.drift.filter((d) => d.item === null || d.kind === 'malformed').map((d) => d.words) }
+  const { holding, command } = standing
+  const move = holding === null || command === null || next?.planned !== true ? null : `build range ${holding.item} of ${standing.count} — \`${command}\``
+  return { view, move }
 }
 
 /**
@@ -868,6 +923,10 @@ export function orient(input: OrientInput): Orientation {
   const target = requestedStep ?? nextUndone
   const seamParse = target === undefined ? null : parseStepSeam(input.intent, target.n)
   const phase = input.spiking ? 'SPIKE' : input.inFlight !== null ? 'BUILD' : 'DESIGN'
+  // At the boundary with nothing asked for, the move names the range holding
+  // the next step; a spike, a step in flight, or a request keeps its own.
+  const ranges = rangesView(input.intent, ordered, nextUndone)
+  const atBoundary = !input.spiking && input.inFlight === null && requested === null
   return {
     title: parseTitle(input.intent),
     phase,
@@ -876,9 +935,10 @@ export function orient(input: OrientInput): Orientation {
     parked: parks.open,
     parkedTotal: parks.total,
     openQuestions: parseOpenQuestions(input.intent),
-    next: nextMove(input.spiking, ordered, input.inFlight, parks.open, requested),
+    next: (atBoundary ? ranges.move : null) ?? nextMove(input.spiking, ordered, input.inFlight, parks.open, requested),
     nextUndone: nextUndone?.n ?? null,
     buildOrder: remainingOrder(steps, order, null),
+    ranges: ranges.view,
     requested: requestedStep?.n ?? null,
     nextDoneWhen: target?.doneWhen ?? null,
     nextSeam: seamParse !== null && seamParse.ok ? seamParse.seam : [],
@@ -1556,6 +1616,7 @@ export function formatOrientation(o: Orientation): string {
   })
   const stepsBlock =
     o.steps.length === 0 ? '  (no steps planned yet)' : `  steps  ${doneCount}/${o.steps.length} done\n${stepLines.join('\n')}`
+  const rangesBlock = o.ranges === null ? [] : [formatRanges(o.ranges), '']
 
   const cp = o.lastCheckpoint
   const cpLine = cp === null ? 'last checkpoint  none yet' : `last checkpoint  step ${cp.n} · ${cp.sha.slice(0, 7)}`
@@ -1580,6 +1641,7 @@ export function formatOrientation(o: Orientation): string {
     '',
     stepsBlock,
     '',
+    ...rangesBlock,
     cpLine,
     ...receipts,
     ...orderRow,
@@ -1587,4 +1649,24 @@ export function formatOrientation(o: Orientation): string {
     '',
     `next → ${o.next}`,
   ].join('\n')
+}
+
+/**
+ * The dashboard's ranges block, in the step list's own grammar: a count, then a
+ * row per range with its command as the plan wrote it and its model, `✓` for
+ * a range landed and `▸` with the `← next` tail for the one holding the next
+ * step. An undone range carries its stop beneath it, since the stops ahead are
+ * what the human steers by, and a landed one folds to its row. A range's drift
+ * rides beneath it, and the plan's own rows close the block.
+ */
+function formatRanges(view: RangesView): string {
+  const landed = view.rows.filter((r) => r.landed).length
+  const rows = view.rows.flatMap((r) => {
+    const marker = r.landed ? '✓' : r.next ? '▸' : ' '
+    const model = r.range.model === null ? '' : ` · ${r.range.model}`
+    const head = `  ${marker} ${r.range.item}  ${r.range.command}${model}${r.next ? '   ← next' : ''}`
+    const stop = r.landed ? [] : [`        stop: ${r.range.stop}`]
+    return [head, ...stop, ...r.drift.map((words) => `        ⚠ needs a re-cut: ${words}`)]
+  })
+  return [`  ranges  ${landed} of ${view.count} done`, ...rows, ...view.plan.map((words) => `  ⚠ ${words}`)].join('\n')
 }

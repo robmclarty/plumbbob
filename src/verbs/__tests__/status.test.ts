@@ -95,6 +95,49 @@ describe('status', () => {
   })
 })
 
+describe('status — the build ranges', () => {
+  const RANGED = [
+    '# Ranged',
+    '',
+    '## Steps',
+    '',
+    '1. [x] First — **done when:** ok',
+    '   - seam: `src/a.ts`',
+    '2. [ ] Second — **done when:** ok',
+    '   - seam: `src/b.ts`',
+    '3. [ ] Third — **done when:** ok',
+    '   - seam: `src/c.ts`',
+    '',
+    '## Build ranges',
+    '',
+    "1. `/plumbbob:build 1`, **stop:** at step 1's pause, approve the schema",
+    '2. `/plumbbob:build 2-3`, **stop:** review the parser',
+    '   - model: opus',
+    '',
+  ].join('\n')
+
+  it('lists the ranges beneath the steps and names the range to type next', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Ranged', '--slug', 'ranged']))
+    writeFileSync(join(buildDir(dir, 'ranged'), 'intent.md'), RANGED)
+    const { code, stdout } = captureIo(() => status(dir))
+    expect(code).toBe(0)
+    expect(stdout).toContain(
+      ['  ranges  1 of 2 done', '  ✓ 1  /plumbbob:build 1', '  ▸ 2  /plumbbob:build 2-3 · opus   ← next', '        stop: review the parser'].join('\n'),
+    )
+    expect(stdout).toContain('next → build range 2 of 2 — `/plumbbob:build 2-3`')
+  })
+
+  it('renders a plan without ranges exactly as before', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Plain', '--slug', 'plain']))
+    writeFileSync(join(buildDir(dir, 'plain'), 'intent.md'), RANGED.replace(/## Build ranges[\s\S]*$/, ''))
+    const { stdout } = captureIo(() => status(dir))
+    expect(stdout).not.toContain('ranges')
+    expect(stdout).toContain('next → build step 2 — `/plumbbob:build`')
+  })
+})
+
 describe('status — --invoked repoints the dashboard at the requested step', () => {
   const STEPS_INTENT = [
     '# Invoked',

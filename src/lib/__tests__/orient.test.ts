@@ -32,6 +32,7 @@ import {
   spentRowValue,
   summaryCheckRow,
 } from '../orient.ts'
+import type { OrientInput } from '../orient.ts'
 import { readTemplate } from '../templates.ts'
 import type { StepList } from '../steplist.ts'
 
@@ -1024,6 +1025,112 @@ describe('the build order', () => {
   })
 })
 
+describe('the dashboard ranges block', () => {
+  // Twelve steps cut the way the presentation spec's running example cuts them.
+  const RANGED = [
+    '# Ranged',
+    '',
+    '## Steps',
+    '',
+    ...Array.from({ length: 12 }, (_, i) => `${i + 1}. [ ] Step ${i + 1}, **done when:** it works`),
+    '',
+    '## Build ranges',
+    '',
+    'Five commands drive the build.',
+    '',
+    "1. `/plumbbob:build 1`, **stop:** at step 1's pause, approve the schema before anything writes to it",
+    '   - model: opus',
+    '2. `/plumbbob:build 2-5`, **stop:** review the parser before the renderers build on it',
+    '   - model: opus',
+    '3. `/plumbbob:build 6-9`, **stop:** review the card on a live boundary before the skills teach it',
+    '   - model: opus',
+    "4. `/plumbbob:build 10`, **stop:** at step 10's pause, pick the label the docs will name",
+    '   - model: fable',
+    '5. `/plumbbob:build 11-12`, **stop:** the final read of the docs, then `/plumbbob:finish`',
+    '   - model: opus',
+    '',
+  ].join('\n')
+
+  /** RANGED with the steps in `done` ticked. */
+  const ranged = (done: ReadonlyArray<number>, intent = RANGED): string =>
+    done.reduce((text, n) => text.replace(`${n}. [ ]`, `${n}. [x]`), intent)
+
+  /** The dashboard for a plan, at the boundary, nothing parked. */
+  const dashboard = (intent: string, extra: Partial<OrientInput> = {}) =>
+    formatOrientation(orient({ ...base, intent, buildLog: '', checkpoints: 'step 5 1a2b3c4d\n', ...extra }))
+
+  it('renders the block beneath the steps exactly, and names the range in next →', () => {
+    const out = dashboard(ranged([1, 2, 3, 4, 5]))
+    expect(out.slice(out.indexOf('  ranges'))).toBe(
+      [
+        '  ranges  2 of 5 done',
+        '  ✓ 1  /plumbbob:build 1 · opus',
+        '  ✓ 2  /plumbbob:build 2-5 · opus',
+        '  ▸ 3  /plumbbob:build 6-9 · opus   ← next',
+        '        stop: review the card on a live boundary before the skills teach it',
+        "    4  /plumbbob:build 10 · fable",
+        "        stop: at step 10's pause, pick the label the docs will name",
+        '    5  /plumbbob:build 11-12 · opus',
+        '        stop: the final read of the docs, then `/plumbbob:finish`',
+        '',
+        'last checkpoint  step 5 · 1a2b3c4',
+        'parked 0 · open questions 0',
+        '',
+        'next → build range 3 of 5 — `/plumbbob:build 6-9`',
+      ].join('\n'),
+    )
+    // The block sits under the step list, a blank line between.
+    expect(out).toContain('  ▸ 6  Step 6   ← next\n        done when: it works\n    7  Step 7')
+    expect(out).toContain('   12  Step 12\n\n  ranges  2 of 5 done')
+  })
+
+  it('names what is left of the range in next →, and drops the model for a range with none', () => {
+    expect(dashboard(ranged([1, 2, 3, 4, 5, 6, 7]))).toContain('next → build range 3 of 5 — `/plumbbob:build 8-9`')
+    const plainModel = ranged([1, 2, 3, 4, 5], RANGED.replace("   - model: fable\n", ''))
+    expect(dashboard(plainModel)).toContain('    4  /plumbbob:build 10\n')
+  })
+
+  it('rides a drift row beneath the range it flags and closes on the plan rows, and the move falls back to the step', () => {
+    const outgrown = ranged(
+      [1, 2, 3, 4, 5],
+      RANGED.replace('## Build ranges', '## Build order\n\n1, 2, 3, 4, 5, 6, 7, 11, 8\n\n## Build ranges')
+        .replace(/^5\. `[\s\S]*$/m, '5. `/plumbbob:build 11`\n'),
+    )
+    const out = dashboard(outgrown)
+    expect(out).toContain(
+      [
+        '  ▸ 3  /plumbbob:build 6-9 · opus   ← next',
+        '        stop: review the card on a live boundary before the skills teach it',
+        '        ⚠ needs a re-cut: the build order puts step 11 inside it',
+        '    4  /plumbbob:build 10 · fable',
+        "        stop: at step 10's pause, pick the label the docs will name",
+        '  ⚠ no range names steps 11, 12',
+        '  ⚠ item 5 under Build ranges does not parse',
+      ].join('\n'),
+    )
+    expect(out).toContain('  ranges  2 of 5 done')
+    expect(out).toContain('next → build step 6 — `/plumbbob:build` (or `/plumbbob:step` to revise it first)')
+  })
+
+  it('keeps the pointer as it reads today with a step in flight or a step asked for', () => {
+    expect(dashboard(ranged([1, 2, 3, 4, 5]), { inFlight: 6 })).toContain('next → finish step 6 — `/plumbbob:verify`')
+    expect(dashboard(ranged([1, 2, 3, 4, 5]), { requested: one(8) })).toContain('next → build step 8 — explicitly requested')
+  })
+
+  it("renders no block for a plan without ranges, or with only the template's placeholder", () => {
+    const placeholder = RANGED.replace(
+      /## Build ranges[\s\S]*$/,
+      "## Build ranges\n\n1. `/plumbbob:build <N-M>`, **stop:** <the call that is the human's here>\n   - model: <the strongest model any step inside it recommends>\n",
+    )
+    for (const intent of [ranged([1], RANGED.replace(/## Build ranges[\s\S]*$/, '')), ranged([1], placeholder)]) {
+      const o = orient({ ...base, intent })
+      expect(o.ranges).toBeNull()
+      expect(formatOrientation(o)).not.toContain('ranges')
+      expect(o.next).toBe('build step 2 — `/plumbbob:build` (or `/plumbbob:step` to revise it first)')
+    }
+  })
+})
+
 describe('the park counts', () => {
   it('parseParkTotals counts the open items and every item; parseParked keeps its open count', () => {
     expect(parseParkTotals(BUILDLOG)).toEqual({ open: 2, total: 2 })
@@ -1102,6 +1209,7 @@ Five commands drive the build. Two stops are calls made at a step's own pause, a
       expect(ranges.map((r) => r.item)).toEqual([1, 2, 3, 4, 5])
       expect(ranges[1]).toEqual({
         item: 2,
+        command: '/plumbbob:build 2-5',
         steps: [{ from: 2, to: 5 }],
         bare: false,
         stop: 'review the parser before the renderers build on it',
@@ -1110,6 +1218,7 @@ Five commands drive the build. Two stops are calls made at a step's own pause, a
       })
       expect(ranges[3]).toEqual({
         item: 4,
+        command: '/plumbbob:build 10',
         steps: [{ from: 10, to: 10 }],
         bare: true,
         stop: "at step 10's pause, pick the label the docs will name",
@@ -1315,6 +1424,11 @@ Five commands drive the build. Two stops are calls made at a step's own pause, a
       // With no range that parses, no step sits outside one: only the item is reported.
       const broken = standing(plan({ ranges: items('1. `/plumbbob:build 1-12`') }), 1)
       expect(broken).toMatchObject({ count: 1, flag: null, drift: [{ kind: 'malformed', item: 1, words: 'item 1 under Build ranges does not parse' }] })
+    })
+
+    it('keeps the command as the plan wrote it, spacing and all', () => {
+      const { ranges } = parseBuildRanges(plan({ ranges: items('1. `/plumbbob:build 20, 5-9`, **stop:** review it') }))
+      expect(ranges[0]?.command).toBe('/plumbbob:build 20, 5-9')
     })
 
     it("lists each range's reports in the plan's order, then the steps no range names, then the items that do not parse", () => {

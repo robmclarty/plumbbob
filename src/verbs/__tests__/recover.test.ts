@@ -257,6 +257,29 @@ describe('recover — the build order names the plan', () => {
     expect(readFileSync(intentPath(dir), 'utf8')).toBe(intent)
   })
 
+  it('flags a build range naming a step the plan lacks beside the order, and never rewrites the plan', async () => {
+    const dir = await started()
+    const intent = `${INTENT}\n## Build order\n\n2, 1\n\n## Build ranges\n\n1. \`/plumbbob:build 1-2\`, **stop:** review it\n2. \`/plumbbob:build 4\`, **stop:** decide it\n`
+    writeFileSync(intentPath(dir), intent)
+    const { code, stdout } = captureIo(() => recover(dir, ['--fix']))
+    expect(code).toBe(1)
+    expect(stdout).toContain('✓ build order: every step it lists is planned (2, 1)')
+    expect(stdout).toContain('range 2 names a step the plan lacks: step 4 is not in the plan')
+    expect(stdout).toContain('/plumbbob:refine')
+    expect(stdout.indexOf('build order')).toBeLessThan(stdout.indexOf('build ranges'))
+    expect(readFileSync(intentPath(dir), 'utf8')).toBe(intent)
+  })
+
+  it('reads ranges the plan holds as consistent, and a plan with none as nothing to say', async () => {
+    const dir = await started()
+    writeFileSync(intentPath(dir), `${INTENT}\n## Build ranges\n\n1. \`/plumbbob:build 1-2\`, **stop:** review it\n`)
+    const ranged = captureIo(() => recover(dir, []))
+    expect(ranged.code).toBe(0)
+    expect(ranged.stdout).toContain('✓ build ranges: every step they name is planned (1 range)')
+    writeFileSync(intentPath(dir), INTENT)
+    expect(captureIo(() => recover(dir, [])).stdout).not.toContain('build ranges')
+  })
+
   it('reads a build order the plan holds as consistent, and a plan with none as nothing to say', async () => {
     const dir = await started()
     writeFileSync(intentPath(dir), `${INTENT}\n## Build order\n\n2, 1\n`)

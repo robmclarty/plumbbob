@@ -19,7 +19,7 @@
 
 import { existsSync, readFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
-import { parseBuildOrder, parseSteps } from '../lib/orient.ts'
+import { parseBuildOrder, parseBuildRanges, parseOrderedSteps, parseSteps, rangeStanding } from '../lib/orient.ts'
 import {
   activeBuild,
   checkpointsPath,
@@ -134,6 +134,7 @@ function sessionFindings(root: string): ReadonlyArray<Finding> {
   const stepInFlight = existsSync(stepPath(root, slug))
   findings.push(...phaseFindings(root, slug, stepInFlight))
   findings.push(...orderFindings(root, slug))
+  findings.push(...rangeFindings(root, slug))
   findings.push(...leftoverFindings(root, slug, stepInFlight))
   return findings
 }
@@ -164,6 +165,36 @@ function orderFindings(root: string, slug: string): ReadonlyArray<Finding> {
       ok: false,
       detail: `the build order names step${unknown.length === 1 ? '' : 's'} ${unknown.join(', ')}, which the plan does not hold (planned: ${planned.join(', ')})`,
       hint: 'rewrite the line with plumbbob order <n>…, or plumbbob order --reset to read the plan in document order',
+    },
+  ]
+}
+
+/**
+ * A build range naming a step the plan does not hold.
+ *
+ * The section under `## Build ranges` is hand-editable, and a refine can drop
+ * a step a range names; the card then suggests no command for that range, and
+ * the dashboard says why. Reported beside the build order's own finding, never
+ * repaired: where the stop belongs now is the human's call. Silent while the
+ * plan declares no ranges.
+ */
+function rangeFindings(root: string, slug: string): ReadonlyArray<Finding> {
+  const intent = readOr(intentPath(root, slug))
+  const plan = parseBuildRanges(intent)
+  if (plan.ranges.length === 0) {
+    return []
+  }
+  const missing = rangeStanding(plan, parseOrderedSteps(intent), null).drift.filter((d) => d.kind === 'missing')
+  if (missing.length === 0) {
+    const count = `${plan.ranges.length} range${plan.ranges.length === 1 ? '' : 's'}`
+    return [{ name: 'build ranges', ok: true, detail: `every step they name is planned (${count})` }]
+  }
+  return [
+    {
+      name: 'build ranges',
+      ok: false,
+      detail: missing.map((d) => `range ${d.item} names a step the plan lacks: ${d.words}`).join('; '),
+      hint: 're-cut the range under ## Build ranges by hand, or with /plumbbob:refine',
     },
   ]
 }
