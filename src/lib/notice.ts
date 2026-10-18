@@ -79,6 +79,9 @@ export type Ending = {
   // The advisories qualifying the lead, one rendered entry each, in the order
   // they were found.
   readonly advisories?: ReadonlyArray<string>
+  // Why the build stops here: the Stop part, on the one boundary where a
+  // range's last step landed. Absent everywhere else.
+  readonly stop?: string | null
   // The Next Up pointer `handoff` rendered. Absent only where no step is left
   // to point at.
   readonly pointer?: string | null
@@ -135,13 +138,14 @@ export function advisory(a: Advisory): string {
 
 /**
  * Assemble a transition's whole ending: the labeled lead line, the Verdict
- * where one was measured, the advisories, and the pointer.
+ * where one was measured, the advisories, the Stop part where a range landed,
+ * and the pointer.
  *
  * The order is the type's field order, so a verb composes parts and never a
  * sequence. A part with nothing in it vanishes rather than leaving a gap.
  */
 export function ending(e: Ending): string {
-  return blocks([e.lead, e.verdict ?? null, ...(e.advisories ?? []), e.pointer ?? null])
+  return blocks([e.lead, e.verdict ?? null, ...(e.advisories ?? []), e.stop ?? null, e.pointer ?? null])
 }
 
 /**

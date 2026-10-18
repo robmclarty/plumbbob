@@ -42,7 +42,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { type NumstatEntry, PLAN_COMMIT_MARKER, commitsSince, diffNumstat, diffPatch, findRepoRoot } from '../lib/git.ts'
-import { blocks, printEnding } from '../lib/notice.ts'
+import { blocks, printEnding, transition } from '../lib/notice.ts'
 import { isArtifactPath, parseStepSeam } from '../lib/intent.ts'
 import {
   buildLogPath,
@@ -207,11 +207,12 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   // which pause to render.
   const pending = inFlight !== null || (explicit !== undefined && steps.some((s) => s.n === current && !s.done))
   if (!pending) {
-    // The boundary: the orientation-tier ending, the state word and the forward
-    // pointer, no decision pending and so no Your Call. The same two parts the
-    // checkpoint printed for itself, from the same call.
+    // The boundary: the orientation-tier ending, the state word, the Stop part
+    // where a range just landed, and the forward pointer, no decision pending
+    // and so no Your Call. The same parts the checkpoint printed for itself,
+    // from the same call.
     const landed = boundaryEnding(root, slug, current)
-    return emit(root, { tier: 'orientation', render: 'boundary' }, [landed.verdict, landed.pointer])
+    return emit(root, { tier: 'orientation', render: 'boundary' }, [landed.verdict, landed.stop, landed.pointer])
   }
 
   // The pause: the whole turn as one contiguous block, each part a labeled line
@@ -335,27 +336,56 @@ function writePause(root: string, slug: string | null, stamp: string): void {
 }
 
 /**
- * The two CLI-rendered parts of a boundary ending: the Verdict folded from
- * everything measurable right now, and the pointer at the step to come.
+ * The CLI-rendered parts of a boundary ending: the Verdict folded from
+ * everything measurable right now, the Stop part when the landing finished a
+ * range, and the pointer at the step to come.
  *
  * `step` is the step that just landed, or null at a plan commit, where nothing
- * was measured and the Verdict vanishes. A transition verb prints these beneath
- * its own lead line, so a boundary reads identically whether `checkpoint`
- * emitted it or a later `handoff` did; the paths a stray advisory named are the
- * one part that does not survive, and the commit holds those.
+ * was measured and the Verdict and the Stop part both vanish. A transition verb
+ * prints these beneath its own lead line, so a boundary reads identically
+ * whether `checkpoint` emitted it or a later `handoff` did; the paths a stray
+ * advisory named are the one part that does not survive, and the commit holds
+ * those.
  */
 export function boundaryEnding(root: string, slug: string | null, step: number | null): BoundaryEnding {
   const intent = readOr(intentPath(root, slug))
   const steps = parseOrderedSteps(intent)
   const nextUp = steps.find((s) => !s.done && s.n !== step)
+  const where = relative(root, intentPath(root, slug))
   return {
     verdict: step === null ? null : landedVerdict(root, slug, intent, step),
-    pointer: nextUpBlock(intent, readOr(buildLogPath(root, slug)), nextUp, step, relative(root, intentPath(root, slug))),
+    stop: stopLine(intent, steps, step, where),
+    pointer: nextUpBlock(intent, readOr(buildLogPath(root, slug)), nextUp, step, where),
   }
 }
 
-/** A boundary ending's CLI-rendered parts: the Verdict, where one was measured, and the pointer. */
-export type BoundaryEnding = { readonly verdict: string | null; readonly pointer: string }
+/** A boundary ending's CLI-rendered parts: the Verdict and the Stop part, where either applies, and the pointer. */
+export type BoundaryEnding = { readonly verdict: string | null; readonly stop: string | null; readonly pointer: string }
+
+/**
+ * The Stop part: why the build stops at this boundary, when the step that
+ * landed was the last undone step of a range that lands its steps. One labeled
+ * line, the range over the count, a plain hyphen, the stop as the plan wrote
+ * it, and a bracket pointing at the item, where its note can be read.
+ *
+ * Null for every other boundary: a landing that leaves the range open, a bare
+ * range (its stop was its own pause), a plan without ranges, and the plan
+ * commit, where nothing landed.
+ */
+function stopLine(intent: string, steps: ReadonlyArray<Step>, step: number | null, where: string): string | null {
+  if (step === null) {
+    return null
+  }
+  const { count, completed } = rangeStanding(parseBuildRanges(intent), steps, step)
+  if (completed === null || completed.bare) {
+    return null
+  }
+  return transition({
+    label: 'Stop',
+    fact: `Range ${completed.item} of ${count} landed - ${completed.stop}`,
+    detail: [`details: \`${where}:${completed.line}\``],
+  })
+}
 
 /**
  * The step's record for the build-log's Log: the pause as the human approved

@@ -162,6 +162,7 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
       lead: transition({ label: 'Checkpoint', fact: `Step ${step} complete`, detail: leadDetail(sha, pointer) }),
       verdict: landed.verdict,
       advisories: [drift, flipNotice],
+      stop: landed.stop,
       pointer: landed.pointer,
     }),
   })

@@ -66,9 +66,14 @@ const TIER_PARTS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
   decision: ['Now', 'Summary', 'Readout', 'Verdict', 'Next Up', 'Your Call', 'Recommendation'],
   plan: ['Next Up', 'Your Call', 'Recommendation'],
   reminder: ['Next Up'],
-  boundary: ['Verdict', 'Next Up'],
+  boundary: ['Verdict', 'Stop', 'Next Up'],
   driver: ['Next Up'],
 }
+
+// The parts a tier may carry without owing them. The Stop part rides only the
+// boundary where a range's last step landed, so a boundary without it is whole,
+// and one with it still has to stand it between the Verdict and Next Up.
+const OPTIONAL_PARTS: ReadonlySet<string> = new Set(['Stop'])
 
 // What each tier must NOT render. The Your Call block belongs only where a
 // decision is pending; a Verdict only where something was measured; the Now
@@ -92,7 +97,7 @@ const TIER_FORBIDS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
 const CHECK_ROW = 'check'
 
 export function tierParts(tier: Tier): ReadonlyArray<string> {
-  return TIER_PARTS[tier]
+  return TIER_PARTS[tier].filter((part) => !OPTIONAL_PARTS.has(part))
 }
 
 // Read a turn's text as an ending. Lines are classified, never matched
@@ -213,9 +218,10 @@ function splitMidLineLabels(lines: ReadonlyArray<string>): ReadonlyArray<string>
   return out
 }
 
-// The tier's parts that never showed up, in the tier's own order.
+// The tier's parts that never showed up, in the tier's own order. A part the
+// tier may leave out is never missing.
 export function missingParts(a: Anatomy, tier: Tier): ReadonlyArray<string> {
-  return TIER_PARTS[tier].filter((part) => !a.trailingLabels.includes(part))
+  return tierParts(tier).filter((part) => !a.trailingLabels.includes(part))
 }
 
 // The parts this tier forbids that showed up anyway.

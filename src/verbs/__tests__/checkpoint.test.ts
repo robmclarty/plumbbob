@@ -3,6 +3,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync }
 import { join, relative } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { checkpoint } from '../checkpoint.ts'
+import { handoff } from '../handoff.ts'
 import { start } from '../start.ts'
 import { buildLogPath, checkpointsPath, detailPath, grantPath, handoffPath, hasSession, intentPath, readRelay, readStats, stampStepStat, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
 import { gitPath } from '../../lib/git.ts'
@@ -10,7 +11,7 @@ import { advisory, ending, notice, transition } from '../../lib/notice.ts'
 import { setLocalSetting, settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { cleanupFixtures, makeFixtureRepo, runCli } from '../../../test/helpers/fixture-repo.ts'
-import { captureIoAsync } from '../../../test/helpers/capture-io.ts'
+import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 import { runCliWithSocketStdin } from '../../../test/helpers/socket-stdin.ts'
 
 afterAll(cleanupTempRepos)
@@ -879,6 +880,26 @@ describe('checkpoint — the range segment beneath Next Up', () => {
     expect(stdout).toContain(
       '**Next Up**: Step 1 of 3 - First (details: `.plumbbob/builds/checkpoint-test/intent.md:5`)\n  · range 1 of 2: /plumbbob:build 1\n',
     )
+  })
+
+  it('says why the build stops when a landing finishes a range, and a later handoff says it the same way', async () => {
+    const dir = await startedGreen()
+    writeFileSync(intentPath(dir), RANGED.replace('1. [ ]', '1. [x]').replace('2. [ ]', '2. [x]'))
+    const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['3']))
+    expect(code).toBe(0)
+    const stop = '**Stop**: Range 2 of 2 landed - review the parser (details: `.plumbbob/builds/checkpoint-test/intent.md:16`)'
+    expect(stdout).toContain(`\n\n${stop}\n\n**Next Up**: Nothing planned`)
+    const later = captureIo(() => handoff(dir, [])).stdout
+    expect(later).toContain(`\n\n${stop}\n\n**Next Up**: Nothing planned`)
+    // The landed parts read identically: the boundary is the same one.
+    expect(stdout.slice(stdout.indexOf('**Verdict**'))).toBe(later)
+  })
+
+  it('prints no Stop part for a bare range, or on the plan commit', async () => {
+    const dir = await startedGreen()
+    writeFileSync(intentPath(dir), RANGED)
+    expect((await captureIoAsync(() => checkpoint(dir, ['--plan']))).stdout).not.toContain('**Stop**')
+    expect((await captureIoAsync(() => checkpoint(dir, ['1']))).stdout).not.toContain('**Stop**')
   })
 
   it("names the next range on the boundary a landing prints, with the range's model in bold", async () => {

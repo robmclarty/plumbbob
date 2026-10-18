@@ -935,6 +935,20 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
     expect(shapeDetail(readAnatomy(backwards), 'boundary')).toBe('out of order: Next Up > Verdict')
   })
 
+  it('accepts the Stop part on a boundary between the Verdict and Next Up, and never owes it', () => {
+    const stop = '**Stop**: Range 3 of 5 landed - review the card (details: `x/intent.md:63`)'
+    const pointer = '**Next Up**: Step 10 of 12 - Tenth (details: `x/intent.md:34`)'
+    const lead = '**Checkpoint**: Step 9 complete (c7d8e9f0a)'
+    const whole = readAnatomy([lead, '', '**Verdict**: ● Plumb', '', stop, '', pointer, ''].join('\n'))
+    expect(whole.strays).toEqual([])
+    expect(endingRenders(whole, 'boundary')).toBe(true)
+    expect(transitionLabel(whole)).toBe('Checkpoint')
+    const late = readAnatomy([lead, '', '**Verdict**: ● Plumb', '', pointer, '', stop, ''].join('\n'))
+    expect(shapeDetail(late, 'boundary')).toBe('out of order: Checkpoint > Verdict > Next Up > Stop')
+    expect(missingParts(readAnatomy([lead, '', '**Verdict**: ● Plumb', '', pointer, ''].join('\n')), 'boundary')).toEqual([])
+    expect(tierParts('boundary')).toEqual(['Verdict', 'Next Up'])
+  })
+
   it('keeps the advisory and its remedy inside the ending, not outside it', () => {
     const boundary = [
       '**Checkpoint**: Step 16 complete (f2b83e17c)',

@@ -165,6 +165,33 @@ describe('ending — D43 (verb-prints-its-ending)', () => {
     )
   })
 
+  it('stands the Stop part after the advisories and before the pointer', () => {
+    const stop = transition({ label: 'Stop', fact: 'Range 3 of 5 landed - review the card', detail: ['details: `x/intent.md:63`'] })
+    expect(
+      ending({
+        lead: transition({ label: 'Checkpoint', fact: 'Step 9 complete', detail: ['c7d8e9f0a'] }),
+        verdict: '**Verdict**: ● Plumb',
+        advisories: [advisory({ fact: 'the plan rides the commit message' })],
+        stop,
+        pointer: '**Next Up**: Step 10 of 12 - feat(docs): name the label',
+      }),
+    ).toBe(
+      [
+        '**Checkpoint**: Step 9 complete (c7d8e9f0a)',
+        '',
+        '**Verdict**: ● Plumb',
+        '',
+        'The plan rides the commit message ⚠',
+        '',
+        '**Stop**: Range 3 of 5 landed - review the card (details: `x/intent.md:63`)',
+        '',
+        '**Next Up**: Step 10 of 12 - feat(docs): name the label',
+        '',
+        '',
+      ].join('\n'),
+    )
+  })
+
   it('vanishes the parts a transition does not have rather than leaving a gap', () => {
     expect(ending({ lead: transition({ label: 'Parked', fact: 'throttle /password-reset too (tangent)' }) })).toBe(
       '**Parked**: throttle /password-reset too (tangent)\n\n',

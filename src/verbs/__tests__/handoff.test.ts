@@ -1082,6 +1082,38 @@ describe('handoff — the range segment beneath Next Up', () => {
   })
 })
 
+describe('handoff — the Stop part on the boundary where a range landed', () => {
+  /** The Stop line for RANGED's range 2, as a boundary prints it. */
+  const stopOf = (dir: string) =>
+    `**Stop**: Range 2 of 3 landed - review the parser before the card reads it (details: \`${relative(dir, intentPath(dir))}:24\`)`
+
+  it('says why the build stops when the step that landed finished a range, between the Verdict and Next Up', async () => {
+    const dir = await started(rangedWith([1, 2, 3]))
+    writeFileSync(checkpointsPath(dir), 'step 3 abc1234\n')
+    const { stdout } = captureIo(() => handoff(dir, []))
+    expect(stdout).toMatch(/^\*\*Verdict\*\*: .*\n\n/)
+    expect(stdout).toContain(`\n\n${stopOf(dir)}\n\n**Next Up**: Step 4 of 4 - Fourth`)
+  })
+
+  it('prints the line when a step landed by hand finishes the range out of order', async () => {
+    const dir = await started(rangedWith([1, 3, 2]))
+    writeFileSync(checkpointsPath(dir), 'step 3 abc1234\nstep 2 def5678\n')
+    expect(captureIo(() => handoff(dir, [])).stdout).toContain(stopOf(dir))
+  })
+
+  it('prints no Stop part for a landing that leaves the range open, a bare range, or a plan without ranges', async () => {
+    const open = await started(rangedWith([1, 2]))
+    writeFileSync(checkpointsPath(open), 'step 2 abc1234\n')
+    expect(captureIo(() => handoff(open, [])).stdout).not.toContain('**Stop**')
+    const bare = await started(rangedWith([1]))
+    writeFileSync(checkpointsPath(bare), 'step 1 abc1234\n')
+    expect(captureIo(() => handoff(bare, [])).stdout).not.toContain('**Stop**')
+    const plain = await started(rangedWith([1, 2, 3], RANGED.replace(/## Build ranges[\s\S]*$/, '')))
+    writeFileSync(checkpointsPath(plain), 'step 3 abc1234\n')
+    expect(captureIo(() => handoff(plain, [])).stdout).not.toContain('**Stop**')
+  })
+})
+
 const REMINDER = '**Next Up**: Back to Step 2 of 3 - Second\n\n'
 
 /** Step 2 at its pause: a one-line change in its seam, a detail file, and a green gate. */

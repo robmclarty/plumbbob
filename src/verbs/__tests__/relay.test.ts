@@ -425,6 +425,24 @@ describe('relay — the holds the 2026-10-17 A/B made, replayed — D19 (facts-e
     expect(held(relayCheck(dir, stop(dir, { last: `${card}${card.replace('**Verdict**: ', '**Verdict**: ✗ ')}` })))).not.toBeNull()
   })
 
+  it('lets a boundary relayed whole with its Stop part through, and holds one that dropped it', async () => {
+    const dir = await paused()
+    const text = ending({
+      lead: transition({ label: 'Checkpoint', fact: 'Step 3 complete', detail: ['b4c5d6e7f'] }),
+      verdict: '**Verdict**: ● Plumb',
+      stop: transition({ label: 'Stop', fact: 'Range 2 of 2 landed - review the parser', detail: ['details: `x/intent.md:16`'] }),
+      pointer: '**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish',
+    })
+    writeRelay(dir, { tier: 'orientation', render: 'checkpoint', text })
+    const path = transcript(dir, ['Landing it now.'])
+    expect(held(relayCheck(dir, stop(dir, { last: text, transcript: path })))).toBeNull()
+    writeFileSync(turnPath(dir), '5\n')
+    writeRelay(dir, { tier: 'orientation', render: 'checkpoint', text })
+    const dropped = text.replace(/\*\*Stop\*\*:.*\n\n/, '')
+    expect(dropped).not.toContain('**Stop**')
+    expect(held(relayCheck(dir, stop(dir, { last: dropped, transcript: path })))).not.toBeNull()
+  })
+
   it('lets a boundary through with its lead reworded, and holds one whose Verdict changed', async () => {
     const dir = await paused()
     const block = recordBoundary(dir)
