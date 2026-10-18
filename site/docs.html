@@ -386,7 +386,7 @@ class Component extends DCLogic {
 
     const happyPath = [
       ['/plumbbob:plan', 'Plan the whole goal — open the session and author intent\'s Frame, Decisions, Constraints, and all Steps. Commits the plan on its own so the first step\'s diff stays clean.'],
-      ['/plumbbob:build', 'Implement the next planned step, then verify it to the pause. --auto self-approves and chains to done; a range like 1-3 stops after step 3.'],
+      ['/plumbbob:build', 'Implement the next planned step, then verify it to the pause. --auto self-approves and chains to done; a range like 1-3 or a list like 20,5-9 lands exactly the steps it names, then stops.'],
       ['/plumbbob:finish', 'Write the report, make the final commit, clear for a fresh goal. The build folder rides the branch into the PR.'],
     ].map(([skill, does], i) => ({ skill, does, bg: i % 2 ? '#E1DCF0' : '#ECEAF4' }));
 

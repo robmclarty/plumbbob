@@ -19,8 +19,8 @@ lands; [**D33 (info-exclude)**](#d33)–[**D38 (cli-owns-slugs)**](#d38) below c
 [**D76 (resolved-on-opener)**](#d76)–[**D77 (placeholder-uncounted)**](#d77) from the 2026-07-18
 intent-legibility build, and [**D80 (cli-renders-model-relays)**](#d80)–[**D84 (one-liner-register)**](#d84)
 from the 2026-08-28 presentation build, and [**D87 (pause-once)**](#d87)–[**D89 (block-once)**](#d89)
-from the 2026-10-08 said-once-said-whole build, and [**D90 (notice-not-turn)**](#d90) from the
-2026-10-17 build-ranges build.)
+from the 2026-10-08 said-once-said-whole build, and [**D90 (notice-not-turn)**](#d90)–[**D91 (step-list-grants)**](#d91)
+from the 2026-10-17 build-ranges build.)
 
 ## Constraints (C)
 
@@ -393,7 +393,9 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   top-of-range affordance. The `GRANT` file is the *only* self-approval: the [**D27 (settings-ladder)**](#d27) `auto`
   settings key is not a grant ([**D67 (auto-not-a-grant)**](#d67)). (Amended 2026-10-17: the tick that
   rewrites `GRANT` is a typed prompt's, and a background job's notice leaves the grant standing, so a
-  range survives a job that reports back partway through it ([**D90 (notice-not-turn)**](#d90)).)
+  range survives a job that reports back partway through it ([**D90 (notice-not-turn)**](#d90)). A typed
+  range now mints `steps <list>`, exactly the steps it names, and `range M` is the form a hook from
+  before that rule mints, which still lands with its ceiling ([**D91 (step-list-grants)**](#d91)).)
   *Tagged in* `turn.ts`, `latch.ts`, `sidecar.ts`.
 - <a id="d66"></a>**D66 (oob-commits-surfaced): Out-of-band commits are surfaced, never blocked.** The human commits freely
   ([**C5 (additive-git)**](#c5)); a raw `git commit` the model issues while a step is in flight becomes a permission
@@ -805,7 +807,11 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   range contract caught models taking it: the top step sat at a pause in 2 of 4 runs across the
   2026-09-03 and 2026-09-05 sweeps, where 0.9.0 had landed it in 5 of 5. (Revised 2026-09-16, after
   0.12.0: the `build` line also names the last step an `--auto` run or an overlong range reaches,
-  because the end of the plan is the other clean halt, and the eval tier's contract 9 measures it.) Amends
+  because the end of the plan is the other clean halt, and the eval tier's contract 9 measures it.)
+  (Revised 2026-10-17: a range may list its steps, and it lands exactly the steps it names, walked in
+  build order from its first undone one and halted before the first step it does not name, so `N-M`
+  grants N through M where the latch used to allow every step under M; the top is the last undone step
+  the range names ([**D91 (step-list-grants)**](#d91)).) Amends
   [**D56 (auto-composes)**](#d56) and [**D83 (card-teaches-itself)**](#d83). *Tagged in* the `build`
   skill, `docs/presentation.md`, and `docs/cli-reference.md`.
 
@@ -956,6 +962,35 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   the 2026-10-17 build-ranges build, merging its locals `notice-not-turn` and `notice-clears-relay`.
   *Evidence in* `.plumbbob/builds/2026-10-17-build-ranges/spike-01-task-notice.md`. *Tagged in*
   `docs/cli-reference.md` and `docs/state-and-git.md`.
+
+- <a id="d91"></a>**D91 (step-list-grants): A range may list its steps, and it grants exactly the steps it
+  names, walked in build order.** A typed range is a span `N-M` or numbers and spans joined by commas
+  (`20,5-9`). The turn hook mints a `GRANT` of exactly that set, stored in its normal form
+  (`steps 5-9,20`, never expanded, so `1-100000` stays one short line), and the latch lands a step the
+  set names and refuses any other by name, *because* the set is fixed by what the human typed, so no
+  later edit to the plan or its build order can widen it. Reading `N-M` as "through M in build order"
+  would have been shorter to type, but it lets the model widen a grant by reordering the plan, the side
+  door [**D67 (auto-not-a-grant)**](#d67) closed for settings. Ranges needed this once the build order
+  ([**D86 (build-order)**](#d86)) re-sequenced a stretch. A range named plan numbers and landed every
+  step up to its top, so a step appended later and ordered inside a stretch cut the range short or split
+  it: on 2026-10-16 checkride's `48-57` could reach only 51 with step 76 next, and fascicle's run of
+  steps 20 and 5 to 9 had to be typed as two. A plain `N-M` now grants exactly N through M, which is what
+  [**D85 (range-top-lands)**](#d85) always said it did, where the latch used to allow every step under M.
+  Once any number in the argument run carries a comma or a dash, every number and span in the run joins
+  one set, *because* `20, 5-9` typed with a space read as `range 9`, which refused the range's first
+  step. Bare numbers alone still mint nothing, a comma after the run's last number belongs to the
+  sentence, and a range that does not parse mints nothing even beside `--auto`, so a typo never widens
+  into an unbounded grant. A set has no order of its own, so the build order supplies one: a range starts
+  at its first undone step in build order however it is written, walks forward in build order, and halts
+  before the first step it does not name. `status --invoked` points the dashboard at that first step, and
+  `plumbbob build` names the last undone step the range holds as its top. One pure module,
+  `src/lib/steplist.ts`, holds the grammar, and the hook, the latch, `build`, and the dashboard all read
+  it, so no two of them can read one set of keystrokes two ways. A `range M` grant, the form a hook from
+  before this rule mints, still lands with its ceiling, so a session whose installed plugin predates the
+  change keeps its ranges. Amends [**D65 (human-typed-grants)**](#d65), whose `GRANT` gains the
+  `steps` form, and [**D85 (range-top-lands)**](#d85). Promoted from the 2026-10-17 build-ranges build,
+  merging its locals `step-list-grants` and `list-reading`. *Tagged in* the `build` skill,
+  `docs/cli-reference.md`, and `docs/state-and-git.md`.
 
 ### Superseded
 

@@ -1,7 +1,7 @@
 ---
 name: build
-description: "The default engine: read the next planned step from intent, implement it (its done-when, seam, Decisions, Constraints), then verify it through to the approval pause. Swappable: build by hand/vibed/another harness and run /plumbbob:verify instead. `--auto` self-approves and chains to done; a step range like `1-3` self-approves through step 3, then stops."
-argument-hint: "[step-number | step-range] [--auto]"
+description: "The default engine: read the next planned step from intent, implement it (its done-when, seam, Decisions, Constraints), then verify it through to the approval pause. Swappable: build by hand/vibed/another harness and run /plumbbob:verify instead. `--auto` self-approves and chains to done; a step range like `1-3`, or a list like `20,5-9`, self-approves exactly the steps it names, in build order, then stops."
+argument-hint: "[step-number | step-range | step-list] [--auto]"
 disable-model-invocation: true
 allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob park:*), Bash(plumbbob agent:*), Bash(plumbbob spike:*), Bash(git diff:*)
 ---
@@ -35,9 +35,10 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
 ## What this skill does, in order
 
 1. **Pick the step.** Use the number you were invoked with (for example `/plumbbob:build 4`), or,
-   if you were given a range like `/plumbbob:build 1-3`, start at the first number and treat
-   the second as the last step you approve and land yourself (see the range note under
-   `--auto`). With no argument, don't resolve the next step yourself; the CLI does: bare `plumbbob build`
+   if you were given a range like `/plumbbob:build 1-3` or a list like `/plumbbob:build 20,5-9`,
+   start at its first undone step in build order, the one the dashboard above marks
+   `← requested`, and land only the steps it names (see the range note under `--auto`).
+   With no argument, don't resolve the next step yourself; the CLI does: bare `plumbbob build`
    (step 2) enters the next undone step in build order (the `## Build order` line when the
    plan has one, else the numbering) and refuses with a `/plumbbob:step` nudge when every
    step is checkpointed.
@@ -287,7 +288,8 @@ and approves in the human's place**, and it **chains**:
     advance the loop), or a new decision is needed. The step is still in flight and the
     human has a call to make about it, so end on the same turn the default pause does:
     write the detail file, run `plumbbob handoff`, and paste its block.
-  - **A clean halt lands its step first.** The top of a requested range is reached, or no
+  - **A clean halt lands its step first.** The top of a requested range is reached (the
+    next step in build order is one the range does not name, or none is left), or no
     planned steps remain, and `plumbbob build` names that step as it enters it (for
     example `step 3 is the last undone step in the plan`). That step checkpoints like
     every step before it, and its
@@ -302,36 +304,45 @@ only because the human asked for it by name. A range hands the clock back once i
 step has landed: the step after it waits for the human's next run. The default (no flag,
 no range) always ends at the pause.
 
-### A step range (`N-M`) is a bounded `--auto`
+### A step range (`N-M`, or a list like `20,5-9`) is a bounded `--auto`
 
 `/plumbbob:build 1-3` self-approves steps 1 through 3 exactly as `--auto` does, then **stops
-once step 3 has landed** instead of chaining to done. The range *is* the opt-in; you do not
-also pass `--auto`. Run it as the `--auto` loop with one extra halt: **stop before building
-any next step whose plan number is past the top of the range.** It adds no machinery: just
-the one more entry already in the halt list above, and it is a clean halt, so the top step
-is never held back for approval. The human approved it by typing the range, and
-`plumbbob build` says so as it enters that step:
-`step 3 is the top of the range you granted`, or, when the plan ends first,
+once step 3 has landed** instead of chaining to done. A range may also list its steps, numbers
+and spans joined by commas (`/plumbbob:build 20,5-9`, typed with or without a space after a
+comma), and it grants exactly the steps it names: the checkpoint refuses any other
+([D91 (step-list-grants)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d91)).
+The range *is* the opt-in; you do not also pass `--auto`.
+
+Run it as the `--auto` loop, walked in build order. **Start at the range's first undone step
+in build order, however it is written** (`5-9,20` under an order that puts 20 first starts at
+20), and after each landing take the next undone step in build order. Build it if the range
+names it; **stop before building any step the range does not name**, or once none is left. It
+adds no machinery: just the one more entry already in the halt list above, and it is a clean
+halt, so the top step is never held back for approval. The human approved it by typing the
+range, and `plumbbob build` says so as it enters that step:
+`step 3 is the top of the range you granted`, or, when the walk ends early (the plan runs
+out, or the next step in build order is one the range does not name),
 `the last undone step in the range you granted`.
 
-- **`N-M` with N ≤ M**: build N…M, self-approving and checkpointing each, M included, then
-  relay M's checkpoint block and end the turn. `N-N` is a range like any other: it builds
-  and lands the single step `N`. Only a bare `/plumbbob:build N` ends at the pause.
-- **N > M** (for example `3-1`): that is not a range you can walk; report it and stop rather
-  than guess the intent.
-- **M past the last planned step** (for example `1-9` with three steps): build through the
-  last planned step and stop; that is the existing "no planned steps remain" halt, not
-  an error.
-- **A step inside the range won't build** (missing, or its seam won't parse): `plumbbob
-  build <n>` fails exactly as it always does; surface it and stop, the same as a red
-  check. Do not skip past the gap.
-- **N is above the next undone step**: you are jumping over earlier planned work; note
-  that you are skipping the steps before N, then proceed (the same latitude as a
+- **A range that parses**: build each step it names in build order, self-approving and
+  checkpointing each, the last included, then relay the last one's checkpoint block and end
+  the turn. `N-N` is a range like any other: it builds and lands the single step `N`. Only a
+  bare `/plumbbob:build N` ends at the pause.
+- **A range that does not parse** (for example `3-1`, or `1--3`): that is not a range you can
+  walk, and it grants nothing; report it and stop rather than guess the intent.
+- **A number past the last planned step** (for example `1-9` with three steps): build through
+  the last planned step the range names and stop; that is the existing "no planned steps
+  remain" halt, not an error. A number the plan lacks is never reached.
+- **A step inside the range won't build** (its seam won't parse): `plumbbob build <n>` fails
+  exactly as it always does; surface it and stop, the same as a red check. Do not skip past
+  the gap.
+- **The range starts above the next undone step**: you are jumping over earlier planned work;
+  note that you are skipping the steps before it, then proceed (the same latitude as a
   single-number jump like `/plumbbob:build 4`).
-- **The build order puts a number past the top ahead of the rest** (the order reads
-  `1, 4, 2, 3` under `/plumbbob:build 1-3`): a range names plan numbers, so the halt above
-  fires before step 4 and `plumbbob build` names step 1 as the last undone step in the
-  range. Build a re-sequenced stretch step by step, or grant `--auto`.
+- **The build order puts a step the range does not name inside it** (the order reads
+  `1, 4, 2, 3` under `/plumbbob:build 1-3`): the halt above fires before step 4, and
+  `plumbbob build` names step 1 as the last undone step in the range. The range that walks
+  the whole stretch lists step 4 too (`/plumbbob:build 1-4`, or `/plumbbob:build 1,4,2,3`).
 
 ## The hard contracts
 

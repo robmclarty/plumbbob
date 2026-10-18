@@ -391,7 +391,7 @@ class Component extends DCLogic {
     // skill catalogue: [name, group, does]
     const SKILLS = [
       ['/plumbbob:plan',    'happy path',    'open the session and author the whole plan — Frame, Decisions, Constraints, and all Steps.'],
-      ['/plumbbob:build',   'happy path',    'implement the next planned step, then verify it to the pause. --auto chains to done; a range like 1-3 self-approves through step 3.'],
+      ['/plumbbob:build',   'happy path',    'implement the next planned step, then verify it to the pause. --auto chains to done; a range like 1-3 or a list like 20,5-9 self-approves exactly the steps it names.'],
       ['/plumbbob:finish',  'happy path',    'write the report, make the final commit, and clear the slate for a fresh goal.'],
       ['/plumbbob:step',    'plan-shaping',  'revise or sharpen the next step just-in-time. Empty input auto-syncs it to reality.'],
       ['/plumbbob:refine',  'plan-shaping',  'attack the frame for holes as Open questions, or repair a plan that drifted from the code.'],

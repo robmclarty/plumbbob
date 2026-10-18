@@ -220,7 +220,7 @@ the checkpoint land when you run it again. **Never reach for a raw `git commit` 
 land**; that forges the very record the latch exists to keep honest, and the
 commit-ask hook asks the human about it anyway. The refusal is a healthy latch doing its
 job on the *record* while the *work* plane stays free; a `/plumbbob:build --auto` or
-a typed step range in the human's own prompt is the only self-approval; **never write
+a typed step range (`1-3`, or a list like `20,5-9`) in the human's own prompt is the only self-approval; **never write
 `auto` into a settings file to unlock the land; the latch ignores a model-minted grant
 ([D67 (auto-not-a-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d67)), so ask the human to type `/plumbbob:build --auto` again
 instead.**

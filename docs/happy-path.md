@@ -167,7 +167,8 @@ straight to `/plumbbob:build`.
 
 `/plumbbob:build` is the bundled executor. Called bare, **it picks the next undone step
 automatically** (pass a number only to jump, for example `/plumbbob:build 3`; a range like
-`/plumbbob:build 1-3` auto-approves through step 3, then stops). It reads the step's
+`/plumbbob:build 1-3`, or a list like `/plumbbob:build 20,5-9`, auto-approves exactly the steps
+it names, then stops). It reads the step's
 done-when, seam, Decisions, and Constraints, implements *only that step*, then carries
 straight through the verify tick to the pause.
 
@@ -257,7 +258,7 @@ still nothing lands until you say `looks good`.
 > **cannot** self-checkpoint past you. That refusal *is* this pause: the agent presents
 > the diff and ends its turn, and **your next message is the tick** that lets the
 > checkpoint land. You don't have to trust the agent to stop; the ledger stops it. (Say
-> the word by name, `/plumbbob:build --auto` or a range like `1-3`, and you grant it
+> the word by name, `/plumbbob:build --auto` or a range like `1-3` or `20,5-9`, and you grant it
 > self-approval for that run; that grant can only come from a prompt *you* typed. See
 > [D64 (approval-latch)](decisions.md#d64)–[D66 (oob-commits-surfaced)](decisions.md#d66).)
 
@@ -304,6 +305,7 @@ tick*. The dashboard tracks the march:
 > then chain straight to the next step until the plan is done. It **halts** the moment
 > the check goes red or the self-review finds a mismatch, and hands back to you. A step
 > range like `/plumbbob:build 1-3` bounds this: it self-approves through step 3, then stops.
+> A list like `/plumbbob:build 20,5-9` lands exactly the steps it names, in build order.
 > The default (no flag) always waits at the pause.
 
 ---

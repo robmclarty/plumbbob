@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Build ranges
 
-**Current step:** 3 — feat(grant): let a range list its steps, and land only those steps
+**Current step:** 4 — docs(build): teach the skill and the docs a range that lists its steps
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -25,7 +25,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
 - ☑ 1. chore(turn): spike what the prompt hook gets for a background notice
 - ☑ 2. fix(turn): stop a background job's notice from counting as a human turn
-- ☐ 3. feat(grant): let a range list its steps, and land only those steps
+- ☑ 3. feat(grant): let a range list its steps, and land only those steps
 - ☐ 4. docs(build): teach the skill and the docs a range that lists its steps
 - ☐ 5. docs(presentation): spec the build ranges and the lines that name them
 - ☐ 6. feat(orient): read the build ranges and where the build stands in them
@@ -174,3 +174,45 @@ folder, so it rides the branch into the PR.)*
   **3.** The tests replay all 29 captured prompts in order
 
   `fixtures/notice-payloads.json` holds the spike's 29 payloads, paths trimmed, each labeled by the probe's own typed text rather than by the rule. The replay checks that `TURN` ends at 16, that every notice leaves `GRANT` as it found it, and that phase 6's range survives the notice queued before it. The real hook runs once on stdin to show the nudge stays silent for a notice. Three relay tests cover a notice after a shown pause, an ending printed after it, and a notice folded into the turn that printed the card.
+
+- 2026-10-18 — step 3 checkpointed · d860fd4cc — feat(grant): let a range list its steps, and land only those steps (1 drift, 22m)
+
+  **Summary**: A typed range now mints `steps <list>`, the exact set it names in normal form, and the latch lands only those steps while still honoring an old `range M`; the hook, the latch, `build`, and `status --invoked` all read the one grammar in `src/lib/steplist.ts`.
+
+  1. One pure module holds the grammar
+  2. The latch lands members and names the range when it refuses
+  3. A range starts at its first undone step in build order
+  4. One path outside the seam: the lexicon word
+
+  **Readout**:
+
+  ```text
+  check        green: 1 of 1 checks
+  done-when    met
+  decisions    3 of 3 honored
+  constraints  9 of 9 honored
+  seam         strayed: 1 path outside the seam
+               → cspell.json
+  diff         +540 -102 across 13 files
+  spent        21 min · 310s gate · green first run
+  ```
+
+  **Verdict**: ◐ A hair off (seam strayed)
+
+  **Recommendation**: Nothing to settle here. The range's stop is the place to read the latch as a whole, steps 2 and 3 together.
+
+  **1.** One pure module holds the grammar
+
+  `steplist.ts` parses a number, a span, or a comma list into spans (never expanded, so `1-100000` stays two numbers), writes steps back in the order given with each climbing run folded, normalizes a set for storage, and reads a build invocation's argument run. A comma after the run's last number is the sentence's, so `/build 2, then review` mints nothing.
+
+  **2.** The latch lands members and names the range when it refuses
+
+  `/build 20, 5-9` mints `steps 5-9,20`. A plain `2-4` now grants exactly 2 through 4, where the old `range 4` would land step 1 too. A range that does not parse mints nothing, even beside `--auto`, so a typo can never widen into an unbounded grant. The refusal reuses the `ceiling` reason, which keeps `abandon` (outside the seam) working; its wording there still says "past the range", which I parked.
+
+  **3.** A range starts at its first undone step in build order
+
+  `rangeStart` in `orient.ts` picks it, so `status --invoked "1-3"` with step 1 done and the order `3, 2` points at 3, and `plumbbob build 20,5-9` refuses with that step as its remedy. `build` names the last undone member in build order as the top, and the step before one the list does not hold as the last the range reaches.
+
+  **4.** One path outside the seam: the lexicon word
+
+  The plan names the module `steplist`, and cspell rejected the import path, so `cspell.json` gained the one word.

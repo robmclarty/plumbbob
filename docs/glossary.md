@@ -64,8 +64,9 @@ word up without reading the others first. Each entry points at the page that own
 - **The latch**: the rule that `checkpoint` refuses to land a step until a human turn has
   landed since the step began, so a model cannot commit its own work past you. Enforced
   on the record, never on edits. → [`decisions.md`](decisions.md#d64)
-- **Auto** (`--auto`, or a range like `1-3`): the one self-approval, granted only by a
-  prompt you typed; the agent then approves in your place and halts on red or a mismatch.
+- **Auto** (`--auto`, or a range like `1-3` or `20,5-9`): the one self-approval, granted only by a
+  prompt you typed; the agent then approves in your place and halts on red or a mismatch. A range
+  grants exactly the steps it names. → [`decisions.md`](decisions.md#d91)
 - **Revert**: `git reset --hard` to a recorded checkpoint, with the build folder
   snapshotted across it so your plan and park lines survive.
 - **Abandon**: the third exit from a step: drop the attempt, keep the diff in the tree,

@@ -25,7 +25,7 @@ Three ground rules apply to all of them:
 | ------------------------------------ | -------------------------------------- | ------ |
 | [`/plumbbob:plan`](#plan) | `[spec-path \| intent]` | open the session and author the whole plan: Frame, Decisions, Constraints, all Steps |
 | [`/plumbbob:step`](#step) | `[what-changed]` | revise/sharpen the next step (empty input auto-syncs it to reality) |
-| [`/plumbbob:build`](#build) | `[step-number \| step-range] [--auto]` | implement the next planned step, then verify it to the pause |
+| [`/plumbbob:build`](#build) | `[step-number \| step-range \| step-list] [--auto]` | implement the next planned step, then verify it to the pause |
 | [`/plumbbob:verify`](#verify) | none | the tick: check → self-review → validate → **PAUSE** → checkpoint |
 | [`/plumbbob:park`](#park) | `[idea]` | capture a mid-build idea without chasing it |
 | [`/plumbbob:order`](#order) | `[steps in sequence]` | set the build order: the undone steps in the sequence to build them |
@@ -89,7 +89,10 @@ bound, and fires an agent mid-build when a manifest's `when` prose calls for it.
 lets the agent self-approve and chain step after step until the plan is done, halting the
 moment a check goes red, the self-review finds a mismatch, or a bound agent returns
 `blocked`/`drift`. A step range like `1-3` is a bounded `--auto`: it self-approves and
-lands steps 1 through 3, then ends on step 3's checkpoint block. At a pause (the default
+lands steps 1 through 3, then ends on step 3's checkpoint block. A range may also list its
+steps (`20,5-9`): it lands exactly the steps it names, walked in build order from its first
+undone one, and halts before any step it does not name
+([D91 (step-list-grants)](decisions.md#d91)). At a pause (the default
 path, or a halt on a red check or a mismatch) it writes its judgment into `.plumbbob/detail.md`,
 runs `plumbbob handoff`, and pastes the block; you reply with one of the four moves the
 block names (`looks good`, `expand`, a direction, `revert`), and on `looks good` the

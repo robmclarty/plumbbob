@@ -119,14 +119,17 @@ orientation, not a lock. With no `n`, it enters the next undone step in build or
 `## Build order` line when the plan has one, else the numbering;
 [**D86 (build-order)**](decisions.md#d86)), and an explicit `n` says how many undone steps
 it skips ahead of in that order. When this step is the last one the turn's `GRANT` reaches (a
-typed range's top, the last undone step under it when the plan ends first, or the plan's
-last undone step under `--auto`), it adds one line saying so, such as
+typed range's top, which is the last undone step it names in build order; the last it reaches
+when the plan ends first or the next step in build order is one it does not name; or the
+plan's last undone step under `--auto`), it adds one line saying so, such as
 `step 3 is the top of the range you granted` with the remedy beneath it, because that
 step lands like the rest and the turn ends on its checkpoint
 ([**D85 (range-top-lands)**](decisions.md#d85)).
 Refuses (exit 1)
-with no session, a non-numeric or `< 1` step, or a seam it cannot parse (seams are exact
-paths or `dir/` grants, never globs; [**D23 (no-glob-seams)**](decisions.md#d23)).
+with no session, a non-numeric or `< 1` step, a range such as `1-3` or `20,5-9` (a
+`/plumbbob:build` feature, so the remedy names the step it starts at: its first undone step in
+build order; [**D91 (step-list-grants)**](decisions.md#d91)), or a seam it cannot parse (seams
+are exact paths or `dir/` grants, never globs; [**D23 (no-glob-seams)**](decisions.md#d23)).
 
 ### handoff
 
@@ -594,7 +597,7 @@ stays git-excluded; a session is live iff `STATE` is present.
 .plumbbob/
   STATE                    # untracked — session sentinel (presence = live) AND the active-build cursor (its content — D28 (state-cursor))
   TURN                     # untracked — the human-turn counter the approval latch reads, ticked by the UserPromptSubmit hook
-  GRANT                    # untracked — a one-turn self-approval, minted only from a typed --auto or step range
+  GRANT                    # untracked — a one-turn self-approval, minted only from a typed --auto (auto) or step range (steps 5-9,20: exactly the steps it names)
   PROMPT                   # untracked: the id of the last prompt the hook saw, so a notice folded into a running turn reads as one (D90 (notice-not-turn))
   RELAY                    # untracked — the ending the CLI printed last, with its tier and the TURN it printed in, for the Stop hook — D89 (block-once)
   detail.md                # untracked — the in-flight step's full detail: the wire handoff renders a turn from, recorded under the build-log's Log and truncated at checkpoint — D81 (detail-file)
