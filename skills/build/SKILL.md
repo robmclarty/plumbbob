@@ -371,8 +371,11 @@ out, or the next step in build order is one the range does not name),
   the whole stretch lists step 4 too (`/plumbbob:build 1-4`, or `/plumbbob:build 1,4,2,3`).
 - **At a range's stop, harvest before the next range.** No harvest runs between the steps
   inside a range, so the parks pile up, and a blocker among them would otherwise ride into
-  the next one. When the human asks what comes next at a stop with parks open (the note's
-  `parked 2 of 7 open`), the move is `/plumbbob:harvest`, then the range the card names.
+  the next one. A run's range ends on the stop card, which lists every open park with a
+  proposed class, and the reply that settles the card records them (the run skill's
+  section on the reply at a stop). A range landed here, by a typed range, ends on the plain
+  boundary instead; when the human asks what comes next there with parks open (the note's
+  `parked 2 of 7 open`), the move is `/plumbbob:harvest`, then the run the card names.
 - **After an early stop, settle the step, then rerun what is left.** A halt on trouble
   inside a range ends at that step's pause, and the grant ends with the turn. Once the
   human approves and the step lands, the note beneath Next Up names the run that lands

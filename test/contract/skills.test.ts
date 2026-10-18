@@ -149,6 +149,15 @@ describe('finish — the close-out: report by default, final commit, clear — D
     expect(data['allowed-tools']).toContain('plumbbob finish')
   })
 
+  it('records a stop card still waiting through plumbbob harvest before the report — D102 (settle-in-one-reply)', () => {
+    expect(data['allowed-tools']).toContain('Bash(plumbbob harvest:*)')
+    const settle = body.indexOf('**Settle a stop card still waiting.**')
+    expect(settle).toBeGreaterThan(-1)
+    expect(settle).toBeLessThan(body.indexOf('**Write the report**'))
+    expect(body).toMatch(/`# Detail · Range <N>` header/)
+    expect(body).toMatch(/then run `plumbbob harvest`/)
+  })
+
   it('writes the report by default, never a gate — D9 (finish-no-gate)', () => {
     expect(body).toMatch(/report by default/i)
     expect(body).toMatch(/gate/i)
@@ -394,6 +403,12 @@ describe('build — a run hands its range section a range the plan names — D96
     // The early-stop note names the run the card prints, not the old explicit command.
     expect(section).toContain('`· range 3 of 5: /plumbbob:run (steps 8-9)`')
   })
+
+  it("names the stop card in its note on harvesting at a range's stop — D100 (stop-card)", () => {
+    const note = body.slice(body.indexOf("**At a range's stop, harvest before the next range.**"), body.indexOf('**After an early stop'))
+    expect(note).toMatch(/stop card/)
+    expect(note).toContain('/plumbbob:harvest')
+  })
 })
 
 describe('run — a range of the plan, walked by the build skill — D95 (run-verb), D99 (one-loop)', () => {
@@ -413,8 +428,10 @@ describe('run — a range of the plan, walked by the build skill — D95 (run-ve
     expect(data['argument-hint']).toBe('"[range-number]"')
   })
 
-  it("grants exactly the build skill's tools, since it drives the same loop", () => {
-    expect(data['allowed-tools']).toBe(build.data['allowed-tools'])
+  it("grants the build skill's tools, since it drives the same loop, plus what its stop card records with", () => {
+    const tools = (list: string | undefined): string[] => (list ?? '').split(/,\s*/).sort()
+    const own = ['Bash(plumbbob harvest:*)', 'Bash(plumbbob order:*)', 'Bash(git log:*)']
+    expect(tools(data['allowed-tools'])).toEqual([...tools(build.data['allowed-tools']), ...own].sort())
   })
 
   it('opens with the run header pre-injection, passing the invocation through', () => {
@@ -447,10 +464,52 @@ describe('run — a range of the plan, walked by the build skill — D95 (run-ve
     expect(build.body).toContain('### A step range (`N-M`, or a list like `20,5-9`) is a bounded `--auto`')
   })
 
-  it('builds a bare range to its pause and ends a landed range on the checkpoint block', () => {
+  it("builds a bare range to its pause, ending on its step's checkpoint block once it lands", () => {
     expect(body).toMatch(/bare range/i)
     expect(body).toMatch(/pause/i)
-    expect(body).toMatch(/relay its checkpoint's block whole/)
+    expect(body).toMatch(/bare range's run\s+ends there: relay the checkpoint's block whole/)
+  })
+
+  it('ends a landed range on the stop card, written from the record and rendered by handoff --stop — D100 (stop-card)', () => {
+    const section = body.slice(body.indexOf('## 5. End on the stop card'), body.indexOf('## 6. The reply at a stop'))
+    expect(section).toContain('plumbbob handoff --stop')
+    expect(section).toContain('# Detail · Range <N> · <the stop, as the plan words it>')
+    expect(section).toContain('── recap · range <N> of <M> ──')
+    expect(section).toContain('- park <handle> → <blocker, tangent, or pivot>: <the reason, one clause>')
+    // The review is drawn from the record, never from recall, since a long run can compact.
+    expect(section).toMatch(/checkpoint bodies/)
+    expect(section).toMatch(/`## Log`/)
+    expect(section).toMatch(/never from recall/)
+    // Every open park gets a class, by the harvest skill's rules, tangent when uncertain.
+    expect(section).toMatch(/every open park/)
+    expect(section).toMatch(/`tangent` for anything uncertain/)
+    // The card is the turn's ending, and nothing is recorded in the turn it printed.
+    expect(section).toMatch(/record nothing in this turn/)
+    // The checkpoint's block gives way to the card, even after a halt approved at the range's last step.
+    expect(body).toMatch(/relay none of it, and end\s+the run on the stop card/)
+    expect(body).toMatch(/the run ends on the stop card\s+too/)
+    expect(body).toContain('`../harvest/SKILL.md`')
+  })
+
+  it('settles the card in one reply: looks good records it, a change re-renders it, a question ends on the reminder — D102 (settle-in-one-reply)', () => {
+    const section = body.slice(body.indexOf('## 6. The reply at a stop'), body.indexOf('## The hard contracts'))
+    expect(section).toMatch(/\*\*`looks good`\*\* confirms the review and every class/)
+    expect(section).toMatch(/Fold each confirmed\s+blocker into `intent.md` by the harvest skill's rules first, then run `plumbbob harvest`/)
+    expect(section).toMatch(/\*\*A change\*\*[\s\S]*run `plumbbob handoff --stop`, paste the whole card/)
+    expect(section).toMatch(/\*\*A question\*\*[\s\S]*one-line reminder/)
+    expect(section).toContain('plumbbob handoff --stop --full')
+  })
+
+  it('records a waiting card before a run typed at it, and ends at the boundary when the record re-cut the range — D102 (settle-in-one-reply)', () => {
+    expect(body).toMatch(/`waiting: range 2 of 5's stop card, recorded before the run`/)
+    const section = body.slice(body.indexOf('## 6. The reply at a stop'), body.indexOf('## The hard contracts'))
+    expect(section).toMatch(/Record first: fold the blockers and run `plumbbob harvest`, then read\s+`plumbbob status --run/)
+    expect(section).toMatch(/`unlike the run`[\s\S]*end the turn there/)
+    expect(section).toMatch(/\/plumbbob:finish/)
+  })
+
+  it('never records the stop in the turn its card printed — D103 (stop-latched)', () => {
+    expect(body).toMatch(/Never run `plumbbob harvest` in the turn the stop card\s+printed/)
   })
 
   it("reads a run typed at a step's pause as that pause's looks good — D95 (run-verb)", () => {
@@ -616,10 +675,25 @@ describe('harvest — propose, the human confirms', () => {
     expect(body).toMatch(/default/i)
   })
 
-  it('proposes but writes only after per-item confirmation', () => {
+  it('proposes every class at once, and records only after one reply settles them — D102 (settle-in-one-reply)', () => {
     expect(body).toMatch(/propose/i)
+    expect(body).toMatch(/every open item at once/)
+    expect(body).toMatch(/one reply/)
     expect(body).toMatch(/confirm/i)
     expect(body).toMatch(/only after/i)
+  })
+
+  it('records through plumbbob harvest from a `# Detail · Harvest` file — D104 (harvest-records)', () => {
+    expect(data['allowed-tools']).toContain('Bash(plumbbob harvest:*)')
+    expect(data['allowed-tools']).toMatch(/\bWrite\b/)
+    expect(body).toContain('`# Detail · Harvest`')
+    expect(body).toContain('`- park 6 → tangent: <the reason, one clause>`')
+    expect(body).toMatch(/run `plumbbob harvest`/)
+  })
+
+  it("leaves a run's stop to its card, and refuses while one waits — D100 (stop-card)", () => {
+    expect(body).toMatch(/A run's stop card\s+carries its harvest/)
+    expect(body).toMatch(/`# Detail · Range <N>` header, that card is still waiting/)
   })
 
   it('folds a blocker into intent slugged at birth — never a bare ref', () => {

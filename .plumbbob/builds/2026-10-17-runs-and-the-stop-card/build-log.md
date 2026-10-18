@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Runs and the stop card
 
-**Current step:** 10 — feat(harvest): record a stop's harvest and review with plumbbob harvest
+**Current step:** 11 — feat(skills): end a run on the stop card and settle it in one reply
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -32,7 +32,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 7. docs(presentation): spec the stop card that closes a run's range
 - ☑ 8. feat(orient): measure a landed range for the stop card's readout
 - ☑ 9. feat(handoff): render the stop card with plumbbob handoff --stop
-- ☐ 10. feat(harvest): record a stop's harvest and review with plumbbob harvest
+- ☑ 10. feat(harvest): record a stop's harvest and review with plumbbob harvest
 - ☐ 11. feat(skills): end a run on the stop card and settle it in one reply
 - ☐ 12. feat(plan): point the plan and its template at the run
 - ☐ 13. docs: describe the run as the main way to drive a plan
@@ -215,3 +215,4 @@ folder, so it rides the branch into the PR.)*
 
 - 2026-10-18 — step 8 checkpointed · 163a6b025 — feat(orient): measure a landed range for the stop card's readout (4m)
 - 2026-10-18 — step 9 checkpointed · 921dc85c7 — feat(handoff): render the stop card with plumbbob handoff --stop (1 drift, 22m)
+- 2026-10-18 — step 10 checkpointed · df2a0c000 — feat(harvest): record a stop's harvest and review with plumbbob harvest (1 drift, 13m)

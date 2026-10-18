@@ -2,7 +2,7 @@
 name: finish
 description: "Finish the build: write the report (what shipped, decisions, parked/harvested items, deferred tangents), then make the final commit that closes the session. The build folder rides the branch into the PR: no separate archive. Report by default, no gate."
 disable-model-invocation: true
-allowed-tools: Read, Write, Bash(plumbbob status:*), Bash(plumbbob finish:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob harvest:*), Bash(plumbbob order:*), Bash(plumbbob finish:*)
 ---
 
 # PlumbBob: finish the build (the close-out)
@@ -17,7 +17,18 @@ record.
 
 ## What this skill does, in order
 
-1. **Write the report** to the active build's `report.md`
+1. **Settle a stop card still waiting.** Read `.plumbbob/detail.md`. When it opens on a
+   `# Detail · Range <N>` header, the last range's stop card is waiting for its reply, and
+   `/plumbbob:finish` typed at it is that reply, the move its Your Call block names
+   ([D102 (settle-in-one-reply)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d102)).
+   Record it the way `looks good` would before anything else: fold each blocker its
+   `## Harvest` section proposes into `intent.md` by the harvest skill's rules (read
+   `../harvest/SKILL.md` from this skill's base directory), then run `plumbbob harvest`,
+   which writes the range's review into the Log and flips the parks the card settled. A
+   finish that skipped it would leave the last range's review out of the Log and its parks
+   open in the report. When `plumbbob harvest` refuses, report what it names and stop
+   before the report. Any other detail file, or none, has nothing waiting.
+2. **Write the report** to the active build's `report.md`
    (`.plumbbob/builds/<slug>/report.md`), from `intent.md` + `build-log.md`.
    The build-log's `## Log` is already the chronological history; `plumbbob checkpoint`
    wrote a dated line for every step as it landed. **Read it as the spine; do not
@@ -34,7 +45,7 @@ record.
    `## Stats` (the per-step receipts) itself, so do **not** hand-write either; a report
    that spells them out collides with the CLI's own tail. This is the "yeah, I did that"
    artifact. Write it by default; the human may edit it.
-2. **Finish.** Run `plumbbob finish`, which appends the checkpoint SHAs to the
+3. **Finish.** Run `plumbbob finish`, which appends the checkpoint SHAs to the
    report and makes the final commit (subject `chore(<scope>): finish`, its body
    led by a `plumbbob finish` marker plus an optional proportional `--body`), then
    clears the control state (the in-flight markers, then `STATE` last; one delete
@@ -58,7 +69,7 @@ record.
    cannot analyze the extra redirect, so it blocks the command or stops to ask instead of
    letting this skill's allowance cover it. Omit `--body` entirely and the commit carries
    the `plumbbob finish` marker subject only.
-3. **Point at the next goal.** Relay `plumbbob finish`'s output verbatim, blank lines
+4. **Point at the next goal.** Relay `plumbbob finish`'s output verbatim, blank lines
    included: its lead line, which names the branch the tracked folder now rides into the
    PR, any advisory beneath it, and `**Next Up**: Nothing planned - /plumbbob:plan`. That
    is the orientation tier's close (the
