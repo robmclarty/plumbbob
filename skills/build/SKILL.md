@@ -332,6 +332,13 @@ comma), and it grants exactly the steps it names: the checkpoint refuses any oth
 ([D91 (step-list-grants)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d91)).
 The range *is* the opt-in; you do not also pass `--auto`.
 
+**A run hands you a range the plan names, walked the same way.** `/plumbbob:run` (the run
+skill) reads this section for its walk: its grant is the `steps` list the turn hook minted
+from the plan's `## Build ranges` when the human typed the run, in the normal form a typed
+list mints, so the latch, `plumbbob build`'s notice at the top step, and every halt below
+read it exactly as they read a typed range
+([D96 (plan-names-the-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d96)).
+
 Run it as the `--auto` loop, walked in build order. **Start at the range's first undone step
 in build order, however it is written** (`5-9,20` under an order that puts 20 first starts at
 20), and after each landing take the next undone step in build order. Build it if the range
@@ -368,9 +375,9 @@ out, or the next step in build order is one the range does not name),
   `parked 2 of 7 open`), the move is `/plumbbob:harvest`, then the range the card names.
 - **After an early stop, settle the step, then rerun what is left.** A halt on trouble
   inside a range ends at that step's pause, and the grant ends with the turn. Once the
-  human approves and the step lands, the note beneath Next Up names what is left of the
-  range (`· range 3 of 5: /plumbbob:build 8-9`), and that is the command the human types
-  to carry on.
+  human approves and the step lands, the note beneath Next Up names the run that lands
+  what is left of the range (`· range 3 of 5: /plumbbob:run (steps 8-9)`), and that is what
+  the human types to carry on; `/plumbbob:build 8-9` lands the same steps by hand.
 
 ## The hard contracts
 

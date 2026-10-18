@@ -384,6 +384,92 @@ describe('build — the default engine: implement the planned step, then verify'
   })
 })
 
+describe('build — a run hands its range section a range the plan names — D96 (plan-names-the-grant)', () => {
+  const { body } = parseSkill('build')
+
+  it('says a run hands it a range the plan names, walked the same way', () => {
+    const section = body.slice(body.indexOf('### A step range'), body.indexOf('## The hard contracts'))
+    expect(section).toMatch(/\/plumbbob:run/)
+    expect(section).toMatch(/walked the same way/i)
+    // The early-stop note names the run the card prints, not the old explicit command.
+    expect(section).toContain('`· range 3 of 5: /plumbbob:run (steps 8-9)`')
+  })
+})
+
+describe('run — a range of the plan, walked by the build skill — D95 (run-verb), D99 (one-loop)', () => {
+  const { data, body } = parseSkill('run')
+  const build = parseSkill('build')
+
+  it('names itself after its directory and disables model invocation', () => {
+    expect(data.name).toBe('run')
+    expect(data['disable-model-invocation']).toBe('true')
+  })
+
+  it('inherits the session model — D63 (no-model-pins)', () => {
+    expect(data.model).toBeUndefined()
+  })
+
+  it('takes a range number as its one argument', () => {
+    expect(data['argument-hint']).toBe('"[range-number]"')
+  })
+
+  it("grants exactly the build skill's tools, since it drives the same loop", () => {
+    expect(data['allowed-tools']).toBe(build.data['allowed-tools'])
+  })
+
+  it('opens with the run header pre-injection, passing the invocation through', () => {
+    expect(body).toContain('!`plumbbob status --run "$ARGUMENTS" 2>/dev/null')
+  })
+
+  it('lets the typed number and the grant outrank a header that resolved another range', () => {
+    expect(body).toMatch(/typed number and the grant outrank the header/i)
+    expect(body).toMatch(/unlike the run/)
+  })
+
+  it('refuses what the run cannot walk with the move the dashboard names — D97 (run-refuses)', () => {
+    expect(body).toMatch(/refus/i)
+    expect(body).toMatch(/No run header/)
+    for (const move of ['/plumbbob:refine ranges', '/plumbbob:finish', '/plumbbob:verify', '/plumbbob:abandon', 'plumbbob spike done']) {
+      expect(body, move).toContain(move)
+    }
+  })
+
+  it('reads the build skill beside it from its base directory, by heading and never by line — D99 (one-loop)', () => {
+    expect(body).toContain('`../build/SKILL.md`')
+    expect(body).toMatch(/base directory/i)
+    expect(body).not.toMatch(/SKILL\.md:\d+/)
+    // Every heading it names is one the build skill carries.
+    for (const heading of ['What this skill does, in order', '`--auto`: let the agent be the clock (opt-in)', 'Running bound agents', 'The hard contracts']) {
+      expect(body, heading).toContain(heading)
+      expect(build.body, heading).toContain(`## ${heading}`)
+    }
+    expect(body.replace(/\s+/g, ' ')).toContain('A step range (`N-M`, or a list like `20,5-9`) is a bounded `--auto`')
+    expect(build.body).toContain('### A step range (`N-M`, or a list like `20,5-9`) is a bounded `--auto`')
+  })
+
+  it('builds a bare range to its pause and ends a landed range on the checkpoint block', () => {
+    expect(body).toMatch(/bare range/i)
+    expect(body).toMatch(/pause/i)
+    expect(body).toMatch(/relay its checkpoint's block whole/)
+  })
+
+  it("reads a run typed at a step's pause as that pause's looks good — D95 (run-verb)", () => {
+    expect(body).toMatch(/that pause's\s+`looks good`/)
+    expect(body).toMatch(/only\s+on green/)
+  })
+
+  it('names the latch: a refused checkpoint is the pause, never a raw git commit, and a grant you mint is no grant — D64 (approval-latch), D67 (auto-not-a-grant)', () => {
+    expect(body).toMatch(/latch/i)
+    expect(body).toMatch(/end the turn/i)
+    expect(body).toMatch(/git commit/)
+    expect(body).toMatch(/a grant you\s+mint is no grant/i)
+  })
+
+  it('never chains ranges: the human types each run', () => {
+    expect(body).toMatch(/nothing chains ranges/i)
+  })
+})
+
 describe('verify — the tick: check, self-review, validate, PAUSE, checkpoint', () => {
   const { data, body } = parseSkill('verify')
 

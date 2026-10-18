@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Runs and the stop card
 
-**Current step:** 5 — feat(handoff): name the run on the card in place of the range command
+**Current step:** 6 — feat(run): add /plumbbob:run to run the range holding the next step
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -27,7 +27,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 2. feat(orient): resolve a run to the range it names and what is left
 - ☑ 3. feat(turn): mint a run's grant from the range the plan names
 - ☑ 4. feat(status): show the run a /plumbbob:run invocation resolves to
-- ☐ 5. feat(handoff): name the run on the card in place of the range command
+- ☑ 5. feat(handoff): name the run on the card in place of the range command
 - ☐ 6. feat(run): add /plumbbob:run to run the range holding the next step
 - ☐ 7. docs(presentation): spec the stop card that closes a run's range
 - ☐ 8. feat(orient): measure a landed range for the stop card's readout
@@ -148,3 +148,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-10-18 — step 2 checkpointed · d2bd150d9 — feat(orient): resolve a run to the range it names and what is left (11m)
 - 2026-10-18 — step 3 checkpointed · aee679a7a — feat(turn): mint a run's grant from the range the plan names (6m)
 - 2026-10-18 — step 4 checkpointed · 0129d3519 — feat(status): show the run a /plumbbob:run invocation resolves to (1 red, 1 drift, 11m)
+- 2026-10-18 — step 5 checkpointed · de0185e58 — feat(handoff): name the run on the card in place of the range command (8m)
