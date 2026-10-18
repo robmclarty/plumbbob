@@ -1103,7 +1103,7 @@ describe('the dashboard ranges block', () => {
         'last checkpoint  step 5 · 1a2b3c4',
         'parked 0 · open questions 0',
         '',
-        'next → build range 3 of 5 — `/plumbbob:build 6-9`',
+        'next → run range 3 of 5 — `/plumbbob:run` (steps 6-9)',
       ].join('\n'),
     )
     // The block sits under the step list, a blank line between.
@@ -1112,7 +1112,9 @@ describe('the dashboard ranges block', () => {
   })
 
   it('names what is left of the range in next →, and drops the model for a range with none', () => {
-    expect(dashboard(ranged([1, 2, 3, 4, 5, 6, 7]))).toContain('next → build range 3 of 5 — `/plumbbob:build 8-9`')
+    expect(dashboard(ranged([1, 2, 3, 4, 5, 6, 7]))).toContain('next → run range 3 of 5 — `/plumbbob:run` (steps 8-9)')
+    expect(dashboard(ranged([1, 2, 3, 4, 5, 6, 7, 8]))).toContain('next → run range 3 of 5 — `/plumbbob:run` (step 9)')
+    expect(dashboard(ranged([1, 2, 3, 4, 5, 6, 7, 8, 9]))).toContain('next → run range 4 of 5 — `/plumbbob:run` (step 10 to its pause)')
     const plainModel = ranged([1, 2, 3, 4, 5], RANGED.replace("   - model: fable\n", ''))
     expect(dashboard(plainModel)).toContain('    4  /plumbbob:build 10\n')
   })
@@ -1628,8 +1630,13 @@ Five commands drive the build. Two stops are calls made at a step's own pause, a
       // An item that does not parse is flagged by its number.
       const broken = plan({ ranges: items('1. `/plumbbob:build 1-6`, **stop:** review it', '2. `/plumbbob:build 7-12`') })
       expect(run(broken, { item: 2 })).toEqual({ ok: false, kind: 'flagged', item: 2, count: 2, words: 'item 2 under Build ranges does not parse' })
-      // A section where nothing parses leaves the next step in no range.
-      expect(run(plan({ ranges: items('1. `/plumbbob:build 1-12`') }))).toEqual({ ok: false, kind: 'uncovered', step: 1, words: 'no range names step 1' })
+      // A section where nothing parses leaves the next step in no range, and says which item to fix.
+      expect(run(plan({ ranges: items('1. `/plumbbob:build 1-12`') }))).toEqual({
+        ok: false,
+        kind: 'uncovered',
+        step: 1,
+        words: 'item 1 under Build ranges does not parse',
+      })
     })
 
     it('reads raw arguments the way the hook does, and refuses a span or a list of ranges with the run named instead', () => {

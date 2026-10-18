@@ -1013,21 +1013,66 @@ function rangedWith(done: ReadonlyArray<number>, intent = RANGED): string {
 }
 
 describe('handoff — the range segment beneath Next Up', () => {
-  it('names range 1 whole at the plan pause, with the range model in bold', async () => {
+  it('names range 1 whole at the plan pause, with the range model in bold, and looks good names the run — D98 (card-names-the-run)', async () => {
     const dir = await started(RANGED)
     const { stdout } = captureIo(() => handoff(dir, ['--plan']))
     expect(stdout).toContain(
-      `**Next Up**: Step 1 of 4 - First (model: **Opus**, details: \`${rangedPointer(dir, 1)}\`)\n  · range 1 of 3: /plumbbob:build 1\n`,
+      `**Next Up**: Step 1 of 4 - First (model: **Opus**, details: \`${rangedPointer(dir, 1)}\`)\n  · range 1 of 3: /plumbbob:run (step 1 to its pause)\n`,
+    )
+    expect(stdout).toContain('- `looks good` → I mark the plan decided; /plumbbob:run runs range 1 from Step 1\n')
+  })
+
+  it('names the run from where a mid-build refine left the plan, and keeps the build for a step in no range', async () => {
+    const dir = await started(rangedWith([1, 2]))
+    expect(captureIo(() => handoff(dir, ['--plan'])).stdout).toContain('- `looks good` → I mark the plan decided; /plumbbob:run runs range 2 from Step 3\n')
+    const open = await started(rangedWith([1, 2, 3], RANGED.replace(/^3\. `[\s\S]*$/m, '')))
+    expect(captureIo(() => handoff(open, ['--plan'])).stdout).toContain('- `looks good` → I mark the plan decided; /plumbbob:build starts Step 4\n')
+  })
+
+  it('names the run that lands the step in flight and the rest of its range at a step pause, and offers it as a move', async () => {
+    const dir = await started(rangedWith([1]))
+    writeFileSync(stepPath(dir), '2\n')
+    writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
+    const { stdout } = captureIo(() => handoff(dir, []))
+    expect(stdout).toContain(
+      `**Next Up**: Step 3 of 4 - Third (model: **Fable**, details: \`${rangedPointer(dir, 3)}\`)\n  · range 2 of 3: /plumbbob:run (steps 2-3)\n\n**Your Call**:`,
+    )
+    expect(stdout).toContain(
+      [
+        '- `looks good` → I checkpoint Step 2; back to the boundary',
+        '- `/plumbbob:run` → I checkpoint Step 2, then run the rest of range 2 to its stop',
+        '- `expand`, or any question',
+      ].join('\n'),
     )
   })
 
-  it('names what is left once the step in flight lands at a step pause, its last step written to land', async () => {
+  it('offers no run while the check is red, since the step could not land', async () => {
     const dir = await started(rangedWith([1]))
     writeFileSync(stepPath(dir), '2\n')
+    writeCheckSummary(dir, false, [{ name: 'test', ok: false }])
     const { stdout } = captureIo(() => handoff(dir, []))
-    expect(stdout).toContain(
-      `**Next Up**: Step 3 of 4 - Third (model: **Fable**, details: \`${rangedPointer(dir, 3)}\`)\n  · range 2 of 3: /plumbbob:build 3-3\n\n**Your Call**:`,
+    expect(stdout).toContain('  · range 2 of 3: /plumbbob:run (steps 2-3)\n')
+    expect(stdout).not.toContain('`/plumbbob:run` →')
+  })
+
+  it("names no run at the pause on a range's last step, or a bare range's, and keeps the four moves", async () => {
+    const last = await started(rangedWith([1, 2]))
+    writeFileSync(stepPath(last), '3\n')
+    writeCheckSummary(last, true, [{ name: 'test', ok: true }])
+    const atLast = captureIo(() => handoff(last, [])).stdout
+    // Next Up is the next range's step, and its bold model the step's, since range 3 declares none.
+    expect(atLast).toContain(
+      `**Next Up**: Step 4 of 4 - Fourth (model: **Sonnet**, details: \`${rangedPointer(last, 4)}\`)\n  · range 2 of 3 lands with step 3\n\n**Your Call**:`,
     )
+    expect(atLast).not.toContain('`/plumbbob:run` →')
+    const bare = await started(RANGED)
+    writeFileSync(stepPath(bare), '1\n')
+    writeCheckSummary(bare, true, [{ name: 'test', ok: true }])
+    const atBare = captureIo(() => handoff(bare, [])).stdout
+    expect(atBare).toContain(
+      `**Next Up**: Step 2 of 4 - Second (model: **Fable**, details: \`${rangedPointer(bare, 2)}\`)\n  · range 1 of 3 lands with step 1\n\n**Your Call**:`,
+    )
+    expect(atBare).not.toContain('`/plumbbob:run` →')
   })
 
   it('names the next range on the boundary, and leads the note ahead of the parks', async () => {
@@ -1036,7 +1081,7 @@ describe('handoff — the range segment beneath Next Up', () => {
     writeFileSync(buildLogPath(dir), PARKS)
     const { stdout } = captureIo(() => handoff(dir, []))
     expect(stdout).toContain(
-      `**Next Up**: Step 2 of 4 - Second (model: **Fable**, details: \`${rangedPointer(dir, 2)}\`)\n  · range 2 of 3: /plumbbob:build 2-3 · parked 2 of 3 open\n`,
+      `**Next Up**: Step 2 of 4 - Second (model: **Fable**, details: \`${rangedPointer(dir, 2)}\`)\n  · range 2 of 3: /plumbbob:run (steps 2-3) · parked 2 of 3 open\n`,
     )
   })
 
@@ -1044,7 +1089,9 @@ describe('handoff — the range segment beneath Next Up', () => {
     const dir = await started(rangedWith([1, 2, 3]))
     writeFileSync(checkpointsPath(dir), 'step 3 abc1234\n')
     const { stdout } = captureIo(() => handoff(dir, []))
-    expect(stdout).toContain(`**Next Up**: Step 4 of 4 - Fourth (model: **Sonnet**, details: \`${rangedPointer(dir, 4)}\`)\n  · range 3 of 3: /plumbbob:build 4\n`)
+    expect(stdout).toContain(
+      `**Next Up**: Step 4 of 4 - Fourth (model: **Sonnet**, details: \`${rangedPointer(dir, 4)}\`)\n  · range 3 of 3: /plumbbob:run (step 4 to its pause)\n`,
+    )
   })
 
   it("gives a flagged range the re-cut words in place of a command, and the step's model", async () => {

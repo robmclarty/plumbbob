@@ -878,7 +878,7 @@ describe('checkpoint — the range segment beneath Next Up', () => {
     const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
     expect(code).toBe(0)
     expect(stdout).toContain(
-      '**Next Up**: Step 1 of 3 - First (details: `.plumbbob/builds/checkpoint-test/intent.md:5`)\n  · range 1 of 2: /plumbbob:build 1\n',
+      '**Next Up**: Step 1 of 3 - First (details: `.plumbbob/builds/checkpoint-test/intent.md:5`)\n  · range 1 of 2: /plumbbob:run (step 1 to its pause)\n',
     )
   })
 
@@ -908,7 +908,15 @@ describe('checkpoint — the range segment beneath Next Up', () => {
     const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['1']))
     expect(code).toBe(0)
     expect(stdout).toContain(
-      '**Next Up**: Step 2 of 3 - Second (model: **Opus**, details: `.plumbbob/builds/checkpoint-test/intent.md:7`)\n  · range 2 of 2: /plumbbob:build 2-3\n',
+      '**Next Up**: Step 2 of 3 - Second (model: **Opus**, details: `.plumbbob/builds/checkpoint-test/intent.md:7`)\n  · range 2 of 2: /plumbbob:run (steps 2-3)\n',
     )
+  })
+
+  it('names what is left once a range stopped early, one step bracketed the way two are — D98 (card-names-the-run)', async () => {
+    const dir = await startedGreen()
+    writeFileSync(intentPath(dir), RANGED.replace('1. [ ]', '1. [x]'))
+    const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['2']))
+    expect(code).toBe(0)
+    expect(stdout).toContain('  · range 2 of 2: /plumbbob:run (step 3)\n')
   })
 })

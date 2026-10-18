@@ -126,7 +126,7 @@ describe('status — the build ranges', () => {
     expect(stdout).toContain(
       ['  ranges  1 of 2 done', '  ✓ 1  /plumbbob:build 1', '  ▸ 2  /plumbbob:build 2-3 · opus   ← next', '        stop: review the parser'].join('\n'),
     )
-    expect(stdout).toContain('next → build range 2 of 2 — `/plumbbob:build 2-3`')
+    expect(stdout).toContain('next → run range 2 of 2 — `/plumbbob:run` (steps 2-3)')
   })
 
   it("reads a section filled in from the template: the guidance is the reader's, every step in one range", async () => {
@@ -248,7 +248,7 @@ describe('status — --run prints the run a /plumbbob:run invocation names — D
     writeFileSync(grantPath(dir), 'steps 2-3\n')
     const plain = captureIo(() => status(dir)).stdout
     expect(plain).not.toContain('run  range')
-    expect(plain).toContain('next → build range 2 of 3 — `/plumbbob:build 2-3`')
+    expect(plain).toContain('next → run range 2 of 3 — `/plumbbob:run` (steps 2-3)')
     expect(captureIo(() => status(dir, ['--invoked', ''])).stdout).toBe(plain)
     expect(captureIo(() => status(dir, ['--invoked', '3'])).stdout).toContain('▸ 3  Third   ← requested')
   })

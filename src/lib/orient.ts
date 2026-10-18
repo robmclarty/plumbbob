@@ -548,8 +548,8 @@ export type RangesView = {
 }
 
 /**
- * The ranges block the dashboard renders, and the move it suggests: the range
- * holding the next undone step and the command that runs what is left of it.
+ * The ranges block the dashboard renders, and the move it suggests: the run
+ * of the range holding the next undone step, with what is left of it.
  *
  * Null for a plan without ranges, so the block vanishes. The move is null when
  * the next step sits in no range, its range is flagged, or the step is still
@@ -569,9 +569,8 @@ function rangesView(intent: string, ordered: ReadonlyArray<Step>, next: Step | u
     drift: own(range.item).map((d) => d.words),
   }))
   const view = { count: standing.count, rows, plan: standing.drift.filter((d) => d.item === null || d.kind === 'malformed').map((d) => d.words) }
-  const { holding, command } = standing
-  const move = holding === null || command === null || next?.planned !== true ? null : `build range ${holding.item} of ${standing.count} — \`${command}\``
-  return { view, move }
+  const run = resolveRun({ intent, inFlight: null, spiking: false, item: null })
+  return { view, move: !run.ok || next?.planned !== true ? null : runMove(run) }
 }
 
 /**
@@ -798,8 +797,11 @@ export function resolveRun(input: RunInput): Run {
   }
   if (input.item === null) {
     const { holding } = standing
+    // With no range that parses, no step sits outside one, so the words are
+    // the first item's that does not.
+    const words = standing.flag ?? standing.drift.find((d) => d.kind === 'malformed')?.words ?? noRangeWords([anchor])
     return holding === null
-      ? { ok: false, kind: 'uncovered', step: anchor, words: noRangeWords([anchor]) }
+      ? { ok: false, kind: 'uncovered', step: anchor, words }
       : walkRun(holding, standing, ordered, input.inFlight)
   }
   const item = input.item
@@ -863,13 +865,19 @@ export function runSteps(run: RunRange): string {
 }
 
 /**
+ * What the card's bracket says the run lands: what is left of it, and for a
+ * bare range that it builds the step to its pause (`step 10 to its pause`).
+ */
+export function runBracket(run: RunRange): string {
+  return run.range.bare ? `${runSteps(run)} to its pause` : runSteps(run)
+}
+
+/**
  * The pointer naming a run: the range and its count, the run's command, and
- * what is left in a bracket (`(steps 6-9)`, or a bare range's
- * `(step 10 to its pause)`), with a note beside the steps when one is given.
+ * the bracket, with a note beside the steps when one is given.
  */
 export function runMove(run: RunRange, note?: string): string {
-  const bracket = run.range.bare ? `${runSteps(run)} to its pause` : runSteps(run)
-  return `run range ${run.range.item} of ${run.count} — \`/plumbbob:run\` (${bracket}${note === undefined ? '' : `; ${note}`})`
+  return `run range ${run.range.item} of ${run.count} — \`/plumbbob:run\` (${runBracket(run)}${note === undefined ? '' : `; ${note}`})`
 }
 
 /**

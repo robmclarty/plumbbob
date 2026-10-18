@@ -91,9 +91,12 @@ import {
   rangeStanding,
   recapLines,
   remainingOrder,
+  resolveRun,
+  runBracket,
   seamRowFromDiff,
   spentRowValue,
   summaryCheckRow,
+  type Run,
 } from '../lib/orient.ts'
 
 // The inline-diff threshold (docs/presentation.md): at 20 changed lines or
@@ -164,7 +167,7 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     const plan = [
       SEAM_RULE,
       nextUpBlock(intent, buildLog, first, null, where),
-      planCallBlock(first),
+      planCallBlock(first, cardRun(intent, null)),
     ]
     const command = reprintCommand('--plan', undefined, named)
     return emit(root, { tier: 'decision', render: 'plan', command }, withRecommendation(plan, parseRecommendation(detail)))
@@ -262,7 +265,7 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   parts.push(
     verdict,
     nextUpBlock(intent, buildLog, nextUp, current, where),
-    yourCallBlock(current, checkGreen),
+    yourCallBlock(current, checkGreen, cardRun(intent, current)),
   )
   const command = reprintCommand('--full', explicit, named)
   return emit(root, { tier: 'decision', render: 'card', command }, withRecommendation(parts, parseRecommendation(detail)))
@@ -727,11 +730,20 @@ function readCheckSummary(root: string): CheckSummary | null {
  * `revert` comes last, because a destructive move is named rather than
  * discovered. `looks good` renders only while the measured check is green;
  * offering a move that would refuse teaches a false ceremony.
+ *
+ * `run` is what `/plumbbob:run` typed at this pause names. Inside a range
+ * that lands its steps, with steps still ahead of this one, the run rides
+ * second as the other approval: it lands this step and the rest of the range.
+ * At a bare range's pause, and at a range's last step, it does no more than
+ * `looks good`, so the block keeps its four moves.
  */
-function yourCallBlock(step: number, checkGreen: boolean): string {
+function yourCallBlock(step: number, checkGreen: boolean, run: Run): string {
   const moves: string[] = []
   if (checkGreen) {
     moves.push(callLine('`looks good`', `I checkpoint Step ${step}; back to the boundary`))
+    if (run.ok && !run.range.bare && run.left[0] === step && run.left.length > 1) {
+      moves.push(callLine('`/plumbbob:run`', `I checkpoint Step ${step}, then run the rest of range ${run.range.item} to its stop`))
+    }
   }
   moves.push(
     callLine('`expand`, or any question', 'I show more of what is there; nothing changes, and `show the pause` brings all of this back'),
@@ -755,9 +767,14 @@ function callLine(move: string, outcome: string): string {
  * there. Nothing is recorded yet, so `revert` has nothing to wind back to and
  * vanishes; `looks good` names the step the plan starts at, which is Step 1 at
  * the plan pause and the first undone step after a mid-build refine.
+ *
+ * When that step sits in a range the run can walk, `looks good` names the run
+ * instead, since the run is what the human types next; a step in no range, or
+ * in a flagged one, keeps the build.
  */
-function planCallBlock(first: Step | undefined): string {
-  const starts = first === undefined ? '' : `; /plumbbob:build starts Step ${first.n}`
+function planCallBlock(first: Step | undefined, run: Run): string {
+  const build = first === undefined ? '' : `; /plumbbob:build starts Step ${first.n}`
+  const starts = run.ok ? `; /plumbbob:run runs range ${run.range.item} from Step ${run.left[0]}` : build
   return [
     '**Your Call**:',
     '',
@@ -839,13 +856,19 @@ function nextUpBlock(intent: string, buildLog: string, nextUp: Step | undefined,
 
 /**
  * The range segment that leads the note, and the model the pointer's bracket
- * bolds while it suggests a range: `range 3 of 5: /plumbbob:build 6-9` with
- * the range's model, the re-cut words for a flagged range, the words for a step
- * no range names, or '' for a plan without ranges.
+ * bolds while it suggests a range: the run `/plumbbob:run` typed now would
+ * walk, `range 3 of 5: /plumbbob:run (steps 6-9)`, with the model of the range
+ * holding the step Next Up names; the re-cut words for a flagged range; the
+ * words for a step no range names; or '' for a plan without ranges.
  *
- * The step the turn is about reads as landed, so a step pause names what is
- * left of the range once the step in flight lands. A flagged range, and a
- * range with no `- model:` line, leave the step's model in the bracket.
+ * The bracket is the grant the hook would mint. At a step pause that is the
+ * range holding the step in flight, its bracket opening on that step, since a
+ * run typed there lands it first; at the pause on a range's last step, where
+ * a run ends on that range's stop, the segment names no run
+ * (`range 3 of 5 lands with step 9`). The model is read with the step the turn
+ * is about landed, so at that last-step pause it is the next range's, the one
+ * the human picks a model for. A flagged range, and a range with no
+ * `- model:` line, leave the step's model in the bracket.
  */
 function rangeSegment(
   intent: string,
@@ -854,14 +877,29 @@ function rangeSegment(
   exclude: number | null,
 ): { readonly segment: string; readonly model: string | null } {
   const landed = steps.map((s) => (s.n === exclude ? { ...s, done: true } : s))
-  const { count, holding, command, flag } = rangeStanding(parseBuildRanges(intent), landed, nextUp?.n ?? null)
-  if (holding !== null && command !== null) {
-    return { segment: `range ${holding.item} of ${count}: ${command}`, model: holding.model }
+  const { holding, command } = rangeStanding(parseBuildRanges(intent), landed, nextUp?.n ?? null)
+  const model = holding !== null && command !== null ? holding.model : null
+  const paused = steps.some((s) => s.n === exclude && !s.done) ? exclude : null
+  const run = cardRun(intent, paused)
+  if (run.ok) {
+    const name = `range ${run.range.item} of ${run.count}`
+    const lands = paused !== null && run.left.length === 1
+    return { segment: lands ? `${name} lands with step ${paused}` : `${name}: /plumbbob:run (${runBracket(run)})`, model }
   }
-  if (flag === null) {
-    return { segment: '', model: null }
+  if (run.kind === 'uncovered') {
+    return { segment: run.words, model }
   }
-  return { segment: holding === null ? flag : `range ${holding.item} of ${count} needs a re-cut (${flag})`, model: null }
+  return { segment: run.kind === 'flagged' ? `range ${run.item} of ${run.count} needs a re-cut (${run.words})` : '', model }
+}
+
+/**
+ * The run `/plumbbob:run` typed now would walk, as the card names it: the
+ * range holding `paused`, the step waiting at its pause, or with none the
+ * range holding the next undone step. A spike open is the run's refusal to
+ * make, not the card's, so the card names the run that waits beyond it.
+ */
+function cardRun(intent: string, paused: number | null): Run {
+  return resolveRun({ intent, inFlight: paused, spiking: false, item: null })
 }
 
 /**
