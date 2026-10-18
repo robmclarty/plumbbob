@@ -3,9 +3,11 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { start } from '../start.ts'
+import { status } from '../status.ts'
+import { parseBuildRanges } from '../../lib/orient.ts'
 import { activeBuild, buildDir, excludeControl, grantPath, hasSession, sidecarDir, tickPath, turnPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
-import { captureIoAsync } from '../../../test/helpers/capture-io.ts'
+import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 import { advisory, ending, transition } from '../../lib/notice.ts'
 
 afterAll(cleanupTempRepos)
@@ -208,6 +210,30 @@ describe('start', () => {
     }
     expect(settings.check).toBe('fascicle run check')
     expect(settings.auto).toBe(true)
+  })
+
+  it('scaffolds the build ranges as scaffold: no ranges on a fresh dashboard — D92 (build-ranges)', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['My Feature']))
+    const path = join(dir, '.plumbbob', 'builds', `${TODAY}-my-feature`, 'intent.md')
+    const intent = readFileSync(path, 'utf8')
+    // The section sits right after the build order, holding the placeholder the
+    // presentation spec fixes, word for word.
+    const headings = intent.split('\n').filter((l) => l.startsWith('## '))
+    expect(headings.indexOf('## Build ranges')).toBe(headings.indexOf('## Build order') + 1)
+    expect(intent).toContain(
+      [
+        "1. `/plumbbob:build <N-M>`, **stop:** <the call that is the human's here: a decision the plan leaves open, a review before later steps build on what landed, or a thing only a human can do>",
+        '   - model: <the strongest model any step inside it recommends>',
+      ].join('\n'),
+    )
+    expect(parseBuildRanges(intent)).toEqual({ ranges: [], malformed: [] })
+    // The placeholder reads as no section at all: the dashboard is the one a plan
+    // without `## Build ranges` renders, with no ranges block and no drift row.
+    const fresh = captureIo(() => status(dir)).stdout
+    expect(fresh).not.toMatch(/ranges|⚠/)
+    writeFileSync(path, intent.replace(/## Build ranges[\s\S]*?(?=## Open questions)/, ''))
+    expect(captureIo(() => status(dir)).stdout).toBe(fresh)
   })
 
   it('echoes the checkride gate into the scaffolded build-log (documentation only)', async () => {

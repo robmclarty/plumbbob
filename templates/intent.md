@@ -88,6 +88,24 @@ order. `plumbbob order 7 8 5 10 6` (`/plumbbob:order`) writes it, and `status`, 
 `/plumbbob:build`, and the card's Next Up agree. A step keeps its number for life; this
 line is where the sequence lives.)*
 
+## Build ranges
+
+*(Where the build stops for a human call, written with the steps: one numbered item per
+range, the command the human types, then `**stop:**` and the call that ends it, with an
+optional `- model:` line naming the model to run it on. The command's form says where it
+stops: a bare `/plumbbob:build 4` builds step 4 to its pause, so its stop is a decision
+made before the step lands, and a span such as `/plumbbob:build 5-9` lands every step it
+names, so its stop is a review of what landed. A range ends where a human call is due
+and nowhere else, so a plan of two or three steps may need one range or none. The card
+names the range to type beneath Next Up and the dashboard lists them, but a range is
+advice, never a grant: the human still types the command (plumbbob
+[D92 (build-ranges)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d92)).
+The item below is scaffold while it holds its `<...>` fill-ins; fill it in, or delete
+the section when the build needs no range.)*
+
+1. `/plumbbob:build <N-M>`, **stop:** <the call that is the human's here: a decision the plan leaves open, a review before later steps build on what landed, or a thing only a human can do>
+   - model: <the strongest model any step inside it recommends>
+
 ## Open questions
 
 *(Holes you could NOT resolve on paper: the one section that expands rather than

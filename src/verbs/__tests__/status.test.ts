@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { status } from '../status.ts'
@@ -126,6 +126,24 @@ describe('status — the build ranges', () => {
       ['  ranges  1 of 2 done', '  ✓ 1  /plumbbob:build 1', '  ▸ 2  /plumbbob:build 2-3 · opus   ← next', '        stop: review the parser'].join('\n'),
     )
     expect(stdout).toContain('next → build range 2 of 2 — `/plumbbob:build 2-3`')
+  })
+
+  it("reads a section filled in from the template: the guidance is the reader's, every step in one range", async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Filled', '--slug', 'filled']))
+    const path = join(buildDir(dir, 'filled'), 'intent.md')
+    // Fill the scaffold the way the plan skill does: real steps, and the
+    // placeholder item replaced, the template's italic guidance left in place.
+    const steps = RANGED.slice(RANGED.indexOf('1. [x]'), RANGED.indexOf('\n## Build ranges'))
+    const ranges = RANGED.slice(RANGED.indexOf('1. `/plumbbob:build 1`'))
+    const filled = readFileSync(path, 'utf8')
+      .replace(/^1\. \[ \] feat: <step>[\s\S]*?(?=\n## Build order)/m, steps)
+      .replace(/^1\. `\/plumbbob:build <N-M>`[\s\S]*?(?=\n## Open questions)/m, ranges)
+    expect(filled).toContain('*(Where the build stops for a human call')
+    writeFileSync(path, filled)
+    const { stdout } = captureIo(() => status(dir))
+    expect(stdout).toContain(['  ranges  1 of 2 done', '  ✓ 1  /plumbbob:build 1', '  ▸ 2  /plumbbob:build 2-3 · opus   ← next'].join('\n'))
+    expect(stdout).not.toContain('⚠')
   })
 
   it('renders a plan without ranges exactly as before', async () => {

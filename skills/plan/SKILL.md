@@ -1,6 +1,6 @@
 ---
 name: plan
-description: "Frame a fresh goal and author the whole plan (Frame, Decisions, Constraints, and all Steps) before any code. Three input modes: no arg interviews you; a file path (or @-mention) absorbs a spec; any other text expands your inline intent."
+description: "Frame a fresh goal and author the whole plan (Frame, Decisions, Constraints, all Steps, and the build ranges) before any code. Three input modes: no arg interviews you; a file path (or @-mention) absorbs a spec; any other text expands your inline intent."
 argument-hint: "[spec-path | intent]"
 disable-model-invocation: true
 allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob handoff:*), Bash(plumbbob start:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent list:*)
@@ -117,7 +117,48 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
    It is advisory metadata for the human (`/plumbbob:status` surfaces it before each build),
    never a gate, and nothing switches models automatically. Write it plain (no
    backticks) and omit it when any model would do.
-5. **Offer harness bindings** *(optional)*. If the build will lean on
+5. **Cut the build ranges.** With the steps written, say where the build stops for a
+   human call, under `## Build ranges`
+   ([D92 (build-ranges)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d92)):
+   one sentence on how to drive the build, then one numbered item per range, in the
+   format the parser reads:
+
+   ```markdown
+   1. `/plumbbob:build 1`, **stop:** at step 1's pause, approve the schema before anything writes to it
+      - model: opus
+   2. `/plumbbob:build 2-5`, **stop:** review the parser before the renderers build on it
+      - model: sonnet
+      - note: <optional; what the range should watch for>
+   ```
+
+   **A range ends where a human call is due, and nowhere else.** Three things make a
+   call: a decision the plan leaves open (an Open question, or a fork only a spike can
+   settle), a review before later steps build on what landed, and a thing only the human
+   can do, such as a push, a live key, or spending money. A range that runs through one
+   has the model make the human's call; a stop that marks none of them is a pause nobody
+   needed. The command's form says what kind of stop it is
+   ([D85 (range-top-lands)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d85)).
+   A span such as `2-5` lands every step it names and stops at the boundary after the
+   last, so its stop is a review of what landed, or a decision the next steps need before
+   they build. A bare `N` builds step N to its pause, so write one for a call that has to
+   be made before its step lands, on the step's own work: approving the wording it
+   drafted, or the rule it found. Write each stop as what the human decides or reviews
+   there, in words they can act on cold.
+
+   Name every step in exactly one range, by its plan number. A fresh plan has no build
+   order, so the ranges follow the numbering. Give each range a `- model:` line naming the
+   strongest model any step inside it recommends, written plain the way a step's is,
+   because that is the `/model` the human picks before typing the command; any other
+   sub-line (a `- note:` on what to watch for) is the reader's, and the CLI leaves it
+   alone. Replace the template's placeholder item rather than writing beside it: an item
+   still holding its `<...>` fill-ins reads as no range at all.
+
+   **Size the ranges to the work.** A plan of two or three steps may carry one range, or
+   none. When every step would be its own bare range, delete the section: the default
+   loop already stops at each step's pause. A range is advice, never a grant
+   ([D67 (auto-not-a-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d67)):
+   the card names the range to type beneath Next Up, and the human still types it.
+6. **Offer harness bindings** *(optional)*. If the build will lean on
    user-authored agents, author `harness.json` in the build folder (beside `intent.md`)
    and review it at the **same plan pause**, alongside the steps; bindings are
    plan-adjacent configuration, so they converge with the plan. It binds agents to a
@@ -138,7 +179,7 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
    `note` and decides when to run one mid-build. Skip the file entirely when no step
    uses an agent; the loop runs identically without it. The plan commit picks it
    up automatically (it lives in the build folder).
-6. **Commit the plan.** Once the human approves the frame and steps, run
+7. **Commit the plan.** Once the human approves the frame and steps, run
    `plumbbob checkpoint --plan` to commit the scaffold on its own: subject
    `chore(<scope>): plan` (with a `plumbbob plan` body marker), only `.plumbbob/builds/<slug>/`,
    a `plan <sha>` line in
@@ -148,8 +189,9 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
    rationale is worth carrying; skip it for a small plan. Do this
    only on the human's approval; the plan is their convergence.
    - **The plan pause is a decision turn.** Present the framed plan for the human's call,
-     then give it the cold read (**§ The cold read**), write the result into
-     `.plumbbob/detail.md`, and relay `plumbbob handoff --plan`'s block whole: the CLI
+     its build ranges with it (each range's command and its stop, since a stop is where
+     the human will be asked, and moving one is cheapest now), then give it the cold
+     read (**§ The cold read**), write the result into `.plumbbob/detail.md`, and relay `plumbbob handoff --plan`'s block whole: the CLI
      renders the your-call block with the moves that apply before anything is recorded and
      prints your recommendation last (the decision tier of the
      [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)),
@@ -182,7 +224,7 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
        (the `--body` earns its keep here), the files staying untracked. Say that
        instead: the rationale is published in `git log`, not the folder, so pass a
        fuller `--body` than you otherwise would, since the message is the whole record.
-7. **Offer to stress-test it.** Suggest `/plumbbob:refine` to attack the frame for holes (or
+8. **Offer to stress-test it.** Suggest `/plumbbob:refine` to attack the frame for holes (or
    to repair the plan as it drifts). Optional, the human's call.
 
 ## The cold read
@@ -198,7 +240,9 @@ Open questions, and keep it to one screen of reading. The lens:
 - a collision with the existing code (read the files the seams name);
 - a done-when no test or check can measure, or a seam that names a file that does not
   exist or misses one that must change;
-- a step too large to review in one pass, or a Decision with no *because*.
+- a step too large to review in one pass, or a Decision with no *because*;
+- a range that runs through a call the plan leaves open, so the model would make it;
+- a range that stops where no call is due, a pause the human did not need.
 
 Write what you found into `.plumbbob/detail.md`, overwriting whatever a past session
 left, the findings first and the recommendation last:
