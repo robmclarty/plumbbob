@@ -29,8 +29,9 @@ after the step in flight is the usual reason to run it.
 1. **Compose the full sequence.** Read the step list and the `build order` row on the
    dashboard. Take the human's instruction, whether a full list (`7 8 5 10 6`, or
    `1, 6, 2-4, 7, 5` with spans and commas) or a relative one ("7 and 8 before 5", "10
-   last"), and turn it into **every undone step, in the sequence to build them**. Never renumber a step and never move one inside `## Steps`; the sequence
-   lives in this one line.
+   last"), and turn it into **every undone step, in the sequence to build them**. Never
+   renumber a step and never move one inside `## Steps`; the sequence lives in this one
+   line.
 2. **Show the sequence and get the human's OK in-turn.** When the human's own message states
    the full sequence, that message **is** the approval: run the verb directly.
 3. **Write it by shelling `plumbbob order 7 8 5 10 6`** via Bash. The verb reads spans and
