@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Build ranges
 
-**Current step:** 11 — feat(plan): author the build ranges with the steps
+**Current step:** 12 — feat(skills): keep the build ranges true as the plan changes
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -33,7 +33,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 8. feat(checkpoint): say why the build stops when a range's last step lands
 - ☑ 9. feat(status): show the ranges and flag one the plan outgrew
 - ☑ 10. feat(build): halt --auto where the plan reserves a call for the human
-- ☐ 11. feat(plan): author the build ranges with the steps
+- ☑ 11. feat(plan): author the build ranges with the steps
 - ☐ 12. feat(skills): keep the build ranges true as the plan changes
 - ☐ 13. docs: describe the build ranges where the card and plan are described
 
@@ -273,3 +273,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-10-18 — step 8 checkpointed · 5c4e9ed33 — feat(checkpoint): say why the build stops when a range's last step lands (8m)
 - 2026-10-18 — step 9 checkpointed · 5b283b5d7 — feat(status): show the ranges and flag one the plan outgrew (11m)
 - 2026-10-18 — step 10 checkpointed · 89e656c4b — feat(build): halt --auto where the plan reserves a call for the human (7m)
+- 2026-10-18 — step 11 checkpointed · 735c90ebf — feat(plan): author the build ranges with the steps (18m)

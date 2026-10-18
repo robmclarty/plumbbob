@@ -23,6 +23,10 @@ DESIGN boundary, not mid-step. Read the dashboard injected above:
   Chasing parked items mid-step is the disease parking prevents.
 - At the boundary (the dashboard reads `[DESIGN]`): go ahead.
 
+A range's stop is the boundary that matters most. No harvest runs between the steps
+inside a range, so the parks it piled up wait for the stop where it lands, and a
+blocker among them is caught there before the next range builds on it.
+
 ## What this skill does
 
 Walk the **Park list** in `build-log.md` item by item and, for each, **propose exactly
@@ -47,6 +51,11 @@ one line of reasoning, then **wait for the human to confirm or override**. Write
   (`- <a id="d5"></a>**D5 (retry-cap)**: <the call>, *because* <why>`), never a bare `D5`.
   A blocker that becomes a new step takes the next free number under `## Steps` and,
   when it has to land before an existing undone step, its place in the sequence through
-  `plumbbob order 7 8 5` (the `## Build order` line), never by renumbering.
+  `plumbbob order 7 8 5` (the `## Build order` line), never by renumbering. When the plan
+  carries `## Build ranges`, the new step goes into a range too (the one it builds with,
+  or a bare range of its own when it brings a call the human has to make before it
+  lands), and a range it breaks is re-cut in the same confirmed edit
+  ([D92 (build-ranges)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d92));
+  `plumbbob status` afterward carries a `⚠` row for any range still broken.
 - Never reclassify or resolve an item the human hasn't confirmed, and default every
   uncertain item to **tangent**, never to blocker.

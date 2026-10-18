@@ -182,6 +182,12 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    line in the build-log's `## Log` and then truncates it, so the detail lands in the
    tracked ledger rather than piling up on disk.
 
+   **A bare range's pause is its stop.** When the injected dashboard's ranges block lists
+   this step as a bare range (`/plumbbob:build 5`, its row marked `▸`), the plan reserved a
+   call for this pause, and the `stop:` line beneath the row names it. The recommendation
+   speaks to that call: the move you would take on the plan's question, and why, rather
+   than a verdict on the diff alone.
+
    *Paste the turn.* Run `plumbbob handoff` and paste its output whole, verbatim, at top
    level, trailing blank line included, then end the turn. Never nest it inside a fence of
    your own; it carries fences of its own and they cannot nest. It prints the Now line
@@ -224,8 +230,11 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
 
    **Then hand off with the next model.** `plumbbob checkpoint` prints the whole boundary
    ending itself: `**Checkpoint**: Step N complete (<sha>)`, the Verdict the step earned,
-   any advisory (a staged path outside the seam is the common one), and Next Up. Relay
-   that block whole, run no second command, and write nothing around it. It is the
+   any advisory (a staged path outside the seam is the common one), the Stop part when
+   this landing completes a range (`**Stop**: Range 3 of 5 landed - <its stop>`, the reason
+   the build stops here), and Next Up. Relay that block whole, the Stop part with the rest
+   (the relay check holds a boundary that dropped it), run no second command, and write
+   nothing around it. It is the
    orientation tier (no Your Call block, no recommendation), and it points at the next
    undone step carrying that step's `- model:` recommendation (the plan's
    smallest-model-that-fits call) so the human knows which `/model` to select before
@@ -353,6 +362,15 @@ out, or the next step in build order is one the range does not name),
   `1, 4, 2, 3` under `/plumbbob:build 1-3`): the halt above fires before step 4, and
   `plumbbob build` names step 1 as the last undone step in the range. The range that walks
   the whole stretch lists step 4 too (`/plumbbob:build 1-4`, or `/plumbbob:build 1,4,2,3`).
+- **At a range's stop, harvest before the next range.** No harvest runs between the steps
+  inside a range, so the parks pile up, and a blocker among them would otherwise ride into
+  the next one. When the human asks what comes next at a stop with parks open (the note's
+  `parked 2 of 7 open`), the move is `/plumbbob:harvest`, then the range the card names.
+- **After an early stop, settle the step, then rerun what is left.** A halt on trouble
+  inside a range ends at that step's pause, and the grant ends with the turn. Once the
+  human approves and the step lands, the note beneath Next Up names what is left of the
+  range (`· range 3 of 5: /plumbbob:build 8-9`), and that is the command the human types
+  to carry on.
 
 ## The hard contracts
 

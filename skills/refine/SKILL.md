@@ -1,7 +1,7 @@
 ---
 name: refine
-description: "Keep intent.md true: attack the plan for holes (append as Open questions) and refine or repair the Frame, Decisions, Constraints, and Steps to match reality. Usable at any point; you propose, the human approves."
-argument-hint: "[focus]"
+description: "Keep intent.md true: attack the plan for holes (append as Open questions) and refine or repair the Frame, Decisions, Constraints, Steps, and build ranges to match reality (`ranges` re-cuts the whole section). Usable at any point; you propose, the human approves."
+argument-hint: "[focus | ranges]"
 disable-model-invocation: true
 allowed-tools: Read, Edit, Bash(plumbbob status:*), Bash(plumbbob order:*)
 ---
@@ -22,7 +22,7 @@ it is `NO ACTIVE SESSION`, **refuse** in one line and tell the human to run
 `plumbbob start "<title>"` (or `/plumbbob:plan`) first, and edit nothing. Every active state
 is fine; refining is always available.
 
-## Two modes
+## Two modes, and a re-cut
 
 - **Attack (diverge in the problem space).** Hand the **Frame**, **Decisions**, and
   **Architecture sketch** a cold, adversarial read and surface holes: ambiguities,
@@ -56,6 +56,24 @@ is fine; refining is always available.
   writes the sequence instead: shell `plumbbob order 7 8 5` with the undone steps in the
   sequence to build them, and the `## Build order` line it writes is what every next-step
   pick follows. Never renumber, and never edit that line by hand.
+
+  **A repair keeps the build ranges true.** When the plan carries `## Build ranges`, a
+  step the repair adds goes into a range (the one it builds with, or a bare range of its
+  own when it brings a call the human has to make before it lands), and a range the
+  repair breaks is re-cut in the same before/after
+  ([D92 (build-ranges)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d92)).
+  Read `plumbbob status` once the edits are written: its ranges block carries a `⚠` row
+  for a range naming a step the plan lacks, a step two ranges name, a step the build order
+  puts inside a range that does not name it, and an undone step no range names, and none
+  once the section is sound.
+- **Re-cut the ranges (`/plumbbob:refine ranges`).** On request, re-cut the whole
+  `## Build ranges` section against the plan as it stands, by the rule `/plumbbob:plan`
+  cuts it with: a range ends where a human call is due (a decision the plan leaves open,
+  a review before later steps build on what landed, or a thing only the human can do)
+  and nowhere else, a bare build for a call made on a step's own work before it lands,
+  every undone step in exactly one range, walked in build order, and a `- model:` line
+  per range. A landed range stays as written, since its call was made. Show the section
+  before and after, and write only what the human approves.
 
 ## The hard contracts
 

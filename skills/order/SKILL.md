@@ -38,9 +38,16 @@ after the step in flight is the usual reason to run it.
 4. **Relay the ending verbatim, then stop.** The verb prints its whole ending: the
    `**Build order**: 7, 8, 5, 10, 6` line, a blank line, and the `**Next Up**` pointer (back
    at the step in flight, or forward to the first step in the new sequence). Run no second
-   command. A refusal (a number the plan lacks, a repeat, a step already checkpointed) is the
-   CLI's call: report it verbatim, never retry or work around it, and ask the human which
-   number they meant.
+   command but the one in step 5. A refusal (a number the plan lacks, a repeat, a step
+   already checkpointed) is the CLI's call: report it verbatim, never retry or work around
+   it, and ask the human which number they meant.
+5. **Read the ranges when the plan has them.** If the dashboard injected above shows a
+   `ranges` block, run `plumbbob status` after the verb and read that block again. A `⚠`
+   row that was not there before means the new sequence broke a range (most often
+   `the build order puts step 11 inside it`). This skill edits nothing, so it cannot re-cut
+   one: open the turn with one line naming the range, its drift words, and
+   `/plumbbob:refine` as the move that re-cuts it, then the verb's ending, whole, as the
+   turn's last text. With no new `⚠` row, or no ranges block, relay the ending alone.
 
 ## The one hard contract
 
