@@ -847,3 +847,47 @@ describe('checkpoint — the fallback step follows the build order', () => {
     expect(intent).toContain('1. [ ]')
   })
 })
+
+describe('checkpoint — the range segment beneath Next Up', () => {
+  // A bare call at step 1, then one range over 2 and 3 that runs on Opus.
+  const RANGED = [
+    '# Ranged',
+    '',
+    '## Steps',
+    '',
+    '1. [ ] First — **done when:** a works.',
+    '   - seam: `src/a.ts`',
+    '2. [ ] Second — **done when:** b works.',
+    '   - seam: `src/b.ts`',
+    '   - model: sonnet',
+    '3. [ ] Third — **done when:** c works.',
+    '   - seam: `src/c.ts`',
+    '',
+    '## Build ranges',
+    '',
+    "1. `/plumbbob:build 1`, **stop:** at step 1's pause, approve the schema",
+    '2. `/plumbbob:build 2-3`, **stop:** review the parser',
+    '   - model: opus',
+    '',
+  ].join('\n')
+
+  it('names range 1 whole on the plan commit', async () => {
+    const dir = await startedGreen()
+    writeFileSync(intentPath(dir), RANGED)
+    const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
+    expect(code).toBe(0)
+    expect(stdout).toContain(
+      '**Next Up**: Step 1 of 3 - First (details: `.plumbbob/builds/checkpoint-test/intent.md:5`)\n  · range 1 of 2: /plumbbob:build 1\n',
+    )
+  })
+
+  it("names the next range on the boundary a landing prints, with the range's model in bold", async () => {
+    const dir = await startedGreen()
+    writeFileSync(intentPath(dir), RANGED)
+    const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(code).toBe(0)
+    expect(stdout).toContain(
+      '**Next Up**: Step 2 of 3 - Second (model: **Opus**, details: `.plumbbob/builds/checkpoint-test/intent.md:7`)\n  · range 2 of 2: /plumbbob:build 2-3\n',
+    )
+  })
+})

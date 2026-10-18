@@ -78,6 +78,7 @@ import {
   normalizeDetailHeadings,
   parkedPhrase,
   parseBuildOrder,
+  parseBuildRanges,
   parseConstraintCount,
   parseLastCheckpoint,
   parseOrderedSteps,
@@ -87,6 +88,7 @@ import {
   parseSections,
   parseSteps,
   parseSummary,
+  rangeStanding,
   recapLines,
   remainingOrder,
   seamRowFromDiff,
@@ -161,7 +163,7 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     const detail = settleDetail(root, rawDetail)
     const plan = [
       SEAM_RULE,
-      nextUpBlock(first, steps.length, where, nextUpNote(intent, buildLog, null)),
+      nextUpBlock(intent, buildLog, first, null, where),
       planCallBlock(first),
     ]
     const command = reprintCommand('--plan', undefined, named)
@@ -194,7 +196,7 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   if (current === null) {
     // Nothing measured yet (a fresh session): no Verdict, just the forward pointer.
     return emit(root, { tier: 'orientation', render: 'pointer' }, [
-      nextUpBlock(nextUp, steps.length, where, nextUpNote(intent, buildLog, current)),
+      nextUpBlock(intent, buildLog, nextUp, current, where),
     ])
   }
 
@@ -258,7 +260,7 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   }
   parts.push(
     verdict,
-    nextUpBlock(nextUp, steps.length, where, nextUpNote(intent, buildLog, current)),
+    nextUpBlock(intent, buildLog, nextUp, current, where),
     yourCallBlock(current, checkGreen),
   )
   const command = reprintCommand('--full', explicit, named)
@@ -346,10 +348,9 @@ export function boundaryEnding(root: string, slug: string | null, step: number |
   const intent = readOr(intentPath(root, slug))
   const steps = parseOrderedSteps(intent)
   const nextUp = steps.find((s) => !s.done && s.n !== step)
-  const note = nextUpNote(intent, readOr(buildLogPath(root, slug)), step)
   return {
     verdict: step === null ? null : landedVerdict(root, slug, intent, step),
-    pointer: nextUpBlock(nextUp, steps.length, relative(root, intentPath(root, slug)), note),
+    pointer: nextUpBlock(intent, readOr(buildLogPath(root, slug)), nextUp, step, relative(root, intentPath(root, slug))),
   }
 }
 
@@ -765,10 +766,11 @@ function spikeNextUpLine(inFlight: number | null): string {
 const ORDER_CAP = 5
 
 /**
- * The line beneath the forward pointer: the build order from the step it
- * names, when `## Build order` re-sequences the plan away from its numbering,
- * and the park count, when anything has been parked; '' when neither says
- * anything, so a plan nobody re-sequenced with an empty park list renders the
+ * The line beneath the forward pointer: the range segment, when the plan
+ * declares build ranges; the build order from the step the pointer names, when
+ * `## Build order` re-sequences the plan away from its numbering; and the park
+ * count, when anything has been parked. '' when none says anything, so a plan
+ * with no ranges, nobody re-sequenced, and an empty park list renders the
  * pointer alone, as before.
  *
  * Indented two spaces, because an indented line continues the part above it
@@ -777,9 +779,10 @@ const ORDER_CAP = 5
  * `Nothing planned`: an unharvested list at the end of the plan is the one
  * reminder that matters there.
  */
-function nextUpNote(intent: string, buildLog: string, exclude: number | null): string {
+function nextUpNote(intent: string, buildLog: string, exclude: number | null, range: string): string {
   const parks = parseParkTotals(buildLog)
   const segments = [
+    range,
     buildOrderPhrase(remainingOrder(parseSteps(intent), parseBuildOrder(intent), exclude), ORDER_CAP),
     parks.total > 0 ? parkedPhrase(parks) : '',
   ].filter((s) => s.length > 0)
@@ -789,10 +792,46 @@ function nextUpNote(intent: string, buildLog: string, exclude: number | null): s
 /**
  * The forward pointer with its note beneath, as one part: `blocks` keeps a
  * part's own newlines, so the note rides flush under the line it qualifies.
+ *
+ * `exclude` is the step the turn is about: the step in flight at a pause, the
+ * step just landed at a boundary, null at the plan pause and the plan commit.
+ * While the note suggests a range, the bracket bolds the range's model, since
+ * the run is the range and that is the `/model` the human picks before typing
+ * it.
  */
-function nextUpBlock(nextUp: Step | undefined, total: number, where: string, note: string): string {
-  const line = nextUpLine(nextUp, total, where)
+function nextUpBlock(intent: string, buildLog: string, nextUp: Step | undefined, exclude: number | null, where: string): string {
+  const steps = parseOrderedSteps(intent)
+  const range = rangeSegment(intent, steps, nextUp, exclude)
+  const line = nextUpLine(nextUp, steps.length, where, range.model ?? nextUp?.model ?? null)
+  const note = nextUpNote(intent, buildLog, exclude, range.segment)
   return note.length === 0 ? line : `${line}\n${note}`
+}
+
+/**
+ * The range segment that leads the note, and the model the pointer's bracket
+ * bolds while it suggests a range: `range 3 of 5: /plumbbob:build 6-9` with
+ * the range's model, the re-cut words for a flagged range, the words for a step
+ * no range names, or '' for a plan without ranges.
+ *
+ * The step the turn is about reads as landed, so a step pause names what is
+ * left of the range once the step in flight lands. A flagged range, and a
+ * range with no `- model:` line, leave the step's model in the bracket.
+ */
+function rangeSegment(
+  intent: string,
+  steps: ReadonlyArray<Step>,
+  nextUp: Step | undefined,
+  exclude: number | null,
+): { readonly segment: string; readonly model: string | null } {
+  const landed = steps.map((s) => (s.n === exclude ? { ...s, done: true } : s))
+  const { count, holding, command, flag } = rangeStanding(parseBuildRanges(intent), landed, nextUp?.n ?? null)
+  if (holding !== null && command !== null) {
+    return { segment: `range ${holding.item} of ${count}: ${command}`, model: holding.model }
+  }
+  if (flag === null) {
+    return { segment: '', model: null }
+  }
+  return { segment: holding === null ? flag : `range ${holding.item} of ${count} needs a re-cut (${flag})`, model: null }
 }
 
 /**
@@ -807,12 +846,12 @@ function nextUpBlock(nextUp: Step | undefined, total: number, where: string, not
  * reads as a path in a PR diff. The line alone is the driver tier's pointer;
  * every other tier rides `nextUpNote` beneath it, through `nextUpBlock`.
  */
-function nextUpLine(nextUp: Step | undefined, total: number, where: string): string {
+function nextUpLine(nextUp: Step | undefined, total: number, where: string, model = nextUp?.model ?? null): string {
   if (nextUp === undefined) {
     return '**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish'
   }
   const title = nextUp.title.length > 0 ? ` - ${nextUp.title}` : ''
-  const token = modelToken(nextUp.model)
+  const token = modelToken(model)
   const bracket = token === null ? [] : [`model: **${capitalize(token)}**`]
   bracket.push(`details: \`${where}:${nextUp.line}\``)
   return `**Next Up**: Step ${nextUp.n} of ${total}${title} (${bracket.join(', ')})`

@@ -971,6 +971,117 @@ describe('handoff — the note beneath Next Up', () => {
   })
 })
 
+// Four steps cut into three ranges: a bare call at step 1, a span over 2 and
+// 3, and a bare call at step 4. Each range's model differs from its first
+// step's, and range 3 has none, so the bracket says whose model it bolds.
+const RANGED = `# Handoff range test
+
+## Steps
+
+1. [ ] First — **done when:** a works.
+   - seam: \`src/a.ts\`
+   - model: sonnet
+2. [ ] Second — **done when:** b works.
+   - seam: \`src/b.ts\`
+   - model: sonnet
+3. [ ] Third — **done when:** c works.
+   - seam: \`src/c.ts\`
+   - model: haiku
+4. [ ] Fourth — **done when:** d works.
+   - seam: \`src/d.ts\`
+   - model: sonnet
+
+## Build ranges
+
+Three commands drive the build.
+
+1. \`/plumbbob:build 1\`, **stop:** at step 1's pause, approve the schema
+   - model: opus
+2. \`/plumbbob:build 2-3\`, **stop:** review the parser before the card reads it
+   - model: fable
+3. \`/plumbbob:build 4\`, **stop:** at step 4's pause, pick the label
+`
+
+/** The `details:` target Next Up points at for step `n` of RANGED. */
+function rangedPointer(dir: string, n: number): string {
+  return `${relative(dir, intentPath(dir))}:${2 + 3 * n}`
+}
+
+/** RANGED with the steps in `done` ticked. */
+function rangedWith(done: ReadonlyArray<number>, intent = RANGED): string {
+  return done.reduce((text, n) => text.replace(`${n}. [ ]`, `${n}. [x]`), intent)
+}
+
+describe('handoff — the range segment beneath Next Up', () => {
+  it('names range 1 whole at the plan pause, with the range model in bold', async () => {
+    const dir = await started(RANGED)
+    const { stdout } = captureIo(() => handoff(dir, ['--plan']))
+    expect(stdout).toContain(
+      `**Next Up**: Step 1 of 4 - First (model: **Opus**, details: \`${rangedPointer(dir, 1)}\`)\n  · range 1 of 3: /plumbbob:build 1\n`,
+    )
+  })
+
+  it('names what is left once the step in flight lands at a step pause, its last step written to land', async () => {
+    const dir = await started(rangedWith([1]))
+    writeFileSync(stepPath(dir), '2\n')
+    const { stdout } = captureIo(() => handoff(dir, []))
+    expect(stdout).toContain(
+      `**Next Up**: Step 3 of 4 - Third (model: **Fable**, details: \`${rangedPointer(dir, 3)}\`)\n  · range 2 of 3: /plumbbob:build 3-3\n\n**Your Call**:`,
+    )
+  })
+
+  it('names the next range on the boundary, and leads the note ahead of the parks', async () => {
+    const dir = await started(rangedWith([1]))
+    writeFileSync(checkpointsPath(dir), 'step 1 abc1234\n')
+    writeFileSync(buildLogPath(dir), PARKS)
+    const { stdout } = captureIo(() => handoff(dir, []))
+    expect(stdout).toContain(
+      `**Next Up**: Step 2 of 4 - Second (model: **Fable**, details: \`${rangedPointer(dir, 2)}\`)\n  · range 2 of 3: /plumbbob:build 2-3 · parked 2 of 3 open\n`,
+    )
+  })
+
+  it("keeps the step's model when the range declares none", async () => {
+    const dir = await started(rangedWith([1, 2, 3]))
+    writeFileSync(checkpointsPath(dir), 'step 3 abc1234\n')
+    const { stdout } = captureIo(() => handoff(dir, []))
+    expect(stdout).toContain(`**Next Up**: Step 4 of 4 - Fourth (model: **Sonnet**, details: \`${rangedPointer(dir, 4)}\`)\n  · range 3 of 3: /plumbbob:build 4\n`)
+  })
+
+  it("gives a flagged range the re-cut words in place of a command, and the step's model", async () => {
+    const shared = rangedWith([1], RANGED.replace('`/plumbbob:build 4`', '`/plumbbob:build 3-4`'))
+    const dir = await started(shared)
+    writeFileSync(checkpointsPath(dir), 'step 1 abc1234\n')
+    const { stdout } = captureIo(() => handoff(dir, []))
+    expect(stdout).toContain(
+      `**Next Up**: Step 2 of 4 - Second (model: **Sonnet**, details: \`${rangedPointer(dir, 2)}\`)\n  · range 2 of 3 needs a re-cut (step 3 is also in range 3)\n`,
+    )
+  })
+
+  it('says no range names a step that sits in none', async () => {
+    const open = rangedWith([1, 2, 3], RANGED.replace(/^3\. `[\s\S]*$/m, ''))
+    const dir = await started(open)
+    writeFileSync(checkpointsPath(dir), 'step 3 abc1234\n')
+    const { stdout } = captureIo(() => handoff(dir, []))
+    expect(stdout).toContain(`**Next Up**: Step 4 of 4 - Fourth (model: **Sonnet**, details: \`${rangedPointer(dir, 4)}\`)\n  · no range names step 4\n`)
+  })
+
+  it("keeps the driver pointer to one line, and renders a plan holding only the template's placeholder as before", async () => {
+    const dir = await started(rangedWith([1]))
+    writeFileSync(checkpointsPath(dir), 'step 1 abc1234\n')
+    const driver = captureIo(() => handoff(dir, ['--driver'])).stdout
+    expect(driver.trim()).toBe(`**Next Up**: Step 2 of 4 - Second (model: **Sonnet**, details: \`${rangedPointer(dir, 2)}\`)`)
+    const placeholder = RANGED.replace(
+      /## Build ranges[\s\S]*$/,
+      "## Build ranges\n\n1. `/plumbbob:build <N-M>`, **stop:** <the call that is the human's here>\n   - model: <the strongest model any step inside it recommends>\n",
+    )
+    const plain = await started(rangedWith([1], placeholder))
+    writeFileSync(checkpointsPath(plain), 'step 1 abc1234\n')
+    const { stdout } = captureIo(() => handoff(plain, []))
+    expect(stdout).toContain(`**Next Up**: Step 2 of 4 - Second (model: **Sonnet**, details: \`${rangedPointer(plain, 2)}\`)`)
+    expect(stdout).not.toContain('  · ')
+  })
+})
+
 const REMINDER = '**Next Up**: Back to Step 2 of 3 - Second\n\n'
 
 /** Step 2 at its pause: a one-line change in its seam, a detail file, and a green gate. */
