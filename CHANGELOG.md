@@ -5,6 +5,44 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.1] - 2026-10-17
+
+- **Added:** build ranges. A plan's `## Build ranges` section, right after `## Build order`,
+  says where the build stops for a human call: one item per range, the command to type, then
+  `**stop:**` and the call that ends it, with an optional model. `/plumbbob:plan` writes it
+  with the steps. A bare `/plumbbob:build 4` stops at that step's pause, for a decision made
+  before it lands; a span lands every step it names and stops at the boundary after the
+  last, for a review of what landed. The card names the range to type beneath Next Up
+  (`· range 3 of 5: /plumbbob:build 6-9`, with the range's model in bold), the boundary where
+  a range's last step lands carries a `**Stop**` part saying why the build stops there, and
+  `plumbbob status` lists the ranges with a `⚠` row for any the plan has outgrown. A range is
+  advice, never a grant: you still type the command. D92 (build-ranges) and
+  D93 (range-on-the-card) record it.
+- **Added:** a range can list its steps, numbers and spans joined by commas, with or without
+  a space after each (`/plumbbob:build 20,5-9`). It walks them in build order from its first
+  undone step, lands exactly the steps it names, and stops before any it does not.
+  D91 (step-list-grants) records the rule.
+- **Added:** `--auto` stops where the plan reserves a call. A step the ranges name as a bare
+  range is built to its pause and held there, and `plumbbob build` says so as it enters the
+  step; a review stop is run through. D94 (auto-and-stops) records it.
+- **Added:** the skills keep the ranges true as the plan changes. Step, refine, and harvest
+  put a step they add into a range and re-cut a range their edit breaks,
+  `/plumbbob:refine ranges` re-cuts the whole section, and `/plumbbob:order` names
+  `/plumbbob:refine` when a new sequence breaks one.
+- **Added:** `plumbbob order` and the `## Build order` line read spans beside numbers, with
+  or without a space after each comma, so `plumbbob order 1, 6, 2-4, 7, 5` writes
+  `1, 6, 2, 3, 4, 7, 5`. A hand-written line holding a span used to fall back to document
+  order without a word.
+- **Changed:** a typed range such as `/plumbbob:build 2-4` grants exactly steps 2 through 4.
+  The old grant landed any step up to the top, so step 1 could land under it too. A grant
+  minted by an earlier release still lands as it did.
+- **Fixed:** a background job's completion notice no longer counts as a human turn. Claude
+  Code delivers a finished Bash job, Monitor event, or subagent through the prompt hook, and
+  each one ticked the turn count, cleared a typed range's grant partway through the range,
+  and could satisfy the approval latch at a pause no one had answered. A prompt that opens
+  on `<task-notification>` or `<agent-message` now leaves the turn ledger and the grant as
+  they were. D90 (notice-not-turn) records it.
+
 ## [0.13.0] - 2026-10-17
 
 - **Added:** a relay check at the end of every turn. The skills tell the model to paste
