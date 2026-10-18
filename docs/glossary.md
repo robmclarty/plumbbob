@@ -39,7 +39,8 @@ word up without reading the others first. Each entry points at the page that own
 - **Build log** (`build-log.md`): the live ledger: the step mirror, the park list, the
   harvest, and a dated entry per landed step carrying the pause as you approved it.
 - **Build order** (`## Build order` in `intent.md`): the sequence to build the undone
-  steps in, once it stops being their numbering. One line of step numbers, written by
+  steps in, once it stops being their numbering. One line of step numbers and spans
+  (`1, 6, 2-4, 7, 5`), written by
   `plumbbob order`; every next-step pick follows it, and the card reminds you of the
   next five when it departs from the numbering.
 - **Build ranges** (`## Build ranges` in `intent.md`): where the build stops for a human

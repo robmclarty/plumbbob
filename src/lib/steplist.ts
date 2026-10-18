@@ -79,6 +79,26 @@ export function normalizeStepList(list: StepList): string {
   return merged.map(spanText).join(',')
 }
 
+/**
+ * The numbers a list names, in the order written, each span walked only while
+ * `known` holds and stopped at the first number it does not, which is kept.
+ *
+ * A build order is a sequence rather than a set, so its spans expand in place
+ * (`1,6,2-4` names 1, 6, 2, 3, 4). The number kept past the plan is the one a
+ * caller reports the plan lacks, and stopping there means `2-100000` costs one
+ * number past the last planned step rather than a hundred thousand.
+ */
+export function expandStepList(list: StepList, known: (n: number) => boolean): number[] {
+  const numbers: number[] = []
+  for (const span of list) {
+    for (let n = span.from; n <= span.to; n += 1) {
+      numbers.push(n)
+      if (!known(n)) break
+    }
+  }
+  return numbers
+}
+
 /** One span as it is typed: a lone number, or `from-to`. */
 function spanText(span: Span): string {
   return span.from === span.to ? String(span.from) : `${span.from}-${span.to}`

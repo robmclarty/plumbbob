@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatStepList, hasStep, normalizeStepList, parseStepList, readBuildArgs } from '../steplist.ts'
+import { expandStepList, formatStepList, hasStep, normalizeStepList, parseStepList, readBuildArgs } from '../steplist.ts'
 
 describe('parseStepList — D12 (step-list-grants)', () => {
   it('reads a number, a span, and numbers and spans joined by commas, in the order written', () => {
@@ -21,6 +21,19 @@ describe('parseStepList — D12 (step-list-grants)', () => {
   it('holds a long span as its two ends, never the expansion', () => {
     expect(parseStepList('1-100000')).toEqual([{ from: 1, to: 100000 }])
     expect(parseStepList('1-99999999999999999999')).toBeNull() // past a safe integer
+  })
+})
+
+describe('expandStepList', () => {
+  const plan = (n: number): boolean => n >= 1 && n <= 7
+
+  it('spells each span out in place, in the order written', () => {
+    expect(expandStepList(parseStepList('1,6,2-4,7,5') ?? [], plan)).toEqual([1, 6, 2, 3, 4, 7, 5])
+  })
+
+  it('stops a span at the first number the plan lacks, and keeps that number', () => {
+    expect(expandStepList(parseStepList('6,2-100000,3') ?? [], plan)).toEqual([6, 2, 3, 4, 5, 6, 7, 8, 3])
+    expect(expandStepList(parseStepList('9') ?? [], plan)).toEqual([9])
   })
 })
 

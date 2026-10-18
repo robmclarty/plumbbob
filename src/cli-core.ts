@@ -184,11 +184,17 @@ const VERBS: ReadonlyArray<Verb> = [
   {
     name: 'order',
     description: 'set the build order: the undone steps in the sequence to build them',
-    synopsis: ['order <n> [<n>…]', 'order --reset'],
-    args: [{ name: '<n>…', gloss: 'undone step numbers in the sequence to build them; the rest follow in document order' }],
+    synopsis: ['order <steps>', 'order --reset'],
+    args: [
+      {
+        name: '<steps>',
+        gloss:
+          'undone step numbers and spans (2-4) in the sequence to build them, space- or comma-separated (1, 6, 2-4, 7, 5); the rest follow in document order',
+      },
+    ],
     flags: [{ name: '--reset', gloss: 'drop the line, so the plan reads in document order again' }],
     notes:
-      'Writes the one numeric line under `## Build order` in intent.md, which status, build, checkpoint, and handoff all read. Refuses (exit 1) with no session, no numbers, a number the plan lacks, a repeat, or a step already checkpointed.',
+      'Writes the one numeric line under `## Build order` in intent.md, which status, build, checkpoint, and handoff all read. A span is spelled out on the line. Refuses (exit 1) with no session, no numbers, a span that runs backward, a number the plan lacks, a repeat, or a step already checkpointed.',
   },
   {
     name: 'spike',

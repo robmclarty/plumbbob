@@ -1,7 +1,7 @@
 ---
 name: order
 description: "Set the build order: turn the human's sequence (or a relative one, such as 7 and 8 before 5) into the full list of undone steps and write it by shelling `plumbbob order`, never by editing intent.md. A step keeps its number; the sequence moves."
-argument-hint: "[steps in the sequence to build them]"
+argument-hint: "[steps in the sequence to build them, such as 1, 6, 2-4, 7, 5]"
 disable-model-invocation: true
 model: haiku
 allowed-tools: Bash(plumbbob status:*), Bash(plumbbob order:*)
@@ -27,14 +27,16 @@ after the step in flight is the usual reason to run it.
 ## What this skill does
 
 1. **Compose the full sequence.** Read the step list and the `build order` row on the
-   dashboard. Take the human's instruction, whether a full list (`7 8 5 10 6`) or a relative
-   one ("7 and 8 before 5", "10 last"), and turn it into **every undone step, in the sequence
-   to build them**. Never renumber a step and never move one inside `## Steps`; the sequence
+   dashboard. Take the human's instruction, whether a full list (`7 8 5 10 6`, or
+   `1, 6, 2-4, 7, 5` with spans and commas) or a relative one ("7 and 8 before 5", "10
+   last"), and turn it into **every undone step, in the sequence to build them**. Never renumber a step and never move one inside `## Steps`; the sequence
    lives in this one line.
 2. **Show the sequence and get the human's OK in-turn.** When the human's own message states
    the full sequence, that message **is** the approval: run the verb directly.
-3. **Write it by shelling `plumbbob order 7 8 5 10 6`** via Bash. `plumbbob order --reset`
-   drops the line, and the plan reads in document order again.
+3. **Write it by shelling `plumbbob order 7 8 5 10 6`** via Bash. The verb reads spans and
+   commas, with or without a space after one, so a list typed as `1, 6, 2-4, 7, 5` goes to it
+   as typed, and the line it writes spells the span out. `plumbbob order --reset` drops the
+   line, and the plan reads in document order again.
 4. **Relay the ending verbatim, then stop.** The verb prints its whole ending: the
    `**Build order**: 7, 8, 5, 10, 6` line, a blank line, and the `**Next Up**` pointer (back
    at the step in flight, or forward to the first step in the new sequence). Run no second

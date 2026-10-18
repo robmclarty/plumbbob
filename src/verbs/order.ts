@@ -15,17 +15,19 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { activeBuild, hasSession, intentPath } from '../lib/sidecar.ts'
 import { clearBuildOrder, orderSteps, parseSteps, setBuildOrder } from '../lib/orient.ts'
+import { expandStepList, parseStepList } from '../lib/steplist.ts'
 import { ending, notice, printEnding, transition } from '../lib/notice.ts'
 import { driverPointer } from './handoff.ts'
 
 /**
- * Set the build order to the given step numbers, the rest of the undone steps
- * following in document order, or clear it with `--reset`.
+ * Set the build order to the given step numbers and spans, the rest of the
+ * undone steps following in document order, or clear it with `--reset`.
  *
- * The line written is the whole remaining sequence, so a cold reader of
- * intent.md sees every undone step and not only the ones re-sequenced.
- * Refuses (exit 1) with no session, no numbers, a token that is not a number,
- * a number the plan lacks, a repeated number, or a step already checkpointed.
+ * The line written is the whole remaining sequence, each span spelled out, so a
+ * cold reader of intent.md sees every undone step and not only the ones
+ * re-sequenced. Refuses (exit 1) with no session, no numbers, a token that is
+ * neither a number nor a span, a number the plan lacks, a repeated number, or a
+ * step already checkpointed.
  */
 export function order(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
@@ -51,8 +53,9 @@ export function order(cwd: string, args: ReadonlyArray<string>): number {
     return 0
   }
 
-  // Numbers arrive space- or comma-separated: `order 7 8 5` and `order 7,8,5`
-  // read the same, since the line they write is the comma form.
+  // Numbers and spans arrive space- or comma-separated, with or without a space
+  // after a comma: `order 7 8 5`, `order 7,8,5`, and `order 1, 6, 2-4, 7, 5`
+  // all read, and a span names its steps in place, since the line is a sequence.
   const tokens = args
     .filter((a) => !a.startsWith('--'))
     .flatMap((a) => a.split(','))
@@ -68,14 +71,20 @@ export function order(cwd: string, args: ReadonlyArray<string>): number {
     )
     return 1
   }
-  const stray = tokens.find((t) => !/^\d+$/.test(t))
+  const lists = tokens.map(parseStepList)
+  const stray = tokens.find((_, i) => lists[i] === null)
   if (stray !== undefined) {
-    process.stderr.write(notice({ fact: `\`${stray}\` is not a step number`, remedy: 'plumbbob order 7 8 5' }))
+    process.stderr.write(
+      notice({ fact: `\`${stray}\` is not a step number or span`, remedy: 'plumbbob order 1, 6, 2-4, 7, 5' }),
+    )
     return 1
   }
-  const given = tokens.map(Number)
   const steps = parseSteps(intent)
   const planned = steps.map((s) => s.n)
+  const given = expandStepList(
+    lists.flatMap((list) => list ?? []),
+    (n) => planned.includes(n),
+  )
   const unknown = given.find((n) => !planned.includes(n))
   if (unknown !== undefined) {
     process.stderr.write(

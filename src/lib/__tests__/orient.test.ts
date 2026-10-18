@@ -911,6 +911,25 @@ describe('the build order', () => {
     expect(parseBuildOrder('## Build order\n\n2, 2, 9\n3\n\n## Open questions\n')).toEqual([2, 2, 9])
   })
 
+  // Seven planned steps and an empty build order, for a line to be appended to.
+  const SEVEN = ['## Steps', '', ...[1, 2, 3, 4, 5, 6, 7].map((n) => `${n}. [ ] s${n}, **done when:** ok`), '', '## Build order', '', ''].join('\n')
+
+  it('parseBuildOrder spells a span out in place, with or without a space after each comma', () => {
+    expect(parseBuildOrder(`${SEVEN}1, 6, 2-4, 7, 5\n`)).toEqual([1, 6, 2, 3, 4, 7, 5])
+    expect(parseBuildOrder(`${SEVEN}1,6,2-4,7,5,\n`)).toEqual([1, 6, 2, 3, 4, 7, 5])
+  })
+
+  it('parseBuildOrder stops a span past the plan at its first unknown, and reads a backward span as no order', () => {
+    expect(parseBuildOrder(`${SEVEN}6, 2-100000\n`)).toEqual([6, 2, 3, 4, 5, 6, 7, 8])
+    expect(parseBuildOrder(`${SEVEN}4-2, 1\n`)).toEqual([])
+  })
+
+  it('setBuildOrder replaces a hand-written line that holds a span', () => {
+    const replaced = setBuildOrder(`${SEVEN}1, 6, 2-4, 7, 5\n`, [6, 1])
+    expect(replaced).toContain('## Build order\n\n6, 1\n')
+    expect(replaced).not.toContain('2-4')
+  })
+
   it('orderSteps puts the listed steps first, then the rest in document order', () => {
     const steps = parseSteps(INTENT)
     expect(orderSteps(steps, [3]).map((s) => s.n)).toEqual([3, 1, 2])

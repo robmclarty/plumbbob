@@ -838,7 +838,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   rewriting it. (Revised 2026-10-17 by [**D93 (range-on-the-card)**](#d93): when the plan declares build
   ranges, the note opens on the range holding the step and the command that runs what is left of it,
   `· range 3 of 5: /plumbbob:build 6-9`, ahead of the build order and the parks, and the dashboard lists
-  the ranges beneath the steps.) Amends [**D6 (parseable-steps)**](#d6) (a second machine-read section) and
+  the ranges beneath the steps. Revised again 2026-10-18: the line and `plumbbob order` read spans
+  beside numbers, `1, 6, 2-4, 7, 5`, with or without a space after each comma, each span naming its steps
+  in place through the grammar of [**D91 (step-list-grants)**](#d91), and the verb still writes every
+  step out.) Amends [**D6 (parseable-steps)**](#d6) (a second machine-read section) and
   [**D83 (card-teaches-itself)**](#d83) (the one unlabeled continuation under Next Up). *Tagged in*
   `orient.ts`, `order.ts`, `build.ts`, `checkpoint.ts`, `handoff.ts`, `recover.ts`, the `order`, `step`,
   `refine`, and `harvest` skills, `templates/intent.md`, `docs/presentation.md`, and

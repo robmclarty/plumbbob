@@ -5,7 +5,16 @@
 // than throwing.
 
 import { parseStepSeam, scopeDrift } from './intent.ts'
-import { formatStepList, hasStep, normalizeStepList, readBuildArgs, type Span, type StepList } from './steplist.ts'
+import {
+  expandStepList,
+  formatStepList,
+  hasStep,
+  normalizeStepList,
+  parseStepList,
+  readBuildArgs,
+  type Span,
+  type StepList,
+} from './steplist.ts'
 
 /** One numbered step under intent.md's `## Steps`. */
 export type Step = {
@@ -172,34 +181,36 @@ export function parseSteps(intent: string): Step[] {
   })
 }
 
-// A build-order line: step numbers and commas, nothing else. A trailing comma
-// is tolerated, since a hand edit leaves one behind.
-const BUILD_ORDER_LINE = /^\d+(?:\s*,\s*\d+)*\s*,?$/
+// A build-order line: step numbers and spans (`2-4`) joined by commas, with or
+// without a space after each, and nothing else. A trailing comma is tolerated,
+// since a hand edit leaves one behind.
+const BUILD_ORDER_LINE = /^\d+(?:-\d+)?(?:\s*,\s*\d+(?:-\d+)?)*\s*,?$/
 
 /**
  * The build order declared under `## Build order`: the step numbers on the
- * first line that is nothing but numbers and commas, in the sequence written.
+ * first line that is nothing but numbers, spans, and commas, in the sequence
+ * written, each span spelled out in place (`1, 6, 2-4` reads 1, 6, 2, 3, 4).
  *
  * The line is the plan's own statement of what to build next once the
  * numbering stops carrying it (a refined plan appends a step 7 that has to
  * land before step 5), and `plumbbob order` is the verb that writes it. The
  * template's guidance, a comment, and an absent section all read as `[]`,
- * which every picker takes to mean document order. Numbers come back
- * verbatim, repeats and unknowns included: `orderSteps` does the cleaning, and
- * `recover` wants the raw read to say which number the plan lacks.
+ * which every picker takes to mean document order, and so does a line holding
+ * a span that runs backward. Numbers come back verbatim, repeats and unknowns
+ * included: `orderSteps` does the cleaning, and `recover` wants the raw read to
+ * say which number the plan lacks. A span stops at the first number past the
+ * plan, which it keeps for `recover` to name.
  */
 export function parseBuildOrder(intent: string): number[] {
   const line = sectionLines(intent, '## Build order')
     .lines.map((l) => l.trim())
     .find((l) => BUILD_ORDER_LINE.test(l))
-  if (line === undefined) {
+  const list = line === undefined ? null : parseStepList(line.replace(/\s+/g, '').replace(/,$/, ''))
+  if (list === null) {
     return []
   }
-  return line
-    .split(',')
-    .map((n) => n.trim())
-    .filter((n) => n.length > 0)
-    .map(Number)
+  const planned = new Set(parseSteps(intent).map((s) => s.n))
+  return expandStepList(list, (n) => planned.has(n))
 }
 
 /**

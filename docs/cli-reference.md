@@ -28,7 +28,7 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 | `revert` | `revert [--to <n>] [--build <slug>]` | `git reset --hard` to a checkpoint SHA |
 | `abandon` | `abandon [--build <slug>]` | drop the in-flight step, keep its work in the tree |
 | `park` | `park <text>` | append a line to the park list |
-| `order` | `order <n> [<n>…]` \| `order --reset` | set the build order: the undone steps in the sequence to build them |
+| `order` | `order <steps>` \| `order --reset` | set the build order: the undone steps in the sequence to build them |
 | `spike` | `spike <slug> [opt…] [--build <slug>]` \| `spike report <slug>` \| `spike done` | throwaway worktree experiment |
 | `agent` | `agent list` \| `agent run <name> [--step N] [--mode …] [--agent <path>] [--build <slug>]` | list user-authored agents, or run one through the doorway |
 | `use` | `use <slug>` | re-point the active-build cursor and resume that build |
@@ -363,7 +363,7 @@ tag at the tail, is the `/plumbbob:park` skill's job. Refuses (exit 1) with no s
 ### order
 
 ```text
-plumbbob order <n> [<n>…]
+plumbbob order <steps>
 plumbbob order --reset
 ```
 
@@ -377,8 +377,15 @@ appended a step that has to land before an existing one. `status`, a bare `build
 the step a bare `/plumbbob:build` enters, and the card agree. Prints its ending,
 `**Build order**: 7, 8, 5, 10, 6` and then the pointer (back at the step in flight, or
 forward to the first step in the new sequence). `--reset` drops the line, and the plan reads
-in document order again. Refuses (exit 1) with no session, no numbers, a number the plan
-lacks, a repeat, or a step already checkpointed. Composing a relative instruction ("7 and 8
+in document order again.
+
+`<steps>` is step numbers and spans (`2-4`), separated by spaces or commas, with or without a
+space after a comma, so `plumbbob order 1, 6, 2-4, 7, 5`, `plumbbob order 1,6,2-4,7,5`, and
+`plumbbob order 1 6 2-4 7 5` all write `1, 6, 2, 3, 4, 7, 5`: a span names its steps in place,
+because the line is a sequence, and the line spells it out. A hand-written line holding a span
+reads the same way. Refuses (exit 1) with no session, no numbers, a span that runs backward, a
+number the plan lacks (a span past the plan names its first missing step), a repeat, or a step
+already checkpointed. Composing a relative instruction ("7 and 8
 before 5") into the full sequence is the `/plumbbob:order` skill's job.
 
 ### spike

@@ -67,6 +67,25 @@ describe('order', () => {
     expect(intent.match(/## Build order/g)).toHaveLength(1)
   })
 
+  it('reads spans beside numbers, with or without a space after a comma, and spells them out', async () => {
+    const dir = await started()
+    for (const args of [['4,', '2-3'], ['4,2-3'], ['4', '2-3']]) {
+      const { code, stdout } = captureIo(() => order(dir, args))
+      expect(code).toBe(0)
+      expect(stdout).toContain('**Build order**: 4, 2, 3')
+    }
+    expect(readFileSync(intentPath(dir), 'utf8')).toContain('## Build order\n\n4, 2, 3\n\n## Open questions')
+  })
+
+  it('refuses a backward span, a span past the plan, one over a landed step, and one that repeats a number', async () => {
+    const dir = await started()
+    expect(captureIo(() => order(dir, ['3-2'])).stderr).toContain('`3-2` is not a step number or span')
+    expect(captureIo(() => order(dir, ['2-100000'])).stderr).toContain('no step 5 in the plan')
+    expect(captureIo(() => order(dir, ['1-2'])).stderr).toContain('step 1 is already checkpointed')
+    expect(captureIo(() => order(dir, ['2-3,', '3'])).stderr).toContain('step 3 is listed twice')
+    expect(readFileSync(intentPath(dir), 'utf8')).toBe(INTENT)
+  })
+
   it('points back at the step in flight when one is open: the order is a driver turn', async () => {
     const dir = await started()
     writeFileSync(stepPath(dir), '2\n')

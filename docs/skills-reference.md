@@ -135,6 +135,7 @@ step stays protected; the list gets triaged later by `/plumbbob:harvest`.
 A step keeps its number for life, so once `/plumbbob:step` or `/plumbbob:refine` appends a
 step that has to land before an existing one, the sequence to build them stops being the
 numbering (`4, 7, 8, 5, 10, 6`) and used to live in your head. Give it the full sequence
+(numbers and spans, with or without a space after each comma, such as `1, 6, 2-4, 7, 5`)
 or a relative one ("7 and 8 before 5"); it composes every undone step in order, shows it
 for a quick OK, then writes it by shelling `plumbbob order`, never by editing `intent.md`.
 The `## Build order` line it writes is what the dashboard's `← next`, a bare

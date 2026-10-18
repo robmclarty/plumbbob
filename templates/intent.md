@@ -82,8 +82,8 @@ auto-syncs it), and use `/plumbbob:refine` to repair the whole plan when a block
 ## Build order
 
 *(Optional. The sequence to build the steps in once it stops being their numbering: one
-line of comma-separated step numbers, such as `7, 8, 5, 10, 6`; empty means document
-order. `plumbbob order 7 8 5 10 6` (`/plumbbob:order`) writes it, and `status`, `build`,
+line of step numbers and spans, comma-separated, such as `7, 8, 5, 10, 6` or
+`1, 6, 2-4, 7, 5`; empty means document order. `plumbbob order 7 8 5 10 6` (`/plumbbob:order`) writes it, and `status`, `build`,
 `checkpoint`, and `handoff` all read it, so the dashboard's `← next`, a bare
 `/plumbbob:build`, and the card's Next Up agree. A step keeps its number for life; this
 line is where the sequence lives.)*
