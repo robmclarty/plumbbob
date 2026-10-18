@@ -9,7 +9,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { hasSession, intentPath, resolveBuild, seamPath, stampStepStat, stampTick, stepPath } from '../lib/sidecar.ts'
 import { parseStepSeam } from '../lib/intent.ts'
-import { parseOrderedSteps, rangeStart, skippedBefore, type Step } from '../lib/orient.ts'
+import { parseBuildRanges, parseOrderedSteps, rangeStanding, rangeStart, skippedBefore, type Step } from '../lib/orient.ts'
 import { stepLabel, syncBuildLogState } from '../lib/buildlogsync.ts'
 import { readGrant, type Grant } from '../lib/latch.ts'
 import { notice } from '../lib/notice.ts'
@@ -23,7 +23,8 @@ import { hasStep, readBuildArgs } from '../lib/steplist.ts'
  * that fails to parse.
  * On entry it stamps the turn ledger and the step's start time, re-renders the
  * build-log's Current step line, and names the step when it is the last one a
- * self-approval grant reaches.
+ * self-approval grant reaches, or, under `--auto`, a call the plan's ranges
+ * reserve for the human.
  */
 export function build(cwd: string, args: ReadonlyArray<string>): number {
   const root = findRepoRoot(cwd)
@@ -116,12 +117,16 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
       : skipped > 0
         ? ['explicitly requested', `skips ${skipped} undone step${skipped === 1 ? '' : 's'}`]
         : []
-  // Two lines (three on the last step a grant reaches), one colon each, then
-  // the seam as a plain readout beneath the notice that frames it: the paths
-  // are a list, and a list is not a one-liner.
+  // Two lines (three on the last step a grant reaches, or on a call the plan
+  // reserves), one colon each, then the seam as a plain readout beneath the
+  // notice that frames it: the paths are a list, and a list is not a one-liner.
+  // A reserved call outranks the last-step line, since the step stops at its
+  // pause rather than landing.
+  const grant = readGrant(root)
+  const reserved = grant?.kind === 'auto' ? reservedCallNotice(intent, steps, step) : ''
   process.stdout.write(
     notice({ fact: `building step ${step}`, detail: picked }) +
-      lastGrantedNotice(readGrant(root), steps, step) +
+      (reserved.length > 0 ? reserved : lastGrantedNotice(grant, steps, step)) +
       notice({
         fact: 'the seam is orientation, not a lock',
         detail: [`${parsed.seam.length} path${parsed.seam.length === 1 ? '' : 's'}`],
@@ -147,6 +152,27 @@ function rangeEntry(intent: string, args: string, raw: string): string {
     // No plan to order by: fall back to the number typed first.
   }
   return /\d+/.exec(raw)?.[0] ?? '1'
+}
+
+/**
+ * The line saying a step ends at its pause under `--auto`, because the plan's
+ * build ranges name it as a bare range: a call the plan reserves for the
+ * human. '' for any other step.
+ *
+ * The halt is this line's and the skill's, never the latch's: the ranges are
+ * advice, so `--auto` still grants the checkpoint, and saying so as the step
+ * is entered is what puts the stop in front of the model before it lands one.
+ */
+function reservedCallNotice(intent: string, steps: ReadonlyArray<Step>, step: number): string {
+  const { count, holding } = rangeStanding(parseBuildRanges(intent), steps, step)
+  if (holding === null || !holding.bare) {
+    return ''
+  }
+  return notice({
+    fact: `step ${step} ends at its pause, where the plan reserves the call for the human`,
+    detail: [`range ${holding.item} of ${count}`],
+    remedy: 'hold it there for their approval, --auto or not',
+  })
 }
 
 /**

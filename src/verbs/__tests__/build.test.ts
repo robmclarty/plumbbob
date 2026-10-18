@@ -363,3 +363,52 @@ describe('build — the build order', () => {
     )
   })
 })
+
+describe('build — a call the plan reserves halts --auto — D94 (auto-and-stops)', () => {
+  // Steps 1 and 2 land as one range; step 3 is a call made at its own pause.
+  const RANGED = `${INTENT}3. [ ] Third — **done when:** c works.
+   - seam: \`src/d.ts\`
+
+## Build ranges
+
+1. \`/plumbbob:build 1-2\`, **stop:** review the parser
+2. \`/plumbbob:build 3\`, **stop:** at step 3's pause, pick the label
+`
+  const RESERVED = notice({
+    fact: 'step 3 ends at its pause, where the plan reserves the call for the human',
+    detail: ['range 2 of 2'],
+    remedy: 'hold it there for their approval, --auto or not',
+  })
+  const LANDS = 'land it on green, then stop at the boundary'
+
+  async function rangedAt(done: ReadonlyArray<number>, grant: string | null, intent = RANGED): Promise<string> {
+    const dir = await startedWithSteps()
+    writeFileSync(intentPath(dir), done.reduce((text, n) => text.replace(`${n}. [ ]`, `${n}. [x]`), intent))
+    if (grant !== null) writeFileSync(grantPath(dir), `${grant}\n`)
+    return dir
+  }
+
+  it('says a bare range ends at its pause under --auto, in place of the last-step line', async () => {
+    const dir = await rangedAt([1, 2], 'auto')
+    const { code, stdout } = captureIo(() => build(dir, ['3']))
+    expect(code).toBe(0)
+    expect(stdout).toContain(notice({ fact: 'building step 3' }) + RESERVED + notice({ fact: 'the seam is orientation, not a lock', detail: ['1 path'] }))
+    expect(stdout).not.toContain(LANDS)
+  })
+
+  it('runs a range that lands its steps through under --auto', async () => {
+    const dir = await rangedAt([], 'auto')
+    expect(captureIo(() => build(dir, ['1'])).stdout).not.toContain('ends at its pause')
+  })
+
+  it('leaves a typed range as typed, a run with no grant as before, and --auto on a plan without ranges unchanged', async () => {
+    const listed = await rangedAt([1, 2], 'steps 1-3')
+    expect(captureIo(() => build(listed, ['3'])).stdout).toContain(notice({ fact: 'step 3 is the top of the range you granted', remedy: LANDS }))
+    const ceiling = await rangedAt([1, 2], 'range 3')
+    expect(captureIo(() => build(ceiling, ['3'])).stdout).toContain(notice({ fact: 'step 3 is the top of the range you granted', remedy: LANDS }))
+    const none = await rangedAt([1, 2], null)
+    expect(captureIo(() => build(none, ['3'])).stdout).not.toContain('ends at its pause')
+    const plain = await rangedAt([1, 2], 'auto', RANGED.replace(/## Build ranges[\s\S]*$/, ''))
+    expect(captureIo(() => build(plain, ['3'])).stdout).toContain(notice({ fact: 'step 3 is the last undone step in the plan', remedy: LANDS }))
+  })
+})

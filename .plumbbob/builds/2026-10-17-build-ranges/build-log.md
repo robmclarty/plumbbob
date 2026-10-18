@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Build ranges
 
-**Current step:** 9 — feat(status): show the ranges and flag one the plan outgrew
+**Current step:** 10 — feat(build): halt --auto where the plan reserves a call for the human
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -31,7 +31,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 6. feat(orient): read the build ranges and where the build stands in them
 - ☑ 7. feat(handoff): name the range to run beneath Next Up
 - ☑ 8. feat(checkpoint): say why the build stops when a range's last step lands
-- ☐ 9. feat(status): show the ranges and flag one the plan outgrew
+- ☑ 9. feat(status): show the ranges and flag one the plan outgrew
 - ☐ 10. feat(build): halt --auto where the plan reserves a call for the human
 - ☐ 11. feat(plan): author the build ranges with the steps
 - ☐ 12. feat(skills): keep the build ranges true as the plan changes
@@ -271,3 +271,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-10-18 — step 6 checkpointed · 23c55f43d — feat(orient): read the build ranges and where the build stands in them (9m)
 - 2026-10-18 — step 7 checkpointed · 7d523ae92 — feat(handoff): name the range to run beneath Next Up (8m)
 - 2026-10-18 — step 8 checkpointed · 5c4e9ed33 — feat(checkpoint): say why the build stops when a range's last step lands (8m)
+- 2026-10-18 — step 9 checkpointed · 5b283b5d7 — feat(status): show the ranges and flag one the plan outgrew (11m)

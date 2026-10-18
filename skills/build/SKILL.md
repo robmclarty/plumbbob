@@ -288,6 +288,16 @@ and approves in the human's place**, and it **chains**:
     advance the loop), or a new decision is needed. The step is still in flight and the
     human has a call to make about it, so end on the same turn the default pause does:
     write the detail file, run `plumbbob handoff`, and paste its block.
+  - **A call the plan reserves halts at its pause.** A step the plan's `## Build ranges`
+    names as a bare range (`/plumbbob:build 10`) is a decision the plan left for the human,
+    and `plumbbob build` says so as it enters the step (`step 10 ends at its pause, where
+    the plan reserves the call for the human`). Build it, verify it, and end on the same
+    turn a halt on trouble does: write the detail file, run `plumbbob handoff`, and paste
+    its block. The latch would let it land, since `--auto` grants every step, so keeping
+    the step open is yours to do
+    ([D94 (auto-and-stops)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d94)).
+    A range that lands its steps runs through, since its stop is a review that can wait
+    for the end of the run, and a typed range stays exactly as typed.
   - **A clean halt lands its step first.** The top of a requested range is reached (the
     next step in build order is one the range does not name, or none is left), or no
     planned steps remain, and `plumbbob build` names that step as it enters it (for
