@@ -20,7 +20,7 @@ lands; [**D33 (info-exclude)**](#d33)–[**D38 (cli-owns-slugs)**](#d38) below c
 intent-legibility build, and [**D80 (cli-renders-model-relays)**](#d80)–[**D84 (one-liner-register)**](#d84)
 from the 2026-08-28 presentation build, and [**D87 (pause-once)**](#d87)–[**D89 (block-once)**](#d89)
 from the 2026-10-08 said-once-said-whole build, and [**D90 (notice-not-turn)**](#d90)–[**D94 (auto-and-stops)**](#d94)
-from the 2026-10-17 build-ranges build, and [**D95 (run-verb)**](#d95)–[**D99 (one-loop)**](#d99)
+from the 2026-10-17 build-ranges build, and [**D95 (run-verb)**](#d95)–[**D104 (harvest-records)**](#d104)
 from the 2026-10-17 runs-and-the-stop-card build.)
 
 ## Constraints (C)
@@ -814,7 +814,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   grants N through M where the latch used to allow every step under M; the top is the last undone step
   the range names ([**D91 (step-list-grants)**](#d91)).) (Revised 2026-10-17 by
   [**D94 (auto-and-stops)**](#d94): under `--auto`, a step the plan's build ranges name as a bare range
-  halts at its pause, a decision turn, and `plumbbob build` says so as it enters the step.) Amends
+  halts at its pause, a decision turn, and `plumbbob build` says so as it enters the step.) (Revised
+  2026-10-18 by [**D100 (stop-card)**](#d100): a run's clean halt lands its top step first, as any clean
+  halt does, and then ends on the stop card rather than the checkpoint's block, because a landing range's
+  stop is a review and the block gave it nothing to read.) Amends
   [**D56 (auto-composes)**](#d56) and [**D83 (card-teaches-itself)**](#d83). *Tagged in* the `build`
   skill, `docs/presentation.md`, and `docs/cli-reference.md`.
 
@@ -863,6 +866,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   row) and on request: `plumbbob handoff --full` prints it whatever the stamp says, the `expand` move names
   the phrase that asks for it (`show the pause`), and a session without the block in front of it (a fresh
   window, or after `/clear`) asks the same way; `checkpoint`, `revert`, and `abandon` clear the stamp.
+  (Revised 2026-10-18 by [**D100 (stop-card)**](#d100): the stop card that closes a run's range renders
+  once too, under a stamp of its own (the range, the detail file, and the measured rows); its reminder
+  reads `Back to Range 3 of 5's stop - <its stop>`, `plumbbob handoff --stop --full` brings it back, and
+  the record clears the stamp.)
   Promoted from the 2026-10-08 said-once-said-whole build, merging its locals `pause-once`,
   `cli-picks-the-form`, and `stamp-skips-spent`. *Tagged in* `docs/presentation.md`.
 
@@ -936,7 +943,11 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   prose, and a reordered Your Call still offers every move. Replayed against the A/B's eight holds, it
   lets the five one-line changes through and still holds the three misses, and it holds a relay that
   keeps every part but turns a red check row green or changes the Verdict, which parts and order alone,
-  the other choice, would have passed.) Promoted from the
+  the other choice, would have passed.) (Revised 2026-10-18 by [**D103 (stop-latched)**](#d103): the
+  checkpoint that completes a range under the `RUN` mark writes its `RELAY` record as owing the stop
+  card, and the check holds a turn whose last ending still owes it, once, naming
+  `plumbbob handoff --stop` as the retry; the card's own render then takes the record's place at the
+  decision tier, with `plumbbob handoff --stop --full` as its reprint.) Promoted from the
   2026-10-08 said-once-said-whole build, where Q1 (relay-check-tier) settled the tier and the spike
   settled the mechanics, merging its local `block-once`. *Evidence in*
   `.plumbbob/builds/2026-10-08-said-once-said-whole/spike-01-stop-hook.md` and
@@ -1185,6 +1196,111 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   session in the build that settled this, and the eval tier's contract c11, hold the run to its range.
   Promoted from the 2026-10-17 runs-and-the-stop-card build, merging its local `one-loop`. *Tagged in*
   the `run` skill.
+
+- <a id="d100"></a>**D100 (stop-card): A run that lands its range ends on the stop card, a decision turn
+  in the range's shape, and a run whose range lands with nothing parked still ends on it.** The model
+  writes the range's detail (its summary and highlights drawn from the steps' checkpoint bodies and the
+  build-log's Log rather than from recall, the three judgment rows across the range, a proposed class
+  for every open park, and the recommendation) and `plumbbob handoff --stop` renders the card: the Stop
+  lead (the boundary's Stop part moved to the top, with the range's count, the stop's text, and the
+  bracket at the item), the Summary and highlights of the whole range, the Readout measured across it
+  ([**D101 (range-readout)**](#d101)), the Verdict, the Harvest part with every open park's handle,
+  text, proposed class, and reason, Next Up with the next range's segment, Your Call, and the
+  recommendation; it closes the run's turn in place of the last checkpoint's block, and the model relays
+  it whole. Rob's pick at the plan prompt on 2026-10-17, over a stop the CLI renders with the parks
+  listed and a pointer at harvest, *because* a landing range's stop is a review, and the block gave it
+  nothing to read: every step before the last had landed without a pause, so a step that landed a hair
+  off mid-range never reached the screen, and the parks piled up behind a count at the end of the note
+  (checkride's polyglot build parked 64 over its run). A stop with no park open renders the card without
+  its Harvest part, *because* the review is the stop's point, the plain block leaves it nothing to read,
+  and the one reply the card then costs is the run the human was going to type anyway. The card renders
+  once per stop under a stamp of its own ([**D87 (pause-once)**](#d87)), its reminder naming the stop
+  still waiting, and `plumbbob handoff --stop --full` brings it back. It renders for a run's landing
+  only: a range landed by `/plumbbob:build`, a typed range, `--auto`, or by hand keeps the boundary and
+  its Stop part, and a bare range's stop is its own pause. Amends [**D85 (range-top-lands)**](#d85): a
+  run's clean halt lands its top step first, then ends on the card. Promoted from the 2026-10-17
+  runs-and-the-stop-card build, merging its locals `stop-card` and `empty-stop`. *Tagged in*
+  `docs/presentation.md`.
+
+- <a id="d101"></a>**D101 (range-readout): The stop card's readout is measured by the CLI across the
+  range, and its Verdict folds the range worst-of.** From the steps' commits, the checkpoints ledger,
+  `stats.json`, and the last check's summary, the CLI writes the `steps` row (each step the range landed
+  with its checkpoint's sha, in build order), the `check` row with the count of landings, the `seam` row
+  comparing each step's commit against that step's own seam with the strays named, the `diff` row summed
+  over the commits, and the `spent` row from the first step's `startedAt` to the last's `landedAt` with
+  the red runs summed; the model writes `done-when`, `decisions`, and `constraints` across the range
+  into the range detail, under its own header rule; and the Verdict folds them all worst-of with the
+  range's accrued stats, its advisories counted across the range, *because* the CLI measures whatever it
+  can ([**D80 (cli-renders-model-relays)**](#d80)), a landed range's facts are already on record in its
+  commits and its stats, and a row the model attested about a landed commit is one it could pad. Each
+  step is held to its own seam rather than the range's union, *because* a step that wandered into
+  another step's seam still wandered. No gate or turn clause rides the range's `spent` row, since a gate
+  is one run's wall clock and a range has several, only the last on disk, and the ledger counts turns
+  from the tick that entered a step. Promoted from the 2026-10-17 runs-and-the-stop-card build, merging
+  its local `range-readout`. *Tagged in* `docs/presentation.md`.
+
+- <a id="d102"></a>**D102 (settle-in-one-reply): The stop card's proposals are settled in one reply,
+  each park under a handle the card prints, and a run or a finish typed at the card records it first.**
+  `looks good` confirms every proposal (the model folds a confirmed blocker into `intent.md` by the
+  harvest skill's rules, then records through `plumbbob harvest`); a reply that changes one is
+  direction, and the card re-renders with the proposal changed while nothing is recorded until
+  `looks good`; a question is answered and closed on the reminder; and `/plumbbob:run` typed at the card
+  confirms them all and runs the next range, *because* the human reads every proposal on the card, one
+  reply per item is what made a stop's harvest a chore, and the classes stay the human's call, which is
+  the harvest skill's contract. A park's handle is its place in `## Park list`, counting every line ever
+  parked, written `park 6` on the card and in a reply and never a bare number, *because* a line is never
+  deleted from the list, only flipped, so the number is stable for the life of the build and the record
+  matches a proposal to its park without guessing, and the bare numbers are the highlights' (`expand 2`
+  opens a section) where one reply can carry both. A run typed at a waiting card records the stop first,
+  and when `status --run` then reports the grant unlike the run, because the harvest added or moved a
+  step in the range the run would walk, the run ends at the boundary, where the record's ending names
+  the re-cut run, rather than walking a grant that no longer covers the range, *because* the hook minted
+  the grant from the plan before the record ran, and halting before a step its own harvest added is the
+  early halt [**D97 (run-refuses)**](#d97) says ranges exist to remove. The plan's last range names
+  `/plumbbob:finish` on its card in the run's place, and the finish skill records a waiting stop card
+  the way `looks good` would, through `plumbbob harvest`, before it writes the report, *because* every
+  build whose plan declares ranges ends its last run on a stop card, finish is the move after it, and a
+  review the finish skipped would never reach the Log or the report. Promoted from the 2026-10-17
+  runs-and-the-stop-card build, merging its locals `settle-in-one-reply`, `fold-then-run`, and
+  `finish-at-a-stop`. *Tagged in* `docs/presentation.md`.
+
+- <a id="d103"></a>**D103 (stop-latched): The stop's record is latched, and a `RUN` mark with an owing
+  `RELAY` record holds a run to its card.** `plumbbob harvest` refuses in the turn the stop card
+  printed, refuses a range's detail that no stop card showed, and refuses one whose range no longer
+  reads as landed, while a harvest outside a stop needs no stamp, *because* a run's long turn that ends
+  on proposals is where a model would carry straight on into recording its own, and the record is where
+  plumbbob holds the line ([**D64 (approval-latch)**](#d64)). The turn hook marks a run in a `RUN`
+  control file naming its range, written beside `GRANT` as it mints a grant that lands steps and cleared
+  by the next typed prompt unless a step of that range waits at a pause, while a notice leaves it as it
+  leaves the grant ([**D90 (notice-not-turn)**](#d90)), and the latch reads grants exactly as it did;
+  the checkpoint that completes a marked range writes its `RELAY` record as owing the stop card, and the
+  relay check holds a turn whose last ending still owes it, once ([**D89 (block-once)**](#d89)), with
+  `plumbbob handoff --stop` as the retry, *because* only the run skill's prose asked for the card's
+  second beat, a boundary relayed whole passed the check, nothing in the CLI could tell a run's grant
+  from a typed list's (both mint `steps 6-9`), and a new clean-halt shape has gone wrong under the eval
+  tier before, in 2 of 4 runs ([**D85 (range-top-lands)**](#d85)). The mark outlives a prompt at a pause
+  inside its range so that a halt approved with `looks good` still owes the card. Promoted from the
+  2026-10-17 runs-and-the-stop-card build, merging its locals `stop-latched` and `stop-card-held`.
+  *Tagged in* `docs/presentation.md`.
+
+- <a id="d104"></a>**D104 (harvest-records): `plumbbob harvest` records a harvest from the detail file,
+  and recording a stop commits nothing.** The verb reads the detail file's `## Harvest` proposals, flips
+  each settled park in `build-log.md`, appends the dated Harvest lines, and, when the detail is a
+  range's, writes the range's review beneath a dated Log line, then clears the file and the stop's
+  stamp; it refuses a proposal naming a park the list lacks or a class other than blocker, tangent, or
+  pivot, and leaves a park no proposal names open; the `/plumbbob:harvest` skill records through it too,
+  proposing every class at once so one reply settles a boundary harvest; and `checkpoint` never records
+  a range's detail beneath a step's Log line, *because* everywhere else in plumbbob a skill decides and
+  the CLI records, and a range's review is the record a PR reviewer reads, kept the way `checkpoint`
+  keeps a step's pause beneath its Log line. The record commits nothing, and the review and the flipped
+  parks ride the next step's checkpoint, or the finish, as a harvest's edits always have, *because* a
+  stop commit would need a fourth kind of ledger line that `recover`, `revert`, `status`'s out-of-band
+  count, and the finish report would each have to learn, while the Log already carries the review into
+  the PR. Its ending is the orientation tier's with no Verdict:
+  `**Stop**: Range 3 of 5 recorded (1 blocker, 2 tangents)` at a stop,
+  `**Harvested**: 2 parked ideas (2 tangents)` outside one, and Next Up with its note naming the next
+  run. Promoted from the 2026-10-17 runs-and-the-stop-card build, merging its locals `harvest-records`
+  and `stop-record`. *Tagged in* `docs/presentation.md`.
 
 ### Superseded
 

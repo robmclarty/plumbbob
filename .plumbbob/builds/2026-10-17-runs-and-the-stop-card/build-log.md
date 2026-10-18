@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Runs and the stop card
 
-**Current step:** 6 — feat(run): add /plumbbob:run to run the range holding the next step
+**Current step:** 7 — docs(presentation): spec the stop card that closes a run's range
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -28,7 +28,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 3. feat(turn): mint a run's grant from the range the plan names
 - ☑ 4. feat(status): show the run a /plumbbob:run invocation resolves to
 - ☑ 5. feat(handoff): name the run on the card in place of the range command
-- ☐ 6. feat(run): add /plumbbob:run to run the range holding the next step
+- ☑ 6. feat(run): add /plumbbob:run to run the range holding the next step
 - ☐ 7. docs(presentation): spec the stop card that closes a run's range
 - ☐ 8. feat(orient): measure a landed range for the stop card's readout
 - ☐ 9. feat(handoff): render the stop card with plumbbob handoff --stop
@@ -44,7 +44,8 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 > go straight back to the step. Acting the instant an idea arrives is the disease.
 > Capture is one line (`/plumbbob:park` composes it). Harvest happens only at the boundary.
 
-- [ ] status --run words two refusal pointers docs/presentation.md does not list: a span typed reads '(steps 6-9; a run names one range)', and a numbered run while a step no range names is in flight reads '(or /plumbbob:abandon it; no range names it)'; spec them beside the eight in The run header (src/lib/orient.ts runRefusalMove)
+- [x] status --run words two refusal pointers docs/presentation.md does not list: a span typed reads '(steps 6-9; a run names one range)', and a numbered run while a step no range names is in flight reads '(or /plumbbob:abandon it; no range names it)'; spec them beside the eight in The run header (src/lib/orient.ts runRefusalMove)
+- [ ] the plain dashboard's ranges block could mark a stop card still waiting (a tail beside the landed range's row), where only status --run names it today (tangent)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -62,7 +63,12 @@ from sprawling across branches.
 
 Harvest results this boundary:
 
-- (none yet)
+- 2026-10-18, at range 2's stop (the step 6 boundary): one parked item, classified.
+- **blocker** (folded into step 7's done-when): `status --run` words two refusal pointers
+  `docs/presentation.md` does not list, a span typed and a numbered run while a step no range
+  names is in flight (`runRefusalMove` in `src/lib/orient.ts`). The code is right; the spec is
+  behind it, and step 7 already rewrites the run header's section, so it specs both beside the
+  eight.
 
 ## Log
 
@@ -149,3 +155,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-10-18 — step 3 checkpointed · aee679a7a — feat(turn): mint a run's grant from the range the plan names (6m)
 - 2026-10-18 — step 4 checkpointed · 0129d3519 — feat(status): show the run a /plumbbob:run invocation resolves to (1 red, 1 drift, 11m)
 - 2026-10-18 — step 5 checkpointed · de0185e58 — feat(handoff): name the run on the card in place of the range command (8m)
+- 2026-10-18 — step 6 checkpointed · ea3968808 — feat(run): add /plumbbob:run to run the range holding the next step (10m)

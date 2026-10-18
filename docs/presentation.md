@@ -35,8 +35,8 @@ there.
 
 | what | whose judgment | how it reaches the turn |
 | --- | --- | --- |
-| the Summary lead, the numbered highlights, the `done-when`, `decisions`, and `constraints` rows, the recommendation | the model | written into `.plumbbob/detail.md`, read back and rendered by handoff |
-| the Now line, the Readout's other rows, the inline diff when the change is small, the Verdict, the Stop part on the boundary that earns one, Next Up, Your Call | the CLI | measured from the session, the gate, the plan, and git |
+| the Summary lead, the numbered highlights, the `done-when`, `decisions`, and `constraints` rows, the class and reason proposed for each park at a stop, the recommendation | the model | written into `.plumbbob/detail.md`, read back and rendered by handoff |
+| the Now line, the Readout's other rows, the inline diff when the change is small, the Verdict, the Stop part on the boundary that earns one, the Stop lead and each park's handle and text on a stop card, Next Up, Your Call | the CLI | measured from the session, the gate, the plan, the build log, and git |
 
 The model authors nothing in the turn but the relay. Every defect the build
 that wrote this spec found in a live turn sat in the region the model was
@@ -168,6 +168,10 @@ seam, a check that went red or came back green. And it comes back on request:
 (`show the pause`), and a session that no longer has the block in front of it
 (a fresh window, or one after `/clear`) asks the same way. A checkpoint, a
 revert, or an abandon clears the stamp, so the next pause renders whole.
+The stop card that closes a run's range keeps the rule under a stamp of its
+own, with a reminder naming the stop still waiting and
+`plumbbob handoff --stop --full` to bring it back
+([the stop card](#the-stop-card)).
 
 ## The Now line
 
@@ -471,6 +475,8 @@ full:
 
 **Next Up**: Back to Step 2 of 3 - feat(login): wire the limiter into POST /login
 
+**Next Up**: Back to Range 3 of 5's stop - review the card on a live boundary before the skills teach it
+
 **Next Up**: Close the spike - /plumbbob:spike done, then back to Step 2
 
 **Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish
@@ -479,7 +485,9 @@ full:
 ```
 
 The `Back to` form is the pointer a park closes on, and the reminder a pause
-already shown ends on. The progress count rides Next Up in every tier,
+already shown ends on; a stop card already shown ends on the same form,
+naming the range and its stop where a step's names its title
+([the stop card](#the-stop-card)). The progress count rides Next Up in every tier,
 because Next Up is the one line present at the pause, at the boundary, and on
 a driver turn. It is dropped only where it would lie: a driver pointer back at
 a step the plan no longer holds says `Back to Step 9` and no count, and an
@@ -583,7 +591,9 @@ renders only where the run does more than `looks good`: inside a bare range
 the run ends once its step lands, and so does one typed at the pause on a
 range's last step, so at those pauses the block keeps its four moves and
 the segment beneath Next Up says the range lands with the step
-([the range segment](#the-range-segment-beneath-next-up)).
+([the range segment](#the-range-segment-beneath-next-up)). The stop card
+that closes a run's range carries a block of its own, with the record in
+place of the checkpoint ([the reply at a stop](#the-reply-at-a-stop)).
 
 At the plan pause the block keeps the shape with the moves that apply there
 (nothing is recorded yet, so `revert` has nothing to wind back to):
@@ -667,7 +677,8 @@ scales down with the turn:
 | tier | turns | the ending renders |
 | --- | --- | --- |
 | decision | the build/verify pause, the plan pause, an auto halt on trouble | the whole block: the Now line, the Summary and its highlights, the Readout, the inline diff when small, the Verdict, Next Up, Your Call, and the recommendation, rendered once per pause; a later turn at the same pause ends on the one-line reminder. The plan pause judges no diff and has no step in flight, so it renders the pointer, the moves, and the recommendation alone |
-| orientation | the checkpoint boundary (a clean halt's included), finish, status | the transition's lead line, the Verdict, any advisories, the Stop part on the boundary where a range's last step landed, and Next Up with its note; no Your Call block, no recommendation. `status` is the exception: it renders the dashboard and nothing else, and the dashboard's last line is its own pointer |
+| decision, at a stop | the stop card that closes a run's range | the whole block in the range's shape: the Stop lead, the Summary and its highlights, the Readout measured across the range, the Verdict, the Harvest part while a park is open, Next Up, Your Call, and the recommendation, rendered once per stop; a later turn at the same stop ends on the one-line reminder ([the stop card](#the-stop-card)) |
+| orientation | the checkpoint boundary (a clean halt's included), a stop's record, finish, status | the transition's lead line, the Verdict where one was measured (a stop's record measures nothing and renders none), any advisories, the Stop part on the boundary where a range's last step landed, and Next Up with its note; no Your Call block, no recommendation. `status` is the exception: it renders the dashboard and nothing else, and the dashboard's last line is its own pointer |
 | driver | park, order, spike, use, recover, revert, agent runs | the transition's lead line, any advisories, and Next Up alone, no note beneath it; no Verdict, since nothing landed |
 
 **An auto halt takes the tier of what it leaves behind**
@@ -685,7 +696,11 @@ ranges name as a bare range is built to its pause and halts there, a decision
 turn, with `plumbbob build` saying so as it enters the step, because the plan
 reserved that call for the human and a flag typed for speed should not make
 it. A review stop runs through, since a review can wait for the end of the
-run, and a typed range stays exactly as typed.
+run, and a typed range stays exactly as typed. A run's clean halt lands its
+top step first, as any clean halt does, and then ends on the stop card
+rather than the checkpoint's block ([D100 (stop-card)](decisions.md#d100)),
+because a landing range's stop is a review, and the block gave it nothing to
+read ([the stop card](#the-stop-card)).
 
 A boundary turn, whole:
 
@@ -846,7 +861,9 @@ steps and nothing for a bare one
 ([D96 (plan-names-the-grant)](decisions.md#d96)), because a grant comes only
 from the literal prompt ([D65 (human-typed-grants)](decisions.md#d65)), and a
 line the model can edit would otherwise be a grant the model could forge
-([D67 (auto-not-a-grant)](decisions.md#d67)). Three sections a model wrote by
+([D67 (auto-not-a-grant)](decisions.md#d67)). A run that lands its range ends
+on the stop card, the review the plan's stop asked for, with every open park
+on it ([the stop card](#the-stop-card)). Three sections a model wrote by
 hand on 2026-10-16, one each in checkride, fascicle, and this repo, settled
 the shape before any code read one, and all three cut at the same points: a
 decision the plan could not make on paper, made at a step's own pause; a
@@ -1038,7 +1055,10 @@ own pause: the step's `plumbbob status` carries the stop text, in the ranges
 block and in the run header, and the model writing that pause's
 recommendation reads it there. The plan commit carries
 none, since nothing landed. The boundary keeps its tier: the part is
-orientation, and no Your Call block follows it.
+orientation, and no Your Call block follows it. A run that lands its range
+ends on the stop card instead, where the part is the card's lead
+([the stop card](#the-stop-card)); the boundary above is what a range landed
+by `/plumbbob:build`, a typed range, `--auto`, or by hand still ends on.
 
 ### The dashboard's ranges block
 
@@ -1144,6 +1164,21 @@ record at the boundary re-cut the range between the keystroke and the walk.
 The header states the difference; what the skill does with it is the run
 skill's to say.
 
+A fourth line rides beneath the grant while a stop card still waits for its
+reply, naming the range whose card it is:
+
+```text
+run  range 4 of 5 · step 10 · ends at step 10's pause
+     stop: at step 10's pause, pick the label the docs will name
+     grant: none, as a bare range builds to its pause
+     waiting: range 3 of 5's stop card, recorded before the run
+```
+
+A run typed at a waiting card records it first
+([D102 (settle-in-one-reply)](decisions.md#d102)), and the line is how a run
+skill in a fresh session learns that a card is waiting at all. It vanishes
+once the record lands, so a header without it is a stop already settled.
+
 A run that names nothing it can walk prints no header
 ([D97 (run-refuses)](decisions.md#d97)). The dashboard renders as it does
 without the flag, and its pointer is the refusal with the move that unblocks
@@ -1155,24 +1190,418 @@ next → re-cut the ranges — `/plumbbob:refine ranges` (no range names step 12
 next → re-cut the ranges — `/plumbbob:refine ranges` (range 3 of 5 needs a re-cut: the build order puts step 11 inside it)
 next → run range 3 of 5 — `/plumbbob:run` (steps 6-9; range 2 of 5 has landed)
 next → run range 3 of 5 — `/plumbbob:run` (steps 6-9; the plan has no range 7)
+next → run range 3 of 5 — `/plumbbob:run` (steps 6-9; a run names one range)
 next → harvest 2 parked ideas — `/plumbbob:harvest`; then finish up — `/plumbbob:finish` (or `/plumbbob:step` to add another increment)
 next → finish step 12 — `/plumbbob:verify` (or `/plumbbob:abandon` it; a run names range 5 of 5, which holds it)
+next → finish step 12 — `/plumbbob:verify` (or `/plumbbob:abandon` it; no range names it)
 next → close the spike — `plumbbob spike done`
 ```
 
 The first three are the plan's: no ranges, a next step no range names, and
 a flagged range, each pointing at the re-cut, with the build named beside
 the first because a plan without ranges is still built a step at a time.
-The fourth and fifth refuse the number typed, a range that has landed and
-one the plan lacks, and name the run the card names in its place, since
-that is the range to type. The sixth is the dashboard's own ending, which a
-run adds nothing to. The last two are the step in flight's and the spike's:
-a numbered run naming a range other than the one holding the step in flight
-refuses, and so does any run while a spike is open, with the remedy the
-dashboard already names, because a run that starts elsewhere would sweep
-the half-built diff into its first commit. A bare run while a step is in
-flight is not a refusal: it names the range holding that step, and the
-header renders.
+The fourth, fifth, and sixth refuse what was typed: a range that has
+landed, one the plan lacks, and a span or a list of ranges (`2-4`, or
+`2,4`), a form this build leaves unread
+([D96 (plan-names-the-grant)](decisions.md#d96)); each names the run the
+card names in its place, since that is the range to type. The seventh is the
+dashboard's own ending, which a run adds nothing to. The last three are the
+step in flight's and the spike's: a numbered run naming a range other than
+the one holding the step in flight refuses, so does any run while the step
+in flight sits in no range, since the range the run would name starts
+elsewhere, and so does any run while a spike is open, each with the remedy
+the dashboard already names, because a run that starts elsewhere would
+sweep the half-built diff into its first commit. A bare run while a step is
+in flight is not a refusal when a range holds that step: it names that
+range, and the header renders.
+
+### The stop card
+
+A run that lands its range ends on the stop card
+([D100 (stop-card)](decisions.md#d100)): the review the plan's stop asked
+for, written by the model into the detail file in the range's shape and
+rendered by `plumbbob handoff --stop`. It is a decision turn, at the tier of
+the step pause, and it closes the run's turn in place of the last
+checkpoint's block. The block used to be the whole ending of a range, and it
+left the review with nothing to read: every step before the last had landed
+without a pause, so a step that landed a hair off mid-range never reached the
+screen, and the parks the range piled up sat behind a count at the end of the
+note. The card puts both on screen, with the range's readout between them.
+
+It renders on exactly one ending: the turn in which the checkpoint completes
+a range the human typed a run for. The turn hook marks the run in a `RUN`
+control file as it mints the grant ([the stop's record](#the-stops-record)),
+so the checkpoint can tell a run's landing from any other, and a range landed
+by `/plumbbob:build 6-9`, by `--auto`, or by hand keeps the boundary above,
+Stop part and all. A run that halts on trouble mid-range ends at that step's
+pause, as a typed range does; the mark outlives the pause, so a `looks good`
+that lands the range's last step still owes the card, and the human who
+approved the halt reads the review in the same turn. A bare range earns no
+card, because its stop is its own pause and the recommendation there speaks
+to it.
+
+The card, whole, at the boundary where the running example's range 3 landed:
+
+````markdown
+**Stop**: Range 3 of 5 landed - review the card on a live boundary before the skills teach it (details: `.plumbbob/builds/x/intent.md:63`)
+
+**Summary**: The boundary where a range's last step lands now says why the build stops there, and the dashboard lists the ranges beneath the steps. (details: `.plumbbob/detail.md`)
+
+1. Steps 6 and 7 read the section and flag its four drifts in one parser the card and the dashboard share.
+2. Step 8 landed a hair off: its commit reached `src/lib/notice.ts`, outside its seam, for the Stop part's label.
+3. Step 9's ranges block folds a landed range to its row, as the spec says, and the eval's anatomy reader needed no change.
+
+**Readout**:
+
+```text
+steps        4 of 4 landed
+             - 6 a1b2c3d · 7 b2c3d4e · 8 c3d4e5f · 9 d4e5f6a
+check        green: 11 of 11 checks, 4 landings
+done-when    met
+decisions    3 of 3 honored
+constraints  4 of 4 honored
+seam         strayed: 1 path outside step 8's seam
+             → src/lib/notice.ts
+diff         +412 -38 across 17 files
+spent        192 min · 1 red run
+```
+
+**Verdict**: ◐ A hair off (seam strayed)
+
+**Harvest**: 3 of 8 parked ideas open
+
+- park 6 · the Stop part could carry the range's note too → tangent: the bracket already points at the item, where the note is
+- park 7 · recover reports a range naming a step the plan lacks, but not two ranges naming one step → blocker: step 10's done-when assumes recover flags it, so a step before 10 teaches it the second drift
+- park 8 · a stop's markdown link prints raw on the dashboard → tangent: cosmetic, and the card renders it
+
+**Next Up**: Step 10 of 12 - feat(docs): name the label (model: **Fable**, details: `.plumbbob/builds/x/intent.md:34`)
+  · range 4 of 5: /plumbbob:run (step 10 to its pause)
+
+**Your Call**:
+
+- `looks good` → I record the review and every class as proposed, folding a blocker into the plan; back to the boundary
+- `/plumbbob:run` → I record them the same way, then run range 4 of 5 to its stop
+- anything that reads as direction (`park 7 is a tangent`) → I re-render the card with the proposal changed; nothing is recorded until you approve
+- `expand`, or any question → I show more of what is there; nothing changes, and `show the stop` brings all of this back
+
+**Recommendation**: Approve it, with park 7 as the blocker it is. Step 8's stray is the label the Stop part needed, in a file the plan should have named, and the drift recover misses is the one step 10 builds on.
+````
+
+Its parts, in order, and what each one is:
+
+- **The Stop lead** opens the card where the Now line opens a pause: the
+  Stop part of the boundary above, moved to the top of the card, with the
+  range's count, the stop's text as the plan wrote it, and the bracket
+  pointing at the item. The card has no Now line, since no step is in
+  flight, and no `Checkpoint` lead, since the range's checkpoints are the
+  readout's first row. The label is `Stop` because the question the human
+  brings to a landed range is why the build stopped here, and the plan's own
+  words answer it.
+- **The Summary and the highlights** are the whole range's, not the last
+  step's: the lead states what the range built, and the highlights are the
+  five things worth a reviewer's eye across its steps, a step that landed a
+  hair off first among them. The model writes them from the steps' checkpoint
+  bodies and the build-log's Log, not from recall, because a long run can
+  compact its context partway through and lose its early steps.
+- **The Readout** is measured across the range
+  ([the range readout](#the-range-readout)).
+- **The Verdict** folds the readout's rows worst-of with the range's accrued
+  stats, the same fold a step's Verdict runs.
+- **The Harvest part** lists every open park with the class the model
+  proposes for it and one line of reason
+  ([the Harvest part](#the-harvest-part)). A stop with no park open renders
+  the card without it ([D100 (stop-card)](decisions.md#d100)): the review is
+  the stop's point, the plain block left it nothing to read, and the one
+  reply the card then costs is the run the human was going to type anyway.
+- **Next Up** names the next range's first step, with the segment beneath it
+  naming that range's run, as the boundary's would. The parks segment does
+  not ride the note here, because the Harvest lead above carries the count.
+  On the plan's last range the pointer reads `Nothing planned`, and the note
+  vanishes.
+- **Your Call** names the replies that settle the card in one message
+  ([the reply at a stop](#the-reply-at-a-stop)).
+- **The recommendation** is the move on the review and the proposals
+  together: `Approve it`, or `Approve it, with park 7 as the blocker it is`,
+  then why, and a range that landed a step the human should look at before
+  the next run says so here.
+
+The card renders once per stop ([D87 (pause-once)](decisions.md#d87)), under
+a stamp of its own: the range number, the detail file, and the measured rows.
+A later turn at the same stop, with nothing about it changed, is the model's
+answer and then the reminder, naming the stop still waiting:
+
+```text
+**Next Up**: Back to Range 3 of 5's stop - review the card on a live boundary before the skills teach it
+```
+
+The card comes back when the stop changes (a rewritten detail file, so a
+proposal the human changed re-renders the whole card with the change in it)
+and on request: `plumbbob handoff --stop --full` prints it whatever the stamp
+says, the `expand` move names the phrase (`show the stop`), and a session
+without the card in front of it asks the same way. The record clears the
+stamp, and so does a revert that reopens a step of the range. The card
+carries no inline diff: a range's change is its commits, read by the shas on
+the steps row, and the diff row sums them.
+
+### The range readout
+
+The readout keeps the step pause's fence, its column, and its rules, and
+measures across the range ([D101 (range-readout)](decisions.md#d101)): the
+CLI reads the steps' commits, the checkpoints ledger, `stats.json`, and the
+last check's summary, and the model writes the three judgment rows under the
+range detail's header rule. Eight rows at most, in this order:
+
+```text
+steps        4 of 4 landed
+             - 6 a1b2c3d · 7 b2c3d4e · 8 c3d4e5f · 9 d4e5f6a
+check        green: 11 of 11 checks, 4 landings
+done-when    met
+decisions    3 of 3 honored
+constraints  4 of 4 honored
+seam         held: 4 of 4 steps, no strays
+diff         +412 -38 across 17 files
+spent        192 min · green first run at every landing
+```
+
+| row | written by | true | failing |
+| --- | --- | --- | --- |
+| `steps` | CLI | `<N> of <N> landed`, the steps and their checkpoint shas on a continuation line | never; a step the ledger holds no commit for reads `no checkpoint` in its sha's place |
+| `check` | CLI | `green: <N> of <M> checks, <L> landings` | `red: <slot> failing` |
+| `done-when` | model | `met`, every step's | `not met: step 7, <what is missing>`, or `drift: <why no diff can meet it>` |
+| `decisions` | model | `<N> of <N> honored`, the decisions the range exercised, or `none exercised` | `bent: <tag>, <how>`, or `drift` |
+| `constraints` | model | `<N> of <N> honored` | `bent: <tag>, <how>`, or `drift` |
+| `seam` | CLI | `held: <N> of <N> steps, no strays` | `strayed: <N> paths outside step 8's seam` |
+
+The rules the range's rows add to the step's:
+
+- The `steps` row is the range's identity on the readout, and its one row
+  that measures nothing: it names each step the range landed with the sha
+  of its checkpoint, in build order, so a reviewer can `git show` any of them.
+  The shas pack onto continuation lines by width, a new line when one
+  overruns the 67 columns, rather than one line per step, because each is a
+  handle rather than an item to judge.
+- The `check` row is the last run's summary, as at a pause, with the count
+  of landings behind it: every landing passed the gate, since the checkpoint
+  refuses on red, and the red runs along the way ride the `spent` row and
+  the Verdict's advisory rather than this row. A narrowed gate names its
+  slots here as it does at a pause.
+- The `seam` row compares each step's commit against that step's own seam,
+  never the range's union, because a step that wandered into another step's
+  seam still wandered. Green counts the steps; red names the one step and
+  its paths on the `→` line, and two or more strayed steps break onto
+  continuation lines, one per step. It folds no lower than `◐ A hair off`,
+  as at a pause, since a stray in a landed commit asks the same question of
+  the plan.
+- The `diff` row sums the commits, a file counted once however many commits
+  touched it. It never folds, and at a stop it never vanishes.
+- The `spent` row runs from the first step's `startedAt` to the last step's
+  `landedAt`, then the red runs summed across the steps, or
+  `green first run at every landing` when there were none, then any drift
+  warnings. No gate clause rides it: a gate is one run's wall clock, and a
+  range has several, only the last of which is on disk. No turn count rides
+  it either, since the ledger counts a step's turns from the tick that
+  entered it, and a range has one tick per step.
+- A step landed by hand, with no `build` entry to count from, contributes
+  its commit to every row and nothing to `spent`.
+
+The Verdict folds as a step's does, worst-of, and names its component the
+same way: a drifted row, then the first failing row in row order, then the
+first advisory in a fixed order, now counted across the range (`seam
+strayed`, `2 red runs before green`, `1 revert in the range`, `3 commits
+outside the ledger`, the last counting commits between the range's
+checkpoints that are not plumbbob's own), then `● Plumb`.
+
+### The Harvest part
+
+A park is a line under `## Park list` in `build-log.md`, and the card gives
+each one a handle it did not have: its place in that list, counting every
+line ever parked, harvested ones included. That is the count the note already
+sizes (`parked 3 of 8 open` counts the same lines), a line is never deleted
+from the list, only flipped, so the handle is stable for the life of the
+build, and the record can match a proposal to its park by the number alone,
+with no guessing against the text. The handle reads `park 6` on the card and
+in a reply, and never a bare number, because the bare numbers are the
+highlights' (`expand 2` opens a section) and one reply at a stop can carry
+both ([D102 (settle-in-one-reply)](decisions.md#d102)).
+
+The part is a label, a lead that sizes the list, and one item per open park
+in list order:
+
+```text
+**Harvest**: 3 of 8 parked ideas open
+
+- park 6 · the Stop part could carry the range's note too → tangent: the bracket already points at the item, where the note is
+- park 7 · recover reports a range naming a step the plan lacks, but not two ranges naming one step → blocker: step 10's done-when assumes recover flags it, so a step before 10 teaches it the second drift
+- park 8 · a stop's markdown link prints raw on the dashboard → tangent: cosmetic, and the card renders it
+```
+
+An item is the handle, the park's text as the list holds it, and behind the
+arrow the class the model proposes and its reason in one clause. The handle
+and the text are the CLI's, read from the list, so the card can never
+misquote a park; the class and the reason are the model's, written into the
+detail file's `## Harvest` section as `- park 6 → tangent: <the reason>`, one
+line per open park, and handoff joins the two. The classes are the harvest
+skill's three, `blocker`, `tangent`, and `pivot`, and the default for
+anything uncertain is `tangent`, as the skill has always said; a park the
+section leaves out renders with `→ no class proposed` in its place, so a
+silent omission reads as one on the card, and the record leaves that park
+open. A tag a park's line carries (`(tangent)` from `plumbbob park`) is the
+parker's own guess and stays in the text; the class behind the arrow is the
+proposal.
+
+### The reply at a stop
+
+The card's proposals are settled in one reply
+([D102 (settle-in-one-reply)](decisions.md#d102)). The harvest used to ask
+for a confirmation per item, and one reply per item is what made a stop's
+harvest a chore the human skipped; the card puts every proposal in front of
+them at once, and the classes stay the human's call, which is the harvest
+skill's contract. The Your Call block names the replies:
+
+```text
+**Your Call**:
+
+- `looks good` → I record the review and every class as proposed, folding a blocker into the plan; back to the boundary
+- `/plumbbob:run` → I record them the same way, then run range 4 of 5 to its stop
+- anything that reads as direction (`park 7 is a tangent`) → I re-render the card with the proposal changed; nothing is recorded until you approve
+- `expand`, or any question → I show more of what is there; nothing changes, and `show the stop` brings all of this back
+```
+
+`looks good` confirms every proposal: the model folds a confirmed blocker
+into `intent.md` by the harvest skill's rules first, then records the stop
+through `plumbbob harvest`, and relays its ending. A reply that changes a
+proposal is direction, and the handle is how it names one: the model
+rewrites the detail file's line and runs `plumbbob handoff --stop`, the
+stamp sees the change, and the whole card comes back with the proposal as it
+will be recorded. Nothing lands until `looks good`. A question is answered
+and closed on the reminder. The block names no `revert` move: the range's
+work is in its commits, the tree is clean, and a step the review finds wrong
+is `/plumbbob:revert`'s own call at the boundary the record returns to.
+
+`/plumbbob:run` typed at the card confirms every proposal and runs the next
+range, which is why the row names the range it will run. The record lands
+first, and the hook minted the run's grant from the plan before it did, so
+the run reads `status --run` again once the record is in and compares the
+grant to the run it now resolves. When they agree, the run walks. When the
+record left the grant unlike the run, because a confirmed blocker added or
+moved a step in the range the run would walk, the run ends at the boundary
+instead ([D102 (settle-in-one-reply)](decisions.md#d102)): the record's
+ending already names the re-cut run beneath Next Up, and the human types it,
+rather than the run walking a grant that no longer covers the range and
+halting before a step its own harvest added. Nothing unapproved lands either
+way.
+
+The second row is the next range's, so it changes with it. On the plan's
+last range it names the finish, since finish is the move after the last
+stop ([D102 (settle-in-one-reply)](decisions.md#d102)):
+
+```text
+- `/plumbbob:finish` → I record them the same way, then write the report and close the build
+```
+
+The finish skill records a waiting stop card the way `looks good` would,
+through `plumbbob harvest`, before it writes the report, so the last range's
+review and its parks reach the Log and the report, where a finish that
+skipped them would leave the parks open on the one stop every ranged build
+has. When the next range is flagged, or no range names the next step, the
+row does not render, because the run would refuse, and the note beneath Next
+Up carries the drift words. A stop with no park open keeps the four moves
+with the record in their clauses: `looks good` records the review,
+`/plumbbob:run` records it and runs the next range, and direction is a
+change to the review.
+
+### The stop's record
+
+The reply records through `plumbbob harvest`
+([D104 (harvest-records)](decisions.md#d104)): the verb reads the detail
+file's `## Harvest` section, flips each settled park from `- [ ]` to `- [x]`,
+appends the dated Harvest lines under `## Harvest`, and, when the detail is a
+range's, writes the range's review beneath a dated Log line for the range, as
+`checkpoint` keeps a step's pause beneath the step's. The `/plumbbob:harvest`
+skill records through the same verb outside a stop, with the proposals for
+every open park written into the detail file under a `# Detail · Harvest`
+header and no range parts, and it proposes every class at once there too, so
+one reply settles a boundary harvest the way it settles a stop. The record
+commits nothing: the review and the flipped parks ride the next step's
+checkpoint, or the finish, as a harvest's edits always have, because a stop
+commit would need a fourth kind of ledger line that `recover`, `revert`,
+`status`'s out-of-band count, and the finish report would each have to
+learn, while the Log already carries the review into the PR.
+
+The record's ending is the orientation tier's: the lead line, any advisory,
+and Next Up with its note, which names the next run, re-cut or not. No
+Verdict rides it, since nothing was measured:
+
+```text
+**Stop**: Range 3 of 5 recorded (1 blocker, 2 tangents)
+
+**Next Up**: Step 10 of 12 - feat(docs): name the label (model: **Fable**, details: `.plumbbob/builds/x/intent.md:34`)
+  · range 4 of 5: /plumbbob:run (step 10 to its pause) · parked 0 of 8 open
+```
+
+The label is `Stop` again, because the artifact that landed is the stop's
+record and the fact reads on from it; the parenthetical counts the classes,
+and reads `(nothing parked)` when the stop had no Harvest part. Outside a
+stop the lead names what moved instead:
+`**Harvested**: 2 parked ideas (2 tangents)`.
+
+The record is latched ([D103 (stop-latched)](decisions.md#d103)). A run's
+turn is long, it ends on proposals, and that is exactly where a model would
+carry straight on into recording its own; the record is where plumbbob holds
+the line, as the checkpoint is for a step. So `plumbbob harvest` refuses in
+the turn the stop card printed, refuses a range's detail that no stop card
+showed, and refuses one whose range no longer reads as landed, each with the
+move that unblocks it, while a harvest outside a stop needs no stamp:
+
+```text
+plumbbob: range 3 of 5's stop not recorded (its card printed this turn, and no human turn has read it)
+  → end the turn on the card; the human's reply is what records it
+plumbbob: range 3 of 5's stop not recorded (no stop card showed its detail)
+  → plumbbob handoff --stop, then end the turn on the card
+plumbbob: range 3 of 5's stop not recorded (step 9 is open again)
+  → land it, then plumbbob handoff --stop
+plumbbob: range 3 of 5's stop not recorded (park 9 is not in the list; 8 parked)
+  → fix the Harvest proposals in .plumbbob/detail.md
+plumbbob: range 3 of 5's stop not recorded (park 7's class "later" is not blocker, tangent, or pivot)
+  → fix the Harvest proposals in .plumbbob/detail.md
+plumbbob: nothing to record (the detail file is Step 9's, not a range's or a harvest's)
+  → plumbbob checkpoint 9 records a step's detail
+```
+
+The first is the latch itself: the card's stamp carries the turn it printed
+in, and the record waits for a human turn after it, the way a step's
+checkpoint waits for one after `plumbbob build`. A proposal naming a park
+the list lacks, or a class outside the three, refuses the whole record
+rather than recording the rest, because a partial record would leave the
+card and the ledger disagreeing about which parks are still open. A park no
+proposal names stays open, and the record says nothing about it.
+`checkpoint` never records a range's detail beneath a step's Log line: a
+detail whose header names a range is the stop's, and a step's checkpoint
+leaves it where it is.
+
+What holds a run to the card is the same mark that tells the checkpoint a
+run is landing ([D103 (stop-latched)](decisions.md#d103)). The turn hook
+writes `RUN`, naming the range, beside `GRANT` as it mints a run that lands
+its steps; the next typed prompt clears it, unless a step of that range
+waits at a pause, and a notice leaves it as it leaves the grant. The latch
+reads grants exactly as it did, since the mark is not one. The checkpoint
+that completes a marked range writes its `RELAY` record as owing the stop
+card, and the relay check holds a turn whose last ending still owes it,
+once ([D89 (block-once)](decisions.md#d89)), with the one-line reason the
+model acts on:
+
+```text
+plumbbob: the turn ended on Step 9's boundary, and range 3 of 5's stop card is still owed. Write the range's detail file, run `plumbbob handoff --stop`, and end the turn on its output, whole, with nothing after it.
+```
+
+`plumbbob handoff --stop` records the card in `RELAY` at the decision tier
+in the boundary's place, with `plumbbob handoff --stop --full` as its reprint
+command, so the check then reads the card by its parts as it reads a pause:
+the labeled parts in order, the Readout table and the Verdict line exact, and
+nothing after the recommendation. Only the run skill's prose asked for the
+card's second beat before the mark existed, a boundary relayed whole passed
+the check, and a new clean-halt shape has gone wrong under the eval tier
+before, in 2 of 4 runs ([D85 (range-top-lands)](decisions.md#d85)).
 
 ### Without the section
 
@@ -1180,7 +1609,8 @@ None of this renders for a plan without `## Build ranges`, or with only the
 template's placeholder under it: the note beneath Next Up is today's build
 order and parks, the bracket's model is the step's, the Your Call block keeps
 its four moves and the plan pause's row names the build, no boundary carries
-a Stop part, the dashboard has no ranges block, its pointer reads
+a Stop part, no run ends on a stop card, a harvest records through
+`plumbbob harvest` with no range parts, the dashboard has no ranges block, its pointer reads
 `build step 6`, and `status --run` prints no header, only the pointer that
 says to cut the ranges.
 Each line renders only when the plan declares ranges and the line says
@@ -1258,6 +1688,49 @@ Its headings are title case (`Detail`, `Step`, `Summary`, `Recommendation`),
 the same case the labels in the turn carry; handoff reads the Summary and
 recommendation headings case-insensitively, so a file written the older
 lowercase way still parses.
+
+A range's detail, the stop card's wire, keeps the shape with the range in
+the step's place and one more section:
+
+```markdown
+# Detail · Range 3 · review the card on a live boundary before the skills teach it
+
+── recap · range 3 of 5 ──
+done-when    met
+decisions    3 of 3 honored
+constraints  all honored
+
+## Summary
+
+<the lead: what the whole range built>
+
+## 1 <the first highlight>
+
+<the full story, drawn from the step's checkpoint body and its Log entry>
+
+## Harvest
+
+- park 6 → tangent: <the reason>
+- park 7 → blocker: <the reason>
+
+## Recommendation
+
+<The move.> <The reason, one or two sentences.>
+```
+
+The header names the range by its item number and its stop, the way a step's
+names its number and title, and the recap rule counts it over the plan's
+ranges. A detail file is read by its header: a header naming a range is what
+tells `checkpoint` the file is not a step's and tells `handoff --stop` which
+range it reviews, so a step's checkpoint records a detail that names its step
+or no step at all, and leaves one naming a range, or a harvest
+(`# Detail · Harvest`, the boundary harvest's wire), where it is. The
+`## Harvest` section sits after the numbered sections and before the
+recommendation, one line per open park, and vanishes when no park is open.
+`plumbbob harvest` records the file beneath the range's dated Log line (the
+Summary and highlights, the Readout, the Verdict, the Harvest part as the
+human settled it, the recommendation, then the full story behind each
+highlight) and truncates it, as `checkpoint` does for a step's.
 
 The model writes it fresh before every pause: the three judgment rows under
 the header rule first (contiguous, since the first blank line ends them; no
