@@ -122,17 +122,19 @@ const VERBS: ReadonlyArray<Verb> = [
   },
   {
     name: 'handoff',
-    description: 'print the footer card that ends a turn (pause, boundary, plan, or driver), or a reminder for a pause already shown',
-    synopsis: ['handoff [<n>] [--full] [--plan] [--driver] [--build <slug>]'],
+    description:
+      'print the footer card that ends a turn (pause, boundary, plan, driver, or stop), or a reminder for a pause or a stop already shown',
+    synopsis: ['handoff [<n>] [--full] [--plan] [--driver] [--stop] [--build <slug>]'],
     args: [{ name: '<n>', gloss: 'step to report on (default: the in-flight step, else the last checkpointed one)' }],
     flags: [
-      { name: '--full', gloss: 'print the whole pause card even when that pause was already shown' },
+      { name: '--full', gloss: 'print the whole pause card, or with --stop the whole stop card, even when it was already shown' },
       { name: '--plan', gloss: 'render the plan-pause card instead of a step tier' },
       { name: '--driver', gloss: "render a driver turn's pointer back at the open step" },
+      { name: '--stop', gloss: "render the stop card for the range the last landing completed, from the range's detail file" },
       BUILD_FLAG,
     ],
     notes:
-      'Writes only the detail file (a blank line around each heading) and the PAUSE stamp; refuses (exit 1) with no session, or with --plan and --driver together.',
+      "Writes only the detail file (a blank line around each heading), the PAUSE stamp, and with --stop the STOP stamp; refuses (exit 1) with no session, with two of --plan, --driver, and --stop together, and with --stop when a step is in flight, no range that lands its steps just landed, or the detail file is not that range's.",
   },
   {
     name: 'check',

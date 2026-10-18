@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Runs and the stop card
 
-**Current step:** 8 — feat(orient): measure a landed range for the stop card's readout
+**Current step:** 9 — feat(handoff): render the stop card with plumbbob handoff --stop
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -30,7 +30,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 5. feat(handoff): name the run on the card in place of the range command
 - ☑ 6. feat(run): add /plumbbob:run to run the range holding the next step
 - ☑ 7. docs(presentation): spec the stop card that closes a run's range
-- ☐ 8. feat(orient): measure a landed range for the stop card's readout
+- ☑ 8. feat(orient): measure a landed range for the stop card's readout
 - ☐ 9. feat(handoff): render the stop card with plumbbob handoff --stop
 - ☐ 10. feat(harvest): record a stop's harvest and review with plumbbob harvest
 - ☐ 11. feat(skills): end a run on the stop card and settle it in one reply
@@ -212,3 +212,5 @@ folder, so it rides the branch into the PR.)*
   **5.** Decisions D100 to D104 merge the ten locals, with revision notes on D85, D87, and D89, and the run header gains its waiting line and the two refusals step 4 worded
 
   D100 (stop-card) merges D8 and D15, D101 (range-readout) is D9, D102 (settle-in-one-reply) merges D10, D18, and D20, D103 (stop-latched) merges D11 and D16, and D104 (harvest-records) merges D12 and D14, each carrying its *because* and its `Promoted from` line, wrapped to the file's width with links kept whole; the header's promoted range now reads D95 to D104. The run header's fourth line, `waiting: range 3 of 5's stop card, recorded before the run`, is how a fresh session learns a card is waiting, and the two refusals from the range 2 harvest's blocker (`a run names one range`; `no range names it`) now sit in the fence with their prose. One flag: the four files under `.plumbbob/builds/2026-10-17-runs-and-the-stop-card/` were already modified when this step began (range 2's harvest, and the CLI's own records), and they ride this checkpoint by D14 (stop-record)'s rule; the seam row names them if it counts them. One park: the plain dashboard could mark a waiting stop card beside the landed range's row, where only `status --run` names it (tangent).
+
+- 2026-10-18 — step 8 checkpointed · 163a6b025 — feat(orient): measure a landed range for the stop card's readout (4m)

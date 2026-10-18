@@ -4,7 +4,7 @@ import { join, relative } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { abandon } from '../abandon.ts'
 import { checkpoint } from '../checkpoint.ts'
-import { handoff } from '../handoff.ts'
+import { handoff, harvestProposals, parkList, parseDetailRange, stopRecord } from '../handoff.ts'
 import { park } from '../park.ts'
 import { revert } from '../revert.ts'
 import { start } from '../start.ts'
@@ -16,11 +16,13 @@ import {
   intentPath,
   pausePath,
   readRelay,
+  readStop,
   relayPath,
   seamPath,
   spikePath,
   statsPath,
   stepPath,
+  stopPath,
   tickPath,
   turnPath,
 } from '../../lib/sidecar.ts'
@@ -1432,5 +1434,335 @@ describe('handoff — the ending it records for the relay check', () => {
     expect(readRelay(dir)).toBeNull()
     writeFileSync(relayPath(dir), 'turn 7\ntier decision\nrender card') // no blank line, no text
     expect(readRelay(dir)).toBeNull()
+  })
+})
+
+// Steps 1 to 3 landed, range 2 (steps 2 and 3) the last range a landing
+// completed, and range 3 a bare call still to come. Range 2's item opens on
+// line 18 and step 4 on line 11.
+const STOPPED = `# Handoff stop test
+
+## Steps
+
+1. [x] First — **done when:** a works.
+   - seam: \`src/a.ts\`
+2. [x] Second — **done when:** b works.
+   - seam: \`src/b.ts\`
+3. [x] Third — **done when:** c works.
+   - seam: \`src/c.ts\`
+4. [ ] Fourth — **done when:** d works.
+   - seam: \`src/d.ts\`
+   - model: sonnet
+
+## Build ranges
+
+1. \`/plumbbob:build 1\`, **stop:** at step 1's pause, approve the schema
+2. \`/plumbbob:build 2-3\`, **stop:** review the parser before the card reads it
+   - model: fable
+3. \`/plumbbob:build 4\`, **stop:** at step 4's pause, pick the label
+`
+
+// Range 2's detail: the header naming the range, its three judgment rows, the
+// Summary, two highlights, a proposal for each open park, and the move.
+const RANGE_DETAIL = `# Detail · Range 2 · review the parser before the card reads it
+
+── recap · range 2 of 3 ──
+done-when    met
+decisions    none exercised
+constraints  all honored
+
+## Summary
+
+The parser reads the plan, and the card reads the parser.
+
+## 1 Step 2 parses the section.
+
+The parser's story.
+
+## 2 Step 3 renders it.
+
+The card's story.
+
+## Harvest
+
+- park 1 → tangent: the card renders it
+- park 2 → blocker: step 4 builds on it
+
+## Recommendation
+
+Approve it. Both steps held their seams.
+`
+
+/** Range 2 of `intent` landed: a real commit per step on the ledger, their stats, the parks, a green gate, and the range's detail. */
+async function stopped(intent = STOPPED, detail = RANGE_DETAIL): Promise<{ dir: string; shas: ReadonlyArray<string> }> {
+  const dir = await started(intent)
+  mkdirSync(join(dir, 'src'), { recursive: true })
+  const shas = ['a', 'b', 'c'].map((name, i) => {
+    writeFileSync(join(dir, 'src', `${name}.ts`), `export const ${name} = ${i}\n`)
+    git(dir, ['add', '-A'])
+    git(dir, ['commit', '-q', '-m', `step ${i + 1}`])
+    return execFileSync('git', ['-C', dir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+  })
+  writeFileSync(checkpointsPath(dir), shas.map((sha, i) => `step ${i + 1} ${sha}\n`).join(''))
+  writeFileSync(
+    statsPath(dir),
+    JSON.stringify({
+      '2': { startedAt: '2026-10-18T10:00:00.000Z', landedAt: '2026-10-18T10:20:00.000Z' },
+      '3': { startedAt: '2026-10-18T10:21:00.000Z', landedAt: '2026-10-18T10:45:00.000Z' },
+    }),
+  )
+  writeFileSync(buildLogPath(dir), PARKS)
+  writeCheckSummary(dir, true, [{ name: 'test', ok: true }], 60_000)
+  writeFileSync(detailPath(dir), detail)
+  return { dir, shas }
+}
+
+/** The stop card range 2 of STOPPED renders, whole. */
+function stopCardOf(dir: string, shas: ReadonlyArray<string>): string {
+  const intent = relative(dir, intentPath(dir))
+  return [
+    `**Stop**: Range 2 of 3 landed - review the parser before the card reads it (details: \`${intent}:18\`)`,
+    '',
+    '**Summary**: The parser reads the plan, and the card reads the parser. (details: `.plumbbob/detail.md`)',
+    '',
+    '1. Step 2 parses the section.',
+    '2. Step 3 renders it.',
+    '',
+    '**Readout**:',
+    '',
+    '```text',
+    'steps        2 of 2 landed',
+    `             - 2 ${shas[1]?.slice(0, 7)} · 3 ${shas[2]?.slice(0, 7)}`,
+    'check        green: 1 of 1 checks, 2 landings',
+    'done-when    met',
+    'decisions    none exercised',
+    'constraints  all honored',
+    'seam         held: 2 of 2 steps, no strays',
+    'diff         +2 -0 across 2 files',
+    'spent        45 min · green first run at every landing',
+    '```',
+    '',
+    '**Verdict**: ● Plumb',
+    '',
+    '**Harvest**: 2 of 3 parked ideas open',
+    '',
+    '- park 1 · one idea → tangent: the card renders it',
+    '- park 2 · another → blocker: step 4 builds on it',
+    '',
+    `**Next Up**: Step 4 of 4 - Fourth (model: **Sonnet**, details: \`${intent}:11\`)`,
+    '  · range 3 of 3: /plumbbob:run (step 4 to its pause)',
+    '',
+    '**Your Call**:',
+    '',
+    '- `looks good` → I record the review and every class as proposed, folding a blocker into the plan; back to the boundary',
+    '- `/plumbbob:run` → I record them the same way, then run range 3 of 3 to its stop',
+    '- anything that reads as direction (`park 2 is a tangent`) → I re-render the card with the proposal changed; nothing is recorded until you approve',
+    '- `expand`, or any question → I show more of what is there; nothing changes, and `show the stop` brings all of this back',
+    '',
+    '**Recommendation**: Approve it. Both steps held their seams.',
+    '',
+    '',
+  ].join('\n')
+}
+
+const STOP_REMINDER = "**Next Up**: Back to Range 2 of 3's stop - review the parser before the card reads it\n\n"
+
+describe("handoff --stop — the stop card that closes a run's range", () => {
+  it('renders the card whole, in the order the spec stacks it — D100 (stop-card)', async () => {
+    const { dir, shas } = await stopped()
+    const { code, stdout } = render(dir, ['--stop'])
+    expect(code).toBe(0)
+    expect(stdout).toBe(stopCardOf(dir, shas))
+  })
+
+  it('renders once: a second render at an unchanged stop is the reminder, and --full reprints the card — D87 (pause-once)', async () => {
+    const { dir, shas } = await stopped()
+    render(dir, ['--stop'])
+    expect(render(dir, ['--stop'])).toEqual({ code: 0, stdout: STOP_REMINDER })
+    expect(render(dir, ['--stop', '--full']).stdout).toBe(stopCardOf(dir, shas))
+  })
+
+  it('brings the card back when the detail changes, with the proposal as it will be recorded', async () => {
+    const { dir } = await stopped()
+    render(dir, ['--stop'])
+    writeFileSync(detailPath(dir), RANGE_DETAIL.replace('park 2 → blocker: step 4 builds on it', 'park 2 → tangent: it can wait'))
+    const { stdout } = render(dir, ['--stop'])
+    expect(stdout).toContain('- park 2 · another → tangent: it can wait')
+    expect(stdout).toContain('(`park 1 is a blocker`)')
+  })
+
+  it("stamps the stop with its range and the turn it printed in, for the record's latch — D103 (stop-latched)", async () => {
+    const { dir } = await stopped()
+    atTurn(dir, 7)
+    render(dir, ['--stop'])
+    expect(readStop(dir)).toMatchObject({ range: 2, turn: 7 })
+    atTurn(dir, 8)
+    render(dir, ['--stop']) // the reminder leaves the stamp as the card wrote it
+    expect(readStop(dir)?.turn).toBe(7)
+    render(dir, ['--stop', '--full']) // a card printed again restamps its turn
+    expect(readStop(dir)?.turn).toBe(8)
+    expect(() => git(dir, ['check-ignore', '-q', relative(dir, stopPath(dir))])).not.toThrow()
+  })
+
+  it('records the card in RELAY at the decision tier, with --stop --full to reprint it, and the reminder with --stop', async () => {
+    const { dir } = await stopped()
+    const slug = activeBuild(dir) ?? ''
+    atTurn(dir, 5)
+    const card = render(dir, ['--stop']).stdout
+    expect(readRelay(dir)).toEqual({ turn: 5, tier: 'decision', render: 'stop', command: 'plumbbob handoff --stop --full', text: card })
+    render(dir, ['--stop', '--build', slug])
+    expect(readRelay(dir)).toEqual({
+      turn: 5,
+      tier: 'decision',
+      render: 'stop-reminder',
+      command: `plumbbob handoff --stop --build ${slug}`,
+      text: STOP_REMINDER,
+    })
+  })
+
+  it('renders without its Harvest part when no park is open, and the moves record the review alone — D100 (stop-card)', async () => {
+    const { dir } = await stopped()
+    writeFileSync(buildLogPath(dir), PARKS.replace(/- \[ \]/g, '- [x]'))
+    const { stdout } = render(dir, ['--stop'])
+    expect(stdout).not.toContain('**Harvest**')
+    expect(stdout).toContain('**Verdict**: ● Plumb\n\n**Next Up**')
+    expect(stdout).toContain(
+      [
+        '**Your Call**:',
+        '',
+        '- `looks good` → I record the review; back to the boundary',
+        '- `/plumbbob:run` → I record it the same way, then run range 3 of 3 to its stop',
+        '- anything that reads as direction → I re-render the card with the review changed; nothing is recorded until you approve',
+        '- `expand`, or any question → I show more of what is there; nothing changes, and `show the stop` brings all of this back',
+      ].join('\n'),
+    )
+  })
+
+  it('reads a park the detail left out as `no class proposed`', async () => {
+    const { dir } = await stopped(STOPPED, RANGE_DETAIL.replace('- park 1 → tangent: the card renders it\n', ''))
+    expect(render(dir, ['--stop']).stdout).toContain('- park 1 · one idea → no class proposed')
+  })
+
+  it("names the finish on the plan's last range, with nothing planned beneath it — D102 (settle-in-one-reply)", async () => {
+    const last = STOPPED.replace('4. [ ] Fourth', '4. [x] Fourth').replace(/3\. `\/plumbbob:build 4`.*$/m, '3. `/plumbbob:build 4-4`, **stop:** the final read')
+    const { dir } = await stopped(last)
+    mkdirSync(join(dir, 'src'), { recursive: true })
+    writeFileSync(join(dir, 'src', 'd.ts'), 'export const d = 3\n')
+    git(dir, ['add', '-A'])
+    git(dir, ['commit', '-q', '-m', 'step 4'])
+    const sha = execFileSync('git', ['-C', dir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+    writeFileSync(checkpointsPath(dir), `${readFileSync(checkpointsPath(dir), 'utf8')}step 4 ${sha}\n`)
+    writeFileSync(detailPath(dir), RANGE_DETAIL.replace('Range 2 · review the parser before the card reads it', 'Range 3 · the final read').replace('range 2 of 3', 'range 3 of 3'))
+    const { code, stdout } = render(dir, ['--stop'])
+    expect(code).toBe(0)
+    expect(stdout).toMatch(/^\*\*Stop\*\*: Range 3 of 3 landed - the final read/)
+    expect(stdout).toContain('**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish\n\n**Your Call**')
+    expect(stdout).toContain('- `/plumbbob:finish` → I record them the same way, then write the report and close the build')
+    expect(stdout).not.toContain('/plumbbob:run')
+  })
+
+  it('refuses when no range that lands its steps just landed, with a step in flight, or with nothing landed', async () => {
+    const open = await started(STOPPED.replace('3. [x] Third', '3. [ ] Third'))
+    writeFileSync(checkpointsPath(open), 'step 2 abc1234\n')
+    const opened = captureIo(() => handoff(open, ['--stop']))
+    expect(opened).toEqual({
+      code: 1,
+      stdout: '',
+      stderr: 'plumbbob: no stop card to render (step 2 landed last, and completed no range)\n  → plumbbob handoff renders this boundary\n',
+    })
+    const bare = await started(STOPPED.replace(/\[x\]/g, '[ ]').replace('1. [ ] First', '1. [x] First'))
+    writeFileSync(checkpointsPath(bare), 'step 1 abc1234\n')
+    expect(captureIo(() => handoff(bare, ['--stop'])).stderr).toContain("(range 1 of 3 is bare, and its stop was step 1's pause)")
+    const { dir } = await stopped()
+    writeFileSync(stepPath(dir), '4\n')
+    expect(captureIo(() => handoff(dir, ['--stop'])).stderr).toBe(
+      'plumbbob: no stop card to render (step 4 is in flight)\n  → plumbbob handoff renders its pause\n',
+    )
+    const fresh = await started(STOPPED)
+    expect(captureIo(() => handoff(fresh, ['--stop'])).stderr).toContain('(no step has landed)')
+  })
+
+  it('refuses a detail file written for anything but the range that landed', async () => {
+    for (const detail of [`# Detail · Step 3 · Third\n\n${SUMMARY}`, RANGE_DETAIL.replace('Range 2 ·', 'Range 1 ·'), '']) {
+      const { dir } = await stopped(STOPPED, detail)
+      atTurn(dir, 3)
+      const refused = captureIo(() => handoff(dir, ['--stop']))
+      expect(refused.code).toBe(1)
+      expect(refused.stderr).toBe(
+        "plumbbob: no stop card to render (the detail file is not range 2's)\n  → write range 2's detail in .plumbbob/detail.md, then plumbbob handoff --stop\n",
+      )
+      expect(existsSync(stopPath(dir))).toBe(false)
+      expect(readRelay(dir)).toBeNull()
+    }
+  })
+
+  it('refuses beside --plan or --driver, which name other tiers', async () => {
+    const { dir } = await stopped()
+    for (const other of ['--plan', '--driver']) {
+      const refused = captureIo(() => handoff(dir, ['--stop', other]))
+      expect(refused.code).toBe(1)
+      expect(refused.stderr).toBe(`plumbbob: handoff: ${other} and --stop name different tiers; pass one.\n`)
+    }
+  })
+})
+
+describe("handoff — the stop's record and its readers", () => {
+  it('records the card as the human settled it, with the full story beneath — D104 (harvest-records)', async () => {
+    const { dir, shas } = await stopped()
+    const record = stopRecord(dir, activeBuild(dir), RANGE_DETAIL, PARKS) ?? ''
+    const card = stopCardOf(dir, shas)
+    expect(record.startsWith('**Summary**: The parser reads the plan, and the card reads the parser.\n\n1. Step 2 parses')).toBe(true)
+    // The Readout, the Verdict, and the Harvest part read exactly as the card showed them.
+    const shown = card.slice(card.indexOf('**Readout**'), card.indexOf('\n\n**Next Up**'))
+    expect(record).toContain(shown)
+    expect(record).toContain(`${shown}\n\n**Recommendation**: Approve it. Both steps held their seams.\n\n**1.** Step 2 parses the section.\n\nThe parser's story.`)
+    expect(record).not.toContain('**Next Up**')
+    expect(record).not.toContain('**Your Call**')
+    expect(stopRecord(dir, activeBuild(dir), `# Detail · Step 3 · Third\n${SUMMARY}`, PARKS)).toBeNull()
+  })
+
+  it('numbers every park ever parked, harvested ones included, so a handle never moves', () => {
+    const log = '# Build log\n\n## Park list\n\n> how to park\n- [x] first\n- [ ] second (tangent)\n  - [ ] indented, and counted as the note counts it\n- [X] third\n- [ ] fourth\n\n## Harvest\n\n- [ ] not a park either\n'
+    expect(parkList(log)).toEqual([
+      { handle: 1, open: false, text: 'first' },
+      { handle: 2, open: true, text: 'second (tangent)' },
+      { handle: 3, open: true, text: 'indented, and counted as the note counts it' },
+      { handle: 4, open: false, text: 'third' },
+      { handle: 5, open: true, text: 'fourth' },
+    ])
+    expect(parkList('# Build log\n')).toEqual([])
+  })
+
+  it('reads each proposal under the Harvest section by its handle, and nothing outside it', () => {
+    const detail = [
+      '# Detail · Range 2 · x',
+      '',
+      '- park 9 → pivot: not in the section',
+      '',
+      '## Harvest',
+      '',
+      '- park 6 → tangent: the bracket already points at the item',
+      '- park 7 → Blocker: step 10 assumes it',
+      '- park 8 -> later',
+      '- an aside, not a proposal',
+      '',
+      '## Recommendation',
+      '',
+      '- park 1 → tangent: not in the section either',
+    ].join('\n')
+    expect(harvestProposals(detail)).toEqual([
+      { handle: 6, kind: 'tangent', reason: 'the bracket already points at the item' },
+      { handle: 7, kind: 'blocker', reason: 'step 10 assumes it' },
+      { handle: 8, kind: 'later', reason: '' },
+    ])
+    expect(harvestProposals('# Detail · Range 2 · x\n')).toEqual([])
+  })
+
+  it("reads the range a detail reviews off its header, and nothing off a step's or a harvest's", () => {
+    expect(parseDetailRange(RANGE_DETAIL)).toBe(2)
+    expect(parseDetailRange('\n# Detail · Range 12 · at Step 3, a call\n')).toBe(12)
+    expect(parseDetailRange('# Detail · Step 3 · Range 2 of the parser')).toBeNull()
+    expect(parseDetailRange('# Detail · Harvest\n')).toBeNull()
+    expect(parseDetailRange('')).toBeNull()
   })
 })

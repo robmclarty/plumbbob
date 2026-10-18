@@ -5,7 +5,22 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { checkpoint } from '../checkpoint.ts'
 import { handoff } from '../handoff.ts'
 import { start } from '../start.ts'
-import { buildLogPath, checkpointsPath, detailPath, grantPath, handoffPath, hasSession, intentPath, readRelay, readStats, stampStepStat, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
+import {
+  buildLogPath,
+  checkpointsPath,
+  detailPath,
+  grantPath,
+  handoffPath,
+  hasSession,
+  intentPath,
+  readRelay,
+  readStats,
+  runPath,
+  stampStepStat,
+  stepPath,
+  tickPath,
+  turnPath,
+} from '../../lib/sidecar.ts'
 import { gitPath } from '../../lib/git.ts'
 import { advisory, ending, notice, transition } from '../../lib/notice.ts'
 import { setLocalSetting, settingsPath } from '../../lib/settings.ts'
@@ -918,5 +933,41 @@ describe('checkpoint — the range segment beneath Next Up', () => {
     const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['2']))
     expect(code).toBe(0)
     expect(stdout).toContain('  · range 2 of 2: /plumbbob:run (step 3)\n')
+  })
+
+  it("records a run's landing that completes the range it marked as owing the stop card — D103 (stop-latched)", async () => {
+    const dir = await startedGreen()
+    writeFileSync(intentPath(dir), RANGED.replace('1. [ ]', '1. [x]').replace('2. [ ]', '2. [x]'))
+    writeFileSync(turnPath(dir), '4\n') // a hooked host; no entry stamp, so the latch stays out of it
+    writeFileSync(runPath(dir), '2\n')
+    const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['3']))
+    expect(code).toBe(0)
+    expect(stdout).toContain('**Stop**: Range 2 of 2 landed - review the parser')
+    expect(readRelay(dir)).toEqual({
+      turn: 4,
+      tier: 'orientation',
+      render: 'checkpoint',
+      owes: { range: 2, count: 2, step: 3 },
+      text: stdout,
+    })
+  })
+
+  it('owes nothing for a landing that leaves its range open, a range the mark does not name, or no mark at all', async () => {
+    const open = await startedGreen()
+    writeFileSync(intentPath(open), RANGED.replace('1. [ ]', '1. [x]'))
+    writeFileSync(turnPath(open), '4\n')
+    writeFileSync(runPath(open), '2\n')
+    expect((await captureIoAsync(() => checkpoint(open, ['2']))).code).toBe(0)
+    expect(readRelay(open)?.owes).toBeUndefined()
+    for (const mark of ['1\n', null]) {
+      const dir = await startedGreen()
+      writeFileSync(intentPath(dir), RANGED.replace('1. [ ]', '1. [x]').replace('2. [ ]', '2. [x]'))
+      writeFileSync(turnPath(dir), '4\n')
+      if (mark !== null) writeFileSync(runPath(dir), mark)
+      const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['3']))
+      expect(code).toBe(0)
+      expect(stdout).toContain('**Stop**')
+      expect(readRelay(dir)?.owes).toBeUndefined()
+    }
   })
 })

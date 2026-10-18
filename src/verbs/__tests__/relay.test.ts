@@ -461,6 +461,94 @@ describe('relay — the holds the 2026-10-17 A/B made, replayed — D19 (facts-e
   })
 })
 
+// A stop card as `handoff --stop` prints it, whole: the Stop lead, the range's
+// review, the Harvest part, and the moves that settle it.
+const STOP_CARD = [
+  '**Stop**: Range 2 of 2 landed - review the parser (details: `x/intent.md:16`)',
+  '',
+  '**Summary**: The parser reads the plan. (details: `.plumbbob/detail.md`)',
+  '',
+  '1. Step 2 parses the section.',
+  '',
+  '**Readout**:',
+  '',
+  '```text',
+  'steps        2 of 2 landed',
+  '             - 2 a1b2c3d · 3 b2c3d4e',
+  'check        green: 1 of 1 checks, 2 landings',
+  'done-when    met',
+  'seam         held: 2 of 2 steps, no strays',
+  'diff         +2 -0 across 2 files',
+  '```',
+  '',
+  '**Verdict**: ● Plumb',
+  '',
+  '**Harvest**: 1 of 1 parked idea open',
+  '',
+  '- park 1 · one idea → tangent: the card renders it',
+  '',
+  '**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish',
+  '',
+  '**Your Call**:',
+  '',
+  '- `looks good` → I record the review and every class as proposed, folding a blocker into the plan; back to the boundary',
+  '- `/plumbbob:finish` → I record them the same way, then write the report and close the build',
+  '',
+  '**Recommendation**: Approve it. Both steps held their seams.',
+  '',
+  '',
+].join('\n')
+
+describe('relay — a run owes its stop card — D103 (stop-latched)', () => {
+  it("holds a run's boundary that still owes the card, however whole the boundary was relayed, and only once", async () => {
+    const dir = await paused()
+    const text = ending({
+      lead: transition({ label: 'Checkpoint', fact: 'Step 3 complete', detail: ['b4c5d6e7f'] }),
+      verdict: '**Verdict**: ● Plumb',
+      stop: transition({ label: 'Stop', fact: 'Range 2 of 2 landed - review the parser', detail: ['details: `x/intent.md:16`'] }),
+      pointer: '**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish',
+    })
+    writeRelay(dir, { tier: 'orientation', render: 'checkpoint', owes: { range: 2, count: 2, step: 3 }, text })
+    expect(held(relayCheck(dir, stop(dir, { last: text })))).toBe(
+      "plumbbob: the turn ended on Step 3's boundary, and range 2 of 2's stop card is still owed. " +
+        "Write the range's detail file, run `plumbbob handoff --stop`, and end the turn on its output, whole, with nothing after it.",
+    )
+    expect(readRelay(dir)).toMatchObject({ held: 4, owes: { range: 2, count: 2, step: 3 } })
+    expect(relayCheck(dir, stop(dir, { last: text }))).toBeNull()
+  })
+
+  it("lets the turn end on the stop card the retry printed in the boundary's place", async () => {
+    const dir = await paused()
+    writeRelay(dir, { tier: 'orientation', render: 'checkpoint', owes: { range: 2, count: 2, step: 3 }, text: '**Checkpoint**: x\n\n' })
+    writeRelay(dir, { tier: 'decision', render: 'stop', command: 'plumbbob handoff --stop --full', text: STOP_CARD })
+    expect(readRelay(dir)?.owes).toBeUndefined()
+    expect(held(relayCheck(dir, stop(dir, { last: `Range 2 is in.\n\n${STOP_CARD}` })))).toBeNull()
+  })
+
+  it('holds a stop card that dropped a part, naming `plumbbob handoff --stop --full`', async () => {
+    const dir = await paused()
+    writeRelay(dir, { tier: 'decision', render: 'stop', command: 'plumbbob handoff --stop --full', text: STOP_CARD })
+    const dropped = STOP_CARD.replace(/\*\*Harvest\*\*:[\s\S]*?\n\n- park 1[^\n]*\n\n/, '')
+    expect(dropped).not.toContain('**Harvest**')
+    expect(held(relayCheck(dir, stop(dir, { last: dropped })))).toBe(
+      'plumbbob: the turn did not close on the stop card it printed. ' +
+        'Run `plumbbob handoff --stop --full` and end the turn on its output, whole, with nothing after it.',
+    )
+  })
+
+  it('holds a missed stop reminder, naming `plumbbob handoff --stop`', async () => {
+    const dir = await paused()
+    const reminder = "**Next Up**: Back to Range 2 of 2's stop - review the parser\n\n"
+    writeRelay(dir, { tier: 'decision', render: 'stop-reminder', command: 'plumbbob handoff --stop', text: reminder })
+    expect(held(relayCheck(dir, stop(dir, { last: `It parses first.\n\n${reminder}` })))).toBeNull()
+    writeFileSync(turnPath(dir), '5\n')
+    writeRelay(dir, { tier: 'decision', render: 'stop-reminder', command: 'plumbbob handoff --stop', text: reminder })
+    expect(held(relayCheck(dir, stop(dir, { last: 'It parses first.' })))).toContain(
+      'the stop reminder it printed. Run `plumbbob handoff --stop` and',
+    )
+  })
+})
+
 describe('relay — the hook', () => {
   it('exits 0 with no output on a payload it cannot read', async () => {
     const dir = await paused()

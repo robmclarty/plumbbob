@@ -38,8 +38,9 @@ const RULE = /^-{3,}$/
 // lines an ending carries that wear no label of their own.
 const WARN = '⚠'
 // The reminder's pointer: the driver form of Next Up, aimed back at the step
-// still waiting, which a pause already shown ends on instead of its card.
-const BACK_POINTER = /^Back to Step \d+/
+// still waiting, which a pause already shown ends on instead of its card, or
+// at the range whose stop card is still waiting.
+const BACK_POINTER = /^Back to (?:Step \d+|Range \d+ of \d+'s stop)/
 
 export type Anatomy = {
   readonly labels: ReadonlyArray<string> // every bold label, in order
@@ -59,8 +60,10 @@ export type Anatomy = {
 // than one ending, so each gets its own name here: `plan` is the decision
 // tier's plan pause, which judges a plan rather than a diff, `reminder` is a
 // step pause already shown (D87 (pause-once)), which ends on the one line that
-// points back at the step, and `boundary` is the orientation tier's landed step.
-export type Tier = 'decision' | 'plan' | 'reminder' | 'boundary' | 'driver'
+// points back at the step, `boundary` is the orientation tier's landed step,
+// and `stop` is the decision tier at a stop, the card that closes a run's range
+// (D100 (stop-card)).
+export type Tier = 'decision' | 'plan' | 'reminder' | 'boundary' | 'driver' | 'stop'
 
 const TIER_PARTS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
   decision: ['Now', 'Summary', 'Readout', 'Verdict', 'Next Up', 'Your Call', 'Recommendation'],
@@ -68,12 +71,18 @@ const TIER_PARTS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
   reminder: ['Next Up'],
   boundary: ['Verdict', 'Stop', 'Next Up'],
   driver: ['Next Up'],
+  stop: ['Stop', 'Summary', 'Readout', 'Verdict', 'Harvest', 'Next Up', 'Your Call', 'Recommendation'],
 }
 
 // The parts a tier may carry without owing them. The Stop part rides only the
 // boundary where a range's last step landed, so a boundary without it is whole,
-// and one with it still has to stand it between the Verdict and Next Up.
-const OPTIONAL_PARTS: ReadonlySet<string> = new Set(['Stop'])
+// and one with it still has to stand it between the Verdict and Next Up. The
+// Harvest part rides a stop card only while a park is open (D100 (stop-card)),
+// and the Stop part there is the card's lead, which it always owes.
+const OPTIONAL_PARTS: Readonly<Partial<Record<Tier, ReadonlyArray<string>>>> = {
+  boundary: ['Stop'],
+  stop: ['Harvest'],
+}
 
 // What each tier must NOT render. The Your Call block belongs only where a
 // decision is pending; a Verdict only where something was measured; the Now
@@ -85,6 +94,7 @@ const TIER_FORBIDS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
   reminder: ['Now', 'Summary', 'Readout', 'Verdict', 'Your Call', 'Recommendation'],
   boundary: ['Now', 'Your Call', 'Readout', 'Recommendation'],
   driver: ['Now', 'Your Call', 'Verdict', 'Readout', 'Recommendation'],
+  stop: ['Now'],
 }
 
 // The row the spec makes load-bearing: the gate verdict's one home, which
@@ -97,7 +107,8 @@ const TIER_FORBIDS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
 const CHECK_ROW = 'check'
 
 export function tierParts(tier: Tier): ReadonlyArray<string> {
-  return TIER_PARTS[tier].filter((part) => !OPTIONAL_PARTS.has(part))
+  const optional = OPTIONAL_PARTS[tier] ?? []
+  return TIER_PARTS[tier].filter((part) => !optional.includes(part))
 }
 
 // Read a turn's text as an ending. Lines are classified, never matched
@@ -311,12 +322,12 @@ export function anatomyChecks(text: string, tier: Tier): ReadonlyArray<Check> {
   const checks: Check[] = [
     info(`anatomy: ${tier} ending renders whole`, endingRenders(a, tier), shapeDetail(a, tier)),
   ]
-  if (tier === 'decision') {
+  if (tier === 'decision' || tier === 'stop') {
     checks.push(
       info('anatomy: the gate verdict rides the check row', hasCheckRow(a), [...a.rows.keys()].join(', ')),
     )
   }
-  if (tier === 'decision' || tier === 'plan') {
+  if (tier === 'decision' || tier === 'plan' || tier === 'stop') {
     checks.push(
       info('anatomy: recommendation is the last text', a.endsOn === 'Recommendation', a.endsOn ?? 'nothing labeled'),
     )

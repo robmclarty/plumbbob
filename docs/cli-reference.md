@@ -22,7 +22,7 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 | `start` | `start <title> [--slug <name>] [--local] [--allow-dirty]` | scaffold `builds/<slug>/`, record baseline, open the session |
 | `status` | `status [--build <slug>] [--invoked "<args>"] [--run "<args>"]` | print the orientation dashboard (or `NO ACTIVE SESSION`) |
 | `build` | `build [<n>] [--build <slug>]` | write step `n`'s seam + `STEP` (goes in-flight) |
-| `handoff` | `handoff [<n>] [--full] [--plan] [--driver] [--build <slug>]` | print the turn's whole CLI-rendered ending by tier, or a reminder for a pause already shown |
+| `handoff` | `handoff [<n>] [--full] [--plan] [--driver] [--stop] [--build <slug>]` | print the turn's whole CLI-rendered ending by tier, or a reminder for a pause already shown |
 | `check` | `check [--bail] [--changed] [--all] [--only a,b] [--skip a,b] [--include a,b]` | run the heavy gate; no state change |
 | `checkpoint` | `checkpoint [<n>] [--plan] [-m <msg>] [--body <<'BODY'…]` | gate on green, commit, record SHA, mark step done |
 | `revert` | `revert [--to <n>] [--build <slug>]` | `git reset --hard` to a checkpoint SHA |
@@ -164,7 +164,7 @@ are exact paths or `dir/` grants, never globs; [**D23 (no-glob-seams)**](decisio
 ### handoff
 
 ```text
-plumbbob handoff [<n>] [--full] [--plan] [--driver] [--build <slug>]
+plumbbob handoff [<n>] [--full] [--plan] [--driver] [--stop] [--build <slug>]
 ```
 
 Prints the whole CLI-rendered **ending of a turn** ([the turn anatomy](presentation.md);
@@ -244,8 +244,12 @@ your-call block carrying the two plan moves, and the recommendation; nothing is 
 yet, so no Verdict), and `--driver` renders a driver turn's pointer alone, which aims back
 at the step still open instead of forward at the next one. Owning every ending here rather
 than as prose in the skills keeps them from drifting out of sync with `status`, which
-renders the same next-step detail. Refuses (exit 1) with no session, or with `--plan` and
-`--driver` together.
+renders the same next-step detail. `--stop` renders the stop card that closes a run's range
+([the stop card](presentation.md#the-stop-card)), for the range the last landing completed and
+from that range's detail file, once per stop under a `STOP` stamp of its own, with
+`--stop --full` to bring it back. Refuses (exit 1) with no session, with two of `--plan`,
+`--driver`, and `--stop` together, and with `--stop` while a step is in flight, when no range
+that lands its steps just landed, or when the detail file is another range's.
 
 Every transition verb prints its own ending through this same code, so `checkpoint`,
 `park`, `revert`, `abandon`, `spike`, `use`, and `finish` each emit the Verdict (where one

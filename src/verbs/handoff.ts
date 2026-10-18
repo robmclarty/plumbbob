@@ -33,7 +33,10 @@
 // Every tier's ending is emitted here, so no skill has to fake the furniture in
 // prose: `--plan` renders the plan-pause ending and `--driver` the driver
 // turn's pointer, the two endings the session state cannot tell apart from the
-// ones above. The driver pointer reads the phase it lands in: a spike open over
+// ones above, and `--stop` the stop card that closes a run's range, which reads
+// a boundary the session state cannot tell from a plain one either. The stop
+// card renders once too, under its own stamp in `STOP`, which also carries the
+// turn it printed in for `plumbbob harvest`'s latch. The driver pointer reads the phase it lands in: a spike open over
 // the step names closing the spike, a step exit (a revert, an abandon, a spike
 // closed at the boundary) finds nothing in flight and points forward, with no
 // Verdict either way, since nothing landed.
@@ -41,8 +44,18 @@
 import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
-import { type NumstatEntry, PLAN_COMMIT_MARKER, commitsSince, diffNumstat, diffPatch, findRepoRoot } from '../lib/git.ts'
-import { blocks, printEnding, transition } from '../lib/notice.ts'
+import {
+  type NumstatEntry,
+  PLAN_COMMIT_MARKER,
+  commitNumstat,
+  commitsBetween,
+  commitsSince,
+  diffNumstat,
+  diffPatch,
+  findRepoRoot,
+} from '../lib/git.ts'
+import { blocks, notice, printEnding, transition } from '../lib/notice.ts'
+import { hasStep } from '../lib/steplist.ts'
 import { isArtifactPath, parseStepSeam } from '../lib/intent.ts'
 import {
   buildLogPath,
@@ -54,18 +67,22 @@ import {
   pausePath,
   type Relay,
   readStats,
+  readStop,
   readTurn,
   resolveBuild,
   seamPath,
   stepPath,
   tickPath,
+  writeStop,
 } from '../lib/sidecar.ts'
 import {
   type AccruedStats,
+  type BuildRange,
   type CheckSummary,
   type Ladder,
   type RecapRow,
   type DetailSection,
+  type RangeMeasure,
   type RecapRowName,
   type SpentInputs,
   type Step,
@@ -75,6 +92,7 @@ import {
   diffRowValue,
   foldVerdict,
   lastLedgerSha,
+  measureRange,
   normalizeDetailHeadings,
   parkedPhrase,
   parseBuildOrder,
@@ -88,6 +106,7 @@ import {
   parseSections,
   parseSteps,
   parseSummary,
+  rangeSpan,
   rangeStanding,
   recapLines,
   remainingOrder,
@@ -140,13 +159,17 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   }
 
   const { build: slug, rest } = resolveBuild(root, args)
-  if (rest.includes('--plan') && rest.includes('--driver')) {
-    process.stderr.write('plumbbob: handoff: --plan and --driver name different tiers; pass one.\n')
+  const tiers = ['--plan', '--driver', '--stop'].filter((flag) => rest.includes(flag))
+  if (tiers.length > 1) {
+    process.stderr.write(`plumbbob: handoff: ${tiers.join(' and ')} name different tiers; pass one.\n`)
     return 1
   }
   // A build named by flag rides any command that reprints this ending, since
   // the cursor may point elsewhere.
   const named = args.includes('--build') ? slug : null
+  if (rest.includes('--stop')) {
+    return stopCard(root, slug, named, rest.includes('--full'))
+  }
   const intent = readOr(intentPath(root, slug))
   // In build order, so the pointer names the step a bare `plumbbob build`
   // would enter; the build-log feeds the park count beneath it.
@@ -355,39 +378,396 @@ export function boundaryEnding(root: string, slug: string | null, step: number |
   const steps = parseOrderedSteps(intent)
   const nextUp = steps.find((s) => !s.done && s.n !== step)
   const where = relative(root, intentPath(root, slug))
+  const landed = landedRange(intent, steps, step)
   return {
     verdict: step === null ? null : landedVerdict(root, slug, intent, step),
-    stop: stopLine(intent, steps, step, where),
+    stop: landed === null ? null : stopLead(landed, where),
+    range: landed === null ? null : { item: landed.range.item, count: landed.count },
     pointer: nextUpBlock(intent, readOr(buildLogPath(root, slug)), nextUp, step, where),
   }
 }
 
-/** A boundary ending's CLI-rendered parts: the Verdict and the Stop part, where either applies, and the pointer. */
-export type BoundaryEnding = { readonly verdict: string | null; readonly stop: string | null; readonly pointer: string }
+/**
+ * A boundary ending's CLI-rendered parts: the Verdict and the Stop part, where
+ * either applies, and the pointer; and the range whose landing earned the Stop
+ * part, so a run's checkpoint can say its boundary owes the stop card.
+ */
+export type BoundaryEnding = {
+  readonly verdict: string | null
+  readonly stop: string | null
+  readonly range: { readonly item: number; readonly count: number } | null
+  readonly pointer: string
+}
+
+/** A range that lands its steps, completed by the landing of `step`, and the plan's count of ranges. */
+type LandedRange = { readonly range: BuildRange; readonly count: number; readonly step: number }
 
 /**
- * The Stop part: why the build stops at this boundary, when the step that
- * landed was the last undone step of a range that lands its steps. One labeled
- * line, the range over the count, a plain hyphen, the stop as the plan wrote
- * it, and a bracket pointing at the item, where its note can be read.
- *
- * Null for every other boundary: a landing that leaves the range open, a bare
- * range (its stop was its own pause), a plan without ranges, and the plan
- * commit, where nothing landed.
+ * The range that lands its steps whose last undone step was `step`, now
+ * landed, or null for every other landing: one that leaves its range open, a
+ * bare range (its stop was its own pause), a step no range names, a plan
+ * without ranges, and the plan commit, where nothing landed.
  */
-function stopLine(intent: string, steps: ReadonlyArray<Step>, step: number | null, where: string): string | null {
+function landedRange(intent: string, steps: ReadonlyArray<Step>, step: number | null): LandedRange | null {
   if (step === null) {
     return null
   }
   const { count, completed } = rangeStanding(parseBuildRanges(intent), steps, step)
-  if (completed === null || completed.bare) {
-    return null
-  }
+  return completed === null || completed.bare ? null : { range: completed, count, step }
+}
+
+/**
+ * The Stop part: why the build stops at this boundary. One labeled line, the
+ * range over the count, a plain hyphen, the stop as the plan wrote it, and a
+ * bracket pointing at the item, where its note can be read. The stop card
+ * opens on the same line, moved to the top of the card.
+ */
+function stopLead(landed: LandedRange, where: string): string {
   return transition({
     label: 'Stop',
-    fact: `Range ${completed.item} of ${count} landed - ${completed.stop}`,
-    detail: [`details: \`${where}:${completed.line}\``],
+    fact: `Range ${landed.range.item} of ${landed.count} landed - ${landed.range.stop}`,
+    detail: [`details: \`${where}:${landed.range.line}\``],
   })
+}
+
+/**
+ * The stop card that closes a run's range (docs/presentation.md): the Stop
+ * lead, the range's Summary and highlights from the range's detail file, the
+ * Readout measured across the range, the Verdict, the Harvest part while a
+ * park is open, Next Up, Your Call, and the recommendation.
+ *
+ * It renders for the range the last landing completed, and refuses with a
+ * step in flight, with no range just landed, and with a detail file written
+ * for anything but that range, since a card with none of the model's review
+ * on it would ask the human to approve nothing. It renders once per stop:
+ * while the STOP stamp matches the range and what the card showed, a later
+ * render is the one-line reminder, and `--full` prints the card whatever the
+ * stamp says. Every card it prints rewrites the stamp with the turn it printed
+ * in, which is the turn `plumbbob harvest` waits past.
+ */
+function stopCard(root: string, slug: string | null, named: string | null, full: boolean): number {
+  const intent = readOr(intentPath(root, slug))
+  const steps = parseOrderedSteps(intent)
+  const landed = stopRange(root, slug, intent, steps)
+  if (typeof landed === 'string') {
+    process.stderr.write(landed)
+    return 1
+  }
+  const { range, count, step } = landed
+  const detail = settleDetail(root, readOr(detailPath(root)))
+  if (parseDetailRange(detail) !== range.item) {
+    process.stderr.write(
+      notice({
+        fact: 'no stop card to render',
+        detail: [`the detail file is not range ${range.item}'s`],
+        remedy: `write range ${range.item}'s detail in .plumbbob/detail.md, then plumbbob handoff --stop`,
+      }),
+    )
+    return 1
+  }
+  const where = relative(root, intentPath(root, slug))
+  const buildLog = readOr(buildLogPath(root, slug))
+  const review = stopReview(root, slug, intent, range, detail)
+  const parks = parkList(buildLog)
+  const harvest = harvestPart(parks, harvestProposals(detail))
+  const hash = stopHash(detail, review.stamped, harvest ?? '')
+  const stamp = readStop(root, slug)
+  if (!full && stamp !== null && stamp.range === range.item && stamp.hash === hash) {
+    // The stop the human already read, unchanged: the answer above this line
+    // is what they asked for, and the card would push it off the screen.
+    const command = reprintCommand('--stop', undefined, named)
+    return emit(root, { tier: 'decision', render: 'stop-reminder', command }, [
+      `**Next Up**: Back to Range ${range.item} of ${count}'s stop - ${range.stop}`,
+    ])
+  }
+  writeStop(root, slug, { range: range.item, turn: readTurn(root), hash })
+  const nextUp = steps.find((s) => !s.done && s.n !== step)
+  const parts: string[] = [
+    stopLead(landed, where),
+    summaryBlock(parseSummary(detail), relative(root, detailPath(root))),
+  ]
+  if (review.readout.length > 0) {
+    parts.push([READOUT_LABEL, '', ...fence('text', review.readout)].join('\n'))
+  }
+  parts.push(review.verdict)
+  if (harvest !== null) {
+    parts.push(harvest)
+  }
+  parts.push(
+    // The note carries no parks segment here: the Harvest lead above sizes the list.
+    nextUpBlock(intent, '', nextUp, step, where),
+    stopCallBlock(directionExample(parks, harvestProposals(detail)), steps, intent),
+  )
+  const command = reprintCommand('--stop --full', undefined, named)
+  return emit(root, { tier: 'decision', render: 'stop', command }, withRecommendation(parts, parseRecommendation(detail)))
+}
+
+/**
+ * The range the stop card reviews: the one the last landing completed, or the
+ * refusal that says why no stop card renders, with the move that does render
+ * this moment.
+ */
+function stopRange(root: string, slug: string | null, intent: string, steps: ReadonlyArray<Step>): LandedRange | string {
+  const refuse = (why: string, remedy: string): string => notice({ fact: 'no stop card to render', detail: [why], remedy })
+  const inFlight = readMarker(stepPath(root, slug))
+  if (inFlight !== null) {
+    return refuse(`step ${inFlight} is in flight`, 'plumbbob handoff renders its pause')
+  }
+  const last = parseLastCheckpoint(readOr(checkpointsPath(root, slug)))
+  if (last === null) {
+    return refuse('no step has landed', 'plumbbob handoff renders the pointer')
+  }
+  const landed = landedRange(intent, steps, last.n)
+  if (landed === null) {
+    const { completed, count } = rangeStanding(parseBuildRanges(intent), steps, last.n)
+    const why =
+      completed === null
+        ? `step ${last.n} landed last, and completed no range`
+        : `range ${completed.item} of ${count} is bare, and its stop was step ${last.n}'s pause`
+    return refuse(why, 'plumbbob handoff renders this boundary')
+  }
+  return landed
+}
+
+/** A stop's review as the CLI measures it: the Readout's lines, the Verdict line, and the measured lines its stamp hashes. */
+type StopReview = { readonly readout: ReadonlyArray<string>; readonly verdict: string; readonly stamped: ReadonlyArray<string> }
+
+/**
+ * Measure a landed range and fold its Verdict: the CLI's rows across the
+ * range's commits, the ledger, stats.json, and the last check, joined with
+ * the three judgment rows the range's detail wrote, the measured ones winning
+ * where both exist.
+ *
+ * The card and the record read the review through this one call, so the Log
+ * keeps exactly what the card showed.
+ */
+function stopReview(root: string, slug: string | null, intent: string, range: BuildRange, detail: string): StopReview {
+  const measure = rangeMeasure(root, slug, intent, range)
+  const rows: Partial<Record<RecapRowName, RecapRow>> = { ...(parseRecap(detail, 'range')?.rows ?? {}), ...measure.rows }
+  const { ladder, worst } = foldVerdict(rows, measure.stats, 'range')
+  return {
+    readout: recapLines(rows, {
+      steps: measure.steps,
+      diff: measure.diff,
+      spent: measure.spent,
+      constraints: parseConstraintCount(intent),
+    }),
+    verdict: verdictLine(ladder, worst),
+    stamped: recapLines(measure.rows, { steps: measure.steps, diff: measure.diff, spent: null, constraints: 0 }),
+  }
+}
+
+/**
+ * Read what a landed range's measures are taken from: each checkpoint's
+ * commit the ledger names for a step of the range, the first-parent commits
+ * across the range's span for the out-of-band count, stats.json, and the last
+ * check's summary.
+ */
+function rangeMeasure(root: string, slug: string | null, intent: string, range: BuildRange): RangeMeasure {
+  const checkpoints = readOr(checkpointsPath(root, slug))
+  const commits: Record<string, ReadonlyArray<NumstatEntry>> = {}
+  for (const line of checkpoints.split('\n')) {
+    const m = /^step\s+(\d+)\s+(\S+)/.exec(line.trim())
+    const sha = m?.[2]
+    if (sha !== undefined && hasStep(range.steps, Number(m?.[1]))) {
+      commits[sha] = commitNumstat(root, sha)
+    }
+  }
+  const span = rangeSpan(checkpoints, range)
+  return measureRange({
+    range,
+    intent,
+    checkpoints,
+    stats: readStats(root, slug),
+    commits,
+    between: span === null ? [] : commitsBetween(root, span.from, span.to, PLAN_COMMIT_MARKER),
+    summary: readCheckSummary(root),
+  })
+}
+
+/**
+ * The stamp's hash of a stop card: the range's detail file, the measured rows
+ * as rendered, and the Harvest part, which reads the park list. Never `spent`,
+ * as at a pause.
+ */
+function stopHash(detail: string, measured: ReadonlyArray<string>, harvest: string): string {
+  const hash = createHash('sha256')
+  for (const part of [detail, ...measured, harvest]) {
+    hash.update(part).update('\0')
+  }
+  return hash.digest('hex')
+}
+
+/** One line of the park list: its handle, whether it is still open, and its text as the list holds it. */
+export type Park = { readonly handle: number; readonly open: boolean; readonly text: string }
+
+/**
+ * The park list under `build-log.md`'s `## Park list`, each line with its
+ * handle: its place in the list, counting every line ever parked, harvested
+ * ones included.
+ *
+ * A line is never deleted from the list, only flipped, so the handle is
+ * stable for the life of the build, and it counts the same lines the note's
+ * `parked 3 of 8 open` does. The stop card prints the handle and the text
+ * from here, and `plumbbob harvest` matches a proposal to its park by the
+ * handle alone.
+ */
+export function parkList(buildLog: string): Park[] {
+  const lines = buildLog.split('\n')
+  const start = lines.findIndex((l) => l.trim() === '## Park list')
+  if (start === -1) {
+    return []
+  }
+  const end = lines.findIndex((l, i) => i > start && l.startsWith('## '))
+  return lines.slice(start + 1, end === -1 ? lines.length : end).flatMap((line) => {
+    const m = /^-\s+\[([ xX])\]\s+(\S.*)$/.exec(line.trim())
+    return m === null ? [] : [{ open: m[1] === ' ', text: (m[2] ?? '').trim() }]
+  }).map((park, i) => ({ handle: i + 1, ...park }))
+}
+
+/** One proposal from a detail file's `## Harvest` section: the park's handle, the class proposed, and the reason. */
+export type Proposal = { readonly handle: number; readonly kind: string; readonly reason: string }
+
+/**
+ * The proposals under a detail file's `## Harvest` section, one per
+ * `- park 6 → tangent: <the reason>` line, in the order written.
+ *
+ * The class is read as written, whatever its word: the card shows the
+ * proposal the model made, and `plumbbob harvest` is what refuses one outside
+ * blocker, tangent, and pivot. A line in any other shape is not a proposal.
+ */
+export function harvestProposals(detail: string): Proposal[] {
+  const lines = detail.split('\n')
+  const start = lines.findIndex((l) => /^##\s+Harvest\s*$/i.test(l.trim()))
+  if (start === -1) {
+    return []
+  }
+  const end = lines.findIndex((l, i) => i > start && l.startsWith('## '))
+  return lines.slice(start + 1, end === -1 ? lines.length : end).flatMap((line) => {
+    const m = /^-\s+park\s+(\d+)\s*(?:→|->)\s*([\w-]+)\s*(?::\s*(.*))?$/i.exec(line.trim())
+    return m === null ? [] : [{ handle: Number(m[1]), kind: (m[2] ?? '').toLowerCase(), reason: (m[3] ?? '').trim() }]
+  })
+}
+
+/**
+ * The range a detail file reviews, read off its `# Detail · Range <n> · <stop>`
+ * header, or null when the first line is not a range's header (a step's
+ * detail, a boundary harvest's, or a file written without one).
+ */
+export function parseDetailRange(detail: string): number | null {
+  const first = detail.trimStart().split('\n', 1)[0] ?? ''
+  const m = /^#\s+Detail\s*·\s*Range\s+(\d+)\b/.exec(first)
+  return m === null ? null : Number(m[1])
+}
+
+/**
+ * The Harvest part: a lead that sizes the list, then one item per open park in
+ * list order, its handle and text from the list and, behind the arrow, the
+ * class the detail file proposes and its reason. A park the detail left out
+ * reads `no class proposed`, so a silent omission is one on the card. Null
+ * with no park open, which renders the card without the part.
+ */
+function harvestPart(parks: ReadonlyArray<Park>, proposals: ReadonlyArray<Proposal>): string | null {
+  const open = parks.filter((p) => p.open)
+  if (open.length === 0) {
+    return null
+  }
+  const items = open.map((park) => {
+    const proposal = proposals.find((p) => p.handle === park.handle)
+    const proposed =
+      proposal === undefined ? 'no class proposed' : proposal.reason.length === 0 ? proposal.kind : `${proposal.kind}: ${proposal.reason}`
+    return `- park ${park.handle} · ${park.text} → ${proposed}`
+  })
+  const lead = `**Harvest**: ${open.length} of ${parks.length} parked idea${parks.length === 1 ? '' : 's'} open`
+  return [lead, '', ...items].join('\n')
+}
+
+/**
+ * The stop card's Your Call block: the replies that settle the card in one
+ * message, each recording the review and every proposal before what it names.
+ *
+ * The second row is the move after the stop: the next range's run, the finish
+ * on the plan's last range, and nothing when the run would refuse (a flagged
+ * range, or a next step no range names), where the note beneath Next Up
+ * carries the drift words. With no park open (`example` null), the rows
+ * record the review alone and direction is a change to it.
+ */
+function stopCallBlock(example: string | null, steps: ReadonlyArray<Step>, intent: string): string {
+  const parked = example !== null
+  const what = parked ? 'them' : 'it'
+  const moves = [
+    callLine(
+      '`looks good`',
+      parked ? 'I record the review and every class as proposed, folding a blocker into the plan; back to the boundary' : 'I record the review; back to the boundary',
+    ),
+  ]
+  const run = cardRun(intent, null)
+  if (!steps.some((s) => !s.done)) {
+    moves.push(callLine('`/plumbbob:finish`', `I record ${what} the same way, then write the report and close the build`))
+  } else if (run.ok) {
+    moves.push(callLine('`/plumbbob:run`', `I record ${what} the same way, then run range ${run.range.item} of ${run.count} to its stop`))
+  }
+  moves.push(
+    parked
+      ? callLine(`anything that reads as direction (\`${example}\`)`, 'I re-render the card with the proposal changed; nothing is recorded until you approve')
+      : callLine('anything that reads as direction', 'I re-render the card with the review changed; nothing is recorded until you approve'),
+    callLine('`expand`, or any question', 'I show more of what is there; nothing changes, and `show the stop` brings all of this back'),
+  )
+  return ['**Your Call**:', '', ...moves].join('\n')
+}
+
+/**
+ * The direction row's example, a reply naming a park on this card by its
+ * handle: the first open park proposed as anything but a tangent, recast as a
+ * tangent, else the first open park recast as a blocker. Null with no park
+ * open, where direction can only change the review.
+ */
+function directionExample(parks: ReadonlyArray<Park>, proposals: ReadonlyArray<Proposal>): string | null {
+  const open = parks.filter((p) => p.open)
+  const kindOf = (park: Park): string | undefined => proposals.find((p) => p.handle === park.handle)?.kind
+  const recast = open.find((park) => kindOf(park) !== undefined && kindOf(park) !== 'tangent')
+  if (recast !== undefined) {
+    return `park ${recast.handle} is a tangent`
+  }
+  const first = open[0]
+  return first === undefined ? null : `park ${first.handle} is a blocker`
+}
+
+/**
+ * A stop's record for the Log: the card as the human settled it, with the
+ * full story behind each highlight beneath. The Summary and its highlights,
+ * the Readout fence, the Verdict, the Harvest part, the recommendation, then
+ * the numbered sections' bodies, blank-line separated and unindented; the
+ * caller nests it under the range's dated Log line.
+ *
+ * Measured, not recalled, through the same review the card rendered. The
+ * Harvest part reads the park list as `buildLog` holds it, so the caller
+ * passes the list from before its record flips the settled parks, and the
+ * part shows each class the human confirmed. Null when the detail file
+ * reviews no range the plan declares.
+ */
+export function stopRecord(root: string, slug: string | null, detail: string, buildLog: string): string | null {
+  const intent = readOr(intentPath(root, slug))
+  const item = parseDetailRange(detail)
+  const range = parseBuildRanges(intent).ranges.find((r) => r.item === item)
+  if (range === undefined) {
+    return null
+  }
+  const review = stopReview(root, slug, intent, range, detail)
+  const summary = parseSummary(detail)
+  const parts: string[] = []
+  if (summary !== null) {
+    parts.push(recordSummary(summary))
+  }
+  if (review.readout.length > 0) {
+    parts.push([READOUT_LABEL, '', ...fence('text', review.readout)].join('\n'))
+  }
+  parts.push(review.verdict)
+  const harvest = harvestPart(parkList(buildLog), harvestProposals(detail))
+  if (harvest !== null) {
+    parts.push(harvest)
+  }
+  return [...withRecommendation(parts, parseRecommendation(detail)), ...sectionBlocks(parseSections(detail))].join('\n\n')
 }
 
 /**
@@ -555,7 +935,11 @@ function emit(root: string, kind: Omit<Relay, 'text'>, parts: ReadonlyArray<stri
  * pause was named by and the build a flag named, so the retry lands on the
  * same pause with nothing in flight and the cursor elsewhere.
  */
-function reprintCommand(form: '--full' | '--plan' | null, step: string | undefined, build: string | null): string {
+function reprintCommand(
+  form: '--full' | '--plan' | '--stop' | '--stop --full' | null,
+  step: string | undefined,
+  build: string | null,
+): string {
   const parts = ['plumbbob handoff', form, step, build === null ? null : `--build ${build}`]
   return parts.filter((p) => p !== null && p !== undefined).join(' ')
 }

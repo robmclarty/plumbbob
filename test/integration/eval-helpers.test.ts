@@ -949,6 +949,57 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
     expect(tierParts('boundary')).toEqual(['Verdict', 'Next Up'])
   })
 
+  it('reads a stop card whole, its Harvest part optional and its Stop lead owed — D100 (stop-card)', () => {
+    const card = [
+      '**Stop**: Range 3 of 5 landed - review the card (details: `x/intent.md:63`)',
+      '',
+      '**Summary**: The boundary says why the build stops. (details: `.plumbbob/detail.md`)',
+      '',
+      '1. Step 8 landed a hair off.',
+      '',
+      '**Readout**:',
+      '',
+      '```text',
+      'steps        4 of 4 landed',
+      '             - 6 a1b2c3d · 7 b2c3d4e · 8 c3d4e5f · 9 d4e5f6a',
+      'check        green: 11 of 11 checks, 4 landings',
+      'done-when    met',
+      '```',
+      '',
+      '**Verdict**: ● Plumb',
+      '',
+      '**Harvest**: 1 of 8 parked ideas open',
+      '',
+      '- park 8 · a stop link prints raw → tangent: cosmetic',
+      '',
+      '**Next Up**: Step 10 of 12 - Tenth (details: `x/intent.md:34`)',
+      '  · range 4 of 5: /plumbbob:run (step 10 to its pause)',
+      '',
+      '**Your Call**:',
+      '',
+      '- `looks good` → I record the review and every class as proposed, folding a blocker into the plan; back to the boundary',
+      '- `/plumbbob:run` → I record them the same way, then run range 4 of 5 to its stop',
+      '',
+      '**Recommendation**: Approve it.',
+      '',
+    ].join('\n')
+    const a = readAnatomy(card)
+    expect(a.labels).toEqual(['Stop', 'Summary', 'Readout', 'Verdict', 'Harvest', 'Next Up', 'Your Call', 'Recommendation'])
+    expect(a.strays).toEqual([])
+    expect(a.rows.get('steps')).toBe('4 of 4 landed')
+    expect(endingRenders(a, 'stop')).toBe(true)
+    expect(anatomyChecks(card, 'stop').every((c) => c.pass)).toBe(true)
+    // The card with no park open is still whole; one without its lead is not.
+    const empty = card.replace(/\*\*Harvest\*\*:[\s\S]*?cosmetic\n\n/, '')
+    expect(endingRenders(readAnatomy(empty), 'stop')).toBe(true)
+    expect(tierParts('stop')).toEqual(['Stop', 'Summary', 'Readout', 'Verdict', 'Next Up', 'Your Call', 'Recommendation'])
+    expect(missingParts(readAnatomy(card.replace(/^\*\*Stop\*\*:.*\n\n/, '')), 'stop')).toEqual(['Stop'])
+    // The stop's reminder points back at the range whose card is waiting.
+    const reminder = readAnatomy("It reads the plan first.\n\n**Next Up**: Back to Range 3 of 5's stop - review the card\n")
+    expect(isBackPointer(reminder)).toBe(true)
+    expect(endingRenders(reminder, 'reminder')).toBe(true)
+  })
+
   it('keeps the advisory and its remedy inside the ending, not outside it', () => {
     const boundary = [
       '**Checkpoint**: Step 16 complete (f2b83e17c)',

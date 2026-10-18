@@ -25,7 +25,9 @@
 // has already landed. The once is counted in `RELAY` by the turn it held,
 // never by `stop_hook_active`, which checkride's gate sets on every red Stop
 // and which names no hook. It never sends `continue: false`, which would cancel
-// a sibling's block in the same round.
+// a sibling's block in the same round. A run's boundary that still owes its
+// stop card is a miss however whole the boundary was, since the card is the
+// run's ending, and its reason names `plumbbob handoff --stop` as the retry.
 //
 // The final message comes from the payload's `last_assistant_message`, never
 // from the transcript, which does not yet hold that message when Stop fires;
@@ -69,7 +71,10 @@ export function relayCheck(cwd: string, raw: string): string | null {
   const record = readRelay(root)
   const turn = readTurn(root)
   if (record === null || turn === null || record.turn !== turn || record.held === turn) return null
-  const carried = carriedEnding(record, payload.last_assistant_message, payload)
+  // A run's boundary that still owes its stop card is held whatever the turn
+  // relayed: the card is the run's ending, and `handoff --stop` overwrites
+  // this record once it prints.
+  const carried = record.owes !== undefined ? false : carriedEnding(record, payload.last_assistant_message, payload)
   // Whole, or not this check's to judge: let the turn end.
   if (carried !== false) return null
   // A hold that cannot be counted could repeat, so it is no hold at all.
@@ -215,6 +220,13 @@ function partsOf(text: string): ReadonlyArray<Part> {
  * turn missed, and the command or block that puts it back.
  */
 function reason(record: RelayRecord): string {
+  if (record.owes !== undefined) {
+    const { range, count, step } = record.owes
+    return (
+      `plumbbob: the turn ended on Step ${step}'s boundary, and range ${range} of ${count}'s stop card is still owed. ` +
+      "Write the range's detail file, run `plumbbob handoff --stop`, and end the turn on its output, whole, with nothing after it."
+    )
+  }
   if (record.tier === 'decision') {
     const command = record.command ?? 'plumbbob handoff --full'
     return (
@@ -233,6 +245,8 @@ function reason(record: RelayRecord): string {
 const DECISION_NAMES: Readonly<Record<string, string>> = {
   card: 'pause card',
   reminder: 'pause reminder',
+  stop: 'stop card',
+  'stop-reminder': 'stop reminder',
   plan: 'plan card',
 }
 

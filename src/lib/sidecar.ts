@@ -249,6 +249,48 @@ export function clearPause(root: string, slug?: string | null): void {
 }
 
 /**
+ * STOP: the stamp of the stop card `handoff --stop` last rendered whole, the
+ * range it reviews, the TURN it printed in, and a hash of what the card showed.
+ * While a later render matches the range and the hash, handoff prints the
+ * one-line reminder; `plumbbob harvest` reads the turn, and records the stop
+ * only once a human turn has read the card.
+ */
+export function stopPath(root: string, slug?: string | null): string {
+  return join(artifactDir(root, slug), 'STOP')
+}
+
+/** A stop card's stamp: the range it reviews, the turn it printed in (null with no turn hook), and the hash of what it showed. */
+export type StopStamp = { readonly range: number; readonly turn: number | null; readonly hash: string }
+
+/**
+ * The stamp of the stop card last rendered, or null when STOP is absent or
+ * does not parse.
+ */
+export function readStop(root: string, slug?: string | null): StopStamp | null {
+  try {
+    const m = /^(\d+) (\d+|-) (\S+)$/.exec(readFileSync(stopPath(root, slug), 'utf8').trim())
+    if (m === null) return null
+    return { range: Number(m[1]), turn: m[2] === '-' ? null : Number(m[2]), hash: m[3] ?? '' }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Record the stamp of the stop card just printed. Best-effort: a failed write
+ * costs one more full card on a later turn, never this turn's output or its
+ * exit code.
+ */
+export function writeStop(root: string, slug: string | null | undefined, stamp: StopStamp): void {
+  try {
+    writeFileSync(stopPath(root, slug), `${stamp.range} ${stamp.turn ?? '-'} ${stamp.hash}\n`)
+  } catch {
+    // A read-only tree or a vanished build folder: the card still renders.
+  }
+}
+
+
+/**
  * The build's `checkpoints` ledger: the recorded SHAs of landed plan and step
  * commits, one line each.
  */
@@ -730,11 +772,13 @@ export function readTurn(root: string): number | null {
 // it, and a driver ending is recorded only so that the last ending wins.
 const RELAY_TIERS = ['decision', 'orientation', 'driver'] as const
 
-// Which ending printed: handoff's six forms first, then one per transition. It
-// is what the check's reason names when the ending went missing.
+// Which ending printed: handoff's eight forms first, then one per transition.
+// It is what the check's reason names when the ending went missing.
 const RELAY_RENDERS = [
   'card',
   'reminder',
+  'stop',
+  'stop-reminder',
   'plan',
   'boundary',
   'pointer',
@@ -768,9 +812,16 @@ export type Relay = {
   // model keeps working, so the retry reprints it; an orientation or driver
   // ending reports something already done, so it has none.
   readonly command?: string
+  // The stop card a run's boundary still owes: set by the checkpoint that
+  // completes the range a `RUN` mark names, and gone once `handoff --stop`
+  // records the card in its place.
+  readonly owes?: Owed
   // Exactly what went to stdout, trailing blank line included.
   readonly text: string
 }
+
+/** The stop card a boundary owes: the range and the plan's count of them, and the step whose landing completed it. */
+export type Owed = { readonly range: number; readonly count: number; readonly step: number }
 
 /**
  * A recorded ending, stamped with the TURN it printed in, and with the TURN
@@ -838,8 +889,17 @@ export function holdRelay(root: string, record: RelayRecord): boolean {
 function formatRelay(record: RelayRecord): string {
   const header = [`turn ${record.turn}`, `tier ${record.tier}`, `render ${record.render}`]
   if (record.command !== undefined) header.push(`command ${record.command}`)
+  if (record.owes !== undefined) {
+    header.push(`owes range ${record.owes.range} of ${record.owes.count} after step ${record.owes.step}`)
+  }
   if (record.held !== undefined) header.push(`held ${record.held}`)
   return `${header.join('\n')}\n\n${record.text}`
+}
+
+/** The `owes` header field read back, or null when it is absent or does not parse. */
+function owedOf(field: string | undefined): Owed | null {
+  const m = /^range (\d+) of (\d+) after step (\d+)$/.exec(field ?? '')
+  return m === null ? null : { range: Number(m[1]), count: Number(m[2]), step: Number(m[3]) }
 }
 
 /**
@@ -865,12 +925,14 @@ export function readRelay(root: string): RelayRecord | null {
   const render = RELAY_RENDERS.find((r) => r === fields.get('render'))
   if (turn === null || tier === undefined || render === undefined) return null
   const command = fields.get('command')
+  const owes = owedOf(fields.get('owes'))
   const held = count(fields.get('held'))
   return {
     turn,
     tier,
     render,
     ...(command === undefined ? {} : { command }),
+    ...(owes === null ? {} : { owes }),
     ...(held === null ? {} : { held }),
     text: raw.slice(split + 2),
   }
@@ -965,6 +1027,9 @@ export function excludeControl(root: string): void {
     // The pause stamp is in-flight control too: what handoff last showed, so
     // a repeat prints the reminder. It must never ride a step commit.
     `${DIRNAME}/builds/*/PAUSE`,
+    // The stop stamp likewise: what the stop card last showed, and the turn it
+    // printed in, for the reminder and the record's latch.
+    `${DIRNAME}/builds/*/STOP`,
     // The agent-run handoff ledger is step-scoped in-flight state, not a
     // tracked artifact: it must never ride a step commit into the PR.
     `${DIRNAME}/builds/*/handoff.json`,

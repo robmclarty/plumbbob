@@ -27,6 +27,7 @@ import {
   detailPath,
   hasSession,
   intentPath,
+  readRun,
   readStats,
   refreshExcludes,
   seamPath,
@@ -155,9 +156,14 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   // pointer. Read after the flip and the ledger append, so the fold and the
   // pointer both see the boundary the human is standing at.
   const landed = boundaryEnding(root, activeBuild(root), step)
+  // A landing that completes the range a typed run marked owes the stop card:
+  // the record says so, and the relay check holds a turn that ends here.
+  const owes =
+    landed.range !== null && readRun(root) === landed.range.item ? { range: landed.range.item, count: landed.range.count, step } : null
   printEnding(root, {
     tier: 'orientation',
     render: 'checkpoint',
+    ...(owes === null ? {} : { owes }),
     text: ending({
       lead: transition({ label: 'Checkpoint', fact: `Step ${step} complete`, detail: leadDetail(sha, pointer) }),
       verdict: landed.verdict,
