@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Build ranges
 
-**Current step:** 4 — docs(build): teach the skill and the docs a range that lists its steps
+**Current step:** 5 — docs(presentation): spec the build ranges and the lines that name them
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -26,7 +26,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 1. chore(turn): spike what the prompt hook gets for a background notice
 - ☑ 2. fix(turn): stop a background job's notice from counting as a human turn
 - ☑ 3. feat(grant): let a range list its steps, and land only those steps
-- ☐ 4. docs(build): teach the skill and the docs a range that lists its steps
+- ☑ 4. docs(build): teach the skill and the docs a range that lists its steps
 - ☐ 5. docs(presentation): spec the build ranges and the lines that name them
 - ☐ 6. feat(orient): read the build ranges and where the build stands in them
 - ☐ 7. feat(handoff): name the range to run beneath Next Up
@@ -43,7 +43,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 > go straight back to the step. Acting the instant an idea arrives is the disease.
 > Capture is one line (`/plumbbob:park` composes it). Harvest happens only at the boundary.
 
-- [ ] abandon's refusal says a step is 'past the range you granted' when a list grant simply does not name it; reword for the list case (src/verbs/abandon.ts:109)
+- [x] abandon's refusal says a step is 'past the range you granted' when a list grant simply does not name it; reword for the list case (src/verbs/abandon.ts:109)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -61,7 +61,11 @@ from sprawling across branches.
 
 Harvest results this boundary:
 
-- (none yet)
+- 2026-10-17, at the step 4 boundary: one parked item, classified.
+- **tangent** (deferred, a one-line follow-up after this build): `src/verbs/abandon.ts:109`
+  says a step is "past the range you granted" when a list grant simply does not name it. The
+  refusal itself is right, since `abandon` still refuses a step the grant does not name; only
+  the wording is off, on a rare path, and no remaining step depends on it.
 
 ## Log
 
@@ -216,3 +220,5 @@ folder, so it rides the branch into the PR.)*
   **4.** One path outside the seam: the lexicon word
 
   The plan names the module `steplist`, and cspell rejected the import path, so `cspell.json` gained the one word.
+
+- 2026-10-18 — step 4 checkpointed · 759eff15d — docs(build): teach the skill and the docs a range that lists its steps (10m)

@@ -36,7 +36,7 @@ there.
 | what | whose judgment | how it reaches the turn |
 | --- | --- | --- |
 | the Summary lead, the numbered highlights, the `done-when`, `decisions`, and `constraints` rows, the recommendation | the model | written into `.plumbbob/detail.md`, read back and rendered by handoff |
-| the Now line, the Readout's other rows, the inline diff when the change is small, the Verdict, Next Up, Your Call | the CLI | measured from the session, the gate, and git |
+| the Now line, the Readout's other rows, the inline diff when the change is small, the Verdict, the Stop part on the boundary that earns one, Next Up, Your Call | the CLI | measured from the session, the gate, the plan, and git |
 
 The model authors nothing in the turn but the relay. Every defect the build
 that wrote this spec found in a live turn sat in the region the model was
@@ -509,10 +509,13 @@ re-sequences the plan away from its numbering
 carries its sequence in the numbers. The parks segment is the open count
 against everything ever parked, whenever anything has been parked; it rides
 even under `Nothing planned`, where an unharvested list is the one reminder
-that matters. With neither, the line vanishes. The indent is what keeps it
-inside the part: a reader of the anatomy files an indented line under the
-label above it and a flush one as a stray. The driver pointer carries no note;
-a one-line register stays one line.
+that matters. When the plan declares build ranges, a third segment leads the
+line and names the range holding the step and the command that runs what is
+left of it, `· range 3 of 5: /plumbbob:build 6-9`; its forms are under
+[the build ranges](#the-build-ranges). With none of the three, the line
+vanishes. The indent is what keeps it inside the part: a reader of the anatomy
+files an indented line under the label above it and a flush one as a stray.
+The driver pointer carries no note; a one-line register stays one line.
 
 ### The Your Call block
 
@@ -631,7 +634,7 @@ scales down with the turn:
 | tier | turns | the ending renders |
 | --- | --- | --- |
 | decision | the build/verify pause, the plan pause, an auto halt on trouble | the whole block: the Now line, the Summary and its highlights, the Readout, the inline diff when small, the Verdict, Next Up, Your Call, and the recommendation, rendered once per pause; a later turn at the same pause ends on the one-line reminder. The plan pause judges no diff and has no step in flight, so it renders the pointer, the moves, and the recommendation alone |
-| orientation | the checkpoint boundary (a clean halt's included), finish, status | the transition's lead line, the Verdict, any advisories, and Next Up with its note; no Your Call block, no recommendation. `status` is the exception: it renders the dashboard and nothing else, and the dashboard's last line is its own pointer |
+| orientation | the checkpoint boundary (a clean halt's included), finish, status | the transition's lead line, the Verdict, any advisories, the Stop part on the boundary where a range's last step landed, and Next Up with its note; no Your Call block, no recommendation. `status` is the exception: it renders the dashboard and nothing else, and the dashboard's last line is its own pointer |
 | driver | park, order, spike, use, recover, revert, agent runs | the transition's lead line, any advisories, and Next Up alone, no note beneath it; no Verdict, since nothing landed |
 
 **An auto halt takes the tier of what it leaves behind**
@@ -643,7 +646,13 @@ step first, and its ending is that checkpoint's block, because there is
 nothing left to decide. The rule used to send every halt through `handoff`,
 which renders the pause only while a step is open, and models read it as an
 order to hold a range's top step open: the eval tier caught it in 2 of 4
-runs.
+runs. A third halt is the plan's
+([D94 (auto-and-stops)](decisions.md#d94)): under `--auto`, a step the build
+ranges name as a bare range is built to its pause and halts there, a decision
+turn, with `plumbbob build` saying so as it enters the step, because the plan
+reserved that call for the human and a flag typed for speed should not make
+it. A review stop runs through, since a review can wait for the end of the
+run, and a typed range stays exactly as typed.
 
 A boundary turn, whole:
 
@@ -765,9 +774,10 @@ are retired, because the glyph table already gives `⚠` to a warning and `→`
 to what happens next.
 
 The order of an ending is fixed: the lead line, the Verdict where one was
-measured, the advisories, and the pointer, one blank line between each. So a
-relay never has to work out which line leads, and a stray a checkpoint alone
-can see lands under the Verdict it just earned a rung on:
+measured, the advisories, the Stop part on the one boundary that earns it, and
+the pointer, one blank line between each. So a relay never has to work out
+which line leads, and a stray a checkpoint alone can see lands under the
+Verdict it just earned a rung on:
 
 ```text
 **Checkpoint**: Step 16 complete (f2b83e17c, details: `.plumbbob/builds/presentation/build-log.md:97`)
@@ -787,6 +797,246 @@ fact, the detail list, and the remedy, and `ending()` for the order they
 stack in. A verb composes those parts and never a string, so moving the shape
 is one edit here and one there rather than a sweep across the verbs, and the
 tests assert through the same renderer.
+
+## The build ranges
+
+A plan may say where the build stops for a human call, and the card reads it
+back. `## Build ranges` sits in `intent.md` right after `## Build order`
+([D92 (build-ranges)](decisions.md#d92)): one numbered item per range, each
+the command the human types, the stop that ends it, and the model to run it
+on. **A range is advice the way a `- model:` line is, never a grant.** The
+human still types the command, because a grant comes only from the literal
+prompt ([D65 (human-typed-grants)](decisions.md#d65)), and a line the model
+can edit would otherwise be a grant the model could forge
+([D67 (auto-not-a-grant)](decisions.md#d67)). Three sections a model wrote by
+hand on 2026-10-16, one each in checkride, fascicle, and this repo, settled
+the shape before any code read one, and all three cut at the same points: a
+decision the plan could not make on paper, made at a step's own pause; a
+review before later steps build on what landed, made at the boundary after a
+range's last step; and a thing only a human can do, such as a push or a live
+key. The plan places the stops and the CLI never does, because where a call
+falls is judgment.
+
+### The plan's section
+
+The running example for the rest of this section is a twelve-step plan cut
+into five ranges:
+
+````markdown
+## Build ranges
+
+Five commands drive the build. Two stops are calls made at a step's own pause, and three are reviews after a range lands.
+
+1. `/plumbbob:build 1`, **stop:** at step 1's pause, approve the schema before anything writes to it
+   - model: opus
+2. `/plumbbob:build 2-5`, **stop:** review the parser before the renderers build on it
+   - model: opus
+   - note: run long jobs in the foreground while the range is live
+3. `/plumbbob:build 6-9`, **stop:** review the card on a live boundary before the skills teach it
+   - model: opus
+4. `/plumbbob:build 10`, **stop:** at step 10's pause, pick the label the docs will name
+   - model: fable
+5. `/plumbbob:build 11-12`, **stop:** the final read of the docs, then `/plumbbob:finish`
+   - model: opus
+````
+
+An item opens on the command in backticks, then a comma, then `**stop:**` and
+the stop's text to the end of the item, wrapped lines joined with a space. The
+command's steps are written as a typed range is (`1`, `2-5`, or `20,5-9`,
+[D91 (step-list-grants)](decisions.md#d91)), and the command's form says where
+the range stops: a bare `N` builds step N to its pause, so its stop is a call
+made before the step lands, and a span lands every step it names and stops at
+the boundary after the last ([D85 (range-top-lands)](decisions.md#d85)), so
+its stop is a review of what landed. A `- model:` sub-line is optional and
+written plain, the first word the token, as a step's is; any other sub-line (a
+`- note:` on what to watch for) is the reader's, and the CLI leaves it alone.
+A paragraph before the list is the human's too: the parser reads the items.
+The grammar is the Steps grammar because an item wraps where a table row of
+prose runs off the screen, and the item's number is the handle the card
+counts by.
+
+Nothing about a range is stored. It is done when every step it names is
+`[x]`, in progress when it holds the next undone step in build order, and
+what is left of it is its undone steps, written in build order
+([D91 (step-list-grants)](decisions.md#d91)); a range down to one undone step
+writes it `9-9`, which lands it, where a bare range stays bare. The boxes are
+already the truth, and a second copy of a fact is one more thing to drift.
+
+The template ships one item, and it is scaffold until someone fills it in
+([D77 (placeholder-uncounted)](decisions.md#d77)): an item whose command or
+stop still holds a `<...>` fill-in is neither a range nor a report, so a fresh
+build's dashboard carries no warning for it, and the coverage check below runs
+only once a real range parses. The placeholder, exactly:
+
+````markdown
+1. `/plumbbob:build <N-M>`, **stop:** <the call that is the human's here: a decision the plan leaves open, a review before later steps build on what landed, or a thing only a human can do>
+   - model: <the strongest model any step inside it recommends>
+````
+
+A range the plan has outgrown is reported and never rewritten by the CLI,
+because only the human knows where the stop belongs now, and a suggested
+command that halts early is the failure ranges exist to remove. Four things
+flag one, and each has its words, the same on the card and the dashboard:
+
+| the drift | its words |
+| --- | --- |
+| a range names a step the plan lacks | `step 14 is not in the plan` |
+| two ranges name one step | `step 7 is also in range 4` |
+| the build order puts a step from outside a range between two of its own | `the build order puts step 11 inside it` |
+| an undone step sits in no range | `no range names step 12` |
+
+The first three flag the range; the fourth flags the plan, since no range
+holds the step. A flagged range gets no command on the card. A range may name
+a step out of build order without drifting, because a list is walked in build
+order however it is written.
+
+### The range segment beneath Next Up
+
+The note beneath the pointer opens on the range holding the step Next Up
+names, numbered as the plan's item over the count of ranges, and the command
+that runs what is left of it from that step:
+
+```text
+**Next Up**: Step 6 of 12 - feat(orient): read the ranges (model: **Opus**, details: `.plumbbob/builds/x/intent.md:30`)
+  · range 3 of 5: /plumbbob:build 6-9 · parked 2 of 7 open
+```
+
+The segment leads the note, ahead of the build order and the parks, because
+it is the one segment that names what to type. Its forms:
+
+```text
+  · range 3 of 5: /plumbbob:build 6-9
+  · range 3 of 5: /plumbbob:build 8-9
+  · range 3 of 5: /plumbbob:build 9-9
+  · range 4 of 5: /plumbbob:build 10
+  · range 3 of 5 needs a re-cut (the build order puts step 11 inside it)
+  · no range names step 12
+```
+
+The first is a range not yet started. The second and third are what is left
+after steps 6 and 7 landed, and then 8: a range that stopped early (a red
+check, a halt on trouble) resumes from the card, and its last step is written
+`9-9` so the command lands it rather than pausing on it. The fourth is a bare
+range, whose command is the bare build; the form says it stops at the pause.
+The last two are the drift words above, in place of a command. A list range
+writes what is left in build order (`20,5-9`), so the first number on the
+card is where it starts.
+
+The segment renders at every site the note does, with the same string: the
+plan pause and the plan commit, where Next Up names step 1 and the segment
+names range 1 whole; a step pause, where Next Up names the step after the one
+in flight, so the segment names what is left once that step lands; and a
+boundary. The driver pointer and the `Back to` reminder carry no note, as
+before.
+
+**While the segment suggests a range, the bracket's bold model is the
+range's.** Next Up's bracket reads `model: **Opus**` from the range's
+`- model:` line rather than the step's, and the segment names no model of its
+own, because the bold token is the one the human acts on before the next run,
+the run is the range, and a range's first step is often not its hardest. A
+range with no model line leaves the step's in place, and the pointer at a step
+in no range, or in a flagged range, keeps the step's, as today.
+
+### The Stop part
+
+The boundary where a range's last step lands says why the build stops there.
+A boundary turn with it, whole:
+
+```text
+**Checkpoint**: Step 9 complete (c7d8e9f0a, details: `.plumbbob/builds/x/build-log.md:140`)
+
+**Verdict**: ● Plumb
+
+**Stop**: Range 3 of 5 landed - review the card on a live boundary before the skills teach it (details: `.plumbbob/builds/x/intent.md:63`)
+
+**Next Up**: Step 10 of 12 - feat(docs): name the label (model: **Fable**, details: `.plumbbob/builds/x/intent.md:34`)
+  · range 4 of 5: /plumbbob:build 10
+```
+
+The shape is one labeled line: `Range N of M landed`, a plain hyphen, the
+stop's text as the plan wrote it, and a bracket pointing at the item, where
+the `- note:` the card does not carry can be read. The label is `Stop` because
+it names the thing the plan wrote (`**stop:**` is the item's own key), it
+reads as a noun on the card the way `Checkpoint` does, and the question the
+human brings to that boundary is why the build stopped here. It rides between
+the advisories and Next Up, so the Verdict the step earned and any stray land
+first and the stop reads straight into the pointer that names the next range.
+The part is the CLI's, measured from the plan and the boxes;
+`checkpoint` prints it and a later `handoff` at the same boundary prints it
+the same way, and the relay check reads it as a part of the block.
+
+It renders on exactly one boundary per range: the one where the range's last
+undone step lands, whichever step that is and however it landed, by the range,
+by `--auto`, or by hand. A bare range never earns one, because its stop is its
+own pause: the step's `plumbbob status` carries the stop text, and the model
+writing that pause's recommendation reads it there. The plan commit carries
+none, since nothing landed. The boundary keeps its tier: the part is
+orientation, and no Your Call block follows it.
+
+### The dashboard's ranges block
+
+`plumbbob status` lists the ranges beneath the steps, in the step list's own
+grammar:
+
+```text
+  ranges  2 of 5 done
+  ✓ 1  /plumbbob:build 1 · opus
+  ✓ 2  /plumbbob:build 2-5 · opus
+  ▸ 3  /plumbbob:build 6-9 · opus   ← next
+        stop: review the card on a live boundary before the skills teach it
+    4  /plumbbob:build 10 · fable
+        stop: at step 10's pause, pick the label the docs will name
+    5  /plumbbob:build 11-12 · opus
+        stop: the final read of the docs, then /plumbbob:finish
+
+last checkpoint  step 5 · 1a2b3c4
+parked 2 of 7 open · open questions 0
+
+next → build range 3 of 5 — `/plumbbob:build 6-9`
+```
+
+A row is the item's number, its command as the plan wrote it, and its model
+behind the separator when it has one. `✓` marks a range whose every step is
+done and `▸` the one holding the next undone step, with the step list's
+`← next` tail. Each undone range carries its stop on an indented line, because
+the stops ahead are what the human steers by, and a landed range folds to its
+row, because its call was made. The block is the reference surface, so no
+stop is cut to a count. The dashboard's pointer names the range's command
+when the next step sits in one, `build range 3 of 5`, and the command is what
+is left of the range, `/plumbbob:build 8-9` once two of its steps have landed.
+With the step in flight, or an explicit request, the pointer reads as it does
+today.
+
+A drift row rides beneath the range it flags, opening on the warning glyph
+and the words from the table above, and a step no range names, or an item
+that does not parse, gets a row of its own at the block's end:
+
+```text
+  ▸ 3  /plumbbob:build 6-9 · opus   ← next
+        stop: review the card on a live boundary before the skills teach it
+        ⚠ needs a re-cut: the build order puts step 11 inside it
+    4  /plumbbob:build 10 · fable
+        stop: at step 10's pause, pick the label the docs will name
+  ⚠ no range names steps 11, 12
+  ⚠ item 5 under Build ranges does not parse
+```
+
+A flagged range takes the pointer back to today's step move, `build step 6 —
+/plumbbob:build`, and the drift row says why no range command is named.
+`recover` reports a range naming a step the plan lacks, beside the finding it
+already makes for a build order that does.
+
+### Without the section
+
+None of this renders for a plan without `## Build ranges`, or with only the
+template's placeholder under it: the note beneath Next Up is today's build
+order and parks, the bracket's model is the step's, no boundary carries a Stop
+part, the dashboard has no ranges block, and its pointer reads `build step 6`.
+Each line renders only when the plan declares ranges and the line says
+something the card does not already hold, because a reminder that repeats what
+is on screen is noise ([D93 (range-on-the-card)](decisions.md#d93), the call
+[D86 (build-order)](decisions.md#d86) made for its own line), and a plan
+written before the section existed keeps rendering exactly as it did.
 
 ## The glyph vocabulary
 

@@ -19,7 +19,7 @@ lands; [**D33 (info-exclude)**](#d33)–[**D38 (cli-owns-slugs)**](#d38) below c
 [**D76 (resolved-on-opener)**](#d76)–[**D77 (placeholder-uncounted)**](#d77) from the 2026-07-18
 intent-legibility build, and [**D80 (cli-renders-model-relays)**](#d80)–[**D84 (one-liner-register)**](#d84)
 from the 2026-08-28 presentation build, and [**D87 (pause-once)**](#d87)–[**D89 (block-once)**](#d89)
-from the 2026-10-08 said-once-said-whole build, and [**D90 (notice-not-turn)**](#d90)–[**D91 (step-list-grants)**](#d91)
+from the 2026-10-08 said-once-said-whole build, and [**D90 (notice-not-turn)**](#d90)–[**D94 (auto-and-stops)**](#d94)
 from the 2026-10-17 build-ranges build.)
 
 ## Constraints (C)
@@ -811,7 +811,9 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   (Revised 2026-10-17: a range may list its steps, and it lands exactly the steps it names, walked in
   build order from its first undone one and halted before the first step it does not name, so `N-M`
   grants N through M where the latch used to allow every step under M; the top is the last undone step
-  the range names ([**D91 (step-list-grants)**](#d91)).) Amends
+  the range names ([**D91 (step-list-grants)**](#d91)).) (Revised 2026-10-17 by
+  [**D94 (auto-and-stops)**](#d94): under `--auto`, a step the plan's build ranges name as a bare range
+  halts at its pause, a decision turn, and `plumbbob build` says so as it enters the step.) Amends
   [**D56 (auto-composes)**](#d56) and [**D83 (card-teaches-itself)**](#d83). *Tagged in* the `build`
   skill, `docs/presentation.md`, and `docs/cli-reference.md`.
 
@@ -833,7 +835,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   one continuation the anatomy reads as part of the label above it; the dashboard shows the same two, the
   order whole. Numbering stays the plan's own: nothing renumbers, a range grant still names plan numbers
   ([**D85 (range-top-lands)**](#d85)), and `recover` reports a line naming a step the plan lacks without
-  rewriting it. Amends [**D6 (parseable-steps)**](#d6) (a second machine-read section) and
+  rewriting it. (Revised 2026-10-17 by [**D93 (range-on-the-card)**](#d93): when the plan declares build
+  ranges, the note opens on the range holding the step and the command that runs what is left of it,
+  `· range 3 of 5: /plumbbob:build 6-9`, ahead of the build order and the parks, and the dashboard lists
+  the ranges beneath the steps.) Amends [**D6 (parseable-steps)**](#d6) (a second machine-read section) and
   [**D83 (card-teaches-itself)**](#d83) (the one unlabeled continuation under Next Up). *Tagged in*
   `orient.ts`, `order.ts`, `build.ts`, `checkpoint.ts`, `handoff.ts`, `recover.ts`, the `order`, `step`,
   `refine`, and `harvest` skills, `templates/intent.md`, `docs/presentation.md`, and
@@ -991,6 +996,83 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   `steps` form, and [**D85 (range-top-lands)**](#d85). Promoted from the 2026-10-17 build-ranges build,
   merging its locals `step-list-grants` and `list-reading`. *Tagged in* the `build` skill,
   `docs/cli-reference.md`, and `docs/state-and-git.md`.
+
+- <a id="d92"></a>**D92 (build-ranges): A plan says where the build stops for a human call, in a
+  `## Build ranges` section the card reads back as advice.** The section sits in `intent.md` right after
+  `## Build order`, one numbered item per range: the command the human types, in backticks and written as a
+  typed range is (`1`, `2-5`, `20,5-9`, [**D91 (step-list-grants)**](#d91)), a comma, then `**stop:**` and
+  what the human decides or reviews there, with an optional `- model:` sub-line and any other sub-line (a
+  `- note:` on what to watch for) left to the reader, *because* the Steps grammar already reads this way,
+  an item wraps where a table row of prose runs off the screen, and the item's number is the handle the
+  card counts by. The plan is where it lives because the plan is already the tracked document the skills
+  edit and the parser reads, the reason [**D86 (build-order)**](#d86) put the sequence there, and the
+  three sections a model wrote by hand on 2026-10-16 (checkride's polyglot build, fascicle's OpenRouter
+  build, and this repo's said-once build) already sat in a plan. The command's form says where a range
+  stops: a bare `N` builds step N to its pause, so its stop is a call made before the step lands, and a
+  span lands every step it names and stops at the boundary after the last
+  ([**D85 (range-top-lands)**](#d85)), so its stop is a review of what landed, and a stop needs no kind of
+  its own. The plan places the stops and the CLI never does: a range ends where a human call is due (a
+  decision the plan leaves open, a review before later steps build on what landed, or a thing only the
+  human can do, such as a push, a live key, or spending money) and nowhere else, *because* where a call
+  falls is judgment, and all three hand-written sections cut at exactly those points. A range grants
+  nothing. The human still types the command, since a grant comes only from the literal prompt
+  ([**D65 (human-typed-grants)**](#d65)) and a line the model can edit would be a grant it could forge
+  ([**D67 (auto-not-a-grant)**](#d67)); and the section's command and the grant the hook mints are read by
+  one parser, `src/lib/steplist.ts`, because a card that read a range one way while the hook read it
+  another would suggest a command that does something else. A range's progress is derived and never
+  stored, done when every step it names is `[x]` and in progress when it holds the next undone step in
+  build order, *because* the boxes are already the truth and a second copy of a fact is one more thing to
+  drift; what is left of it is its undone steps, written in build order. Its model is what its own
+  `- model:` line says, never computed from its steps, because a ranking of model names in code goes stale
+  with the next release, the reason tokens and cost stay out of the `spent` row. An item whose command or
+  stop still holds a `<...>` fill-in is scaffold, neither a range nor a report, the rule
+  [**D77 (placeholder-uncounted)**](#d77) set for the scaffolded question, so the template's placeholder
+  puts no warning on a fresh build's dashboard, and the coverage check
+  [**D93 (range-on-the-card)**](#d93) reports runs only once a real range parses. Promoted from the
+  2026-10-17 build-ranges build, merging its locals `plan-holds-ranges`, `range-grammar`,
+  `form-says-where`, `advice-not-grant`, `one-grammar`, `state-is-derived`, `plan-places-stops`,
+  `model-declared`, and `scaffold-range`. *Tagged in* `docs/presentation.md`.
+
+- <a id="d93"></a>**D93 (range-on-the-card): The card names the range to type next, and the boundary where
+  a range's last step lands says why the build stops there.** Beneath Next Up, the note opens on the range
+  holding the step the pointer names and the command that runs what is left of it,
+  `· range 3 of 5: /plumbbob:build 6-9`, ahead of the build order and the parks, at the plan pause, the
+  plan commit, a step pause, and a boundary alike. While it suggests a range, the bracket's bold model is
+  the range's rather than the step's, and the note names no model, *because* the bold token is the
+  `/model` the human picks before typing the command, and a range's first step is often not its hardest.
+  On the boundary where a landing range's last undone step lands, however it landed, a
+  `**Stop**: Range 3 of 5 landed - <its stop text>` part rides between the advisories and Next Up, and
+  nowhere else: never for a bare range, whose stop is its own pause, where the injected dashboard already
+  puts the stop text in front of the model writing the recommendation. The label is `Stop` because it
+  names the thing the plan wrote (`**stop:**` is the item's key), reads as a noun on the card the way
+  `Checkpoint` does, and the two questions the human brings to a boundary are what to type next and why
+  the build stopped. The dashboard lists the ranges beneath the steps (`ranges  2 of 5 done`, with `✓` and
+  `▸`, each undone range with its command, model, and stop), and its `next →` names the range's command.
+  Each line renders only when the plan declares ranges and the line says something the card does not
+  already hold, *because* a reminder that repeats what is on screen is noise, the call
+  [**D86 (build-order)**](#d86) made for its own line, so a plan without the section renders exactly as it
+  did. A range the plan has outgrown is reported and never rewritten by the CLI: one naming a step the
+  plan lacks, a step two ranges both name, an undone step no range names, or an undone step from outside
+  a range that the build order places between two of its own. The dashboard carries a `⚠` row for it,
+  `recover` names one that points at a step the plan lacks (as it does for the build order), and the card
+  says the range needs a re-cut, and why, in place of a command, *because* only the human knows where the
+  stop belongs now, and a suggested command that halts early is the failure ranges exist to remove. The
+  exact strings are `docs/presentation.md`'s. Promoted from the 2026-10-17 build-ranges build, merging
+  its locals `informative-only`, `drift-reported`, `card-shape`, and `range-model`. Amends
+  [**D83 (card-teaches-itself)**](#d83) (a labeled part on one boundary) and
+  [**D86 (build-order)**](#d86) (the note's first segment). *Tagged in* `docs/presentation.md`.
+
+- <a id="d94"></a>**D94 (auto-and-stops): `--auto` halts at a step the plan's ranges reserve for a human
+  call.** Under an `--auto` grant, a step the build ranges name as a bare range is built to its pause and
+  halts there at the decision tier, with `plumbbob build` saying so as it enters the step; a review stop
+  (the top of a landing range) is run through, and a typed range stays exactly as typed. A plan that
+  reserves a call for the human should not have it made by a flag typed for speed, *because* a review can
+  wait for the end of a run where a decision cannot be made for the human. The halt is the build notice's
+  and the skill's, never the latch's, since the ranges are advice ([**D92 (build-ranges)**](#d92)) and the
+  latch reads grants alone ([**D65 (human-typed-grants)**](#d65)). Promoted from the 2026-10-17
+  build-ranges build, merging its local `auto-and-stops`. Amends [**D56 (auto-composes)**](#d56) and
+  [**D85 (range-top-lands)**](#d85), whose halt list gains this one. *Tagged in* the `build` skill and
+  `docs/presentation.md`.
 
 ### Superseded
 
