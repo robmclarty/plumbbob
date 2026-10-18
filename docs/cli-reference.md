@@ -20,7 +20,7 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 | Verb | Synopsis | Effect |
 | ------ | ---------- | -------- |
 | `start` | `start <title> [--slug <name>] [--local] [--allow-dirty]` | scaffold `builds/<slug>/`, record baseline, open the session |
-| `status` | `status [--build <slug>] [--invoked "<args>"]` | print the orientation dashboard (or `NO ACTIVE SESSION`) |
+| `status` | `status [--build <slug>] [--invoked "<args>"] [--run "<args>"]` | print the orientation dashboard (or `NO ACTIVE SESSION`) |
 | `build` | `build [<n>] [--build <slug>]` | write step `n`'s seam + `STEP` (goes in-flight) |
 | `handoff` | `handoff [<n>] [--full] [--plan] [--driver] [--build <slug>]` | print the turn's whole CLI-rendered ending by tier, or a reminder for a pause already shown |
 | `check` | `check [--bail] [--changed] [--all] [--only a,b] [--skip a,b] [--include a,b]` | run the heavy gate; no state change |
@@ -90,7 +90,7 @@ baseline ([**D22 (clean-baseline)**](decisions.md#d22)).
 ### status
 
 ```text
-plumbbob status [--build <slug>] [--invoked "<args>"]
+plumbbob status [--build <slug>] [--invoked "<args>"] [--run "<args>"]
 ```
 
 Prints the orientation dashboard (title, the derived phase, the step list with the next
@@ -129,6 +129,13 @@ the dashboard's marker, detail rows, and next move at the requested step, noting
 anything it skips or collides with; the injected state then never argues with a typed
 `/plumbbob:build 22`. Text with no step number (flags only, or a host that never
 substitutes the placeholder) changes nothing.
+
+`--run "<args>"` takes the raw text of a `/plumbbob:run` invocation the same way and
+prints the run it names above the dashboard: a three-line header naming the range, what is
+left of it, its stop, and the grant the turn hook minted
+([**D98 (card-names-the-run)**](decisions.md#d98)). A run that names nothing it can walk
+prints no header, and the next move carries the refusal
+([**D97 (run-refuses)**](decisions.md#d97)).
 
 ### build
 

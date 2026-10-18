@@ -1,10 +1,11 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { status } from '../status.ts'
 import { handoff } from '../handoff.ts'
 import { start } from '../start.ts'
-import { buildDir, checkpointsPath, detailPath, sidecarDir, stepPath } from '../../lib/sidecar.ts'
+import { buildDir, checkpointsPath, detailPath, grantPath, markSpike, sidecarDir, stepPath } from '../../lib/sidecar.ts'
+import { formatVerbHelp } from '../../cli-core.ts'
 import { commit, headSha, stageAll } from '../../lib/git.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
@@ -153,6 +154,113 @@ describe('status — the build ranges', () => {
     const { stdout } = captureIo(() => status(dir))
     expect(stdout).not.toContain('ranges')
     expect(stdout).toContain('next → build step 2 — `/plumbbob:build`')
+  })
+})
+
+describe('status — --run prints the run a /plumbbob:run invocation names — D98 (card-names-the-run)', () => {
+  const RUN_INTENT = [
+    '# Runs',
+    '',
+    '## Steps',
+    '',
+    '1. [x] First — **done when:** ok',
+    '   - seam: `src/a.ts`',
+    '2. [ ] Second — **done when:** ok',
+    '   - seam: `src/b.ts`',
+    '3. [ ] Third — **done when:** ok',
+    '   - seam: `src/c.ts`',
+    '4. [ ] Fourth — **done when:** ok',
+    '   - seam: `src/d.ts`',
+    '',
+    '## Build ranges',
+    '',
+    "1. `/plumbbob:build 1`, **stop:** at step 1's pause, approve the schema",
+    '2. `/plumbbob:build 2-3`, **stop:** review the parser',
+    '   - model: opus',
+    "3. `/plumbbob:build 4`, **stop:** at step 4's pause, pick the label",
+    '',
+  ].join('\n')
+
+  async function runSession(intent = RUN_INTENT): Promise<string> {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Runs', '--slug', 'runs']))
+    writeFileSync(join(buildDir(dir, 'runs'), 'intent.md'), intent)
+    return dir
+  }
+
+  const HEADER = ["run  range 2 of 3 · steps 2-3 · ends at step 3's boundary", '     stop: review the parser']
+
+  it('prints the header above the dashboard, naming the grant the hook minted', async () => {
+    const dir = await runSession()
+    writeFileSync(grantPath(dir), 'steps 2-3\n')
+    const { code, stdout } = captureIo(() => status(dir, ['--run', '']))
+    expect(code).toBe(0)
+    expect(stdout.startsWith([...HEADER, '     grant: steps 2-3', '', 'PlumbBob — Runs   [DESIGN]'].join('\n'))).toBe(true)
+    expect(stdout).toContain('▸ 2  Second   ← requested')
+    expect(stdout).toContain('next → run range 2 of 3 — `/plumbbob:run` (steps 2-3)')
+  })
+
+  it('names range N, and says when the grant is missing or unlike the run', async () => {
+    const dir = await runSession()
+    expect(captureIo(() => status(dir, ['--run', '2'])).stdout).toContain([...HEADER, '     grant: none'].join('\n'))
+    writeFileSync(grantPath(dir), 'range 3\n') // a hook from before step lists
+    expect(captureIo(() => status(dir, ['--run', '2'])).stdout).toContain('     grant: range 3, unlike the run')
+    // The typed number never reached the injection: the header resolved the next range, the hook the typed one.
+    writeFileSync(grantPath(dir), 'steps 4\n')
+    expect(captureIo(() => status(dir, ['--run', '$ARGUMENTS'])).stdout).toContain('     grant: steps 4, unlike the run')
+    rmSync(grantPath(dir), { force: true })
+    const bare = captureIo(() => status(dir, ['--run', '3'])).stdout
+    expect(bare).toContain("run  range 3 of 3 · step 4 · ends at step 4's pause\n     stop: at step 4's pause, pick the label\n     grant: none, as a bare range builds to its pause")
+    expect(bare).toContain('▸ 4  Fourth   ← requested')
+  })
+
+  it('reads a flag with no value as a run with nothing after the verb', async () => {
+    const dir = await runSession()
+    expect(captureIo(() => status(dir, ['--run'])).stdout).toBe(captureIo(() => status(dir, ['--run', ''])).stdout)
+  })
+
+  it('prints no header for a refusal, only the dashboard with the refusal as its pointer', async () => {
+    const dir = await runSession()
+    const landed = captureIo(() => status(dir, ['--run', '1'])).stdout
+    expect(landed).not.toContain('run  range')
+    expect(landed).toContain('← next')
+    expect(landed).toContain('next → run range 2 of 3 — `/plumbbob:run` (steps 2-3; range 1 of 3 has landed)')
+    expect(captureIo(() => status(dir, ['--run', '9'])).stdout).toContain('(steps 2-3; the plan has no range 9)')
+    expect(captureIo(() => status(dir, ['--run', '2-3'])).stdout).toContain('(steps 2-3; a run names one range)')
+    writeFileSync(stepPath(dir, 'runs'), '4\n')
+    expect(captureIo(() => status(dir, ['--run', '2'])).stdout).toContain(
+      'next → finish step 4 — `/plumbbob:verify` (or `/plumbbob:abandon` it; a run names range 3 of 3, which holds it)',
+    )
+    rmSync(stepPath(dir, 'runs'), { force: true })
+    markSpike(dir, 'runs')
+    expect(captureIo(() => status(dir, ['--run', ''])).stdout).toContain('next → close the spike — `plumbbob spike done`')
+  })
+
+  it('prints no header for a plan without ranges, only the pointer that says to cut them', async () => {
+    const dir = await runSession(RUN_INTENT.replace(/## Build ranges[\s\S]*$/, ''))
+    const out = captureIo(() => status(dir, ['--run', ''])).stdout
+    expect(out).not.toContain('run  range')
+    expect(out).toContain('next → cut the ranges — `/plumbbob:refine ranges` (the plan declares none; `/plumbbob:build` builds step 2 alone)')
+  })
+
+  it('renders exactly as before without the flag, and with --invoked', async () => {
+    const dir = await runSession()
+    writeFileSync(grantPath(dir), 'steps 2-3\n')
+    const plain = captureIo(() => status(dir)).stdout
+    expect(plain).not.toContain('run  range')
+    expect(plain).toContain('next → build range 2 of 3 — `/plumbbob:build 2-3`')
+    expect(captureIo(() => status(dir, ['--invoked', ''])).stdout).toBe(plain)
+    expect(captureIo(() => status(dir, ['--invoked', '3'])).stdout).toContain('▸ 3  Third   ← requested')
+  })
+
+  it('composes with --build, whichever order the flags arrive in', async () => {
+    const dir = await runSession()
+    expect(captureIo(() => status(dir, ['--build', 'runs', '--run', '3'])).stdout).toContain('run  range 3 of 3')
+    expect(captureIo(() => status(dir, ['--run', '3', '--build', 'runs'])).stdout).toContain('run  range 3 of 3')
+  })
+
+  it('lists the flag in the verb table', () => {
+    expect(formatVerbHelp('status')).toContain('--run "<args>"')
   })
 })
 

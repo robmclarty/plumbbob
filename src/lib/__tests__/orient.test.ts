@@ -3,6 +3,8 @@ import {
   buildOrderPhrase,
   clearBuildOrder,
   formatOrientation,
+  formatRunDashboard,
+  formatRunHeader,
   lastLedgerSha,
   markStepDone,
   normalizeDetailHeadings,
@@ -28,6 +30,10 @@ import {
   recapLines,
   remainingOrder,
   resolveRun,
+  resolveRunArgs,
+  runMove,
+  runRefusalMove,
+  runSteps,
   seamRowFromDiff,
   setBuildOrder,
   skippedBefore,
@@ -1626,6 +1632,13 @@ Five commands drive the build. Two stops are calls made at a step's own pause, a
       expect(run(plan({ ranges: items('1. `/plumbbob:build 1-12`') }))).toEqual({ ok: false, kind: 'uncovered', step: 1, words: 'no range names step 1' })
     })
 
+    it('reads raw arguments the way the hook does, and refuses a span or a list of ranges with the run named instead', () => {
+      const build = { intent: plan({ done: through(5), ranges: SECTION }), inFlight: null, spiking: false }
+      expect(resolveRunArgs('', build)).toEqual(run(build.intent))
+      expect(resolveRunArgs('5 --auto', build)).toEqual(run(build.intent, { item: 5 }))
+      expect(resolveRunArgs('2-4', build)).toEqual({ ok: false, kind: 'span', instead: run(build.intent) })
+    })
+
     it('names the range the card names, read through rangeStanding', () => {
       for (const done of [0, 1, 5, 7, 9, 10]) {
         const intent = plan({ done: through(done), ranges: SECTION })
@@ -1633,6 +1646,143 @@ Five commands drive the build. Two stops are calls made at a step's own pause, a
         const r = run(intent)
         expect(r.ok && r.range.item).toBe(standing(intent, next).holding?.item)
         expect(r.ok && r.count).toBe(standing(intent, next).count)
+      }
+    })
+  })
+
+  describe('the run header and its pointers — D98 (card-names-the-run), D97 (run-refuses)', () => {
+    /** The run a plan names, nothing in flight and no spike unless given. */
+    const run = (intent: string, opts: { item?: number | null; inFlight?: number | null; spiking?: boolean } = {}) =>
+      resolveRun({ intent, inFlight: opts.inFlight ?? null, spiking: opts.spiking ?? false, item: opts.item ?? null })
+
+    /** The run, asserted to name a range it can walk. */
+    const walkable = (r: ReturnType<typeof run>) => {
+      if (!r.ok) throw new Error(`expected a run, got ${r.kind}`)
+      return r
+    }
+
+    const STOP3 = 'review the card on a live boundary before the skills teach it'
+
+    it('writes the bracket and the pointer for a landing range, a range down to one step, a list, and a bare range', () => {
+      const r3 = walkable(run(plan({ done: through(5), ranges: SECTION })))
+      expect(runSteps(r3)).toBe('steps 6-9')
+      expect(runMove(r3)).toBe('run range 3 of 5 — `/plumbbob:run` (steps 6-9)')
+      expect(runMove(walkable(run(plan({ done: through(8), ranges: SECTION }))))).toBe('run range 3 of 5 — `/plumbbob:run` (step 9)')
+      expect(runMove(walkable(run(plan({ done: through(9), ranges: SECTION }))))).toBe('run range 4 of 5 — `/plumbbob:run` (step 10 to its pause)')
+      const list = items('1. `/plumbbob:build 1-4`, **stop:** review it', '2. `/plumbbob:build 20,5-9`, **stop:** review it', '3. `/plumbbob:build 10-19`, **stop:** review it')
+      expect(runSteps(walkable(run(plan({ count: 20, done: through(4), order: [1, 2, 3, 4, 20], ranges: list }))))).toBe('steps 20,5-9')
+    })
+
+    it('prints the header for a landing range and a bare one, with each form of the grant line', () => {
+      const r3 = walkable(run(plan({ done: through(5), ranges: SECTION })))
+      expect(formatRunHeader(r3, 'steps 6-9')).toBe(
+        ['run  range 3 of 5 · steps 6-9 · ends at step 9\'s boundary', `     stop: ${STOP3}`, '     grant: steps 6-9'].join('\n'),
+      )
+      expect(formatRunHeader(r3, null).split('\n')[2]).toBe('     grant: none')
+      expect(formatRunHeader(r3, 'range 9').split('\n')[2]).toBe('     grant: range 9, unlike the run')
+      expect(formatRunHeader(r3, 'steps 11-12').split('\n')[2]).toBe('     grant: steps 11-12, unlike the run')
+      const bare = walkable(run(plan({ done: through(9), ranges: SECTION })))
+      expect(formatRunHeader(bare, null)).toBe(
+        [
+          "run  range 4 of 5 · step 10 · ends at step 10's pause",
+          "     stop: at step 10's pause, pick the label the docs will name",
+          '     grant: none, as a bare range builds to its pause',
+        ].join('\n'),
+      )
+      expect(formatRunHeader(bare, 'auto').split('\n')[2]).toBe('     grant: auto, unlike the run')
+    })
+
+    it('ends the header where the walk ends, after the step in flight leads it', () => {
+      const inside = walkable(run(plan({ done: through(5), ranges: SECTION }), { inFlight: 8 }))
+      expect(formatRunHeader(inside, 'steps 6-9').split('\n')[0]).toBe("run  range 3 of 5 · steps 8,6-7,9 · ends at step 9's boundary")
+      const one = walkable(run(plan({ done: through(8), ranges: SECTION }), { inFlight: 9 }))
+      expect(formatRunHeader(one, 'steps 9').split('\n')[0]).toBe("run  range 3 of 5 · step 9 · ends at step 9's boundary")
+    })
+
+    it('words each refusal as the dashboard pointer with its remedy', () => {
+      const pointer = (r: ReturnType<typeof run>) => (r.ok ? null : runRefusalMove(r))
+      const at5 = plan({ done: through(5), ranges: SECTION })
+      const four = plan({ done: through(10), ranges: SECTION.replace(/^5\. [\s\S]*$/m, '') })
+      const cut = plan({ done: through(5), order: [1, 2, 3, 4, 5, 6, 7, 11, 8], ranges: SECTION })
+      expect(pointer(run(plan({ done: through(5) })))).toBe(
+        'cut the ranges — `/plumbbob:refine ranges` (the plan declares none; `/plumbbob:build` builds step 6 alone)',
+      )
+      expect(pointer(run(four))).toBe('re-cut the ranges — `/plumbbob:refine ranges` (no range names step 11)')
+      expect(pointer(run(cut))).toBe(
+        're-cut the ranges — `/plumbbob:refine ranges` (range 3 of 5 needs a re-cut: the build order puts step 11 inside it)',
+      )
+      expect(pointer(run(at5, { item: 2 }))).toBe('run range 3 of 5 — `/plumbbob:run` (steps 6-9; range 2 of 5 has landed)')
+      expect(pointer(run(at5, { item: 7 }))).toBe('run range 3 of 5 — `/plumbbob:run` (steps 6-9; the plan has no range 7)')
+      expect(pointer(run(plan({ done: through(12), ranges: SECTION })))).toBeNull()
+      expect(pointer(run(at5, { inFlight: 12, item: 3 }))).toBe(
+        'finish step 12 — `/plumbbob:verify` (or `/plumbbob:abandon` it; a run names range 5 of 5, which holds it)',
+      )
+      expect(pointer(run(at5, { spiking: true }))).toBe('close the spike — `plumbbob spike done`')
+      // Two the spec's list leaves to the code: a span typed, and a step in flight no range names.
+      const build = { intent: at5, inFlight: null, spiking: false }
+      expect(pointer(resolveRunArgs('2-4', build))).toBe('run range 3 of 5 — `/plumbbob:run` (steps 6-9; a run names one range)')
+      expect(pointer(run(plan({ done: through(5), ranges: SECTION.replace(/^5\. [\s\S]*$/m, '') }), { inFlight: 11, item: 3 }))).toBe(
+        'finish step 11 — `/plumbbob:verify` (or `/plumbbob:abandon` it; no range names it)',
+      )
+      // A refusal whose stand-in refuses too points at the stand-in's refusal.
+      expect(pointer(run(four, { item: 2 }))).toBe('re-cut the ranges — `/plumbbob:refine ranges` (no range names step 11)')
+    })
+
+    /** The dashboard input for a plan at the boundary, nothing parked. */
+    const input = (intent: string, extra: Partial<OrientInput> = {}): OrientInput => ({
+      ...base,
+      intent,
+      buildLog: '',
+      checkpoints: 'step 5 1a2b3c4d\n',
+      ...extra,
+    })
+
+    it('prints the header above the dashboard, the run marked requested and the pointer naming it', () => {
+      const intent = plan({ done: through(5), ranges: SECTION })
+      const out = formatRunDashboard(input(intent), run(intent), 'steps 6-9')
+      expect(out.startsWith(
+        [
+          "run  range 3 of 5 · steps 6-9 · ends at step 9's boundary",
+          `     stop: ${STOP3}`,
+          '     grant: steps 6-9',
+          '',
+          'PlumbBob — Ranged   [DESIGN]',
+        ].join('\n'),
+      )).toBe(true)
+      expect(out).toContain('  ▸ 6  Step 6   ← requested')
+      expect(out).not.toContain('← next\n        done when')
+      expect(out.endsWith('next → run range 3 of 5 — `/plumbbob:run` (steps 6-9)')).toBe(true)
+    })
+
+    it('marks range N requested at its first undone step, and the step in flight when one leads the run', () => {
+      const intent = plan({ done: through(5), ranges: SECTION })
+      const five = formatRunDashboard(input(intent), run(intent, { item: 5 }), 'steps 11-12')
+      expect(five).toContain('  ▸ 11  Step 11   ← requested')
+      expect(five.endsWith('next → run range 5 of 5 — `/plumbbob:run` (steps 11-12)')).toBe(true)
+      const paused = formatRunDashboard(input(intent, { inFlight: 8 }), run(intent, { inFlight: 8 }), 'steps 6-9')
+      expect(paused).toContain('  ▸ 8  Step 8   ← requested')
+      expect(paused).toContain('PlumbBob — Ranged   [BUILD]')
+      expect(paused.endsWith('next → run range 3 of 5 — `/plumbbob:run` (steps 8,6-7,9)')).toBe(true)
+    })
+
+    it('prints no header for a refusal: the dashboard as without the flag, its pointer the refusal', () => {
+      const intent = plan({ done: through(5), ranges: SECTION })
+      const plain = formatOrientation(orient(input(intent)))
+      const refused = formatRunDashboard(input(intent), run(intent, { item: 2 }), null)
+      expect(refused).not.toContain('run  range')
+      expect(refused).toBe(plain.replace(/next → .*$/, 'next → run range 3 of 5 — `/plumbbob:run` (steps 6-9; range 2 of 5 has landed)'))
+      // Nothing left keeps the dashboard's own ending.
+      const done = plan({ done: through(12), ranges: SECTION })
+      expect(formatRunDashboard(input(done), run(done), null)).toBe(formatOrientation(orient(input(done))))
+    })
+
+    it('prints no header for a plan without ranges, only the pointer that says to cut them', () => {
+      for (const ranges of [undefined, PLACEHOLDER]) {
+        const intent = plan({ done: through(5), ranges })
+        const out = formatRunDashboard(input(intent), run(intent), null)
+        expect(out).not.toContain('run  range')
+        expect(out).not.toContain('  ranges')
+        expect(out.endsWith('next → cut the ranges — `/plumbbob:refine ranges` (the plan declares none; `/plumbbob:build` builds step 6 alone)')).toBe(true)
       }
     })
   })

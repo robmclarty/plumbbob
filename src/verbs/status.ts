@@ -3,7 +3,8 @@
 // the in-flight STEP marker) into a where-am-I view that suggests one primary
 // next move while printing the full picture, so you can always override.
 // Read-only, always exits 0. Skills pre-inject this output to gate their own
-// behavior, so the `NO ACTIVE SESSION` sentinel is kept exact.
+// behavior, so the `NO ACTIVE SESSION` sentinel is kept exact. With `--run`, it
+// prints the run a `/plumbbob:run` invocation names above the dashboard.
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -26,7 +27,17 @@ import {
   resolveBuild,
   stepPath,
 } from '../lib/sidecar.ts'
-import { formatOrientation, lastLedgerSha, orient, parseRequestedStep } from '../lib/orient.ts'
+import { readGrant, type Grant } from '../lib/latch.ts'
+import {
+  formatOrientation,
+  formatRunDashboard,
+  lastLedgerSha,
+  orient,
+  parseRequestedStep,
+  resolveRunArgs,
+  type OrientInput,
+} from '../lib/orient.ts'
+import { normalizeStepList } from '../lib/steplist.ts'
 
 /**
  * Read a file as utf8, or '' when it is missing or unreadable.
@@ -40,22 +51,34 @@ function readOr(path: string): string {
 }
 
 /**
- * Split `--invoked "<raw args>"` out of the argument list, ahead of any other
- * flag parsing.
+ * Split a flag carrying a skill invocation's raw text (`--invoked` or `--run`)
+ * out of the argument list, ahead of any other flag parsing.
  *
  * The value is the verbatim text of a skill invocation (the `$ARGUMENTS` the
- * `/plumbbob:build` skill passes through), so it can contain anything,
- * including tokens that look like this CLI's own flags; extracting it first
- * keeps such a value from confusing `resolveBuild`. A missing flag, or one
- * with no value, reads as null: no explicit ask.
+ * skill passes through), so it can contain anything, including tokens that
+ * look like this CLI's own flags; extracting it first keeps such a value from
+ * confusing `resolveBuild`. An absent flag reads as null; a flag with no value
+ * reads as `missing`, which `--invoked` takes as no explicit ask and `--run`
+ * as a run with nothing after the verb.
  */
-function takeInvoked(args: ReadonlyArray<string>): {
-  readonly invoked: string | null
-  readonly rest: ReadonlyArray<string>
-} {
-  const i = args.indexOf('--invoked')
-  if (i === -1) return { invoked: null, rest: args }
-  return { invoked: args[i + 1] ?? null, rest: [...args.slice(0, i), ...args.slice(i + 2)] }
+function takeRaw(
+  args: ReadonlyArray<string>,
+  flag: string,
+  missing: string | null,
+): { readonly raw: string | null; readonly rest: ReadonlyArray<string> } {
+  const i = args.indexOf(flag)
+  if (i === -1) return { raw: null, rest: args }
+  return { raw: args[i + 1] ?? missing, rest: [...args.slice(0, i), ...args.slice(i + 2)] }
+}
+
+/**
+ * A grant as the GRANT file holds it in its normal form, or null for none:
+ * the text the run header holds against the grant a run would mint.
+ */
+function grantText(grant: Grant | null): string | null {
+  if (grant === null) return null
+  if (grant.kind === 'auto') return 'auto'
+  return grant.kind === 'steps' ? `steps ${normalizeStepList(grant.steps)}` : `range ${grant.ceiling}`
 }
 
 /**
@@ -67,6 +90,10 @@ function takeInvoked(args: ReadonlyArray<string>): {
  * `/plumbbob:build` skill passes its own invocation through), an explicit step
  * number in the raw text repoints the dashboard's marker, detail, and next
  * move at that step, so the injected state never contradicts the human's ask.
+ * With `--run "<raw args>"` (how the `/plumbbob:run` skill passes its own),
+ * the dashboard prints beneath a header naming the run the text resolves to
+ * and the grant the turn hook minted, or carries the refusal in its pointer
+ * when the run names nothing it can walk.
  */
 export function status(cwd: string, args: ReadonlyArray<string> = []): number {
   const root = findRepoRoot(cwd)
@@ -74,7 +101,8 @@ export function status(cwd: string, args: ReadonlyArray<string> = []): number {
     process.stdout.write('NO ACTIVE SESSION\n')
     return 0
   }
-  const { invoked, rest } = takeInvoked(args)
+  const { raw: run, rest: afterRun } = takeRaw(args, '--run', '')
+  const { raw: invoked, rest } = takeRaw(afterRun, '--invoked', null)
   // A session with builds but no resolvable cursor (finish cleared it, or the repo
   // holds several builds and none is active) has no single dashboard to show, so
   // list the builds and point at `use` instead of rendering a broken, empty one.
@@ -96,7 +124,7 @@ export function status(cwd: string, args: ReadonlyArray<string> = []): number {
   // checkpoint still surfaces. No ledger yet ⇒ nothing to reconcile against ⇒ 0.
   const checkpoints = readOr(checkpointsPath(root, slug))
   const anchor = lastLedgerSha(checkpoints)
-  const orientation = orient({
+  const input: OrientInput = {
     intent: readOr(intentPath(root, slug)),
     buildLog: readOr(buildLogPath(root, slug)),
     checkpoints,
@@ -104,8 +132,12 @@ export function status(cwd: string, args: ReadonlyArray<string> = []): number {
     spiking: inSpike(root, slug),
     requested: parseRequestedStep(invoked),
     outOfBand: anchor === null ? 0 : commitsSince(root, anchor, PLAN_COMMIT_MARKER),
-  })
-  const lines = [formatOrientation(orientation), ...harnessSection(root, slug)]
+  }
+  const dashboard =
+    run === null
+      ? formatOrientation(orient(input))
+      : formatRunDashboard(input, resolveRunArgs(run, input), grantText(readGrant(root)))
+  const lines = [dashboard, ...harnessSection(root, slug)]
   process.stdout.write(`${lines.join('\n')}\n`)
   return 0
 }

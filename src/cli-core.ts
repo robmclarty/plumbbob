@@ -96,13 +96,18 @@ const VERBS: ReadonlyArray<Verb> = [
   {
     name: 'status',
     description: 'print the orientation dashboard, or NO ACTIVE SESSION',
-    synopsis: ['status [--build <slug>] [--invoked "<args>"]'],
+    synopsis: ['status [--build <slug>] [--invoked "<args>"] [--run "<args>"]'],
     flags: [
       BUILD_FLAG,
       {
         name: '--invoked',
         value: '"<args>"',
         gloss: 'the raw skill invocation; an explicit step number in it repoints the dashboard at that step',
+      },
+      {
+        name: '--run',
+        value: '"<args>"',
+        gloss: 'the raw /plumbbob:run invocation; prints the run it names above the dashboard, or the refusal as its pointer',
       },
     ],
     notes: 'Read-only; always exits 0. With no cursor it lists the available builds.',

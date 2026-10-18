@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Runs and the stop card
 
-**Current step:** 3 — feat(turn): mint a run's grant from the range the plan names
+**Current step:** 4 — feat(status): show the run a /plumbbob:run invocation resolves to
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -25,7 +25,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
 - ☑ 1. docs(presentation): spec how the card and the dashboard name the run
 - ☑ 2. feat(orient): resolve a run to the range it names and what is left
-- ☐ 3. feat(turn): mint a run's grant from the range the plan names
+- ☑ 3. feat(turn): mint a run's grant from the range the plan names
 - ☐ 4. feat(status): show the run a /plumbbob:run invocation resolves to
 - ☐ 5. feat(handoff): name the run on the card in place of the range command
 - ☐ 6. feat(run): add /plumbbob:run to run the range holding the next step
@@ -43,6 +43,8 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 > Mid-step, every new problem / idea / "ooh what if" lands HERE, untouched, and you
 > go straight back to the step. Acting the instant an idea arrives is the disease.
 > Capture is one line (`/plumbbob:park` composes it). Harvest happens only at the boundary.
+
+- [ ] status --run words two refusal pointers docs/presentation.md does not list: a span typed reads '(steps 6-9; a run names one range)', and a numbered run while a step no range names is in flight reads '(or /plumbbob:abandon it; no range names it)'; spec them beside the eight in The run header (src/lib/orient.ts runRefusalMove)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -144,3 +146,4 @@ folder, so it rides the branch into the PR.)*
   The split: D95 (run-verb) merges D1, D2, D13, and D19 (the verb, what it names, the run at a pause, the step in flight deciding it); D96 (plan-names-the-grant) merges D3 and D4; D97 (run-refuses) carries D5 and the two refusals D19 added; D98 (card-names-the-run) carries D7 with the exact strings; D99 (one-loop) carries D6. Each keeps its *because*, cites by slug, and names what it amends (D83, D92, D65, D93). D92's note says a range grants nothing until the human types the run that names it, and D93's says the segment and the pointer name the run and the last-step pause names none. The header paragraph lists D95 to D99 as promoted from this build. The full check is green across all 11 slots, test included; the `--only` narrowing I asked for was not applied, so the green is the whole gate.
 
 - 2026-10-18 — step 2 checkpointed · d2bd150d9 — feat(orient): resolve a run to the range it names and what is left (11m)
+- 2026-10-18 — step 3 checkpointed · aee679a7a — feat(turn): mint a run's grant from the range the plan names (6m)

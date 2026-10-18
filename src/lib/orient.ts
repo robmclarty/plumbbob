@@ -742,9 +742,10 @@ export type RunRange = {
  * Why a run names nothing it can walk, with what each refusal's move needs: a
  * spike open, nothing left, a plan without ranges (and the step a build would
  * take), a step no range names, a flagged range or item and its drift words, a
- * range typed that has landed or that the plan lacks (and the run a bare
- * `/plumbbob:run` names in its place), and a range typed that does not hold
- * the step in flight (and the range that does, if any).
+ * range typed that has landed or that the plan lacks, or a span or a list of
+ * ranges typed (each with the run a bare `/plumbbob:run` names in its place),
+ * and a range typed that does not hold the step in flight (and the range that
+ * does, if any).
  */
 export type RunRefusal =
   | { readonly ok: false; readonly kind: 'spike' }
@@ -754,6 +755,7 @@ export type RunRefusal =
   | { readonly ok: false; readonly kind: 'flagged'; readonly item: number; readonly count: number; readonly words: string }
   | { readonly ok: false; readonly kind: 'landed'; readonly item: number; readonly count: number; readonly instead: Run }
   | { readonly ok: false; readonly kind: 'missing'; readonly item: number; readonly instead: Run }
+  | { readonly ok: false; readonly kind: 'span'; readonly instead: Run }
   | {
       readonly ok: false
       readonly kind: 'in-flight'
@@ -837,6 +839,124 @@ function walkRun(range: BuildRange, standing: RangeStanding, ordered: ReadonlyAr
     steps: formatStepList(left),
     grant: range.bare ? null : `steps ${normalizeStepList(left.map((n) => ({ from: n, to: n })))}`,
   }
+}
+
+/**
+ * The run a skill invocation's raw arguments name, read as the turn hook reads
+ * them: `readRunArgs`, then `resolveRun`. A span or a list of ranges names no
+ * run, and refuses with the run a bare `/plumbbob:run` names in its place.
+ */
+export function resolveRunArgs(text: string, build: Omit<RunInput, 'item'>): Run {
+  const args = readRunArgs(text)
+  if (args === null) {
+    return { ok: false, kind: 'span', instead: resolveRun({ ...build, item: null }) }
+  }
+  return resolveRun({ ...build, item: args.item })
+}
+
+/**
+ * What is left of a run, as its bracket and its header write it: `steps 6-9`,
+ * `steps 20,5-9`, or `step 9` for one step.
+ */
+export function runSteps(run: RunRange): string {
+  return `${run.left.length === 1 ? 'step' : 'steps'} ${run.steps}`
+}
+
+/**
+ * The pointer naming a run: the range and its count, the run's command, and
+ * what is left in a bracket (`(steps 6-9)`, or a bare range's
+ * `(step 10 to its pause)`), with a note beside the steps when one is given.
+ */
+export function runMove(run: RunRange, note?: string): string {
+  const bracket = run.range.bare ? `${runSteps(run)} to its pause` : runSteps(run)
+  return `run range ${run.range.item} of ${run.count} — \`/plumbbob:run\` (${bracket}${note === undefined ? '' : `; ${note}`})`
+}
+
+/**
+ * The dashboard's pointer for a run that names nothing it can walk, in the
+ * dashboard's own register: the refusal and the move that unblocks it. Null
+ * for nothing left, whose move is the dashboard's own ending, which a run adds
+ * nothing to.
+ */
+export function runRefusalMove(refusal: RunRefusal): string | null {
+  const recut = 're-cut the ranges — `/plumbbob:refine ranges`'
+  switch (refusal.kind) {
+    case 'spike':
+      return 'close the spike — `plumbbob spike done`'
+    case 'finished':
+      return null
+    case 'no-ranges':
+      return `cut the ranges — \`/plumbbob:refine ranges\` (the plan declares none; \`/plumbbob:build\` builds step ${refusal.step} alone)`
+    case 'uncovered':
+      return `${recut} (${refusal.words})`
+    case 'flagged':
+      return `${recut} (range ${refusal.item} of ${refusal.count} needs a re-cut: ${refusal.words})`
+    case 'landed':
+      return insteadMove(refusal.instead, `range ${refusal.item} of ${refusal.count} has landed`)
+    case 'missing':
+      return insteadMove(refusal.instead, `the plan has no range ${refusal.item}`)
+    case 'span':
+      return insteadMove(refusal.instead, 'a run names one range')
+    case 'in-flight': {
+      const holds = refusal.holding === null ? 'no range names it' : `a run names range ${refusal.holding} of ${refusal.count}, which holds it`
+      return `finish step ${refusal.step} — \`/plumbbob:verify\` (or \`/plumbbob:abandon\` it; ${holds})`
+    }
+  }
+}
+
+/**
+ * The pointer at the run a bare `/plumbbob:run` names, carrying why the typed
+ * one was refused, or that run's own refusal when it names nothing either.
+ */
+function insteadMove(instead: Run, note: string): string | null {
+  return instead.ok ? runMove(instead, note) : runRefusalMove(instead)
+}
+
+/**
+ * The three-line header `status --run` prints above the dashboard: the range,
+ * what is left of it, and where the run ends; its stop; and the grant the
+ * hook minted, held against the one the run would mint.
+ *
+ * `grant` is the GRANT file's content in its normal form, or null when none
+ * stands. The grant line is the one the run skill trusts over the two above
+ * it, since the hook read the plan the human typed against, so it says when
+ * the two differ rather than choosing between them.
+ */
+export function formatRunHeader(run: RunRange, grant: string | null): string {
+  const last = run.left.at(-1) ?? run.range.steps[0]?.from
+  const ends = run.range.bare ? `ends at step ${last}'s pause` : `ends at step ${last}'s boundary`
+  return [
+    `run  range ${run.range.item} of ${run.count} · ${runSteps(run)} · ${ends}`,
+    `     stop: ${run.range.stop}`,
+    `     grant: ${grantWords(run, grant)}`,
+  ].join('\n')
+}
+
+/**
+ * The grant line's value: the grant as the hook minted it, `none` with its
+ * reason, or the grant marked unlike the run.
+ */
+function grantWords(run: RunRange, grant: string | null): string {
+  if (grant === null) {
+    return run.grant === null ? 'none, as a bare range builds to its pause' : 'none'
+  }
+  return grant === run.grant ? grant : `${grant}, unlike the run`
+}
+
+/**
+ * The dashboard `status --run` prints for a run: beneath the run header, with
+ * the run's first step marked `← requested` and the pointer naming the run;
+ * or, for a run that names nothing it can walk, the dashboard as it renders
+ * without the flag, its pointer carrying the refusal.
+ */
+export function formatRunDashboard(input: OrientInput, run: Run, grant: string | null): string {
+  if (!run.ok) {
+    const plain = orient({ ...input, requested: null })
+    return formatOrientation({ ...plain, next: runRefusalMove(run) ?? plain.next })
+  }
+  const first = run.left[0] ?? null
+  const repointed = orient({ ...input, requested: first === null ? null : [{ from: first, to: first }] })
+  return `${formatRunHeader(run, grant)}\n\n${formatOrientation({ ...repointed, next: runMove(run) })}`
 }
 
 /**
