@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest'
 import {
   buildOrderPhrase,
   clearBuildOrder,
+  foldVerdict,
   formatOrientation,
   formatRunDashboard,
   formatRunHeader,
   lastLedgerSha,
   markStepDone,
+  measureRange,
   normalizeDetailHeadings,
   orderSteps,
   orient,
@@ -24,6 +26,7 @@ import {
   parseRequestedStep,
   parseSteps,
   parseTitle,
+  rangeSpan,
   rangeStanding,
   rangeStart,
   readRunArgs,
@@ -40,7 +43,7 @@ import {
   spentRowValue,
   summaryCheckRow,
 } from '../orient.ts'
-import type { OrientInput } from '../orient.ts'
+import type { BuildRange, OrientInput, RangeInput, RangeMeasure } from '../orient.ts'
 import { readTemplate } from '../templates.ts'
 import type { StepList } from '../steplist.ts'
 
@@ -1792,5 +1795,216 @@ Five commands drive the build. Two stops are calls made at a step's own pause, a
         expect(out.endsWith('next → cut the ranges — `/plumbbob:refine ranges` (the plan declares none; `/plumbbob:build` builds step 6 alone)')).toBe(true)
       }
     })
+  })
+})
+
+describe('the range readout', () => {
+  // Four steps, the first three a landing range with a seam each, the fourth a
+  // bare range still to come.
+  const RANGED = `# Ranged
+
+## Steps
+
+1. [x] Step 1, **done when:** it works
+   - seam: \`src/one.ts\`
+2. [x] Step 2, **done when:** it works
+   - seam: \`src/two.ts\`, \`test/two.test.ts\`
+3. [x] Step 3, **done when:** it works
+   - seam: \`src/three/\`
+4. [ ] Step 4, **done when:** it works
+   - seam: \`src/four.ts\`
+
+## Build ranges
+
+1. \`/plumbbob:build 1-3\`, **stop:** review the three before step 4 builds on them
+2. \`/plumbbob:build 4\`, **stop:** at step 4's pause, decide
+`
+
+  /** A full sha made of one character, so its short form is easy to read back. */
+  const sha = (c: string): string => c.repeat(40)
+  const LEDGER = [`baseline ${sha('a')}`, `plan ${sha('b')}`, `step 1 ${sha('1')}`, `step 2 ${sha('2')}`, `step 3 ${sha('3')}`].join('\n')
+  const STATS = {
+    '1': { startedAt: '2026-10-18T10:00:00.000Z', landedAt: '2026-10-18T10:20:00.000Z' },
+    '2': { startedAt: '2026-10-18T10:21:00.000Z', landedAt: '2026-10-18T10:50:00.000Z' },
+    '3': { startedAt: '2026-10-18T10:51:00.000Z', landedAt: '2026-10-18T11:30:00.000Z' },
+  }
+  const COMMITS = {
+    [sha('1')]: [
+      { path: 'src/one.ts', added: 10, removed: 2 },
+      { path: '.plumbbob/builds/x/build-log.md', added: 5, removed: 1 },
+    ],
+    [sha('2')]: [
+      { path: 'src/two.ts', added: 20, removed: 0 },
+      { path: 'test/two.test.ts', added: 30, removed: 0 },
+    ],
+    [sha('3')]: [{ path: 'src/three/a.ts', added: 4, removed: 4 }],
+  }
+  const GREEN = { ok: true, total_duration_ms: 60_000, checks: [{ name: 'lint', ok: true }, { name: 'test', ok: true }] }
+  // The model's three judgment rows, as a range's detail writes them.
+  const JUDGED = parseRecap(
+    ['── recap · range 1 of 2 ──', 'done-when    met', 'decisions    honored: D1 (one), D2 (two)', 'constraints  all honored', ''].join('\n'),
+    'range',
+  )?.rows
+
+  /** The range readout measured from the fixture, with any field swapped. */
+  const measure = (over: Partial<RangeInput> = {}) =>
+    measureRange({
+      range: parseBuildRanges(RANGED).ranges[0] as BuildRange,
+      intent: RANGED,
+      checkpoints: LEDGER,
+      stats: STATS,
+      commits: COMMITS,
+      between: [sha('3'), sha('2'), sha('1')],
+      summary: GREEN,
+      ...over,
+    })
+
+  /** The fence and the Verdict a stop card would render from a measure and the model's rows. */
+  const render = (m: RangeMeasure) => {
+    const rows = { ...JUDGED, ...m.rows }
+    const { ladder, worst } = foldVerdict(rows, m.stats, 'range')
+    return {
+      lines: recapLines(rows, { steps: m.steps, diff: m.diff, spent: m.spent, constraints: 4 }),
+      verdict: `${ladder.glyph} ${ladder.state}${worst === null ? '' : ` (${worst})`}`,
+    }
+  }
+
+  it('measures a clean range: every step landed, held to its own seam, the diff summed, and the time spent', () => {
+    const { lines, verdict } = render(measure())
+    expect(lines).toEqual([
+      'steps        3 of 3 landed',
+      '             - 1 1111111 · 2 2222222 · 3 3333333',
+      'check        green: 2 of 2 checks, 3 landings',
+      'done-when    met',
+      'decisions    2 of 2 honored',
+      'constraints  4 of 4 honored',
+      'seam         held: 3 of 3 steps, no strays',
+      'diff         +64 -6 across 4 files',
+      'spent        90 min · green first run at every landing',
+    ])
+    expect(verdict).toBe('● Plumb')
+  })
+
+  it("holds each step to its own seam, so a path in a neighbor's seam is still a stray", () => {
+    const commits = { ...COMMITS, [sha('3')]: [...(COMMITS[sha('3')] ?? []), { path: 'src/one.ts', added: 1, removed: 1 }] }
+    const m = measure({ commits })
+    expect(m.rows.seam).toEqual({
+      verdict: 'advisory',
+      word: 'strayed',
+      evidence: "strayed: 1 path outside step 3's seam",
+      pointer: 'src/one.ts',
+    })
+    const { lines, verdict } = render(m)
+    expect(lines).toContain("seam         strayed: 1 path outside step 3's seam")
+    expect(lines).toContain('             → src/one.ts')
+    // The file two commits touched counts once; its lines count in both.
+    expect(lines).toContain('diff         +65 -7 across 4 files')
+    expect(verdict).toBe('◐ A hair off (seam strayed)')
+  })
+
+  it('names each strayed step on its own line when two or more strayed', () => {
+    const commits = {
+      ...COMMITS,
+      [sha('1')]: [...(COMMITS[sha('1')] ?? []), { path: 'src/x.ts', added: 1, removed: 0 }],
+      [sha('3')]: [...(COMMITS[sha('3')] ?? []), { path: 'src/one.ts', added: 1, removed: 1 }, { path: 'src/y.ts', added: 2, removed: 0 }],
+    }
+    expect(measure({ commits }).rows.seam).toEqual({
+      verdict: 'advisory',
+      word: 'strayed',
+      evidence: "strayed: 3 paths outside 2 steps' seams",
+      items: ['step 1: src/x.ts', 'step 3: src/one.ts, src/y.ts'],
+    })
+  })
+
+  it('fits a strayed step to its line by count, never a cut', () => {
+    const long = Array.from({ length: 6 }, (_, i) => ({ path: `src/a/rather/long/path/number-${i}.ts`, added: 1, removed: 0 }))
+    const commits = { ...COMMITS, [sha('1')]: long, [sha('3')]: [{ path: 'src/z.ts', added: 1, removed: 0 }] }
+    const items = measure({ commits }).rows.seam?.items ?? []
+    expect(items).toEqual(['step 1: src/a/rather/long/path/number-0.ts and 5 others', 'step 3: src/z.ts'])
+  })
+
+  it('carries a red run along the way on the spent row and the Verdict, never the check row', () => {
+    const stats = { ...STATS, '2': { ...STATS['2'], redChecks: 2 } }
+    const m = measure({ stats })
+    expect(m.rows.check?.evidence).toBe('green: 2 of 2 checks, 3 landings')
+    expect(m.spent).toBe('90 min · 2 red runs')
+    expect(render(m).verdict).toBe('◐ A hair off (2 red runs before green)')
+  })
+
+  it('counts a step landed by hand on every row but the clock', () => {
+    // Step 3 went through /plumbbob:verify: a checkpoint, a landedAt, and the
+    // red run its gate refused, but no startedAt from `build`.
+    const stats = { '1': STATS['1'], '2': STATS['2'], '3': { landedAt: '2026-10-18T15:00:00.000Z', redChecks: 1 } }
+    const m = measure({ stats })
+    expect(m.steps.items).toEqual(['1 1111111 · 2 2222222 · 3 3333333'])
+    expect(m.rows.seam?.evidence).toBe('held: 3 of 3 steps, no strays')
+    expect(m.diff).toBe('+64 -6 across 4 files')
+    // The clock stops at step 2's landing; the red run still reads on both surfaces.
+    expect(m.spent).toBe('50 min · 1 red run')
+    expect(render(m).verdict).toBe('◐ A hair off (1 red run before green)')
+  })
+
+  it('reads `no checkpoint` for a step the ledger holds no commit for, and measures the rest', () => {
+    const checkpoints = LEDGER.split('\n').filter((l) => !l.startsWith('step 2')).join('\n')
+    const m = measure({ checkpoints })
+    expect(m.steps).toEqual({ evidence: '3 of 3 landed', items: ['1 1111111 · 2 no checkpoint · 3 3333333'] })
+    expect(m.rows.check?.evidence).toBe('green: 2 of 2 checks, 2 landings')
+    expect(m.rows.seam?.evidence).toBe('held: 2 of 3 steps, no strays')
+    expect(m.diff).toBe('+14 -6 across 2 files')
+  })
+
+  it('lists the steps in build order, the last landing of a step landed twice, and packs them by width', () => {
+    const ordered = RANGED.replace('## Build ranges', '## Build order\n\n3, 1, 2, 4\n\n## Build ranges')
+    const relanded = `${LEDGER}\nstep 1 ${sha('9')}`
+    expect(measure({ intent: ordered, checkpoints: relanded }).steps.items).toEqual(['3 3333333 · 1 9999999 · 2 2222222'])
+    const eight = `# Eight\n\n## Steps\n\n${Array.from({ length: 8 }, (_, i) => `${i + 1}. [x] Step ${i + 1}`).join('\n')}\n\n## Build ranges\n\n1. \`/plumbbob:build 1-8\`, **stop:** review them\n`
+    const ledger = Array.from({ length: 8 }, (_, i) => `step ${i + 1} ${sha(String(i + 1))}`).join('\n')
+    const items = measureRange({
+      range: parseBuildRanges(eight).ranges[0] as BuildRange,
+      intent: eight,
+      checkpoints: ledger,
+      stats: {},
+      commits: {},
+      between: [],
+      summary: null,
+    }).steps.items
+    expect(items).toEqual(['1 1111111 · 2 2222222 · 3 3333333 · 4 4444444 · 5 5555555', '6 6666666 · 7 7777777 · 8 8888888'])
+    expect(items.every((line) => `             - ${line}`.length <= 80)).toBe(true)
+  })
+
+  it('folds a revert and a commit outside the ledger across the range', () => {
+    const reverted = measure({ stats: { ...STATS, '1': { ...STATS['1'], reverts: 1 } } })
+    expect(render(reverted).verdict).toBe('◐ A hair off (1 revert in the range)')
+    const outside = measure({ between: [sha('3'), sha('f'), sha('2'), sha('1')] })
+    expect(outside.stats.outOfBand).toBe(1)
+    expect(render(outside).verdict).toBe('◐ A hair off (1 commit outside the ledger)')
+    // A step's fold keeps its own words.
+    expect(foldVerdict({}, { driftWarnings: 0, redChecks: 0, reverts: 2, outOfBand: 0 }).worst).toBe('2 reverts on this step')
+  })
+
+  it('leaves out what it cannot measure: no summary, no seam, nothing countable', () => {
+    const bare = RANGED.replace(/\n {3}- seam: .*$/gm, '')
+    const m = measure({ intent: bare, summary: null, stats: {} })
+    expect(m.rows).toEqual({})
+    expect(m.spent).toBe(null)
+    expect(m.diff).toBe('+64 -6 across 4 files')
+    // At a stop the diff row never vanishes, even when the commits changed nothing.
+    expect(measure({ commits: {} }).diff).toBe('+0 -0 across 0 files')
+  })
+
+  it('reads the range a span covers on the ledger, from the line before its first landing', () => {
+    const ranges = parseBuildRanges(RANGED).ranges
+    expect(rangeSpan(LEDGER, ranges[0] as BuildRange)).toEqual({ from: sha('b'), to: sha('3') })
+    expect(rangeSpan(LEDGER, ranges[1] as BuildRange)).toBe(null)
+    expect(rangeSpan(`step 1 ${sha('1')}`, ranges[0] as BuildRange)).toBe(null)
+  })
+
+  it("reads a range's recap only under the range scope, and a step's only under the step's", () => {
+    const range = ['── recap · range 3 of 5 ──', 'done-when    met', ''].join('\n')
+    const step = ['── recap · step 2 of 3 ──', 'done-when    met', ''].join('\n')
+    expect(parseRecap(range, 'range')).toMatchObject({ n: 3, total: 5 })
+    expect(parseRecap(range)).toBe(null)
+    expect(parseRecap(step, 'range')).toBe(null)
+    expect(parseRecap(step)).toMatchObject({ n: 2, total: 3 })
   })
 })

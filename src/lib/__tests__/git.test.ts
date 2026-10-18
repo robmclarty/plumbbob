@@ -4,6 +4,8 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import {
   commit,
+  commitNumstat,
+  commitsBetween,
   commitsSince,
   diffNumstat,
   diffPatch,
@@ -13,6 +15,7 @@ import {
   headSha,
   isDirty,
   isIgnored,
+  PLAN_COMMIT_MARKER,
   resetHard,
   stageAll,
   stagePath,
@@ -81,6 +84,71 @@ describe('diffNumstat', () => {
     const dir = makeTempRepo({ commit: false })
     writeFileSync(join(dir, 'new.txt'), 'a\n')
     expect(diffNumstat(dir)).toEqual([{ added: 1, removed: 0, path: 'new.txt', untracked: true }])
+  })
+})
+
+describe('commitNumstat', () => {
+  it('reads one commit against its parent, a rename split into two plain paths', () => {
+    const dir = makeTempRepo()
+    writeFileSync(join(dir, 'a.txt'), 'one\ntwo\n')
+    git(dir, 'add', '-A')
+    git(dir, 'commit', '-q', '-m', 'add a')
+    git(dir, 'mv', 'README.md', 'DOCS.md')
+    writeFileSync(join(dir, 'a.txt'), 'one\n')
+    git(dir, 'add', '-A')
+    const sha = commit(dir, 'move and trim')
+    // A later commit leaves the one asked about as it was.
+    writeFileSync(join(dir, 'b.txt'), 'b\n')
+    stageAll(dir)
+    commit(dir, 'add b')
+    const entries = [...commitNumstat(dir, sha)].sort((x, y) => (x.path < y.path ? -1 : 1))
+    expect(entries).toEqual([
+      { added: 1, removed: 0, path: 'DOCS.md', untracked: false },
+      { added: 0, removed: 1, path: 'README.md', untracked: false },
+      { added: 0, removed: 1, path: 'a.txt', untracked: false },
+    ])
+  })
+
+  it('reads a root commit against the empty tree', () => {
+    const dir = makeTempRepo()
+    expect(commitNumstat(dir, headSha(dir))).toEqual([{ added: 1, removed: 0, path: 'README.md', untracked: false }])
+  })
+
+  it('is empty for a sha the repo does not know, and outside a repo', () => {
+    expect(commitNumstat(makeTempRepo(), 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef')).toEqual([])
+    expect(commitNumstat(makeTempDir(), 'HEAD')).toEqual([])
+  })
+})
+
+describe('commitsBetween', () => {
+  it('lists the first-parent commits after `from` through `to`, newest first', () => {
+    const dir = makeTempRepo()
+    const from = headSha(dir)
+    const shas: string[] = []
+    for (const name of ['one', 'two', 'three']) {
+      writeFileSync(join(dir, `${name}.txt`), `${name}\n`)
+      stageAll(dir)
+      shas.push(commit(dir, name))
+    }
+    expect(commitsBetween(dir, from, shas[1] ?? '')).toEqual([shas[1], shas[0]])
+    expect(commitsBetween(dir, from, from)).toEqual([])
+  })
+
+  it('leaves out a commit whose message matches the exclusion, as a plan commit is', () => {
+    const dir = makeTempRepo()
+    const from = headSha(dir)
+    writeFileSync(join(dir, 'a.txt'), 'a\n')
+    stageAll(dir)
+    const work = commit(dir, 'work')
+    writeFileSync(join(dir, 'b.txt'), 'b\n')
+    stageAll(dir)
+    const plan = commit(dir, 'chore(plan): harvest', 'plumbbob plan')
+    expect(commitsBetween(dir, from, plan, PLAN_COMMIT_MARKER)).toEqual([work])
+  })
+
+  it('is empty for a sha the repo does not know', () => {
+    const dir = makeTempRepo()
+    expect(commitsBetween(dir, 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef', headSha(dir))).toEqual([])
   })
 })
 

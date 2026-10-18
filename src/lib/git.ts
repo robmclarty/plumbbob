@@ -154,6 +154,37 @@ function trackedNumstat(root: string): ReadonlyArray<NumstatEntry> {
   } catch {
     return []
   }
+  return numstatLines(out)
+}
+
+/**
+ * One commit's product, one entry per file: what it changed against its
+ * parent, or against the empty tree for a root commit.
+ *
+ * The stop card's range readout reads this for each checkpoint the range
+ * landed, where the pause reads `diffNumstat` for the working tree: a landed
+ * step's work is its commit, and the tree is clean by then. `--no-renames`
+ * keeps a moved file as two plain paths, the shape the seam row wants, as it
+ * does at the pause.
+ *
+ * Information, never a gate: best-effort and never throws ([] for a sha the
+ * repo does not know).
+ */
+export function commitNumstat(root: string, sha: string): ReadonlyArray<NumstatEntry> {
+  let out: string
+  try {
+    out = runGit(root, ['diff-tree', '--no-commit-id', '--numstat', '--no-renames', '-r', '--root', sha])
+  } catch {
+    return []
+  }
+  return numstatLines(out)
+}
+
+/**
+ * Numstat output as entries: `-` (a binary file) counts 0, and every path is
+ * one git has a blob for.
+ */
+function numstatLines(out: string): ReadonlyArray<NumstatEntry> {
   if (out.length === 0) {
     return []
   }
@@ -161,6 +192,29 @@ function trackedNumstat(root: string): ReadonlyArray<NumstatEntry> {
     const [added, removed, ...path] = line.split('\t')
     return { added: toCount(added), removed: toCount(removed), path: path.join('\t'), untracked: false }
   })
+}
+
+/**
+ * The commits on the first-parent line from `from` (exclusive) to `to`
+ * (inclusive), newest first, leaving out those whose message matches
+ * `excluding`.
+ *
+ * The stop card counts the commits outside the ledger across a range with
+ * this, the way `commitsSince` counts them since the last checkpoint: the
+ * caller takes the ledger's own shas out of the list, and passes
+ * `PLAN_COMMIT_MARKER` so a hand-made plan commit never reads as out-of-band.
+ *
+ * Best-effort and never throws: [] for an empty span or a sha the repo does
+ * not know.
+ */
+export function commitsBetween(root: string, from: string, to: string, excluding?: string): ReadonlyArray<string> {
+  try {
+    const skip = excluding === undefined ? [] : ['--grep', excluding, '--invert-grep']
+    const out = runGit(root, ['rev-list', '--first-parent', ...skip, `${from}..${to}`])
+    return out.length === 0 ? [] : out.split('\n')
+  } catch {
+    return []
+  }
 }
 
 /**

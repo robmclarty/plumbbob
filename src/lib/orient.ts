@@ -4,7 +4,7 @@
 // contents (no fs), and a malformed document degrades to fewer fields rather
 // than throwing.
 
-import { parseStepSeam, scopeDrift } from './intent.ts'
+import { isArtifactPath, parseStepSeam, scopeDrift } from './intent.ts'
 import {
   expandStepList,
   formatStepList,
@@ -1278,9 +1278,9 @@ export type RecapRow = {
 const RECAP_ROW_NAMES = ['check', 'done-when', 'decisions', 'constraints', 'seam'] as const
 export type RecapRowName = (typeof RECAP_ROW_NAMES)[number]
 
-/** The recap the model writes into `.plumbbob/detail.md` before a pause. */
+/** The recap the model writes into `.plumbbob/detail.md` before a pause, or before a stop card. */
 export type Recap = {
-  readonly step: number
+  readonly n: number // the step's number, or the range's under a range header
   readonly total: number
   readonly rows: Readonly<Partial<Record<RecapRowName, RecapRow>>>
   readonly diff: string | null // information only; never folds into the Verdict
@@ -1328,19 +1328,24 @@ function classifyRecapRow(name: RecapRowName, value: string): { readonly verdict
  * `── recap · step N of M ──` header, the (subset of) five measuring rows
  * present, and the free-text diff row. Null when no header is found.
  *
+ * A range's detail opens its rows under `── recap · range N of M ──` instead,
+ * and only the `range` scope reads that header, so a step pause never takes a
+ * stop's judgment rows for its own, and the stop card never takes a step's.
+ *
  * A row absent from the block is simply missing from `rows`: a vanished row
  * the fold treats exactly like one that never applied, never like a failure.
  * An indented `- ` or `→ ` line attaches to the row above it, which is how a
  * row carrying two or more items, or a pointer at its evidence, survives the
  * round trip through the file.
  */
-export function parseRecap(detail: string): Recap | null {
+export function parseRecap(detail: string, scope: 'step' | 'range' = 'step'): Recap | null {
   const lines = detail.split('\n')
-  const headerIdx = lines.findIndex((l) => /^──\s*recap\s*·\s*step\s+\d+\s+of\s+\d+\s*──$/.test(l.trim()))
+  const opener = new RegExp(`^──\\s*recap\\s*·\\s*${scope}\\s+\\d+\\s+of\\s+\\d+\\s*──$`)
+  const headerIdx = lines.findIndex((l) => opener.test(l.trim()))
   if (headerIdx === -1) {
     return null
   }
-  const header = /step\s+(\d+)\s+of\s+(\d+)/.exec(lines[headerIdx] ?? '')
+  const header = new RegExp(`${scope}\\s+(\\d+)\\s+of\\s+(\\d+)`).exec(lines[headerIdx] ?? '')
   if (header === null) {
     return null
   }
@@ -1378,7 +1383,7 @@ export function parseRecap(detail: string): Recap | null {
       }
     }
   }
-  return { step: Number(header[1]), total: Number(header[2]), rows, diff }
+  return { n: Number(header[1]), total: Number(header[2]), rows, diff }
 }
 
 /** One rung of the circle ladder (docs/presentation.md's state table): its glyph and its state word. */
@@ -1392,7 +1397,7 @@ const NOT_STANDING: Ladder = { glyph: '✗', state: 'Not standing' }
 /** The Verdict's computed result: the ladder rung, and the worst component named (null when nothing is off). */
 export type VerdictFold = { readonly ladder: Ladder; readonly worst: string | null }
 
-/** A step's accrued stats, the advisory inputs to the fold's third rung. */
+/** A step's accrued stats, or a range's summed across its steps: the advisory inputs to the fold's third rung. */
 export type AccruedStats = {
   readonly driftWarnings: number
   readonly redChecks: number
@@ -1412,8 +1417,17 @@ export type AccruedStats = {
  * carries the stray; at the boundary the tree is clean, the row has vanished,
  * and the stat the checkpoint bumped carries it instead. Both name it
  * `seam strayed`, so the rung does not change between the two.
+ *
+ * A stop card folds a range the same way, its stats summed across the steps,
+ * and only the revert's words change with the scope (`1 revert in the
+ * range`), since the other advisories already read across whatever they
+ * count.
  */
-export function foldVerdict(rows: Readonly<Partial<Record<RecapRowName, RecapRow>>>, stats: AccruedStats): VerdictFold {
+export function foldVerdict(
+  rows: Readonly<Partial<Record<RecapRowName, RecapRow>>>,
+  stats: AccruedStats,
+  scope: 'step' | 'range' = 'step',
+): VerdictFold {
   for (const name of RECAP_ROW_NAMES) {
     if (rows[name]?.verdict === 'drift') {
       return { ladder: NOT_STANDING, worst: `${name} drifted` }
@@ -1441,7 +1455,8 @@ export function foldVerdict(rows: Readonly<Partial<Record<RecapRowName, RecapRow
     return { ladder: A_HAIR_OFF, worst: `${stats.redChecks} red run${stats.redChecks === 1 ? '' : 's'} before green` }
   }
   if (stats.reverts > 0) {
-    return { ladder: A_HAIR_OFF, worst: `${stats.reverts} revert${stats.reverts === 1 ? '' : 's'} on this step` }
+    const where = scope === 'range' ? 'in the range' : 'on this step'
+    return { ladder: A_HAIR_OFF, worst: `${stats.reverts} revert${stats.reverts === 1 ? '' : 's'} ${where}` }
   }
   if (stats.outOfBand > 0) {
     return { ladder: A_HAIR_OFF, worst: `${stats.outOfBand} commit${stats.outOfBand === 1 ? '' : 's'} outside the ledger` }
@@ -1485,15 +1500,20 @@ export type CheckSummary = {
  * Red expands where green collapses: one failing slot is named in the row and
  * its raw output is the `→` pointer, and two or more collapse to a count with
  * one `- ` line per slot.
+ *
+ * A stop card passes the range's `landings`, and a green row counts them
+ * behind the gate's size: every landing passed the gate, since the checkpoint
+ * refuses on red.
  */
-export function summaryCheckRow(summary: CheckSummary): RecapRow {
+export function summaryCheckRow(summary: CheckSummary, landings = 0): RecapRow {
   const ran = summary.checks.filter((c) => c.skipped !== true)
   const skipped = summary.checks.filter((c) => c.skipped === true).map((c) => c.name)
   const named = skipped.length === 0 ? '' : ` · without ${skipped.join(', ')}`
   const counted = skipped.length === 0 ? '' : ` · without ${skipped.length} others`
   const fit = (long: string, short: string): string => (long.length <= RECAP_VALUE_BUDGET ? long : short)
   if (summary.ok) {
-    const size = `${ran.length} of ${summary.checks.length} checks`
+    const landed = landings === 0 ? '' : `, ${landings} landing${landings === 1 ? '' : 's'}`
+    const size = `${ran.length} of ${summary.checks.length} checks${landed}`
     return { verdict: 'true', word: 'green', evidence: fit(`green: ${size}${named}`, `green: ${size}${counted}`) }
   }
   const failing = ran.filter((c) => !c.ok)
@@ -1628,8 +1648,17 @@ function elapsedSpent(input: SpentInputs): string | null {
     return null
   }
   const landed = input.landedAt === undefined ? Number.NaN : Date.parse(input.landedAt)
-  const ms = (Number.isFinite(landed) ? landed : input.now) - started
-  if (ms < 0) {
+  return durationWords((Number.isFinite(landed) ? landed : input.now) - started)
+}
+
+/**
+ * A span of time as the `spent` row says it: seconds under a minute, minutes
+ * under two hours, then hours and minutes. Null for a span that runs
+ * backwards or does not parse, since a negative age is worse than a missing
+ * one.
+ */
+function durationWords(ms: number): string | null {
+  if (!Number.isFinite(ms) || ms < 0) {
     return null
   }
   if (ms < 60_000) {
@@ -1668,6 +1697,7 @@ function collapseRow(name: RecapRowName, row: RecapRow, constraints: number): Re
 
 /** What the CLI measures for itself and hands the readout alongside the parsed rows. */
 export type RecapExtras = {
+  readonly steps?: StepsRow // a stop card's identity row, first in its fence; a step's readout has none
   readonly diff: string | null
   readonly spent: string | null
   readonly constraints: number
@@ -1679,12 +1709,20 @@ export type RecapExtras = {
  * column 14. A row's `- ` items and its `→ ` pointer follow it on indented
  * continuation lines.
  *
- * The step's identity is not in here: the `**Readout**:` label above the fence
- * carries it, so it renders once. Empty when no row survived, so the caller can
- * drop the label and the fence together rather than emit an empty instrument.
+ * The step's identity is not in here: the Now line above the card carries it,
+ * so it renders once. A stop card's range has no Now line, and its `steps`
+ * row opens the fence in that place. Empty when no row survived, so the caller
+ * can drop the label and the fence together rather than emit an empty
+ * instrument.
  */
 export function recapLines(rows: Readonly<Partial<Record<RecapRowName, RecapRow>>>, extras: RecapExtras): string[] {
   const body: string[] = []
+  if (extras.steps !== undefined) {
+    body.push(`${'steps'.padEnd(13)}${extras.steps.evidence}`)
+    for (const item of extras.steps.items) {
+      body.push(`${RECAP_INDENT}- ${item}`)
+    }
+  }
   for (const name of RECAP_ROW_NAMES) {
     const row = rows[name]
     if (row === undefined) {
@@ -1706,6 +1744,289 @@ export function recapLines(rows: Readonly<Partial<Record<RecapRowName, RecapRow>
     body.push(`${'spent'.padEnd(13)}${extras.spent}`)
   }
   return body
+}
+
+// --- The range readout: a landed range measured across its steps for the stop
+// card (docs/presentation.md). `handoff --stop` reads each checkpoint's commit
+// and hands it in with the ledger, stats.json, and the last check's summary;
+// every fact here is already on record, and the model writes only the three
+// judgment rows. ---
+
+/** One file a commit changed: its path and its line counts. */
+export type CommitFile = { readonly path: string; readonly added: number; readonly removed: number }
+
+/** One step's entry in stats.json: the counters and stamps a range's readout reads. */
+export type RangeStepStats = {
+  readonly redChecks?: number
+  readonly driftWarnings?: number
+  readonly reverts?: number
+  readonly startedAt?: string
+  readonly landedAt?: string
+}
+
+/** What a landed range is measured from: the plan, the record, and each checkpoint's commit. */
+export type RangeInput = {
+  readonly range: BuildRange
+  readonly intent: string // the range's steps in build order, and each one's seam
+  readonly checkpoints: string // the ledger, naming each step's commit
+  readonly stats: Readonly<Record<string, RangeStepStats>> // stats.json, keyed by step number
+  readonly commits: Readonly<Record<string, ReadonlyArray<CommitFile>>> // each checkpoint's numstat, keyed by its sha
+  readonly between: ReadonlyArray<string> // the first-parent commits across the range's span, plan commits left out
+  readonly summary: CheckSummary | null // the last check run, or null when none left a summary
+}
+
+/** A stop card's identity row: the count landed, and each step's checkpoint sha on continuation lines. */
+export type StepsRow = { readonly evidence: string; readonly items: ReadonlyArray<string> }
+
+/** A landed range, measured: the rows the CLI owns, and the stats its Verdict folds. */
+export type RangeMeasure = {
+  readonly steps: StepsRow
+  readonly rows: Readonly<Partial<Record<RecapRowName, RecapRow>>> // the measured check and seam
+  readonly diff: string // the commits summed; at a stop it never vanishes
+  readonly spent: string | null
+  readonly stats: AccruedStats // summed across the steps, for `foldVerdict(rows, stats, 'range')`
+}
+
+/** The short form a sha takes on the `steps` row, a handle for `git show`. */
+const SHORT_SHA = 7
+
+/**
+ * Measure a landed range for the stop card's readout: its `steps` row, the
+ * `check` and `seam` rows the CLI owns, the `diff` and `spent` rows, and the
+ * stats the Verdict folds.
+ *
+ * Each step is held to its own commit and its own seam, never the range's
+ * union, so a step that wandered into a neighbor's seam still wandered. A
+ * step the ledger holds no commit for reads `no checkpoint` on the `steps` row
+ * and adds nothing else. A step landed by hand, with a checkpoint but no
+ * `build` entry, adds its commit to every row and no time to `spent`; its
+ * counters still count, so a red run its checkpoint's gate refused reads the
+ * same on the `spent` row and in the Verdict.
+ */
+export function measureRange(input: RangeInput): RangeMeasure {
+  const held = parseOrderedSteps(input.intent).filter((s) => hasStep(input.range.steps, s.n))
+  const shas = stepShas(input.checkpoints)
+  const landed = held.flatMap((s) => {
+    const sha = shas.get(s.n)
+    return sha === undefined ? [] : [{ n: s.n, files: input.commits[sha] ?? [] }]
+  })
+  const rows: Partial<Record<RecapRowName, RecapRow>> = {}
+  if (input.summary !== null) {
+    rows.check = summaryCheckRow(input.summary, landed.length)
+  }
+  const seam = rangeSeamRow(input.intent, landed, held.length)
+  if (seam !== null) {
+    rows.seam = seam
+  }
+  const stats = held.map((s) => input.stats[String(s.n)] ?? {})
+  const sum = (key: 'redChecks' | 'driftWarnings' | 'reverts'): number => stats.reduce((total, s) => total + (s[key] ?? 0), 0)
+  const recorded = ledgerShas(input.checkpoints)
+  return {
+    steps: stepsRow(held, shas),
+    rows,
+    diff: rangeDiffValue(landed.flatMap((l) => l.files)),
+    spent: rangeSpentValue(stats),
+    stats: {
+      driftWarnings: sum('driftWarnings'),
+      redChecks: sum('redChecks'),
+      reverts: sum('reverts'),
+      outOfBand: input.between.filter((sha) => !recorded.has(sha)).length,
+    },
+  }
+}
+
+/**
+ * The ledger span a range landed across, for the out-of-band count: from the
+ * line before the range's first landing to the range's last. Null when no
+ * step of the range is on the ledger, or nothing precedes its first landing.
+ *
+ * The caller asks git for the first-parent commits in `from..to`, plumbbob's
+ * plan commits left out, and hands them to `measureRange` as `between`; the
+ * ledger's own commits drop out there, so what is left is the range's
+ * commits outside the ledger.
+ */
+export function rangeSpan(checkpoints: string, range: BuildRange): { readonly from: string; readonly to: string } | null {
+  const lines = ledgerLines(checkpoints)
+  const inRange = (line: LedgerLine): boolean => line.step !== null && hasStep(range.steps, line.step)
+  const first = lines.findIndex(inRange)
+  const last = lines.findLastIndex(inRange)
+  const from = lines[first - 1]?.sha
+  const to = lines[last]?.sha
+  return first < 1 || from === undefined || to === undefined ? null : { from, to }
+}
+
+/** One line of the checkpoints ledger: the step it records, or null for `baseline` and `plan`, and its sha. */
+type LedgerLine = { readonly step: number | null; readonly sha: string }
+
+/**
+ * The ledger's lines of every kind, in the order they were written.
+ */
+function ledgerLines(checkpoints: string): LedgerLine[] {
+  return checkpoints.split('\n').flatMap((line) => {
+    const m = /^(?:baseline|plan|step\s+(\d+))\s+(\S+)/.exec(line.trim())
+    return m === null ? [] : [{ step: m[1] === undefined ? null : Number(m[1]), sha: m[2] ?? '' }]
+  })
+}
+
+/**
+ * Each step's checkpoint sha, the last line for a step landed twice (a revert,
+ * then a landing again), since that is the commit on the branch now.
+ */
+function stepShas(checkpoints: string): Map<number, string> {
+  const shas = new Map<number, string>()
+  for (const line of ledgerLines(checkpoints)) {
+    if (line.step !== null) {
+      shas.set(line.step, line.sha)
+    }
+  }
+  return shas
+}
+
+/**
+ * Every sha the ledger records, of any kind: the commits plumbbob made, so
+ * none of them counts as out-of-band.
+ */
+function ledgerShas(checkpoints: string): Set<string> {
+  return new Set(ledgerLines(checkpoints).map((line) => line.sha))
+}
+
+/**
+ * The `steps` row: how many of the range's steps landed, then each step and
+ * its checkpoint sha in build order, packed onto continuation lines by width
+ * rather than one per step, since each is a handle and not an item to judge.
+ */
+function stepsRow(held: ReadonlyArray<Step>, shas: ReadonlyMap<number, string>): StepsRow {
+  const done = held.filter((s) => s.done).length
+  const handles = held.map((s) => {
+    const sha = shas.get(s.n)
+    return `${s.n} ${sha === undefined ? 'no checkpoint' : sha.slice(0, SHORT_SHA)}`
+  })
+  return { evidence: `${done} of ${held.length} landed`, items: packed(handles, RECAP_VALUE_BUDGET - 2) }
+}
+
+/**
+ * Pack items onto lines joined by ` · `, a new line when the next would
+ * overrun `width`.
+ */
+function packed(items: ReadonlyArray<string>, width: number): string[] {
+  const lines: string[] = []
+  for (const item of items) {
+    const last = lines.at(-1)
+    if (last !== undefined && `${last} · ${item}`.length <= width) {
+      lines[lines.length - 1] = `${last} · ${item}`
+    } else {
+      lines.push(item)
+    }
+  }
+  return lines
+}
+
+/**
+ * The range's `seam` row: each landed step's commit against that step's own
+ * seam. Null when no step had both a commit and a seam to measure.
+ *
+ * Green counts the steps measured out of the range's steps. One strayed step
+ * is named in the row with its paths as the evidence, the way a step's pause
+ * names them; two or more break onto continuation lines, one per step. It is
+ * an advisory, as at a pause: a stray in a landed commit asks the same
+ * question of the plan.
+ */
+function rangeSeamRow(
+  intent: string,
+  landed: ReadonlyArray<{ readonly n: number; readonly files: ReadonlyArray<CommitFile> }>,
+  steps: number,
+): RecapRow | null {
+  const measured = landed.flatMap(({ n, files }) => {
+    const seam = parseStepSeam(intent, n)
+    return seam.ok ? [{ n, strays: scopeDrift(files.map((f) => f.path), seam.seam) }] : []
+  })
+  if (measured.length === 0) {
+    return null
+  }
+  const strayed = measured.filter((m) => m.strays.length > 0)
+  const only = strayed[0]
+  if (only === undefined) {
+    return { verdict: 'true', word: 'held', evidence: `held: ${measured.length} of ${steps} steps, no strays` }
+  }
+  if (strayed.length === 1) {
+    const evidence = `strayed: ${pathCount(only.strays.length)} outside step ${only.n}'s seam`
+    const path = only.strays[0]
+    return only.strays.length === 1 && path !== undefined
+      ? { verdict: 'advisory', word: 'strayed', evidence, pointer: path }
+      : { verdict: 'advisory', word: 'strayed', evidence, items: only.strays }
+  }
+  const total = strayed.reduce((sum, m) => sum + m.strays.length, 0)
+  return {
+    verdict: 'advisory',
+    word: 'strayed',
+    evidence: `strayed: ${pathCount(total)} outside ${strayed.length} steps' seams`,
+    items: strayed.map((m) => strayedStep(m.n, m.strays)),
+  }
+}
+
+/** A count of paths: `1 path`, `3 paths`. */
+function pathCount(n: number): string {
+  return `${n} path${n === 1 ? '' : 's'}`
+}
+
+/**
+ * One strayed step's continuation line, `step 8: src/x.ts, src/y.ts`, fitted
+ * to the line by count rather than cut: the first path and how many others,
+ * then the count alone.
+ */
+function strayedStep(n: number, strays: ReadonlyArray<string>): string {
+  const width = RECAP_VALUE_BUDGET - 2
+  const whole = `step ${n}: ${strays.join(', ')}`
+  if (whole.length <= width) {
+    return whole
+  }
+  const others = strays.length - 1
+  const first = `step ${n}: ${strays[0] ?? ''} and ${others} other${others === 1 ? '' : 's'}`
+  return first.length <= width ? first : `step ${n}: ${pathCount(strays.length)}`
+}
+
+/**
+ * The range's `diff` row: the commits summed, a file counted once however
+ * many commits touched it, plumbbob's own records left out as at a pause.
+ * Information that never folds, and at a stop it never vanishes.
+ */
+function rangeDiffValue(files: ReadonlyArray<CommitFile>): string {
+  const work = files.filter((f) => !isArtifactPath(f.path))
+  const counts = { ...countDiff(work), files: new Set(work.map((f) => f.path)).size }
+  return diffRowValue(counts, false) ?? '+0 -0 across 0 files'
+}
+
+/**
+ * The range's `spent` row: from the first step's `startedAt` to the last
+ * step's `landedAt`, then the red runs summed across the steps, or `green
+ * first run at every landing`, then any drift warnings. Null when nothing is
+ * countable.
+ *
+ * The clock reads only the steps `build` entered, since a step landed by hand
+ * has no `startedAt` to count from. No gate clause rides here, because only
+ * the last of the range's gate runs is on disk, and no turn count, because the
+ * ledger counts a step's turns from the tick that entered it.
+ */
+function rangeSpentValue(stats: ReadonlyArray<RangeStepStats>): string | null {
+  const entered = stats.filter((s) => s.startedAt !== undefined)
+  const started = Math.min(...entered.map((s) => Date.parse(s.startedAt ?? '')).filter(Number.isFinite))
+  const landed = Math.max(...entered.map((s) => Date.parse(s.landedAt ?? '')).filter(Number.isFinite))
+  const elapsed = Number.isFinite(started) && Number.isFinite(landed) ? durationWords(landed - started) : null
+  const red = stats.reduce((sum, s) => sum + (s.redChecks ?? 0), 0)
+  const drift = stats.reduce((sum, s) => sum + (s.driftWarnings ?? 0), 0)
+  const parts: string[] = []
+  if (elapsed !== null) {
+    parts.push(elapsed)
+  }
+  if (red > 0) {
+    parts.push(`${red} red run${red === 1 ? '' : 's'}`)
+  } else if (elapsed !== null) {
+    parts.push('green first run at every landing')
+  }
+  if (drift > 0) {
+    parts.push(`${drift} drift warning${drift === 1 ? '' : 's'}`)
+  }
+  return parts.length === 0 ? null : parts.join(' · ')
 }
 
 // --- The detail file's prose: the Summary that opens a decision turn and the
