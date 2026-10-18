@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Build ranges
 
-**Current step:** 5 — docs(presentation): spec the build ranges and the lines that name them
+**Current step:** 6 — feat(orient): read the build ranges and where the build stands in them
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -27,7 +27,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 2. fix(turn): stop a background job's notice from counting as a human turn
 - ☑ 3. feat(grant): let a range list its steps, and land only those steps
 - ☑ 4. docs(build): teach the skill and the docs a range that lists its steps
-- ☐ 5. docs(presentation): spec the build ranges and the lines that name them
+- ☑ 5. docs(presentation): spec the build ranges and the lines that name them
 - ☐ 6. feat(orient): read the build ranges and where the build stands in them
 - ☐ 7. feat(handoff): name the range to run beneath Next Up
 - ☐ 8. feat(checkpoint): say why the build stops when a range's last step lands
@@ -222,3 +222,48 @@ folder, so it rides the branch into the PR.)*
   The plan names the module `steplist`, and cspell rejected the import path, so `cspell.json` gained the one word.
 
 - 2026-10-18 — step 4 checkpointed · 759eff15d — docs(build): teach the skill and the docs a range that lists its steps (10m)
+- 2026-10-18 — step 5 checkpointed · 65c15b2c9 — docs(presentation): spec the build ranges and the lines that name them (96m)
+
+  **Summary**: `docs/presentation.md` now fixes every string the build ranges put on a turn: the plan's section and its placeholder, the range segment beneath Next Up in six forms at four sites, the bracket's model while a range is suggested, the `Stop` part on the one boundary that earns it, the dashboard's ranges block with its drift rows, and the rule that none of it renders without the section. `docs/decisions.md` records the build ranges as D92 to D94, with dated notes on D86 and D85, and this build's own section needed only its intro changed.
+
+  1. The Stop part settles as `**Stop**: Range N of M landed - <stop text> (details: …)`
+  2. The range segment leads the note in six forms, and the drift words are one table
+  3. The dashboard block: undone ranges carry their stops, landed ones fold, and `next →` names what is left
+  4. Three decisions, D92 to D94, with dated notes on D86 and D85
+  5. This build's own section held: only its intro changed
+
+  **Readout**:
+
+  ```text
+  check        green: 1 of 1 checks
+  done-when    met
+  decisions    5 of 5 honored
+  constraints  9 of 9 honored
+  seam         held: 2 of 3 declared, no strays
+  diff         +345 -13 across 2 files
+  spent        96 min · 1 turn · 95s gate · green first run
+  ```
+
+  **Verdict**: ● Plumb
+
+  **Recommendation**: Approve it. The strings steps 6 to 10 render are now fixed, and the three calls I made past the plan's leans are the ones to read first: the `Stop` label with its details bracket, the drift words shared by the card and the dashboard, and a landed range folding to its row.
+
+  **1.** The Stop part settles as `**Stop**: Range N of M landed - <stop text> (details: …)`
+
+  The working label held. `Stop` names the thing the plan wrote (`**stop:**` is the item's own key), reads as a noun on the card the way `Checkpoint` does, and answers the question the human brings to that boundary. I considered `Range` (names the subject that moved, but says nothing about why the build stopped) and `Landed` (reads as a past tense, not a part). The line carries a `details:` bracket pointing at the range's item, the one place its `- note:` sub-line can be read, since the card does not carry notes. It rides between the advisories and Next Up, renders on exactly one boundary per range (the one where its last undone step lands, however it landed), never for a bare range, never at the plan commit, and the boundary keeps the orientation tier. The ownership table, the tiers table, and the fixed order of an ending each gained the part.
+
+  **2.** The range segment leads the note in six forms, and the drift words are one table
+
+  `· range 3 of 5: /plumbbob:build 6-9` leads the note ahead of the build order and the parks, the same string at the plan pause, the plan commit, a step pause, and a boundary. What is left is written in build order, with a last step as `9-9` so the command lands it. A bare range reads `· range 4 of 5: /plumbbob:build 10`. Drift takes the place of the command: `· range 3 of 5 needs a re-cut (the build order puts step 11 inside it)` and, for a step in no range, `· no range names step 12`. The four drift kinds from [D10 (drift-reported)](#d10) each got exact words, and the dashboard's rows use the same words, so a human reads one vocabulary. One call beyond the lean: a step no range names flags the plan rather than a range, since no range holds it, and the card names no range for it. The bracket's bold model is the range's while a range is suggested; a range with no `- model:` line leaves the step's in place, which [D17 (range-model)](#d17) left open.
+
+  **3.** The dashboard block: undone ranges carry their stops, landed ones fold, and `next →` names what is left
+
+  The block sits beneath the steps in the step list's grammar: `ranges  2 of 5 done`, then one row per range with its command as the plan wrote it and its model behind the separator, `✓` and `▸` as the steps use them, and the `← next` tail. Each undone range carries its stop on an indented line, because the stops ahead are what the human steers by; a landed range folds to its row, because its call was made. Drift rows open on `⚠` beneath the range they flag, and a step no range names, or an item that does not parse, gets a row at the block's end. The pointer reads `next → build range 3 of 5 — /plumbbob:build 8-9`, the command being what is left, and falls back to today's step move for a flagged range. The relayed dashboard strings keep their em-dash; none of my prose has one.
+
+  **4.** Three decisions, D92 to D94, with dated notes on D86 and D85
+
+  D92 (build-ranges) merges the model: D1 (plan-holds-ranges) through D8 (model-declared) and D18 (scaffold-range). D93 (range-on-the-card) merges the surfaces: D9 (informative-only), D10 (drift-reported), D13 (card-shape), and D17 (range-model), and names `docs/presentation.md` as the home of the exact strings. D94 (auto-and-stops) merges D14 alone, because it changes what `--auto` means and amends D56 and D85 rather than the card. D86 carries the dated note the done-when asked for; D85 got one too, since D94 adds to its halt list, and the head paragraph's range for this build now runs D90 to D94. The `refs` slot passed on the first run.
+
+  **5.** This build's own section held: only its intro changed
+
+  The grammar the spec settled is the one the plan was written in, so the rewrite is the intro sentence: it cites plumbbob D92 (build-ranges) as settled rather than proposing a grammar step 6 would have to read. The five items, their stops, and the `- model:` and `- note:` sub-lines are unchanged and parse under the spec's rules: every step named once, no build order to drift against.

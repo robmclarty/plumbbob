@@ -10,6 +10,7 @@ import {
   orient,
   parkedPhrase,
   parseBuildOrder,
+  parseBuildRanges,
   parseConstraintCount,
   parseDetailStep,
   parseLastCheckpoint,
@@ -21,6 +22,7 @@ import {
   parseRequestedStep,
   parseSteps,
   parseTitle,
+  rangeStanding,
   rangeStart,
   remainingOrder,
   recapLines,
@@ -1041,5 +1043,293 @@ describe('the park counts', () => {
     expect(o.parked).toBe(1)
     expect(o.parkedTotal).toBe(2)
     expect(formatOrientation(o)).toContain('parked 1 of 2 open · open questions 2')
+  })
+})
+
+describe('the build ranges', () => {
+  // The running example from docs/presentation.md: twelve steps cut into five ranges.
+  const SECTION = `## Build ranges
+
+Five commands drive the build. Two stops are calls made at a step's own pause, and three are reviews after a range lands.
+
+1. \`/plumbbob:build 1\`, **stop:** at step 1's pause, approve the schema before anything writes to it
+   - model: opus
+2. \`/plumbbob:build 2-5\`, **stop:** review the parser before the renderers build on it
+   - model: opus
+   - note: run long jobs in the foreground while the range is live
+3. \`/plumbbob:build 6-9\`, **stop:** review the card on a live boundary before the skills teach it
+   - model: opus
+4. \`/plumbbob:build 10\`, **stop:** at step 10's pause, pick the label the docs will name
+   - model: fable
+5. \`/plumbbob:build 11-12\`, **stop:** the final read of the docs, then \`/plumbbob:finish\`
+   - model: opus
+`
+
+  // The template's placeholder, exactly as the spec fixes it.
+  const PLACEHOLDER = `## Build ranges
+
+1. \`/plumbbob:build <N-M>\`, **stop:** <the call that is the human's here: a decision the plan leaves open, a review before later steps build on what landed, or a thing only a human can do>
+   - model: <the strongest model any step inside it recommends>
+`
+
+  /** A plan of `count` steps, those in `done` landed, under an optional build order and ranges section. */
+  const plan = (opts: { count?: number; done?: ReadonlyArray<number>; order?: ReadonlyArray<number>; ranges?: string }): string => {
+    const count = opts.count ?? 12
+    const steps = Array.from({ length: count }, (_, i) => {
+      const n = i + 1
+      return `${n}. [${opts.done?.includes(n) === true ? 'x' : ' '}] Step ${n}, **done when:** it works`
+    })
+    const order = opts.order === undefined ? '' : `## Build order\n\n${opts.order.join(', ')}\n\n`
+    return `# Ranged\n\n## Steps\n\n${steps.join('\n')}\n\n${order}${opts.ranges ?? ''}\n## Open questions\n`
+  }
+
+  /** The steps 1 through `n`. */
+  const through = (n: number): number[] => Array.from({ length: n }, (_, i) => i + 1)
+
+  /** A section of the given items under the heading, no intro. */
+  const items = (...lines: string[]): string => `## Build ranges\n\n${lines.join('\n')}\n`
+
+  /** Where the build stands from `step`, read the way every surface reads it. */
+  const standing = (intent: string, step: number | null) =>
+    rangeStanding(parseBuildRanges(intent), parseOrderedSteps(intent), step)
+
+  describe('parseBuildRanges', () => {
+    it('reads each item: its number, its steps, its form, its stop, its model, and its line', () => {
+      const intent = plan({ ranges: SECTION })
+      const lineOf = (opener: string) => intent.split('\n').findIndex((l) => l.startsWith(opener)) + 1
+      const { ranges, malformed } = parseBuildRanges(intent)
+      expect(malformed).toEqual([])
+      expect(ranges.map((r) => r.item)).toEqual([1, 2, 3, 4, 5])
+      expect(ranges[1]).toEqual({
+        item: 2,
+        steps: [{ from: 2, to: 5 }],
+        bare: false,
+        stop: 'review the parser before the renderers build on it',
+        model: 'opus',
+        line: lineOf('2. `'),
+      })
+      expect(ranges[3]).toEqual({
+        item: 4,
+        steps: [{ from: 10, to: 10 }],
+        bare: true,
+        stop: "at step 10's pause, pick the label the docs will name",
+        model: 'fable',
+        line: lineOf('4. `'),
+      })
+      expect(ranges[4]?.stop).toBe('the final read of the docs, then `/plumbbob:finish`')
+    })
+
+    it('joins a stop wrapped across lines and ends it at the first sub-line, leaving a note to the reader', () => {
+      const { ranges } = parseBuildRanges(
+        plan({
+          ranges: items(
+            '1. `/plumbbob:build 1-3`, **stop:** review the parser',
+            '   before the renderers build on it,',
+            'and before the docs name it',
+            '   - note: watch the hook',
+            '   - model: sonnet (the parser is small)',
+          ),
+        }),
+      )
+      expect(ranges[0]?.stop).toBe('review the parser before the renderers build on it, and before the docs name it')
+      expect(ranges[0]?.model).toBe('sonnet (the parser is small)')
+    })
+
+    it('reads a list or a span the way the turn hook reads a typed range, and a lone number as bare', () => {
+      const { ranges } = parseBuildRanges(
+        plan({
+          ranges: items(
+            '1. `/plumbbob:build 20,5-9`, **stop:** review it',
+            '2. `/plumbbob:build 20, 5-9`, **stop:** review it',
+            '3. `/plumbbob:build 9-9`, **stop:** review it',
+            '4. `/plumbbob:build 7`, **stop:** decide it',
+          ),
+        }),
+      )
+      expect(ranges.map((r) => [r.steps, r.bare])).toEqual([
+        [[{ from: 20, to: 20 }, { from: 5, to: 9 }], false],
+        [[{ from: 20, to: 20 }, { from: 5, to: 9 }], false],
+        [[{ from: 9, to: 9 }], false],
+        [[{ from: 7, to: 7 }], true],
+      ])
+      expect(ranges.every((r) => r.model === null)).toBe(true)
+    })
+
+    it("reads no ranges from a plan without the section, a record under another heading, or the template's placeholder", () => {
+      const older = '## Build runs\n\n1. `/plumbbob:build 1-3`, **stop:** review it\n\n## Ranges\n\n1. `/plumbbob:build 4-6`, **stop:** review it\n'
+      for (const intent of [plan({}), plan({ ranges: older }), plan({ ranges: PLACEHOLDER })]) {
+        expect(parseBuildRanges(intent)).toEqual({ ranges: [], malformed: [] })
+        expect(standing(intent, 6)).toEqual({ count: 0, holding: null, command: null, flag: null, completed: null, drift: [] })
+      }
+    })
+
+    it('reads an item whose command or stop still holds a fill-in as scaffold, and a placeholder model as none', () => {
+      const intent = plan({
+        ranges: items(
+          '1. `/plumbbob:build <N-M>`, **stop:** review the parser',
+          '2. `/plumbbob:build 2-5`, **stop:** <the call that is the human here>',
+          '3. `/plumbbob:build 6-9`, **stop:** review the card',
+          '   - model: <the strongest model any step inside it recommends>',
+        ),
+      })
+      const { ranges, malformed } = parseBuildRanges(intent)
+      expect(malformed).toEqual([])
+      expect(ranges.map((r) => [r.item, r.model])).toEqual([[3, null]])
+    })
+
+    it('reports an item that fails the grammar by its number, and never throws', () => {
+      const intent = plan({
+        ranges: items(
+          '1. /plumbbob:build 1, **stop:** no backticks',
+          '2. `/plumbbob:build 2`',
+          '3. `/plumbbob:build 3`, **stop:**',
+          '4. `/plumbbob:build 9-6`, **stop:** a span that runs backwards',
+          '5. `/plumbbob:build 5 6`, **stop:** two bare numbers',
+          '6. `/plumbbob:build --auto`, **stop:** a flag and no steps',
+          '7. `/build 7`, **stop:** another command',
+          '8. `/plumbbob:build 8 then review`, **stop:** words after the steps',
+          '9. `/plumbbob:build 1-12`, **stop:** the one that parses',
+        ),
+      })
+      const { ranges, malformed } = parseBuildRanges(intent)
+      expect(malformed).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
+      expect(ranges.map((r) => r.item)).toEqual([9])
+      expect(standing(intent, 1).count).toBe(9)
+      expect(standing(intent, 1).drift.at(-1)).toEqual({ kind: 'malformed', item: 8, words: 'item 8 under Build ranges does not parse' })
+    })
+  })
+
+  describe('rangeStanding', () => {
+    it('names the range holding a step and the command that runs it, in document order', () => {
+      const intent = plan({ ranges: SECTION })
+      const at6 = standing(intent, 6)
+      expect(at6.count).toBe(5)
+      expect(at6.holding?.item).toBe(3)
+      expect(at6.command).toBe('/plumbbob:build 6-9')
+      expect([at6.flag, at6.completed, at6.drift]).toEqual([null, null, []])
+      expect(standing(intent, 1).command).toBe('/plumbbob:build 1')
+      expect(standing(intent, 2).command).toBe('/plumbbob:build 2-5')
+      expect(standing(intent, 10).command).toBe('/plumbbob:build 10')
+      expect(standing(intent, null)).toEqual({ count: 5, holding: null, command: null, flag: null, completed: null, drift: [] })
+    })
+
+    it('names what is left from the step: a run resumed, its last step written to land, and a step pause', () => {
+      expect(standing(plan({ done: through(7), ranges: SECTION }), 8).command).toBe('/plumbbob:build 8-9')
+      expect(standing(plan({ done: through(8), ranges: SECTION }), 9).command).toBe('/plumbbob:build 9-9')
+      // Step 6 in flight: Next Up names step 7, so the command is what is left once 6 lands.
+      expect(standing(plan({ done: through(5), ranges: SECTION }), 7).command).toBe('/plumbbob:build 7-9')
+      // A landed step's range with nothing left names no command.
+      expect(standing(plan({ done: through(9), ranges: SECTION }), 9).command).toBeNull()
+    })
+
+    it('writes a list range in build order however it is written, under a re-sequenced build order', () => {
+      const runs = (list: string) =>
+        items('1. `/plumbbob:build 1-4`, **stop:** review it', `2. \`/plumbbob:build ${list}\`, **stop:** review it`, '3. `/plumbbob:build 10-19`, **stop:** review it')
+      // Step 20 joined the plan late, and the build order puts it before step 5.
+      const order = [1, 2, 3, 4, 20]
+      for (const list of ['20,5-9', '5-9,20']) {
+        const intent = plan({ count: 20, done: through(4), order, ranges: runs(list) })
+        expect(standing(intent, 20).command).toBe('/plumbbob:build 20,5-9')
+        expect(standing(intent, 20).drift).toEqual([])
+      }
+      const resumed = plan({ count: 20, done: [...through(4), 20], order, ranges: runs('5-9,20') })
+      expect(standing(resumed, 5).command).toBe('/plumbbob:build 5-9')
+      // A span the build order re-sequences is written in build order too.
+      const whole = standing(plan({ count: 20, order, ranges: items('1. `/plumbbob:build 1-20`, **stop:** review it') }), 1)
+      expect(whole).toMatchObject({ command: '/plumbbob:build 1-4,20,5-19', drift: [] })
+    })
+
+    it('names the range a landing completed, whichever step lands last and however it landed', () => {
+      expect(standing(plan({ done: through(9), ranges: SECTION }), 9).completed?.item).toBe(3)
+      expect(standing(plan({ done: through(8), ranges: SECTION }), 8).completed).toBeNull()
+      // Landed by hand out of order: step 8 lands after 9, and finishes the range.
+      expect(standing(plan({ done: [...through(7), 9, 8], ranges: SECTION }), 8).completed?.item).toBe(3)
+      expect(standing(plan({ done: [...through(7), 9], ranges: SECTION }), 9).completed).toBeNull()
+      // A bare range completes too; the caller drops the Stop part for it.
+      expect(standing(plan({ done: through(10), ranges: SECTION }), 10).completed).toMatchObject({ item: 4, bare: true })
+      // An undone step completes nothing.
+      expect(standing(plan({ done: [...through(5), 7, 8, 9], ranges: SECTION }), 6).completed).toBeNull()
+      // Under a re-sequenced build order, the range completes when its last undone step lands.
+      const runs = items('1. `/plumbbob:build 1-4`, **stop:** review it', '2. `/plumbbob:build 20,5-9`, **stop:** review it')
+      expect(standing(plan({ count: 20, done: through(9), order: [1, 2, 3, 4, 20], ranges: runs }), 9).completed).toBeNull()
+      expect(standing(plan({ count: 20, done: [...through(9), 20], order: [1, 2, 3, 4, 20], ranges: runs }), 20).completed?.item).toBe(2)
+    })
+
+    it('flags a range naming steps the plan lacks, a span of any width read without counting it out', () => {
+      const one = standing(plan({ ranges: items('1. `/plumbbob:build 1-12`, **stop:** review it', '2. `/plumbbob:build 14`, **stop:** decide it') }), 1)
+      expect(one.drift).toEqual([{ kind: 'missing', item: 2, words: 'step 14 is not in the plan' }])
+      const wide = plan({ ranges: items('1. `/plumbbob:build 1-10`, **stop:** review it', '2. `/plumbbob:build 11-1000000000`, **stop:** review it') })
+      expect(standing(wide, 11).drift).toEqual([{ kind: 'missing', item: 2, words: 'steps 13-1000000000 are not in the plan' }])
+      // A flagged range gets no command, and the words say why.
+      expect(standing(wide, 11)).toMatchObject({ command: null, flag: 'steps 13-1000000000 are not in the plan' })
+    })
+
+    it('flags two ranges naming one step, each naming the other, landed or not', () => {
+      const ranges = items(
+        '1. `/plumbbob:build 1-5`, **stop:** review it',
+        '2. `/plumbbob:build 5-9`, **stop:** review it',
+        '3. `/plumbbob:build 10-12`, **stop:** review it',
+      )
+      const fresh = standing(plan({ ranges }), 5)
+      expect(fresh.drift).toEqual([
+        { kind: 'shared', item: 1, words: 'step 5 is also in range 2' },
+        { kind: 'shared', item: 2, words: 'step 5 is also in range 1' },
+      ])
+      expect(fresh).toMatchObject({ holding: { item: 1 }, command: null, flag: 'step 5 is also in range 2' })
+      const landed = standing(plan({ done: through(5), ranges }), 6)
+      expect(landed).toMatchObject({ holding: { item: 2 }, command: null, flag: 'step 5 is also in range 1' })
+    })
+
+    it('flags a range the build order cuts short, and passes it once the range names the step', () => {
+      // Checkride's case: step 76 joined late, and the build order puts it between 51 and 52.
+      const order = [...through(51), 76]
+      const cut = (second: string, rest: ReadonlyArray<string>) =>
+        items('1. `/plumbbob:build 1-47`, **stop:** review it', `2. \`/plumbbob:build ${second}\`, **stop:** review it`, ...rest)
+      const flagged = plan({ count: 76, done: through(47), order, ranges: cut('48-57', ['3. `/plumbbob:build 58-75`, **stop:** review it', '4. `/plumbbob:build 76`, **stop:** decide it']) })
+      expect(standing(flagged, 48)).toMatchObject({
+        holding: { item: 2 },
+        command: null,
+        flag: 'the build order puts step 76 inside it',
+        drift: [{ kind: 'inside', item: 2, words: 'the build order puts step 76 inside it' }],
+      })
+      const passed = plan({ count: 76, done: through(47), order, ranges: cut('48-57,76', ['3. `/plumbbob:build 58-75`, **stop:** review it']) })
+      expect(standing(passed, 48)).toMatchObject({ command: '/plumbbob:build 48-51,76,52-57', flag: null, drift: [] })
+      // Step 76 ordered ahead of the range builds first and cuts nothing, and neither does a landed 76 inside it.
+      const own76 = ['3. `/plumbbob:build 58-75`, **stop:** review it', '4. `/plumbbob:build 76`, **stop:** decide it']
+      const ahead = plan({ count: 76, done: through(47), order: [...through(47), 76], ranges: cut('48-57', own76) })
+      expect(standing(ahead, 76)).toMatchObject({ command: '/plumbbob:build 76', drift: [] })
+      const landed = plan({ count: 76, done: [...through(51), 76], order, ranges: cut('48-57', own76) })
+      expect(standing(landed, 52)).toMatchObject({ command: '/plumbbob:build 52-57', drift: [] })
+      // A run that halted at 51 leaves the range flagged until step 76 lands; the card names 76's range meanwhile.
+      const halted = plan({ count: 76, done: through(51), order, ranges: cut('48-57', own76) })
+      expect(standing(halted, 76)).toMatchObject({ command: '/plumbbob:build 76', drift: [{ kind: 'inside', item: 2 }] })
+    })
+
+    it('flags the undone steps no range names, once a real range parses', () => {
+      const four = SECTION.replace(/^5\. [\s\S]*$/m, '')
+      const open = standing(plan({ ranges: four }), 11)
+      expect(open.drift).toEqual([{ kind: 'uncovered', item: null, words: 'no range names steps 11, 12' }])
+      expect(open).toMatchObject({ holding: null, command: null, flag: 'no range names step 11' })
+      // A landed step outside every range is not flagged.
+      expect(standing(plan({ done: [11], ranges: four }), 12).drift).toEqual([{ kind: 'uncovered', item: null, words: 'no range names step 12' }])
+      // With no range that parses, no step sits outside one: only the item is reported.
+      const broken = standing(plan({ ranges: items('1. `/plumbbob:build 1-12`') }), 1)
+      expect(broken).toMatchObject({ count: 1, flag: null, drift: [{ kind: 'malformed', item: 1, words: 'item 1 under Build ranges does not parse' }] })
+    })
+
+    it("lists each range's reports in the plan's order, then the steps no range names, then the items that do not parse", () => {
+      const intent = plan({
+        ranges: items(
+          '1. `/plumbbob:build 1-5`, **stop:** review it',
+          '2. `/plumbbob:build 6-9,14`, **stop:** review it',
+          '3. `/plumbbob:build 10-11`',
+        ),
+      })
+      expect(standing(intent, 6).drift.map((d) => [d.kind, d.item])).toEqual([
+        ['missing', 2],
+        ['uncovered', null],
+        ['malformed', 3],
+      ])
+    })
   })
 })

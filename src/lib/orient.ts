@@ -5,7 +5,7 @@
 // than throwing.
 
 import { parseStepSeam, scopeDrift } from './intent.ts'
-import { hasStep, readBuildArgs, type StepList } from './steplist.ts'
+import { formatStepList, hasStep, normalizeStepList, readBuildArgs, type Span, type StepList } from './steplist.ts'
 
 /** One numbered step under intent.md's `## Steps`. */
 export type Step = {
@@ -340,6 +340,278 @@ export function clearBuildOrder(intent: string): string {
     lines.splice(heading, body.length + 1)
   }
   return lines.join('\n')
+}
+
+/** One range under `## Build ranges`: a command the human types, and the stop that ends it. */
+export type BuildRange = {
+  readonly item: number // the item's number as the plan wrote it: the handle the card counts by
+  readonly steps: StepList // the command's steps, read the way the turn hook reads a typed range
+  readonly bare: boolean // a lone `N`, which builds the step to its pause rather than landing it
+  readonly stop: string // the stop's text, wrapped lines joined with a space
+  readonly model: string | null // the optional `- model:` line, verbatim: advice, never a gate
+  readonly line: number // the 1-based line of the item's opener in intent.md
+}
+
+/** What `## Build ranges` holds: the ranges that parse, and the items that do not. */
+export type BuildRanges = {
+  readonly ranges: ReadonlyArray<BuildRange>
+  // The numbers of items that are neither a range nor scaffold, so the dashboard
+  // can say which one to fix rather than drop it without a word.
+  readonly malformed: ReadonlyArray<number>
+}
+
+// A range's opener: the item's number, the command in backticks, a comma, and
+// the stop's text from `**stop:**` to the end of the line.
+const RANGE_OPENER = /^`([^`]*)`\s*,?\s*\*\*stop:\*\*\s*(.*)$/i
+
+// A `<...>` fill-in the template ships, still waiting for its words.
+const FILL_IN = /<[^<>]+>/
+
+/**
+ * Parse the ranges under `## Build ranges`: one numbered item per range, the
+ * command in backticks, then `**stop:**` and the stop's text, then an optional
+ * `- model:` sub-line.
+ *
+ * The command's steps go through the turn hook's own reader, so the card can
+ * never suggest a command the hook reads another way. A paragraph before the
+ * list and any sub-line but the model are the reader's. An item still holding
+ * a `<...>` fill-in in its command or stop is scaffold, the template's
+ * placeholder waiting for words, and reads as neither a range nor a report; any
+ * other item that fails the grammar is reported by its number and never
+ * thrown. A plan without the section, a build's record from before ranges
+ * existed under another heading, and a section holding only the placeholder
+ * all read as no ranges.
+ */
+export function parseBuildRanges(intent: string): BuildRanges {
+  const { offset, lines } = sectionLines(intent, '## Build ranges')
+  const ranges: BuildRange[] = []
+  const malformed: number[] = []
+  const openers = lines.flatMap((l, idx) => {
+    const m = /^(\d+)\.\s+(.*)$/.exec(l)
+    return m === null ? [] : [{ item: Number(m[1]), text: m[2] ?? '', idx }]
+  })
+  openers.forEach((o, i) => {
+    const block = lines.slice(o.idx + 1, openers[i + 1]?.idx ?? lines.length)
+    const text = [o.text, ...wrappedLines(block)].join(' ').trim()
+    if (FILL_IN.test(text)) {
+      return
+    }
+    const range = readRange(o.item, text, block, offset + o.idx + 1)
+    if (range === null) {
+      malformed.push(o.item)
+    } else {
+      ranges.push(range)
+    }
+  })
+  return { ranges, malformed }
+}
+
+/**
+ * The lines an item's opener wraps onto: each line after it, trimmed, up to the
+ * first blank line, sub-line, or heading.
+ */
+function wrappedLines(block: ReadonlyArray<string>): string[] {
+  const end = block.findIndex((l) => l.trim() === '' || /^\s*[-*+]\s/.test(l) || l.startsWith('#'))
+  return block.slice(0, end === -1 ? block.length : end).map((l) => l.trim())
+}
+
+/**
+ * One item read as a range, or null when it is not one: a command other than
+ * `/plumbbob:build` with steps and nothing after them, a bare command naming
+ * more than one step, or a stop with no text.
+ */
+function readRange(item: number, text: string, block: ReadonlyArray<string>, line: number): BuildRange | null {
+  const m = RANGE_OPENER.exec(text)
+  const args = /^\/plumbbob:build\s+([\d,\s-]+)$/.exec((m?.[1] ?? '').trim())?.[1]
+  const stop = (m?.[2] ?? '').trim()
+  if (args === undefined || stop === '') {
+    return null
+  }
+  const read = readBuildArgs(args)
+  const single = read.steps?.length === 1 && read.steps[0]?.from === read.steps[0]?.to
+  if (read.steps === null || (!read.range && !single)) {
+    return null
+  }
+  const model = /^\s*-\s*model:\s*(.+)$/im.exec(block.join('\n'))?.[1]?.trim() ?? null
+  return {
+    item,
+    steps: read.steps,
+    bare: !read.range,
+    stop,
+    model: model === null || FILL_IN.test(model) ? null : model,
+    line,
+  }
+}
+
+/** One report on the ranges: a range the plan has outgrown, or an item that does not parse. */
+export type RangeDrift = {
+  // A range's drift flags that range; a step no range names flags the plan,
+  // and an item that does not parse names itself. The dashboard places a
+  // range's rows beneath it and the plan's at the block's end.
+  readonly kind: 'missing' | 'shared' | 'inside' | 'uncovered' | 'malformed'
+  readonly item: number | null // the range or item it names; null for a step no range names
+  readonly words: string // the words the card and the dashboard both say
+}
+
+/** Where the build stands in its ranges, read from one step: the card's and the dashboard's one source. */
+export type RangeStanding = {
+  // The ranges and the items that do not parse: the M in `range N of M`.
+  readonly count: number
+  // The range naming the step, the first in the plan when two do.
+  readonly holding: BuildRange | null
+  // The command that runs what is left of that range from the step, written
+  // in build order; null when the range is flagged or nothing of it is left.
+  readonly command: string | null
+  // Why no command is named: the first words flagging the range, or the words
+  // for a step no range names. Null when nothing is flagged.
+  readonly flag: string | null
+  // The range the step's landing completed, the step itself done along with
+  // every other step the range names, whatever the range's form; the Stop
+  // part is the caller's to drop for a bare one.
+  readonly completed: BuildRange | null
+  // Every report, each range's in the plan's order, then the plan's own.
+  readonly drift: ReadonlyArray<RangeDrift>
+}
+
+/**
+ * Where the build stands in its ranges, read from `step`: the range holding
+ * it, the command that runs what is left of that range, the range its landing
+ * completed, and every range the plan has outgrown.
+ *
+ * Nothing is stored. A range is landed once every step it names is done, and
+ * what is left of it is its undone steps from `step` on, in build order, so a
+ * step pause names what is left once the step in flight lands. A landing
+ * range down to one step writes it `9-9`, which lands it, where a bare range
+ * stays bare. `ordered` is the plan's steps in build order, landed ones
+ * included. With no range that parses, no step sits outside one, so a fresh
+ * build's placeholder flags nothing.
+ */
+export function rangeStanding(plan: BuildRanges, ordered: ReadonlyArray<Step>, step: number | null): RangeStanding {
+  const drift = rangeDrift(plan, ordered)
+  const count = plan.ranges.length + plan.malformed.length
+  const at = ordered.findIndex((s) => s.n === step)
+  const holding = plan.ranges.find((r) => step !== null && hasStep(r.steps, step))
+  if (holding === undefined) {
+    const outside = step !== null && plan.ranges.length > 0 && ordered[at]?.done === false
+    return { count, holding: null, command: null, flag: outside ? noRangeWords([step]) : null, completed: null, drift }
+  }
+  const flag = drift.find((d) => d.item === holding.item && d.kind !== 'malformed')?.words ?? null
+  const left = at === -1 ? [] : ordered.slice(at).filter((s) => !s.done && hasStep(holding.steps, s.n))
+  const landed = ordered[at]?.done === true && ordered.every((s) => s.done || !hasStep(holding.steps, s.n))
+  return {
+    count,
+    holding,
+    command: flag === null && left.length > 0 ? `/plumbbob:build ${leftExpression(holding, left)}` : null,
+    flag,
+    completed: landed ? holding : null,
+    drift,
+  }
+}
+
+/**
+ * What is left of a range as the steps of a command: a landing range's last
+ * step written `9-9` so the command lands it, else the steps in build order
+ * with each climbing run folded to a span, a bare range's lone number included.
+ */
+function leftExpression(range: BuildRange, left: ReadonlyArray<Step>): string {
+  const ns = left.map((s) => s.n)
+  return !range.bare && ns.length === 1 ? `${ns[0]}-${ns[0]}` : formatStepList(ns)
+}
+
+/** The words for steps no range names: `no range names step 12`, or `steps 11, 12`. */
+function noRangeWords(steps: ReadonlyArray<number>): string {
+  return `no range names ${stepPhrase(steps.map(String)).words}`
+}
+
+/**
+ * Every report on the ranges, in the order the dashboard lists them: each
+ * range's own (a step the plan lacks, a step another range also names, a step
+ * from outside it the build order puts among its own), then the undone steps
+ * no range names, then the items that do not parse.
+ *
+ * A step the build order puts inside a range, and a step no range names,
+ * count only while undone, since a landed step cannot cut a run short. The
+ * coverage check runs only once a real range parses.
+ */
+function rangeDrift(plan: BuildRanges, ordered: ReadonlyArray<Step>): RangeDrift[] {
+  const own = plan.ranges.flatMap((r) => [
+    ...missingDrift(r, ordered),
+    ...sharedDrift(r, plan.ranges, ordered),
+    ...insideDrift(r, ordered),
+  ])
+  const outside = ordered.filter((s) => !s.done && !plan.ranges.some((r) => hasStep(r.steps, s.n))).map((s) => s.n)
+  const uncovered: RangeDrift[] =
+    plan.ranges.length > 0 && outside.length > 0 ? [{ kind: 'uncovered', item: null, words: noRangeWords(outside) }] : []
+  const malformed = plan.malformed.map(
+    (item): RangeDrift => ({ kind: 'malformed', item, words: `item ${item} under Build ranges does not parse` }),
+  )
+  return [...own, ...uncovered, ...malformed]
+}
+
+/**
+ * A range naming steps the plan lacks, reported as the spans it names past
+ * the plan's steps, so a span of any width is read without being counted out.
+ */
+function missingDrift(range: BuildRange, ordered: ReadonlyArray<Step>): RangeDrift[] {
+  const held = ordered.map((s) => s.n).sort((a, b) => a - b)
+  const gaps: Span[] = []
+  for (const span of range.steps) {
+    let from = span.from
+    for (const n of held.filter((h) => h >= span.from && h <= span.to)) {
+      if (n > from) {
+        gaps.push({ from, to: n - 1 })
+      }
+      from = Math.max(from, n + 1)
+    }
+    if (from <= span.to) {
+      gaps.push({ from, to: span.to })
+    }
+  }
+  if (gaps.length === 0) {
+    return []
+  }
+  const { words, be } = stepPhrase(normalizeStepList(gaps).split(','))
+  return [{ kind: 'missing', item: range.item, words: `${words} ${be} not in the plan` }]
+}
+
+/** A range sharing steps with another range, one report for each other range. */
+function sharedDrift(range: BuildRange, ranges: ReadonlyArray<BuildRange>, ordered: ReadonlyArray<Step>): RangeDrift[] {
+  const mine = ordered.filter((s) => hasStep(range.steps, s.n))
+  return ranges.flatMap((other) => {
+    const both = other === range ? [] : mine.filter((s) => hasStep(other.steps, s.n)).map((s) => String(s.n))
+    if (both.length === 0) {
+      return []
+    }
+    const { words, be } = stepPhrase(both)
+    return [{ kind: 'shared' as const, item: range.item, words: `${words} ${be} also in range ${other.item}` }]
+  })
+}
+
+/**
+ * A range the build order cuts short: an undone step it does not name, placed
+ * between two of its own, where a run of the range halts.
+ *
+ * An outside step ahead of the range's first step builds first and cuts
+ * nothing, and the card names its range before this one.
+ */
+function insideDrift(range: BuildRange, ordered: ReadonlyArray<Step>): RangeDrift[] {
+  const first = ordered.findIndex((s) => hasStep(range.steps, s.n))
+  const last = ordered.findLastIndex((s) => hasStep(range.steps, s.n))
+  const inside = first === -1 ? [] : ordered.slice(first + 1, last).filter((s) => !s.done && !hasStep(range.steps, s.n))
+  if (inside.length === 0) {
+    return []
+  }
+  const words = stepPhrase(inside.map((s) => String(s.n))).words
+  return [{ kind: 'inside', item: range.item, words: `the build order puts ${words} inside it` }]
+}
+
+/**
+ * Steps as a phrase, with the verb that agrees: `step 12` and `is`, or
+ * `steps 11, 12` and `are`. Each item is a number or a span as it is typed.
+ */
+function stepPhrase(items: ReadonlyArray<string>): { readonly words: string; readonly be: string } {
+  const one = items.length === 1 && /^\d+$/.test(items[0] ?? '')
+  return { words: `${one ? 'step' : 'steps'} ${items.join(', ')}`, be: one ? 'is' : 'are' }
 }
 
 /**
