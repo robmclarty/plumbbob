@@ -131,8 +131,8 @@ In Claude Code, inside any git repo with a clean tree:
 
 1. **Plan.** Fire `/plumbbob:plan` and give it whatever you have: nothing (it interviews
    you), a rough line (`/plumbbob:plan rate-limit POST /login, 5/min/IP, return 429`), or a
-   path to a spec file. Together you fill the build's `intent.md`. No code is written
-   yet.
+   path to a spec file. Together you fill the build's `intent.md`: the steps, and the
+   build ranges that say where the build stops for your call. No code is written yet.
 2. **Build.** Fire `/plumbbob:build`. It implements the next undone step, runs the
    heavy check gate, reviews its own diff against the plan, and stops. What it stops on
    is one block with a fixed shape (the [turn anatomy](docs/presentation.md)): the CLI
@@ -198,7 +198,9 @@ In Claude Code, inside any git repo with a clean tree:
    whole block again, since you have already read it; say `show the pause` to see the
    block again. Direct it and it takes that as the fix, and nothing lands until you say
    `looks good`. Then fire `/plumbbob:build` again for the next step: re-firing it
-   *is* the clock tick. Whenever you lose the thread, `/plumbbob:status` shows where you
+   *is* the clock tick. When the plan cut build ranges, the line beneath Next Up names
+   one to type instead (`· range 2 of 2: /plumbbob:build 2-3`): it lands each step it
+   names and stops where the plan reserved a call for you. Whenever you lose the thread, `/plumbbob:status` shows where you
    are and names the next move.
 4. **Finish.** When the last step is done, `/plumbbob:finish` writes a report of what shipped
    and why into the build's tracked folder, makes the final commit, and clears the slate
@@ -224,7 +226,7 @@ nothing else:
 
 | Skill <img alt="" width="110" height="1"> | Does |
 | ------------------------------------ | ------ |
-| `/plumbbob:plan` | plan the whole goal: open the session and author intent's Frame, Decisions, Constraints, **and all Steps** |
+| `/plumbbob:plan` | plan the whole goal: open the session and author intent's Frame, Decisions, Constraints, **and all Steps**, with the build ranges that say where the build stops for you |
 | `/plumbbob:build` | implement the next planned step, then verify it to the pause: `--auto` self-approves and chains to done; a range like `1-3`, or a list like `20,5-9`, self-approves exactly the steps it names, then stops |
 | `/plumbbob:finish` | finish up: write the report, make the final commit, clear for a fresh goal |
 
@@ -233,7 +235,7 @@ nothing else:
 | Skill <img alt="" width="110" height="1"> | Does |
 | ------------------------------------ | ------ |
 | `/plumbbob:step` | revise/sharpen the next step (empty input auto-syncs it to reality) |
-| `/plumbbob:refine` | attack the frame for holes, or repair a drifted plan |
+| `/plumbbob:refine` | attack the frame for holes, or repair a drifted plan (`ranges` re-cuts the build ranges) |
 | `/plumbbob:spike` | throwaway worktree experiment for a fork the plan can't settle |
 
 **Helpers**: orient, verify, recover, diagnose:

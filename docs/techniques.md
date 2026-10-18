@@ -174,6 +174,33 @@ nothing lands until you say `looks good`; `revert` winds the work back.
 > is a bounded `--auto`: it self-approves through step 3, then stops. These are the only
 > paths that checkpoint without a human pause, and only because you asked for it by name.
 
+### Build ranges say where the clock stops
+
+**The plan says where you will be asked, before any code.** A pause at every step is the
+right clock for a short build and an expensive one for a long build, where most steps need
+no call from anyone: checkride's polyglot build cut its last 45 steps into six ranges. A
+typed range runs a stretch on your word, but which stretches are safe to run is judgment,
+and it used to live in your head. The plan writes it down instead, under
+`## Build ranges`, one item per range: the command to type, then `**stop:**` and the call
+that ends it.
+
+```markdown
+1. `/plumbbob:build 1`, **stop:** at step 1's pause, pick refill-on-read or a timer
+   - model: opus
+2. `/plumbbob:build 2-3`, **stop:** try six logins yourself, then `/plumbbob:finish`
+   - model: sonnet
+```
+
+A range ends where a human call is due (a decision the plan leaves open, a review before
+later steps build on what landed, or a thing only you can do) and nowhere else. The
+command's form says which kind: a bare `1` builds the step to its pause, so the call is
+made before it lands, and a span lands every step it names and stops at the boundary after
+the last. `/plumbbob:plan` cuts the ranges with the steps, and `/plumbbob:step`,
+`/plumbbob:refine`, and `/plumbbob:harvest` keep them true as the plan changes. The card
+names the range to type beneath Next Up, and the boundary where one lands says why the
+build stopped there. A range is advice, never a grant: the latch lands only what you
+typed ([D92 (build-ranges)](decisions.md#d92)).
+
 ### The pluggable executor reads the diff, not the author
 
 `/plumbbob:build` is the default way to turn a planned step into code, but it is
@@ -322,6 +349,7 @@ every move and `/plumbbob:status` always names the next one.
 | Frame and plan the goal | `/plumbbob:plan` | `plumbbob start` | `intent.md`, session opened |
 | Sharpen the next step | `/plumbbob:step` | none (edits markdown) | `intent.md` `## Steps` |
 | Stress-test or repair the plan | `/plumbbob:refine` | none (edits markdown) | `intent.md` |
+| Say where the build stops | `/plumbbob:plan` (kept true by step, refine, harvest) | none (edits markdown) | `intent.md` `## Build ranges` |
 | Build a step | `/plumbbob:build` | `plumbbob build` | `SEAM`, `STEP` (in-flight) |
 | Verify and checkpoint | `/plumbbob:verify` | `plumbbob check`, `plumbbob checkpoint` | `checkpoints` |
 | Render the pause | `/plumbbob:build`, `/plumbbob:verify` | `plumbbob handoff` | `.plumbbob/detail.md` |

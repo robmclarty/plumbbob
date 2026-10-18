@@ -100,6 +100,29 @@ items against everything ever parked), then a
 single suggested next move ([**D8 (status-dashboard)**](decisions.md#d8) / [**D15 (one-next-move)**](decisions.md#d15)). Read-only; prints `NO ACTIVE SESSION` and
 exits 0 when there is no session.
 
+When the plan carries `## Build ranges` ([**D92 (build-ranges)**](decisions.md#d92)), the
+ranges are listed beneath the steps, in the step list's own grammar, and the next move names
+the command that runs what is left of the range holding the next step:
+
+```text
+  ranges  1 of 2 done
+  ✓ 1  /plumbbob:build 1 · opus
+  ▸ 2  /plumbbob:build 2-4 · sonnet   ← next
+        stop: try six logins yourself, then `/plumbbob:finish`
+
+last checkpoint  step 3 · cbc9d9c
+parked 0 · open questions 0
+
+next → build range 2 of 2 — `/plumbbob:build 4-4`
+```
+
+`✓` marks a range whose every step is done and `▸` the one holding the next undone step;
+each undone range carries its stop on the line beneath it. A range the plan has outgrown gets
+a `⚠` row beneath it (`⚠ needs a re-cut: step 9 is not in the plan`), and a step no range
+names, or an item that does not parse, gets one at the block's end; a flagged range takes the
+next move back to the step's own. A plan without the section, or with only the template's
+placeholder under it, renders no block at all.
+
 `--invoked "<args>"` takes the raw text of a skill invocation (the `/plumbbob:build`
 skill passes its `$ARGUMENTS` through). An explicit step number in that text repoints
 the dashboard's marker, detail rows, and next move at the requested step, noting
@@ -168,10 +191,15 @@ At a build pause it renders the turn entire, in this order:
   ([**D82 (readout-ladder)**](decisions.md#d82)).
 - `**Next Up**:` the next undone step in build order, its progress count, and a bracket
   carrying the step's `- model:` recommendation and where to read it in full. Beneath it,
-  indented, one line of reminders when there is something to remind of: the build order from
-  that step on (only when `## Build order` departs from the numbering; five steps, then a
-  count) and the park count (`parked 2 of 7 open`, whenever anything has been parked). The
-  driver tier's pointer carries no such line ([**D86 (build-order)**](decisions.md#d86)).
+  indented, one line of reminders when there is something to remind of: the range holding
+  that step and the command that runs what is left of it (`· range 2 of 2: /plumbbob:build
+  3-4`, when the plan declares build ranges), the build order from that step on (only when
+  `## Build order` departs from the numbering; five steps, then a count), and the park count
+  (`parked 2 of 7 open`, whenever anything has been parked). While the line suggests a range,
+  the bracket's bold model is the range's own `- model:` rather than the step's, and a range
+  the plan has outgrown reads `· range 2 of 2 needs a re-cut (step 9 is not in the plan)` in
+  place of a command ([**D93 (range-on-the-card)**](decisions.md#d93)). The driver tier's
+  pointer carries no such line ([**D86 (build-order)**](decisions.md#d86)).
 - `**Your Call**:` the moves a human actually makes at a pause, each with its outcome. The
   `expand` move also names the way back to the card: `show the pause`.
 - `**Recommendation**:` the model's own call, read from the detail file's
@@ -276,7 +304,15 @@ the first step's diff doesn't absorb the scaffold ([**D36 (plan-commit)**](decis
 it records the plan pause's cold read the same way, beneath a `plan committed` line in
 the Log. Either form closes on its
 whole ending, `handoff`-rendered and printed here: the lead line, the Verdict the step just
-earned (the plan commit measures nothing, so it has none), any advisory, and the pointer.
+earned (the plan commit measures nothing, so it has none), any advisory, the Stop part when
+the step completes a range, and the pointer. The Stop part renders on the one boundary where a
+range's last undone step lands, however it landed, and never for a bare range, whose stop is
+its own pause ([**D93 (range-on-the-card)**](decisions.md#d93)):
+
+```text
+**Stop**: Range 2 of 2 landed - try six logins yourself, then `/plumbbob:finish` (details: `.plumbbob/builds/rate-limit/intent.md:23`)
+```
+
 Staged paths outside the step's seam are an advisory, never a gate, and the stray they name
 puts a `seam strayed` rung under that Verdict, the same rung the pause's measured seam row
 gave it. Refuses (exit 1) with no session,
@@ -569,6 +605,10 @@ switched away mid-step. What it checks:
   not hold is reported with the numbers and never rewritten: `intent.md` is a tracked
   artifact, and the sequence is a judgment call (`plumbbob order` rewrites it, or
   `--reset` drops it).
+- **The build ranges name the plan.** A range under `## Build ranges` naming a step the plan
+  does not hold is reported the same way (`range 2 names a step the plan lacks: step 9 is not
+  in the plan`) and never rewritten, since where its stop belongs now is the human's call: re-cut
+  it by hand or with `/plumbbob:refine`.
 - **Nothing is left over.** An orphaned `handoff.json` would thread a finished step's agent
   output into the next step's context; a `TICK` stranded at the boundary arms the approval
   latch against a pause that already closed; a `GRANT` with no turn ledger to clear it

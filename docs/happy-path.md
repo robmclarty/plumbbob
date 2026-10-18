@@ -308,6 +308,55 @@ tick*. The dashboard tracks the march:
 > A list like `/plumbbob:build 20,5-9` lands exactly the steps it names, in build order.
 > The default (no flag) always waits at the pause.
 
+### Or type the range the plan cut
+
+A plan can say where the build stops for you. `/plumbbob:plan` writes a
+`## Build ranges` section beside the steps, one item per range: the command to type,
+the call that ends it, and the model to run it on. This plan's would read:
+
+```markdown
+## Build ranges
+
+Build step 1 alone to settle how the bucket refills, then run the rest straight through.
+
+1. `/plumbbob:build 1`, **stop:** at step 1's pause, pick refill-on-read or a timer before the route leans on it
+   - model: opus
+2. `/plumbbob:build 2-3`, **stop:** try six logins yourself, then `/plumbbob:finish`
+   - model: sonnet
+```
+
+A bare `1` builds step 1 to its pause, so the refill call is made there, before it
+lands; a span lands every step it names and stops at the boundary after the last.
+The card reads the section back. Once step 1 lands, the line beneath Next Up names the
+command to type, and the bracket's bold model is the range's:
+
+```text
+**Checkpoint**: Step 1 complete (a1b2c3d4e, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md:44`)
+
+**Verdict**: ● Plumb
+
+**Next Up**: Step 2 of 3 - feat(login): wire the limiter into POST /login (model: **Sonnet**, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:20`)
+  · range 2 of 2: /plumbbob:build 2-3
+```
+
+You type `/plumbbob:build 2-3`, and steps 2 and 3 land without a pause between them.
+The range is advice, never a grant: only the command you typed lets the agent approve
+in your place. Step 3's checkpoint ends the turn, and it says why the build stopped:
+
+```text
+**Checkpoint**: Step 3 complete (e5f6a7b8c, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md:46`)
+
+**Verdict**: ● Plumb
+
+**Stop**: Range 2 of 2 landed - try six logins yourself, then `/plumbbob:finish` (details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:32`)
+
+**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish
+```
+
+`/plumbbob:status` lists the ranges beneath the steps, with `✓` on a landed range and
+`▸` on the one in progress. A step `/plumbbob:step` or `/plumbbob:refine` adds goes into
+a range, and a range the plan has outgrown is flagged rather than rewritten.
+
 ---
 
 ## 4. Park strays mid-build: `/plumbbob:park`

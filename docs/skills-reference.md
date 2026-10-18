@@ -48,7 +48,12 @@ its input itself: no argument runs an interview, a file path (or an `@`-mention)
 an out-of-band spec, any other text is expanded as inline intent. Under the hood it runs `plumbbob start`
 (recording the baseline), fills the build's `intent.md` (Frame, Decisions, Constraints,
 and **all** Steps, each with a done-when, a seam, and (where the signal is clear) an
-advisory `model:` recommendation naming the smallest model that can carry the step) and
+advisory `model:` recommendation naming the smallest model that can carry the step), and
+the **build ranges**: where the build stops for a human call, one item per range, with the
+command to type, the call that ends it, and the model to run it on
+([D92 (build-ranges)](decisions.md#d92)). A range ends where a call is due (a decision the
+plan leaves open, a review before later steps build on what landed, or a thing only you
+can do) and nowhere else, so a small plan may carry one range or none. Then it
 commits the plan on its own
 (`plumbbob checkpoint --plan`), so the first step's diff stays clean. It writes intent
 only, never source. If the build will lean on user-authored agents it also offers to
@@ -73,7 +78,8 @@ build has already taught you and syncs the step's done-when and seam to reality;
 `<what-changed>`, it makes that directed revision (tighten, re-cut, split, or add a step).
 One step at a time, written back into `## Steps` only on your approval. An added step that
 has to land before an existing one is placed by sequence (`plumbbob order`, the
-[build order](#order)), never by renumbering. It can also sharpen
+[build order](#order)), never by renumbering, and goes into a range when the plan carries
+build ranges, with any range the edit breaks re-cut in the same before/after. It can also sharpen
 that step's [harness bindings](#the-harness-slots) just-in-time when the agents it wants
 have drifted. Most steps need nothing; skip straight to `/plumbbob:build`.
 
@@ -92,7 +98,11 @@ moment a check goes red, the self-review finds a mismatch, or a bound agent retu
 lands steps 1 through 3, then ends on step 3's checkpoint block. A range may also list its
 steps (`20,5-9`): it lands exactly the steps it names, walked in build order from its first
 undone one, and halts before any step it does not name
-([D91 (step-list-grants)](decisions.md#d91)). At a pause (the default
+([D91 (step-list-grants)](decisions.md#d91)). When the plan carries build ranges, the card
+names the range to type beneath Next Up, and the boundary where a range's last step lands
+carries a `**Stop**` part saying why the build stops there, relayed with the rest of the
+checkpoint's block; a bare range's pause is its stop, so the recommendation there speaks to
+the plan's call. At a pause (the default
 path, or a halt on a red check or a mismatch) it writes its judgment into `.plumbbob/detail.md`,
 runs `plumbbob handoff`, and pastes the block; you reply with one of the four moves the
 block names (`looks good`, `expand`, a direction, `revert`), and on `looks good` the
@@ -130,7 +140,9 @@ for a quick OK, then writes it by shelling `plumbbob order`, never by editing `i
 The `## Build order` line it writes is what the dashboard's `← next`, a bare
 `/plumbbob:build`, `checkpoint`'s fallback, and the card's Next Up all follow, and the card
 reminds you of the next five beneath Next Up whenever the sequence departs from the
-numbering. `--reset` drops the line. Step, refine, and harvest shell the same verb when
+numbering. `--reset` drops the line. It edits nothing else, so when the new sequence breaks
+a build range it reads the dashboard after writing and names `/plumbbob:refine` as the move
+that re-cuts it. Step, refine, and harvest shell the same verb when
 they append a step that has to land early, so you rarely need to fire this yourself.
 
 ### status
@@ -138,8 +150,8 @@ they append a step that has to land early, so you rarely need to fire this yours
 The orientation move: a thin trigger for `plumbbob status`. Prints the dashboard (title,
 phase, the step list with the next step's done-when, seam, and advisory model
 recommendation, last checkpoint, the build order when it departs from the numbering,
-`parked 2 of 7 open`, and the open-question count) and names the single
-next move. The model line is the plan's suggestion of the smallest model that can carry
+the build ranges when the plan has them, `parked 2 of 7 open`, and the open-question count)
+and names the single next move, which is the range's command when the next step sits in one. The model line is the plan's suggestion of the smallest model that can carry
 the next step: switch before building, or ignore it; guidance, never a gate. Read-only;
 fire it any time you lose the thread.
 
@@ -151,7 +163,9 @@ one class per item: **blocker** (the plan was wrong; fold into intent and handle
 signal** (the approach is wrong; stop and replan). You call each one; confirmed items are
 recorded under `## Harvest` and a confirmed blocker is folded into `intent.md`, placed in
 the [build order](#order) with `plumbbob order` when it becomes a step that has to land
-early.
+early, and into a build range when the plan carries them. A range's stop is the boundary
+that matters most: no harvest runs between the steps inside a range, so the parks it piled
+up are triaged where it lands.
 
 ### finish
 
@@ -189,7 +203,9 @@ Keeps `intent.md` honest, in two modes. **Attack**: a cold, adversarial read of 
 and Decisions that surfaces holes as one-line **Open questions**, never as Decisions,
 because resolving a hole is your call. **Repair**: when the plan has drifted from what the
 code actually does, it proposes the edits that bring it back, before/after, written only
-on your approval. Where `/plumbbob:step` sharpens one step, refine works the whole plan.
+on your approval, a step it adds going into a build range and a range it breaks re-cut;
+`/plumbbob:refine ranges` re-cuts the whole section on request. Where `/plumbbob:step`
+sharpens one step, refine works the whole plan.
 The plan pause's cold read is refine's tip: it surfaces the worst hole and names refine
 for the rest, so the full attack stays optional and arrives when the read says it would
 pay. Refine is where the real adversary looks; the cold read is an estimate.
