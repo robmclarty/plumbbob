@@ -214,9 +214,11 @@ export function readLedger(repo: string, name: 'TURN' | 'GRANT'): string | null 
 // processing); headless `-p` ticks at ~session end, after the turn it should
 // have covered — so without this, a latched sweep would refuse every
 // sanctioned checkpoint and measure a `-p` timing quirk instead of the skill.
-// The minting logic itself stays covered by src/verbs/__tests__/turn.test.ts; the sweep report
-// footnotes this. No-op on baseline (no ledger exists to grant against).
-export function armGrant(repo: string, sweep: Sweep, grant: 'auto' | `range ${number}`): void {
+// A range arms the `steps <list>` the hook mints from it (`/build 1-2` mints
+// `steps 1-2`). The minting logic itself stays covered by
+// src/verbs/__tests__/turn.test.ts; the sweep report footnotes this. No-op on
+// baseline (no ledger exists to grant against).
+export function armGrant(repo: string, sweep: Sweep, grant: 'auto' | `steps ${string}`): void {
   if (sweep === 'baseline') return
   writeFileSync(join(repo, '.plumbbob', 'GRANT'), `${grant}\n`)
 }

@@ -66,6 +66,7 @@
     "sgconfig",
     "slugified",
     "stepcontext",
+    "steplist",
     "subdirs",
     "titleless",
     "toctou",

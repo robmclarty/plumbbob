@@ -4,8 +4,8 @@
 // `TURN`, the monotonic count of human turns the checkpoint latch compares
 // against a step's entry stamp to know a human turn intervened since the step
 // began, and it rewrites `GRANT` from the literal prompt, minting a one-turn
-// self-approval only when the human typed `/build --auto` or an `N-M` step
-// range, clearing it otherwise (those strings can only come from a human
+// self-approval only when the human typed `/build --auto` or a step range
+// (`N-M`, or a list such as `20,5-9`), clearing it otherwise (those strings can only come from a human
 // keystroke, because `build` is disable-model-invocation: a grant the model
 // could forge would be no grant). The harness also sends a background job's
 // completion notice through this event, as a prompt the human never typed, so
@@ -28,6 +28,7 @@ import {
   stepPath,
   turnPath,
 } from '../lib/sidecar.ts'
+import { normalizeStepList, readBuildArgs } from '../lib/steplist.ts'
 
 /**
  * The hook entry point: apply the prompt, then emit the in-flight-step nudge
@@ -146,9 +147,12 @@ export function isNotice(prompt: string): boolean {
  * A grant is minted only from a literal `build` invocation the human typed:
  * `build` is disable-model-invocation, so this string can only come from a
  * human keystroke, never model-authored pressure: a grant the model can forge
- * is no grant. A bounded range beats `--auto` (bounded wins); a bare
- * `/build`, or any non-invocation prompt, mints nothing. The namespaced
- * `/plumbbob:build` form is honored alongside the bare one.
+ * is no grant. A range mints `steps <list>`, exactly the steps it names in
+ * their normal form (`20, 5-9` mints `steps 5-9,20`), and beats `--auto`
+ * (bounded wins), so a range that does not parse mints nothing rather than
+ * falling back to `auto`. A bare `/build`, a bare step number, or any
+ * non-invocation prompt mints nothing. The namespaced `/plumbbob:build` form is
+ * honored alongside the bare one.
  *
  * The invocation must *start* a token: a slash preceded by a word character,
  * `/`, `.`, `-`, or `~` is a path segment (`src/build`, `./build`), not a
@@ -167,25 +171,9 @@ export function grantFromPrompt(prompt: string): string | null {
   const invocation = /(?<![\w/.~-])\/(?:plumbbob:)?build\b/.exec(prompt)
   if (invocation === null) return null
   const line = prompt.slice(invocation.index + invocation[0].length).split('\n', 1)[0] ?? ''
-  let auto = false
-  let ceiling: string | undefined
-  for (const token of line.split(/\s+/)) {
-    const word = token.replace(/[.,;:!?]+$/, '')
-    if (word === '') continue
-    if (word === '--auto') {
-      auto = true
-      continue
-    }
-    const range = /^\d+-(\d+)$/.exec(word)
-    if (range !== null) {
-      ceiling = range[1]
-      continue
-    }
-    if (/^\d+$/.test(word)) continue // a bare step number: keep scanning for a range/--auto
-    break // an unrecognized flag or free text: the arguments have ended
-  }
-  if (ceiling !== undefined) return `range ${ceiling}`
-  return auto ? 'auto' : null
+  const args = readBuildArgs(line)
+  if (args.range) return args.steps === null ? null : `steps ${normalizeStepList(args.steps)}`
+  return args.auto ? 'auto' : null
 }
 
 /**

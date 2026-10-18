@@ -26,16 +26,38 @@ describe('grantFromPrompt', () => {
 
   it('honors the namespaced `/plumbbob:build` form', async () => {
     expect(grantFromPrompt('/plumbbob:build --auto')).toBe('auto')
-    expect(grantFromPrompt('/plumbbob:build 2-5')).toBe('range 5')
+    expect(grantFromPrompt('/plumbbob:build 2-5')).toBe('steps 2-5')
+    expect(grantFromPrompt('/plumbbob:build 1-2')).toBe('steps 1-2') // what contract 4's armGrant pre-arms
   })
 
-  it('mints `range M` from a N-M range, carrying the ceiling', async () => {
-    expect(grantFromPrompt('/build 1-3')).toBe('range 3')
+  it('mints `steps N-M` from a N-M range, naming exactly the steps it holds — D12 (step-list-grants)', async () => {
+    expect(grantFromPrompt('/build 1-3')).toBe('steps 1-3')
+    expect(grantFromPrompt('/build 4-4')).toBe('steps 4')
+  })
+
+  it('mints a list as its normal form, typed with or without a space — D16 (list-reading)', async () => {
+    expect(grantFromPrompt('/plumbbob:build 20,5-9')).toBe('steps 5-9,20')
+    expect(grantFromPrompt('/plumbbob:build 20, 5-9')).toBe('steps 5-9,20')
+    expect(grantFromPrompt('/plumbbob:build 48-51,76,52-57')).toBe('steps 48-57,76')
+  })
+
+  it('stores a long range as one short line, never the expansion', async () => {
+    expect(grantFromPrompt('/build 1-100000')).toBe('steps 1-100000')
+  })
+
+  it('mints nothing from bare numbers alone, or a comma that only ends the sentence', async () => {
+    expect(grantFromPrompt('/build 2 3')).toBeNull()
+    expect(grantFromPrompt('/build 2, then review it')).toBeNull()
+  })
+
+  it('mints nothing from a range that does not parse, even beside --auto (bounded wins)', async () => {
+    expect(grantFromPrompt('/build 5-3')).toBeNull()
+    expect(grantFromPrompt('/build --auto 5-3')).toBeNull()
   })
 
   it('lets a bounded range beat --auto, in either order (bounded wins)', async () => {
-    expect(grantFromPrompt('/build --auto 1-3')).toBe('range 3')
-    expect(grantFromPrompt('/build 1-3 --auto')).toBe('range 3')
+    expect(grantFromPrompt('/build --auto 1-3')).toBe('steps 1-3')
+    expect(grantFromPrompt('/build 1-3 --auto')).toBe('steps 1-3')
   })
 
   it('mints nothing from a bare invocation or a single step', async () => {
@@ -71,7 +93,7 @@ describe('grantFromPrompt', () => {
   })
 
   it('tolerates trailing sentence punctuation on an argument', async () => {
-    expect(grantFromPrompt('/build 1-3.')).toBe('range 3')
+    expect(grantFromPrompt('/build 1-3.')).toBe('steps 1-3')
     expect(grantFromPrompt('/build --auto!')).toBe('auto')
   })
 
@@ -82,7 +104,7 @@ describe('grantFromPrompt', () => {
     // gap in minting grants from the human's literal prompt).
     expect(grantFromPrompt('/build --wip 2020-2024')).toBeNull()
     expect(grantFromPrompt('/build --draft 1-3')).toBeNull()
-    expect(grantFromPrompt('/build 1-3 --auto')).toBe('range 3') // sanctioned args still compose
+    expect(grantFromPrompt('/build 1-3 --auto')).toBe('steps 1-3') // sanctioned args still compose
   })
 })
 
@@ -190,9 +212,9 @@ describe('a background notice is not a human turn — D90 (notice-not-turn)', ()
     const dir = await startedSession()
     applyTurn(dir, raw(captured('71c59aa3', 0)))
     applyTurn(dir, raw(captured('71c59aa3', 1)))
-    expect(readFileSync(grantPath(dir), 'utf8').trim()).toBe('range 3')
+    expect(readFileSync(grantPath(dir), 'utf8').trim()).toBe('steps 2-3')
     expect(applyTurn(dir, raw(captured('71c59aa3', 2)))).toBe(false)
-    expect(readFileSync(grantPath(dir), 'utf8').trim()).toBe('range 3')
+    expect(readFileSync(grantPath(dir), 'utf8').trim()).toBe('steps 2-3')
     expect(readFileSync(turnPath(dir), 'utf8').trim()).toBe('2')
   })
 

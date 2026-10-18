@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Build ranges
 
-**Current step:** 2 — fix(turn): stop a background job's notice from counting as a human turn
+**Current step:** 3 — feat(grant): let a range list its steps, and land only those steps
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -24,7 +24,7 @@ line above. Only ONE step is in flight; a step is done only after a checkpoint:
 check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
 - ☑ 1. chore(turn): spike what the prompt hook gets for a background notice
-- ☐ 2. fix(turn): stop a background job's notice from counting as a human turn
+- ☑ 2. fix(turn): stop a background job's notice from counting as a human turn
 - ☐ 3. feat(grant): let a range list its steps, and land only those steps
 - ☐ 4. docs(build): teach the skill and the docs a range that lists its steps
 - ☐ 5. docs(presentation): spec the build ranges and the lines that name them
@@ -42,6 +42,8 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 > Mid-step, every new problem / idea / "ooh what if" lands HERE, untouched, and you
 > go straight back to the step. Acting the instant an idea arrives is the disease.
 > Capture is one line (`/plumbbob:park` composes it). Harvest happens only at the boundary.
+
+- [ ] abandon's refusal says a step is 'past the range you granted' when a list grant simply does not name it; reword for the list case (src/verbs/abandon.ts:109)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -136,3 +138,39 @@ folder, so it rides the branch into the PR.)*
   **5.** Claude Code updated mid-spike, and the subagent case changed with it.
 
   The CLI moved from 2.1.283 to 2.1.302 during the first session, so I reran the Monitor and subagent phases on the new version. On 2.1.283 a finished subagent sent two prompts (its report, then a task notice), each its own turn; on 2.1.302 only the report reaches the hook, and the task notice lands in the transcript without starting a turn. The rule names both frames. Headless `claude -p`, Cursor, a Monitor's timeout notice, and `/loop` wakeups were not probed.
+
+- 2026-10-17 — step 2 checkpointed · 18c85b450 — fix(turn): stop a background job's notice from counting as a human turn (16m)
+
+  **Summary**: A prompt that opens on `<task-notification>` or `<agent-message from="…">` no longer ticks `TURN`, rewrites `GRANT`, or gets the nudge, and one that starts its own turn clears `RELAY`; recorded as D90 (notice-not-turn).
+
+  1. The spike's rule went in as written, at the top of the hook
+  2. I made the absorbed-notice call the spike left for this pause
+  3. The tests replay all 29 captured prompts in order
+
+  **Readout**:
+
+  ```text
+  check        green: 1 of 1 checks
+  done-when    met
+  decisions    2 of 2 honored
+  constraints  9 of 9 honored
+  seam         held: 8 of 8 declared, no strays
+  diff         +750 -40 across 8 files
+  spent        16 min · 233s gate · green first run
+  ```
+
+  **Verdict**: ● Plumb
+
+  **Recommendation**: Read highlight 2 at the range's stop. It is the one place this step went past the plan's wording, and the plan left it open on purpose.
+
+  **1.** The spike's rule went in as written, at the top of the hook
+
+  `applyTurn` reads the prompt and its `prompt_id`, and a prompt whose first characters are either frame skips the tick and the grant together. `turn()` emits the in-flight nudge only when `applyTurn` says the prompt counted, so the nudge skips in the same branch. The latch's two writes come first and the new record last, so a record that cannot be written never costs a typed prompt its tick.
+
+  **2.** I made the absorbed-notice call the spike left for this pause
+
+  A notice the harness folds into a running turn arrives under that turn's `prompt_id`, before the turn's Stop has judged the ending it printed, so clearing `RELAY` there would let a missed card through unjudged. The hook now keeps the id of the last prompt it saw, typed or not, in a new untracked `.plumbbob/PROMPT`, and a notice carrying that id leaves `RELAY` alone. I keyed it on the last prompt *seen* rather than the spike's last prompt *counted*, so a notice folded into a turn another notice started is read the same way. A notice with no id clears `RELAY`, as D15 (notice-clears-relay) reads. It touches only the relay check, never `TURN` or `GRANT`, and it is the one piece of this step to read at the range's stop.
+
+  **3.** The tests replay all 29 captured prompts in order
+
+  `fixtures/notice-payloads.json` holds the spike's 29 payloads, paths trimmed, each labeled by the probe's own typed text rather than by the rule. The replay checks that `TURN` ends at 16, that every notice leaves `GRANT` as it found it, and that phase 6's range survives the notice queued before it. The real hook runs once on stdin to show the nudge stays silent for a notice. Three relay tests cover a notice after a shown pause, an ending printed after it, and a notice folded into the turn that printed the card.

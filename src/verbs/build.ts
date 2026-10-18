@@ -9,16 +9,18 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { hasSession, intentPath, resolveBuild, seamPath, stampStepStat, stampTick, stepPath } from '../lib/sidecar.ts'
 import { parseStepSeam } from '../lib/intent.ts'
-import { parseOrderedSteps, skippedBefore, type Step } from '../lib/orient.ts'
+import { parseOrderedSteps, rangeStart, skippedBefore, type Step } from '../lib/orient.ts'
 import { stepLabel, syncBuildLogState } from '../lib/buildlogsync.ts'
 import { readGrant, type Grant } from '../lib/latch.ts'
 import { notice } from '../lib/notice.ts'
+import { hasStep, readBuildArgs } from '../lib/steplist.ts'
 
 /**
  * Enter step n (or the next undone step) and write its SEAM/STEP markers.
  *
- * Refuses a missing session, a malformed step argument, an `N-M` range (a
- * `/plumbbob:build` skill feature, not a CLI one), and a seam that fails to parse.
+ * Refuses a missing session, a malformed step argument, a range such as `N-M`
+ * or `20,5-9` (a `/plumbbob:build` skill feature, not a CLI one), and a seam
+ * that fails to parse.
  * On entry it stamps the turn ledger and the step's start time, re-renders the
  * build-log's Current step line, and names the step when it is the last one a
  * self-approval grant reaches.
@@ -32,16 +34,16 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
 
   const { build: slug, rest } = resolveBuild(root, args)
   const raw = rest.find((a) => !a.startsWith('--'))
-  // A step range like `1-3` is a `/plumbbob:build` skill affordance (auto-approve
-  // every step through the range's top, then stop), not a CLI capability: the CLI
+  // A step range like `1-3` or `20,5-9` is a `/plumbbob:build` skill affordance
+  // (auto-approve each step it names, then stop), not a CLI capability: the CLI
   // records one in-flight step at a time. Name it rather than bounce off the
-  // generic usage.
-  if (raw !== undefined && /^\d+-\d*$/.test(raw)) {
+  // generic usage, and point at the step the range starts at.
+  if (raw !== undefined && /^\d[\d,-]*$/.test(raw) && /[,-]/.test(raw)) {
     process.stderr.write(
       notice({
         fact: 'build takes one step number',
         detail: [`\`${raw}\` is a /plumbbob:build range, which auto-approves through its top and then stops`],
-        remedy: `plumbbob build ${raw.split('-')[0]}`,
+        remedy: `plumbbob build ${rangeEntry(intentPath(root, slug), rest.join(' '), raw)}`,
       }),
     )
     return 1
@@ -130,6 +132,24 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
 }
 
 /**
+ * The step a range typed at the CLI starts at: its first undone step in build
+ * order when the plan reads, else its first number written.
+ *
+ * Best-effort, since it only fills the refusal's remedy: a plan that cannot be
+ * read, or a range that does not parse, still points at a number the human typed.
+ */
+function rangeEntry(intent: string, args: string, raw: string): string {
+  const list = readBuildArgs(args).steps
+  try {
+    const start = list === null ? null : rangeStart(parseOrderedSteps(readFileSync(intent, 'utf8')), list)
+    if (start !== null) return String(start)
+  } catch {
+    // No plan to order by: fall back to the number typed first.
+  }
+  return /\d+/.exec(raw)?.[0] ?? '1'
+}
+
+/**
  * The line naming the last step a self-approval grant reaches this turn, or ''
  * for any other step and when no grant is live.
  *
@@ -140,13 +160,24 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
  * reaches its top, or the last undone step under its top when the plan ends
  * first, or when the build order puts a number past the top ahead of the rest
  * (a range names plan numbers, and the skill halts before one past its top);
- * `--auto` reaches the plan's last undone step.
+ * `--auto` reaches the plan's last undone step. A range that lists its steps
+ * walks them in build order, so its top is the last undone step it names, and
+ * it reaches no further than a step it does not name.
  */
 function lastGrantedNotice(grant: Grant | null, steps: ReadonlyArray<Step>, step: number): string {
   if (grant === null) {
     return ''
   }
   const remedy = 'land it on green, then stop at the boundary'
+  if (grant.kind === 'steps') {
+    if (!hasStep(grant.steps, step)) return ''
+    const rest = steps.slice(steps.findIndex((s) => s.n === step) + 1).filter((s) => !s.done && s.n !== step)
+    const after = rest[0]
+    if (after !== undefined && hasStep(grant.steps, after.n)) return ''
+    return rest.some((s) => hasStep(grant.steps, s.n))
+      ? notice({ fact: `step ${step} is the last undone step in the range you granted`, remedy })
+      : notice({ fact: `step ${step} is the top of the range you granted`, remedy })
+  }
   if (grant.kind === 'range') {
     if (step === grant.ceiling) {
       return notice({ fact: `step ${step} is the top of the range you granted`, remedy })

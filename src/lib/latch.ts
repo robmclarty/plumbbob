@@ -18,13 +18,19 @@
 import { readFileSync } from 'node:fs'
 import { grantPath, tickPath, turnPath } from './sidecar.ts'
 import { resolveBoolean } from './settings.ts'
+import { hasStep, normalizeStepList, parseStepList, type StepList } from './steplist.ts'
 
 /**
  * A one-turn self-approval grant, minted by `plumbbob turn` from the human's
- * literal prompt. `auto` covers every checkpoint that turn; `range M` covers
- * steps up to its ceiling. The mirror of turn.ts's grantFromPrompt.
+ * literal prompt. `auto` covers every checkpoint that turn; `steps` covers
+ * exactly the steps the typed range names; `range M`, the form a hook from
+ * before step lists mints, covers steps up to its ceiling. The mirror of
+ * turn.ts's grantFromPrompt.
  */
-export type Grant = { readonly kind: 'auto' } | { readonly kind: 'range'; readonly ceiling: number }
+export type Grant =
+  | { readonly kind: 'auto' }
+  | { readonly kind: 'steps'; readonly steps: StepList }
+  | { readonly kind: 'range'; readonly ceiling: number }
 
 export type LatchInput = {
   readonly isTTY: boolean // row 1: a human at the keyboard is their own approval
@@ -79,16 +85,29 @@ function ceilingMessage(ceiling: number): string {
 }
 
 /**
+ * The refusal for a step a list grant does not name, naming the steps it does.
+ */
+function outsideMessage(step: number, steps: StepList): string {
+  return `plumbbob: checkpoint refused — step ${step} is not in the range you granted (${normalizeStepList(steps)}) — pause here; run it again to continue.\n`
+}
+
+/**
  * The five-row matrix, in order, first hit wins.
  *
- * A `range` grant speaks only to numbered steps: on a `--plan` checkpoint (step
+ * A range grant speaks only to numbered steps: on a `--plan` checkpoint (step
  * null) it neither allows nor refuses, and the decision falls through to the
- * turn comparison.
+ * turn comparison. A `steps` grant lands exactly the steps the human typed and
+ * refuses any other, so no later edit to the plan or its build order can widen
+ * it; both kinds refuse with the `ceiling` reason, a step outside the range.
  */
 export function evaluateLatch(input: LatchInput): LatchDecision {
   if (input.isTTY) return ALLOW // 1: a human at the keyboard
   if (input.turn === null || input.tick === null) return ALLOW // 2: dormant ledger / hand-built diff
   if (input.grant?.kind === 'auto') return ALLOW // 3: one-turn grant the human typed
+  if (input.grant?.kind === 'steps' && input.step !== null) {
+    if (hasStep(input.grant.steps, input.step)) return ALLOW
+    return { allow: false, reason: 'ceiling', message: outsideMessage(input.step, input.grant.steps) }
+  }
   if (input.grant?.kind === 'range' && input.step !== null) {
     if (input.step <= input.grant.ceiling) return ALLOW
     return { allow: false, reason: 'ceiling', message: ceilingMessage(input.grant.ceiling) }
@@ -101,14 +120,17 @@ export function evaluateLatch(input: LatchInput): LatchDecision {
 }
 
 /**
- * Parse a GRANT file's content (`auto` | `range <M>`).
+ * Parse a GRANT file's content (`auto` | `steps <list>` | `range <M>`).
  *
- * Anything else (including a corrupted or hand-mangled file) contributes
- * nothing: no grant, never an error.
+ * Anything else (including a corrupted or hand-mangled file, or a list that
+ * does not parse) contributes nothing: no grant, never an error.
  */
 export function parseGrant(raw: string): Grant | null {
   const trimmed = raw.trim()
   if (trimmed === 'auto') return { kind: 'auto' }
+  const listed = /^steps (\S+)$/.exec(trimmed)
+  const steps = listed === null ? null : parseStepList(listed[1] ?? '')
+  if (steps !== null) return { kind: 'steps', steps }
   const range = /^range (\d+)$/.exec(trimmed)
   if (range !== null) return { kind: 'range', ceiling: Number(range[1]) }
   return null

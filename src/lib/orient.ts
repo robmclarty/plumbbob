@@ -5,6 +5,7 @@
 // than throwing.
 
 import { parseStepSeam, scopeDrift } from './intent.ts'
+import { hasStep, readBuildArgs, type StepList } from './steplist.ts'
 
 /** One numbered step under intent.md's `## Steps`. */
 export type Step = {
@@ -75,10 +76,11 @@ export type OrientInput = {
   // "BUILD". `spiking` is the SPIKE marker's presence.
   readonly inFlight: number | null
   readonly spiking: boolean
-  // The step number an explicit invocation asked for (`status --invoked`), or
-  // null when the run carried no explicit ask. The dashboard repoints at it so
-  // the injected state and the human's typed step never disagree.
-  readonly requested: number | null
+  // The steps an explicit invocation asked for (`status --invoked`): one step,
+  // or a range, which starts at its first undone step in build order. Null when
+  // the run carried no explicit ask. The dashboard repoints at the step so the
+  // injected state and the human's typed step never disagree.
+  readonly requested: StepList | null
   // The out-of-band commit count: commits since the last ledger SHA that no
   // plumbbob verb recorded, less the hand-made plan commits that carry the
   // `plumbbob plan` body marker. Only a caller with git can measure it
@@ -482,27 +484,30 @@ export function lastLedgerSha(checkpoints: string): string | null {
 }
 
 /**
- * The step number an explicit skill invocation asks for, out of the raw
- * argument text `status --invoked` receives.
+ * The steps an explicit skill invocation asks for, out of the raw argument
+ * text `status --invoked` receives, read the way the turn hook reads a typed
+ * range.
  *
- * The first whitespace-separated token shaped like `22` or `22-24` names the
- * step (a range asks to start at its first number); flags such as `--auto` and
- * anything else parse to null, meaning "no explicit ask", which leaves the
- * dashboard's own suggestion in charge. Null in means null out, so a host that
- * never substitutes the invocation degrades to today's rendering.
+ * A step number names one step, and a range or a list names the steps it
+ * holds (`orient` starts it at the first undone one in build order); `--auto`
+ * alone, a range that does not parse, and free text parse to null, meaning "no
+ * explicit ask", which leaves the dashboard's own suggestion in charge. Null in
+ * means null out, so a host that never substitutes the invocation degrades to
+ * today's rendering.
  */
-export function parseRequestedStep(raw: string | null): number | null {
-  if (raw === null) {
-    return null
-  }
-  for (const token of raw.trim().split(/\s+/)) {
-    const m = /^(\d+)(?:-\d+)?$/.exec(token)
-    if (m) {
-      const n = Number(m[1])
-      return n >= 1 ? n : null
-    }
-  }
-  return null
+export function parseRequestedStep(raw: string | null): StepList | null {
+  return raw === null ? null : readBuildArgs(raw.trim()).steps
+}
+
+/**
+ * The step a requested list starts at: its first undone step in build order,
+ * however the list was written; its first step in build order when every one
+ * has landed; or its first number written when the plan holds none of them, so
+ * the dashboard reports that number missing. Null for an empty list.
+ */
+export function rangeStart(ordered: ReadonlyArray<Step>, list: StepList): number | null {
+  const named = ordered.filter((s) => hasStep(list, s.n))
+  return (named.find((s) => !s.done) ?? named[0])?.n ?? list[0]?.from ?? null
 }
 
 /**
@@ -579,11 +584,14 @@ export function orient(input: OrientInput): Orientation {
   const order = parseBuildOrder(input.intent)
   const ordered = orderSteps(steps, order)
   const parks = parseParkTotals(input.buildLog)
+  // The step an explicit ask points at: the number typed, or where a typed
+  // range starts in build order.
+  const requested = input.requested === null ? null : rangeStart(ordered, input.requested)
   // The target the dashboard details: the explicitly requested step when it
   // exists in the plan, else the next undone. A requested number that names no
   // planned step carries nothing here; the next-move line reports the mismatch
   // while the rest of the dashboard renders as usual.
-  const requestedStep = input.requested === null ? undefined : steps.find((s) => s.n === input.requested)
+  const requestedStep = requested === null ? undefined : steps.find((s) => s.n === requested)
   const nextUndone = ordered.find((s) => !s.done)
   const target = requestedStep ?? nextUndone
   const seamParse = target === undefined ? null : parseStepSeam(input.intent, target.n)
@@ -596,7 +604,7 @@ export function orient(input: OrientInput): Orientation {
     parked: parks.open,
     parkedTotal: parks.total,
     openQuestions: parseOpenQuestions(input.intent),
-    next: nextMove(input.spiking, ordered, input.inFlight, parks.open, input.requested),
+    next: nextMove(input.spiking, ordered, input.inFlight, parks.open, requested),
     nextUndone: nextUndone?.n ?? null,
     buildOrder: remainingOrder(steps, order, null),
     requested: requestedStep?.n ?? null,

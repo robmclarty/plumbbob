@@ -77,6 +77,38 @@ describe('evaluateLatch — the five-row matrix, first hit wins', () => {
     expect(evaluateLatch({ ...LATCHED, grant, step: null, turn: 3 }).allow).toBe(true)
   })
 
+  it('row 3: a step-list grant lands each step it names, and refuses any other by name — D12 (step-list-grants)', () => {
+    const grant = { kind: 'steps', steps: [{ from: 20, to: 20 }, { from: 5, to: 9 }] } as const
+    for (const step of [5, 7, 9, 20]) expect(evaluateLatch({ ...LATCHED, grant, step }).allow).toBe(true)
+    for (const step of [1, 4, 10, 19, 21]) {
+      const decision = evaluateLatch({ ...LATCHED, grant, step })
+      expect(decision.allow).toBe(false)
+      if (!decision.allow) {
+        expect(decision.reason).toBe('ceiling')
+        expect(decision.message).toBe(
+          `plumbbob: checkpoint refused — step ${step} is not in the range you granted (5-9,20) — pause here; run it again to continue.\n`,
+        )
+      }
+    }
+  })
+
+  it('row 3: a span grants exactly N through M, so a step under N refuses where `range M` would land it', () => {
+    const grant = { kind: 'steps', steps: [{ from: 2, to: 4 }] } as const
+    expect(evaluateLatch({ ...LATCHED, grant, step: 1 }).allow).toBe(false)
+    expect(evaluateLatch({ ...LATCHED, grant: { kind: 'range', ceiling: 4 }, step: 1 }).allow).toBe(true)
+  })
+
+  it('row 3 precedes row 4 for a list too: a step it does not name refuses even after a human turn', () => {
+    const grant = { kind: 'steps', steps: [{ from: 2, to: 3 }] } as const
+    expect(evaluateLatch({ ...LATCHED, turn: 3, tick: 2, grant, step: 4 }).allow).toBe(false)
+  })
+
+  it('row 3: a step-list grant does not speak to a plan checkpoint — falls through', () => {
+    const grant = { kind: 'steps', steps: [{ from: 1, to: 3 }] } as const
+    expect(evaluateLatch({ ...LATCHED, grant, step: null }).allow).toBe(false)
+    expect(evaluateLatch({ ...LATCHED, grant, step: null, turn: 3 }).allow).toBe(true)
+  })
+
   it('row 4: a human turn since entry allows', () => {
     expect(evaluateLatch({ ...LATCHED, turn: 3, tick: 2 }).allow).toBe(true)
   })
@@ -116,8 +148,14 @@ describe('evaluateLatch — the five-row matrix, first hit wins', () => {
 })
 
 describe('parseGrant', () => {
-  it('parses the two minted forms, trailing newline and all', () => {
+  it('parses the minted forms, trailing newline and all', () => {
     expect(parseGrant('auto\n')).toEqual({ kind: 'auto' })
+    expect(parseGrant('steps 5-9,20\n')).toEqual({ kind: 'steps', steps: [{ from: 5, to: 9 }, { from: 20, to: 20 }] })
+    expect(parseGrant('steps 3')).toEqual({ kind: 'steps', steps: [{ from: 3, to: 3 }] })
+    expect(parseGrant('steps 1-100000')).toEqual({ kind: 'steps', steps: [{ from: 1, to: 100000 }] })
+  })
+
+  it('still parses the `range M` a hook from before step lists mints — C8 (old-grants-land)', () => {
     expect(parseGrant('range 3\n')).toEqual({ kind: 'range', ceiling: 3 })
     expect(parseGrant('range 12')).toEqual({ kind: 'range', ceiling: 12 })
   })
@@ -129,6 +167,11 @@ describe('parseGrant', () => {
     expect(parseGrant('range x')).toBeNull()
     expect(parseGrant('range -1')).toBeNull()
     expect(parseGrant('auto range 3')).toBeNull()
+    expect(parseGrant('steps')).toBeNull()
+    expect(parseGrant('steps 5-3')).toBeNull()
+    expect(parseGrant('steps 1,,2')).toBeNull()
+    expect(parseGrant('steps 1, 2')).toBeNull()
+    expect(parseGrant('steps x')).toBeNull()
   })
 })
 
@@ -169,6 +212,13 @@ describe('checkLatch — gathering from the worktree', () => {
     const dir = latchedRepo()
     writeFileSync(grantPath(dir), 'auto\n')
     expect(withoutTty(() => checkLatch(dir, 1)).allow).toBe(true)
+  })
+
+  it('reads a step-list GRANT, landing its members only', () => {
+    const dir = latchedRepo()
+    writeFileSync(grantPath(dir), 'steps 2-4\n')
+    expect(withoutTty(() => checkLatch(dir, 3)).allow).toBe(true)
+    expect(withoutTty(() => checkLatch(dir, 1)).allow).toBe(false)
   })
 
   it('reads a settings `auto` only to note it — it no longer allows — D67 (auto-not-a-grant)', () => {

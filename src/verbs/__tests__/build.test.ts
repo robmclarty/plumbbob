@@ -108,6 +108,23 @@ describe('build', () => {
     expect(stderr).toContain('plumbbob build 1')
   })
 
+  it('rejects a list the same way, pointing at its first undone step in build order — D16 (list-reading)', async () => {
+    const dir = await startedWithSteps()
+    writeFileSync(intentPath(dir), REORDERED.replace('1. [ ]', '1. [x]')) // order 1, 3, 2 with 1 done
+    for (const args of [['2,3'], ['2,', '3'], ['1-3']]) {
+      const { code, stderr } = captureIo(() => build(dir, args))
+      expect(code).toBe(1)
+      expect(stderr).toBe(
+        notice({
+          fact: 'build takes one step number',
+          detail: [`\`${args[0] ?? ''}\` is a /plumbbob:build range, which auto-approves through its top and then stops`],
+          remedy: 'plumbbob build 3',
+        }),
+      )
+    }
+    expect(existsSync(stepPath(dir))).toBe(false)
+  })
+
   it('skips flag args when finding the step number', async () => {
     const dir = await startedWithSteps()
     const { code } = captureIo(() => build(dir, ['--quiet', '2']))
@@ -222,6 +239,45 @@ describe('build — the last step a grant reaches — D85 (range-top-lands)', ()
     quiet('auto', '1') // step 2 is still ahead
     quiet('auto', '2') // step 1 is still undone behind it
     quiet(null, '2')
+  })
+})
+
+describe('build — the last step a step-list grant reaches — D12 (step-list-grants)', () => {
+  const REMEDY = 'land it on green, then stop at the boundary'
+
+  it('names the last undone step the list holds as its top, in build order', async () => {
+    // `steps 2-3` over the order 1, 3, 2: the walk runs 3 then 2, so 2 is the top.
+    const dir = await startedWithSteps()
+    writeFileSync(intentPath(dir), REORDERED.replace('1. [ ]', '1. [x]'))
+    writeFileSync(grantPath(dir), 'steps 2-3\n')
+    expect(captureIo(() => build(dir, ['3'])).stdout).not.toContain(REMEDY)
+    rmSync(stepPath(dir), { force: true })
+    expect(captureIo(() => build(dir, ['2'])).stdout).toContain(
+      notice({ fact: 'step 2 is the top of the range you granted', remedy: REMEDY }),
+    )
+  })
+
+  it('names the step before one the list does not hold, where the walk halts', async () => {
+    // `steps 1-2` over the order 1, 3, 2: step 3 comes next and is not named.
+    const dir = await startedWithSteps()
+    writeFileSync(intentPath(dir), REORDERED)
+    writeFileSync(grantPath(dir), 'steps 1-2\n')
+    expect(captureIo(() => build(dir, ['1'])).stdout).toContain(
+      notice({ fact: 'step 1 is the last undone step in the range you granted', remedy: REMEDY }),
+    )
+  })
+
+  it('reaches past a step the plan ends on, and stays quiet for a step the list does not hold', async () => {
+    const dir = await startedWithSteps() // two steps, both undone
+    writeFileSync(grantPath(dir), 'steps 1-9\n')
+    expect(captureIo(() => build(dir, ['1'])).stdout).not.toContain(REMEDY)
+    rmSync(stepPath(dir), { force: true })
+    expect(captureIo(() => build(dir, ['2'])).stdout).toContain(
+      notice({ fact: 'step 2 is the top of the range you granted', remedy: REMEDY }),
+    )
+    rmSync(stepPath(dir), { force: true })
+    writeFileSync(grantPath(dir), 'steps 2\n')
+    expect(captureIo(() => build(dir, ['1'])).stdout).not.toContain(REMEDY)
   })
 })
 

@@ -21,6 +21,7 @@ import {
   parseRequestedStep,
   parseSteps,
   parseTitle,
+  rangeStart,
   remainingOrder,
   recapLines,
   seamRowFromDiff,
@@ -30,6 +31,10 @@ import {
   summaryCheckRow,
 } from '../orient.ts'
 import { readTemplate } from '../templates.ts'
+import type { StepList } from '../steplist.ts'
+
+/** A request for one step, as `status --invoked` reads a bare number. */
+const one = (n: number): StepList => [{ from: n, to: n }]
 
 const INTENT = `# My Feature
 
@@ -573,14 +578,16 @@ describe('formatOrientation', () => {
 
 describe('parseRequestedStep', () => {
   it('reads a bare step number, ignoring flags around it', () => {
-    expect(parseRequestedStep('22')).toBe(22)
-    expect(parseRequestedStep('  22 --auto')).toBe(22)
-    expect(parseRequestedStep('--auto 22')).toBe(22)
+    expect(parseRequestedStep('22')).toEqual(one(22))
+    expect(parseRequestedStep('  22 --auto')).toEqual(one(22))
+    expect(parseRequestedStep('--auto 22')).toEqual(one(22))
   })
 
-  it('reads a range as its first number (the range is the skill\'s auto-approve ceiling)', () => {
-    expect(parseRequestedStep('1-3')).toBe(1)
-    expect(parseRequestedStep('22-24 --auto')).toBe(22)
+  it('reads a range or a list as the steps it names, the way the turn hook reads it — D16 (list-reading)', () => {
+    expect(parseRequestedStep('1-3')).toEqual([{ from: 1, to: 3 }])
+    expect(parseRequestedStep('22-24 --auto')).toEqual([{ from: 22, to: 24 }])
+    expect(parseRequestedStep('20,5-9')).toEqual([{ from: 20, to: 20 }, { from: 5, to: 9 }])
+    expect(parseRequestedStep('20, 5-9')).toEqual([{ from: 20, to: 20 }, { from: 5, to: 9 }])
   })
 
   it('parses no ask to null', () => {
@@ -591,6 +598,25 @@ describe('parseRequestedStep', () => {
     // through literally; that must degrade to "no ask", not a step.
     expect(parseRequestedStep('$ARGUMENTS')).toBe(null)
     expect(parseRequestedStep('0')).toBe(null)
+    expect(parseRequestedStep('5-3')).toBe(null) // a range that does not parse asks for nothing
+  })
+})
+
+describe('rangeStart — D16 (list-reading)', () => {
+  const steps = (done: ReadonlyArray<number>, order: ReadonlyArray<number>) =>
+    order.map((n) => ({ n, title: `Step ${n}`, done: done.includes(n), planned: true, doneWhen: null, model: null, line: n }))
+
+  it('starts a range at its first undone step in build order, however it is written', () => {
+    const ordered = steps([], [20, 5, 6, 7, 8, 9])
+    expect(rangeStart(ordered, [{ from: 5, to: 9 }, { from: 20, to: 20 }])).toBe(20)
+    expect(rangeStart(ordered, [{ from: 20, to: 20 }, { from: 5, to: 9 }])).toBe(20)
+    expect(rangeStart(steps([20, 5], [20, 5, 6, 7, 8, 9]), [{ from: 5, to: 9 }, { from: 20, to: 20 }])).toBe(6)
+  })
+
+  it('falls back to its first step in build order once every one has landed, then to the number typed', () => {
+    expect(rangeStart(steps([1, 2, 3], [3, 1, 2]), [{ from: 1, to: 3 }])).toBe(3)
+    expect(rangeStart(steps([], [1, 2, 3]), [{ from: 9, to: 12 }])).toBe(9)
+    expect(rangeStart(steps([], [1, 2]), [])).toBeNull()
   })
 })
 
@@ -648,45 +674,45 @@ describe('orient with an explicitly requested step', () => {
   it('the request outranks the derived suggestion and names what it skips', () => {
     // Step 3 is both a jump past undone step 2 and still rough: both notes
     // ride in one parenthetical rather than fighting for the line.
-    expect(orient({ ...base, requested: 3 }).next).toBe(
+    expect(orient({ ...base, requested: one(3) }).next).toBe(
       'build step 3 — explicitly requested (skips 1 undone step; still unplanned: `/plumbbob:step` it first)',
     )
   })
 
   it('a request agreeing with the next undone step still reads as requested', () => {
-    expect(orient({ ...base, requested: 2 }).next).toBe('build step 2 — explicitly requested')
+    expect(orient({ ...base, requested: one(2) }).next).toBe('build step 2 — explicitly requested')
   })
 
   it('a request for a checkpointed step says so instead of pointing elsewhere', () => {
-    expect(orient({ ...base, requested: 1 }).next).toBe('build step 1 — explicitly requested (already checkpointed)')
+    expect(orient({ ...base, requested: one(1) }).next).toBe('build step 1 — explicitly requested (already checkpointed)')
   })
 
   it('a request outside the plan asks for a report, and repoints nothing', () => {
-    const o = orient({ ...base, requested: 9 })
+    const o = orient({ ...base, requested: one(9) })
     expect(o.next).toBe('step 9 is not in the plan (3 steps planned) — report the mismatch rather than guess')
     expect(o.requested).toBe(null)
     expect(o.nextDoneWhen).toBe('the thing works.') // detail stays with the next undone step
   })
 
   it('detail rows repoint at the requested step', () => {
-    const o = orient({ ...base, requested: 1 })
+    const o = orient({ ...base, requested: one(1) })
     expect(o.requested).toBe(1)
     expect(o.nextSeam).toEqual(['src/a.ts'])
     expect(o.nextDoneWhen).toBe(null) // step 1 carries no done-when of its own
   })
 
   it('a request matching the in-flight step keeps the finish move', () => {
-    expect(orient({ ...base, requested: 2, inFlight: 2 }).next).toContain('finish step 2')
+    expect(orient({ ...base, requested: one(2), inFlight: 2 }).next).toContain('finish step 2')
   })
 
   it('a request colliding with a different in-flight step surfaces the collision', () => {
-    expect(orient({ ...base, requested: 3, inFlight: 2 }).next).toBe(
+    expect(orient({ ...base, requested: one(3), inFlight: 2 }).next).toBe(
       'build step 3 — explicitly requested (step 2 is still in flight: `/plumbbob:verify` it or `/plumbbob:abandon` it first)',
     )
   })
 
   it('a spike still closes first; the request rides behind it', () => {
-    expect(orient({ ...base, requested: 3, spiking: true }).next).toBe(
+    expect(orient({ ...base, requested: one(3), spiking: true }).next).toBe(
       'close the spike — `plumbbob spike done`; then build step 3 (explicitly requested)',
     )
   })
@@ -696,7 +722,7 @@ describe('formatOrientation with an explicitly requested step', () => {
   it('moves the one arrow to the requested row, exactly', () => {
     // One arrow, always: the requested step takes the marker and the derived
     // next step loses it, so the dashboard never argues with the invocation.
-    expect(formatOrientation(orient({ ...base, requested: 3 }))).toBe(
+    expect(formatOrientation(orient({ ...base, requested: one(3) }))).toBe(
       [
         'PlumbBob — My Feature   [DESIGN]',
         '',
@@ -714,14 +740,14 @@ describe('formatOrientation with an explicitly requested step', () => {
   })
 
   it('a requested checkpointed step keeps its ✓ and takes the arrow', () => {
-    const out = formatOrientation(orient({ ...base, requested: 1 }))
+    const out = formatOrientation(orient({ ...base, requested: one(1) }))
     expect(out).toContain('✓ 1  First step   ← requested')
     expect(out).toContain('seam: src/a.ts')
     expect(out).not.toContain('← next')
   })
 
   it('an out-of-plan request leaves the ← next marker in place', () => {
-    const out = formatOrientation(orient({ ...base, requested: 9 }))
+    const out = formatOrientation(orient({ ...base, requested: one(9) }))
     expect(out).toContain('▸ 2  Second step   ← next')
     expect(out).toContain('step 9 is not in the plan')
   })
@@ -950,11 +976,20 @@ describe('the build order', () => {
     expect(orient({ ...base, intent: ORDERED }).next).toBe('plan step 3 — `/plumbbob:step`')
   })
 
+  it('points a requested range at its first undone step in build order, not its first number', () => {
+    // Step 1 is done and the order runs 3 before 2, so `1-3` starts at 3.
+    expect(orient({ ...base, intent: ORDERED, requested: parseRequestedStep('1-3') }).requested).toBe(3)
+    expect(orient({ ...base, intent: ORDERED, requested: parseRequestedStep('2,3') }).requested).toBe(3)
+    // Document order: the same range starts at 2, its first undone step.
+    expect(orient({ ...base, requested: parseRequestedStep('1-3') }).requested).toBe(2)
+    expect(orient({ ...base, requested: parseRequestedStep('3,2') }).requested).toBe(2)
+  })
+
   it("a requested step's skip count reads the build order", () => {
-    expect(orient({ ...base, intent: ORDERED, requested: 2 }).next).toBe(
+    expect(orient({ ...base, intent: ORDERED, requested: one(2) }).next).toBe(
       'build step 2 — explicitly requested (skips 1 undone step)',
     )
-    expect(orient({ ...base, intent: ORDERED, requested: 3 }).next).toBe(
+    expect(orient({ ...base, intent: ORDERED, requested: one(3) }).next).toBe(
       'build step 3 — explicitly requested (still unplanned: `/plumbbob:step` it first)',
     )
   })
