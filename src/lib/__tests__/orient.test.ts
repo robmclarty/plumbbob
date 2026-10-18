@@ -24,8 +24,10 @@ import {
   parseTitle,
   rangeStanding,
   rangeStart,
-  remainingOrder,
+  readRunArgs,
   recapLines,
+  remainingOrder,
+  resolveRun,
   seamRowFromDiff,
   setBuildOrder,
   skippedBefore,
@@ -1463,6 +1465,175 @@ Five commands drive the build. Two stops are calls made at a step's own pause, a
         ['uncovered', null],
         ['malformed', 3],
       ])
+    })
+  })
+
+  describe('readRunArgs — D96 (plan-names-the-grant)', () => {
+    it('reads a range number, and anything else as the range holding the next step', () => {
+      expect(readRunArgs('')).toEqual({ item: null })
+      expect(readRunArgs('3')).toEqual({ item: 3 })
+      expect(readRunArgs('  4  ')).toEqual({ item: 4 })
+      expect(readRunArgs('3.')).toEqual({ item: 3 })
+      expect(readRunArgs('3, then review the card')).toEqual({ item: 3 })
+      expect(readRunArgs('range 3')).toEqual({ item: null })
+      // A host that never substitutes the invocation passes the placeholder through.
+      expect(readRunArgs('$ARGUMENTS')).toEqual({ item: null })
+    })
+
+    it('passes over --auto, which adds nothing', () => {
+      expect(readRunArgs('--auto')).toEqual({ item: null })
+      expect(readRunArgs('--auto 3')).toEqual({ item: 3 })
+      expect(readRunArgs('3 --auto')).toEqual({ item: 3 })
+      expect(readRunArgs('3 4')).toEqual({ item: 3 })
+    })
+
+    it('reads a span or a list of ranges as a form no run defines', () => {
+      for (const text of ['2-4', '2,3', '2, 3', '2-', '1-3.']) {
+        expect(readRunArgs(text)).toBeNull()
+      }
+    })
+  })
+
+  describe('resolveRun — D95 (run-verb), D97 (run-refuses)', () => {
+    /** The run a plan names, nothing in flight and no spike unless given. */
+    const run = (intent: string, opts: { item?: number | null; inFlight?: number | null; spiking?: boolean } = {}) =>
+      resolveRun({ intent, inFlight: opts.inFlight ?? null, spiking: opts.spiking ?? false, item: opts.item ?? null })
+
+    it('names the range holding the next undone step and what is left of it, in document order', () => {
+      const intent = plan({ done: through(5), ranges: SECTION })
+      const r = run(intent)
+      expect(r).toMatchObject({ ok: true, range: { item: 3, bare: false }, count: 5, left: [6, 7, 8, 9], steps: '6-9', grant: 'steps 6-9' })
+      expect(r.ok && r.range.stop).toBe('review the card on a live boundary before the skills teach it')
+      expect(run(plan({ done: through(1), ranges: SECTION }))).toMatchObject({ ok: true, range: { item: 2 }, left: [2, 3, 4, 5], grant: 'steps 2-5' })
+      expect(run(plan({ done: through(7), ranges: SECTION }))).toMatchObject({ ok: true, range: { item: 3 }, left: [8, 9], steps: '8-9', grant: 'steps 8-9' })
+    })
+
+    it('names range N when one is typed, whatever step comes next', () => {
+      const intent = plan({ done: through(5), ranges: SECTION })
+      expect(run(intent, { item: 5 })).toMatchObject({ ok: true, range: { item: 5 }, left: [11, 12], steps: '11-12', grant: 'steps 11-12' })
+      expect(run(intent, { item: 3 })).toMatchObject({ ok: true, range: { item: 3 }, steps: '6-9' })
+    })
+
+    it('mints nothing for a bare range, which builds its step to the pause, and carries its stop', () => {
+      const r = run(plan({ done: through(9), ranges: SECTION }))
+      expect(r).toMatchObject({ ok: true, range: { item: 4, bare: true }, left: [10], steps: '10', grant: null })
+      expect(r.ok && r.range.stop).toBe("at step 10's pause, pick the label the docs will name")
+      expect(run(plan({ ranges: SECTION }), { item: 4 })).toMatchObject({ ok: true, range: { item: 4 }, grant: null })
+      // Range 1 is bare too: the run names it whole at the plan's start.
+      expect(run(plan({ ranges: SECTION }))).toMatchObject({ ok: true, range: { item: 1, bare: true }, steps: '1', grant: null })
+    })
+
+    it('writes a range down to one step as that step, and grants it alone', () => {
+      expect(run(plan({ done: through(8), ranges: SECTION }))).toMatchObject({ ok: true, range: { item: 3 }, left: [9], steps: '9', grant: 'steps 9' })
+    })
+
+    it('writes what is left in build order under a re-sequenced build order, and grants it in the normal form', () => {
+      const runs = (list: string) =>
+        items('1. `/plumbbob:build 1-4`, **stop:** review it', `2. \`/plumbbob:build ${list}\`, **stop:** review it`, '3. `/plumbbob:build 10-19`, **stop:** review it')
+      const order = [1, 2, 3, 4, 20]
+      for (const list of ['20,5-9', '5-9,20']) {
+        const r = run(plan({ count: 20, done: through(4), order, ranges: runs(list) }))
+        expect(r).toMatchObject({ ok: true, range: { item: 2 }, left: [20, 5, 6, 7, 8, 9], steps: '20,5-9', grant: 'steps 5-9,20' })
+      }
+      expect(run(plan({ count: 20, done: [...through(4), 20], order, ranges: runs('5-9,20') }))).toMatchObject({ steps: '5-9', grant: 'steps 5-9' })
+    })
+
+    it('walks a list range such as 70,1-3,5 from its first step in build order', () => {
+      const order = [70, 1, 2, 3, 5, 4]
+      const ranges = items('1. `/plumbbob:build 70,1-3,5`, **stop:** review it', '2. `/plumbbob:build 4,6-69`, **stop:** review it')
+      const fresh = run(plan({ count: 70, order, ranges }))
+      expect(fresh).toMatchObject({ ok: true, range: { item: 1 }, left: [70, 1, 2, 3, 5], steps: '70,1-3,5', grant: 'steps 1-3,5,70' })
+      expect(run(plan({ count: 70, done: [70, 1], order, ranges }))).toMatchObject({ steps: '2-3,5', grant: 'steps 2-3,5' })
+      expect(run(plan({ count: 70, done: [70, 1, 2, 3, 5], order, ranges }))).toMatchObject({ range: { item: 2 }, steps: '4,6-69', grant: 'steps 4,6-69' })
+    })
+
+    it('names the range holding the step in flight, and leads what is left with it', () => {
+      // At step 6's pause the run is that pause's approval and the rest of range 3.
+      expect(run(plan({ done: through(5), ranges: SECTION }), { inFlight: 6 })).toMatchObject({ ok: true, range: { item: 3 }, steps: '6-9', grant: 'steps 6-9' })
+      // At the pause on a range's last step, only that step is left.
+      expect(run(plan({ done: through(8), ranges: SECTION }), { inFlight: 9 })).toMatchObject({ ok: true, left: [9], grant: 'steps 9' })
+      // Entered out of order: step 12 in flight while step 6 is undone names range 5, led by 12.
+      const ahead = run(plan({ done: through(5), ranges: SECTION }), { inFlight: 12 })
+      expect(ahead).toMatchObject({ ok: true, range: { item: 5 }, left: [12, 11], steps: '12,11', grant: 'steps 11-12' })
+      // Entered out of order inside its own range: step 8 leads, then 6, 7, and 9.
+      const inside = run(plan({ done: through(5), ranges: SECTION }), { inFlight: 8 })
+      expect(inside).toMatchObject({ ok: true, range: { item: 3 }, left: [8, 6, 7, 9], steps: '8,6-7,9', grant: 'steps 6-9' })
+      // A number naming the range that holds the step in flight walks it the same way.
+      expect(run(plan({ done: through(5), ranges: SECTION }), { inFlight: 12, item: 5 })).toMatchObject({ ok: true, left: [12, 11] })
+    })
+
+    it('refuses a number naming a range other than the one holding the step in flight', () => {
+      const intent = plan({ done: through(5), ranges: SECTION })
+      expect(run(intent, { inFlight: 12, item: 3 })).toEqual({ ok: false, kind: 'in-flight', step: 12, holding: 5, count: 5 })
+      // A step in flight that no range names leaves no range to name.
+      const four = plan({ done: through(5), ranges: SECTION.replace(/^5\. [\s\S]*$/m, '') })
+      expect(run(four, { inFlight: 11, item: 3 })).toEqual({ ok: false, kind: 'in-flight', step: 11, holding: null, count: 4 })
+      expect(run(four, { inFlight: 11 })).toEqual({ ok: false, kind: 'uncovered', step: 11, words: 'no range names step 11' })
+    })
+
+    it('refuses every run while a spike is open, ahead of every other case', () => {
+      const intent = plan({ done: through(5), ranges: SECTION })
+      expect(run(intent, { spiking: true })).toEqual({ ok: false, kind: 'spike' })
+      expect(run(intent, { spiking: true, item: 3 })).toEqual({ ok: false, kind: 'spike' })
+      expect(run(plan({ done: through(12), ranges: SECTION }), { spiking: true })).toEqual({ ok: false, kind: 'spike' })
+    })
+
+    it("refuses a plan without ranges, or with only the template's placeholder, naming the step a build would take", () => {
+      for (const ranges of [undefined, PLACEHOLDER]) {
+        expect(run(plan({ done: through(5), ranges }))).toEqual({ ok: false, kind: 'no-ranges', step: 6 })
+        expect(run(plan({ done: through(5), ranges }), { item: 2 })).toEqual({ ok: false, kind: 'no-ranges', step: 6 })
+        expect(run(plan({ done: through(5), ranges }), { inFlight: 8 })).toEqual({ ok: false, kind: 'no-ranges', step: 8 })
+      }
+    })
+
+    it('refuses nothing left, ahead of the ranges', () => {
+      expect(run(plan({ done: through(12), ranges: SECTION }))).toEqual({ ok: false, kind: 'finished' })
+      expect(run(plan({ done: through(12), ranges: SECTION }), { item: 3 })).toEqual({ ok: false, kind: 'finished' })
+      expect(run(plan({ done: through(12) }))).toEqual({ ok: false, kind: 'finished' })
+    })
+
+    it('refuses a range that has landed or that the plan lacks, naming the run a bare /plumbbob:run names instead', () => {
+      const intent = plan({ done: through(5), ranges: SECTION })
+      const instead = run(intent)
+      expect(run(intent, { item: 2 })).toEqual({ ok: false, kind: 'landed', item: 2, count: 5, instead })
+      expect(run(intent, { item: 7 })).toEqual({ ok: false, kind: 'missing', item: 7, instead })
+      expect(run(intent, { item: 0 })).toEqual({ ok: false, kind: 'missing', item: 0, instead })
+      expect(instead).toMatchObject({ ok: true, range: { item: 3 } })
+      // The run named instead can itself refuse.
+      const four = plan({ done: through(10), ranges: SECTION.replace(/^5\. [\s\S]*$/m, '') })
+      expect(run(four, { item: 2 })).toMatchObject({ kind: 'landed', instead: { ok: false, kind: 'uncovered', step: 11 } })
+    })
+
+    it('refuses a step no range names and a flagged range with the drift words, by number or not', () => {
+      const four = plan({ done: through(10), ranges: SECTION.replace(/^5\. [\s\S]*$/m, '') })
+      expect(run(four)).toEqual({ ok: false, kind: 'uncovered', step: 11, words: 'no range names step 11' })
+      const cut = plan({
+        done: through(5),
+        order: [1, 2, 3, 4, 5, 6, 7, 11, 8],
+        ranges: SECTION,
+      })
+      const flagged = { ok: false, kind: 'flagged', item: 3, count: 5, words: 'the build order puts step 11 inside it' }
+      expect(run(cut)).toEqual(flagged)
+      expect(run(cut, { item: 3 })).toEqual(flagged)
+      // The build order cuts range 5 too (steps 8 to 10 fall between 11 and 12),
+      // while range 4 is whole, so naming it walks it.
+      expect(run(cut, { item: 5 })).toMatchObject({ ok: false, kind: 'flagged', item: 5 })
+      expect(run(cut, { item: 4 })).toMatchObject({ ok: true, steps: '10' })
+      // An item that does not parse is flagged by its number.
+      const broken = plan({ ranges: items('1. `/plumbbob:build 1-6`, **stop:** review it', '2. `/plumbbob:build 7-12`') })
+      expect(run(broken, { item: 2 })).toEqual({ ok: false, kind: 'flagged', item: 2, count: 2, words: 'item 2 under Build ranges does not parse' })
+      // A section where nothing parses leaves the next step in no range.
+      expect(run(plan({ ranges: items('1. `/plumbbob:build 1-12`') }))).toEqual({ ok: false, kind: 'uncovered', step: 1, words: 'no range names step 1' })
+    })
+
+    it('names the range the card names, read through rangeStanding', () => {
+      for (const done of [0, 1, 5, 7, 9, 10]) {
+        const intent = plan({ done: through(done), ranges: SECTION })
+        const next = done + 1
+        const r = run(intent)
+        expect(r.ok && r.range.item).toBe(standing(intent, next).holding?.item)
+        expect(r.ok && r.count).toBe(standing(intent, next).count)
+      }
     })
   })
 })

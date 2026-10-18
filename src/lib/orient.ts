@@ -680,6 +680,165 @@ function stepPhrase(items: ReadonlyArray<string>): { readonly words: string; rea
   return { words: `${one ? 'step' : 'steps'} ${items.join(', ')}`, be: one ? 'is' : 'are' }
 }
 
+// --- The run: what `/plumbbob:run` names. The turn hook reads it to mint the
+// run's grant, `status --run` to print the run header, and the card to name the
+// run beneath Next Up, so all three read one answer from one plan. ---
+
+/**
+ * The range a run's arguments name, read from the one token after the verb:
+ * a range number names that range, and anything else, nothing included, names
+ * the range holding the next step.
+ *
+ * `--auto` beside the verb adds nothing, so it is passed over. Numbers joined
+ * by a dash or a comma are a span or a list of ranges (`2-4`, `2, 3`), a form
+ * no run defines, and read as null, so nothing is minted or resolved for them.
+ * Trailing sentence punctuation is the sentence's, and so is a comma after the
+ * last number (`/plumbbob:run 3, then review`), as it is after a build's.
+ */
+export function readRunArgs(text: string): { readonly item: number | null } | null {
+  const words: string[] = []
+  for (const token of text.split(/\s+/)) {
+    const word = token.replace(/[.;:!?]+$/, '')
+    if (word === '' || word === '--auto') {
+      continue
+    }
+    if (!/^[\d,-]+$/.test(word)) {
+      break
+    }
+    words.push(word)
+  }
+  const run = words.join(' ').replace(/,+$/, '')
+  if (/[,-]/.test(run)) {
+    return null
+  }
+  return { item: run === '' ? null : Number(run.split(' ')[0]) }
+}
+
+/** What a run is resolved from: the plan's text, the step in flight, whether a spike is open, and the range typed. */
+export type RunInput = {
+  readonly intent: string
+  readonly inFlight: number | null
+  readonly spiking: boolean
+  readonly item: number | null // the range number typed; null names the range holding the next step
+}
+
+/** A run that names a range it can walk. */
+export type RunRange = {
+  readonly ok: true
+  readonly range: BuildRange // its item, its form (`bare`), its stop, and its model
+  readonly count: number // the M in `range N of M`
+  // What is left of the range, in the order the run builds it: the step in
+  // flight first when the range holds it, then the undone steps in build order.
+  readonly left: ReadonlyArray<number>
+  // `left` written as a step list in that order (`6-9`, `20,5-9`, `9`), so
+  // its first number is where the run starts.
+  readonly steps: string
+  // The grant the hook mints for the run, `steps 6-9` in the list's normal
+  // form; null for a bare range, which builds its step to the pause.
+  readonly grant: string | null
+}
+
+/**
+ * Why a run names nothing it can walk, with what each refusal's move needs: a
+ * spike open, nothing left, a plan without ranges (and the step a build would
+ * take), a step no range names, a flagged range or item and its drift words, a
+ * range typed that has landed or that the plan lacks (and the run a bare
+ * `/plumbbob:run` names in its place), and a range typed that does not hold
+ * the step in flight (and the range that does, if any).
+ */
+export type RunRefusal =
+  | { readonly ok: false; readonly kind: 'spike' }
+  | { readonly ok: false; readonly kind: 'finished' }
+  | { readonly ok: false; readonly kind: 'no-ranges'; readonly step: number }
+  | { readonly ok: false; readonly kind: 'uncovered'; readonly step: number; readonly words: string }
+  | { readonly ok: false; readonly kind: 'flagged'; readonly item: number; readonly count: number; readonly words: string }
+  | { readonly ok: false; readonly kind: 'landed'; readonly item: number; readonly count: number; readonly instead: Run }
+  | { readonly ok: false; readonly kind: 'missing'; readonly item: number; readonly instead: Run }
+  | {
+      readonly ok: false
+      readonly kind: 'in-flight'
+      readonly step: number
+      readonly holding: number | null // the range holding the step in flight; null when none does
+      readonly count: number
+    }
+
+/** The range a run names, or why it names nothing it can walk. */
+export type Run = RunRange | RunRefusal
+
+/**
+ * The range a run names and what is left of it, or the refusal that says why
+ * it names nothing it can walk.
+ *
+ * A step in flight decides the run: with no number typed, the run names the
+ * range holding that step, or with none in flight the range holding the next
+ * undone step in build order; a number names that range, and refuses when the
+ * range does not hold the step in flight. What is left counts the step in
+ * flight as undone and leads with it, since a run that started elsewhere would
+ * rewrite the step markers and sweep its half-built diff into another step's
+ * commit. A spike open refuses every run, and nothing left refuses before the
+ * ranges are read. The ranges are read through `rangeStanding`, so the run
+ * and the card name the same range and the same drift.
+ */
+export function resolveRun(input: RunInput): Run {
+  if (input.spiking) {
+    return { ok: false, kind: 'spike' }
+  }
+  const ordered = parseOrderedSteps(input.intent)
+  const anchor = input.inFlight ?? ordered.find((s) => !s.done)?.n ?? null
+  if (anchor === null) {
+    return { ok: false, kind: 'finished' }
+  }
+  const plan = parseBuildRanges(input.intent)
+  const standing = rangeStanding(plan, ordered, anchor)
+  const { count } = standing
+  if (count === 0) {
+    return { ok: false, kind: 'no-ranges', step: anchor }
+  }
+  if (input.item === null) {
+    const { holding } = standing
+    return holding === null
+      ? { ok: false, kind: 'uncovered', step: anchor, words: noRangeWords([anchor]) }
+      : walkRun(holding, standing, ordered, input.inFlight)
+  }
+  const item = input.item
+  const range = plan.ranges.find((r) => r.item === item)
+  if (range === undefined) {
+    const malformed = standing.drift.find((d) => d.kind === 'malformed' && d.item === item)
+    return malformed === undefined
+      ? { ok: false, kind: 'missing', item, instead: resolveRun({ ...input, item: null }) }
+      : { ok: false, kind: 'flagged', item, count, words: malformed.words }
+  }
+  if (rangeLanded(range, ordered)) {
+    return { ok: false, kind: 'landed', item, count, instead: resolveRun({ ...input, item: null }) }
+  }
+  if (input.inFlight !== null && !hasStep(range.steps, input.inFlight)) {
+    return { ok: false, kind: 'in-flight', step: input.inFlight, holding: standing.holding?.item ?? null, count }
+  }
+  return walkRun(range, standing, ordered, input.inFlight)
+}
+
+/**
+ * A range as a run walks it: what is left of it, led by the step in flight,
+ * and the grant the hook mints; or the flagged refusal when the range's own
+ * drift names it.
+ */
+function walkRun(range: BuildRange, standing: RangeStanding, ordered: ReadonlyArray<Step>, inFlight: number | null): Run {
+  const flag = standing.drift.find((d) => d.item === range.item && d.kind !== 'malformed')
+  if (flag !== undefined) {
+    return { ok: false, kind: 'flagged', item: range.item, count: standing.count, words: flag.words }
+  }
+  const undone = ordered.filter((s) => hasStep(range.steps, s.n) && (!s.done || s.n === inFlight)).map((s) => s.n)
+  const left = inFlight !== null && undone.includes(inFlight) ? [inFlight, ...undone.filter((n) => n !== inFlight)] : undone
+  return {
+    ok: true,
+    range,
+    count: standing.count,
+    left,
+    steps: formatStepList(left),
+    grant: range.bare ? null : `steps ${normalizeStepList(left.map((n) => ({ from: n, to: n })))}`,
+  }
+}
+
 /**
  * Flip step N's `[ ]` checkbox to `[x]` within the `## Steps` section.
  *
