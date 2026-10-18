@@ -510,8 +510,8 @@ carries its sequence in the numbers. The parks segment is the open count
 against everything ever parked, whenever anything has been parked; it rides
 even under `Nothing planned`, where an unharvested list is the one reminder
 that matters. When the plan declares build ranges, a third segment leads the
-line and names the range holding the step and the command that runs what is
-left of it, `· range 3 of 5: /plumbbob:build 6-9`; its forms are under
+line and names the range holding the step and the run that lands what is
+left of it, `· range 3 of 5: /plumbbob:run (steps 6-9)`; its forms are under
 [the build ranges](#the-build-ranges). With none of the three, the line
 vanishes. The indent is what keeps it inside the part: a reader of the anatomy
 files an indented line under the label above it and a flush one as a stray.
@@ -559,6 +559,32 @@ tick, and the card is where they learn what each tick does. It teaches the
 moves without saying which one to take; that is the recommendation's job, and
 it follows.
 
+When the plan declares build ranges and the step in flight sits in a range
+that lands its steps, with steps still ahead of it, a fifth move rides
+second, beneath `looks good`:
+
+```text
+**Your Call**:
+
+- `looks good` → I checkpoint Step 6; back to the boundary
+- `/plumbbob:run` → I checkpoint Step 6, then run the rest of range 3 to its stop
+- `expand`, or any question → I show more of what is there; nothing changes, and `show the pause` brings all of this back
+- anything that reads as direction → I take it as what to change; nothing lands until you approve
+- `revert` → I wind the work back to the last checkpoint
+```
+
+The run typed at a pause is that pause's `looks good` and the rest of the
+range in one reply ([D95 (run-verb)](decisions.md#d95)): the step lands
+only on a green check, so the row renders exactly when `looks good` does,
+and what is left of the range follows, walked as a run walks it. It rides
+second because it is the second approval, and it names the step and the
+range because the outcome is two beats where `looks good` is one. The row
+renders only where the run does more than `looks good`: inside a bare range
+the run ends once its step lands, and so does one typed at the pause on a
+range's last step, so at those pauses the block keeps its four moves and
+the segment beneath Next Up says the range lands with the step
+([the range segment](#the-range-segment-beneath-next-up)).
+
 At the plan pause the block keeps the shape with the moves that apply there
 (nothing is recorded yet, so `revert` has nothing to wind back to):
 
@@ -569,6 +595,13 @@ At the plan pause the block keeps the shape with the moves that apply there
 - `expand`, or any question → I show more of what is there; nothing changes
 - anything that reads as direction → I take it as what to sharpen; the plan is cheap to change now
 ```
+
+When the plan declares build ranges and the step the plan starts at sits in
+a range that parses, the first row names the run instead, since the run is
+what the human types next: `/plumbbob:run runs range 1 from Step 1`, or
+`runs range 3 from Step 8` after a mid-build refine, where the first undone
+step sits partway through a range. A step in no range, or in a flagged
+range, keeps the build.
 
 An auto halt on trouble renders the standard card; the Verdict's worst
 component is the halt reason. A clean halt renders no card at all: its step
@@ -804,10 +837,15 @@ A plan may say where the build stops for a human call, and the card reads it
 back. `## Build ranges` sits in `intent.md` right after `## Build order`
 ([D92 (build-ranges)](decisions.md#d92)): one numbered item per range, each
 the command the human types, the stop that ends it, and the model to run it
-on. **A range is advice the way a `- model:` line is, never a grant.** The
-human still types the command, because a grant comes only from the literal
-prompt ([D65 (human-typed-grants)](decisions.md#d65)), and a line the model
-can edit would otherwise be a grant the model could forge
+on. **A range is advice the way a `- model:` line is, and it grants nothing
+until the human types the run that names it.** `/plumbbob:run` runs what is
+left of the range holding the next step, and `/plumbbob:run 3` runs range 3
+([D95 (run-verb)](decisions.md#d95)); the turn hook mints the grant from the
+plan as it stands at the keystroke, `steps 6-9` for a range that lands its
+steps and nothing for a bare one
+([D96 (plan-names-the-grant)](decisions.md#d96)), because a grant comes only
+from the literal prompt ([D65 (human-typed-grants)](decisions.md#d65)), and a
+line the model can edit would otherwise be a grant the model could forge
 ([D67 (auto-not-a-grant)](decisions.md#d67)). Three sections a model wrote by
 hand on 2026-10-16, one each in checkride, fascicle, and this repo, settled
 the shape before any code read one, and all three cut at the same points: a
@@ -858,9 +896,10 @@ counts by.
 Nothing about a range is stored. It is done when every step it names is
 `[x]`, in progress when it holds the next undone step in build order, and
 what is left of it is its undone steps, written in build order
-([D91 (step-list-grants)](decisions.md#d91)); a range down to one undone step
-writes it `9-9`, which lands it, where a bare range stays bare. The boxes are
-already the truth, and a second copy of a fact is one more thing to drift.
+([D91 (step-list-grants)](decisions.md#d91)), the steps a run lands; a human
+landing the last of them by hand types `/plumbbob:build 9-9`, which lands it
+where a bare `9` would pause. The boxes are already the truth, and a second
+copy of a fact is one more thing to drift.
 
 The template ships one item, and it is scaffold until someone fills it in
 ([D77 (placeholder-uncounted)](decisions.md#d77)): an item whose command or
@@ -893,49 +932,76 @@ order however it is written.
 ### The range segment beneath Next Up
 
 The note beneath the pointer opens on the range holding the step Next Up
-names, numbered as the plan's item over the count of ranges, and the command
-that runs what is left of it from that step:
+names, numbered as the plan's item over the count of ranges, and the run
+that lands what is left of it from that step, the steps in a bracket:
 
 ```text
 **Next Up**: Step 6 of 12 - feat(orient): read the ranges (model: **Opus**, details: `.plumbbob/builds/x/intent.md:30`)
-  · range 3 of 5: /plumbbob:build 6-9 · parked 2 of 7 open
+  · range 3 of 5: /plumbbob:run (steps 6-9) · parked 2 of 7 open
 ```
 
 The segment leads the note, ahead of the build order and the parks, because
 it is the one segment that names what to type. Its forms:
 
 ```text
-  · range 3 of 5: /plumbbob:build 6-9
-  · range 3 of 5: /plumbbob:build 8-9
-  · range 3 of 5: /plumbbob:build 9-9
-  · range 4 of 5: /plumbbob:build 10
+  · range 3 of 5: /plumbbob:run (steps 6-9)
+  · range 3 of 5: /plumbbob:run (steps 8-9)
+  · range 3 of 5: /plumbbob:run (step 9)
+  · range 4 of 5: /plumbbob:run (step 10 to its pause)
+  · range 3 of 5 lands with step 9
   · range 3 of 5 needs a re-cut (the build order puts step 11 inside it)
   · no range names step 12
 ```
 
 The first is a range not yet started. The second and third are what is left
 after steps 6 and 7 landed, and then 8: a range that stopped early (a red
-check, a halt on trouble) resumes from the card, and its last step is written
-`9-9` so the command lands it rather than pausing on it. The fourth is a bare
-range, whose command is the bare build; the form says it stops at the pause.
-The last two are the drift words above, in place of a command. A list range
-writes what is left in build order (`20,5-9`), so the first number on the
-card is where it starts.
+check, a halt on trouble) resumes from the card, and the run lands its last
+step rather than pausing on it, so one step is bracketed the way four are.
+The fourth is a bare range, whose run builds its step to the pause, and the
+bracket says so. The fifth is the pause on a range's last step, below. The
+last two are the drift words above, in place of a run. A list range writes
+what is left in build order (`20,5-9`), so the first number in the bracket
+is where the run starts.
 
-The segment renders at every site the note does, with the same string: the
-plan pause and the plan commit, where Next Up names step 1 and the segment
-names range 1 whole; a step pause, where Next Up names the step after the one
-in flight, so the segment names what is left once that step lands; and a
-boundary. The driver pointer and the `Back to` reminder carry no note, as
-before.
+The verb is the same at every site, so the bracket is what changes, and it
+is written as the grant the hook will mint
+([D96 (plan-names-the-grant)](decisions.md#d96)): `steps 6-9` on the card
+is `steps 6-9` in `GRANT` once the human types the run, and a card that
+named one set while the hook minted another would be a suggestion that does
+something else. The plan's item keeps `/plumbbob:build 6-9` as the range's
+definition, and typing that still lands the range by hand; the card names
+the run because the run is what the human types now, and the steps because
+they are what it will land
+([D98 (card-names-the-run)](decisions.md#d98)).
+
+The segment renders at every site the note does: the plan pause and the
+plan commit, where Next Up names step 1 and the segment names range 1
+whole; a step pause; and a boundary. The driver pointer and the `Back to`
+reminder carry no note, as before. At a step pause the segment names the
+range holding the step in flight, and the bracket opens on that step,
+because `/plumbbob:run` typed there is that pause's `looks good`
+([D95 (run-verb)](decisions.md#d95)): it lands the step on a green check
+and runs on through what is left of the range, and the grant the hook mints
+counts the step in flight as undone. So at step 6's pause, where Next Up
+names step 7, the segment reads `range 3 of 5: /plumbbob:run (steps 6-9)`,
+and the Your Call block offers the run as a move
+([the Your Call block](#the-your-call-block)). At the pause on a range's
+last step a run would land that step and end on the range's stop rather
+than start the next range, so the segment names no run: it reads
+`range 3 of 5 lands with step 9`, and Next Up's step 10 waits for the
+boundary, where the Stop part and the next range's segment render. A bare
+range's pause is the same case, since its run ends once its step lands.
 
 **While the segment suggests a range, the bracket's bold model is the
-range's.** Next Up's bracket reads `model: **Opus**` from the range's
-`- model:` line rather than the step's, and the segment names no model of its
-own, because the bold token is the one the human acts on before the next run,
-the run is the range, and a range's first step is often not its hardest. A
-range with no model line leaves the step's in place, and the pointer at a step
-in no range, or in a flagged range, keeps the step's, as today.
+range's.** Next Up's bracket reads `model: **Opus**` from the `- model:`
+line of the range holding the step Next Up names, rather than the step's,
+and the segment names no model of its own, because the bold token is the
+one the human acts on before the next run, the run is the range, and a
+range's first step is often not its hardest. At the pause on a range's last
+step that is the next range, the one the human picks a model for, while
+the segment names the range that is finishing. A range with no model line
+leaves the step's in place, and the pointer at a step in no range, or in a
+flagged range, keeps the step's, as today.
 
 ### The Stop part
 
@@ -950,7 +1016,7 @@ A boundary turn with it, whole:
 **Stop**: Range 3 of 5 landed - review the card on a live boundary before the skills teach it (details: `.plumbbob/builds/x/intent.md:63`)
 
 **Next Up**: Step 10 of 12 - feat(docs): name the label (model: **Fable**, details: `.plumbbob/builds/x/intent.md:34`)
-  · range 4 of 5: /plumbbob:build 10
+  · range 4 of 5: /plumbbob:run (step 10 to its pause)
 ```
 
 The shape is one labeled line: `Range N of M landed`, a plain hyphen, the
@@ -968,8 +1034,9 @@ the same way, and the relay check reads it as a part of the block.
 It renders on exactly one boundary per range: the one where the range's last
 undone step lands, whichever step that is and however it landed, by the range,
 by `--auto`, or by hand. A bare range never earns one, because its stop is its
-own pause: the step's `plumbbob status` carries the stop text, and the model
-writing that pause's recommendation reads it there. The plan commit carries
+own pause: the step's `plumbbob status` carries the stop text, in the ranges
+block and in the run header, and the model writing that pause's
+recommendation reads it there. The plan commit carries
 none, since nothing landed. The boundary keeps its tier: the part is
 orientation, and no Your Call block follows it.
 
@@ -992,7 +1059,7 @@ grammar:
 last checkpoint  step 5 · 1a2b3c4
 parked 2 of 7 open · open questions 0
 
-next → build range 3 of 5 — `/plumbbob:build 6-9`
+next → run range 3 of 5 — `/plumbbob:run` (steps 6-9)
 ```
 
 A row is the item's number, its command as the plan wrote it, and its model
@@ -1001,11 +1068,12 @@ done and `▸` the one holding the next undone step, with the step list's
 `← next` tail. Each undone range carries its stop on an indented line, because
 the stops ahead are what the human steers by, and a landed range folds to its
 row, because its call was made. The block is the reference surface, so no
-stop is cut to a count. The dashboard's pointer names the range's command
-when the next step sits in one, `build range 3 of 5`, and the command is what
-is left of the range, `/plumbbob:build 8-9` once two of its steps have landed.
-With the step in flight, or an explicit request, the pointer reads as it does
-today.
+stop is cut to a count. The dashboard's pointer names the run when the next
+step sits in a range, `run range 3 of 5`, with the verb and the bracket the
+card's segment carries: `(steps 8-9)` once two of its steps have landed,
+`(step 10 to its pause)` for a bare range. With the step in flight, or an
+explicit request, the pointer reads as it does today; `--run` is the one
+request that keeps it, below.
 
 A drift row rides beneath the range it flags, opening on the warning glyph
 and the words from the table above, and a step no range names, or an item
@@ -1026,12 +1094,95 @@ A flagged range takes the pointer back to today's step move, `build step 6 —
 `recover` reports a range naming a step the plan lacks, beside the finding it
 already makes for a build order that does.
 
+### The run header
+
+`plumbbob status --run "<args>"` is the dashboard the `/plumbbob:run` skill
+reads first, the raw text of its invocation passed through the way the build
+skill passes `--invoked`. It resolves the run the text names
+([D95 (run-verb)](decisions.md#d95)), the range holding the next undone step
+in build order with the step in flight counted undone, or range N when the
+text carries a number, and prints the dashboard beneath a header naming it,
+with the run's first step marked `← requested` and the pointer naming the
+run, as an explicit `/plumbbob:build 6` repoints them at a step:
+
+```text
+run  range 3 of 5 · steps 6-9 · ends at step 9's boundary
+     stop: review the card on a live boundary before the skills teach it
+     grant: steps 6-9
+
+PlumbBob — Build ranges   [DESIGN]
+```
+
+The first line is the range, what is left of it (the bracket the card
+carries, `steps 6-9`, `steps 20,5-9`, or `step 9`), and where the run ends:
+`ends at step 9's boundary` for a range that lands its steps,
+`ends at step 10's pause` for a bare one. The stop rides beneath, as the
+ranges block writes it, because a bare range's pause is where the model
+writes the recommendation to that call, and the stop is what it speaks to.
+The third line is the grant the hook minted at the keystroke
+([D96 (plan-names-the-grant)](decisions.md#d96)), and it is the line the
+skill trusts over the two above it, since the hook read the plan the human
+typed against. Its forms:
+
+```text
+     grant: steps 6-9
+     grant: none, as a bare range builds to its pause
+     grant: none
+     grant: range 9, unlike the run
+     grant: steps 6-9, unlike the run
+```
+
+The first is a run the hook minted as the header resolved it. The second is
+a bare range's, where no step lands and the pause is the point. The third is
+a landing range the hook minted nothing for (a plugin older than the run, or
+a bare `/run` that reached Claude Code's own skill), so no step could land,
+and the skill reports it rather than walks it. The last two name a grant
+unlike the run: `range 9` from a hook before step lists, or a set that is
+not the run's, because the typed number never reached the injection and the
+header resolved the next range while the hook minted the typed one, or a
+record at the boundary re-cut the range between the keystroke and the walk.
+The header states the difference; what the skill does with it is the run
+skill's to say.
+
+A run that names nothing it can walk prints no header
+([D97 (run-refuses)](decisions.md#d97)). The dashboard renders as it does
+without the flag, and its pointer is the refusal with the move that unblocks
+it, in the dashboard's own register:
+
+```text
+next → cut the ranges — `/plumbbob:refine ranges` (the plan declares none; `/plumbbob:build` builds step 6 alone)
+next → re-cut the ranges — `/plumbbob:refine ranges` (no range names step 12)
+next → re-cut the ranges — `/plumbbob:refine ranges` (range 3 of 5 needs a re-cut: the build order puts step 11 inside it)
+next → run range 3 of 5 — `/plumbbob:run` (steps 6-9; range 2 of 5 has landed)
+next → run range 3 of 5 — `/plumbbob:run` (steps 6-9; the plan has no range 7)
+next → harvest 2 parked ideas — `/plumbbob:harvest`; then finish up — `/plumbbob:finish` (or `/plumbbob:step` to add another increment)
+next → finish step 12 — `/plumbbob:verify` (or `/plumbbob:abandon` it; a run names range 5 of 5, which holds it)
+next → close the spike — `plumbbob spike done`
+```
+
+The first three are the plan's: no ranges, a next step no range names, and
+a flagged range, each pointing at the re-cut, with the build named beside
+the first because a plan without ranges is still built a step at a time.
+The fourth and fifth refuse the number typed, a range that has landed and
+one the plan lacks, and name the run the card names in its place, since
+that is the range to type. The sixth is the dashboard's own ending, which a
+run adds nothing to. The last two are the step in flight's and the spike's:
+a numbered run naming a range other than the one holding the step in flight
+refuses, and so does any run while a spike is open, with the remedy the
+dashboard already names, because a run that starts elsewhere would sweep
+the half-built diff into its first commit. A bare run while a step is in
+flight is not a refusal: it names the range holding that step, and the
+header renders.
+
 ### Without the section
 
 None of this renders for a plan without `## Build ranges`, or with only the
 template's placeholder under it: the note beneath Next Up is today's build
-order and parks, the bracket's model is the step's, no boundary carries a Stop
-part, the dashboard has no ranges block, and its pointer reads `build step 6`.
+order and parks, the bracket's model is the step's, the Your Call block keeps
+its four moves and the plan pause's row names the build, no boundary carries
+a Stop part, the dashboard has no ranges block, its pointer reads
+`build step 6`, and `status --run` prints no header, only the pointer that
+says to cut the ranges.
 Each line renders only when the plan declares ranges and the line says
 something the card does not already hold, because a reminder that repeats what
 is on screen is noise ([D93 (range-on-the-card)](decisions.md#d93), the call

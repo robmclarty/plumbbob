@@ -20,7 +20,8 @@ lands; [**D33 (info-exclude)**](#d33)–[**D38 (cli-owns-slugs)**](#d38) below c
 intent-legibility build, and [**D80 (cli-renders-model-relays)**](#d80)–[**D84 (one-liner-register)**](#d84)
 from the 2026-08-28 presentation build, and [**D87 (pause-once)**](#d87)–[**D89 (block-once)**](#d89)
 from the 2026-10-08 said-once-said-whole build, and [**D90 (notice-not-turn)**](#d90)–[**D94 (auto-and-stops)**](#d94)
-from the 2026-10-17 build-ranges build.)
+from the 2026-10-17 build-ranges build, and [**D95 (run-verb)**](#d95)–[**D99 (one-loop)**](#d99)
+from the 2026-10-17 runs-and-the-stop-card build.)
 
 ## Constraints (C)
 
@@ -1022,9 +1023,12 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   ([**D65 (human-typed-grants)**](#d65)) and a line the model can edit would be a grant it could forge
   ([**D67 (auto-not-a-grant)**](#d67)); and the section's command and the grant the hook mints are read by
   one parser, `src/lib/steplist.ts`, because a card that read a range one way while the hook read it
-  another would suggest a command that does something else. A range's progress is derived and never
-  stored, done when every step it names is `[x]` and in progress when it holds the next undone step in
-  build order, *because* the boxes are already the truth and a second copy of a fact is one more thing to
+  another would suggest a command that does something else. (Revised 2026-10-18 by
+  [**D96 (plan-names-the-grant)**](#d96): a range grants nothing until the human types the run that
+  names it, and the turn hook then mints `steps <what is left>` from the plan as it stands at the
+  keystroke, nothing for a bare range, while the item's command stays the range's definition.) A range's
+  progress is derived and never stored, done when every step it names is `[x]` and in progress when it
+  holds the next undone step in build order, *because* the boxes are already the truth and a second copy of a fact is one more thing to
   drift; what is left of it is its undone steps, written in build order. Its model is what its own
   `- model:` line says, never computed from its steps, because a ranking of model names in code goes stale
   with the next release, the reason tokens and cost stay out of the `spent` row. An item whose command or
@@ -1051,6 +1055,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   `Checkpoint` does, and the two questions the human brings to a boundary are what to type next and why
   the build stopped. The dashboard lists the ranges beneath the steps (`ranges  2 of 5 done`, with `✓` and
   `▸`, each undone range with its command, model, and stop), and its `next →` names the range's command.
+  (Revised 2026-10-18 by [**D98 (card-names-the-run)**](#d98): the segment and the pointer name
+  `/plumbbob:run` with the steps it lands in a bracket, `· range 3 of 5: /plumbbob:run (steps 6-9)`,
+  where they named the range's explicit command, and at the pause on a range's last step the segment
+  reads `range 3 of 5 lands with step 9` and names no run.)
   Each line renders only when the plan declares ranges and the line says something the card does not
   already hold, *because* a reminder that repeats what is on screen is noise, the call
   [**D86 (build-order)**](#d86) made for its own line, so a plan without the section renders exactly as it
@@ -1076,6 +1084,107 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   build-ranges build, merging its local `auto-and-stops`. Amends [**D56 (auto-composes)**](#d56) and
   [**D85 (range-top-lands)**](#d85), whose halt list gains this one. *Tagged in* the `build` skill and
   `docs/presentation.md`.
+
+- <a id="d95"></a>**D95 (run-verb): `/plumbbob:run` runs what is left of the range holding the next step, or of
+  range N, and ends where that range does.** The verb is `run`, Rob's pick at the plan prompt on 2026-10-17
+  over `range` and `build_range`, *because* it names an act, it is the word Rob reached for ("build run
+  3"), and it keeps the act apart from the plan's noun: the plan declares ranges, and a run is one range
+  being built. Claude Code ships a `/run` skill of its own, so a bare `/run` reaches theirs, the collision
+  `/plan`, `/status`, `/doctor`, and `/verify` already accept. With no argument the run names the range
+  holding the next undone step in build order, the step in flight counted undone, and `/plumbbob:run N`
+  names range N by its item number; either runs what is left of that range, its undone steps in build
+  order, *because* that is the range and the steps the card already names beneath Next Up
+  ([**D93 (range-on-the-card)**](#d93)) and the item number is the handle the card counts by. A range
+  that lands its steps is walked as a typed range is ([**D91 (step-list-grants)**](#d91)) and ends at
+  the boundary after its last step; a bare range is built to its pause, where the plan reserved the call
+  ([**D94 (auto-and-stops)**](#d94)). A step in flight decides the run: a bare run names the range
+  holding it, and a numbered run naming another range refuses ([**D97 (run-refuses)**](#d97)), *because*
+  a run that started elsewhere would rewrite the step markers, and its first checkpoint would stage the
+  half-built diff into another step's commit. Typed while a step waits at its pause, the run is that
+  pause's `looks good`: it lands the step only on a green check and runs on through what is left of the
+  range holding it, ending where the range does, so a bare range's run ends once its step lands and a
+  landing range's ends on its stop even when the paused step was its last, *because* finishing the run
+  that holds the next step is the verb's promise, approving the paused step is its first beat, and a run
+  that halted on trouble would otherwise take two replies to resume. The pause card offers the move only
+  inside a landing range with steps still ahead of the one in flight, where it does more than
+  `looks good`. Nothing chains ranges (`/plumbbob:run 2-4`, and `--auto` beside the verb, are forms this
+  build leaves unread), the CLI never decides where a range stops, and there is no `plumbbob run` verb:
+  the CLI resolves and records while the skill builds. Amends [**D83 (card-teaches-itself)**](#d83),
+  whose Your Call block gains the run as a move at that pause. Promoted from the 2026-10-17
+  runs-and-the-stop-card build, merging its locals `run-verb`, `run-names-a-range`, `run-at-a-pause`,
+  and `in-flight-first`. *Tagged in* `docs/presentation.md`.
+
+- <a id="d96"></a>**D96 (plan-names-the-grant): The turn hook mints a run's grant from the plan as it stands
+  when the human types the verb, and only for the namespaced verb.** `/plumbbob:run` mints
+  `steps <what is left>` of the range it names ([**D95 (run-verb)**](#d95)), in the normal form a typed
+  list mints (`steps 6-9`, [**D91 (step-list-grants)**](#d91)), and nothing for a bare range, which
+  builds to its pause; the set is frozen at the keystroke, so a later edit to the ranges or the build
+  order leaves it as it was, and a range on its own still grants nothing. The plan is the source
+  *because* the human types the verb against a card that names that range and its steps, so the card,
+  the grant, and the dashboard's run header read one plan; a frozen set cannot widen with an edit the
+  model makes afterwards, the side door [**D67 (auto-not-a-grant)**](#d67) closed for settings; and
+  reading the committed plan instead would disagree with the card after any re-cut at a boundary. Only
+  `/plumbbob:run` mints, and it reads the one token after it: a range number names that range, a token
+  carrying a dash or a comma mints nothing, and anything else names the next range, *because* a bare
+  `/run` reaches Claude Code's own skill and must leave no grant behind, and a span of ranges (`2-4`) is
+  a form this build does not define, so it must not be read as another today. `--auto` beside the verb
+  adds nothing, a run that names nothing it can walk mints nothing ([**D97 (run-refuses)**](#d97)), a
+  plan the hook cannot read mints nothing while the hook still exits 0, and a notice leaves the grant
+  alone ([**D90 (notice-not-turn)**](#d90)). The latch reads the grant exactly as it reads a typed
+  list's, `/plumbbob:build` mints exactly as it did, and a `range M` grant from a hook before this rule
+  still lands with its ceiling, so a session on an older plugin keeps its ranges. Amends
+  [**D92 (build-ranges)**](#d92), whose "a range grants nothing" becomes nothing until the human types
+  the run that names it, and [**D65 (human-typed-grants)**](#d65), whose literal prompt may now name a
+  range the plan resolves. Promoted from the 2026-10-17 runs-and-the-stop-card build, merging its
+  locals `plan-names-the-grant` and `namespaced-run`. *Tagged in* `docs/presentation.md`.
+
+- <a id="d97"></a>**D97 (run-refuses): A run that names nothing it can walk mints nothing and refuses with
+  the move that unblocks it.** The cases, each with the remedy the dashboard's pointer names: a plan
+  without ranges (`/plumbbob:refine ranges` to cut them, or `/plumbbob:build` for the next step); a next
+  step no range names, or a flagged range (its drift words, then `/plumbbob:refine ranges`); a landed
+  range, or a number no range carries (the range the card names); nothing left (`/plumbbob:finish`); a
+  numbered run naming a range other than the one holding the step in flight (`/plumbbob:verify` or
+  `/plumbbob:abandon` that step); and any run while a spike is open (`plumbbob spike done`). A run's
+  promise is the plan's stops, *because* a run with no range would have no stop or be a single step, and
+  a guessed range is the early halt ranges exist to remove ([**D93 (range-on-the-card)**](#d93)); the
+  two in-flight cases refuse *because* a run that starts elsewhere rewrites the step markers, and its
+  first checkpoint stages the step in flight's half-built diff into another step's commit, while a spike
+  is an unresolved fork a run would build on. The hook mints nothing for a refusal, so nothing can land
+  in its turn, and `status --run` prints no run header for one: the dashboard renders as it does without
+  the flag, and its pointer carries the refusal and the move. The exact strings are
+  `docs/presentation.md`'s. Promoted from the 2026-10-17 runs-and-the-stop-card build, merging its local
+  `run-refuses` and the refusals `in-flight-first` added. *Tagged in* `docs/presentation.md`.
+
+- <a id="d98"></a>**D98 (card-names-the-run): The card and the dashboard name the run where they named the
+  range's command, with the steps it lands beside it.** Beneath Next Up the segment reads
+  `· range 3 of 5: /plumbbob:run (steps 6-9)`, the bracket written as the grant the hook will mint
+  ([**D96 (plan-names-the-grant)**](#d96)), `(step 9)` for a range down to one step and
+  `(step 10 to its pause)` for a bare one; the dashboard's `next →` reads `run range 3 of 5` with the
+  verb and the same bracket; the plan pause's `looks good` row says `/plumbbob:run runs range 1 from
+  Step 1`; and `status --run` prints a header above the dashboard naming the range, what is left of it,
+  where the run ends, its stop, and the grant the hook minted. The plan's item keeps `/plumbbob:build 6-9`
+  as the range's definition, *because* the run is what the human types now, the steps are what it will
+  land, and every plan written since [**D92 (build-ranges)**](#d92) keeps parsing, its explicit
+  commands included. At a step pause the segment names the range holding the step in flight, and the
+  bracket opens on that step, since a run typed there lands it first ([**D95 (run-verb)**](#d95)); at
+  the pause on a range's last step it reads `range 3 of 5 lands with step 9` and names no run,
+  *because* a run typed there ends on that range's stop, and a card naming the next range would suggest
+  a run that does not reach it. The bracket's bold model stays that of the range holding the step Next
+  Up names, the run the human picks a model for. A flagged range, a step no range names, and a plan
+  without ranges render exactly as they did. Amends [**D93 (range-on-the-card)**](#d93), whose segment
+  and pointer name the run. Promoted from the 2026-10-17 runs-and-the-stop-card build, merging its local
+  `card-names-the-run`. *Tagged in* `docs/presentation.md`.
+
+- <a id="d99"></a>**D99 (one-loop): The run skill carries only what is the run's own and reads the build
+  skill beside it for the per-step loop.** `skills/run/SKILL.md` holds resolving the run, its refusals,
+  the ending that closes a range, and the reply to it, and reads `../build/SKILL.md` from its own base
+  directory (the path a skill prints as it loads, which resolves under the marketplace cache and the
+  `~/.claude/skills/plumbbob` link alike) for the loop a typed range walks, and the harvest skill the
+  same way for the park classes and the fold rules, *because* two copies of the loop would drift apart,
+  the build skill is the engine both verbs drive, and the read is measured rather than trusted: one live
+  session in the build that settled this, and the eval tier's contract c11, hold the run to its range.
+  Promoted from the 2026-10-17 runs-and-the-stop-card build, merging its local `one-loop`. *Tagged in*
+  the `run` skill.
 
 ### Superseded
 
