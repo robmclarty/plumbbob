@@ -583,7 +583,7 @@ export function grantPath(root: string): string {
 
 /**
  * Rewrite (or clear) the one-turn GRANT: a non-null value is the minted grant
- * (`auto` | `range M`), null clears it.
+ * (`auto` | `steps <list>`), null clears it.
  *
  * The turn hook calls this on every human prompt (minted on a match, cleared
  * otherwise) so a grant lives exactly one turn by construction. Pairing the
@@ -595,6 +595,41 @@ export function setGrant(root: string, grant: string | null): void {
     rmSync(grantPath(root), { force: true })
   } else {
     writeFileSync(grantPath(root), `${grant}\n`)
+  }
+}
+
+/**
+ * RUN: the range a `/plumbbob:run` the human typed is landing, written beside
+ * GRANT by the turn hook so the checkpoint that completes the range knows a
+ * run landed it. The latch never reads it.
+ */
+export function runPath(root: string): string {
+  return join(root, DIRNAME, 'RUN')
+}
+
+/**
+ * The range number the RUN mark names, or null when the mark is absent or
+ * holds anything but a positive number.
+ */
+export function readRun(root: string): number | null {
+  try {
+    const n = Number(readFileSync(runPath(root), 'utf8').trim())
+    return Number.isSafeInteger(n) && n > 0 ? n : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Rewrite (or clear) the RUN mark: a range number marks that range's run,
+ * null clears it. The turn hook calls this on every typed prompt, beside
+ * `setGrant`, and the delete lives here with the grant's.
+ */
+export function setRun(root: string, item: number | null): void {
+  if (item === null) {
+    rmSync(runPath(root), { force: true })
+  } else {
+    writeFileSync(runPath(root), `${item}\n`)
   }
 }
 
@@ -908,6 +943,8 @@ export function excludeControl(root: string): void {
     // never writes, and never commits.
     `${DIRNAME}/TURN`,
     `${DIRNAME}/GRANT`,
+    // The range a typed run is landing, written beside the grant.
+    `${DIRNAME}/RUN`,
     // The id of the last prompt the turn hook saw, which tells a notice folded
     // into the running turn from one that starts its own.
     `${DIRNAME}/PROMPT`,

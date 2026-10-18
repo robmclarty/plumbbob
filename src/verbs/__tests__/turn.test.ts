@@ -1,9 +1,22 @@
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
-import { applyTurn, grantFromPrompt, isNotice, stepInFlightContext, turn } from '../turn.ts'
+import { applyTurn, grantFromPrompt, isNotice, mintFromPrompt, stepInFlightContext, turn, type BuildRead } from '../turn.ts'
 import { start } from '../start.ts'
-import { grantPath, promptPath, readRelay, relayPath, stepPath, turnPath, writeRelay } from '../../lib/sidecar.ts'
+import {
+  grantPath,
+  intentPath,
+  markSpike,
+  promptPath,
+  readRelay,
+  readRun,
+  relayPath,
+  runPath,
+  stepPath,
+  turnPath,
+  writeRelay,
+} from '../../lib/sidecar.ts'
 import { formatHelp } from '../../cli-core.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { runCli } from '../../../test/helpers/fixture-repo.ts'
@@ -105,6 +118,186 @@ describe('grantFromPrompt', () => {
     expect(grantFromPrompt('/build --wip 2020-2024')).toBeNull()
     expect(grantFromPrompt('/build --draft 1-3')).toBeNull()
     expect(grantFromPrompt('/build 1-3 --auto')).toBe('steps 1-3') // sanctioned args still compose
+  })
+})
+
+// Nine steps in three ranges: two that land their steps and a bare one between.
+const RUN_PLAN = [
+  '# Runs',
+  '',
+  '## Steps',
+  '',
+  ...Array.from({ length: 9 }, (_, i) => `${i + 1}. [ ] Step ${i + 1}, **done when:** it works`),
+  '',
+  '## Build ranges',
+  '',
+  '1. `/plumbbob:build 1-3`, **stop:** review the parser',
+  "2. `/plumbbob:build 4`, **stop:** at step 4's pause, pick the label",
+  '3. `/plumbbob:build 5-9`, **stop:** review the card',
+  '',
+].join('\n')
+
+/** RUN_PLAN with the steps in `done` ticked. */
+const runPlan = (done: ReadonlyArray<number> = []): string =>
+  done.reduce((text, n) => text.replace(`${n}. [ ]`, `${n}. [x]`), RUN_PLAN)
+
+/** The build as the hook reads it: RUN_PLAN, nothing in flight and no spike unless given. */
+const read = (opts: { done?: ReadonlyArray<number>; inFlight?: number; spiking?: boolean; intent?: string } = {}): BuildRead => ({
+  intent: opts.intent ?? runPlan(opts.done),
+  inFlight: opts.inFlight ?? null,
+  spiking: opts.spiking ?? false,
+})
+
+describe('mintFromPrompt — D96 (plan-names-the-grant)', () => {
+  it('mints what is left of the range holding the next step, and marks the range', () => {
+    expect(mintFromPrompt('/plumbbob:run', read(), null)).toEqual({ grant: 'steps 1-3', run: 1 })
+    expect(mintFromPrompt('/plumbbob:run', read({ done: [1] }), null)).toEqual({ grant: 'steps 2-3', run: 1 })
+    expect(mintFromPrompt('/plumbbob:run', read({ done: [1, 2, 3, 4] }), null)).toEqual({ grant: 'steps 5-9', run: 3 })
+  })
+
+  it('mints what is left of range N when a number is typed', () => {
+    expect(mintFromPrompt('/plumbbob:run 3', read(), null)).toEqual({ grant: 'steps 5-9', run: 3 })
+    expect(mintFromPrompt('/plumbbob:run 3.', read({ done: [5, 6] }), null)).toEqual({ grant: 'steps 7-9', run: 3 })
+    expect(mintFromPrompt('/plumbbob:run 3, then review it', read(), null)).toEqual({ grant: 'steps 5-9', run: 3 })
+  })
+
+  it('counts the step in flight, so a run typed at its pause grants it with the rest of its range', () => {
+    expect(mintFromPrompt('/plumbbob:run', read({ done: [1, 2, 3, 4], inFlight: 5 }), null)).toEqual({ grant: 'steps 5-9', run: 3 })
+    expect(mintFromPrompt('/plumbbob:run 3', read({ done: [1, 2, 3, 4, 5, 6, 7, 8], inFlight: 9 }), null)).toEqual({ grant: 'steps 9', run: 3 })
+  })
+
+  it('mints nothing for a bare range, which builds its step to the pause, and marks nothing', () => {
+    expect(mintFromPrompt('/plumbbob:run', read({ done: [1, 2, 3] }), null)).toEqual({ grant: null, run: null })
+    expect(mintFromPrompt('/plumbbob:run 2', read(), null)).toEqual({ grant: null, run: null })
+  })
+
+  it('mints nothing for a run that refuses — D97 (run-refuses)', () => {
+    const none = { grant: null, run: null }
+    // A step in flight outside the range typed, and a spike open.
+    expect(mintFromPrompt('/plumbbob:run 3', read({ inFlight: 2 }), null)).toEqual(none)
+    expect(mintFromPrompt('/plumbbob:run', read({ spiking: true }), null)).toEqual(none)
+    expect(mintFromPrompt('/plumbbob:run 1', read({ spiking: true }), null)).toEqual(none)
+    // A landed range, a number the plan lacks, nothing left, and a plan without ranges.
+    expect(mintFromPrompt('/plumbbob:run 1', read({ done: [1, 2, 3] }), null)).toEqual(none)
+    expect(mintFromPrompt('/plumbbob:run 7', read(), null)).toEqual(none)
+    expect(mintFromPrompt('/plumbbob:run', read({ done: [1, 2, 3, 4, 5, 6, 7, 8, 9] }), null)).toEqual(none)
+    expect(mintFromPrompt('/plumbbob:run', read({ intent: RUN_PLAN.replace(/## Build ranges[\s\S]*$/, '') }), null)).toEqual(none)
+  })
+
+  it('mints nothing for a span or a list of ranges, a bare /run, or a path segment — D96 (plan-names-the-grant)', () => {
+    const none = { grant: null, run: null }
+    for (const prompt of ['/plumbbob:run 1-3', '/plumbbob:run 1,3', '/plumbbob:run 1, 3', '/run', '/run 3', 'tools/plumbbob:run 3', '/plumbbob:running']) {
+      expect(mintFromPrompt(prompt, read(), null), prompt).toEqual(none)
+    }
+  })
+
+  it('reads --auto beside the verb as nothing, never an auto grant', () => {
+    expect(mintFromPrompt('/plumbbob:run --auto', read(), null)).toEqual({ grant: 'steps 1-3', run: 1 })
+    expect(mintFromPrompt('/plumbbob:run --auto 3', read(), null)).toEqual({ grant: 'steps 5-9', run: 3 })
+    expect(mintFromPrompt('/plumbbob:run 2 --auto', read(), null)).toEqual({ grant: null, run: null })
+  })
+
+  it('mints nothing for a run when the plan could not be read — C2 (hooks-never-wedge)', () => {
+    expect(mintFromPrompt('/plumbbob:run', null, 3)).toEqual({ grant: null, run: null })
+    // A build still mints from the prompt alone.
+    expect(mintFromPrompt('/plumbbob:build 1-3', null, 3)).toEqual({ grant: 'steps 1-3', run: null })
+  })
+
+  it('mints a build exactly as grantFromPrompt does — C10 (build-unchanged)', () => {
+    for (const prompt of ['/plumbbob:build 2-5', '/build --auto', '/plumbbob:build 20, 5-9', '/build 2', 'carry on']) {
+      expect(mintFromPrompt(prompt, read(), null).grant, prompt).toBe(grantFromPrompt(prompt))
+    }
+  })
+
+  it('reads whichever invocation comes first as the one the human fired', () => {
+    expect(mintFromPrompt('/plumbbob:run 3, or else /build --auto', read(), null)).toEqual({ grant: 'steps 5-9', run: 3 })
+    expect(mintFromPrompt('/plumbbob:build 1-2, then /plumbbob:run', read(), null)).toEqual({ grant: 'steps 1-2', run: null })
+  })
+
+  it('keeps the mark while a step of the marked range waits at its pause, and clears it otherwise — D16 (stop-card-held)', () => {
+    expect(mintFromPrompt('looks good', read({ done: [1, 2, 3, 4], inFlight: 6 }), 3)).toEqual({ grant: null, run: 3 })
+    expect(mintFromPrompt('/plumbbob:build 7-9', read({ done: [1, 2, 3, 4], inFlight: 6 }), 3)).toEqual({ grant: 'steps 7-9', run: 3 })
+    expect(mintFromPrompt('looks good', read({ inFlight: 2 }), 3)).toEqual({ grant: null, run: null })
+    expect(mintFromPrompt('looks good', read(), 3)).toEqual({ grant: null, run: null })
+    expect(mintFromPrompt('looks good', read({ inFlight: 6 }), null)).toEqual({ grant: null, run: null })
+    // A new run replaces the mark with its own range, or clears it for a bare one.
+    expect(mintFromPrompt('/plumbbob:run', read({ done: [1, 2, 3, 4], inFlight: 6 }), 1)).toEqual({ grant: 'steps 5-9', run: 3 })
+    expect(mintFromPrompt('/plumbbob:run', read({ done: [1, 2, 3], inFlight: 4 }), 1)).toEqual({ grant: null, run: null })
+    // A run that refuses clears it too.
+    expect(mintFromPrompt('/plumbbob:run 1', read({ inFlight: 6 }), 3)).toEqual({ grant: null, run: null })
+  })
+})
+
+describe("applyTurn and a run's grant — D96 (plan-names-the-grant), D16 (stop-card-held)", () => {
+  /** A started session whose plan is RUN_PLAN. */
+  async function runSession(done: ReadonlyArray<number> = []): Promise<string> {
+    const dir = await startedSession()
+    writeFileSync(intentPath(dir), runPlan(done))
+    return dir
+  }
+
+  const control = (path: string): string | null => (existsSync(path) ? readFileSync(path, 'utf8').trim() : null)
+
+  it('mints the grant and the mark from the plan at the keystroke, and the next plain prompt clears both', async () => {
+    const dir = await runSession()
+    expect(applyTurn(dir, hookJson('/plumbbob:run'))).toBe(true)
+    expect([control(grantPath(dir)), control(runPath(dir))]).toEqual(['steps 1-3', '1'])
+    expect(readRun(dir)).toBe(1)
+    applyTurn(dir, hookJson('carry on'))
+    expect([control(grantPath(dir)), control(runPath(dir))]).toEqual([null, null])
+  })
+
+  it('leaves a minted grant as it was through a later edit to the ranges or the build order, and through a notice', async () => {
+    const dir = await runSession()
+    applyTurn(dir, hookJson('/plumbbob:run 3'))
+    writeFileSync(intentPath(dir), runPlan().replace('5-9', '5-6').replace('## Build ranges', '## Build order\n\n9, 8, 7, 6, 5\n\n## Build ranges'))
+    expect(applyTurn(dir, raw(captured('859f0678')))).toBe(false)
+    expect([control(grantPath(dir)), control(runPath(dir))]).toEqual(['steps 5-9', '3'])
+  })
+
+  it('keeps the mark across a prompt at a pause inside its range, and drops it once the step lands', async () => {
+    const dir = await runSession([1, 2, 3, 4])
+    applyTurn(dir, hookJson('/plumbbob:run'))
+    writeFileSync(stepPath(dir), '6\n') // a halt on trouble left step 6 at its pause
+    applyTurn(dir, hookJson('looks good'))
+    expect([control(grantPath(dir)), control(runPath(dir))]).toEqual([null, '3'])
+    rmSync(stepPath(dir), { force: true })
+    applyTurn(dir, hookJson('what next?'))
+    expect(control(runPath(dir))).toBeNull()
+  })
+
+  it('mints nothing while a spike is open, or for a run typed while a step outside its range is in flight', async () => {
+    const dir = await runSession()
+    markSpike(dir)
+    applyTurn(dir, hookJson('/plumbbob:run'))
+    expect([control(grantPath(dir)), control(runPath(dir))]).toEqual([null, null])
+    const other = await runSession()
+    writeFileSync(stepPath(other), '2\n')
+    applyTurn(other, hookJson('/plumbbob:run 3'))
+    expect([control(grantPath(other)), control(runPath(other))]).toEqual([null, null])
+  })
+
+  it('mints nothing for a plan it cannot read, and the hook still exits 0 — C2 (hooks-never-wedge)', async () => {
+    const dir = await runSession()
+    applyTurn(dir, hookJson('/plumbbob:run'))
+    rmSync(intentPath(dir), { force: true })
+    const hook = runCli(dir, ['turn'], {}, hookJson('/plumbbob:run'))
+    expect(hook.status).toBe(0)
+    expect([control(grantPath(dir)), control(runPath(dir))]).toEqual([null, null])
+    expect(control(turnPath(dir))).toBe('2')
+  })
+
+  it('mints through the real hook on stdin', async () => {
+    const dir = await runSession()
+    const hook = runCli(dir, ['turn'], {}, hookJson('/plumbbob:run 3'))
+    expect(hook.status).toBe(0)
+    expect([control(grantPath(dir)), control(runPath(dir))]).toEqual(['steps 5-9', '3'])
+  })
+
+  it('git-excludes the mark beside the grant, so no checkpoint sweeps it into a commit', async () => {
+    const dir = await startedSession()
+    const exclude = readFileSync(join(realpathSync(dir), '.git', 'info', 'exclude'), 'utf8').split('\n')
+    expect(exclude).toContain('.plumbbob/RUN')
   })
 })
 

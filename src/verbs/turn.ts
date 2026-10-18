@@ -1,34 +1,42 @@
 // `plumbbob turn`: the turn-ledger hook. Wired to the harness's
-// UserPromptSubmit event, it runs once per prompt and maintains two of the
-// sidecar's git-excluded control files (flat files under `.plumbbob/`): it ticks
-// `TURN`, the monotonic count of human turns the checkpoint latch compares
-// against a step's entry stamp to know a human turn intervened since the step
-// began, and it rewrites `GRANT` from the literal prompt, minting a one-turn
-// self-approval only when the human typed `/build --auto` or a step range
-// (`N-M`, or a list such as `20,5-9`), clearing it otherwise (those strings can only come from a human
-// keystroke, because `build` is disable-model-invocation: a grant the model
-// could forge would be no grant). The harness also sends a background job's
+// UserPromptSubmit event, it runs once per prompt and maintains the sidecar's
+// git-excluded turn ledger (flat files under `.plumbbob/`): it ticks `TURN`,
+// the monotonic count of human turns the checkpoint latch compares against a
+// step's entry stamp to know a human turn intervened since the step began, and
+// it rewrites `GRANT` from the literal prompt, minting a one-turn
+// self-approval only when the human typed `/build --auto`, a step range (`N-M`,
+// or a list such as `20,5-9`), or `/plumbbob:run`, clearing it otherwise (those
+// strings can only come from a human keystroke, because `build` and `run` are
+// disable-model-invocation: a grant the model could forge would be no grant).
+// A run's grant is the steps left of the range the plan names, read from the
+// active build's `intent.md` at the keystroke, and `RUN` beside it marks the
+// range the run is landing. The harness also sends a background job's
 // completion notice through this event, as a prompt the human never typed, so
-// a notice ticks nothing, keeps the grant, and clears only the ending `RELAY`
-// holds from an earlier turn. When a step is in flight a typed prompt also
-// emits ONE `UserPromptSubmit` additionalContext line so a fresh session
-// (post-compaction, or a scripted `-p` turn where no skill prose is in context)
-// still knows the beat: a tangent is parked, not chased, and a message that
-// also asks something is answered before the park's block. Guidance only: it
-// blocks nothing. It ALWAYS exits 0 and any failure degrades to no output, so
-// neither the tick nor the emit can ever wedge prompting.
+// a notice ticks nothing, keeps the grant and the mark, and clears only the
+// ending `RELAY` holds from an earlier turn. When a step is in flight a typed
+// prompt also emits ONE `UserPromptSubmit` additionalContext line so a fresh
+// session (post-compaction, or a scripted `-p` turn where no skill prose is in
+// context) still knows the beat: a tangent is parked, not chased, and a
+// message that also asks something is answered before the park's block.
+// Guidance only: it blocks nothing. It ALWAYS exits 0 and any failure degrades
+// to no output, so neither the tick nor the emit can ever wedge prompting.
 
 import { readFileSync, writeFileSync } from 'node:fs'
+import { parseBuildRanges, readRunArgs, resolveRun, type RunInput } from '../lib/orient.ts'
 import {
   clearRelay,
   findSessionRoot,
+  inSpike,
+  intentPath,
   notePrompt,
   readPrompt,
+  readRun,
   setGrant,
+  setRun,
   stepPath,
   turnPath,
 } from '../lib/sidecar.ts'
-import { normalizeStepList, readBuildArgs } from '../lib/steplist.ts'
+import { hasStep, normalizeStepList, readBuildArgs } from '../lib/steplist.ts'
 
 /**
  * The hook entry point: apply the prompt, then emit the in-flight-step nudge
@@ -96,10 +104,10 @@ function inFlightStep(root: string): number | null {
  * The testable core: apply one prompt given the raw hook stdin, and say
  * whether it counted as a human turn.
  *
- * A typed prompt ticks TURN and rewrites GRANT. A notice touches neither,
- * because the latch reads TURN passing a step's entry stamp as its one sign
- * that a human answered, and a grant the human typed has to outlive a job
- * that reports back partway through the range. A notice that starts a turn of
+ * A typed prompt ticks TURN and rewrites GRANT and the RUN mark. A notice
+ * touches none of them, because the latch reads TURN passing a step's entry
+ * stamp as its one sign that a human answered, and a grant the human typed has
+ * to outlive a job that reports back partway through the range. A notice that starts a turn of
  * its own clears RELAY, whose ending was judged when its own turn ended; one
  * the harness folds into the running turn arrives under that turn's prompt id
  * and leaves RELAY alone, since the ending the turn just printed has yet to be
@@ -118,7 +126,9 @@ export function applyTurn(cwd: string, raw: string): boolean {
     if (promptId === null || promptId !== readPrompt(root)) clearRelay(root)
   } else {
     writeFileSync(turnPath(root), `${readTurn(root) + 1}\n`)
-    setGrant(root, grantFromPrompt(prompt))
+    const minted = mintSafely(root, prompt)
+    setGrant(root, minted.grant)
+    setRun(root, minted.run)
   }
   // Last, so a record that cannot be written never costs the tick or the grant.
   notePrompt(root, promptId)
@@ -140,6 +150,14 @@ export function applyTurn(cwd: string, raw: string): boolean {
 export function isNotice(prompt: string): boolean {
   return prompt.startsWith('<task-notification>') || prompt.startsWith('<agent-message ')
 }
+
+// A build invocation, bare or namespaced, starting a token.
+const BUILD_INVOCATION = /(?<![\w/.~-])\/(?:plumbbob:)?build\b/
+
+// A run invocation: only the namespaced verb, since a bare `/run` reaches
+// Claude Code's own skill, starting a token and ending at a space, a line's
+// end, or sentence punctuation.
+const RUN_INVOCATION = /(?<![\w/.~-])\/plumbbob:run(?=[\s.;:!?,]|$)/
 
 /**
  * Derive the GRANT content from the human's prompt, or null to clear it.
@@ -168,12 +186,88 @@ export function isNotice(prompt: string): boolean {
  * argument the human typed.
  */
 export function grantFromPrompt(prompt: string): string | null {
-  const invocation = /(?<![\w/.~-])\/(?:plumbbob:)?build\b/.exec(prompt)
+  const invocation = BUILD_INVOCATION.exec(prompt)
   if (invocation === null) return null
-  const line = prompt.slice(invocation.index + invocation[0].length).split('\n', 1)[0] ?? ''
-  const args = readBuildArgs(line)
+  const args = readBuildArgs(argumentLine(prompt, invocation))
   if (args.range) return args.steps === null ? null : `steps ${normalizeStepList(args.steps)}`
   return args.auto ? 'auto' : null
+}
+
+/**
+ * The text an invocation's arguments are read from: the rest of its line.
+ */
+function argumentLine(prompt: string, invocation: RegExpExecArray): string {
+  return prompt.slice(invocation.index + invocation[0].length).split('\n', 1)[0] ?? ''
+}
+
+/** What the hook read of the active build, for resolving a run; the range number comes from the prompt. */
+export type BuildRead = Omit<RunInput, 'item'>
+
+/** What one typed prompt leaves in GRANT and in the RUN mark: null clears each. */
+export type Minted = { readonly grant: string | null; readonly run: number | null }
+
+/**
+ * The GRANT one typed prompt mints and the RUN mark it leaves, given the
+ * active build as the hook read it (null when it could not) and the range the
+ * RUN mark names now.
+ *
+ * Whichever invocation comes first in the prompt is the one the human fired.
+ * A run mints `steps <what is left>` of the range the plan names at the
+ * keystroke, and marks that range, so a later edit to the ranges or the build
+ * order leaves both as they were. A bare range's run mints nothing and marks
+ * nothing, since it builds its step to the pause, and so does a run that names
+ * nothing it can walk, a span or a list of ranges, and a plan the hook could
+ * not read. Any other prompt mints what `grantFromPrompt` reads, and keeps the
+ * mark only while a step of the marked range waits at its pause, so a halt
+ * inside the run approved with `looks good` still lands under it.
+ */
+export function mintFromPrompt(prompt: string, build: BuildRead | null, marked: number | null): Minted {
+  const run = RUN_INVOCATION.exec(prompt)
+  const first = BUILD_INVOCATION.exec(prompt)
+  if (run === null || (first !== null && first.index < run.index)) {
+    return { grant: grantFromPrompt(prompt), run: heldMark(build, marked) }
+  }
+  const args = readRunArgs(argumentLine(prompt, run))
+  const resolved = args === null || build === null ? null : resolveRun({ ...build, item: args.item })
+  if (resolved?.ok !== true || resolved.grant === null) return { grant: null, run: null }
+  return { grant: resolved.grant, run: resolved.range.item }
+}
+
+/**
+ * The RUN mark a prompt that is not a run leaves: the marked range while a
+ * step it names is in flight, so waiting at its pause, else none.
+ */
+function heldMark(build: BuildRead | null, marked: number | null): number | null {
+  if (build === null || marked === null || build.inFlight === null) return null
+  const step = build.inFlight
+  const range = parseBuildRanges(build.intent).ranges.find((r) => r.item === marked)
+  return range !== undefined && hasStep(range.steps, step) ? marked : null
+}
+
+/**
+ * What a typed prompt mints, read against the active build, degrading to no
+ * grant and no mark on any failure, so a broken read can never leave the last
+ * turn's grant standing.
+ */
+function mintSafely(root: string, prompt: string): Minted {
+  try {
+    return mintFromPrompt(prompt, readBuild(root), readRun(root))
+  } catch {
+    return { grant: null, run: null }
+  }
+}
+
+/**
+ * The active build as a run reads it: the plan's text, the step in flight,
+ * and whether a spike is open; null when the plan cannot be read, which mints
+ * no run.
+ */
+function readBuild(root: string): BuildRead | null {
+  try {
+    return { intent: readFileSync(intentPath(root), 'utf8'), inFlight: inFlightStep(root), spiking: inSpike(root) }
+  } catch {
+    return null
+  }
 }
 
 /**
