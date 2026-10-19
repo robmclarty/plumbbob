@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Runs and the stop card
 
-**Current step:** 13 — docs: describe the run as the main way to drive a plan
+**Current step:** 14 — test(evals): hold /plumbbob:run to its range and its stop card
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -35,7 +35,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 10. feat(harvest): record a stop's harvest and review with plumbbob harvest
 - ☑ 11. feat(skills): end a run on the stop card and settle it in one reply
 - ☑ 12. feat(plan): point the plan and its template at the run
-- ☐ 13. docs: describe the run as the main way to drive a plan
+- ☑ 13. docs: describe the run as the main way to drive a plan
 - ☐ 14. test(evals): hold /plumbbob:run to its range and its stop card
 - ☑ 15. docs(presentation): spec the stop card's leans and handles and the cards' short links
 - ☑ 16. feat(handoff): render the leans, the park handles, and the short links on every card
@@ -50,7 +50,9 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [x] the plain dashboard's ranges block could mark a stop card still waiting (a tail beside the landed range's row), where only status --run names it today (tangent)
 - [x] docs/presentation.md's range readout examples read `spent 192 min`, where the shared duration format step 8 reuses renders `3h 12m` past two hours; align the examples or give a range its own minutes form (tangent)
 - [x] the build log's dated Harvest lines still write `park 1 ·` (harvestLines in src/lib/buildlog.ts, outside step 16's seam) while the card and the Log's review say P1, so D105 (park-handles)'s one name stops short of the ledger (tangent)
-- [ ] docs/faq.md's 'Fourteen skills' heading and docs/attention-first-development.md's 'fifteen skills' predate the run (sixteen now); faq's day-to-day answer should name /plumbbob:run (tangent)
+- [x] docs/faq.md's 'Fourteen skills' heading and docs/attention-first-development.md's 'fifteen skills' predate the run (sixteen now); faq's day-to-day answer should name /plumbbob:run (tangent)
+- [ ] holds.ts cannot see a stop card's holds: the owed-card reason opens 'plumbbob: the turn ended on', outside REASON_PREFIX, and tierOf knows no 'stop card', so a receipt's holds table misses c11's (tangent)
+- [ ] report.ts's method footnote names c3, c4, c9 as the pre-armed contracts; c11 pre-arms GRANT and the RUN mark too, so the next receipt's footnote undercounts (tangent)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -89,6 +91,13 @@ Harvest results this boundary:
   write `park 1 ·` (`harvestLines` in `src/lib/buildlog.ts`) where the card and the Log's review
   say `P1`. `plumbbob harvest` matches a park by its number, never by that text, and no step left
   reads the lines, so the wording can wait.
+- 2026-10-19, at range 5's stop (the step 13 boundary): one parked item, classified.
+- **blocker** (fixed at the boundary, by Rob's call): `docs/faq.md`'s "Fourteen skills" heading and
+  its day-to-day answer, and `docs/attention-first-development.md`'s "fifteen skills", predated the
+  run. Both sat outside step 13's seam, and leaving them would ship docs that contradict the README,
+  so the FAQ now counts sixteen and names `/plumbbob:run` per range as the day-to-day move, with
+  `/plumbbob:build` among the situational ones. No plan change; the two edits ride step 14's
+  checkpoint as named strays.
 
 ## Log
 
@@ -443,3 +452,4 @@ folder, so it rides the branch into the PR.)*
   `harvestLines` in `src/lib/buildlog.ts` writes `- **tangent**: park 1 · <text> → <reason>` under `## Harvest`, while the review beneath the stop's Log line now reads `P1`. The spec does not give those lines a form and the file is outside step 16's seam, so I left them and parked the one-line fix as a tangent; the demo repo's record shows both forms one above the other.
 
 - 2026-10-19 — step 12 checkpointed · 5fe5d3a9e — feat(plan): point the plan and its template at the run (12m)
+- 2026-10-19 — step 13 checkpointed · 00133b1f6 — docs: describe the run as the main way to drive a plan (17m)

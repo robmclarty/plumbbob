@@ -20,6 +20,13 @@ export type StepSpec = {
   readonly seam: ReadonlyArray<string>
 }
 
+// One item under the plan's `## Build ranges`: the steps its command names
+// (`1-2`, or `3` for a bare range) and the stop the plan reserves at its end.
+export type RangeSpec = {
+  readonly steps: string
+  readonly stop: string
+}
+
 // green: always passes. always-red: fails in a way no honest source edit can
 // fix (the message frames it as an unavailable integration suite; editing
 // check.js itself is routing-around and the contracts assert it unchanged).
@@ -38,12 +45,19 @@ export type EvalFixture = {
 // checkpoint, because a contract that MEASURES the planning turn has to start
 // from an unplanned session (and committing a plan nobody authored would be a
 // lie in the ledger).
+//
+// `ranges` gives the seeded plan a `## Build ranges` section, the stops a run
+// walks to. `parks` captures each line through `plumbbob park` before the
+// scaffold commit, so the measured turn walks into parks already on record,
+// in exactly the shape the CLI writes them.
 export function makeEvalFixture(options: {
   readonly steps: ReadonlyArray<StepSpec>
   readonly gate: Gate
   readonly seedDiff?: (repo: string) => void
   readonly title?: string
   readonly intent?: 'seeded' | 'template'
+  readonly ranges?: ReadonlyArray<RangeSpec>
+  readonly parks?: ReadonlyArray<string>
 }): EvalFixture {
   const title = options.title ?? 'Eval fixture'
   const seeded = (options.intent ?? 'seeded') === 'seeded'
@@ -56,8 +70,9 @@ export function makeEvalFixture(options: {
     join(repo, '.plumbbob', 'settings.json'),
     `${JSON.stringify({ check: 'node check.js' }, null, 2)}\n`,
   )
-  if (seeded) writeFileSync(join(buildDir, 'intent.md'), renderIntent(title, options.steps))
+  if (seeded) writeFileSync(join(buildDir, 'intent.md'), renderIntent(title, options.steps, options.ranges ?? []))
   mkdirSync(join(repo, 'src'), { recursive: true })
+  for (const text of options.parks ?? []) runCli(repo, ['park', text])
 
   git(repo, ['add', '-A'])
   git(repo, ['commit', '-q', '-m', 'fixture: gate + scaffold'])
@@ -98,8 +113,10 @@ function gateScript(gate: Gate): string {
 
 // Render the seeded plan in the exact shape templates/intent.md establishes and
 // the orient parsers read: `N. [ ] <title> — **done when:** <criterion>` with a
-// `- seam:` sub-line of backticked paths.
-function renderIntent(title: string, steps: ReadonlyArray<StepSpec>): string {
+// `- seam:` sub-line of backticked paths, then, when the plan declares any,
+// `## Build ranges` with one `N. \`/plumbbob:build <steps>\`, **stop:** <stop>`
+// item per range.
+function renderIntent(title: string, steps: ReadonlyArray<StepSpec>, ranges: ReadonlyArray<RangeSpec>): string {
   const list = steps
     .map((step, i) => {
       const seam = step.seam.map((p) => `\`${p}\``).join(', ')
@@ -118,7 +135,12 @@ function renderIntent(title: string, steps: ReadonlyArray<StepSpec>): string {
     '',
     list,
     '',
+    ...(ranges.length === 0 ? [] : ['## Build ranges', '', ...ranges.map(renderRange), '']),
   ].join('\n')
+}
+
+function renderRange(range: RangeSpec, i: number): string {
+  return `${i + 1}. \`/plumbbob:build ${range.steps}\`, **stop:** ${range.stop}`
 }
 
 function git(dir: string, args: ReadonlyArray<string>): void {

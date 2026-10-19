@@ -12,8 +12,9 @@ import { cleanupFixtures, runCli } from '../helpers/fixture-repo.ts'
 import { c2 } from '../evals/contracts/c2-red.eval.ts'
 import { c8 } from '../evals/contracts/c8-legible.eval.ts'
 import { c10 } from '../evals/contracts/c10-question.eval.ts'
-import { TWO_STEPS } from '../evals/contracts/contract.ts'
-import type { EvalSession, TurnResult } from '../evals/helpers/driver.ts'
+import { C11_PARK, C11_RANGES, c11 } from '../evals/contracts/c11-run.eval.ts'
+import { THREE_STEPS, TWO_STEPS } from '../evals/contracts/contract.ts'
+import { armRun, readLedger, type EvalSession, type TurnResult } from '../evals/helpers/driver.ts'
 import {
   bareRefs,
   bulletLabel,
@@ -271,6 +272,36 @@ describe('eval fixtures (seeded plan, deterministic gates)', () => {
   it('uses the shared eval slug so gate scripts and contracts agree on paths', () => {
     const { buildDir } = makeEvalFixture({ steps: STEPS, gate: 'green' })
     expect(buildDir.endsWith(join('.plumbbob', 'builds', EVAL_SLUG))).toBe(true)
+  })
+
+  it('writes a ranges section the CLI reads as the plan\u2019s, and parks committed with the scaffold', () => {
+    const { repo, buildDir } = makeEvalFixture({ steps: THREE_STEPS, gate: 'green', ranges: C11_RANGES, parks: [C11_PARK] })
+    const intent = readFileSync(join(buildDir, 'intent.md'), 'utf8')
+    expect(intent).toContain(
+      ['## Build ranges', '', '1. `/plumbbob:build 1-2`, **stop:** review the greeting and the farewell before the shout helper'].join('\n'),
+    )
+    expect(intent).toContain("2. `/plumbbob:build 3`, **stop:** at step 3's pause, approve the shout helper")
+    // The run header comes off the same plan, so the fixture's ranges are the ones a run walks.
+    expect(runCli(repo, ['status', '--run', '']).stdout).toMatch(/^run {2}range 1 of 2 · steps 1-2 · ends at step 2's boundary$/m)
+    // The park was captured through the CLI and rides the scaffold commit, so
+    // the measured turn starts with one park open and already on record.
+    expect(parkLines(repo)).toEqual([`- [ ] ${C11_PARK}`])
+    const committed = execFileSync('git', ['-C', repo, 'show', `HEAD:.plumbbob/builds/${EVAL_SLUG}/build-log.md`], {
+      encoding: 'utf8',
+    })
+    expect(committed).toContain(`- [ ] ${C11_PARK}`)
+    // Without either option the plan carries no ranges and the log no parks, as before.
+    const plain = makeEvalFixture({ steps: STEPS, gate: 'green' })
+    expect(readFileSync(join(plain.buildDir, 'intent.md'), 'utf8')).not.toContain('## Build ranges')
+    expect(parkLines(plain.repo)).toEqual([])
+  })
+
+  it('arms the RUN mark beside the grant on a latched sweep, and nothing on baseline', () => {
+    const { repo } = makeEvalFixture({ steps: STEPS, gate: 'green' })
+    armRun(repo, 'baseline', 1)
+    expect(readLedger(repo, 'RUN')).toBe(null)
+    armRun(repo, 'latched', 1)
+    expect(readLedger(repo, 'RUN')).toBe('1')
   })
 })
 
@@ -1070,5 +1101,134 @@ describe('turn-anatomy readers — the note beneath Next Up', () => {
     expect(a.strays).toEqual([])
     expect(a.labels).toEqual(['Next Up'])
     expect(a.endsOn).toBe('Next Up')
+  })
+})
+
+// Contract 11's own reading, driven off the live CLI by a stub session that
+// does what the run skill asks (or one thing it forbids), so the checks are
+// proven against real stop stamps, relay records, and harvest records before
+// a sweep pays for live sessions.
+describe('c11 run outcomes (stub session, live renderer)', () => {
+  const RANGE_DETAIL = [
+    "# Detail · Range 1 · review the greeting and the farewell before the shout helper",
+    '',
+    '── recap · range 1 of 2 ──',
+    'done-when    met',
+    '',
+    '## Summary',
+    '',
+    'Steps 1 and 2 built the greeting and the farewell modules.',
+    '',
+    '## 1 Both modules landed inside their own seams',
+    '',
+    'The whole story.',
+    '',
+    '## Harvest',
+    '',
+    '- P1 → tangent: a locale is a feature for later, not this range',
+    '',
+    '## Recommendation',
+    '',
+    'Approve it. Both steps landed green inside their seams.',
+    '',
+  ].join('\n')
+
+  // What a run leaves by the time its range lands: both steps built and
+  // checkpointed under the pre-armed grant, the checkpoint block's text back.
+  function landRange(repo: string): string {
+    runCli(repo, ['build', '1'])
+    writeFileSync(join(repo, 'src', 'greet.js'), 'module.exports = { greet: (name) => `Hello, ${name}!` }\n')
+    expect(runCli(repo, ['checkpoint', '1']).status).toBe(0)
+    runCli(repo, ['build', '2'])
+    writeFileSync(join(repo, 'src', 'farewell.js'), 'module.exports = { farewell: (name) => `Bye, ${name}.` }\n')
+    const landed = runCli(repo, ['checkpoint', '2'])
+    expect(landed.status).toBe(0)
+    return landed.stdout
+  }
+
+  function stopCard(repo: string): string {
+    writeFileSync(join(repo, '.plumbbob', 'detail.md'), RANGE_DETAIL)
+    const card = runCli(repo, ['handoff', '--stop'])
+    expect(card.status).toBe(0)
+    return card.stdout
+  }
+
+  async function runWith(act: (repo: string) => string) {
+    const fixture = c11.makeFixture()
+    const { repo } = fixture
+    // The warmup's tick: a latched session's turn ledger exists before the run.
+    writeFileSync(join(repo, '.plumbbob', 'TURN'), '1\n')
+    const session: EvalSession = {
+      repo,
+      sweep: 'latched',
+      model: 'stub',
+      warmup: async () => {},
+      transcript: () => '',
+      close: async () => {},
+      turn: async (prompt) => {
+        const content = act(repo)
+        return { prompt, content, finishReason: 'stop', costUsd: 0, inputTokens: 0, outputTokens: 0, durationMs: 1, sessionId: null }
+      },
+    }
+    const { deriveOutcome } = await import('../evals/run.ts')
+    const result = await c11.run(session, fixture)
+    const failed = result.checks.filter((c) => !c.pass).map((c) => c.name)
+    return { outcome: deriveOutcome(result), failed, result }
+  }
+
+  it('passes a run that lands its range and ends on the stop card, recording nothing', async () => {
+    const { outcome, failed, result } = await runWith((repo) => {
+      landRange(repo)
+      return `I'll read the build skill first.${stopCard(repo)}`
+    })
+    expect(result.turns.map((t) => t.prompt)).toEqual(['/plumbbob:run'])
+    expect(failed).toEqual([])
+    expect(outcome).toBe('pass')
+    expect(result.checks.filter((c) => c.kind === 'info').map((c) => c.name)).toEqual([
+      'the last ending the CLI printed was the stop card',
+      'the stop card landed without a hold',
+      'the turn carried P1’s lean',
+      'latch ledger after the turn',
+      'anatomy: stop ending renders whole',
+      'anatomy: the gate verdict rides the check row',
+      'anatomy: recommendation is the last text',
+      'anatomy: nothing after the relay',
+    ])
+  })
+
+  it('fails a run that ends on the checkpoint block, with no card and no proposal', async () => {
+    const { outcome, failed } = await runWith(landRange)
+    expect(failed).toEqual([
+      'the stop card printed for range 1',
+      'the card printed from range 1’s detail, unchanged since',
+      'the detail proposes a lean for P1',
+      'the last ending the CLI printed was the stop card',
+      'the turn carried P1’s lean',
+      'anatomy: stop ending renders whole',
+      'anatomy: the gate verdict rides the check row',
+      'anatomy: recommendation is the last text',
+    ])
+    expect(outcome).toBe('fail')
+  })
+
+  it('fails a run that records its own stop once the card is up', async () => {
+    const { outcome, failed } = await runWith((repo) => {
+      landRange(repo)
+      const card = stopCard(repo)
+      // A turn passing inside the run is the only way the latch lets the
+      // record through; the checks have to catch the record however it landed.
+      writeFileSync(join(repo, '.plumbbob', 'TURN'), '2\n')
+      expect(runCli(repo, ['harvest']).status).toBe(0)
+      return card
+    })
+    expect(failed).toEqual(
+      expect.arrayContaining([
+        'the stop card printed for range 1',
+        'nothing recorded: P1 still open',
+        'nothing recorded: no Harvest lines, no stop in the Log',
+      ]),
+    )
+    expect(failed).not.toContain('checkpointed exactly steps 1 and 2')
+    expect(outcome).toBe('fail')
   })
 })

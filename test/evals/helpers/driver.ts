@@ -196,12 +196,12 @@ function readCount(raw: string | undefined, fallback: number): number {
   return Number.isFinite(n) && n > 0 ? n : fallback
 }
 
-// Read a worktree ledger file (`.plumbbob/TURN` or `GRANT`), trimmed, or null
-// when absent. The latch contracts (c3/c4) read it back after the turn as
+// Read a worktree ledger file (`.plumbbob/TURN`, `GRANT`, or `RUN`), trimmed, or
+// null when absent. The latch contracts (c3/c4) read it back after the turn as
 // informational context: it makes the headless `-p` tick observable — whether
 // the turn hook fired and what the one-turn GRANT settled to — so a refusal
 // reads apart from the tick-timing artifact armGrant exists to avoid.
-export function readLedger(repo: string, name: 'TURN' | 'GRANT'): string | null {
+export function readLedger(repo: string, name: 'TURN' | 'GRANT' | 'RUN'): string | null {
   try {
     return readFileSync(join(repo, '.plumbbob', name), 'utf8').trim()
   } catch {
@@ -221,4 +221,15 @@ export function readLedger(repo: string, name: 'TURN' | 'GRANT'): string | null 
 export function armGrant(repo: string, sweep: Sweep, grant: 'auto' | `steps ${string}`): void {
   if (sweep === 'baseline') return
   writeFileSync(join(repo, '.plumbbob', 'GRANT'), `${grant}\n`)
+}
+
+// Pre-arm the RUN mark beside the grant for the run contract (c11): the range
+// the hook marks when the human types `/plumbbob:run`, so the checkpoint that
+// completes that range writes its ending as owing the stop card. The headless
+// tick lands too late to write it, for the reason armGrant gives; the marking
+// itself is unit-tested in src/verbs/__tests__/turn.test.ts. No-op on
+// baseline, like the grant.
+export function armRun(repo: string, sweep: Sweep, range: number): void {
+  if (sweep === 'baseline') return
+  writeFileSync(join(repo, '.plumbbob', 'RUN'), `${range}\n`)
 }

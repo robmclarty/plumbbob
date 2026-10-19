@@ -113,13 +113,18 @@ CLI is deliberately host-neutral: every mechanical verb (`start`, `build`, `chec
 so you can drive the method from anywhere by hand. A `plumbbob init --host codex|cursor|zed`
 is on the roadmap ([`install.md`](install.md#other-agents-roadmap)).
 
-## Fourteen skills: which ones do I actually use day to day?
+## Sixteen skills: which ones do I actually use day to day?
 
-Four: `/plumbbob:plan` once, `/plumbbob:build` (or `/plumbbob:verify`) per step, `/plumbbob:status` whenever you
-lose the thread, `/plumbbob:finish` once. `/plumbbob:park` joins the moment a stray idea shows up
-mid-step. The rest are situational: `/plumbbob:step`/`/plumbbob:refine` when the plan needs work,
-`/plumbbob:harvest` at boundaries, `/plumbbob:revert`/`/plumbbob:abandon`/`/plumbbob:spike` for rewinds, drops,
-and forks, `/plumbbob:doctor` when the install misbehaves, and `/plumbbob:recover` when the session's own
+Four: `/plumbbob:plan` once, `/plumbbob:run` per range, `/plumbbob:status` whenever you lose
+the thread, `/plumbbob:finish` once. A run stops where the plan says, at a step's pause or
+on the stop card that reviews what landed, and one reply settles either. `/plumbbob:park`
+joins the moment a stray idea shows up mid-step, and the next stop card proposes a class for
+it. The rest are situational: `/plumbbob:build` to take one step at a time (or for a plan
+without ranges), `/plumbbob:verify` for a diff you wrote yourself,
+`/plumbbob:step`/`/plumbbob:refine`/`/plumbbob:order` when the plan needs work,
+`/plumbbob:harvest` at boundaries no stop card covers,
+`/plumbbob:revert`/`/plumbbob:abandon`/`/plumbbob:spike` for rewinds, drops, and forks,
+`/plumbbob:doctor` when the install misbehaves, and `/plumbbob:recover` when the session's own
 state looks wrong.
 
 ## Is every task worth a session?
