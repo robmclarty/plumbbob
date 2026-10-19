@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Runs and the stop card
 
-**Current step:** 11 — feat(skills): end a run on the stop card and settle it in one reply
+**Current step:** 15 — docs(presentation): spec the stop card's leans and handles and the cards' short links
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -33,10 +33,12 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 8. feat(orient): measure a landed range for the stop card's readout
 - ☑ 9. feat(handoff): render the stop card with plumbbob handoff --stop
 - ☑ 10. feat(harvest): record a stop's harvest and review with plumbbob harvest
-- ☐ 11. feat(skills): end a run on the stop card and settle it in one reply
+- ☑ 11. feat(skills): end a run on the stop card and settle it in one reply
 - ☐ 12. feat(plan): point the plan and its template at the run
 - ☐ 13. docs: describe the run as the main way to drive a plan
 - ☐ 14. test(evals): hold /plumbbob:run to its range and its stop card
+- ☐ 15. docs(presentation): spec the stop card's leans and handles and the cards' short links
+- ☐ 16. feat(handoff): render the leans, the park handles, and the short links on every card
 
 ## Park list
 
@@ -46,7 +48,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
 - [x] status --run words two refusal pointers docs/presentation.md does not list: a span typed reads '(steps 6-9; a run names one range)', and a numbered run while a step no range names is in flight reads '(or /plumbbob:abandon it; no range names it)'; spec them beside the eight in The run header (src/lib/orient.ts runRefusalMove)
 - [x] the plain dashboard's ranges block could mark a stop card still waiting (a tail beside the landed range's row), where only status --run names it today (tangent)
-- [ ] docs/presentation.md's range readout examples read `spent 192 min`, where the shared duration format step 8 reuses renders `3h 12m` past two hours; align the examples or give a range its own minutes form (tangent)
+- [x] docs/presentation.md's range readout examples read `spent 192 min`, where the shared duration format step 8 reuses renders `3h 12m` past two hours; align the examples or give a range its own minutes form (tangent)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -74,6 +76,12 @@ Harvest results this boundary:
 - **tangent** (deferred to the plan's Noticed list): the plain dashboard's ranges block could mark a
   stop card still waiting, a tail beside the landed range's row, where only `status --run` names it
   (step 10's waiting line). No step depends on it, and step 7's spec leaves the plain dashboard as it is.
+- 2026-10-18, at range 4's stop (the step 11 boundary): one parked item, classified.
+- **blocker** (folded into step 13's done-when and seam): the range readout examples in
+  `docs/presentation.md` read `spent 192 min`, where the duration format step 8 reuses from a step's
+  `spent` row prints `3h 12m` past two hours. The code is consistent with the step's row; the spec's
+  two examples are what is off, and C4 (spec-first) makes the spec the card's source of truth, so
+  step 13 aligns them alongside the rest of the docs.
 
 ## Log
 
@@ -216,3 +224,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-10-18 — step 8 checkpointed · 163a6b025 — feat(orient): measure a landed range for the stop card's readout (4m)
 - 2026-10-18 — step 9 checkpointed · 921dc85c7 — feat(handoff): render the stop card with plumbbob handoff --stop (1 drift, 22m)
 - 2026-10-18 — step 10 checkpointed · df2a0c000 — feat(harvest): record a stop's harvest and review with plumbbob harvest (1 drift, 13m)
+- 2026-10-18 — step 11 checkpointed · 38112dea2 — feat(skills): end a run on the stop card and settle it in one reply (10m)

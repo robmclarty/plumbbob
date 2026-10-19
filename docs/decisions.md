@@ -20,7 +20,7 @@ lands; [**D33 (info-exclude)**](#d33)–[**D38 (cli-owns-slugs)**](#d38) below c
 intent-legibility build, and [**D80 (cli-renders-model-relays)**](#d80)–[**D84 (one-liner-register)**](#d84)
 from the 2026-08-28 presentation build, and [**D87 (pause-once)**](#d87)–[**D89 (block-once)**](#d89)
 from the 2026-10-08 said-once-said-whole build, and [**D90 (notice-not-turn)**](#d90)–[**D94 (auto-and-stops)**](#d94)
-from the 2026-10-17 build-ranges build, and [**D95 (run-verb)**](#d95)–[**D104 (harvest-records)**](#d104)
+from the 2026-10-17 build-ranges build, and [**D95 (run-verb)**](#d95)–[**D108 (order-label)**](#d108)
 from the 2026-10-17 runs-and-the-stop-card build.)
 
 ## Constraints (C)
@@ -692,7 +692,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   inline below the readout, and anything larger stays in the working tree behind the diffstat row, because
   code is the single largest source of visual flood and the counted row already says what moved. Where to
   look is introduced by one word, `details:`, a code-spanned `path:line` inside the closing bracket of the
-  Summary lead and of Next Up, the form that opens in every host and survives as plain text. Promoted from
+  Summary lead and of Next Up, the form that opens in every host and survives as plain text. (Revised
+  2026-10-18 by [**D107 (short-linked-paths)**](#d107): the bracket shows the file's name and line as a
+  link, `[intent.md:41](.plumbbob/builds/x/intent.md#L41)`, in place of the code-spanned full path.)
+  Promoted from
   the 2026-08-28 presentation build, merging its locals `latest-detail-file`, `latest-card-addressing`,
   `honest-elision`, `code-on-request`, and `details-one-word`. *Tagged in* `docs/presentation.md`,
   `docs/cli-reference.md`, and `docs/state-and-git.md`.
@@ -1251,7 +1254,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   parked, written `park 6` on the card and in a reply and never a bare number, *because* a line is never
   deleted from the list, only flipped, so the number is stable for the life of the build and the record
   matches a proposal to its park without guessing, and the bare numbers are the highlights' (`expand 2`
-  opens a section) where one reply can carry both. A run typed at a waiting card records the stop first,
+  opens a section) where one reply can carry both. (Revised 2026-10-18 by
+  [**D105 (park-handles)**](#d105) and [**D106 (leans-harvested)**](#d106): the handle is written `P6`, on
+  a bullet line, in the detail file and the reply alike, and the proposals are leans the Your Call
+  block says approval locks in.) A run typed at a waiting card records the stop first,
   and when `status --run` then reports the grant unlike the run, because the harvest added or moved a
   step in the range the run would walk, the run ends at the boundary, where the record's ending names
   the re-cut run, rather than walking a grant that no longer covers the range, *because* the hook minted
@@ -1299,8 +1305,66 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   the PR. Its ending is the orientation tier's with no Verdict:
   `**Stop**: Range 3 of 5 recorded (1 blocker, 2 tangents)` at a stop,
   `**Harvested**: 2 parked ideas (2 tangents)` outside one, and Next Up with its note naming the next
-  run. Promoted from the 2026-10-17 runs-and-the-stop-card build, merging its locals `harvest-records`
+  run. (Revised 2026-10-18 by [**D106 (leans-harvested)**](#d106): the ending outside a stop reads
+  `**Recorded**: 2 parked ideas (2 tangents)`, and a refusal names a park by its handle, `P9 is not in
+  the list`.) Promoted from the 2026-10-17 runs-and-the-stop-card build, merging its locals `harvest-records`
   and `stop-record`. *Tagged in* `docs/presentation.md`.
+
+- <a id="d105"></a>**D105 (park-handles): The stop card names each open park by a handle of its own, `P6` for
+  the sixth line ever parked, on a bullet line, and the detail file and the reply name it the same
+  way.** The handle is the park's place under `## Park list`, counting every line ever parked, harvested
+  ones included: `P6` on the card, `- P6 → tangent: <the reason>` in the detail file's `## Harvest`
+  section, and `make P6 a blocker` in a reply, and each park rides a bullet line, not a numbered one,
+  *because* a markdown list renumbers its items (open parks 6 and 8 would read 6 and 7, and the number
+  the human read would not be the one the record matched), the bare numbers belong to the highlights
+  (`expand 2` opens a section), and one name on the card, in the reply, and in the wire leaves nothing
+  to map between them. A line is never deleted from the list, only flipped, so the handle holds for
+  the life of the build. Rob's call at range 4's stop (2026-10-18), reading a stop card in a throwaway
+  repo, over the `park 6` phrase the spec first carried and a plain numbered list; letters had been
+  dropped earlier for needing a second mapping and running out. Revises
+  [**D102 (settle-in-one-reply)**](#d102)'s `park 6`. Promoted from the 2026-10-17 runs-and-the-stop-card
+  build, merging its local `park-handles`. *Tagged in* `docs/presentation.md`.
+
+- <a id="d106"></a>**D106 (leans-harvested): The stop card's part is labeled `Harvested`, each proposal
+  reads `→ lean: <class>, <reason>`, the Your Call block says approval locks in each lean while a park
+  is open, and `plumbbob harvest`'s ending outside a stop reads `**Recorded**:`.** Each item behind its
+  handle carries `→ lean: tangent, <the reason>`, *because* the class is the model's suggestion and has
+  to read as one, and `lean` is the plan's own word for a proposed answer (an open question's `*lean:*`),
+  so `suggested:` beside it would be a second term for the same thing; the part is labeled `Harvested`,
+  *because* it lists what the run harvested for the human to judge; one line beneath the Your Call label
+  says that approving locks in each lean and that changing one means saying so first, with an example
+  naming a handle on the card (`make P6 a blocker`: the first open park, recast as the class its lean is
+  not), and the direction row drops its own example, *because* the reply is a decision on every lean at
+  once and the human has to know that before typing `looks good`; and the record's ending outside a
+  stop reads `**Recorded**: 2 parked ideas (2 tangents)` where it read `**Harvested**:`, *because* one
+  label over a part that proposes and an ending that records would mean two things. A stop with no
+  park open renders no lean line, since nothing is there to lock in. Rob's call at range 4's stop
+  (2026-10-18). Revises [**D104 (harvest-records)**](#d104)'s ending. Promoted from the 2026-10-17
+  runs-and-the-stop-card build, merging its locals `leans-harvested` and `leans-lock-in`. *Tagged in*
+  `docs/presentation.md`.
+
+- <a id="d107"></a>**D107 (short-linked-paths): Every `details:` bracket shows the file's name and line as
+  a link whose target opens the file.** The bracket reads
+  `details: [intent.md:41](.plumbbob/builds/x/intent.md#L41)`: the text is the file's name and line, the
+  target the path from the repo root with the line as a `#L` fragment, on the Summary lead (the detail
+  file, with no line), Next Up, the Stop part and the stop card's lead, and a transition's lead alike,
+  *because* the full sidecar path was noise on every card while the short name still says which file, a
+  relative target keeps a machine's path out of any card that gets pasted and resolves on GitHub with
+  the line highlighted, and one form at every site is one form to learn. Rob's call at step 15's pause
+  of the runs-and-the-stop-card build (2026-10-18), over the code-spanned `path:line`, a link to the
+  relative path with no line, and an absolute `file://` URL; the click test the plan asked for, in
+  Claude Code's terminal and in Zed, was not run at that pause, and `docs/presentation.md` says so
+  beside the form, leaving what each host opens to the first card the code renders. Revises [**D81 (detail-file)**](#d81)'s code-spanned `path:line`. Promoted
+  from the 2026-10-17 runs-and-the-stop-card build, merging its local `short-linked-paths`. *Tagged in*
+  `docs/presentation.md`.
+
+- <a id="d108"></a>**D108 (order-label): The note beneath Next Up writes the build order as a labeled
+  field, `order: 7, 8, 5`.** The segment reads `· order: 7, 8, 5, 10, 6 (and 2 more)` where it read
+  `· build order 7, 8, 5, 10, 6 (and 2 more)`, *because* the note's other segments read as labeled
+  fields (`range 3 of 5:` names its range, `parked 2 of 7 open` its count) and a label is how the eye
+  finds one in a line of three. Rob's call at range 4's stop (2026-10-18). Revises the phrase
+  [**D86 (build-order)**](#d86) gave the line. Promoted from the 2026-10-17 runs-and-the-stop-card build,
+  merging its local `order-label`. *Tagged in* `docs/presentation.md`.
 
 ### Superseded
 
