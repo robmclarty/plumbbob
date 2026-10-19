@@ -32,7 +32,7 @@ describe('use', () => {
     expect(stdout).toBe(
       ending({
         lead: transition({ label: 'Active build', fact: 'other-build' }),
-        pointer: '**Next Up**: Step 1 of 1 - Do it (details: `.plumbbob/builds/other-build/intent.md:5`)',
+        pointer: '**Next Up**: Step 1 of 1 - Do it (details: [intent.md:5](.plumbbob/builds/other-build/intent.md#L5))',
       }),
     )
     // And no in-flight warning when the build being left has none either.

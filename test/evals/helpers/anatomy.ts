@@ -37,6 +37,10 @@ const RULE = /^-{3,}$/
 // The advisory glyph. An advisory and its indented remedy line are the two
 // lines an ending carries that wear no label of their own.
 const WARN = '⚠'
+// The stop card's lock-in line: the one flush line beneath the Your Call label,
+// ahead of the moves, while a park is open (D106 (leans-harvested)). It belongs
+// to Your Call, so it is no stray.
+const LOCK_IN = /^Approving locks in each lean above\b/
 // The reminder's pointer: the driver form of Next Up, aimed back at the step
 // still waiting, which a pause already shown ends on instead of its card, or
 // at the range whose stop card is still waiting.
@@ -71,17 +75,18 @@ const TIER_PARTS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
   reminder: ['Next Up'],
   boundary: ['Verdict', 'Stop', 'Next Up'],
   driver: ['Next Up'],
-  stop: ['Stop', 'Summary', 'Readout', 'Verdict', 'Harvest', 'Next Up', 'Your Call', 'Recommendation'],
+  stop: ['Stop', 'Summary', 'Readout', 'Verdict', 'Harvested', 'Next Up', 'Your Call', 'Recommendation'],
 }
 
 // The parts a tier may carry without owing them. The Stop part rides only the
 // boundary where a range's last step landed, so a boundary without it is whole,
 // and one with it still has to stand it between the Verdict and Next Up. The
-// Harvest part rides a stop card only while a park is open (D100 (stop-card)),
-// and the Stop part there is the card's lead, which it always owes.
+// Harvested part rides a stop card only while a park is open (D100 (stop-card),
+// labeled by D106 (leans-harvested)), and the Stop part there is the card's
+// lead, which it always owes.
 const OPTIONAL_PARTS: Readonly<Partial<Record<Tier, ReadonlyArray<string>>>> = {
   boundary: ['Stop'],
-  stop: ['Harvest'],
+  stop: ['Harvested'],
 }
 
 // What each tier must NOT render. The Your Call block belongs only where a
@@ -175,6 +180,11 @@ export function readAnatomy(text: string): Anatomy {
     if (ITEM.test(line)) {
       if (current === 'Your Call') moves.push(line.trim())
       else if (current === 'Summary') highlights.push(line.trim())
+      endsOn = current
+      continue
+    }
+
+    if (current === 'Your Call' && LOCK_IN.test(line)) {
       endsOn = current
       continue
     }

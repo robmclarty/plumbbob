@@ -275,10 +275,14 @@ export function remainingOrder(
 }
 
 /**
- * The build order as a phrase: the next `cap` step numbers in sequence, the
- * rest folded to a count (`and 2 more`), the way a long detail degrades on
- * every one-liner; '' for an empty order. With no cap, the whole sequence,
- * which is the dashboard's row.
+ * The build order as the note's labeled field: `order:`, then the next `cap`
+ * step numbers in sequence, the rest folded to a count (`and 2 more`), the way
+ * a long detail degrades on every one-liner; '' for an empty order. With no
+ * cap, the whole sequence.
+ *
+ * A label, where the phrase once read `build order 7, 8, 5`, because the
+ * note's other segments read as labeled fields and a label is how the eye
+ * finds one in a line of three (D108 (order-label)).
  */
 export function buildOrderPhrase(order: ReadonlyArray<number>, cap?: number): string {
   if (order.length === 0) {
@@ -286,7 +290,7 @@ export function buildOrderPhrase(order: ReadonlyArray<number>, cap?: number): st
   }
   const shown = cap === undefined ? order : order.slice(0, cap)
   const rest = order.length - shown.length
-  return `build order ${shown.join(', ')}${rest > 0 ? ` (and ${rest} more)` : ''}`
+  return `order: ${shown.join(', ')}${rest > 0 ? ` (and ${rest} more)` : ''}`
 }
 
 /**

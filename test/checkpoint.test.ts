@@ -55,7 +55,7 @@ describe('the detail-file lifecycle — D81 (detail-file)', () => {
     // the lead line points at it.
     expect(buildLog(dir)).toContain('step 1 checkpointed')
     expect(buildLog(dir)).toContain('  **1.** the first highlight\n\n  the full story of what moved')
-    expect(res.stdout).toContain('details: `.plumbbob/builds/detail-test/build-log.md:')
+    expect(res.stdout).toMatch(/details: \[build-log\.md:(\d+)\]\(\.plumbbob\/builds\/detail-test\/build-log\.md#L\1\)/)
     // truncated once recorded: no stale detail carries into the next step.
     expect(sidecarExists(dir, 'detail.md')).toBe(false)
   })

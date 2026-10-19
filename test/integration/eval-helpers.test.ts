@@ -785,7 +785,7 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
     // The card pasted again beneath the answer is the repetition the reminder removes.
     expect(anatomyChecks(`src/greet.js is the new file.\n\n${card}`, 'reminder').map((c) => c.pass)).toEqual([false, false, false])
     // A forward pointer is not the reminder, even standing alone.
-    const forward = readAnatomy('**Next Up**: Step 2 of 2 - Add the farewell module (details: `x/intent.md:9`)\n')
+    const forward = readAnatomy('**Next Up**: Step 2 of 2 - Add the farewell module (details: [intent.md:9](x/intent.md#L9))\n')
     expect(endingRenders(forward, 'reminder')).toBe(false)
     expect(shapeDetail(forward, 'reminder')).toMatch(/^not the reminder: Step 2 of 2/)
   })
@@ -895,7 +895,7 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
     const noGate = [
       '**Now**: Step 1 of 2 - First',
       '',
-      '**Summary**: it built. (details: `.plumbbob/detail.md`)',
+      '**Summary**: it built. (details: [detail.md](.plumbbob/detail.md))',
       '',
       '**Readout**:',
       '',
@@ -936,8 +936,8 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
   })
 
   it('accepts the Stop part on a boundary between the Verdict and Next Up, and never owes it', () => {
-    const stop = '**Stop**: Range 3 of 5 landed - review the card (details: `x/intent.md:63`)'
-    const pointer = '**Next Up**: Step 10 of 12 - Tenth (details: `x/intent.md:34`)'
+    const stop = '**Stop**: Range 3 of 5 landed - review the card (details: [intent.md:63](x/intent.md#L63))'
+    const pointer = '**Next Up**: Step 10 of 12 - Tenth (details: [intent.md:34](x/intent.md#L34))'
     const lead = '**Checkpoint**: Step 9 complete (c7d8e9f0a)'
     const whole = readAnatomy([lead, '', '**Verdict**: ● Plumb', '', stop, '', pointer, ''].join('\n'))
     expect(whole.strays).toEqual([])
@@ -949,11 +949,11 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
     expect(tierParts('boundary')).toEqual(['Verdict', 'Next Up'])
   })
 
-  it('reads a stop card whole, its Harvest part optional and its Stop lead owed — D100 (stop-card)', () => {
+  it('reads a stop card whole, its Harvested part optional and its Stop lead owed — D100 (stop-card)', () => {
     const card = [
-      '**Stop**: Range 3 of 5 landed - review the card (details: `x/intent.md:63`)',
+      '**Stop**: Range 3 of 5 landed - review the card (details: [intent.md:63](x/intent.md#L63))',
       '',
-      '**Summary**: The boundary says why the build stops. (details: `.plumbbob/detail.md`)',
+      '**Summary**: The boundary says why the build stops. (details: [detail.md](.plumbbob/detail.md))',
       '',
       '1. Step 8 landed a hair off.',
       '',
@@ -968,29 +968,38 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
       '',
       '**Verdict**: ● Plumb',
       '',
-      '**Harvest**: 1 of 8 parked ideas open',
+      '**Harvested**: 1 of 8 parked ideas open',
       '',
-      '- park 8 · a stop link prints raw → tangent: cosmetic',
+      '- P8 · a stop link prints raw → lean: tangent, cosmetic',
       '',
-      '**Next Up**: Step 10 of 12 - Tenth (details: `x/intent.md:34`)',
+      '**Next Up**: Step 10 of 12 - Tenth (details: [intent.md:34](x/intent.md#L34))',
       '  · range 4 of 5: /plumbbob:run (step 10 to its pause)',
       '',
       '**Your Call**:',
       '',
-      '- `looks good` → I record the review and every class as proposed, folding a blocker into the plan; back to the boundary',
+      'Approving locks in each lean above; to change one, say so first (`make P8 a blocker`).',
+      '',
+      '- `looks good` → I record the review and every lean as proposed, folding a blocker into the plan; back to the boundary',
       '- `/plumbbob:run` → I record them the same way, then run range 4 of 5 to its stop',
       '',
       '**Recommendation**: Approve it.',
       '',
     ].join('\n')
     const a = readAnatomy(card)
-    expect(a.labels).toEqual(['Stop', 'Summary', 'Readout', 'Verdict', 'Harvest', 'Next Up', 'Your Call', 'Recommendation'])
+    expect(a.labels).toEqual(['Stop', 'Summary', 'Readout', 'Verdict', 'Harvested', 'Next Up', 'Your Call', 'Recommendation'])
+    // The lock-in line beneath the Your Call label belongs to it (D106 (leans-harvested)),
+    // while any other flush line there is still the stray it always was.
     expect(a.strays).toEqual([])
+    expect(a.moves).toHaveLength(2)
+    expect(readAnatomy(card.replace('**Your Call**:\n\n', '**Your Call**:\n\nOne more thing.\n\n')).strays).toEqual(['One more thing.'])
+    expect(readAnatomy(card.replace(/\n\nApproving locks in[^\n]*/, '').replace('**Verdict**: ● Plumb\n', '**Verdict**: ● Plumb\n\nApproving locks in each lean above.\n')).strays).toEqual([
+      'Approving locks in each lean above.',
+    ])
     expect(a.rows.get('steps')).toBe('4 of 4 landed')
     expect(endingRenders(a, 'stop')).toBe(true)
     expect(anatomyChecks(card, 'stop').every((c) => c.pass)).toBe(true)
     // The card with no park open is still whole; one without its lead is not.
-    const empty = card.replace(/\*\*Harvest\*\*:[\s\S]*?cosmetic\n\n/, '')
+    const empty = card.replace(/\*\*Harvested\*\*:[\s\S]*?cosmetic\n\n/, '')
     expect(endingRenders(readAnatomy(empty), 'stop')).toBe(true)
     expect(tierParts('stop')).toEqual(['Stop', 'Summary', 'Readout', 'Verdict', 'Next Up', 'Your Call', 'Recommendation'])
     expect(missingParts(readAnatomy(card.replace(/^\*\*Stop\*\*:.*\n\n/, '')), 'stop')).toEqual(['Stop'])
@@ -1009,7 +1018,7 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
       'Staged paths reach outside Step 16’s seam ⚠ (test/integration/spike.test.ts)',
       '  → the checkpoint captures them, so revise the plan with /plumbbob:step',
       '',
-      '**Next Up**: Step 17 of 18 - Third (details: `x/intent.md:9`)',
+      '**Next Up**: Step 17 of 18 - Third (details: [intent.md:9](x/intent.md#L9))',
       '',
     ].join('\n')
     const a = readAnatomy(boundary)
@@ -1043,8 +1052,8 @@ describe('turn-anatomy readers — the note beneath Next Up', () => {
   it('keeps an indented continuation inside the Next Up part, where a flush one is a stray', () => {
     // The indent is load-bearing: the reader files an unindented line as a
     // stray, which fails the "nothing after the relay" probe on every tier.
-    const pointer = '**Next Up**: Step 7 of 10 - Seventh (details: `x/intent.md:22`)'
-    const note = '· build order 7, 8, 5, 10, 6 (and 2 more) · parked 2 of 7 open'
+    const pointer = '**Next Up**: Step 7 of 10 - Seventh (details: [intent.md:22](x/intent.md#L22))'
+    const note = '· order: 7, 8, 5, 10, 6 (and 2 more) · parked 2 of 7 open'
     const indented = readAnatomy(['**Verdict**: ● Plumb', '', pointer, `  ${note}`, ''].join('\n'))
     expect(indented.strays).toEqual([])
     expect(indented.endsOn).toBe('Next Up')

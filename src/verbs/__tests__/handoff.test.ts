@@ -95,9 +95,9 @@ function writeCheckSummary(dir: string, ok: boolean, checks: ReadonlyArray<Check
   writeFileSync(join(dir, '.check', 'summary.json'), JSON.stringify(summary))
 }
 
-/** The `details:` target Next Up points at for step 3: the intent path as a human would type it. */
+/** The short link Next Up's bracket carries for step 3: the file's name and line, then the path from the repo root with its `#L` fragment. */
 function thirdStepPointer(dir: string): string {
-  return `${relative(dir, intentPath(dir))}:${THIRD_STEP_LINE}`
+  return `[intent.md:${THIRD_STEP_LINE}](${relative(dir, intentPath(dir))}#L${THIRD_STEP_LINE})`
 }
 
 function git(dir: string, args: ReadonlyArray<string>): void {
@@ -127,7 +127,7 @@ describe('handoff', () => {
       [
         '**Now**: Step 2 of 3 - Second',
         '',
-        '**Summary**: The limiter runs before credentials are checked. (details: `.plumbbob/detail.md`)',
+        '**Summary**: The limiter runs before credentials are checked. (details: [detail.md](.plumbbob/detail.md))',
         '',
         '1. `POST /login` returns 429 on the 6th attempt inside a minute.',
         '2. Misses count against the bucket; a success does not reset it.',
@@ -146,7 +146,7 @@ describe('handoff', () => {
         '',
         '**Verdict**: ● Plumb',
         '',
-        `**Next Up**: Step 3 of 3 - Third (model: **Sonnet**, details: \`${thirdStepPointer(dir)}\`)`,
+        `**Next Up**: Step 3 of 3 - Third (model: **Sonnet**, details: ${thirdStepPointer(dir)})`,
         '',
         '**Your Call**:',
         '',
@@ -202,7 +202,7 @@ describe('handoff', () => {
     writeFileSync(detailPath(dir), '## Summary\n\nOne line.\n\n## 1 First move\n\nthe story\n\n## 2 Second move\n\nthe rest\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('\n**Summary**: One line. (details: `.plumbbob/detail.md`)\n\n1. First move\n2. Second move\n\n')
+    expect(stdout).toContain('\n**Summary**: One line. (details: [detail.md](.plumbbob/detail.md))\n\n1. First move\n2. Second move\n\n')
   })
 
   it('unwraps a hard-wrapped Summary lead, keeping its paragraph breaks', async () => {
@@ -212,7 +212,7 @@ describe('handoff', () => {
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
     expect(stdout).toContain(
-      '**Summary**: The limiter runs first, and nothing else moved.\n\nThe step needed the extra breath. (details: `.plumbbob/detail.md`)',
+      '**Summary**: The limiter runs first, and nothing else moved.\n\nThe step needed the extra breath. (details: [detail.md](.plumbbob/detail.md))',
     )
   })
 
@@ -222,7 +222,7 @@ describe('handoff', () => {
     writeFileSync(detailPath(dir), '## Summary\n\nOne line covers it.\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout.startsWith('**Now**: Step 2 of 3 - Second\n\n**Summary**: One line covers it. (details: `.plumbbob/detail.md`)\n\n**Verdict**')).toBe(true)
+    expect(stdout.startsWith('**Now**: Step 2 of 3 - Second\n\n**Summary**: One line covers it. (details: [detail.md](.plumbbob/detail.md))\n\n**Verdict**')).toBe(true)
   })
 
   it('vanishes the Summary block when the detail file carries no lead', async () => {
@@ -279,7 +279,7 @@ describe('handoff', () => {
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
     expect(stdout).toContain('**Verdict**: ● Plumb')
-    expect(stdout).toContain(`**Next Up**: Step 3 of 3 - Third (model: **Sonnet**, details: \`${thirdStepPointer(dir)}\`)`)
+    expect(stdout).toContain(`**Next Up**: Step 3 of 3 - Third (model: **Sonnet**, details: ${thirdStepPointer(dir)})`)
     expect(stdout).not.toContain('**Your Call**')
     expect(stdout).not.toContain('**Readout**')
   })
@@ -388,7 +388,7 @@ describe('handoff', () => {
     writeFileSync(stepPath(dir), '2\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain(`**Next Up**: Step 3 of 3 - Third (details: \`${thirdStepPointer(dir)}\`)`)
+    expect(stdout).toContain(`**Next Up**: Step 3 of 3 - Third (details: ${thirdStepPointer(dir)})`)
     expect(stdout).not.toContain('model:')
   })
 
@@ -445,7 +445,7 @@ describe('handoff', () => {
     const dir = await started()
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout.trim()).toBe(`**Next Up**: Step 2 of 3 - Second (details: \`${relative(dir, intentPath(dir))}:7\`)`)
+    expect(stdout.trim()).toBe(`**Next Up**: Step 2 of 3 - Second (details: [intent.md:7](${relative(dir, intentPath(dir))}#L7))`)
   })
 
   it('treats a whitespace-only model recommendation as none', async () => {
@@ -507,7 +507,7 @@ describe('handoff', () => {
     writeFileSync(checkpointsPath(dir), 'step 2 abc1234\n')
     const { code, stdout } = captureIo(() => handoff(dir, ['--driver']))
     expect(code).toBe(0)
-    expect(stdout.trim()).toBe(`**Next Up**: Step 3 of 3 - Third (model: **Sonnet**, details: \`${thirdStepPointer(dir)}\`)`)
+    expect(stdout.trim()).toBe(`**Next Up**: Step 3 of 3 - Third (model: **Sonnet**, details: ${thirdStepPointer(dir)})`)
   })
 
   it('points at closing the spike under --driver, with the interrupted step as the trailing clause', async () => {
@@ -537,7 +537,7 @@ describe('handoff', () => {
     const { code, stdout } = captureIo(() => handoff(dir, ['--driver']))
     expect(code).toBe(0)
     expect(stdout).not.toContain('**Verdict**')
-    expect(stdout.trim()).toBe(`**Next Up**: Step 3 of 3 - Third (model: **Sonnet**, details: \`${thirdStepPointer(dir)}\`)`)
+    expect(stdout.trim()).toBe(`**Next Up**: Step 3 of 3 - Third (model: **Sonnet**, details: ${thirdStepPointer(dir)})`)
   })
 
   it('names the step number alone when the plan no longer holds the in-flight step', async () => {
@@ -887,7 +887,7 @@ const PARKS = '# Build log\n\n## Park list\n\n- [ ] one idea\n- [ ] another\n- [
 
 /** The `details:` target Next Up points at for step 4 of REORDERED. */
 function fourthStepPointer(dir: string): string {
-  return `${relative(dir, intentPath(dir))}:${FOURTH_STEP_LINE}`
+  return `[intent.md:${FOURTH_STEP_LINE}](${relative(dir, intentPath(dir))}#L${FOURTH_STEP_LINE})`
 }
 
 describe('handoff — the note beneath Next Up', () => {
@@ -900,7 +900,7 @@ describe('handoff — the note beneath Next Up', () => {
     // The order starts at the step the pointer names and leaves out the one in
     // flight; the indent keeps the line inside the Next Up part.
     expect(stdout).toContain(
-      `**Next Up**: Step 4 of 4 - Fourth (details: \`${fourthStepPointer(dir)}\`)\n  · build order 4, 3 · parked 2 of 3 open\n\n**Your Call**:`,
+      `**Next Up**: Step 4 of 4 - Fourth (details: ${fourthStepPointer(dir)})\n  · order: 4, 3 · parked 2 of 3 open\n\n**Your Call**:`,
     )
   })
 
@@ -918,7 +918,7 @@ describe('handoff — the note beneath Next Up', () => {
     const dir = await started(REORDERED.replace('4, 3', '3, 4'))
     writeFileSync(stepPath(dir), '2\n')
     const { stdout } = captureIo(() => handoff(dir, []))
-    expect(stdout).toContain('**Next Up**: Step 3 of 4 - Third (details: `')
+    expect(stdout).toContain('**Next Up**: Step 3 of 4 - Third (details: [intent.md:')
     expect(stdout).not.toContain('  · ')
   })
 
@@ -938,8 +938,8 @@ describe('handoff — the note beneath Next Up', () => {
     const dir = await started(eight)
     writeFileSync(stepPath(dir), '1\n')
     const { stdout } = captureIo(() => handoff(dir, []))
-    expect(stdout).toContain('**Next Up**: Step 8 of 8 - Step 8 (details: `')
-    expect(stdout).toContain('\n  · build order 8, 7, 6, 5, 4 (and 2 more)\n')
+    expect(stdout).toContain('**Next Up**: Step 8 of 8 - Step 8 (details: [intent.md:')
+    expect(stdout).toContain('\n  · order: 8, 7, 6, 5, 4 (and 2 more)\n')
   })
 
   it('still counts the parks when nothing is planned', async () => {
@@ -954,7 +954,7 @@ describe('handoff — the note beneath Next Up', () => {
     const dir = await started(REORDERED)
     const { stdout } = captureIo(() => handoff(dir, ['--plan']))
     expect(stdout).toContain(
-      `**Next Up**: Step 4 of 4 - Fourth (details: \`${fourthStepPointer(dir)}\`)\n  · build order 4, 3, 2\n`,
+      `**Next Up**: Step 4 of 4 - Fourth (details: ${fourthStepPointer(dir)})\n  · order: 4, 3, 2\n`,
     )
     expect(stdout).toContain('/plumbbob:build starts Step 4')
   })
@@ -965,11 +965,11 @@ describe('handoff — the note beneath Next Up', () => {
     const boundary = captureIo(() => handoff(dir, [])).stdout
     expect(boundary).toContain('**Verdict**')
     expect(boundary).toContain(
-      `**Next Up**: Step 4 of 4 - Fourth (details: \`${fourthStepPointer(dir)}\`)\n  · build order 4, 3\n`,
+      `**Next Up**: Step 4 of 4 - Fourth (details: ${fourthStepPointer(dir)})\n  · order: 4, 3\n`,
     )
     // The driver line follows the order for its pick and carries no note.
     const driver = captureIo(() => handoff(dir, ['--driver'])).stdout
-    expect(driver.trim()).toBe(`**Next Up**: Step 4 of 4 - Fourth (details: \`${fourthStepPointer(dir)}\`)`)
+    expect(driver.trim()).toBe(`**Next Up**: Step 4 of 4 - Fourth (details: ${fourthStepPointer(dir)})`)
   })
 })
 
@@ -1006,7 +1006,7 @@ Three commands drive the build.
 
 /** The `details:` target Next Up points at for step `n` of RANGED. */
 function rangedPointer(dir: string, n: number): string {
-  return `${relative(dir, intentPath(dir))}:${2 + 3 * n}`
+  return `[intent.md:${2 + 3 * n}](${relative(dir, intentPath(dir))}#L${2 + 3 * n})`
 }
 
 /** RANGED with the steps in `done` ticked. */
@@ -1019,7 +1019,7 @@ describe('handoff — the range segment beneath Next Up', () => {
     const dir = await started(RANGED)
     const { stdout } = captureIo(() => handoff(dir, ['--plan']))
     expect(stdout).toContain(
-      `**Next Up**: Step 1 of 4 - First (model: **Opus**, details: \`${rangedPointer(dir, 1)}\`)\n  · range 1 of 3: /plumbbob:run (step 1 to its pause)\n`,
+      `**Next Up**: Step 1 of 4 - First (model: **Opus**, details: ${rangedPointer(dir, 1)})\n  · range 1 of 3: /plumbbob:run (step 1 to its pause)\n`,
     )
     expect(stdout).toContain('- `looks good` → I mark the plan decided; /plumbbob:run runs range 1 from Step 1\n')
   })
@@ -1037,7 +1037,7 @@ describe('handoff — the range segment beneath Next Up', () => {
     writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
     const { stdout } = captureIo(() => handoff(dir, []))
     expect(stdout).toContain(
-      `**Next Up**: Step 3 of 4 - Third (model: **Fable**, details: \`${rangedPointer(dir, 3)}\`)\n  · range 2 of 3: /plumbbob:run (steps 2-3)\n\n**Your Call**:`,
+      `**Next Up**: Step 3 of 4 - Third (model: **Fable**, details: ${rangedPointer(dir, 3)})\n  · range 2 of 3: /plumbbob:run (steps 2-3)\n\n**Your Call**:`,
     )
     expect(stdout).toContain(
       [
@@ -1064,7 +1064,7 @@ describe('handoff — the range segment beneath Next Up', () => {
     const atLast = captureIo(() => handoff(last, [])).stdout
     // Next Up is the next range's step, and its bold model the step's, since range 3 declares none.
     expect(atLast).toContain(
-      `**Next Up**: Step 4 of 4 - Fourth (model: **Sonnet**, details: \`${rangedPointer(last, 4)}\`)\n  · range 2 of 3 lands with step 3\n\n**Your Call**:`,
+      `**Next Up**: Step 4 of 4 - Fourth (model: **Sonnet**, details: ${rangedPointer(last, 4)})\n  · range 2 of 3 lands with step 3\n\n**Your Call**:`,
     )
     expect(atLast).not.toContain('`/plumbbob:run` →')
     const bare = await started(RANGED)
@@ -1072,7 +1072,7 @@ describe('handoff — the range segment beneath Next Up', () => {
     writeCheckSummary(bare, true, [{ name: 'test', ok: true }])
     const atBare = captureIo(() => handoff(bare, [])).stdout
     expect(atBare).toContain(
-      `**Next Up**: Step 2 of 4 - Second (model: **Fable**, details: \`${rangedPointer(bare, 2)}\`)\n  · range 1 of 3 lands with step 1\n\n**Your Call**:`,
+      `**Next Up**: Step 2 of 4 - Second (model: **Fable**, details: ${rangedPointer(bare, 2)})\n  · range 1 of 3 lands with step 1\n\n**Your Call**:`,
     )
     expect(atBare).not.toContain('`/plumbbob:run` →')
   })
@@ -1083,7 +1083,7 @@ describe('handoff — the range segment beneath Next Up', () => {
     writeFileSync(buildLogPath(dir), PARKS)
     const { stdout } = captureIo(() => handoff(dir, []))
     expect(stdout).toContain(
-      `**Next Up**: Step 2 of 4 - Second (model: **Fable**, details: \`${rangedPointer(dir, 2)}\`)\n  · range 2 of 3: /plumbbob:run (steps 2-3) · parked 2 of 3 open\n`,
+      `**Next Up**: Step 2 of 4 - Second (model: **Fable**, details: ${rangedPointer(dir, 2)})\n  · range 2 of 3: /plumbbob:run (steps 2-3) · parked 2 of 3 open\n`,
     )
   })
 
@@ -1092,7 +1092,7 @@ describe('handoff — the range segment beneath Next Up', () => {
     writeFileSync(checkpointsPath(dir), 'step 3 abc1234\n')
     const { stdout } = captureIo(() => handoff(dir, []))
     expect(stdout).toContain(
-      `**Next Up**: Step 4 of 4 - Fourth (model: **Sonnet**, details: \`${rangedPointer(dir, 4)}\`)\n  · range 3 of 3: /plumbbob:run (step 4 to its pause)\n`,
+      `**Next Up**: Step 4 of 4 - Fourth (model: **Sonnet**, details: ${rangedPointer(dir, 4)})\n  · range 3 of 3: /plumbbob:run (step 4 to its pause)\n`,
     )
   })
 
@@ -1102,7 +1102,7 @@ describe('handoff — the range segment beneath Next Up', () => {
     writeFileSync(checkpointsPath(dir), 'step 1 abc1234\n')
     const { stdout } = captureIo(() => handoff(dir, []))
     expect(stdout).toContain(
-      `**Next Up**: Step 2 of 4 - Second (model: **Sonnet**, details: \`${rangedPointer(dir, 2)}\`)\n  · range 2 of 3 needs a re-cut (step 3 is also in range 3)\n`,
+      `**Next Up**: Step 2 of 4 - Second (model: **Sonnet**, details: ${rangedPointer(dir, 2)})\n  · range 2 of 3 needs a re-cut (step 3 is also in range 3)\n`,
     )
   })
 
@@ -1111,14 +1111,14 @@ describe('handoff — the range segment beneath Next Up', () => {
     const dir = await started(open)
     writeFileSync(checkpointsPath(dir), 'step 3 abc1234\n')
     const { stdout } = captureIo(() => handoff(dir, []))
-    expect(stdout).toContain(`**Next Up**: Step 4 of 4 - Fourth (model: **Sonnet**, details: \`${rangedPointer(dir, 4)}\`)\n  · no range names step 4\n`)
+    expect(stdout).toContain(`**Next Up**: Step 4 of 4 - Fourth (model: **Sonnet**, details: ${rangedPointer(dir, 4)})\n  · no range names step 4\n`)
   })
 
   it("keeps the driver pointer to one line, and renders a plan holding only the template's placeholder as before", async () => {
     const dir = await started(rangedWith([1]))
     writeFileSync(checkpointsPath(dir), 'step 1 abc1234\n')
     const driver = captureIo(() => handoff(dir, ['--driver'])).stdout
-    expect(driver.trim()).toBe(`**Next Up**: Step 2 of 4 - Second (model: **Sonnet**, details: \`${rangedPointer(dir, 2)}\`)`)
+    expect(driver.trim()).toBe(`**Next Up**: Step 2 of 4 - Second (model: **Sonnet**, details: ${rangedPointer(dir, 2)})`)
     const placeholder = RANGED.replace(
       /## Build ranges[\s\S]*$/,
       "## Build ranges\n\n1. `/plumbbob:build <N-M>`, **stop:** <the call that is the human's here>\n   - model: <the strongest model any step inside it recommends>\n",
@@ -1126,7 +1126,7 @@ describe('handoff — the range segment beneath Next Up', () => {
     const plain = await started(rangedWith([1], placeholder))
     writeFileSync(checkpointsPath(plain), 'step 1 abc1234\n')
     const { stdout } = captureIo(() => handoff(plain, []))
-    expect(stdout).toContain(`**Next Up**: Step 2 of 4 - Second (model: **Sonnet**, details: \`${rangedPointer(plain, 2)}\`)`)
+    expect(stdout).toContain(`**Next Up**: Step 2 of 4 - Second (model: **Sonnet**, details: ${rangedPointer(plain, 2)})`)
     expect(stdout).not.toContain('  · ')
   })
 })
@@ -1134,7 +1134,7 @@ describe('handoff — the range segment beneath Next Up', () => {
 describe('handoff — the Stop part on the boundary where a range landed', () => {
   /** The Stop line for RANGED's range 2, as a boundary prints it. */
   const stopOf = (dir: string) =>
-    `**Stop**: Range 2 of 3 landed - review the parser before the card reads it (details: \`${relative(dir, intentPath(dir))}:24\`)`
+    `**Stop**: Range 2 of 3 landed - review the parser before the card reads it (details: [intent.md:24](${relative(dir, intentPath(dir))}#L24))`
 
   it('says why the build stops when the step that landed finished a range, between the Verdict and Next Up', async () => {
     const dir = await started(rangedWith([1, 2, 3]))
@@ -1485,8 +1485,8 @@ The card's story.
 
 ## Harvest
 
-- park 1 → tangent: the card renders it
-- park 2 → blocker: step 4 builds on it
+- P1 → tangent: the card renders it
+- P2 → blocker: step 4 builds on it
 
 ## Recommendation
 
@@ -1521,9 +1521,9 @@ async function stopped(intent = STOPPED, detail = RANGE_DETAIL): Promise<{ dir: 
 function stopCardOf(dir: string, shas: ReadonlyArray<string>): string {
   const intent = relative(dir, intentPath(dir))
   return [
-    `**Stop**: Range 2 of 3 landed - review the parser before the card reads it (details: \`${intent}:18\`)`,
+    `**Stop**: Range 2 of 3 landed - review the parser before the card reads it (details: [intent.md:18](${intent}#L18))`,
     '',
-    '**Summary**: The parser reads the plan, and the card reads the parser. (details: `.plumbbob/detail.md`)',
+    '**Summary**: The parser reads the plan, and the card reads the parser. (details: [detail.md](.plumbbob/detail.md))',
     '',
     '1. Step 2 parses the section.',
     '2. Step 3 renders it.',
@@ -1544,19 +1544,21 @@ function stopCardOf(dir: string, shas: ReadonlyArray<string>): string {
     '',
     '**Verdict**: ● Plumb',
     '',
-    '**Harvest**: 2 of 3 parked ideas open',
+    '**Harvested**: 2 of 3 parked ideas open',
     '',
-    '- park 1 · one idea → tangent: the card renders it',
-    '- park 2 · another → blocker: step 4 builds on it',
+    '- P1 · one idea → lean: tangent, the card renders it',
+    '- P2 · another → lean: blocker, step 4 builds on it',
     '',
-    `**Next Up**: Step 4 of 4 - Fourth (model: **Sonnet**, details: \`${intent}:11\`)`,
+    `**Next Up**: Step 4 of 4 - Fourth (model: **Sonnet**, details: [intent.md:11](${intent}#L11))`,
     '  · range 3 of 3: /plumbbob:run (step 4 to its pause)',
     '',
     '**Your Call**:',
     '',
-    '- `looks good` → I record the review and every class as proposed, folding a blocker into the plan; back to the boundary',
+    'Approving locks in each lean above; to change one, say so first (`make P1 a blocker`).',
+    '',
+    '- `looks good` → I record the review and every lean as proposed, folding a blocker into the plan; back to the boundary',
     '- `/plumbbob:run` → I record them the same way, then run range 3 of 3 to its stop',
-    '- anything that reads as direction (`park 2 is a tangent`) → I re-render the card with the proposal changed; nothing is recorded until you approve',
+    '- anything that reads as direction → I re-render the card with the lean changed; nothing is recorded until you approve',
     '- `expand`, or any question → I show more of what is there; nothing changes, and `show the stop` brings all of this back',
     '',
     '**Recommendation**: Approve it. Both steps held their seams.',
@@ -1582,13 +1584,14 @@ describe("handoff --stop — the stop card that closes a run's range", () => {
     expect(render(dir, ['--stop', '--full']).stdout).toBe(stopCardOf(dir, shas))
   })
 
-  it('brings the card back when the detail changes, with the proposal as it will be recorded', async () => {
+  it('brings the card back when the detail changes, with the lean as it will be recorded and the example recast against it', async () => {
     const { dir } = await stopped()
     render(dir, ['--stop'])
-    writeFileSync(detailPath(dir), RANGE_DETAIL.replace('park 2 → blocker: step 4 builds on it', 'park 2 → tangent: it can wait'))
+    writeFileSync(detailPath(dir), RANGE_DETAIL.replace('P1 → tangent: the card renders it', 'P1 → blocker: step 4 reads it'))
     const { stdout } = render(dir, ['--stop'])
-    expect(stdout).toContain('- park 2 · another → tangent: it can wait')
-    expect(stdout).toContain('(`park 1 is a blocker`)')
+    expect(stdout).toContain('- P1 · one idea → lean: blocker, step 4 reads it')
+    // The example is the first open park recast as the class its lean is not (D106 (leans-harvested)).
+    expect(stdout).toContain('Approving locks in each lean above; to change one, say so first (`make P1 a tangent`).')
   })
 
   it("stamps the stop with its range and the turn it printed in, for the record's latch — D103 (stop-latched)", async () => {
@@ -1624,7 +1627,8 @@ describe("handoff --stop — the stop card that closes a run's range", () => {
     const { dir } = await stopped()
     writeFileSync(buildLogPath(dir), PARKS.replace(/- \[ \]/g, '- [x]'))
     const { stdout } = render(dir, ['--stop'])
-    expect(stdout).not.toContain('**Harvest**')
+    expect(stdout).not.toContain('**Harvested**')
+    expect(stdout).not.toContain('Approving locks in')
     expect(stdout).toContain('**Verdict**: ● Plumb\n\n**Next Up**')
     expect(stdout).toContain(
       [
@@ -1638,9 +1642,20 @@ describe("handoff --stop — the stop card that closes a run's range", () => {
     )
   })
 
-  it('reads a park the detail left out as `no class proposed`', async () => {
-    const { dir } = await stopped(STOPPED, RANGE_DETAIL.replace('- park 1 → tangent: the card renders it\n', ''))
-    expect(render(dir, ['--stop']).stdout).toContain('- park 1 · one idea → no class proposed')
+  it('reads a park the detail left out as `no lean proposed`, and a lean with no reason as its class alone', async () => {
+    const detail = RANGE_DETAIL.replace('- P1 → tangent: the card renders it\n', '').replace('P2 → blocker: step 4 builds on it', 'P2 → pivot')
+    const { dir } = await stopped(STOPPED, detail)
+    const { stdout } = render(dir, ['--stop'])
+    expect(stdout).toContain('- P1 · one idea → no lean proposed')
+    expect(stdout).toContain('- P2 · another → lean: pivot\n')
+    // A park with no lean recasts as a blocker, the change the card could take.
+    expect(stdout).toContain('(`make P1 a blocker`)')
+  })
+
+  it('renders a detail written with the `- park 6 →` wire the same as the `- P6 →` one', async () => {
+    const legacy = RANGE_DETAIL.replace('- P1 →', '- park 1 →').replace('- P2 →', '- park 2 →')
+    const { dir, shas } = await stopped(STOPPED, legacy)
+    expect(render(dir, ['--stop']).stdout).toBe(stopCardOf(dir, shas))
   })
 
   it("names the finish on the plan's last range, with nothing planned beneath it — D102 (settle-in-one-reply)", async () => {
@@ -1712,7 +1727,7 @@ describe("handoff — the stop's record and its readers", () => {
     const record = stopRecord(dir, activeBuild(dir), RANGE_DETAIL, PARKS) ?? ''
     const card = stopCardOf(dir, shas)
     expect(record.startsWith('**Summary**: The parser reads the plan, and the card reads the parser.\n\n1. Step 2 parses')).toBe(true)
-    // The Readout, the Verdict, and the Harvest part read exactly as the card showed them.
+    // The Readout, the Verdict, and the Harvested part read exactly as the card showed them.
     const shown = card.slice(card.indexOf('**Readout**'), card.indexOf('\n\n**Next Up**'))
     expect(record).toContain(shown)
     expect(record).toContain(`${shown}\n\n**Recommendation**: Approve it. Both steps held their seams.\n\n**1.** Step 2 parses the section.\n\nThe parser's story.`)
@@ -1737,19 +1752,21 @@ describe("handoff — the stop's record and its readers", () => {
     const detail = [
       '# Detail · Range 2 · x',
       '',
-      '- park 9 → pivot: not in the section',
+      '- P9 → pivot: not in the section',
       '',
       '## Harvest',
       '',
-      '- park 6 → tangent: the bracket already points at the item',
+      '- P6 → tangent: the bracket already points at the item',
       '- park 7 → Blocker: step 10 assumes it',
-      '- park 8 -> later',
+      '- P8 -> later',
+      '- P 10 → tangent: a handle with a space is not one',
       '- an aside, not a proposal',
       '',
       '## Recommendation',
       '',
-      '- park 1 → tangent: not in the section either',
+      '- P1 → tangent: not in the section either',
     ].join('\n')
+    // The card's `P6` handle, with the `park 7` wire a detail written before it carried still read (D105 (park-handles)).
     expect(harvestProposals(detail)).toEqual([
       { handle: 6, kind: 'tangent', reason: 'the bracket already points at the item' },
       { handle: 7, kind: 'blocker', reason: 'step 10 assumes it' },

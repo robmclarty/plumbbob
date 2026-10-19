@@ -13,10 +13,10 @@
 // range's detail no stop card showed, read off the digest the card's STOP
 // stamp keeps; and it refuses a range that no longer reads as landed. A
 // harvest outside a stop (`# Detail · Harvest`) needs no stamp. A proposal
-// naming a park the list lacks, or a class outside the three, refuses the
-// whole record, so the card and the ledger never disagree about which parks
-// are open; a park no proposal names stays open, and the record says nothing
-// about it.
+// naming a handle the list lacks (`P9` with eight parked), or a class outside
+// the three, refuses the whole record, so the card and the ledger never
+// disagree about which parks are open; a park no proposal names stays open,
+// and the record says nothing about it.
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
@@ -92,7 +92,7 @@ export function harvest(cwd: string, _args: ReadonlyArray<string>): number {
     return 1
   }
 
-  // The review is read before the flip, so its Harvest part shows each class
+  // The review is read before the flip, so its Harvested part shows each lean
   // the human confirmed beside the park it settled.
   const record = stop === null ? null : stopRecord(root, slug, detail, buildLog)
   const date = new Date().toISOString().slice(0, 10)
@@ -112,10 +112,13 @@ export function harvest(cwd: string, _args: ReadonlyArray<string>): number {
   clearDetail(root)
   clearStop(root, slug)
 
+  // Outside a stop the label names the act, `Recorded`, since `Harvested` is
+  // the stop card's part and one label over a part that proposes and an ending
+  // that records would mean two things (D106 (leans-harvested)).
   const counted = classWords(settled)
   const lead =
     stop === null
-      ? transition({ label: 'Harvested', fact: `${settled.length} parked idea${settled.length === 1 ? '' : 's'}`, detail: [counted] })
+      ? transition({ label: 'Recorded', fact: `${settled.length} parked idea${settled.length === 1 ? '' : 's'}`, detail: [counted] })
       : transition({ label: 'Stop', fact: `Range ${stop.item} of ${stop.count} recorded`, detail: [counted] })
   printEnding(root, {
     tier: 'orientation',
@@ -161,18 +164,18 @@ function stopRange(root: string, slug: string | null, intent: string, detail: st
 
 /**
  * The open parks the proposals settle, in list order, or the words for the
- * first proposal that cannot be recorded: one naming a park the list lacks, or
- * a class outside the three. A park no proposal names stays open; a proposal
+ * first proposal that cannot be recorded: one naming a handle the list lacks,
+ * or a class outside the three, each named by the handle the card prints. A park no proposal names stays open; a proposal
  * for a park already harvested settles nothing; and the first proposal for a
  * park is the one the card showed.
  */
 function settle(parks: ReadonlyArray<Park>, proposals: ReadonlyArray<Proposal>): SettledPark[] | string {
   for (const proposal of proposals) {
     if (proposal.handle < 1 || proposal.handle > parks.length) {
-      return `park ${proposal.handle} is not in the list; ${parks.length} parked`
+      return `P${proposal.handle} is not in the list; ${parks.length} parked`
     }
     if (!(CLASSES as readonly string[]).includes(proposal.kind)) {
-      return `park ${proposal.handle}'s class "${proposal.kind}" is not blocker, tangent, or pivot`
+      return `P${proposal.handle}'s class "${proposal.kind}" is not blocker, tangent, or pivot`
     }
   }
   return parks.flatMap((park) => {

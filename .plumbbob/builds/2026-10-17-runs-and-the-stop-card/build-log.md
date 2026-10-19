@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Runs and the stop card
 
-**Current step:** 15 — docs(presentation): spec the stop card's leans and handles and the cards' short links
+**Current step:** 16 — feat(handoff): render the leans, the park handles, and the short links on every card
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -37,7 +37,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☐ 12. feat(plan): point the plan and its template at the run
 - ☐ 13. docs: describe the run as the main way to drive a plan
 - ☐ 14. test(evals): hold /plumbbob:run to its range and its stop card
-- ☐ 15. docs(presentation): spec the stop card's leans and handles and the cards' short links
+- ☑ 15. docs(presentation): spec the stop card's leans and handles and the cards' short links
 - ☐ 16. feat(handoff): render the leans, the park handles, and the short links on every card
 
 ## Park list
@@ -49,6 +49,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [x] status --run words two refusal pointers docs/presentation.md does not list: a span typed reads '(steps 6-9; a run names one range)', and a numbered run while a step no range names is in flight reads '(or /plumbbob:abandon it; no range names it)'; spec them beside the eight in The run header (src/lib/orient.ts runRefusalMove)
 - [x] the plain dashboard's ranges block could mark a stop card still waiting (a tail beside the landed range's row), where only status --run names it today (tangent)
 - [x] docs/presentation.md's range readout examples read `spent 192 min`, where the shared duration format step 8 reuses renders `3h 12m` past two hours; align the examples or give a range its own minutes form (tangent)
+- [ ] the build log's dated Harvest lines still write `park 1 ·` (harvestLines in src/lib/buildlog.ts, outside step 16's seam) while the card and the Log's review say P1, so D105 (park-handles)'s one name stops short of the ledger (tangent)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -225,3 +226,50 @@ folder, so it rides the branch into the PR.)*
 - 2026-10-18 — step 9 checkpointed · 921dc85c7 — feat(handoff): render the stop card with plumbbob handoff --stop (1 drift, 22m)
 - 2026-10-18 — step 10 checkpointed · df2a0c000 — feat(harvest): record a stop's harvest and review with plumbbob harvest (1 drift, 13m)
 - 2026-10-18 — step 11 checkpointed · 38112dea2 — feat(skills): end a run on the stop card and settle it in one reply (10m)
+- 2026-10-19 — step 15 checkpointed · ed4cbe200 — docs(presentation): spec the stop card's leans and handles and the cards' short links (632m)
+
+  **Summary**: The spec now names each open park on the stop card `P6` on a bullet line with `→ lean: <class>, <reason>` behind it under a `Harvested` label, opens the Your Call block on a line saying approval locks in each lean, ends `plumbbob harvest` outside a stop on `**Recorded**:`, writes the note's build order as `order: 7, 8, 5`, and gives every `details:` bracket a short link, `[intent.md:41](.plumbbob/builds/x/intent.md#L41)`, the relative form Rob chose at this pause.
+
+  1. The `Harvested` part names each park `P6` on a bullet line and proposes `→ lean: <class>, <reason>`, with `- P6 → <class>: <reason>` as the wire and `P9` in the refusals
+  2. The Your Call block opens on "Approving locks in each lean above" with `make P6 a blocker` as its example, the direction row drops its own, and `plumbbob harvest` ends outside a stop on `**Recorded**:`
+  3. Every `details:` bracket is specified as `[intent.md:41](.plumbbob/builds/x/intent.md#L41)`, the relative link Rob chose at this pause; the click test was waived, and the spec says so beside the form
+  4. The note beneath Next Up writes `order: 7, 8, 5, 10, 6 (and 2 more)` as a labeled field
+  5. `docs/decisions.md` gains D105 (park-handles) through D108 (order-label), with revision notes on D81, D102, and D104
+
+  **Readout**:
+
+  ```text
+  check        green: 1 of 1 checks
+  done-when    met
+  decisions    5 of 5 honored
+               - D21 (park-handles), D22 (leans-harvested), D23 (leans-lock-in)
+               - D24 (short-linked-paths), D25 (order-label)
+  constraints  10 of 10 honored
+  seam         held: 2 of 2 declared, no strays
+  diff         +220 -92 across 2 files
+  spent        10h 32m · 6 turns · 425s gate · green first run
+  ```
+
+  **Verdict**: ● Plumb
+
+  **Recommendation**: Approve it. The five calls from range 4's stop are on the page in a form step 16 can render as written, and the one the plan left to this pause, the link form, is recorded as chosen, with the click test's absence stated where a reader would look for its result.
+
+  **1.** The `Harvested` part names each park `P6` on a bullet line and proposes `→ lean: <class>, <reason>`, with `- P6 → <class>: <reason>` as the wire and `P9` in the refusals
+
+  The section is renamed `### The Harvested part` (its anchor moved with it, and the one reference in the file follows). The handle is `P6` for the sixth line ever parked, harvested lines counted, the same count the note sizes, so the record still matches a proposal by number alone. Each park rides a bullet line because a numbered list renumbers: open parks 6 and 8 would render as 6 and 7. The item reads `- P6 · <text> → lean: tangent, <reason>`; the detail wire keeps the colon form, `- P6 → tangent: <the reason>`, and handoff writes the lean's punctuation. The omission string is now `→ no lean proposed`. `plumbbob harvest`'s two proposal refusals read `(P9 is not in the list; 8 parked)` and `(P7's class "later" is not blocker, tangent, or pivot)`. The word `lean` is the plan's own (an open question's `*lean:*`), which is why `suggested:` was dropped; the spec says so where the item is defined.
+
+  **2.** The Your Call block opens on "Approving locks in each lean above" with `make P6 a blocker` as its example, the direction row drops its own, and `plumbbob harvest` ends outside a stop on `**Recorded**:`
+
+  The line sits beneath the label and ahead of the moves, blank lines either side, so no renderer folds it into the label's paragraph: `Approving locks in each lean above; to change one, say so first (`make P6 a blocker`).` The example's rule, for step 16 to render: the first open park, recast as the class its lean is not (a blocker for a tangent or a pivot, a tangent for a blocker), so it always names a change the card could take. The direction row is now bare, `anything that reads as direction → I re-render the card with the lean changed`, and the moves say `every lean` where they said `every class`. A stop with no park open renders no lean line. Outside a stop the record's ending is `**Recorded**: 2 parked ideas (2 tangents)`, because `Harvested` is the card's part now and one label over a part that proposes and an ending that records would mean two things; the stop's own ending keeps `**Stop**: Range 3 of 5 recorded (…)`.
+
+  **3.** Every `details:` bracket is specified as `[intent.md:41](.plumbbob/builds/x/intent.md#L41)`, the relative link Rob chose at this pause; the click test was waived, and the spec says so beside the form
+
+  The rule lives in `### The Next Up line`, and the Summary section points at it. The text is the file's name and line (`detail.md` alone for the Summary lead, since the whole file is the detail), the target the path from the repo root with a `#L41` fragment, on the Summary lead, Next Up, the Stop part and the stop card's lead, and a transition's lead alike. All 19 example brackets in the file are converted, including the detail plane's `…/build-log.md:412`. The plan asked for four candidates to be clicked in Claude Code's terminal and in Zed before the pick (the code-spanned `path:line` the cards print today, a link to the relative path, the same with `#L1275`, and an absolute `file://` URL); the pause offered them twice, and Rob chose the relative link with the fragment on its reasons: the short name says which file, a relative target keeps a machine's path out of any pasted card and resolves on GitHub with the line highlighted, and `file://` would stamp one machine's absolute path on every card. The spec and D107 (short-linked-paths) both record that the test was not run and leave what each host opens to the first card the code renders. Two things checked for the choice: the links check walks every `*.md` under the repo, `.plumbbob/` included, and skips links inside code spans and fences, so the spec's examples are safe where they sit; and the record of a Summary lead drops its bracket, so no live link lands in the build log.
+
+  **4.** The note beneath Next Up writes `order: 7, 8, 5, 10, 6 (and 2 more)` as a labeled field
+
+  In place of `build order 7, 8, 5, 10, 6 (and 2 more)`. The reason is on the page: the note's other segments read as labeled fields (`range 3 of 5:` names its range, `parked 2 of 7 open` its count), and a label is how the eye finds one in a line of three. D86 (build-order) in `docs/decisions.md` does not quote the phrase, so it needs no revision note; D108 (order-label) says it revises the phrase D86 gave the line.
+
+  **5.** `docs/decisions.md` gains D105 (park-handles) through D108 (order-label), with revision notes on D81, D102, and D104
+
+  D105 (park-handles) is D21; D106 (leans-harvested) merges D22 and D23, since the label, the lean, the lock-in line, and the `Recorded` ending are one call about how a proposal reads; D107 (short-linked-paths) is D24, with the waived test on record; D108 (order-label) is D25. Each keeps its *because*, cites by slug, names what it revises, and carries its `Promoted from` line. D81's note records the link form, D102's the `P6` handle and the leans, D104's the `Recorded` ending and the `P9` refusal. The header's promoted range now runs D95 to D108. The full gate ran green across all 11 slots at the pause; the `--only` narrowing asked for was not applied, so the green was the whole gate.

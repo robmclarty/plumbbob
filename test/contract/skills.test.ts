@@ -475,7 +475,11 @@ describe('run — a range of the plan, walked by the build skill — D95 (run-ve
     expect(section).toContain('plumbbob handoff --stop')
     expect(section).toContain('# Detail · Range <N> · <the stop, as the plan words it>')
     expect(section).toContain('── recap · range <N> of <M> ──')
-    expect(section).toContain('- park <handle> → <blocker, tangent, or pivot>: <the reason, one clause>')
+    // Each park is named by the handle the card prints, and the lean's punctuation is handoff's (D105 (park-handles)).
+    expect(section).toContain('- P<handle> → <blocker, tangent, or pivot>: <the reason, one clause>')
+    expect(section).not.toMatch(/- park <handle>/)
+    expect(section).toMatch(/is `P3` whether or not the two above it are flipped/)
+    expect(section).toMatch(/`no lean proposed`/)
     // The review is drawn from the record, never from recall, since a long run can compact.
     expect(section).toMatch(/checkpoint bodies/)
     expect(section).toMatch(/`## Log`/)
@@ -493,8 +497,12 @@ describe('run — a range of the plan, walked by the build skill — D95 (run-ve
 
   it('settles the card in one reply: looks good records it, a change re-renders it, a question ends on the reminder — D102 (settle-in-one-reply)', () => {
     const section = body.slice(body.indexOf('## 6. The reply at a stop'), body.indexOf('## The hard contracts'))
-    expect(section).toMatch(/\*\*`looks good`\*\* confirms the review and every class/)
-    expect(section).toMatch(/Fold each confirmed\s+blocker into `intent.md` by the harvest skill's rules first, then run `plumbbob harvest`/)
+    const flat = section.replace(/\s+/g, ' ')
+    expect(flat).toMatch(/\*\*`looks good`\*\* confirms the review and locks in every lean as proposed/)
+    expect(flat).toMatch(/Fold each confirmed blocker into `intent.md` by the harvest skill's rules first, then run `plumbbob harvest`/)
+    // A change names the park the way the card's lock-in line does (D105 (park-handles)).
+    expect(section).toContain('`make P7 a tangent`')
+    expect(section).not.toMatch(/park \d+ is a/)
     expect(section).toMatch(/\*\*A change\*\*[\s\S]*run `plumbbob handoff --stop`, paste the whole card/)
     expect(section).toMatch(/\*\*A question\*\*[\s\S]*one-line reminder/)
     expect(section).toContain('plumbbob handoff --stop --full')
@@ -687,8 +695,13 @@ describe('harvest — propose, the human confirms', () => {
     expect(data['allowed-tools']).toContain('Bash(plumbbob harvest:*)')
     expect(data['allowed-tools']).toMatch(/\bWrite\b/)
     expect(body).toContain('`# Detail · Harvest`')
-    expect(body).toContain('`- park 6 → tangent: <the reason, one clause>`')
+    expect(body).toContain('`- P6 → tangent: <the reason, one clause>`')
+    expect(body).not.toMatch(/- park \d+ →/)
+    expect(body).toContain('`make P7 a tangent`')
     expect(body).toMatch(/run `plumbbob harvest`/)
+    // Outside a stop the record ends on `Recorded`, and a missing handle refuses as `P9` (D106 (leans-harvested)).
+    expect(body).toContain('`**Recorded**:`')
+    expect(body).toMatch(/`P9`/)
   })
 
   it("leaves a run's stop to its card, and refuses while one waits — D100 (stop-card)", () => {

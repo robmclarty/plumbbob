@@ -135,7 +135,7 @@ line names it, so your recommendation speaks to that call.
 
 A run that lands its range ends on the stop card
 ([D100 (stop-card)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d100)):
-the review the plan's stop asked for, with every open park on it and a class proposed for
+the review the plan's stop asked for, with every open park on it and a lean proposed for
 each. The checkpoint that landed the range's last step marked its ending as owing the card,
 and the turn will not close on that boundary
 ([D103 (stop-latched)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d103)).
@@ -160,7 +160,7 @@ constraints  all honored
 
 ## Harvest
 
-- park <handle> → <blocker, tangent, or pivot>: <the reason, one clause>
+- P<handle> → <blocker, tangent, or pivot>: <the reason, one clause>
 
 ## Recommendation
 
@@ -176,12 +176,16 @@ never from recall, since a long run can compact its context partway through and 
 early steps. A step that landed a hair off comes first among the highlights; five at most.
 
 The `## Harvest` section carries one line for every open park in the build-log's
-`## Park list`. A park's handle is its place in that list, counting the harvested lines
-too, which is the count the note sizes as `parked 3 of 8 open`: the third line ever parked is
-`park 3` whether or not the two above it are flipped. Propose one class per park by the
-harvest skill's rules, `tangent` for anything uncertain, with the reason in one clause; a
-park you leave out reads `no class proposed` on the card and stays open. The section
-vanishes when no park is open, and so does the card's Harvest part
+`## Park list`. A park's handle is `P` and its place in that list, counting the harvested
+lines too, which is the count the note sizes as `parked 3 of 8 open`: the third line ever
+parked is `P3` whether or not the two above it are flipped, and the card, the detail file,
+and the human's reply all name it `P3`
+([D105 (park-handles)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d105)).
+Propose one class per park by the harvest skill's rules, `tangent` for anything uncertain,
+with the reason in one clause; the card prints it as the park's lean
+(`→ lean: tangent, <the reason>`), so write the class and the reason alone and leave the
+punctuation to handoff. A park you leave out reads `no lean proposed` on the card and stays
+open. The section vanishes when no park is open, and so does the card's Harvested part
 ([D100 (stop-card)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d100)).
 The recommendation speaks to the plan's stop, the header's `stop:` line, and to the
 proposals: the move you would take on both, then why.
@@ -198,12 +202,12 @@ The card's proposals are settled in one reply
 ([D102 (settle-in-one-reply)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d102)),
 and the Your Call block names the replies. Read the human's message as one of them:
 
-- **`looks good`** confirms the review and every class as proposed. Fold each confirmed
-  blocker into `intent.md` by the harvest skill's rules first, then run `plumbbob harvest`,
-  which flips the parks, writes the Harvest lines, and writes the range's review beneath a
-  dated line in the Log. Relay its ending whole and end the turn. It commits nothing; the
+- **`looks good`** confirms the review and locks in every lean as proposed, as the line
+  beneath the card's Your Call label says. Fold each confirmed blocker into `intent.md` by
+  the harvest skill's rules first, then run `plumbbob harvest`, which flips the parks,
+  writes the Harvest lines, and writes the range's review beneath a dated line in the Log. Relay its ending whole and end the turn. It commits nothing; the
   record rides the next step's checkpoint.
-- **A change** (`park 7 is a tangent`, or a change to the review) is direction. Rewrite the
+- **A change** (`make P7 a tangent`, or a change to the review) is direction. Rewrite the
   detail file's line or section, run `plumbbob handoff --stop`, paste the whole card it
   prints, and end the turn. Nothing is recorded until `looks good`.
 - **A question**, or `expand 2`, is answered from the detail file, the range's commits, or
@@ -223,8 +227,8 @@ and the Your Call block names the replies. Read the human's message as one of th
 - **`/plumbbob:finish`** at the plan's last range is the finish skill's to settle: it
   records the card the way `looks good` would before it writes the report.
 
-`plumbbob harvest` refuses a proposal naming a park the list lacks and a class outside the
-three, and it refuses a detail file no card showed; fix what the refusal names, run
+`plumbbob harvest` refuses a proposal naming a handle the list lacks (`P9` with eight
+parked) and a class outside the three, and it refuses a detail file no card showed; fix what the refusal names, run
 `plumbbob handoff --stop` again, and end the turn on the card.
 
 ## The hard contracts

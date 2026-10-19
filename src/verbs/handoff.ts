@@ -43,7 +43,7 @@
 
 import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { basename, join, relative } from 'node:path'
 import {
   type NumstatEntry,
   PLAN_COMMIT_MARKER,
@@ -426,14 +426,30 @@ function stopLead(landed: LandedRange, where: string): string {
   return transition({
     label: 'Stop',
     fact: `Range ${landed.range.item} of ${landed.count} landed - ${landed.range.stop}`,
-    detail: [`details: \`${where}:${landed.range.line}\``],
+    detail: [detailsLink(where, landed.range.line)],
   })
+}
+
+/**
+ * The `details:` clause every bracket on a card carries, in its short linked
+ * form: the file's name and line as the link's text, and its path from the
+ * repo root with a `#L41` fragment as the target. With no line, the name links
+ * the whole file, as the Summary lead's does, since the whole file is the
+ * detail.
+ *
+ * The full path was noise on every card while the name alone still says which
+ * file, and a relative target keeps any one machine's path out of a pasted
+ * card (D107 (short-linked-paths)).
+ */
+export function detailsLink(path: string, line: number | null): string {
+  const name = basename(path)
+  return line === null ? `details: [${name}](${path})` : `details: [${name}:${line}](${path}#L${line})`
 }
 
 /**
  * The stop card that closes a run's range (docs/presentation.md): the Stop
  * lead, the range's Summary and highlights from the range's detail file, the
- * Readout measured across the range, the Verdict, the Harvest part while a
+ * Readout measured across the range, the Verdict, the Harvested part while a
  * park is open, Next Up, Your Call, and the recommendation.
  *
  * It renders for the range the last landing completed, and refuses with a
@@ -494,9 +510,9 @@ function stopCard(root: string, slug: string | null, named: string | null, full:
     parts.push(harvest)
   }
   parts.push(
-    // The note carries no parks segment here: the Harvest lead above sizes the list.
+    // The note carries no parks segment here: the Harvested lead above sizes the list.
     nextUpBlock(intent, '', nextUp, step, where),
-    stopCallBlock(directionExample(parks, harvestProposals(detail)), steps, intent),
+    stopCallBlock(leanExample(parks, harvestProposals(detail)), steps, intent),
   )
   const command = reprintCommand('--stop --full', undefined, named)
   return emit(root, { tier: 'decision', render: 'stop', command }, withRecommendation(parts, parseRecommendation(detail)))
@@ -587,7 +603,7 @@ function rangeMeasure(root: string, slug: string | null, intent: string, range: 
 
 /**
  * The stamp's hash of a stop card: the range's detail file, the measured rows
- * as rendered, and the Harvest part, which reads the park list. Never `spent`,
+ * as rendered, and the Harvested part, which reads the park list. Never `spent`,
  * as at a pause.
  */
 function stopHash(detail: string, measured: ReadonlyArray<string>, harvest: string): string {
@@ -630,7 +646,9 @@ export type Proposal = { readonly handle: number; readonly kind: string; readonl
 
 /**
  * The proposals under a detail file's `## Harvest` section, one per
- * `- park 6 → tangent: <the reason>` line, in the order written.
+ * `- P6 → tangent: <the reason>` line, in the order written. The handle is the
+ * one the card prints (D105 (park-handles)); the `- park 6 →` form a detail
+ * written before it carried is still read.
  *
  * The class is read as written, whatever its word: the card shows the
  * proposal the model made, and `plumbbob harvest` is what refuses one outside
@@ -644,7 +662,7 @@ export function harvestProposals(detail: string): Proposal[] {
   }
   const end = lines.findIndex((l, i) => i > start && l.startsWith('## '))
   return lines.slice(start + 1, end === -1 ? lines.length : end).flatMap((line) => {
-    const m = /^-\s+park\s+(\d+)\s*(?:→|->)\s*([\w-]+)\s*(?::\s*(.*))?$/i.exec(line.trim())
+    const m = /^-\s+(?:P|park\s+)(\d+)\s*(?:→|->)\s*([\w-]+)\s*(?::\s*(.*))?$/i.exec(line.trim())
     return m === null ? [] : [{ handle: Number(m[1]), kind: (m[2] ?? '').toLowerCase(), reason: (m[3] ?? '').trim() }]
   })
 }
@@ -661,11 +679,16 @@ export function parseDetailRange(detail: string): number | null {
 }
 
 /**
- * The Harvest part: a lead that sizes the list, then one item per open park in
- * list order, its handle and text from the list and, behind the arrow, the
- * class the detail file proposes and its reason. A park the detail left out
- * reads `no class proposed`, so a silent omission is one on the card. Null
- * with no park open, which renders the card without the part.
+ * The Harvested part: a lead that sizes the list, then one bullet per open
+ * park in list order, its `P6` handle and text from the list and, behind the
+ * arrow, the lean the detail file proposes: `lean: tangent, <the reason>`. A
+ * park the detail left out reads `no lean proposed`, so a silent omission is
+ * one on the card. Null with no park open, which renders the card without the
+ * part.
+ *
+ * A bullet, never a numbered item, because a markdown list renumbers: open
+ * parks 6 and 8 would render as 6 and 7, and the number read would not be the
+ * one the record matches (D105 (park-handles)).
  */
 function harvestPart(parks: ReadonlyArray<Park>, proposals: ReadonlyArray<Proposal>): string | null {
   const open = parks.filter((p) => p.open)
@@ -674,23 +697,28 @@ function harvestPart(parks: ReadonlyArray<Park>, proposals: ReadonlyArray<Propos
   }
   const items = open.map((park) => {
     const proposal = proposals.find((p) => p.handle === park.handle)
-    const proposed =
-      proposal === undefined ? 'no class proposed' : proposal.reason.length === 0 ? proposal.kind : `${proposal.kind}: ${proposal.reason}`
-    return `- park ${park.handle} · ${park.text} → ${proposed}`
+    const lean =
+      proposal === undefined ? 'no lean proposed' : proposal.reason.length === 0 ? `lean: ${proposal.kind}` : `lean: ${proposal.kind}, ${proposal.reason}`
+    return `- P${park.handle} · ${park.text} → ${lean}`
   })
-  const lead = `**Harvest**: ${open.length} of ${parks.length} parked idea${parks.length === 1 ? '' : 's'} open`
+  const lead = `**Harvested**: ${open.length} of ${parks.length} parked idea${parks.length === 1 ? '' : 's'} open`
   return [lead, '', ...items].join('\n')
 }
 
 /**
  * The stop card's Your Call block: the replies that settle the card in one
- * message, each recording the review and every proposal before what it names.
+ * message, each recording the review and every lean before what it names.
  *
- * The second row is the move after the stop: the next range's run, the finish
- * on the plan's last range, and nothing when the run would refuse (a flagged
- * range, or a next step no range names), where the note beneath Next Up
- * carries the drift words. With no park open (`example` null), the rows
- * record the review alone and direction is a change to it.
+ * While a park is open (`example` set), one line beneath the label says that
+ * approving locks in each lean and that changing one means saying so first,
+ * with the example naming a handle on the card, since the reply is a decision
+ * on every lean at once (D106 (leans-harvested)); the direction row then
+ * carries no example of its own. The second row is the move after the stop:
+ * the next range's run, the finish on the plan's last range, and nothing when
+ * the run would refuse (a flagged range, or a next step no range names), where
+ * the note beneath Next Up carries the drift words. With no park open, no
+ * line renders, the rows record the review alone, and direction is a change to
+ * it.
  */
 function stopCallBlock(example: string | null, steps: ReadonlyArray<Step>, intent: string): string {
   const parked = example !== null
@@ -698,7 +726,7 @@ function stopCallBlock(example: string | null, steps: ReadonlyArray<Step>, inten
   const moves = [
     callLine(
       '`looks good`',
-      parked ? 'I record the review and every class as proposed, folding a blocker into the plan; back to the boundary' : 'I record the review; back to the boundary',
+      parked ? 'I record the review and every lean as proposed, folding a blocker into the plan; back to the boundary' : 'I record the review; back to the boundary',
     ),
   ]
   const run = cardRun(intent, null)
@@ -708,40 +736,38 @@ function stopCallBlock(example: string | null, steps: ReadonlyArray<Step>, inten
     moves.push(callLine('`/plumbbob:run`', `I record ${what} the same way, then run range ${run.range.item} of ${run.count} to its stop`))
   }
   moves.push(
-    parked
-      ? callLine(`anything that reads as direction (\`${example}\`)`, 'I re-render the card with the proposal changed; nothing is recorded until you approve')
-      : callLine('anything that reads as direction', 'I re-render the card with the review changed; nothing is recorded until you approve'),
+    callLine('anything that reads as direction', `I re-render the card with the ${parked ? 'lean' : 'review'} changed; nothing is recorded until you approve`),
     callLine('`expand`, or any question', 'I show more of what is there; nothing changes, and `show the stop` brings all of this back'),
   )
-  return ['**Your Call**:', '', ...moves].join('\n')
+  const lockIn = parked ? [`Approving locks in each lean above; to change one, say so first (\`${example}\`).`, ''] : []
+  return ['**Your Call**:', '', ...lockIn, ...moves].join('\n')
 }
 
 /**
- * The direction row's example, a reply naming a park on this card by its
- * handle: the first open park proposed as anything but a tangent, recast as a
- * tangent, else the first open park recast as a blocker. Null with no park
- * open, where direction can only change the review.
+ * The lock-in line's example, a reply naming a park on this card by its
+ * handle: the first open park recast as the class its lean is not, a blocker
+ * for a tangent, a pivot, or no lean at all, and a tangent for a blocker, so
+ * it always names a change the card could take. Null with no park open, where
+ * there is no lean to change.
  */
-function directionExample(parks: ReadonlyArray<Park>, proposals: ReadonlyArray<Proposal>): string | null {
-  const open = parks.filter((p) => p.open)
-  const kindOf = (park: Park): string | undefined => proposals.find((p) => p.handle === park.handle)?.kind
-  const recast = open.find((park) => kindOf(park) !== undefined && kindOf(park) !== 'tangent')
-  if (recast !== undefined) {
-    return `park ${recast.handle} is a tangent`
+function leanExample(parks: ReadonlyArray<Park>, proposals: ReadonlyArray<Proposal>): string | null {
+  const first = parks.find((p) => p.open)
+  if (first === undefined) {
+    return null
   }
-  const first = open[0]
-  return first === undefined ? null : `park ${first.handle} is a blocker`
+  const kind = proposals.find((p) => p.handle === first.handle)?.kind
+  return `make P${first.handle} a ${kind === 'blocker' ? 'tangent' : 'blocker'}`
 }
 
 /**
  * A stop's record for the Log: the card as the human settled it, with the
  * full story behind each highlight beneath. The Summary and its highlights,
- * the Readout fence, the Verdict, the Harvest part, the recommendation, then
+ * the Readout fence, the Verdict, the Harvested part, the recommendation, then
  * the numbered sections' bodies, blank-line separated and unindented; the
  * caller nests it under the range's dated Log line.
  *
  * Measured, not recalled, through the same review the card rendered. The
- * Harvest part reads the park list as `buildLog` holds it, so the caller
+ * Harvested part reads the park list as `buildLog` holds it, so the caller
  * passes the list from before its record flips the settled parks, and the
  * part shows each class the human confirmed. Null when the detail file
  * reviews no range the plan declares.
@@ -971,7 +997,7 @@ function summaryBlock(summary: Summary | null, where: string): string {
   if (summary === null) {
     return ''
   }
-  const lead = `**Summary**: ${summary.lead} (details: \`${where}\`)`
+  const lead = `**Summary**: ${summary.lead} (${detailsLink(where, null)})`
   if (summary.highlights.length === 0) {
     return lead
   }
@@ -1293,10 +1319,10 @@ function cardRun(intent: string, paused: number | null): Run {
  * instead.
  *
  * The model is the second bold token the line spends, because it is the one
- * the human acts on (a `/model` call) before the next run; the path is a bare
- * `path:line` in a code span, the one link form that opens in a host and still
- * reads as a path in a PR diff. The line alone is the driver tier's pointer;
- * every other tier rides `nextUpNote` beneath it, through `nextUpBlock`.
+ * the human acts on (a `/model` call) before the next run; the path is the
+ * short link every `details:` bracket carries (`detailsLink`). The line alone
+ * is the driver tier's pointer; every other tier rides `nextUpNote` beneath
+ * it, through `nextUpBlock`.
  */
 function nextUpLine(nextUp: Step | undefined, total: number, where: string, model = nextUp?.model ?? null): string {
   if (nextUp === undefined) {
@@ -1305,7 +1331,7 @@ function nextUpLine(nextUp: Step | undefined, total: number, where: string, mode
   const title = nextUp.title.length > 0 ? ` - ${nextUp.title}` : ''
   const token = modelToken(model)
   const bracket = token === null ? [] : [`model: **${capitalize(token)}**`]
-  bracket.push(`details: \`${where}:${nextUp.line}\``)
+  bracket.push(detailsLink(where, nextUp.line))
   return `**Next Up**: Step ${nextUp.n} of ${total}${title} (${bracket.join(', ')})`
 }
 

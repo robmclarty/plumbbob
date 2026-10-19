@@ -43,7 +43,7 @@ import { conventionalSubject, subjectFromTitle, withMarker } from '../lib/commit
 import { appendToSection, checkpointLogLine, logEntry, planLogLine } from '../lib/buildlog.ts'
 import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
 import { advisory, ending, notice, printEnding, transition } from '../lib/notice.ts'
-import { boundaryEnding, parseDetailRange, planRecord, stepRecord } from './handoff.ts'
+import { boundaryEnding, detailsLink, parseDetailRange, planRecord, stepRecord } from './handoff.ts'
 import { isHarvestDetail } from './harvest.ts'
 
 /**
@@ -350,12 +350,16 @@ function flipIntent(root: string, step: number): string {
   }
 }
 
+/** Where a Log entry's dated line landed: the build-log's path from the repo root, and its line. */
+type LogPointer = { readonly path: string; readonly line: number }
+
 /**
  * The lead line's trailing parenthetical: the short SHA, and where the Log
- * entry landed when one did, as the same `details:` clause Next Up carries.
+ * entry landed when one did, as the same short linked `details:` clause Next
+ * Up carries.
  */
-function leadDetail(sha: string, pointer: string | null): string[] {
-  return pointer === null ? [sha.slice(0, 9)] : [sha.slice(0, 9), `details: \`${pointer}\``]
+function leadDetail(sha: string, pointer: LogPointer | null): string[] {
+  return pointer === null ? [sha.slice(0, 9)] : [sha.slice(0, 9), detailsLink(pointer.path, pointer.line)]
 }
 
 /**
@@ -365,10 +369,10 @@ function leadDetail(sha: string, pointer: string | null): string[] {
  * The build's history accrues at each checkpoint instead of being reconstructed
  * at finish; the step's title is lifted from intent.md when still present.
  * Best-effort: a missing or odd build-log never blocks a checkpoint; the
- * `checkpoints` SHA is the source of truth. Returns where the line landed, as
- * `path:line` from the repo root, or null when nothing was written.
+ * `checkpoints` SHA is the source of truth. Returns where the line landed, or
+ * null when nothing was written.
  */
-function logCheckpoint(root: string, step: number, sha: string, record: string | null): string | null {
+function logCheckpoint(root: string, step: number, sha: string, record: string | null): LogPointer | null {
   const date = new Date().toISOString().slice(0, 10)
   return appendLog(root, checkpointLogLine(date, step, sha, titleForStep(root, step), statsSuffix(root, step)), record)
 }
@@ -377,15 +381,15 @@ function logCheckpoint(root: string, step: number, sha: string, record: string |
  * Append the plan's entry to the Log: a dated `plan committed` line, and
  * beneath it the cold read that approved the plan when the model wrote one.
  */
-function logPlan(root: string, sha: string, record: string | null): string | null {
+function logPlan(root: string, sha: string, record: string | null): LogPointer | null {
   return appendLog(root, planLogLine(new Date().toISOString().slice(0, 10), sha), record)
 }
 
 /**
- * Write one Log entry and say where its dated line landed (`path:line` from
- * the repo root), or null when the section is missing or the write failed.
+ * Write one Log entry and say where its dated line landed, or null when the
+ * section is missing or the write failed.
  */
-function appendLog(root: string, line: string, record: string | null): string | null {
+function appendLog(root: string, line: string, record: string | null): LogPointer | null {
   try {
     const path = buildLogPath(root)
     const updated = appendToSection(readFileSync(path, 'utf8'), 'Log', logEntry(line, record))
@@ -394,7 +398,7 @@ function appendLog(root: string, line: string, record: string | null): string | 
     }
     writeFileSync(path, updated)
     const at = updated.split('\n').lastIndexOf(line)
-    return at === -1 ? null : `${relative(root, path)}:${at + 1}`
+    return at === -1 ? null : { path: relative(root, path), line: at + 1 }
   } catch {
     // best-effort ledger; never fail a checkpoint over the build-log.
     return null

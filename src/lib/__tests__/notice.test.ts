@@ -166,7 +166,7 @@ describe('ending — D43 (verb-prints-its-ending)', () => {
   })
 
   it('stands the Stop part after the advisories and before the pointer', () => {
-    const stop = transition({ label: 'Stop', fact: 'Range 3 of 5 landed - review the card', detail: ['details: `x/intent.md:63`'] })
+    const stop = transition({ label: 'Stop', fact: 'Range 3 of 5 landed - review the card', detail: ['details: [intent.md:63](x/intent.md#L63)'] })
     expect(
       ending({
         lead: transition({ label: 'Checkpoint', fact: 'Step 9 complete', detail: ['c7d8e9f0a'] }),
@@ -183,7 +183,7 @@ describe('ending — D43 (verb-prints-its-ending)', () => {
         '',
         'The plan rides the commit message ⚠',
         '',
-        '**Stop**: Range 3 of 5 landed - review the card (details: `x/intent.md:63`)',
+        '**Stop**: Range 3 of 5 landed - review the card (details: [intent.md:63](x/intent.md#L63))',
         '',
         '**Next Up**: Step 10 of 12 - feat(docs): name the label',
         '',

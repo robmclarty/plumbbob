@@ -430,7 +430,7 @@ describe('relay — the holds the 2026-10-17 A/B made, replayed — D19 (facts-e
     const text = ending({
       lead: transition({ label: 'Checkpoint', fact: 'Step 3 complete', detail: ['b4c5d6e7f'] }),
       verdict: '**Verdict**: ● Plumb',
-      stop: transition({ label: 'Stop', fact: 'Range 2 of 2 landed - review the parser', detail: ['details: `x/intent.md:16`'] }),
+      stop: transition({ label: 'Stop', fact: 'Range 2 of 2 landed - review the parser', detail: ['details: [intent.md:16](x/intent.md#L16)'] }),
       pointer: '**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish',
     })
     writeRelay(dir, { tier: 'orientation', render: 'checkpoint', text })
@@ -462,11 +462,12 @@ describe('relay — the holds the 2026-10-17 A/B made, replayed — D19 (facts-e
 })
 
 // A stop card as `handoff --stop` prints it, whole: the Stop lead, the range's
-// review, the Harvest part, and the moves that settle it.
+// review, the Harvested part, the line that says approving locks in the
+// leans, and the moves that settle it.
 const STOP_CARD = [
-  '**Stop**: Range 2 of 2 landed - review the parser (details: `x/intent.md:16`)',
+  '**Stop**: Range 2 of 2 landed - review the parser (details: [intent.md:16](x/intent.md#L16))',
   '',
-  '**Summary**: The parser reads the plan. (details: `.plumbbob/detail.md`)',
+  '**Summary**: The parser reads the plan. (details: [detail.md](.plumbbob/detail.md))',
   '',
   '1. Step 2 parses the section.',
   '',
@@ -483,15 +484,17 @@ const STOP_CARD = [
   '',
   '**Verdict**: ● Plumb',
   '',
-  '**Harvest**: 1 of 1 parked idea open',
+  '**Harvested**: 1 of 1 parked idea open',
   '',
-  '- park 1 · one idea → tangent: the card renders it',
+  '- P1 · one idea → lean: tangent, the card renders it',
   '',
   '**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish',
   '',
   '**Your Call**:',
   '',
-  '- `looks good` → I record the review and every class as proposed, folding a blocker into the plan; back to the boundary',
+  'Approving locks in each lean above; to change one, say so first (`make P1 a blocker`).',
+  '',
+  '- `looks good` → I record the review and every lean as proposed, folding a blocker into the plan; back to the boundary',
   '- `/plumbbob:finish` → I record them the same way, then write the report and close the build',
   '',
   '**Recommendation**: Approve it. Both steps held their seams.',
@@ -505,7 +508,7 @@ describe('relay — a run owes its stop card — D103 (stop-latched)', () => {
     const text = ending({
       lead: transition({ label: 'Checkpoint', fact: 'Step 3 complete', detail: ['b4c5d6e7f'] }),
       verdict: '**Verdict**: ● Plumb',
-      stop: transition({ label: 'Stop', fact: 'Range 2 of 2 landed - review the parser', detail: ['details: `x/intent.md:16`'] }),
+      stop: transition({ label: 'Stop', fact: 'Range 2 of 2 landed - review the parser', detail: ['details: [intent.md:16](x/intent.md#L16)'] }),
       pointer: '**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish',
     })
     writeRelay(dir, { tier: 'orientation', render: 'checkpoint', owes: { range: 2, count: 2, step: 3 }, text })
@@ -528,8 +531,8 @@ describe('relay — a run owes its stop card — D103 (stop-latched)', () => {
   it('holds a stop card that dropped a part, naming `plumbbob handoff --stop --full`', async () => {
     const dir = await paused()
     writeRelay(dir, { tier: 'decision', render: 'stop', command: 'plumbbob handoff --stop --full', text: STOP_CARD })
-    const dropped = STOP_CARD.replace(/\*\*Harvest\*\*:[\s\S]*?\n\n- park 1[^\n]*\n\n/, '')
-    expect(dropped).not.toContain('**Harvest**')
+    const dropped = STOP_CARD.replace(/\*\*Harvested\*\*:[\s\S]*?\n\n- P1 [^\n]*\n\n/, '')
+    expect(dropped).not.toContain('**Harvested**')
     expect(held(relayCheck(dir, stop(dir, { last: dropped })))).toBe(
       'plumbbob: the turn did not close on the stop card it printed. ' +
         'Run `plumbbob handoff --stop --full` and end the turn on its output, whole, with nothing after it.',

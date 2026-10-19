@@ -34,7 +34,7 @@ const INTENT = `# Harvest test
 3. \`/plumbbob:build 4\`, **stop:** at step 4's pause, pick the label
 `
 
-// Range 2's detail, proposing a class for parks 1 and 3 and leaving park 2 out.
+// Range 2's detail, proposing a lean for P1 and P3 and leaving P2 out.
 const RANGE_DETAIL = `# Detail · Range 2 · review the parser before the card reads it
 
 ── recap · range 2 of 3 ──
@@ -52,8 +52,8 @@ The parser's story.
 
 ## Harvest
 
-- park 1 → tangent: the card renders it
-- park 3 → blocker: step 4 builds on it
+- P1 → tangent: the card renders it
+- P3 → blocker: step 4 builds on it
 
 ## Recommendation
 
@@ -64,8 +64,8 @@ const HARVEST_DETAIL = `# Detail · Harvest
 
 ## Harvest
 
-- park 1 → tangent: it can wait
-- park 2 → tangent: cosmetic
+- P1 → tangent: it can wait
+- P2 → tangent: cosmetic
 `
 
 function git(dir: string, args: ReadonlyArray<string>): string {
@@ -131,8 +131,9 @@ describe("harvest — a stop's record — D104 (harvest-records)", () => {
     const entry = after.slice(after.indexOf(`- ${date} — range 2 of 3's stop recorded — review the parser before the card reads it`))
     expect(entry).toContain('\n\n  **Summary**: The parser reads the plan, and the card reads the parser.')
     expect(entry).toContain('  **Verdict**: ● Plumb')
-    expect(entry).toContain('  - park 1 · one idea → tangent: the card renders it')
-    expect(entry).toContain('  - park 2 · another (tangent) → no class proposed')
+    expect(entry).toContain('  **Harvested**: 3 of 3 parked ideas open')
+    expect(entry).toContain('  - P1 · one idea → lean: tangent, the card renders it')
+    expect(entry).toContain('  - P2 · another (tangent) → no lean proposed')
     expect(entry).toContain("  **1.** Step 2 parses the section.\n\n  The parser's story.")
     // Nothing committed; the detail file and the stamp are spent.
     expect(git(dir, ['rev-parse', 'HEAD'])).toBe(head)
@@ -142,7 +143,7 @@ describe("harvest — a stop's record — D104 (harvest-records)", () => {
       [
         '**Stop**: Range 2 of 3 recorded (1 blocker, 1 tangent)',
         '',
-        '**Next Up**: Step 4 of 4 - Fourth (details: `.plumbbob/builds/harvest-test/intent.md:11`)',
+        '**Next Up**: Step 4 of 4 - Fourth (details: [intent.md:11](.plumbbob/builds/harvest-test/intent.md#L11))',
         '  · range 3 of 3: /plumbbob:run (step 4 to its pause) · parked 1 of 3 open',
         '',
         '',
@@ -189,7 +190,7 @@ describe("harvest — the stop's latch — D103 (stop-latched)", () => {
     const unshown = await atStop({ card: false })
     expect(captureIo(() => harvest(unshown, [])).stderr).toBe(refusal)
     const rewritten = await atStop()
-    writeFileSync(detailPath(rewritten), RANGE_DETAIL.replace('park 3 → blocker', 'park 3 → tangent'))
+    writeFileSync(detailPath(rewritten), RANGE_DETAIL.replace('P3 → blocker', 'P3 → tangent'))
     expect(captureIo(() => harvest(rewritten, [])).stderr).toBe(refusal)
     const other = await atStop()
     writeFileSync(detailPath(other), RANGE_DETAIL.replace('# Detail · Range 2', '# Detail · Range 3'))
@@ -206,13 +207,15 @@ describe("harvest — the stop's latch — D103 (stop-latched)", () => {
 })
 
 describe('harvest — the proposals it settles', () => {
-  it('refuses the whole record for a park the list lacks, or a class outside the three', async () => {
+  it('refuses the whole record for a handle the list lacks, or a class outside the three, naming each by its handle — D105 (park-handles)', async () => {
     for (const [line, why] of [
-      ['- park 9 → tangent: x', 'park 9 is not in the list; 3 parked'],
-      ['- park 1 → later: x', 'park 1\'s class "later" is not blocker, tangent, or pivot'],
+      ['- P9 → tangent: x', 'P9 is not in the list; 3 parked'],
+      ['- P1 → later: x', 'P1\'s class "later" is not blocker, tangent, or pivot'],
+      // The `- park 6 →` wire a detail written before the handles carried still reads, and refuses the same way.
+      ['- park 9 → tangent: x', 'P9 is not in the list; 3 parked'],
     ] as const) {
       const dir = await atStop({ card: false })
-      writeFileSync(detailPath(dir), HARVEST_DETAIL.replace('- park 2 → tangent: cosmetic', line))
+      writeFileSync(detailPath(dir), HARVEST_DETAIL.replace('- P2 → tangent: cosmetic', line))
       const before = log(dir)
       expect(captureIo(() => harvest(dir, [])).stderr).toBe(
         `plumbbob: harvest not recorded (${why})\n  → fix the Harvest proposals in .plumbbob/detail.md\n`,
@@ -221,15 +224,20 @@ describe('harvest — the proposals it settles', () => {
     }
   })
 
-  it('records a harvest outside a stop with no stamp, and writes no Log line', async () => {
+  it('records a harvest outside a stop with no stamp, ends on `Recorded`, and writes no Log line — D106 (leans-harvested)', async () => {
     const dir = await atStop({ card: false, detail: HARVEST_DETAIL })
     const { code, stdout } = captureIo(() => harvest(dir, []))
     expect(code).toBe(0)
-    expect(stdout.startsWith('**Harvested**: 2 parked ideas (2 tangents)\n\n**Next Up**: Step 4 of 4')).toBe(true)
+    expect(stdout.startsWith('**Recorded**: 2 parked ideas (2 tangents)\n\n**Next Up**: Step 4 of 4')).toBe(true)
+    expect(stdout).not.toContain('**Harvested**')
     const after = log(dir)
     expect(after).toContain('- [x] one idea\n- [x] another (tangent)\n- [ ] a third')
     expect(after).toContain(`- ${new Date().toISOString().slice(0, 10)}, at the step 3 boundary: 2 parked ideas, classified.`)
     expect(after).not.toContain('stop recorded')
+    // A detail written with the `- park 6 →` wire records the same parks.
+    const legacy = await atStop({ card: false, detail: HARVEST_DETAIL.replace(/- P(\d) →/g, '- park $1 →') })
+    expect(captureIo(() => harvest(legacy, [])).code).toBe(0)
+    expect(log(legacy)).toContain('- [x] one idea\n- [x] another (tangent)\n- [ ] a third')
   })
 
   it('refuses a harvest that settles no open park', async () => {
@@ -253,7 +261,7 @@ describe('harvest — nothing to record', () => {
   it('refuses an empty detail file, and one that names no range or harvest', async () => {
     const empty = await atStop({ card: false, detail: '' })
     expect(captureIo(() => harvest(empty, [])).stderr).toContain('nothing to record (the detail file is empty)')
-    const headless = await atStop({ card: false, detail: '## Harvest\n\n- park 1 → tangent: x\n' })
+    const headless = await atStop({ card: false, detail: '## Harvest\n\n- P1 → tangent: x\n' })
     expect(captureIo(() => harvest(headless, [])).stderr).toContain('nothing to record (the detail file names no range or harvest)')
   })
 

@@ -69,7 +69,7 @@ describe('abandon', () => {
           fact: 'Step 1',
           detail: ['work kept in the tree', 'the step stays planned'],
         }),
-        pointer: '**Next Up**: Step 1 of 2 - First (details: `.plumbbob/builds/abandon-test/intent.md:5`)',
+        pointer: '**Next Up**: Step 1 of 2 - First (details: [intent.md:5](.plumbbob/builds/abandon-test/intent.md#L5))',
       }),
     )
   })

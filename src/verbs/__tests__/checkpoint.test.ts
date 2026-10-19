@@ -50,8 +50,8 @@ function ledgerSha(dir: string, label: string): string {
 
 /** The `details:` pointer the lead line carries: the Log line holding `label`, as `path:line` from the repo root. */
 function logPointer(dir: string, label: string): string {
-  const at = readFileSync(buildLogPath(dir), 'utf8').split('\n').findIndex((l) => l.includes(label))
-  return `${relative(dir, buildLogPath(dir))}:${at + 1}`
+  const at = readFileSync(buildLogPath(dir), 'utf8').split('\n').findIndex((l) => l.includes(label)) + 1
+  return `[build-log.md:${at}](${relative(dir, buildLogPath(dir))}#L${at})`
 }
 
 // A pause's detail file for step 1: the three judgment rows under the header
@@ -112,7 +112,7 @@ describe('checkpoint', () => {
     // stray advisory rides too, and the Verdict wears the rung it earned.
     expect(stdout).toBe(
       ending({
-        lead: transition({ label: 'Checkpoint', fact: 'Step 1 complete', detail: [ledgerSha(dir, 'step 1'), `details: \`${logPointer(dir, 'step 1 checkpointed')}\``] }),
+        lead: transition({ label: 'Checkpoint', fact: 'Step 1 complete', detail: [ledgerSha(dir, 'step 1'), `details: ${logPointer(dir, 'step 1 checkpointed')}`] }),
         verdict: '**Verdict**: ◐ A hair off (seam strayed)',
         advisories: [
           advisory({
@@ -275,7 +275,7 @@ describe('checkpoint', () => {
     expect(existsSync(detailPath(dir))).toBe(false)
     // The lead line points at the entry; the commit body keeps its marker and
     // the lead prose only, since the ledger is the archive now.
-    expect(stdout).toContain(`details: \`${logPointer(dir, 'step 1 checkpointed')}\``)
+    expect(stdout).toContain(`details: ${logPointer(dir, 'step 1 checkpointed')}`)
     const body = execFileSync('git', ['log', '-1', '--format=%b'], { cwd: dir, encoding: 'utf8' })
     expect(body).not.toContain('The whole story')
   })
@@ -330,7 +330,7 @@ describe('checkpoint', () => {
     expect(log).toMatch(/- \d{4}-\d{2}-\d{2} — plan committed · [0-9a-f]{9}\n\n  \*\*Recommendation\*\*: Sharpen step 1 first\./)
     expect(log).toContain('  **1.** The done-when names no test\n\n  Nothing in the seam is a test file.')
     expect(existsSync(detailPath(dir))).toBe(false)
-    expect(stdout).toContain(`details: \`${logPointer(dir, 'plan committed')}\``)
+    expect(stdout).toContain(`details: ${logPointer(dir, 'plan committed')}`)
   })
 
   it('whitelists its own staged artifact writes — no scope-drift warning (step 7)', async () => {
@@ -537,8 +537,8 @@ describe('checkpoint', () => {
       expect(code).toBe(0)
       expect(stdout).toBe(
         ending({
-          lead: transition({ label: 'Plan', fact: 'committed', detail: [ledgerSha(dir, 'plan'), `details: \`${logPointer(dir, 'plan committed')}\``] }),
-          pointer: '**Next Up**: Step 1 of 1 - First (details: `.plumbbob/builds/checkpoint-test/intent.md:5`)',
+          lead: transition({ label: 'Plan', fact: 'committed', detail: [ledgerSha(dir, 'plan'), `details: ${logPointer(dir, 'plan committed')}`] }),
+          pointer: '**Next Up**: Step 1 of 1 - First (details: [intent.md:5](.plumbbob/builds/checkpoint-test/intent.md#L5))',
         }),
       ) // short SHA, not the full 40
       const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
@@ -592,7 +592,7 @@ describe('checkpoint', () => {
       // pointer closes: one stdout block, in the order every ending is written.
       expect(stdout).toBe(
         ending({
-          lead: transition({ label: 'Plan', fact: 'committed', detail: [ledgerSha(dir, 'plan'), `details: \`${logPointer(dir, 'plan committed')}\``] }),
+          lead: transition({ label: 'Plan', fact: 'committed', detail: [ledgerSha(dir, 'plan'), `details: ${logPointer(dir, 'plan committed')}`] }),
           advisories: [
             advisory({
               fact: 'the plan rides the commit message',
@@ -600,7 +600,7 @@ describe('checkpoint', () => {
               remedy: 'unignore .plumbbob/builds/ to keep the record in the tree',
             }),
           ],
-          pointer: '**Next Up**: Step 1 of 1 - First (details: `.plumbbob/builds/checkpoint-test/intent.md:5`)',
+          pointer: '**Next Up**: Step 1 of 1 - First (details: [intent.md:5](.plumbbob/builds/checkpoint-test/intent.md#L5))',
         }),
       )
       expect(stderr).toBe('') // an ending is one block, and it is not stderr's
@@ -909,7 +909,7 @@ describe('checkpoint — the range segment beneath Next Up', () => {
     const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
     expect(code).toBe(0)
     expect(stdout).toContain(
-      '**Next Up**: Step 1 of 3 - First (details: `.plumbbob/builds/checkpoint-test/intent.md:5`)\n  · range 1 of 2: /plumbbob:run (step 1 to its pause)\n',
+      '**Next Up**: Step 1 of 3 - First (details: [intent.md:5](.plumbbob/builds/checkpoint-test/intent.md#L5))\n  · range 1 of 2: /plumbbob:run (step 1 to its pause)\n',
     )
   })
 
@@ -918,7 +918,7 @@ describe('checkpoint — the range segment beneath Next Up', () => {
     writeFileSync(intentPath(dir), RANGED.replace('1. [ ]', '1. [x]').replace('2. [ ]', '2. [x]'))
     const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['3']))
     expect(code).toBe(0)
-    const stop = '**Stop**: Range 2 of 2 landed - review the parser (details: `.plumbbob/builds/checkpoint-test/intent.md:16`)'
+    const stop = '**Stop**: Range 2 of 2 landed - review the parser (details: [intent.md:16](.plumbbob/builds/checkpoint-test/intent.md#L16))'
     expect(stdout).toContain(`\n\n${stop}\n\n**Next Up**: Nothing planned`)
     const later = captureIo(() => handoff(dir, [])).stdout
     expect(later).toContain(`\n\n${stop}\n\n**Next Up**: Nothing planned`)
@@ -939,7 +939,7 @@ describe('checkpoint — the range segment beneath Next Up', () => {
     const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['1']))
     expect(code).toBe(0)
     expect(stdout).toContain(
-      '**Next Up**: Step 2 of 3 - Second (model: **Opus**, details: `.plumbbob/builds/checkpoint-test/intent.md:7`)\n  · range 2 of 2: /plumbbob:run (steps 2-3)\n',
+      '**Next Up**: Step 2 of 3 - Second (model: **Opus**, details: [intent.md:7](.plumbbob/builds/checkpoint-test/intent.md#L7))\n  · range 2 of 2: /plumbbob:run (steps 2-3)\n',
     )
   })
 
