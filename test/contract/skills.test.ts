@@ -774,6 +774,27 @@ describe('the build order — step, refine, and harvest re-sequence through the 
   }
 })
 
+describe('a stop card waiting for its reply holds the step skills — D103 (stop-latched)', () => {
+  /** A skill's body with its line breaks folded to spaces. */
+  const flat = (dir: string): string => parseSkill(dir).body.replace(/\s+/g, ' ')
+
+  it("build relays plumbbob build's refusal whole and ends the turn, inside step 2", () => {
+    const body = flat('build')
+    const step2 = body.slice(body.indexOf('2. **Enter the step.**'), body.indexOf('3. **Read the plan.**'))
+    expect(step2).toMatch(/When it refuses with `no step entered` because a stop card is waiting for its reply, relay the refusal whole and end the turn/)
+  })
+
+  it('verify refuses to write over a waiting range detail, keyed on the dashboard mark', () => {
+    expect(flat('verify')).toMatch(
+      /If `\.plumbbob\/detail\.md` opens on a `# Detail · Range <N>` header and the dashboard above marks that range `← stop card waiting`, that card is still waiting: \*\*refuse\*\*/,
+    )
+  })
+
+  it('status names the tail and the move it takes', () => {
+    expect(flat('status')).toContain('A landed range whose stop card still waits for its reply reads `← stop card waiting`, and the `next →` names that card first.')
+  })
+})
+
 describe('a new step never joins a landed range — D92 (build-ranges)', () => {
   /** A skill's body with its line breaks folded to spaces. */
   const flat = (dir: string): string => parseSkill(dir).body.replace(/\s+/g, ' ')

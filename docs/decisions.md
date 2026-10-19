@@ -1295,7 +1295,15 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   second beat, a boundary relayed whole passed the check, nothing in the CLI could tell a run's grant
   from a typed list's (both mint `steps 6-9`), and a new clean-halt shape has gone wrong under the eval
   tier before, in 2 of 4 runs ([**D85 (range-top-lands)**](#d85)). The mark outlives a prompt at a pause
-  inside its range so that a halt approved with `looks good` still owes the card. Promoted from the
+  inside its range so that a halt approved with `looks good` still owes the card. (Revised 2026-10-19:
+  `plumbbob build` refuses to enter a step while a stop card waits for its reply, a STOP stamp whose
+  range the detail file's header names and the plan still reads as landed, and the plain dashboard marks
+  that range `← stop card waiting` and names the card as its next move ahead of a run or a request,
+  *because* only `status --run` showed the wait, and a `/plumbbob:build` typed at the card entered the
+  step and its pause wrote over the range's review. The landed condition is what keeps a re-cut from
+  wedging the build, the rule [**D92 (build-ranges)**](#d92) set for a step found at a stop keeps builds
+  from needing it, and the card, the dashboard, and the refusal read the move after the stop through one
+  call.) Promoted from the
   2026-10-17 runs-and-the-stop-card build, merging its locals `stop-latched` and `stop-card-held`.
   *Tagged in* `docs/presentation.md`.
 

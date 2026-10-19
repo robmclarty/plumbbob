@@ -106,6 +106,7 @@ import {
   parseSections,
   parseSteps,
   parseSummary,
+  rangeLanded,
   rangeSpan,
   rangeStanding,
   recapLines,
@@ -114,6 +115,7 @@ import {
   runBracket,
   seamRowFromDiff,
   spentRowValue,
+  stopFollowUp,
   summaryCheckRow,
   type Run,
 } from '../lib/orient.ts'
@@ -512,7 +514,7 @@ function stopCard(root: string, slug: string | null, named: string | null, full:
   parts.push(
     // The note carries no parks segment here: the Harvested lead above sizes the list.
     nextUpBlock(intent, '', nextUp, step, where),
-    stopCallBlock(leanExample(parks, harvestProposals(detail)), steps, intent),
+    stopCallBlock(leanExample(parks, harvestProposals(detail)), intent),
   )
   const command = reprintCommand('--stop --full', undefined, named)
   return emit(root, { tier: 'decision', render: 'stop', command }, withRecommendation(parts, parseRecommendation(detail)))
@@ -678,6 +680,36 @@ export function parseDetailRange(detail: string): number | null {
   return m === null ? null : Number(m[1])
 }
 
+/** A stop card waiting for its reply: the range it reviews, and the plan's count of ranges. */
+export type WaitingCard = { readonly range: number; readonly count: number }
+
+/**
+ * The stop card still waiting for its reply, or null when none waits: a STOP
+ * stamp, a detail file whose header names the stamp's range, and that range
+ * still parsing and reading as landed. The record clears the stamp and the
+ * detail file, so the wait ends with it.
+ *
+ * The digest is left to the record's own latch: a detail file rewritten for
+ * a re-render that has not run yet still waits, and a stamp from before the
+ * digest carries none. The landed condition is what keeps a re-cut from
+ * wedging the build, since a range re-cut to take a new step stops waiting.
+ * The stamp is the build's own but the detail file is the session's, so in a
+ * session of several builds, a stamp left in this build and another build's
+ * card for the same range number read as this build's card waiting.
+ */
+export function waitingCard(root: string, slug: string | null, intent: string): WaitingCard | null {
+  const stamp = readStop(root, slug)
+  if (stamp === null || parseDetailRange(readOr(detailPath(root))) !== stamp.range) {
+    return null
+  }
+  const plan = parseBuildRanges(intent)
+  const range = plan.ranges.find((r) => r.item === stamp.range)
+  if (range === undefined || !rangeLanded(range, parseOrderedSteps(intent))) {
+    return null
+  }
+  return { range: range.item, count: plan.ranges.length + plan.malformed.length }
+}
+
 /**
  * The Harvested part: a lead that sizes the list, then one bullet per open
  * park in list order, its `P6` handle and text from the list and, behind the
@@ -713,14 +745,15 @@ function harvestPart(parks: ReadonlyArray<Park>, proposals: ReadonlyArray<Propos
  * approving locks in each lean and that changing one means saying so first,
  * with the example naming a handle on the card, since the reply is a decision
  * on every lean at once (D106 (leans-harvested)); the direction row then
- * carries no example of its own. The second row is the move after the stop:
- * the next range's run, the finish on the plan's last range, and nothing when
- * the run would refuse (a flagged range, or a next step no range names), where
- * the note beneath Next Up carries the drift words. With no park open, no
- * line renders, the rows record the review alone, and direction is a change to
- * it.
+ * carries no example of its own. The second row is the move after the stop,
+ * read through `stopFollowUp` so the dashboard and `plumbbob build`'s refusal
+ * name the same one: the next range's run, the finish on the plan's last
+ * range, and nothing when the run would refuse (a flagged range, or a next
+ * step no range names), where the note beneath Next Up carries the drift
+ * words. With no park open, no line renders, the rows record the review alone,
+ * and direction is a change to it.
  */
-function stopCallBlock(example: string | null, steps: ReadonlyArray<Step>, intent: string): string {
+function stopCallBlock(example: string | null, intent: string): string {
   const parked = example !== null
   const what = parked ? 'them' : 'it'
   const moves = [
@@ -729,11 +762,11 @@ function stopCallBlock(example: string | null, steps: ReadonlyArray<Step>, inten
       parked ? 'I record the review and every lean as proposed, folding a blocker into the plan; back to the boundary' : 'I record the review; back to the boundary',
     ),
   ]
-  const run = cardRun(intent, null)
-  if (!steps.some((s) => !s.done)) {
+  const follow = stopFollowUp(intent)
+  if (follow === 'finish') {
     moves.push(callLine('`/plumbbob:finish`', `I record ${what} the same way, then write the report and close the build`))
-  } else if (run.ok) {
-    moves.push(callLine('`/plumbbob:run`', `I record ${what} the same way, then run range ${run.range.item} of ${run.count} to its stop`))
+  } else if (follow !== null) {
+    moves.push(callLine('`/plumbbob:run`', `I record ${what} the same way, then run range ${follow.range.item} of ${follow.count} to its stop`))
   }
   moves.push(
     callLine('anything that reads as direction', `I re-render the card with the ${parked ? 'lean' : 'review'} changed; nothing is recorded until you approve`),

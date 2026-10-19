@@ -122,8 +122,13 @@ next → run range 2 of 2 — `/plumbbob:run` (step 4)
 each undone range carries its stop on the line beneath it. A range the plan has outgrown gets
 a `⚠` row beneath it (`⚠ needs a re-cut: step 9 is not in the plan`), and a step no range
 names, or an item that does not parse, gets one at the block's end; a flagged range takes the
-next move back to the step's own. A plan without the section, or with only the template's
-placeholder under it, renders no block at all.
+next move back to the step's own. While a stop card waits for its reply, the landed range
+whose card it is reads `← stop card waiting` with its stop beneath it, and the next move names
+the card ahead of any run or request:
+``reply to range 1 of 2's stop card (`/plumbbob:run` records it, then runs range 2 of 2)``, or
+`/plumbbob:finish` on the plan's last range, or ``(`show the stop` brings it back)`` when the
+next run would refuse. A plan without the section, or with only the template's placeholder
+under it, renders no block at all.
 
 `--invoked "<args>"` takes the raw text of a skill invocation (the `/plumbbob:build`
 skill passes its `$ARGUMENTS` through). An explicit step number in that text repoints
@@ -148,7 +153,8 @@ A bare range's header ends at the step's pause instead
 (`grant: none, as a bare range builds to its pause`), a grant the hook never minted or
 minted for another set reads `grant: none` or `unlike the run`, and a fourth line,
 `waiting: range 1 of 2's stop card, recorded before the run`, names a stop card still
-waiting for its reply. A run that names nothing it can walk prints no header, and the next
+waiting for its reply: a STOP stamp, a detail file whose header names its range, and that
+range still landed. A run that names nothing it can walk prints no header, and the next
 move carries the refusal with the move that unblocks it
 ([**D97 (run-refuses)**](decisions.md#d97)):
 
@@ -179,6 +185,14 @@ with no session, a non-numeric or `< 1` step, a range such as `1-3` or `20,5-9` 
 `/plumbbob:build` feature, so the remedy names the step it starts at: its first undone step in
 build order; [**D91 (step-list-grants)**](decisions.md#d91)), or a seam it cannot parse (seams
 are exact paths or `dir/` grants, never globs; [**D23 (no-glob-seams)**](decisions.md#d23)).
+It also refuses, writing nothing, while a stop card waits for its reply
+([**D103 (stop-latched)**](decisions.md#d103)), since the step's pause would write over the
+range's review in `.plumbbob/detail.md`; the remedy names the reply that records the card:
+
+```text
+plumbbob: no step entered (range 1 of 2's stop card is waiting for its reply)
+  → reply to the card; looks good records it, and /plumbbob:run records it, then runs range 2 of 2
+```
 
 ### handoff
 

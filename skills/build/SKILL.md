@@ -44,7 +44,9 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    step is checkpointed.
 2. **Enter the step.** Run `plumbbob build <n>`, or bare `plumbbob build` to enter the
    next undone step (records the in-flight STEP + SEAM so `/plumbbob:status` shows the step in
-   flight; the seam is awareness, not a lock).
+   flight; the seam is awareness, not a lock). When it refuses with `no step entered` because
+   a stop card is waiting for its reply, relay the refusal whole and end the turn: the card's
+   reply is the human's, and no step is built until it records.
    - **Spike-as-step.** If the step's title opens with `spike:` / `Spike:`, the increment
      *is* the experiment: resolving a fork the plan couldn't settle on paper. After
      entering it, run `plumbbob spike report "<slug>"` (the CLI scaffolds a

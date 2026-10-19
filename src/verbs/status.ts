@@ -3,9 +3,10 @@
 // the in-flight STEP marker) into a where-am-I view that suggests one primary
 // next move while printing the full picture, so you can always override.
 // Read-only, always exits 0. Skills pre-inject this output to gate their own
-// behavior, so the `NO ACTIVE SESSION` sentinel is kept exact. With `--run`, it
-// prints the run a `/plumbbob:run` invocation names above the dashboard, and
-// beneath the run's grant, a stop card still waiting for its reply.
+// behavior, so the `NO ACTIVE SESSION` sentinel is kept exact. A stop card
+// still waiting for its reply marks its range and takes the next move. With
+// `--run`, it prints the run a `/plumbbob:run` invocation names above the
+// dashboard, and names the waiting card again beneath the run's grant.
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -21,12 +22,10 @@ import {
   buildFolder,
   buildLogPath,
   checkpointsPath,
-  detailPath,
   hasSession,
   inSpike,
   intentPath,
   listBuilds,
-  readStop,
   resolveBuild,
   stepPath,
 } from '../lib/sidecar.ts'
@@ -36,13 +35,12 @@ import {
   formatRunDashboard,
   lastLedgerSha,
   orient,
-  parseBuildRanges,
   parseRequestedStep,
   resolveRunArgs,
   type OrientInput,
 } from '../lib/orient.ts'
 import { normalizeStepList } from '../lib/steplist.ts'
-import { parseDetailRange } from './handoff.ts'
+import { waitingCard, type WaitingCard } from './handoff.ts'
 
 /**
  * Read a file as utf8, or '' when it is missing or unreadable.
@@ -129,51 +127,43 @@ export function status(cwd: string, args: ReadonlyArray<string> = []): number {
   // checkpoint still surfaces. No ledger yet ⇒ nothing to reconcile against ⇒ 0.
   const checkpoints = readOr(checkpointsPath(root, slug))
   const anchor = lastLedgerSha(checkpoints)
+  const intent = readOr(intentPath(root, slug))
+  // The stop card still waiting, read once: the dashboard marks its range and
+  // names it as the move, and the run header's waiting line names it too.
+  const card = waitingCard(root, slug, intent)
   const input: OrientInput = {
-    intent: readOr(intentPath(root, slug)),
+    intent,
     buildLog: readOr(buildLogPath(root, slug)),
     checkpoints,
     inFlight: /^\d+$/.test(inFlightRaw) ? Number(inFlightRaw) : null,
     spiking: inSpike(root, slug),
     requested: parseRequestedStep(invoked),
     outOfBand: anchor === null ? 0 : commitsSince(root, anchor, PLAN_COMMIT_MARKER),
+    waiting: card?.range ?? null,
   }
   const dashboard =
     run === null
       ? formatOrientation(orient(input))
-      : withWaiting(formatRunDashboard(input, resolveRunArgs(run, input), grantText(readGrant(root))), waitingStop(root, slug, input.intent))
+      : withWaiting(formatRunDashboard(input, resolveRunArgs(run, input), grantText(readGrant(root))), card)
   const lines = [dashboard, ...harnessSection(root, slug)]
   process.stdout.write(`${lines.join('\n')}\n`)
   return 0
 }
 
 /**
- * The stop card still waiting for its reply, as the run header names it
- * (`range 3 of 5's stop card, recorded before the run`), or null when none
- * waits: a STOP stamp whose range the detail file still reviews. The record
- * clears both, so the line vanishes once the stop is settled.
- */
-function waitingStop(root: string, slug: string | null, intent: string): string | null {
-  const stamp = readStop(root, slug)
-  if (stamp === null || parseDetailRange(readOr(detailPath(root))) !== stamp.range) {
-    return null
-  }
-  const plan = parseBuildRanges(intent)
-  return `range ${stamp.range} of ${plan.ranges.length + plan.malformed.length}'s stop card, recorded before the run`
-}
-
-/**
  * The run dashboard with the waiting line beneath the run header's grant line,
- * the header's fourth line. A dashboard with no header (a run that refuses)
- * has no grant line to ride, and is returned as it is.
+ * the header's fourth line, naming the stop card still waiting for its reply
+ * (`range 3 of 5's stop card, recorded before the run`). With no card waiting,
+ * or no header (a run that refuses has no grant line to ride), the dashboard
+ * is returned as it is.
  */
-function withWaiting(dashboard: string, waiting: string | null): string {
+function withWaiting(dashboard: string, card: WaitingCard | null): string {
   const lines = dashboard.split('\n')
   const grant = lines.findIndex((l) => l.startsWith('     grant: '))
-  if (waiting === null || grant === -1) {
+  if (card === null || grant === -1) {
     return dashboard
   }
-  lines.splice(grant + 1, 0, `     waiting: ${waiting}`)
+  lines.splice(grant + 1, 0, `     waiting: range ${card.range} of ${card.count}'s stop card, recorded before the run`)
   return lines.join('\n')
 }
 

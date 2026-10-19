@@ -1140,6 +1140,40 @@ card's segment carries: `(steps 8-9)` once two of its steps have landed,
 explicit request, the pointer reads as it does today; `--run` is the one
 request that keeps it, below.
 
+While a stop card waits for its reply, the block says whose card it is. The
+landed range takes the tail `← stop card waiting` and keeps its stop line,
+since its call is not made until the reply records it, and the range holding
+the next step keeps its `▸` and drops `← next`, so the block carries one
+arrow. The pointer names the card:
+
+```text
+  ranges  2 of 5 done
+  ✓ 1  /plumbbob:build 1 · opus
+  ✓ 2  /plumbbob:build 2-5 · opus   ← stop card waiting
+        stop: review the parser before the renderers build on it
+  ▸ 3  /plumbbob:build 6-9 · opus
+        stop: review the card on a live boundary before the skills teach it
+    4  /plumbbob:build 10 · fable
+        stop: at step 10's pause, pick the label the docs will name
+    5  /plumbbob:build 11-12 · opus
+        stop: the final read of the docs, then /plumbbob:finish
+
+last checkpoint  step 5 · 1a2b3c4
+parked 2 of 7 open · open questions 0
+
+next → reply to range 2 of 5's stop card (`/plumbbob:run` records it, then runs range 3 of 5)
+```
+
+The bracket names the reply that records the card from any session: the
+next range's run, or on the plan's last range the finish,
+``(`/plumbbob:finish` records it, then writes the report)``. It never names
+`looks good`, which records only with the card in the conversation. When
+the next run would refuse, the bracket names the way back to the card
+instead, ``(`show the stop` brings it back)``. The card's pointer outranks the
+run's and an explicit request, because a step entered now would write its
+pause over the range's review in the detail file; a spike and a step in
+flight keep their own.
+
 A drift row rides beneath the range it flags, opening on the warning glyph
 and the words from the table above, and a step no range names, or an item
 that does not parse, gets a row of its own at the block's end:
@@ -1155,7 +1189,8 @@ that does not parse, gets a row of its own at the block's end:
 ```
 
 A flagged range takes the pointer back to today's step move, `build step 6 —
-/plumbbob:build`, and the drift row says why no range command is named.
+/plumbbob:build`, unless a stop card waits, and the drift row says why no
+range command is named.
 `recover` reports a range naming a step the plan lacks, beside the finding it
 already makes for a build order that does.
 
@@ -1221,8 +1256,14 @@ run  range 4 of 5 · step 10 · ends at step 10's pause
 
 A run typed at a waiting card records it first
 ([D102 (settle-in-one-reply)](decisions.md#d102)), and the line is how a run
-skill in a fresh session learns that a card is waiting at all. It vanishes
-once the record lands, so a header without it is a stop already settled.
+skill in a fresh session learns that a card is waiting at all. A card waits
+while three things hold: a STOP stamp, a detail file whose header names the
+stamp's range, and that range still reading as landed. The last keeps a
+re-cut from wedging the build, since a range re-cut to take a new step no
+longer reads as landed, so its card stops waiting and the step can be
+entered. The line and the dashboard's marked row read the card through one
+call, so they come and go together: once the record lands, or once the
+range no longer reads as landed.
 
 A run that names nothing it can walk prints no header
 ([D97 (run-refuses)](decisions.md#d97)). The dashboard renders as it does
@@ -1583,6 +1624,30 @@ Up carries the drift words. A stop with no park open keeps the four moves
 with the record in their clauses and no line beneath the label, since no
 lean is there to lock in: `looks good` records the review, `/plumbbob:run`
 records it and runs the next range, and direction is a change to the review.
+
+A step typed while the card waits is refused before anything is written
+([D103 (stop-latched)](decisions.md#d103)). `/plumbbob:build`, bare or naming
+a step, would enter the step, and the step's pause would write over the
+range's review in `.plumbbob/detail.md` before the reply recorded it. So
+`plumbbob build` writes no marker and stamps nothing, and says which card
+waits and the reply that records it:
+
+```text
+plumbbob: no step entered (range 2 of 5's stop card is waiting for its reply)
+  → reply to the card; looks good records it, and /plumbbob:run records it, then runs range 3 of 5
+plumbbob: no step entered (range 5 of 5's stop card is waiting for its reply)
+  → reply to the card; looks good records it, and /plumbbob:finish records it, then writes the report
+plumbbob: no step entered (range 2 of 5's stop card is waiting for its reply)
+  → reply to the card; looks good records it
+```
+
+The three forms follow the card's second row: the next range's run, the
+finish on the plan's last range, and `looks good` alone when the run would
+refuse. The remedy names `looks good` where the dashboard does not, because
+a build typed at the card is typed with the card in the conversation. The
+refusal comes ahead of the one for no undone step, so on the plan's last
+range it names the finish rather than saying nothing is left to build. The
+build skill relays it whole and ends the turn.
 
 ### The stop's record
 

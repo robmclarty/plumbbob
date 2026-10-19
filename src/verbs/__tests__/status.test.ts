@@ -4,7 +4,7 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { status } from '../status.ts'
 import { handoff } from '../handoff.ts'
 import { start } from '../start.ts'
-import { buildDir, checkpointsPath, detailPath, grantPath, markSpike, sidecarDir, stepPath } from '../../lib/sidecar.ts'
+import { buildDir, checkpointsPath, detailPath, grantPath, markSpike, sidecarDir, stepPath, stopPath } from '../../lib/sidecar.ts'
 import { formatVerbHelp } from '../../cli-core.ts'
 import { commit, headSha, stageAll } from '../../lib/git.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -259,11 +259,38 @@ describe('status — --run prints the run a /plumbbob:run invocation names — D
     expect(captureIo(() => status(dir, ['--run', '3', '--build', 'runs'])).stdout).toContain('run  range 3 of 3')
   })
 
-  it('names a stop card still waiting beneath the grant, and drops the line once the record lands — D102 (settle-in-one-reply)', async () => {
-    const dir = await runSession(RUN_INTENT.replace('2. [ ] Second', '2. [x] Second').replace('3. [ ] Third', '3. [x] Third'))
+  /** RUN_INTENT with range 2 landed and its stop card rendered, waiting for its reply. */
+  async function atCard(intent = RUN_INTENT): Promise<string> {
+    const dir = await runSession(intent.replace('2. [ ] Second', '2. [x] Second').replace('3. [ ] Third', '3. [x] Third'))
     writeFileSync(checkpointsPath(dir, 'runs'), 'step 3 abc1234\n')
     writeFileSync(detailPath(dir), "# Detail · Range 2 · review the parser\n\n## Summary\n\nIt parses.\n")
     expect(captureIo(() => handoff(dir, ['--stop'])).code).toBe(0)
+    return dir
+  }
+
+  const WAITING_MOVE = "next → reply to range 2 of 3's stop card (`/plumbbob:run` records it, then runs range 3 of 3)"
+
+  it('marks the range whose stop card waits and names the card as the move, the waiting line staying --run only — D103 (stop-latched)', async () => {
+    const dir = await atCard()
+    const plain = captureIo(() => status(dir)).stdout
+    expect(plain).toContain(
+      [
+        '  ✓ 2  /plumbbob:build 2-3 · opus   ← stop card waiting',
+        '        stop: review the parser',
+        '  ▸ 3  /plumbbob:build 4',
+        "        stop: at step 4's pause, pick the label",
+      ].join('\n'),
+    )
+    expect(plain.endsWith(`${WAITING_MOVE}\n`)).toBe(true)
+    expect(plain).not.toContain('waiting:')
+    // What /plumbbob:build injects: the step it asked for keeps the marker, and the card keeps the move.
+    const invoked = captureIo(() => status(dir, ['--invoked', '4'])).stdout
+    expect(invoked).toContain('  ▸ 4  Fourth   ← requested')
+    expect(invoked.endsWith(`${WAITING_MOVE}\n`)).toBe(true)
+  })
+
+  it('names a stop card still waiting beneath the grant, and drops it with the tail and the move once the record lands — D102 (settle-in-one-reply)', async () => {
+    const dir = await atCard()
     const waiting = captureIo(() => status(dir, ['--run', ''])).stdout
     expect(waiting).toContain(
       [
@@ -274,10 +301,27 @@ describe('status — --run prints the run a /plumbbob:run invocation names — D
         '',
       ].join('\n'),
     )
-    expect(captureIo(() => status(dir)).stdout).not.toContain('waiting:')
+    expect(waiting).toContain('← stop card waiting')
     // The record clears the detail file and the stamp, so nothing waits after it.
     rmSync(detailPath(dir), { force: true })
-    expect(captureIo(() => status(dir, ['--run', ''])).stdout).not.toContain('waiting:')
+    rmSync(stopPath(dir, 'runs'), { force: true })
+    for (const out of [captureIo(() => status(dir, ['--run', ''])).stdout, captureIo(() => status(dir)).stdout]) {
+      expect(out).not.toContain('waiting')
+    }
+    expect(captureIo(() => status(dir)).stdout).toContain('next → run range 3 of 3 — `/plumbbob:run` (step 4 to its pause)')
+  })
+
+  it('stops naming the card once its range no longer reads as landed', async () => {
+    const dir = await atCard()
+    // A blocker went into range 2 as step 4, which re-cut range 3 away.
+    const recut = readFileSync(join(buildDir(dir, 'runs'), 'intent.md'), 'utf8')
+      .replace('`/plumbbob:build 2-3`', '`/plumbbob:build 2-4`')
+      .replace(/^3\. `\/plumbbob:build 4`.*$/m, '')
+    writeFileSync(join(buildDir(dir, 'runs'), 'intent.md'), recut)
+    for (const out of [captureIo(() => status(dir, ['--run', ''])).stdout, captureIo(() => status(dir)).stdout]) {
+      expect(out).not.toContain('waiting')
+      expect(out).not.toContain("range 2 of 2's stop card")
+    }
   })
 
   it('lists the flag in the verb table', () => {

@@ -4,7 +4,21 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { build } from '../build.ts'
 import { notice } from '../../lib/notice.ts'
 import { start } from '../start.ts'
-import { buildDir, buildLogPath, grantPath, intentPath, readStats, seamPath, stepPath, tickPath, turnPath } from '../../lib/sidecar.ts'
+import {
+  activeBuild,
+  buildDir,
+  buildLogPath,
+  detailPath,
+  grantPath,
+  intentPath,
+  readStats,
+  seamPath,
+  stepPath,
+  stopPath,
+  tickPath,
+  turnPath,
+  writeStop,
+} from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
@@ -410,5 +424,108 @@ describe('build — a call the plan reserves halts --auto — D94 (auto-and-stop
     expect(captureIo(() => build(none, ['3'])).stdout).not.toContain('ends at its pause')
     const plain = await rangedAt([1, 2], 'auto', RANGED.replace(/## Build ranges[\s\S]*$/, ''))
     expect(captureIo(() => build(plain, ['3'])).stdout).toContain(notice({ fact: 'step 3 is the last undone step in the plan', remedy: LANDS }))
+  })
+})
+
+describe('build — a stop card waiting for its reply — D103 (stop-latched)', () => {
+  // Steps 1 to 3 landed, range 2 (steps 2 and 3) the range the last landing
+  // completed, and range 3 a bare call still to come.
+  const RANGED = `# Build test
+
+## Steps
+
+1. [x] First — **done when:** a works.
+   - seam: \`src/a.ts\`
+2. [x] Second — **done when:** b works.
+   - seam: \`src/b.ts\`
+3. [x] Third — **done when:** c works.
+   - seam: \`src/c.ts\`
+4. [ ] Fourth — **done when:** d works.
+   - seam: \`src/d.ts\`
+
+## Build ranges
+
+1. \`/plumbbob:build 1\`, **stop:** at step 1's pause, approve the schema
+2. \`/plumbbob:build 2-3\`, **stop:** review the parser before the card reads it
+3. \`/plumbbob:build 4\`, **stop:** at step 4's pause, pick the label
+`
+
+  const RANGE_DETAIL = '# Detail · Range 2 · review the parser before the card reads it\n\n## Summary\n\nIt parses.\n'
+
+  /** The refusal for range `item` of `count`'s card, its remedy adding `also` to `looks good`. */
+  const refusal = (item: number, count: number, also: string): string =>
+    `plumbbob: no step entered (range ${item} of ${count}'s stop card is waiting for its reply)\n` +
+    `  → reply to the card; looks good records it${also}\n`
+
+  const RUN_3 = ', and /plumbbob:run records it, then runs range 3 of 3'
+
+  /**
+   * A build whose plan is `intent`, with range `range`'s stop card stamped at
+   * turn 4 over a detail file for range 2, and the human's reply as turn 5.
+   */
+  async function atCard(intent = RANGED, range = 2): Promise<string> {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Build test']))
+    writeFileSync(intentPath(dir), intent)
+    // The stamp keeps the detail file's digest, and writes nothing without one.
+    writeFileSync(detailPath(dir), RANGE_DETAIL)
+    writeStop(dir, undefined, { range, turn: 4, hash: 'card' })
+    writeFileSync(turnPath(dir), '5\n')
+    return dir
+  }
+
+  it('refuses a bare build and a named one, writing no marker and stamping nothing', async () => {
+    const dir = await atCard()
+    for (const args of [[], ['4'], ['2']]) {
+      expect(captureIo(() => build(dir, args)), args.join(' ')).toEqual({ code: 1, stdout: '', stderr: refusal(2, 3, RUN_3) })
+    }
+    expect([existsSync(stepPath(dir)), existsSync(seamPath(dir)), existsSync(tickPath(dir))]).toEqual([false, false, false])
+    expect(readStats(dir)['4']?.startedAt).toBeUndefined()
+    expect(readFileSync(detailPath(dir), 'utf8')).toBe(RANGE_DETAIL)
+  })
+
+  it("names the finish on the plan's last range, ahead of the refusal for no undone step", async () => {
+    const dir = await atCard(RANGED.replace('4. [ ] Fourth', '4. [x] Fourth').replace('3. `/plumbbob:build 4`', '3. `/plumbbob:build 4-4`'), 3)
+    writeFileSync(detailPath(dir), RANGE_DETAIL.replace('Range 2', 'Range 3'))
+    writeStop(dir, undefined, { range: 3, turn: 4, hash: 'card' })
+    expect(captureIo(() => build(dir, [])).stderr).toBe(refusal(3, 3, ', and /plumbbob:finish records it, then writes the report'))
+  })
+
+  it('names looks good alone when the next run would refuse', async () => {
+    const dir = await atCard(RANGED.replace(/^3\. `\/plumbbob:build 4`.*$/m, ''))
+    expect(captureIo(() => build(dir, ['4'])).stderr).toBe(refusal(2, 2, ''))
+  })
+
+  it('still refuses once the detail file is rewritten after the card, since the digest is the record latch', async () => {
+    const dir = await atCard()
+    writeFileSync(detailPath(dir), `${RANGE_DETAIL}\n## Recommendation\n\nApprove it.\n`)
+    expect(captureIo(() => build(dir, ['4'])).stderr).toBe(refusal(2, 3, RUN_3))
+  })
+
+  it('enters once nothing waits: the card recorded, a step or harvest detail, a stamp for another range, or a range re-cut', async () => {
+    const recorded = await atCard()
+    rmSync(detailPath(recorded), { force: true })
+    rmSync(stopPath(recorded), { force: true })
+    const stepDetail = await atCard()
+    writeFileSync(detailPath(stepDetail), '# Detail · Step 3 · Third\n\n## Summary\n\nC works.\n')
+    const harvestDetail = await atCard()
+    writeFileSync(detailPath(harvestDetail), '# Detail · Harvest\n\n## Harvest\n\n- P1 → tangent: x\n')
+    const otherRange = await atCard(RANGED, 1)
+    // A blocker went into range 2 as step 4, so the range no longer reads as landed.
+    const recut = await atCard(RANGED.replace('`/plumbbob:build 2-3`', '`/plumbbob:build 2-4`').replace(/^3\. `\/plumbbob:build 4`.*$/m, ''))
+    for (const dir of [recorded, stepDetail, harvestDetail, otherRange, recut]) {
+      const { code, stdout } = captureIo(() => build(dir, ['4']))
+      expect(code).toBe(0)
+      expect(stdout).toContain('building step 4')
+    }
+  })
+
+  it('reads the card per build under --build', async () => {
+    const dir = await atCard()
+    const alt = buildDir(dir, 'alt-build')
+    mkdirSync(alt, { recursive: true })
+    writeFileSync(join(alt, 'intent.md'), INTENT)
+    expect(captureIo(() => build(dir, ['--build', 'alt-build', '2'])).code).toBe(0)
+    expect(captureIo(() => build(dir, ['--build', String(activeBuild(dir)), '4'])).stderr).toBe(refusal(2, 3, RUN_3))
   })
 })

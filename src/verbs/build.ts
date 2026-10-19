@@ -9,18 +9,19 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { hasSession, intentPath, resolveBuild, seamPath, stampStepStat, stampTick, stepPath } from '../lib/sidecar.ts'
 import { parseStepSeam } from '../lib/intent.ts'
-import { parseBuildRanges, parseOrderedSteps, rangeStanding, rangeStart, skippedBefore, type Step } from '../lib/orient.ts'
+import { parseBuildRanges, parseOrderedSteps, rangeStanding, rangeStart, skippedBefore, stopFollowUp, type Step } from '../lib/orient.ts'
 import { stepLabel, syncBuildLogState } from '../lib/buildlogsync.ts'
 import { readGrant, type Grant } from '../lib/latch.ts'
 import { notice } from '../lib/notice.ts'
 import { hasStep, readBuildArgs } from '../lib/steplist.ts'
+import { waitingCard } from './handoff.ts'
 
 /**
  * Enter step n (or the next undone step) and write its SEAM/STEP markers.
  *
  * Refuses a missing session, a malformed step argument, a range such as `N-M`
- * or `20,5-9` (a `/plumbbob:build` skill feature, not a CLI one), and a seam
- * that fails to parse.
+ * or `20,5-9` (a `/plumbbob:build` skill feature, not a CLI one), a stop card
+ * still waiting for its reply, and a seam that fails to parse.
  * On entry it stamps the turn ledger and the step's start time, re-renders the
  * build-log's Current step line, and names the step when it is the last one a
  * self-approval grant reaches, or, under `--auto`, a call the plan's ranges
@@ -57,6 +58,15 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
   }
 
   const intent = readFileSync(intentPath(root, slug), 'utf8')
+  // A stop card waiting for its reply holds every step, bare or named: the
+  // step's pause would write over the range's review in the detail file before
+  // the reply recorded it. Nothing is written, and on the plan's last range the
+  // card outranks "no undone step".
+  const waiting = waitingNotice(root, slug, intent)
+  if (waiting.length > 0) {
+    process.stderr.write(waiting)
+    return 1
+  }
   // In build order: the sequence `## Build order` declares when a refined plan
   // has one, else the numbering, so this pick and the dashboard's agree.
   const steps = parseOrderedSteps(intent)
@@ -134,6 +144,33 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
       `${parsed.seam.map((path) => `  ${path}`).join('\n')}\n`,
   )
   return 0
+}
+
+/**
+ * The refusal while a stop card waits for its reply, or '' when none waits:
+ * the card, then the reply that records it. `looks good` always does, and the
+ * remedy adds the move the card's second row names, read through the same
+ * `stopFollowUp`: the next range's run, the finish on the plan's last range,
+ * or nothing more when the next run would refuse. The remedy spends a
+ * semicolon, since the refusal register keeps its one colon for the prefix.
+ */
+function waitingNotice(root: string, slug: string | null, intent: string): string {
+  const card = waitingCard(root, slug, intent)
+  if (card === null) {
+    return ''
+  }
+  const follow = stopFollowUp(intent)
+  const also =
+    follow === null
+      ? ''
+      : follow === 'finish'
+        ? ', and /plumbbob:finish records it, then writes the report'
+        : `, and /plumbbob:run records it, then runs range ${follow.range.item} of ${follow.count}`
+  return notice({
+    fact: 'no step entered',
+    detail: [`range ${card.range} of ${card.count}'s stop card is waiting for its reply`],
+    remedy: `reply to the card; looks good records it${also}`,
+  })
 }
 
 /**

@@ -102,6 +102,11 @@ export type OrientInput = {
   // no checkpoint to reconcile against, or the tree is clean at the last
   // checkpoint.
   readonly outOfBand: number
+  // The range whose stop card waits for its reply, or null when none does. The
+  // caller reads it (`waitingCard`, which takes the STOP stamp and the detail
+  // file), since orient stays fs-free; its landed row is marked, and the
+  // pointer names the card.
+  readonly waiting: number | null
 }
 
 /** A named `## Section`'s body: its lines, and the 0-based offset of the first. */
@@ -537,16 +542,17 @@ export function rangeStanding(plan: BuildRanges, ordered: ReadonlyArray<Step>, s
 }
 
 /** Whether a range has landed: the plan holds a step it names, and every one it holds is done. */
-function rangeLanded(range: BuildRange, ordered: ReadonlyArray<Step>): boolean {
+export function rangeLanded(range: BuildRange, ordered: ReadonlyArray<Step>): boolean {
   const held = ordered.filter((s) => hasStep(range.steps, s.n))
   return held.length > 0 && held.every((s) => s.done)
 }
 
-/** One range as the dashboard lists it: landed, holding the next step, and what flags it. */
+/** One range as the dashboard lists it: landed, holding the next step, its card waiting, and what flags it. */
 export type RangeRow = {
   readonly range: BuildRange
   readonly landed: boolean
   readonly next: boolean
+  readonly waiting: boolean // a landed range whose stop card waits for its reply
   readonly drift: ReadonlyArray<string> // the words flagging this range, one row each
 }
 
@@ -559,30 +565,60 @@ export type RangesView = {
   readonly plan: ReadonlyArray<string>
 }
 
+/** The ranges block, the run it suggests, and the card it names while a stop card waits. */
+type RangesRead = {
+  readonly view: RangesView | null
+  readonly move: string | null
+  readonly waitingMove: string | null
+}
+
 /**
- * The ranges block the dashboard renders, and the move it suggests: the run
- * of the range holding the next undone step, with what is left of it.
+ * The ranges block the dashboard renders, and the moves it suggests: the run
+ * of the range holding the next undone step, with what is left of it, and the
+ * stop card of the landed range `waiting` names.
  *
- * Null for a plan without ranges, so the block vanishes. The move is null when
- * the next step sits in no range, its range is flagged, or the step is still
- * unplanned, which leaves the dashboard's own step move in charge.
+ * Null for a plan without ranges, so the block vanishes. The run's move is
+ * null when the next step sits in no range, its range is flagged, or the step
+ * is still unplanned, which leaves the dashboard's own step move in charge.
+ * The card's move is null unless `waiting` names a range that parses and
+ * reads as landed, so a range re-cut to take a new step stops waiting.
  */
-function rangesView(intent: string, ordered: ReadonlyArray<Step>, next: Step | undefined): { readonly view: RangesView | null; readonly move: string | null } {
+function rangesView(intent: string, ordered: ReadonlyArray<Step>, next: Step | undefined, waiting: number | null): RangesRead {
   const plan = parseBuildRanges(intent)
   const standing = rangeStanding(plan, ordered, next?.n ?? null)
   if (standing.count === 0) {
-    return { view: null, move: null }
+    return { view: null, move: null, waitingMove: null }
   }
   const own = (item: number) => standing.drift.filter((d) => d.item === item && d.kind !== 'malformed')
-  const rows = plan.ranges.map((range) => ({
-    range,
-    landed: rangeLanded(range, ordered),
-    next: range === standing.holding,
-    drift: own(range.item).map((d) => d.words),
-  }))
+  const rows = plan.ranges.map((range) => {
+    const landed = rangeLanded(range, ordered)
+    return { range, landed, next: range === standing.holding, waiting: landed && range.item === waiting, drift: own(range.item).map((d) => d.words) }
+  })
   const view = { count: standing.count, rows, plan: standing.drift.filter((d) => d.item === null || d.kind === 'malformed').map((d) => d.words) }
   const run = resolveRun({ intent, inFlight: null, spiking: false, item: null })
-  return { view, move: !run.ok || next?.planned !== true ? null : runMove(run) }
+  const card = rows.find((r) => r.waiting)
+  return {
+    view,
+    move: !run.ok || next?.planned !== true ? null : runMove(run),
+    waitingMove: card === undefined ? null : stopCardMove(card.range.item, standing.count, stopFollowUp(intent)),
+  }
+}
+
+/**
+ * The dashboard's pointer while a stop card waits: the card, and in its
+ * bracket the reply that records it from any session, the next range's run or
+ * the finish on the plan's last range, or the way back to the card when the
+ * next run would refuse. `looks good` is never named, since it records only
+ * with the card in the conversation.
+ */
+function stopCardMove(item: number, count: number, follow: RunRange | 'finish' | null): string {
+  const card = `reply to range ${item} of ${count}'s stop card`
+  if (follow === null) {
+    return `${card} (\`show the stop\` brings it back)`
+  }
+  return follow === 'finish'
+    ? `${card} (\`/plumbbob:finish\` records it, then writes the report)`
+    : `${card} (\`/plumbbob:run\` records it, then runs range ${follow.range.item} of ${follow.count})`
 }
 
 /**
@@ -890,6 +926,20 @@ export function runBracket(run: RunRange): string {
 }
 
 /**
+ * The move after a stop, the one the stop card's second row, the dashboard's
+ * waiting pointer, and `plumbbob build`'s refusal all name: the run a bare
+ * `/plumbbob:run` names, `'finish'` once no step is left, or null when the
+ * next run would refuse, where a reply records the card and nothing more.
+ */
+export function stopFollowUp(intent: string): RunRange | 'finish' | null {
+  const run = resolveRun({ intent, inFlight: null, spiking: false, item: null })
+  if (run.ok) {
+    return run
+  }
+  return run.kind === 'finished' ? 'finish' : null
+}
+
+/**
  * The pointer naming a run: the range and its count, the run's command, and
  * the bracket, with a note beside the steps when one is given.
  */
@@ -972,7 +1022,9 @@ function grantWords(run: RunRange, grant: string | null): string {
  * The dashboard `status --run` prints for a run: beneath the run header, with
  * the run's first step marked `← requested` and the pointer naming the run;
  * or, for a run that names nothing it can walk, the dashboard as it renders
- * without the flag, its pointer carrying the refusal.
+ * without the flag, its pointer carrying the refusal. Nothing left keeps the
+ * dashboard's own pointer, which names the stop card while one waits on the
+ * plan's last range, its bracket the finish that records it.
  */
 export function formatRunDashboard(input: OrientInput, run: Run, grant: string | null): string {
   if (!run.ok) {
@@ -1239,9 +1291,13 @@ export function orient(input: OrientInput): Orientation {
   const seamParse = target === undefined ? null : parseStepSeam(input.intent, target.n)
   const phase = input.spiking ? 'SPIKE' : input.inFlight !== null ? 'BUILD' : 'DESIGN'
   // At the boundary with nothing asked for, the move names the range holding
-  // the next step; a spike, a step in flight, or a request keeps its own.
-  const ranges = rangesView(input.intent, ordered, nextUndone)
-  const atBoundary = !input.spiking && input.inFlight === null && requested === null
+  // the next step; a spike, a step in flight, or a request keeps its own. A
+  // stop card waiting for its reply outranks the run and a request, since a
+  // step entered now would write over the range's review; a spike and a step
+  // in flight still keep theirs.
+  const ranges = rangesView(input.intent, ordered, nextUndone, input.waiting)
+  const idle = !input.spiking && input.inFlight === null
+  const atBoundary = idle && requested === null
   return {
     title: parseTitle(input.intent),
     phase,
@@ -1250,7 +1306,10 @@ export function orient(input: OrientInput): Orientation {
     parked: parks.open,
     parkedTotal: parks.total,
     openQuestions: parseOpenQuestions(input.intent),
-    next: (atBoundary ? ranges.move : null) ?? nextMove(input.spiking, ordered, input.inFlight, parks.open, requested),
+    next:
+      (idle ? ranges.waitingMove : null) ??
+      (atBoundary ? ranges.move : null) ??
+      nextMove(input.spiking, ordered, input.inFlight, parks.open, requested),
     nextUndone: nextUndone?.n ?? null,
     buildOrder: remainingOrder(steps, order, null),
     ranges: ranges.view,
@@ -2292,16 +2351,22 @@ export function formatOrientation(o: Orientation): string {
  * row per range with its command as the plan wrote it and its model, `✓` for
  * a range landed and `▸` with the `← next` tail for the one holding the next
  * step. An undone range carries its stop beneath it, since the stops ahead are
- * what the human steers by, and a landed one folds to its row. A range's drift
- * rides beneath it, and the plan's own rows close the block.
+ * what the human steers by, and a landed one folds to its row, because its
+ * call was made. A landed range whose stop card waits is the exception: its
+ * call is still to make, so it keeps its stop and takes the
+ * `← stop card waiting` tail, and the `▸` row drops `← next`, so the block
+ * keeps one arrow. A range's drift rides beneath it, and the plan's own rows
+ * close the block.
  */
 function formatRanges(view: RangesView): string {
   const landed = view.rows.filter((r) => r.landed).length
+  const waits = view.rows.some((r) => r.waiting)
   const rows = view.rows.flatMap((r) => {
     const marker = r.landed ? '✓' : r.next ? '▸' : ' '
     const model = r.range.model === null ? '' : ` · ${r.range.model}`
-    const head = `  ${marker} ${r.range.item}  ${r.range.command}${model}${r.next ? '   ← next' : ''}`
-    const stop = r.landed ? [] : [`        stop: ${r.range.stop}`]
+    const tail = r.waiting ? '   ← stop card waiting' : r.next && !waits ? '   ← next' : ''
+    const head = `  ${marker} ${r.range.item}  ${r.range.command}${model}${tail}`
+    const stop = r.landed && !r.waiting ? [] : [`        stop: ${r.range.stop}`]
     return [head, ...stop, ...r.drift.map((words) => `        ⚠ needs a re-cut: ${words}`)]
   })
   return [`  ranges  ${landed} of ${view.count} done`, ...rows, ...view.plan.map((words) => `  ⚠ ${words}`)].join('\n')

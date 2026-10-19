@@ -95,6 +95,7 @@ const base = {
   spiking: false,
   requested: null,
   outOfBand: 0,
+  waiting: null,
 }
 
 describe('orient parsers', () => {
@@ -580,7 +581,7 @@ describe('formatOrientation', () => {
 
   it('empty inputs degrade to placeholders, never throw', () => {
     const out = formatOrientation(
-      orient({ intent: '', buildLog: '', checkpoints: '', inFlight: null, spiking: false, requested: null, outOfBand: 0 }),
+      orient({ intent: '', buildLog: '', checkpoints: '', inFlight: null, spiking: false, requested: null, outOfBand: 0, waiting: null }),
     )
     expect(out).toContain('PlumbBob — (untitled)   [DESIGN]')
     expect(out).toContain('  (no steps planned yet)')
@@ -1157,6 +1158,56 @@ describe('the dashboard ranges block', () => {
     const out = dashboard(midRange)
     expect(out).not.toContain('⚠')
     expect(out.split('\n').at(-1)).toBe('next → run range 3 of 5 — `/plumbbob:run` (steps 8-9)')
+  })
+
+  it('marks the landed range whose stop card waits, keeps its stop, and drops the next row tail — D103 (stop-latched)', () => {
+    const out = dashboard(ranged([1, 2, 3, 4, 5]), { waiting: 2 })
+    expect(out.slice(out.indexOf('  ranges'))).toBe(
+      [
+        '  ranges  2 of 5 done',
+        '  ✓ 1  /plumbbob:build 1 · opus',
+        '  ✓ 2  /plumbbob:build 2-5 · opus   ← stop card waiting',
+        '        stop: review the parser before the renderers build on it',
+        '  ▸ 3  /plumbbob:build 6-9 · opus',
+        '        stop: review the card on a live boundary before the skills teach it',
+        '    4  /plumbbob:build 10 · fable',
+        "        stop: at step 10's pause, pick the label the docs will name",
+        '    5  /plumbbob:build 11-12 · opus',
+        '        stop: the final read of the docs, then `/plumbbob:finish`',
+        '',
+        'last checkpoint  step 5 · 1a2b3c4',
+        'parked 0 · open questions 0',
+        '',
+        "next → reply to range 2 of 5's stop card (`/plumbbob:run` records it, then runs range 3 of 5)",
+      ].join('\n'),
+    )
+    // The step list keeps its own arrow.
+    expect(out).toContain('  ▸ 6  Step 6   ← next')
+    // A range that does not read as landed, or one the plan lacks, marks nothing.
+    for (const waiting of [3, 9]) {
+      const plain = dashboard(ranged([1, 2, 3, 4, 5]), { waiting })
+      expect(plain).not.toContain('stop card')
+      expect(plain).toContain('  ▸ 3  /plumbbob:build 6-9 · opus   ← next')
+    }
+  })
+
+  it('puts the waiting card ahead of a request, and leaves a spike and a step in flight their own moves', () => {
+    const intent = ranged([1, 2, 3, 4, 5])
+    const card = "next → reply to range 2 of 5's stop card (`/plumbbob:run` records it, then runs range 3 of 5)"
+    const requested = dashboard(intent, { waiting: 2, requested: one(8) })
+    expect(requested).toContain('  ▸ 8  Step 8   ← requested')
+    expect(requested.endsWith(card)).toBe(true)
+    expect(dashboard(intent, { waiting: 2, spiking: true })).toContain('next → close the spike — `plumbbob spike done`')
+    expect(dashboard(intent, { waiting: 2, inFlight: 6 })).toContain('next → finish step 6 — `/plumbbob:verify`')
+  })
+
+  it('names the finish on the last range, and the way back to the card when the next run would refuse', () => {
+    const last = dashboard(ranged(Array.from({ length: 12 }, (_, i) => i + 1)), { waiting: 5 })
+    expect(last).toContain('  ✓ 5  /plumbbob:build 11-12 · opus   ← stop card waiting')
+    expect(last.endsWith("next → reply to range 5 of 5's stop card (`/plumbbob:finish` records it, then writes the report)")).toBe(true)
+    // Range 3 cut short by the build order: the run refuses, so the card is the whole move.
+    const cut = ranged([1, 2, 3, 4, 5], RANGED.replace('## Build ranges', '## Build order\n\n6, 7, 11, 8, 9, 10, 12\n\n## Build ranges'))
+    expect(dashboard(cut, { waiting: 2 }).endsWith("next → reply to range 2 of 5's stop card (`show the stop` brings it back)")).toBe(true)
   })
 
   it('keeps the pointer as it reads today with a step in flight or a step asked for', () => {
@@ -1838,6 +1889,19 @@ Five commands drive the build. Two stops are calls made at a step's own pause, a
       // Nothing left keeps the dashboard's own ending.
       const done = plan({ done: through(12), ranges: SECTION })
       expect(formatRunDashboard(input(done), run(done), null)).toBe(formatOrientation(orient(input(done))))
+    })
+
+    it('needs no special case for a waiting card: the run keeps its pointer, and nothing left keeps the card — D103 (stop-latched)', () => {
+      const intent = plan({ done: through(5), ranges: SECTION })
+      const walkable = formatRunDashboard(input(intent, { waiting: 2 }), run(intent), 'steps 6-9')
+      expect(walkable).toContain('  ✓ 2  /plumbbob:build 2-5 · opus   ← stop card waiting')
+      expect(walkable.endsWith('next → run range 3 of 5 — `/plumbbob:run` (steps 6-9)')).toBe(true)
+      const done = plan({ done: through(12), ranges: SECTION })
+      expect(formatRunDashboard(input(done, { waiting: 5 }), run(done), null).endsWith(
+        "next → reply to range 5 of 5's stop card (`/plumbbob:finish` records it, then writes the report)",
+      )).toBe(true)
+      const refused = formatRunDashboard(input(intent, { waiting: 2 }), run(intent, { item: 2 }), null)
+      expect(refused.endsWith('next → run range 3 of 5 — `/plumbbob:run` (steps 6-9; range 2 of 5 has landed)')).toBe(true)
     })
 
     it('prints no header for a plan without ranges, only the pointer that says to cut them', () => {

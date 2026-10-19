@@ -58,7 +58,11 @@ this skill verifies it the same way: **it reads the diff, not the author**
    "here is the pause", for reading the check verdict back in prose, or for a closing
    courtesy. Each fact appears once, in its part.
 
-   *Write the detail file.* Before you call `plumbbob handoff`, overwrite
+   *Write the detail file.* If `.plumbbob/detail.md` opens on a `# Detail · Range <N>`
+   header and the dashboard above marks that range `← stop card waiting`, that card is still
+   waiting: **refuse**, since writing this skill's detail file would overwrite the range's
+   review, and point the human at the card's own reply (`looks good`, or a change to a
+   lean). Otherwise, before you call `plumbbob handoff`, overwrite
    `.plumbbob/detail.md`. It is the wire handoff parses, and it is the only path by which
    the judgment you formed in steps 2 through 4 reaches the turn:
 

@@ -119,7 +119,8 @@ const VERBS: ReadonlyArray<Verb> = [
     synopsis: ['build [<n>] [--build <slug>]'],
     args: [{ name: '<n>', gloss: 'step to build (default: the next undone step)' }],
     flags: [BUILD_FLAG],
-    notes: 'Refuses (exit 1) with no session, a non-numeric or < 1 step, or a seam it cannot parse.',
+    notes:
+      "Refuses (exit 1) with no session, a non-numeric or < 1 step, a seam it cannot parse, or a stop card still waiting for its reply, since the step's pause would write over the range's review; the remedy names the reply that records the card.",
   },
   {
     name: 'handoff',
