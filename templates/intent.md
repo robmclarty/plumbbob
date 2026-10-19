@@ -69,9 +69,11 @@ characters (GitHub's subject convention: soft, no gate).
 The `(scope)` names the primary code area the step touches (`plan`, `commitmsg`); the
 build's `**Scope:**` header is the feature-level catch-all a step overrides. Scope
 resolves title-scope → `**Scope:**` default → build slug → bare, and type resolves
-title-type → `feat`. Then drive `/plumbbob:build` until done. Later steps may be
-fuzzier than the first; sharpen the next one just-in-time with `/plumbbob:step` (empty input
-auto-syncs it), and use `/plumbbob:refine` to repair the whole plan when a blocker rewrites it.)*
+title-type → `feat`. Then drive the build: `/plumbbob:run` a range at a time when the
+plan cuts ranges below, `/plumbbob:build` a step at a time when it does not. Later
+steps may be fuzzier than the first; sharpen the next one just-in-time with
+`/plumbbob:step` (empty input auto-syncs it), and use `/plumbbob:refine` to repair the
+whole plan when a blocker rewrites it.)*
 
 1. [ ] feat: <step>, **done when:** <criterion, ideally a test or check result>
    - seam: `<file>`, `<file>`
@@ -91,15 +93,17 @@ agree. A step keeps its number for life; this line is where the sequence lives.)
 ## Build ranges
 
 *(Where the build stops for a human call, written with the steps: one numbered item per
-range, the command the human types, then `**stop:**` and the call that ends it, with an
+range, the command that defines it, then `**stop:**` and the call that ends it, with an
 optional `- model:` line naming the model to run it on. The command's form says where it
 stops: a bare `/plumbbob:build 4` builds step 4 to its pause, so its stop is a decision
 made before the step lands, and a span such as `/plumbbob:build 5-9` lands every step it
 names, so its stop is a review of what landed. A range ends where a human call is due
-and nowhere else, so a plan of two or three steps may need one range or none. The card
-names the range to type beneath Next Up and the dashboard lists them, but a range is
-advice, never a grant: the human still types the command (plumbbob
-[D92 (build-ranges)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d92)).
+and nowhere else, so a plan of two or three steps may need one range or none. The
+dashboard lists the ranges, and the card names `/plumbbob:run` beneath Next Up for the
+range holding the next step: it runs what is left of that range, and `/plumbbob:run 3`
+runs range 3. The item's command stays the range's definition, and a range grants
+nothing until the human types the run that names it (plumbbob
+[D96 (plan-names-the-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d96)).
 The item below is scaffold while it holds its `<...>` fill-ins; fill it in, or delete
 the section when the build needs no range.)*
 

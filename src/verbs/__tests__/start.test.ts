@@ -228,10 +228,18 @@ describe('start', () => {
       ].join('\n'),
     )
     expect(parseBuildRanges(intent)).toEqual({ ranges: [], malformed: [] })
+    // The guidance names the run while the item keeps the range's command
+    // (D96 (plan-names-the-grant)).
+    expect(intent).toContain('the card names `/plumbbob:run` beneath Next Up')
+    expect(intent).toContain("The item's command stays the range's definition")
     // The placeholder reads as no section at all: the dashboard is the one a plan
-    // without `## Build ranges` renders, with no ranges block and no drift row.
+    // without `## Build ranges` renders, with no ranges block and no drift row,
+    // and a run names no range, so it prints no header and points at the cut.
     const fresh = captureIo(() => status(dir)).stdout
     expect(fresh).not.toMatch(/ranges|⚠/)
+    const run = captureIo(() => status(dir, ['--run', ''])).stdout
+    expect(run).not.toMatch(/^run /m)
+    expect(run).toContain('(the plan declares none; `/plumbbob:build` builds step 1 alone)')
     writeFileSync(path, intent.replace(/## Build ranges[\s\S]*?(?=## Open questions)/, ''))
     expect(captureIo(() => status(dir)).stdout).toBe(fresh)
   })

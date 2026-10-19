@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Runs and the stop card
 
-**Current step:** 16 — feat(handoff): render the leans, the park handles, and the short links on every card
+**Current step:** 12 — feat(plan): point the plan and its template at the run
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -38,7 +38,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☐ 13. docs: describe the run as the main way to drive a plan
 - ☐ 14. test(evals): hold /plumbbob:run to its range and its stop card
 - ☑ 15. docs(presentation): spec the stop card's leans and handles and the cards' short links
-- ☐ 16. feat(handoff): render the leans, the park handles, and the short links on every card
+- ☑ 16. feat(handoff): render the leans, the park handles, and the short links on every card
 
 ## Park list
 
@@ -49,7 +49,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [x] status --run words two refusal pointers docs/presentation.md does not list: a span typed reads '(steps 6-9; a run names one range)', and a numbered run while a step no range names is in flight reads '(or /plumbbob:abandon it; no range names it)'; spec them beside the eight in The run header (src/lib/orient.ts runRefusalMove)
 - [x] the plain dashboard's ranges block could mark a stop card still waiting (a tail beside the landed range's row), where only status --run names it today (tangent)
 - [x] docs/presentation.md's range readout examples read `spent 192 min`, where the shared duration format step 8 reuses renders `3h 12m` past two hours; align the examples or give a range its own minutes form (tangent)
-- [ ] the build log's dated Harvest lines still write `park 1 ·` (harvestLines in src/lib/buildlog.ts, outside step 16's seam) while the card and the Log's review say P1, so D105 (park-handles)'s one name stops short of the ledger (tangent)
+- [x] the build log's dated Harvest lines still write `park 1 ·` (harvestLines in src/lib/buildlog.ts, outside step 16's seam) while the card and the Log's review say P1, so D105 (park-handles)'s one name stops short of the ledger (tangent)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -83,6 +83,11 @@ Harvest results this boundary:
   `spent` row prints `3h 12m` past two hours. The code is consistent with the step's row; the spec's
   two examples are what is off, and C4 (spec-first) makes the spec the card's source of truth, so
   step 13 aligns them alongside the rest of the docs.
+- 2026-10-18, at range 8's stop (the step 16 boundary): one parked item, classified.
+- **tangent** (deferred to the plan's Noticed list): the build log's dated Harvest lines still
+  write `park 1 ·` (`harvestLines` in `src/lib/buildlog.ts`) where the card and the Log's review
+  say `P1`. `plumbbob harvest` matches a park by its number, never by that text, and no step left
+  reads the lines, so the wording can wait.
 
 ## Log
 
@@ -273,3 +278,165 @@ folder, so it rides the branch into the PR.)*
   **5.** `docs/decisions.md` gains D105 (park-handles) through D108 (order-label), with revision notes on D81, D102, and D104
 
   D105 (park-handles) is D21; D106 (leans-harvested) merges D22 and D23, since the label, the lean, the lock-in line, and the `Recorded` ending are one call about how a proposal reads; D107 (short-linked-paths) is D24, with the waived test on record; D108 (order-label) is D25. Each keeps its *because*, cites by slug, names what it revises, and carries its `Promoted from` line. D81's note records the link form, D102's the `P6` handle and the leans, D104's the `Recorded` ending and the `P9` refusal. The header's promoted range now runs D95 to D108. The full gate ran green across all 11 slots at the pause; the `--only` narrowing asked for was not applied, so the green was the whole gate.
+
+- 2026-10-19 — step 16 checkpointed · 3a93b6355 — feat(handoff): render the leans, the park handles, and the short links on every card (59m)
+
+  **Summary**: Every card now renders what step 15 specified: the stop card lists each open park as `P1` with its lean under a `Harvested` label and says above the moves that approving locks the leans in, every `details:` bracket is a short link to the file and line, the note beneath Next Up writes `order:`, and `plumbbob harvest` reads the `P6` wire, refuses a missing handle as `P9`, and ends outside a stop on `Recorded`.
+
+  1. The stop card names each open park `P1` under a `Harvested` label with its lean, and opens Your Call on the lock-in line.
+  2. Every `details:` bracket is now the short link, built by one helper, on every card and every lead.
+  3. The `P6` handle is the wire in handoff, harvest, and both skills, while a detail written as `- park 6 →` still reads.
+  4. The note beneath Next Up writes `order: 4, 3`.
+  5. The build log's dated Harvest lines still say `park 1 ·`, outside the seam, so I parked it.
+
+  **Readout**:
+
+  ```text
+  check        green: 1 of 1 checks
+  done-when    met
+  decisions    honored
+               - D21 (park-handles), D22 (leans-harvested), D23 (leans-lock-in)
+               - D24 (short-linked-paths), D25 (order-label)
+  constraints  10 of 10 honored
+  seam         held: 18 of 18 declared, no strays
+  diff         +331 -226 across 18 files
+  spent        59 min · 1 turn · 323s gate · green first run
+  ```
+
+  **Verdict**: ● Plumb
+
+  **Recommendation**: Approve it, then click this card's two `details:` links in Claude Code and in Zed before range 5 runs. Step 15 waived that test and left what each host opens to the first card the code renders, which is this one, and steps 12 and 13 should describe a link whose behavior is known.
+
+  **1.** The stop card names each open park `P1` under a `Harvested` label with its lean, and opens Your Call on the lock-in line.
+
+  `harvestPart` prints `- P1 · <text> → lean: tangent, <reason>`, or `→ lean: pivot` when the detail gave no reason, or `→ no lean proposed` when it left the park out. `stopCallBlock` puts `Approving locks in each lean above; to change one, say so first (...)` beneath the label while a park is open, and the direction row is bare. The example comes from `leanExample`, which replaces `directionExample`: the first open park recast as the class its lean is not, so a tangent, a pivot, or a park with no lean reads `make P1 a blocker`, and a blocker reads `make P1 a tangent`. With no park open the line does not render. The anatomy reader had to learn that line: a flush, unlabeled line under Your Call counted as a stray, which would have failed the stop tier on every card with a park open. It now matches that one sentence under that one label, and the test pins that any other flush line there, or this one under another label, is still a stray. `TIER_PARTS` and `OPTIONAL_PARTS` name `Harvested`. The relay check needed no change, as the plan's note said.
+
+  The stop card, rendered by `node src/cli.ts handoff --stop` in a `mktemp -d` repo (four steps, build order `1, 2, 4, 3`, range 1 `1-2` landed, two parks):
+
+  ````markdown
+  **Stop**: Range 1 of 2 landed - review both modules before the CLI reads them (details: [intent.md:34](.plumbbob/builds/greeter/intent.md#L34))
+
+  **Summary**: Both greeting modules exist and export a plain string each. (details: [detail.md](.plumbbob/detail.md))
+
+  1. Step 1 adds `hello`.
+  2. Step 2 adds `bye`.
+
+  **Readout**:
+
+  ```text
+  steps        2 of 2 landed
+               - 1 e30b5b7 · 2 ad63d36
+  check        green: 1 of 1 checks, 2 landings
+  done-when    met
+  decisions    1 of 1 honored
+  constraints  1 of 1 honored
+  seam         held: 2 of 2 steps, no strays
+  diff         +2 -0 across 2 files
+  spent        3s · green first run at every landing
+  ```
+
+  **Verdict**: ● Plumb
+
+  **Harvested**: 2 of 2 parked ideas open
+
+  - P1 · should the greeting carry punctuation? (tangent) → lean: tangent, punctuation is the CLI's call, at step 3
+  - P2 · bye could reuse hello's shape → lean: blocker, step 3 prints both, so the shapes should match first
+
+  **Next Up**: Step 4 of 4 - feat(name): greet by name (model: **Opus**, details: [intent.md:24](.plumbbob/builds/greeter/intent.md#L24))
+    · range 2 of 2: /plumbbob:run (steps 4,3) · order: 4, 3
+
+  **Your Call**:
+
+  Approving locks in each lean above; to change one, say so first (`make P1 a blocker`).
+
+  - `looks good` → I record the review and every lean as proposed, folding a blocker into the plan; back to the boundary
+  - `/plumbbob:run` → I record them the same way, then run range 2 of 2 to its stop
+  - anything that reads as direction → I re-render the card with the lean changed; nothing is recorded until you approve
+  - `expand`, or any question → I show more of what is there; nothing changes, and `show the stop` brings all of this back
+
+  **Recommendation**: Approve it, with P2 as the blocker it is. Step 3 reads both modules, and matching their shapes first saves it a branch.
+  ````
+
+  **2.** Every `details:` bracket is now the short link, built by one helper, on every card and every lead.
+
+  `detailsLink(path, line)` in `src/verbs/handoff.ts` writes `details: [intent.md:24](.plumbbob/builds/greeter/intent.md#L24)`, or `[detail.md](.plumbbob/detail.md)` with no line for the Summary lead. `summaryBlock`, `nextUpLine`, and `stopLead` call it, and so does the checkpoint's `leadDetail`, which now gets a `{ path, line }` pointer from `appendLog` rather than a `path:line` string it would have to split again. The record of a Summary lead still drops its bracket, so no live link lands in the build log. The same repo's boundary where range 1 landed, and then a pause on step 4:
+
+  ````markdown
+  **Checkpoint**: Step 2 complete (ad63d3672, details: [build-log.md:70](.plumbbob/builds/greeter/build-log.md#L70))
+
+  **Verdict**: ● Plumb
+
+  **Stop**: Range 1 of 2 landed - review both modules before the CLI reads them (details: [intent.md:34](.plumbbob/builds/greeter/intent.md#L34))
+
+  **Next Up**: Step 4 of 4 - feat(name): greet by name (model: **Opus**, details: [intent.md:24](.plumbbob/builds/greeter/intent.md#L24))
+    · range 2 of 2: /plumbbob:run (steps 4,3) · order: 4, 3 · parked 2 of 2 open
+  ````
+
+  ````markdown
+  **Now**: Step 4 of 4 - feat(name): greet by name
+
+  **Summary**: `greet` takes a name and returns a plain greeting. (details: [detail.md](.plumbbob/detail.md))
+
+  1. `src/name.ts` exports `greet`, built from the same plain string `hello` holds.
+
+  **Readout**:
+
+  ```text
+  check        green: 1 of 1 checks
+  done-when    met
+  decisions    1 of 1 honored
+  constraints  1 of 1 honored
+  seam         held: 1 of 1 declared, no strays
+  diff         +1 -0 across 1 file · inline below
+  spent        2s · 0s gate · green first run
+  ```
+
+  ```diff
+  diff --git a/src/name.ts b/src/name.ts
+  new file mode 100644
+  index 0000000..daa0696
+  --- /dev/null
+  +++ b/src/name.ts
+  @@ -0,0 +1 @@
+  +export const greet = (name: string): string => 'hello, ' + name
+  ```
+
+  **Verdict**: ● Plumb
+
+  **Next Up**: Step 3 of 4 - feat(cli): print both greetings (model: **Opus**, details: [intent.md:21](.plumbbob/builds/greeter/intent.md#L21))
+    · range 2 of 2: /plumbbob:run (steps 4,3) · parked 0 of 3 open
+
+  **Your Call**:
+
+  - `looks good` → I checkpoint Step 4; back to the boundary
+  - `/plumbbob:run` → I checkpoint Step 4, then run the rest of range 2 to its stop
+  - `expand`, or any question → I show more of what is there; nothing changes, and `show the pause` brings all of this back
+  - anything that reads as direction → I take it as what to change; nothing lands until you approve
+  - `revert` → I wind the work back to the last checkpoint
+
+  **Recommendation**: Approve it. The function is the done-when, word for word.
+  ````
+
+  **3.** The `P6` handle is the wire in handoff, harvest, and both skills, while a detail written as `- park 6 →` still reads.
+
+  `harvestProposals` matches `- P6 →` and `- park 6 →` alike, and a test renders a stop card from the old wire and gets the same card. `plumbbob harvest`'s refusals read `P9 is not in the list; 3 parked` and `P1's class "later" is not blocker, tangent, or pivot`, and outside a stop it ends on `**Recorded**:`. The run skill's detail template writes `- P<handle> →`, its handle text says the third park ever is `P3`, a change reads `make P7 a tangent`, and an omission reads `no lean proposed`; the harvest skill writes `- P6 →`, names the `**Recorded**:` ending, and names the `P9` refusal. The contract tests hold both. From the same repo, a harvest outside a stop:
+
+  ````text
+  plumbbob: harvest not recorded (P9 is not in the list; 3 parked)
+    → fix the Harvest proposals in .plumbbob/detail.md
+  ````
+
+  ````markdown
+  **Recorded**: 1 parked idea (1 tangent)
+
+  **Next Up**: Step 4 of 4 - feat(name): greet by name (model: **Opus**, details: [intent.md:24](.plumbbob/builds/greeter/intent.md#L24))
+    · range 2 of 2: /plumbbob:run (steps 4,3) · order: 4, 3 · parked 0 of 3 open
+  ````
+
+  **4.** The note beneath Next Up writes `order: 4, 3`.
+
+  `buildOrderPhrase` returns `order: 7, 8, 5, 10, 6 (and 2 more)`. The dashboard keeps its own `build order` row, which D25 (order-label) does not touch, and its doc comment no longer claims the phrase is that row.
+
+  **5.** The build log's dated Harvest lines still say `park 1 ·`, outside the seam, so I parked it.
+
+  `harvestLines` in `src/lib/buildlog.ts` writes `- **tangent**: park 1 · <text> → <reason>` under `## Harvest`, while the review beneath the stop's Log line now reads `P1`. The spec does not give those lines a form and the file is outside step 16's seam, so I left them and parked the one-line fix as a tangent; the demo repo's record shows both forms one above the other.

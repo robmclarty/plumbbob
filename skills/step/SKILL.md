@@ -62,9 +62,14 @@ grew, but its everyday job is to sharpen, not to invent.
    A step the build order places between two of a range's steps belongs to that range. A
    split or re-cut that moves where a call falls moves the stop with it, so re-cut any
    range the edit breaks, and show the range edit in the same before/after, since it
-   changes where the human will be asked. Then read `plumbbob status`: its ranges block
-   carries a `⚠` row for any range still broken, and none once every undone step sits in
-   exactly one range.
+   changes where the human will be asked. The edit lands on the item's command, the
+   range's definition, not on the command the card names: the card names `/plumbbob:run`
+   for the range, and the turn hook mints a run's grant from the plan as the human types
+   the run, so the next run lands the range as you re-cut it, while a run already typed
+   keeps the grant it minted
+   ([D96 (plan-names-the-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d96)).
+   Then read `plumbbob status`: its ranges block carries a `⚠` row for any range still
+   broken, and none once every undone step sits in exactly one range.
 4. **Revise the step's harness bindings if they drifted too** *(optional)*. If the
    build carries a `harness.json` (beside `intent.md`) and the reality that moved the
    step also changed which agents it wants, sharpen that step's slot bindings

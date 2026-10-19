@@ -34,6 +34,7 @@ annotate it.
 3. When the plan carries `## Build ranges`, the dashboard lists them beneath the steps:
    `ranges  2 of 5 done`, `✓` on a landed range and `▸` on the one holding the next step,
    each undone range's stop on the line beneath it, and a `⚠` row for any range the plan
-   has outgrown. Its `next →` then names the range's command to type. You relay the block
-   with the rest; a `⚠` row is `/plumbbob:refine`'s to fix.
+   has outgrown. Each row keeps the command the plan wrote, the range's definition, while
+   the `next →` names the run to type, `/plumbbob:run` with the steps it will land beside
+   it. You relay the block with the rest; a `⚠` row is `/plumbbob:refine`'s to fix.
 4. If it reads `NO ACTIVE SESSION`, tell the human to `/plumbbob:plan` to frame a goal.

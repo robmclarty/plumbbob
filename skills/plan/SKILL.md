@@ -12,9 +12,11 @@ Current session state (injected when this skill runs): !`plumbbob status 2>/dev/
 
 `/plumbbob:plan` is the **whole-goal** move; it opens a session and gets the deciding out
 of your head and onto `intent.md` *before* any code. By default it authors the
-**complete plan, including all the Steps**, so the happy path afterward is just
-`/plumbbob:build` until done. (Revising a single increment later is the separate `/plumbbob:step`
-move; do not confuse the two.)
+**complete plan, including all the Steps and the build ranges**, so the happy path
+afterward is `/plumbbob:run` until done: each run lands one range and stops where the plan
+says a human call is due. A plan without ranges is driven with `/plumbbob:build`, a step
+at a time, and `/plumbbob:build` stays the granular move inside any plan. (Revising a
+single increment later is the separate `/plumbbob:step` move; do not confuse the two.)
 
 A model note: this skill **inherits the session model**; nothing pins or switches
 it. Planning is where frontier-class judgment pays for itself, so if the session is
@@ -42,7 +44,8 @@ Look at the argument the human gave and pick the mode yourself:
    genuinely ambiguous.
 
 All three modes converge on the **same artifact**: a complete, standalone `intent.md`
-an agent can follow with `/plumbbob:build`. The argument only seeds how you get there.
+an agent can follow with `/plumbbob:run`, or with `/plumbbob:build` when it cuts no ranges.
+The argument only seeds how you get there.
 
 ## What this skill does
 
@@ -120,8 +123,8 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
 5. **Cut the build ranges.** With the steps written, say where the build stops for a
    human call, under `## Build ranges`
    ([D92 (build-ranges)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d92)):
-   one sentence on how to drive the build, then one numbered item per range, in the
-   format the parser reads:
+   one sentence on how to drive the build, a `/plumbbob:run` per range, then one numbered
+   item per range, in the format the parser reads:
 
    ```markdown
    1. `/plumbbob:build 1`, **stop:** at step 1's pause, approve the schema before anything writes to it
@@ -148,16 +151,26 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
    Name every step in exactly one range, by its plan number. A fresh plan has no build
    order, so the ranges follow the numbering. Give each range a `- model:` line naming the
    strongest model any step inside it recommends, written plain the way a step's is,
-   because that is the `/model` the human picks before typing the command; any other
+   because that is the `/model` the human picks before typing the run; any other
    sub-line (a `- note:` on what to watch for) is the reader's, and the CLI leaves it
    alone. Replace the template's placeholder item rather than writing beside it: an item
    still holding its `<...>` fill-ins reads as no range at all.
 
    **Size the ranges to the work.** A plan of two or three steps may carry one range, or
    none. When every step would be its own bare range, delete the section: the default
-   loop already stops at each step's pause. A range is advice, never a grant
-   ([D67 (auto-not-a-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d67)):
-   the card names the range to type beneath Next Up, and the human still types it.
+   loop already stops at each step's pause, and `/plumbbob:build` drives a plan without
+   ranges a step at a time.
+
+   **The card names the run, not the item.** The item's command is the range's
+   definition: the form the parser reads, and the kind of stop it makes. The card names
+   `/plumbbob:run` beneath Next Up for the range holding the next step, with the steps it
+   will land beside it, and `/plumbbob:run 3` runs range 3 by its item number
+   ([D95 (run-verb)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d95)).
+   A range grants nothing until the human types the run that names it, and then the turn
+   hook mints the grant from the plan as it stands
+   ([D96 (plan-names-the-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d96)),
+   so a range you cut is never a grant you mint
+   ([D67 (auto-not-a-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d67)).
 6. **Offer harness bindings** *(optional)*. If the build will lean on
    user-authored agents, author `harness.json` in the build folder (beside `intent.md`)
    and review it at the **same plan pause**, alongside the steps; bindings are
@@ -195,11 +208,13 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
      renders the your-call block with the moves that apply before anything is recorded and
      prints your recommendation last (the decision tier of the
      [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)),
-     so the moves are relayed, never hand-composed. *looks good* marks the plan decided and
-     starts `/plumbbob:build` at the first undone step; a message that asks (`expand 2`, or
-     any question) is answered from the detail file or `intent.md` and changes nothing; a
-     message that directs is what to sharpen, cheap now, before any code. The revert move
-     vanishes there on its own: nothing has landed to wind back.
+     so the moves are relayed, never hand-composed. *looks good* marks the plan decided, and
+     its row names the move the human types next: `/plumbbob:run` for the range holding
+     Step 1 when the plan declares ranges, `/plumbbob:build` for Step 1 when it does not;
+     a message that asks (`expand 2`, or any question) is answered from the detail file or
+     `intent.md` and changes nothing; a message that directs is what to sharpen, cheap
+     now, before any code. The revert move vanishes there on its own: nothing has landed
+     to wind back.
    - **The plan commit is latched too.** Once the turn ledger exists, `checkpoint
      --plan` refuses to land in the same turn `start` stamped it: present the plan,
      **end the turn**, and the human's approving message is the tick that lets it
@@ -210,7 +225,8 @@ an agent can follow with `/plumbbob:build`. The argument only seeds how you get 
      refusal.)
    - **The plan commit prints its own close.** `plumbbob checkpoint --plan` emits the
      whole boundary ending: `**Plan**: committed (<sha>)`, any advisory, and the pointer at
-     the step the build starts on. Relay that block whole and run no second command; the
+     the step the build starts on, with the run that lands its range named beneath it when
+     the plan declares ranges. Relay that block whole and run no second command; the
      plan-pause card above is the one place `handoff` is still called, because no verb has
      run yet there.
    - **Say what the commit publishes.** The close-out line names the tracked folder:
