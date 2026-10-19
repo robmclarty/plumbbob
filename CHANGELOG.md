@@ -5,6 +5,49 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.2] - 2026-10-19
+
+- **Added:** `/plumbbob:run`, now the main way to drive a plan with build ranges. It runs
+  what is left of the range holding the next step, or of range 3 with `/plumbbob:run 3`,
+  and the turn hook mints its grant from the plan as you type it, so the plan names the
+  steps it lands rather than a span typed by hand. A range that lands its steps ends on its
+  stop card, and a bare range builds its step to the pause. `plumbbob status --run` prints
+  the run's header (the range, what is left of it, its stop, and the grant the hook
+  minted), or the refusal and the move that unblocks it when the run names nothing it can
+  walk, and the card and the dashboard name `/plumbbob:run (steps 6-9)` where they named a
+  range's command. D95 (run-verb) through D99 (one-loop) record it, and contract c11 holds a
+  run to its range and its card, 5 of 5 in `docs/evals/2026-10-19.md`.
+- **Added:** the stop card. A run's range ends on one card that reviews the whole range:
+  the model's summary and highlights, a readout the CLI measures across the range's
+  commits (each step held to its own seam, the landings counted on the check row, the time
+  spent), the Verdict, every open park with a proposed lean under its `P1` handle, and the
+  move after the stop. One reply settles it: `looks good` records the review and every
+  lean, a change re-renders the card with the lean changed, and `/plumbbob:run` records it
+  and then runs the next range. `plumbbob handoff --stop` renders it once per stop, and the
+  record is latched: never in the turn the card printed, and never for a review no card
+  showed. D100 (stop-card) through D104 (harvest-records) record it.
+- **Added:** `plumbbob harvest` records a harvest from the detail file, at a stop and
+  outside one. The harvest skill now proposes a class for every open park at once and
+  records them all after one reply, ending on `**Recorded**: 2 parked ideas (2 tangents)`.
+  D102 (settle-in-one-reply), D105 (park-handles), and D106 (leans-harvested) record it.
+- **Changed:** every card's `details:` bracket is a short relative link with a line
+  fragment, `[intent.md:34](.plumbbob/builds/x/intent.md#L34)`, in place of the full path,
+  and the build order beneath Next Up reads `order: 7, 8, 5`. D107 (short-linked-paths) and
+  D108 (order-label) record them.
+- **Fixed:** a build order written while a range was partly landed flagged that range as
+  needing a re-cut, even with the sequence unchanged, and `/plumbbob:run` refused it. A
+  landed step the order leaves out now reads as built before the order was written, and a
+  range's span ends at its last undone step.
+- **Fixed:** a blocker found at a stop went into the range that had just landed, which
+  reopened it and left `plumbbob harvest` refusing with `step 5 is open again` and no way
+  forward. The skills now put it in a range still to come, or a bare range of its own, and
+  `plumbbob harvest` names the case, `step 5 joined it after it landed`, with the move as
+  its remedy and a rerun in the same reply.
+- **Fixed:** `/plumbbob:build` typed while a stop card waited entered the step, and the
+  step's pause wrote over the range's review before the reply recorded it. `plumbbob build`
+  now refuses while a card waits, naming the reply that records it, and the plain dashboard
+  marks the range `← stop card waiting` and names the card as its next move.
+
 ## [0.13.1] - 2026-10-17
 
 - **Added:** build ranges. A plan's `## Build ranges` section, right after `## Build order`,
