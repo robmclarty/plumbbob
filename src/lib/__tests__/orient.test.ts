@@ -941,22 +941,30 @@ describe('the build order', () => {
     expect(replaced).not.toContain('2-4')
   })
 
-  it('orderSteps puts the listed steps first, then the rest in document order', () => {
+  it('orderSteps puts the landed steps the line leaves out first, then the listed steps, then the undone rest', () => {
     const steps = parseSteps(INTENT)
-    expect(orderSteps(steps, [3]).map((s) => s.n)).toEqual([3, 1, 2])
-    expect(orderSteps(steps, [3, 2]).map((s) => s.n)).toEqual([3, 2, 1])
+    // Step 1 landed before the line was written, so it reads as built ahead of it.
+    expect(orderSteps(steps, [3]).map((s) => s.n)).toEqual([1, 3, 2])
+    expect(orderSteps(steps, [3, 2]).map((s) => s.n)).toEqual([1, 3, 2])
+  })
+
+  it('orderSteps keeps an omitted undone step after the line, and a listed landed step in its place', () => {
+    const cleared = parseSteps(INTENT.replace('1. [x]', '1. [ ]'))
+    expect(orderSteps(cleared, [3]).map((s) => s.n)).toEqual([3, 1, 2])
+    expect(orderSteps(parseSteps(INTENT), [3, 1]).map((s) => s.n)).toEqual([3, 1, 2])
   })
 
   it('orderSteps drops an unknown number, keeps the first of a repeat, and is the identity for an empty order', () => {
     const steps = parseSteps(INTENT)
-    expect(orderSteps(steps, [9, 2, 2]).map((s) => s.n)).toEqual([2, 1, 3])
+    expect(orderSteps(steps, [9, 3, 3]).map((s) => s.n)).toEqual([1, 3, 2])
+    expect(orderSteps(steps, [9]).map((s) => s.n)).toEqual([1, 2, 3])
     expect(orderSteps(steps, [])).toEqual(steps)
     // The steps themselves are untouched: only the sequence moves.
-    expect(orderSteps(steps, [3, 2])[0]).toBe(steps[2])
+    expect(orderSteps(steps, [3, 2])[1]).toBe(steps[2])
   })
 
   it('parseOrderedSteps merges the two reads', () => {
-    expect(parseOrderedSteps(ORDERED).map((s) => s.n)).toEqual([3, 2, 1])
+    expect(parseOrderedSteps(ORDERED).map((s) => s.n)).toEqual([1, 3, 2])
     expect(parseOrderedSteps(INTENT).map((s) => s.n)).toEqual([1, 2, 3])
   })
 
@@ -1142,6 +1150,13 @@ describe('the dashboard ranges block', () => {
     )
     expect(out).toContain('  ranges  2 of 5 done')
     expect(out).toContain('next → build step 6 — `/plumbbob:build` (or `/plumbbob:step` to revise it first)')
+  })
+
+  it('flags nothing for a build order written while a range is partly landed', () => {
+    const midRange = ranged([1, 2, 3, 4, 5, 6, 7], RANGED.replace('## Build ranges', '## Build order\n\n8, 9, 10, 11, 12\n\n## Build ranges'))
+    const out = dashboard(midRange)
+    expect(out).not.toContain('⚠')
+    expect(out.split('\n').at(-1)).toBe('next → run range 3 of 5 — `/plumbbob:run` (steps 8-9)')
   })
 
   it('keeps the pointer as it reads today with a step in flight or a step asked for', () => {
@@ -1446,6 +1461,29 @@ Five commands drive the build. Two stops are calls made at a step's own pause, a
       expect(standing(halted, 76)).toMatchObject({ command: '/plumbbob:build 76', drift: [{ kind: 'inside', item: 2 }] })
     })
 
+    it('reads the lines `plumbbob order` writes, which list undone steps alone, without a false cut', () => {
+      const own76 = ['3. `/plumbbob:build 58-75`, **stop:** review it', '4. `/plumbbob:build 76`, **stop:** decide it']
+      const ranges = items('1. `/plumbbob:build 1-47`, **stop:** review it', '2. `/plumbbob:build 48-57`, **stop:** review it', ...own76)
+      /** The steps `from` through `to`. */
+      const span = (from: number, to: number): number[] => Array.from({ length: to - from + 1 }, (_, i) => from + i)
+      const cutLine = [...span(48, 51), 76, ...span(52, 75)]
+      const inside = [{ kind: 'inside', item: 2, words: 'the build order puts step 76 inside it' }]
+      // Written before the range started, and still read once the run halted at 51: step 76 cuts it both times.
+      expect(standing(plan({ count: 76, done: through(47), order: cutLine, ranges }), 48).drift).toEqual(inside)
+      expect(standing(plan({ count: 76, done: through(51), order: cutLine, ranges }), 76).drift).toEqual(inside)
+      // Written after the halt: 48-51 landed before the line, and 76 still sits inside the range.
+      expect(standing(plan({ count: 76, done: through(51), order: [76, ...span(52, 75)], ranges }), 76).drift).toEqual(inside)
+      // Step 76 moved past the range's last undone step cuts nothing.
+      const past = plan({ count: 76, done: through(51), order: [...span(52, 57), 76, ...span(58, 75)], ranges })
+      expect(standing(past, 52)).toMatchObject({ command: '/plumbbob:build 52-57', flag: null, drift: [] })
+    })
+
+    it('ends a range at its last undone step, so a step built early ahead of an outsider cuts nothing', () => {
+      const ranges = items('1. `/plumbbob:build 1-3`, **stop:** review it', "2. `/plumbbob:build 4`, **stop:** at step 4's pause, decide it")
+      const early = plan({ count: 4, done: [3], order: [1, 2, 4, 3], ranges })
+      expect(standing(early, 1)).toMatchObject({ command: '/plumbbob:build 1-2', drift: [] })
+    })
+
     it('flags the undone steps no range names, once a real range parses', () => {
       const four = SECTION.replace(/^5\. [\s\S]*$/m, '')
       const open = standing(plan({ ranges: four }), 11)
@@ -1547,6 +1585,22 @@ Five commands drive the build. Two stops are calls made at a step's own pause, a
         expect(r).toMatchObject({ ok: true, range: { item: 2 }, left: [20, 5, 6, 7, 8, 9], steps: '20,5-9', grant: 'steps 5-9,20' })
       }
       expect(run(plan({ count: 20, done: [...through(4), 20], order, ranges: runs('5-9,20') }))).toMatchObject({ steps: '5-9', grant: 'steps 5-9' })
+    })
+
+    it('walks a partly landed range under a line written mid-range, and still flags a real cut', () => {
+      const ranges = items('1. `/plumbbob:build 1-3`, **stop:** review the parser', '2. `/plumbbob:build 4-5`, **stop:** review the card')
+      const midRange = (order: ReadonlyArray<number>) => plan({ count: 5, done: [1], order, ranges })
+      // The sequence unchanged: step 1 landed before the line, so nothing cuts range 1.
+      expect(standing(midRange([2, 3, 4, 5]), 2)).toMatchObject({ command: '/plumbbob:build 2-3', drift: [] })
+      expect(run(midRange([2, 3, 4, 5]))).toMatchObject({ ok: true, range: { item: 1 }, steps: '2-3', grant: 'steps 2-3' })
+      // Re-sequenced inside the range.
+      expect(standing(midRange([3, 2, 4, 5]), 3)).toMatchObject({ command: '/plumbbob:build 3,2', drift: [] })
+      expect(run(midRange([3, 2, 4, 5]))).toMatchObject({ ok: true, range: { item: 1 }, steps: '3,2', grant: 'steps 2-3' })
+      // Steps 3 and 4 swapped cut both ranges.
+      expect(standing(midRange([2, 4, 3, 5]), 2).drift).toEqual([
+        { kind: 'inside', item: 1, words: 'the build order puts step 4 inside it' },
+        { kind: 'inside', item: 2, words: 'the build order puts step 3 inside it' },
+      ])
     })
 
     it('walks a list range such as 70,1-3,5 from its first step in build order', () => {
@@ -1957,6 +2011,9 @@ describe('the range readout', () => {
     const ordered = RANGED.replace('## Build ranges', '## Build order\n\n3, 1, 2, 4\n\n## Build ranges')
     const relanded = `${LEDGER}\nstep 1 ${sha('9')}`
     expect(measure({ intent: ordered, checkpoints: relanded }).steps.items).toEqual(['3 3333333 · 1 9999999 · 2 2222222'])
+    // A landed step the line leaves out landed before the line was written, so it leads.
+    const midRange = RANGED.replace('## Build ranges', '## Build order\n\n3, 2, 4\n\n## Build ranges')
+    expect(measure({ intent: midRange }).steps.items).toEqual(['1 1111111 · 3 3333333 · 2 2222222'])
     const eight = `# Eight\n\n## Steps\n\n${Array.from({ length: 8 }, (_, i) => `${i + 1}. [x] Step ${i + 1}`).join('\n')}\n\n## Build ranges\n\n1. \`/plumbbob:build 1-8\`, **stop:** review them\n`
     const ledger = Array.from({ length: 8 }, (_, i) => `step ${i + 1} ${sha(String(i + 1))}`).join('\n')
     const items = measureRange({

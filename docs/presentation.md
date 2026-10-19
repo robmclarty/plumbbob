@@ -982,6 +982,15 @@ holds the step. A flagged range gets no command on the card. A range may name
 a step out of build order without drifting, because a list is walked in build
 order however it is written.
 
+Two rules say where the build order puts a range. A landed step the line
+leaves out counts as built ahead of the line, because `plumbbob order` lists
+undone steps alone, so a step missing from the line landed before the line was
+written; re-ordering what is left of a range that has partly landed moves
+nothing that landed. And a range's span ends at its last undone step, since a
+step placed after every one of them cuts nothing short. The span still opens
+at the range's first step, landed or not, so a range a run halted inside stays
+flagged until the step that halted it lands.
+
 ### The range segment beneath Next Up
 
 The note beneath the pointer opens on the range holding the step Next Up

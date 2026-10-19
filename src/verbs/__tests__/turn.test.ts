@@ -155,6 +155,11 @@ describe('mintFromPrompt — D96 (plan-names-the-grant)', () => {
     expect(mintFromPrompt('/plumbbob:run', read({ done: [1, 2, 3, 4] }), null)).toEqual({ grant: 'steps 5-9', run: 3 })
   })
 
+  it('mints a partly landed range under a build order written mid-range', () => {
+    const midRange = runPlan([1]).replace('## Build ranges', '## Build order\n\n2, 3, 4, 5, 6, 7, 8, 9\n\n## Build ranges')
+    expect(mintFromPrompt('/plumbbob:run', read({ intent: midRange }), null)).toEqual({ grant: 'steps 2-3', run: 1 })
+  })
+
   it('mints what is left of range N when a number is typed', () => {
     expect(mintFromPrompt('/plumbbob:run 3', read(), null)).toEqual({ grant: 'steps 5-9', run: 3 })
     expect(mintFromPrompt('/plumbbob:run 3.', read({ done: [5, 6] }), null)).toEqual({ grant: 'steps 7-9', run: 3 })

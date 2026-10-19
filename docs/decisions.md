@@ -848,7 +848,11 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   the ranges beneath the steps. Revised again 2026-10-18: the line and `plumbbob order` read spans
   beside numbers, `1, 6, 2-4, 7, 5`, with or without a space after each comma, each span naming its steps
   in place through the grammar of [**D91 (step-list-grants)**](#d91), and the verb still writes every
-  step out.) Amends [**D6 (parseable-steps)**](#d6) (a second machine-read section) and
+  step out.) (Revised 2026-10-19: the merge puts a landed step the line leaves out ahead of the line,
+  because the verb lists undone steps alone, so such a step landed before the line was written; the
+  undone sequence is unchanged, and a line written while a range is partly landed no longer reads as
+  cutting that range. A range's span in the build order ends at its last undone step, so a step placed
+  after all of them flags nothing.) Amends [**D6 (parseable-steps)**](#d6) (a second machine-read section) and
   [**D83 (card-teaches-itself)**](#d83) (the one unlabeled continuation under Next Up). *Tagged in*
   `orient.ts`, `order.ts`, `build.ts`, `checkpoint.ts`, `handoff.ts`, `recover.ts`, the `order`, `step`,
   `refine`, and `harvest` skills, `templates/intent.md`, `docs/presentation.md`, and

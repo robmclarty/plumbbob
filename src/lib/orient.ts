@@ -214,15 +214,19 @@ export function parseBuildOrder(intent: string): number[] {
 }
 
 /**
- * The steps in build order: the numbers `order` lists first, in that sequence,
- * then every step it leaves out, in document order.
+ * The steps in build order: the landed steps `order` leaves out, then the
+ * numbers it lists, in that sequence, then the undone steps it leaves out,
+ * each left-out group in document order.
  *
- * A listed number takes the first step in document order that carries it, and
- * a repeat of the number is ignored, so a doubled entry cannot double a step; a
- * number no step carries is dropped. An empty order is the identity, which is
- * what a plan with no `## Build order` section reads as. The steps themselves
- * never change, only the sequence, so `n`, `line`, and `done` stay what
- * `parseSteps` read.
+ * `plumbbob order` lists undone steps only, so a landed step the line leaves
+ * out landed before the line was written, and it reads as built ahead of the
+ * line rather than after it; the undone sequence is the same either way. A
+ * listed number takes the first step in document order that carries it, and a
+ * repeat of the number is ignored, so a doubled entry cannot double a step; a
+ * number no step carries is dropped. An order that names no step, an empty one
+ * included, is the identity, which is what a plan with no `## Build order`
+ * section reads as. The steps themselves never change, only the sequence, so
+ * `n`, `line`, and `done` stay what `parseSteps` read.
  */
 export function orderSteps(steps: ReadonlyArray<Step>, order: ReadonlyArray<number>): Step[] {
   const taken = new Set<Step>()
@@ -234,7 +238,11 @@ export function orderSteps(steps: ReadonlyArray<Step>, order: ReadonlyArray<numb
       ordered.push(step)
     }
   }
-  return [...ordered, ...steps.filter((s) => !taken.has(s))]
+  const rest = steps.filter((s) => !taken.has(s))
+  if (ordered.length === 0) {
+    return rest
+  }
+  return [...rest.filter((s) => s.done), ...ordered, ...rest.filter((s) => !s.done)]
 }
 
 /**
@@ -658,15 +666,20 @@ function sharedDrift(range: BuildRange, ranges: ReadonlyArray<BuildRange>, order
 
 /**
  * A range the build order cuts short: an undone step it does not name, placed
- * between two of its own, where a run of the range halts.
+ * between its first step and its last undone one, where a run of the range
+ * halts.
  *
- * An outside step ahead of the range's first step builds first and cuts
- * nothing, and the card names its range before this one.
+ * The span opens at the range's first step, landed or not, so a range a run
+ * halted inside stays flagged until the step that halted it lands. It ends at
+ * the range's last undone step, since a step placed after every one of them
+ * cuts nothing short, and a range with none left reports nothing. An outside
+ * step ahead of the range's first step builds first and cuts nothing, and the
+ * card names its range before this one.
  */
 function insideDrift(range: BuildRange, ordered: ReadonlyArray<Step>): RangeDrift[] {
   const first = ordered.findIndex((s) => hasStep(range.steps, s.n))
-  const last = ordered.findLastIndex((s) => hasStep(range.steps, s.n))
-  const inside = first === -1 ? [] : ordered.slice(first + 1, last).filter((s) => !s.done && !hasStep(range.steps, s.n))
+  const last = ordered.findLastIndex((s) => !s.done && hasStep(range.steps, s.n))
+  const inside = last === -1 ? [] : ordered.slice(first + 1, last).filter((s) => !s.done && !hasStep(range.steps, s.n))
   if (inside.length === 0) {
     return []
   }
