@@ -76,12 +76,14 @@ export type EvalSession = {
   readonly repo: string
   readonly sweep: Sweep
   readonly model: string
-  // Arm the turn ledger before the first measured turn: the `-p` tick lands at
-  // ~session end, so a fixture's first session would otherwise run against an
-  // absent ledger (no TICK stamp — latch dormant). One trivial turn makes the
-  // ledger exist first, which is production-faithful: a real human has always
-  // spoken at least once (plan approval) before a build turn. No-op on the
-  // baseline sweep, whose whole point is a ledger that never exists.
+  // Tick the turn ledger and check which CLI the session resolves, before the
+  // first measured turn. One trivial turn makes the ledger exist first, which
+  // is production-faithful: a real human has always spoken at least once (plan
+  // approval) before a build turn. The tick lands as the turn starts, headless
+  // as interactive (checked live on Claude Code 2.1.302, 2026-10-19), so the
+  // first measured session would also tick on its own; the warmup stays for
+  // its guards and for parity with earlier receipts. The ledger half is a no-op
+  // on the baseline sweep, whose whole point is a ledger that never exists.
   warmup(): Promise<void>
   turn(prompt: string, options?: TurnOptions): Promise<TurnResult>
   // Every measured turn's assistant text, joined — so the runner can gate on a
@@ -198,9 +200,9 @@ function readCount(raw: string | undefined, fallback: number): number {
 
 // Read a worktree ledger file (`.plumbbob/TURN`, `GRANT`, or `RUN`), trimmed, or
 // null when absent. The latch contracts (c3/c4) read it back after the turn as
-// informational context: it makes the headless `-p` tick observable — whether
-// the turn hook fired and what the one-turn GRANT settled to — so a refusal
-// reads apart from the tick-timing artifact armGrant exists to avoid.
+// informational context: it makes the headless `-p` tick observable (whether
+// the turn hook fired, and what the one-turn GRANT settled to), so a refusal
+// reads apart from a hook that never fired.
 export function readLedger(repo: string, name: 'TURN' | 'GRANT' | 'RUN'): string | null {
   try {
     return readFileSync(join(repo, '.plumbbob', name), 'utf8').trim()
@@ -209,15 +211,18 @@ export function readLedger(repo: string, name: 'TURN' | 'GRANT' | 'RUN'): string
   }
 }
 
-// Pre-arm a one-turn grant for the auto/range contracts (c3/c4). Interactive
-// Claude Code mints the grant BEFORE the turn (UserPromptSubmit blocks prompt
-// processing); headless `-p` ticks at ~session end, after the turn it should
-// have covered — so without this, a latched sweep would refuse every
-// sanctioned checkpoint and measure a `-p` timing quirk instead of the skill.
-// A range arms the `steps <list>` the hook mints from it (`/build 1-2` mints
-// `steps 1-2`). The minting logic itself stays covered by
-// src/verbs/__tests__/turn.test.ts; the sweep report footnotes this. No-op on
-// baseline (no ledger exists to grant against).
+// Pre-arm a one-turn grant for the auto/range contracts (c3/c4/c9), writing
+// what the hook mints from the contract's prompt. The pre-arm dates from a read
+// of headless `-p` as ticking at ~session end, after the turn it should have
+// covered; on Claude Code 2.1.302 the tick lands as the turn starts, headless
+// as interactive, and the hook mints the grant itself (checked live
+// 2026-10-19, the run's grant read in its injected header). The hook's mint
+// over the pre-arm writes the same grant, so the pre-arm changes nothing and
+// stays for parity with the receipts before that check. A range arms the
+// `steps <list>` the hook mints from it (`/build 1-2` mints `steps 1-2`). The
+// minting logic itself stays covered by src/verbs/__tests__/turn.test.ts; the
+// sweep report footnotes this. No-op on baseline (no ledger exists to grant
+// against).
 export function armGrant(repo: string, sweep: Sweep, grant: 'auto' | `steps ${string}`): void {
   if (sweep === 'baseline') return
   writeFileSync(join(repo, '.plumbbob', 'GRANT'), `${grant}\n`)
@@ -225,10 +230,10 @@ export function armGrant(repo: string, sweep: Sweep, grant: 'auto' | `steps ${st
 
 // Pre-arm the RUN mark beside the grant for the run contract (c11): the range
 // the hook marks when the human types `/plumbbob:run`, so the checkpoint that
-// completes that range writes its ending as owing the stop card. The headless
-// tick lands too late to write it, for the reason armGrant gives; the marking
-// itself is unit-tested in src/verbs/__tests__/turn.test.ts. No-op on
-// baseline, like the grant.
+// completes that range writes its ending as owing the stop card. The hook
+// writes the same mark as the turn starts, so it stays for parity, as armGrant
+// explains; the marking itself is unit-tested in
+// src/verbs/__tests__/turn.test.ts. No-op on baseline, like the grant.
 export function armRun(repo: string, sweep: Sweep, range: number): void {
   if (sweep === 'baseline') return
   writeFileSync(join(repo, '.plumbbob', 'RUN'), `${range}\n`)

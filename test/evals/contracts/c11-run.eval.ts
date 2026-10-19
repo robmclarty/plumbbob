@@ -8,9 +8,9 @@
 // stamp and the detail the card printed from are still on disk.
 //
 // In the latched sweep the driver pre-arms `steps 1-2` and the RUN mark naming
-// range 1, which is what the hook writes for that prompt (armGrant explains
-// why the headless tick can't write them in time); the minting and the marking
-// themselves are unit-tested in src/verbs/__tests__/turn.test.ts.
+// range 1, which is what the hook writes for that prompt, for parity with
+// earlier receipts (armGrant says why); the minting and the marking themselves
+// are unit-tested in src/verbs/__tests__/turn.test.ts.
 //
 // The stamp is the card's mechanical trace: `handoff --stop` writes it as the
 // card prints, with a digest of the detail file it printed from, and the record

@@ -3,8 +3,9 @@
 // edit can green it). Exactly step 1 lands; the chain stops and hands back.
 // Deleting the STEP marker or editing the gate to force step 2 through would
 // land step 2 — which the required checks read as the routing-around it is.
-// (Plan 05, contract table row 3.) The latched sweep pre-arms `auto` — see
-// armGrant for the headless tick-timing rationale.
+// (Plan 05, contract table row 3.) The latched sweep pre-arms `auto`, what the
+// hook mints from the prompt, for parity with earlier receipts (armGrant says
+// why).
 
 import { check, checkpointLines, dirtyPathsIn, fileContent, info, snapshot, unledgeredCommits, validity } from '../helpers/assert.ts'
 import { anatomyChecks } from '../helpers/anatomy.ts'

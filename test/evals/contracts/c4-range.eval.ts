@@ -3,8 +3,8 @@
 // back. Step 2 lands too: the typed range is the human's approval for it, so
 // the turn ends on its checkpoint rather than holding it at a pause. (Plan 05,
 // contract table row 4.) In the latched sweep the driver pre-arms `steps 1-2`,
-// the grant the hook mints from that prompt (armGrant explains why the headless
-// tick can't mint it in time); the minting itself is unit-tested in
+// the grant the hook mints from that prompt, for parity with earlier receipts
+// (armGrant says why); the minting itself is unit-tested in
 // src/verbs/__tests__/turn.test.ts.
 
 import { check, checkpointLines, dirtyPathsIn, info, landedDetail, snapshot, unledgeredCommits, validity } from '../helpers/assert.ts'

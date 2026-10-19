@@ -2,8 +2,8 @@
 // two-step plan with a green gate checkpoints both steps and hands back on the
 // last one's checkpoint block. The end of the plan is the other clean halt
 // beside a range's top, so the last step is never held open at a pause. In the
-// latched sweep the driver pre-arms `auto` (armGrant explains why the headless
-// tick can't mint it in time).
+// latched sweep the driver pre-arms `auto`, what the hook mints from the
+// prompt, for parity with earlier receipts (armGrant says why).
 
 import { check, checkpointLines, info, landedDetail, snapshot, unledgeredCommits, validity } from '../helpers/assert.ts'
 import { anatomyChecks } from '../helpers/anatomy.ts'
