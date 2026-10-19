@@ -80,9 +80,13 @@ the call on each one theirs. The detail file you write first is the proposal; re
   A blocker that becomes a new step takes the next free number under `## Steps` and,
   when it has to land before an existing undone step, its place in the sequence through
   `plumbbob order 7 8 5` (the `## Build order` line), never by renumbering. When the plan
-  carries `## Build ranges`, the new step goes into a range too (the one it builds with,
-  or a bare range of its own when it brings a call the human has to make before it
-  lands), and a range it breaks is re-cut in the same confirmed edit
+  carries `## Build ranges`, the new step goes into a range too: a range still to come
+  (the one it builds with), or a bare range of its own when it brings a call the human
+  has to make before it lands, and never a range that has landed, since that range's call
+  was made and the step would reopen it. A new range takes the next free item number, and
+  no item is renumbered, because the stop card's stamp, the detail file's header, and
+  `plumbbob harvest` find a landed range by its number. A range the step breaks is re-cut
+  in the same confirmed edit
   ([D92 (build-ranges)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d92));
   `plumbbob status` afterward carries a `⚠` row for any range still broken.
 - Fold a confirmed blocker into `intent.md` before you run `plumbbob harvest`, so the

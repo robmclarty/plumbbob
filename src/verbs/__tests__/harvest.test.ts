@@ -197,12 +197,36 @@ describe("harvest — the stop's latch — D103 (stop-latched)", () => {
     expect(captureIo(() => harvest(other, [])).stderr).toContain("range 3 of 3's stop not recorded (no stop card showed its detail)")
   })
 
-  it('refuses a range that no longer reads as landed', async () => {
+  it('refuses a range whose landed step was cleared by hand since, as open again', async () => {
     const dir = await atStop()
     writeFileSync(intentPath(dir), INTENT.replace('3. [x] Third', '3. [ ] Third'))
     expect(captureIo(() => harvest(dir, [])).stderr).toBe(
       "plumbbob: range 2 of 3's stop not recorded (step 3 is open again)\n  → land it, then plumbbob handoff --stop\n",
     )
+  })
+
+  it('refuses a step folded into the range that just landed, and records in the same reply once it moves — D92 (build-ranges)', async () => {
+    const dir = await atStop()
+    const step5 = '5. [ ] Fix the parser P3 found — **done when:** e works.\n   - seam: `src/e.ts`\n\n## Build ranges'
+    const withStep5 = INTENT.replace('## Build ranges', step5)
+    writeFileSync(intentPath(dir), withStep5.replace('`/plumbbob:build 2-3`', '`/plumbbob:build 2-3,5`'))
+    const before = { log: log(dir), detail: readFileSync(detailPath(dir), 'utf8'), stop: readFileSync(stopPath(dir), 'utf8') }
+    expect(captureIo(() => harvest(dir, []))).toEqual({
+      code: 1,
+      stdout: '',
+      stderr:
+        "plumbbob: range 2 of 3's stop not recorded (step 5 joined it after it landed)\n" +
+        '  → move step 5 to a range still to come, then plumbbob harvest\n',
+    })
+    expect({ log: log(dir), detail: readFileSync(detailPath(dir), 'utf8'), stop: readFileSync(stopPath(dir), 'utf8') }).toEqual(before)
+    // Moved into a bare range of its own, the next free item number; the reply's turn is still 5.
+    writeFileSync(intentPath(dir), `${withStep5}4. \`/plumbbob:build 5\`, **stop:** at step 5's pause, approve the fix\n`)
+    const { code, stdout } = captureIo(() => harvest(dir, []))
+    expect(code).toBe(0)
+    expect(stdout.startsWith('**Stop**: Range 2 of 4 recorded (1 blocker, 1 tangent)')).toBe(true)
+    expect(log(dir)).toContain("range 2 of 4's stop recorded")
+    expect(existsSync(detailPath(dir))).toBe(false)
+    expect(existsSync(stopPath(dir))).toBe(false)
   })
 })
 

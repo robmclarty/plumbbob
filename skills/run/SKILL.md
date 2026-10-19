@@ -205,8 +205,11 @@ and the Your Call block names the replies. Read the human's message as one of th
 - **`looks good`** confirms the review and locks in every lean as proposed, as the line
   beneath the card's Your Call label says. Fold each confirmed blocker into `intent.md` by
   the harvest skill's rules first, then run `plumbbob harvest`, which flips the parks,
-  writes the Harvest lines, and writes the range's review beneath a dated line in the Log. Relay its ending whole and end the turn. It commits nothing; the
-  record rides the next step's checkpoint.
+  writes the Harvest lines, and writes the range's review beneath a dated line in the Log.
+  A blocker that becomes a step goes into a range still to come, or a bare range of its
+  own, never into the range this card reviews: that range has landed, its call is the one
+  being made, and the step would reopen it. Relay the record's ending whole and end the
+  turn. It commits nothing; the record rides the next step's checkpoint.
 - **A change** (`make P7 a tangent`, or a change to the review) is direction. Rewrite the
   detail file's line or section, run `plumbbob handoff --stop`, paste the whole card it
   prints, and end the turn. Nothing is recorded until `looks good`.
@@ -229,7 +232,11 @@ and the Your Call block names the replies. Read the human's message as one of th
 
 `plumbbob harvest` refuses a proposal naming a handle the list lacks (`P9` with eight
 parked) and a class outside the three, and it refuses a detail file no card showed; fix what the refusal names, run
-`plumbbob handoff --stop` again, and end the turn on the card.
+`plumbbob handoff --stop` again, and end the turn on the card. One refusal takes another
+path: `step 13 joined it after it landed` means a blocker went into the range the card
+reviews. Move that step to a range still to come, or a bare range of its own, leave
+`.plumbbob/detail.md` as it is, fold nothing again, and run `plumbbob harvest` once more in
+the same turn, which records; `plumbbob handoff --stop` would refuse there.
 
 ## The hard contracts
 

@@ -426,9 +426,10 @@ then Next Up:
 
 The first is a stop's record, the second a harvest outside one. A stop's record is latched
 ([**D103 (stop-latched)**](decisions.md#d103)): it refuses in the turn the stop card
-printed, a range's detail no stop card showed, and a range open again. It also refuses a
-proposal naming a park the list lacks (`P9 is not in the list; 3 parked`) or a class other
-than blocker, tangent, or pivot, and a detail file that is no range's or harvest's.
+printed, a range's detail no stop card showed, a range open again, and a range a step joined
+after it landed. It also refuses a proposal naming a park the list lacks
+(`P9 is not in the list; 3 parked`) or a class other than blocker, tangent, or pivot, and a
+detail file that is no range's or harvest's.
 
 ### order
 

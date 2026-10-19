@@ -59,8 +59,11 @@ is fine; refining is always available.
 
   **A repair keeps the build ranges true.** When the plan carries `## Build ranges`, a
   step the repair adds goes into a range (the one it builds with, or a bare range of its
-  own when it brings a call the human has to make before it lands), and a range the
-  repair breaks is re-cut in the same before/after
+  own when it brings a call the human has to make before it lands), never a range that
+  has landed, since that range's call was made and the step would reopen it. A new range
+  takes the next free item number, and no item is renumbered, because the stop card's
+  stamp, the detail file's header, and `plumbbob harvest` find a landed range by its
+  number. A range the repair breaks is re-cut in the same before/after
   ([D92 (build-ranges)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d92)).
   Read `plumbbob status` once the edits are written: its ranges block carries a `⚠` row
   for a range naming a step the plan lacks, a step two ranges name, a step the build order

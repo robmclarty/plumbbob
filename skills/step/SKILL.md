@@ -59,6 +59,10 @@ grew, but its everyday job is to sharpen, not to invent.
    `6-9,14` for a step numbered past the next range), or a bare range of its own when it
    brings a call the human has to make before it lands
    ([D92 (build-ranges)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d92)).
+   Either way it is a range still to come, never a range that has landed, since that
+   range's call was made and the step would reopen it. A new range takes the next free
+   item number, and no item is renumbered, because the stop card's stamp, the detail
+   file's header, and `plumbbob harvest` find a landed range by its number.
    A step the build order places between two of a range's steps belongs to that range. A
    split or re-cut that moves where a call falls moves the stop with it, so re-cut any
    range the edit breaks, and show the range edit in the same before/after, since it

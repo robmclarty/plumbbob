@@ -26,8 +26,11 @@ record.
    `../harvest/SKILL.md` from this skill's base directory), then run `plumbbob harvest`,
    which writes the range's review into the Log and flips the parks the card settled. A
    finish that skipped it would leave the last range's review out of the Log and its parks
-   open in the report. When `plumbbob harvest` refuses, report what it names and stop
-   before the report. Any other detail file, or none, has nothing waiting.
+   open in the report. When `plumbbob harvest` refuses with `step 13 joined it after it
+   landed`, a blocker went into the range the card reviews: move that step to a range
+   still to come, or a bare range of its own, leave the detail file as it is, fold nothing
+   again, and run `plumbbob harvest` once more. On any other refusal, report what it names
+   and stop before the report. Any other detail file, or none, has nothing waiting.
 2. **Write the report** to the active build's `report.md`
    (`.plumbbob/builds/<slug>/report.md`), from `intent.md` + `build-log.md`.
    The build-log's `## Log` is already the chronological history; `plumbbob checkpoint`

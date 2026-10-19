@@ -209,7 +209,7 @@ const VERBS: ReadonlyArray<Verb> = [
     description: "record a harvest from the detail file, and at a run's stop the range's review",
     synopsis: ['harvest'],
     notes:
-      "Reads the detail file's `## Harvest` proposals (`- park 6 → tangent: <reason>`), flips each settled park in build-log.md, appends the dated Harvest lines, and, when the detail is a range's, writes the range's review beneath a dated Log line; then clears the detail file and the STOP stamp, and commits nothing. Refuses (exit 1) with no session, a detail file that is no range's or harvest's, a range's detail in the turn its stop card printed, one no stop card showed, or one whose range is open again, and a proposal naming a park the list lacks or a class other than blocker, tangent, or pivot.",
+      "Reads the detail file's `## Harvest` proposals (`- park 6 → tangent: <reason>`), flips each settled park in build-log.md, appends the dated Harvest lines, and, when the detail is a range's, writes the range's review beneath a dated Log line; then clears the detail file and the STOP stamp, and commits nothing. Refuses (exit 1) with no session, a detail file that is no range's or harvest's, a range's detail in the turn its stop card printed, one no stop card showed, one whose range is open again, or one whose range a step joined after it landed, and a proposal naming a park the list lacks or a class other than blocker, tangent, or pivot.",
   },
   {
     name: 'spike',

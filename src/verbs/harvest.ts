@@ -11,8 +11,9 @@
 // the stop card printed, since a run's long turn ends on proposals and that is
 // where a model would carry straight on into recording its own; it refuses a
 // range's detail no stop card showed, read off the digest the card's STOP
-// stamp keeps; and it refuses a range that no longer reads as landed. A
-// harvest outside a stop (`# Detail · Harvest`) needs no stamp. A proposal
+// stamp keeps; and it refuses a range that no longer reads as landed, telling
+// a step landed and reopened from one that joined the range after it landed,
+// which moves to a range still to come. A harvest outside a stop (`# Detail · Harvest`) needs no stamp. A proposal
 // naming a handle the list lacks (`P9` with eight parked), or a class outside
 // the three, refuses the whole record, so the card and the ledger never
 // disagree about which parks are open; a park no proposal names stays open,
@@ -23,7 +24,7 @@ import { findRepoRoot } from '../lib/git.ts'
 import { ending, notice, printEnding, transition } from '../lib/notice.ts'
 import { appendHarvest, appendToSection, flipParks, harvestLines, logEntry, type SettledPark, stopLogLine } from '../lib/buildlog.ts'
 import { checkStopLatch } from '../lib/latch.ts'
-import { parseBuildRanges, parseDetailStep, parseLastCheckpoint, parseOrderedSteps } from '../lib/orient.ts'
+import { parseBuildRanges, parseDetailStep, parseLastCheckpoint, parseOrderedSteps, stepShas } from '../lib/orient.ts'
 import {
   activeBuild,
   buildLogPath,
@@ -136,6 +137,15 @@ type StopRange = { readonly item: number; readonly count: number; readonly stop:
  * holds the range, a stop card showed this detail, a human turn has read it,
  * and every step of the range has landed. Otherwise the refusal, with the move
  * that unblocks it.
+ *
+ * An undone step in the range reads two ways, told apart by the ledger. One
+ * with a `step N <sha>` line landed and was reopened, so it lands again and
+ * the card re-renders. One with none joined the range after the card, a
+ * blocker folded into the range that just landed, and `handoff --stop` would
+ * refuse too, since the last landing no longer completes the range; so the
+ * remedy moves the step to a range still to come and runs the record again,
+ * which holds in the same reply while the detail file stays as the card
+ * showed it.
  */
 function stopRange(root: string, slug: string | null, intent: string, detail: string, item: number): StopRange | string {
   const plan = parseBuildRanges(intent)
@@ -154,10 +164,16 @@ function stopRange(root: string, slug: string | null, intent: string, detail: st
     return refuse("its card printed this turn, and no human turn has read it", "end the turn on the card; the human's reply is what records it")
   }
   const held = parseOrderedSteps(intent).filter((s) => hasStep(range.steps, s.n))
+  if (held.length === 0) {
+    return refuse('the plan holds none of its steps', 'land it, then plumbbob handoff --stop')
+  }
   const open = held.find((s) => !s.done)
-  if (open !== undefined || held.length === 0) {
-    const why = open === undefined ? 'the plan holds none of its steps' : `step ${open.n} is open again`
-    return refuse(why, 'land it, then plumbbob handoff --stop')
+  if (open !== undefined) {
+    // A step the ledger landed was reopened since, and lands again; one it never
+    // landed was folded into the range after the card, and moves out instead.
+    return stepShas(readOr(checkpointsPath(root, slug))).has(open.n)
+      ? refuse(`step ${open.n} is open again`, 'land it, then plumbbob handoff --stop')
+      : refuse(`step ${open.n} joined it after it landed`, `move step ${open.n} to a range still to come, then plumbbob harvest`)
   }
   return { item, count, stop: range.stop }
 }

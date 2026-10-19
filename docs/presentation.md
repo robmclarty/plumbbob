@@ -1387,8 +1387,7 @@ proposal the human changed re-renders the whole card with the change in it)
 and on request: `plumbbob handoff --stop --full` prints it whatever the stamp
 says, the `expand` move names the phrase (`show the stop`), and a session
 without the card in front of it asks the same way. The record clears the
-stamp, and so does a revert that reopens a step of the range. The card
-carries no inline diff: a range's change is its commits, read by the shas on
+stamp. The card carries no inline diff: a range's change is its commits, read by the shas on
 the steps row, and the diff row sums them.
 
 ### The range readout
@@ -1543,8 +1542,13 @@ through `plumbbob harvest`, and relays its ending. A reply that changes a
 lean is direction (`make P7 a tangent`), and the handle is how it names one:
 the model rewrites the detail file's line and runs `plumbbob handoff --stop`,
 the stamp sees the change, and the whole card comes back with the lean as it
-will be recorded. Nothing lands until `looks good`. A question is answered
-and closed on the reminder. The block names no `revert` move: the range's
+will be recorded. Nothing lands until `looks good`. A blocker that becomes
+a step goes into a range still to come, the one it builds with, or into a
+bare range of its own when it brings a call; never into the range that just
+landed, whose call the card is making, since the step would reopen it. A new
+range takes the next free item number, and no item is renumbered, because
+the stamp, the detail file's header, and the record all find the landed
+range by its number. A question is answered and closed on the reminder. The block names no `revert` move: the range's
 work is in its commits, the tree is clean, and a step the review finds wrong
 is `/plumbbob:revert`'s own call at the boundary the record returns to.
 
@@ -1633,6 +1637,8 @@ plumbbob: range 3 of 5's stop not recorded (no stop card showed its detail)
   → plumbbob handoff --stop, then end the turn on the card
 plumbbob: range 3 of 5's stop not recorded (step 9 is open again)
   → land it, then plumbbob handoff --stop
+plumbbob: range 3 of 5's stop not recorded (step 13 joined it after it landed)
+  → move step 13 to a range still to come, then plumbbob harvest
 plumbbob: range 3 of 5's stop not recorded (P9 is not in the list; 8 parked)
   → fix the Harvest proposals in .plumbbob/detail.md
 plumbbob: range 3 of 5's stop not recorded (P7's class "later" is not blocker, tangent, or pivot)
@@ -1643,8 +1649,15 @@ plumbbob: nothing to record (the detail file is Step 9's, not a range's or a har
 
 The first is the latch itself: the card's stamp carries the turn it printed
 in, and the record waits for a human turn after it, the way a step's
-checkpoint waits for one after `plumbbob build`. A proposal naming a handle
-the list lacks (`P9` with eight parked), or a class outside the three,
+checkpoint waits for one after `plumbbob build`. The ledger tells the two
+open steps apart. A step with a `step 9 <sha>` line landed and was cleared by
+hand since, so it lands again and the card re-renders. A step with no line
+never landed: a blocker was folded into the range the card reviews, and the
+remedy moves it out. A rerun of `plumbbob harvest` in the same reply then
+records, since the stamp's digest covers the detail file, which nothing
+rewrote, and the latch needs only a turn after the card's; `handoff --stop`
+would refuse there, because the last landing no longer completes the range.
+A proposal naming a handle the list lacks (`P9` with eight parked), or a class outside the three,
 refuses the whole record
 rather than recording the rest, because a partial record would leave the
 card and the ledger disagreeing about which parks are still open. A park no

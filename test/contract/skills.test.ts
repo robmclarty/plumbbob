@@ -773,3 +773,29 @@ describe('the build order — step, refine, and harvest re-sequence through the 
     })
   }
 })
+
+describe('a new step never joins a landed range — D92 (build-ranges)', () => {
+  /** A skill's body with its line breaks folded to spaces. */
+  const flat = (dir: string): string => parseSkill(dir).body.replace(/\s+/g, ' ')
+
+  for (const dir of ['step', 'refine', 'harvest'] as const) {
+    it(`${dir} places it in a range still to come, keeping every item's number`, () => {
+      expect(flat(dir)).toMatch(/never a range that has landed, since that range's call was made and the step would reopen it/)
+      expect(flat(dir)).toContain('A new range takes the next free item number, and no item is renumbered')
+    })
+  }
+
+  it('run keeps a blocker out of the range its card reviews when looks good records it', () => {
+    const section = flat('run').slice(flat('run').indexOf('## 6. The reply at a stop'))
+    expect(section).toMatch(/goes into a range still to come, or a bare range of its own, never into the range this card reviews/)
+  })
+
+  it('run and finish move a step that joined the landed range, then record again without re-rendering the card', () => {
+    const run = flat('run')
+    expect(run).toContain('`step 13 joined it after it landed`')
+    expect(run).toMatch(/leave `\.plumbbob\/detail\.md` as it is, fold nothing again, and run `plumbbob harvest` once more in the same turn/)
+    const finish = flat('finish')
+    expect(finish).toContain('`step 13 joined it after it landed`')
+    expect(finish).toMatch(/leave the detail file as it is, fold nothing again, and run `plumbbob harvest` once more/)
+  })
+})

@@ -1889,7 +1889,7 @@ function ledgerLines(checkpoints: string): LedgerLine[] {
  * Each step's checkpoint sha, the last line for a step landed twice (a revert,
  * then a landing again), since that is the commit on the branch now.
  */
-function stepShas(checkpoints: string): Map<number, string> {
+export function stepShas(checkpoints: string): Map<number, string> {
   const shas = new Map<number, string>()
   for (const line of ledgerLines(checkpoints)) {
     if (line.step !== null) {

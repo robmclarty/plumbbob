@@ -1053,7 +1053,13 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   stop still holds a `<...>` fill-in is scaffold, neither a range nor a report, the rule
   [**D77 (placeholder-uncounted)**](#d77) set for the scaffolded question, so the template's placeholder
   puts no warning on a fresh build's dashboard, and the coverage check
-  [**D93 (range-on-the-card)**](#d93) reports runs only once a real range parses. Promoted from the
+  [**D93 (range-on-the-card)**](#d93) reports runs only once a real range parses. (Revised 2026-10-19: a
+  step added at a stop goes into a range still to come, or a bare range of its own when it brings a call,
+  and never into a range that has landed, *because* that range's call was made and the step would reopen
+  it; a new range takes the next free item number and no item is renumbered, since the STOP stamp, the
+  detail file's header, and the record find a landed range by its number. `plumbbob harvest` refuses a
+  range holding an undone step the ledger never landed, `step 13 joined it after it landed`, apart from
+  a step landed and reopened, and its remedy is the move and a rerun in the same reply.) Promoted from the
   2026-10-17 build-ranges build, merging its locals `plan-holds-ranges`, `range-grammar`,
   `form-says-where`, `advice-not-grant`, `one-grammar`, `state-is-derived`, `plan-places-stops`,
   `model-declared`, and `scaffold-range`. *Tagged in* `docs/presentation.md`.
