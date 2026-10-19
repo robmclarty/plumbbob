@@ -180,6 +180,18 @@ describe('relay holds (read from a session transcript, judged by the anatomy pro
       ]),
     )
     expect(holds.map((h) => h.tier)).toEqual(['plan', 'boundary'])
+    // A run's boundary that still owes its card opens another way, and both of
+    // the stop card's reasons read as its tier, its reminder as the reminder.
+    const owed =
+      "plumbbob: the turn ended on Step 2's boundary, and range 1 of 2's stop card is still owed. Write the range's detail file, run `plumbbob handoff --stop`, and end the turn on its output, whole, with nothing after it."
+    const dropped = 'plumbbob: the turn did not close on the stop card it printed. Run `plumbbob handoff --stop --full` and end the turn on its output, whole, with nothing after it.'
+    const reminder = 'plumbbob: the turn did not close on the stop reminder it printed. Run `plumbbob handoff --stop` and end the turn on its output, whole, with nothing after it.'
+    const stops = holdsIn(transcript([{ text: 'Range 1 landed.' }, { context: owed }, { context: dropped }, { context: reminder }]))
+    expect(stops.map((h) => [h.tier, h.whole])).toEqual([
+      ['stop', false],
+      ['stop', false],
+      ['reminder', false],
+    ])
     expect(holdsIn('')).toEqual([])
     expect(holdsIn('not json\n')).toEqual([])
   })
@@ -206,6 +218,9 @@ describe('relay holds (read from a session transcript, judged by the anatomy pro
     expect(lines).toContain('| latched | 2 | 1 |')
     expect(lines).toContain('- c7 run 1 (latched): held over a pause card the turn had not carried whole')
     expect(lines).toContain('- c7 run 2 (latched): held over a plan card the turn had already carried whole')
+    expect(renderHolds([{ sweep: 'latched', ran: '', runs: [run('latched', 3, [{ tier: 'stop', whole: false }])] }])).toContain(
+      '- c7 run 3 (latched): held over a stop card the turn had not carried whole',
+    )
     expect(renderHolds([{ sweep: 'latched', ran: '', runs: [run('latched', 1)] }])).toEqual([])
   })
 })

@@ -27,8 +27,9 @@ export type RelayHold = {
 }
 
 // What the relay check's reasons open with: every hold this reader counts is
-// plumbbob's own, never another Stop hook's context.
-const REASON_PREFIX = 'plumbbob: the turn did not'
+// plumbbob's own, never another Stop hook's context. A run's boundary that
+// still owes its stop card opens `the turn ended on`, the rest `the turn did not`.
+const REASON_PREFIX = 'plumbbob: the turn '
 
 // Where Claude Code keeps a session's transcript: one folder per working
 // directory, one JSONL file per session.
@@ -110,8 +111,10 @@ function holdReason(entry: Entry): string | null {
 // The tier a reason names, read off the words relay.ts writes into it.
 function tierOf(reason: string): Tier | null {
   if (reason.includes('the pause card')) return 'decision'
-  if (reason.includes('the pause reminder')) return 'reminder'
+  if (reason.includes('the pause reminder') || reason.includes('the stop reminder')) return 'reminder'
   if (reason.includes('the plan card')) return 'plan'
+  // Both a stop card printed and dropped and one never printed at all.
+  if (reason.includes('stop card')) return 'stop'
   if (reason.includes('did not relay the block')) return 'boundary'
   return null
 }

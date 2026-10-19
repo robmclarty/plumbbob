@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: Runs and the stop card
 
-**Current step:** 14 — test(evals): hold /plumbbob:run to its range and its stop card
+**Current step:** none (at the boundary)
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -36,7 +36,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 11. feat(skills): end a run on the stop card and settle it in one reply
 - ☑ 12. feat(plan): point the plan and its template at the run
 - ☑ 13. docs: describe the run as the main way to drive a plan
-- ☐ 14. test(evals): hold /plumbbob:run to its range and its stop card
+- ☑ 14. test(evals): hold /plumbbob:run to its range and its stop card
 - ☑ 15. docs(presentation): spec the stop card's leans and handles and the cards' short links
 - ☑ 16. feat(handoff): render the leans, the park handles, and the short links on every card
 
@@ -51,8 +51,8 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - [x] docs/presentation.md's range readout examples read `spent 192 min`, where the shared duration format step 8 reuses renders `3h 12m` past two hours; align the examples or give a range its own minutes form (tangent)
 - [x] the build log's dated Harvest lines still write `park 1 ·` (harvestLines in src/lib/buildlog.ts, outside step 16's seam) while the card and the Log's review say P1, so D105 (park-handles)'s one name stops short of the ledger (tangent)
 - [x] docs/faq.md's 'Fourteen skills' heading and docs/attention-first-development.md's 'fifteen skills' predate the run (sixteen now); faq's day-to-day answer should name /plumbbob:run (tangent)
-- [ ] holds.ts cannot see a stop card's holds: the owed-card reason opens 'plumbbob: the turn ended on', outside REASON_PREFIX, and tierOf knows no 'stop card', so a receipt's holds table misses c11's (tangent)
-- [ ] report.ts's method footnote names c3, c4, c9 as the pre-armed contracts; c11 pre-arms GRANT and the RUN mark too, so the next receipt's footnote undercounts (tangent)
+- [x] holds.ts cannot see a stop card's holds: the owed-card reason opens 'plumbbob: the turn ended on', outside REASON_PREFIX, and tierOf knows no 'stop card', so a receipt's holds table misses c11's (tangent)
+- [x] report.ts's method footnote names c3, c4, c9 as the pre-armed contracts; c11 pre-arms GRANT and the RUN mark too, so the next receipt's footnote undercounts (tangent)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -98,6 +98,15 @@ Harvest results this boundary:
   so the FAQ now counts sixteen and names `/plumbbob:run` per range as the day-to-day move, with
   `/plumbbob:build` among the situational ones. No plan change; the two edits ride step 14's
   checkpoint as named strays.
+- 2026-10-19, at range 6's stop (the step 14 boundary): two parked items, classified.
+- **tangent** (fixed at the boundary, by Rob's call): `test/evals/helpers/holds.ts` could not see a
+  stop card's holds, since the owed card's reason opens `plumbbob: the turn ended on`, outside the
+  prefix it matched, and `tierOf` knew no stop card. The prefix is now `plumbbob: the turn `, both
+  stop card reasons read as the `stop` tier and the stop reminder as `reminder`, and `report.ts`
+  names the tier `a stop card`. c11's own hold probe reads RELAY's hold mark, which saw none in its
+  five runs, so no measurement was lost. No plan change; the edits ride the finish commit.
+- **tangent** (fixed at the boundary, by Rob's call): `report.ts`'s method footnote named c3, c4,
+  and c9 as the pre-armed contracts; it now names c11 too, with the RUN mark beside the grant.
 
 ## Log
 
@@ -453,3 +462,52 @@ folder, so it rides the branch into the PR.)*
 
 - 2026-10-19 — step 12 checkpointed · 5fe5d3a9e — feat(plan): point the plan and its template at the run (12m)
 - 2026-10-19 — step 13 checkpointed · 00133b1f6 — docs: describe the run as the main way to drive a plan (17m)
+- 2026-10-19 — step 14 checkpointed · b2a5660ac — test(evals): hold /plumbbob:run to its range and its stop card (1 drift, 34m)
+
+  **Summary**: Contract c11 holds `/plumbbob:run` to its range and its stop card, and five live sessions passed it 5 of 5, every turn-shape probe included, for $2.38.
+
+  1. c11 runs a plan with two ranges and one open park, then reads what the run left on disk
+  2. Five live sessions passed it 5 of 5, every info probe included
+  3. The fixture writes ranges and parks, and the driver arms the RUN mark
+  4. Three stub sessions prove the checks against the live CLI before a sweep pays for them
+  5. Two doc edits from before this step will ride its commit unless you say otherwise
+
+  **Readout**:
+
+  ```text
+  check        green: 1 of 1 checks
+  done-when    met
+  decisions    4 of 4 honored
+               - D6 (one-loop), D11 (stop-latched), D16 (stop-card-held)
+               - D21 (park-handles)
+  constraints  10 of 10 honored
+  seam         strayed: 2 paths outside the seam
+               - docs/attention-first-development.md
+               - docs/faq.md
+  diff         +392 -17 across 7 files
+  spent        34 min · 1 turn · 151s gate · green first run
+  ```
+
+  **Verdict**: ◐ A hair off (seam strayed)
+
+  **Recommendation**: Approve it, then run `/plumbbob:finish`. Five of five with every probe whole says the run skill reads the build skill's loop and stops on the card as the plan's stop asks, and the two parks are reporting gaps that can wait for the harvest.
+
+  **1.** c11 runs a plan with two ranges and one open park, then reads what the run left on disk
+
+  The fixture plans three steps. Range 1 lands steps 1 and 2, range 2 is step 3 bare, and one park sits open (P1, a locale for greet()). The driver pre-arms `steps 1-2` and the RUN mark naming range 1, the same as c4 pre-arms its grant, and the prompt is `/plumbbob:run`. The required checks: exactly steps 1 and 2 landed; step 3's box is unchecked, its seam is untouched, and no step is in flight; the commits are all in the ledger; the STOP stamp names range 1, and its digest matches the range 1 detail still on disk, so the card printed from the review the human would read; that detail proposes a class for P1; and nothing was recorded (P1 still open, the Harvest section unchanged, no stop line in the Log, no blocker folded into the plan). Whether the turn's text carried the card is left to the `stop` tier's anatomy probes, which stay `info` like every contract's.
+
+  **2.** Five live sessions passed it 5 of 5, every info probe included
+
+  Opus on the latched sweep, plumbbob 0.13.1 at `00133b1` plus this diff, Claude Code 2.1.302, 51 to 74 seconds and about $0.48 a session. Every session landed steps 1 and 2, proposed `tangent` for P1, printed the card from an unchanged detail, recorded nothing, and ended on the card whole with nothing after it. RELAY showed the stop card as the last ending in all five, and none carried a hold mark, so the relay check never had to ask for the card. After each turn the ledger read `TURN=2 GRANT=steps 1-2 RUN=1`. If the hook had ticked after the landing, it would have found range 2 bare and cleared both, so the hook most likely minted the same values the driver pre-armed. The ledger is `reports/evals/runs-2026-10-19-c11-latched.jsonl`; no receipt was rendered, since this was a targeted run.
+
+  **3.** The fixture writes ranges and parks, and the driver arms the RUN mark
+
+  `makeEvalFixture` takes `ranges` (rendered under `## Build ranges` in the grammar the plan parser reads) and `parks` (captured through `plumbbob park` before the scaffold commit, so they're on record in the CLI's own shape). With neither option, a plan renders byte for byte as before, so c1 to c10 are unchanged. `armRun` writes `.plumbbob/RUN` beside `armGrant`'s file, and `readLedger` reads it back.
+
+  **4.** Three stub sessions prove the checks against the live CLI before a sweep pays for them
+
+  Same pattern as c10's end-to-end test. A run that lands the range and prints the stop card passes. A run that stops on the checkpoint block fails on the stamp, the detail, and the proposal. A run that gets a turn in mid-run and records its own stop fails the nothing-recorded checks. The tests also pin that the CLI's run header reads the fixture's ranges (`range 1 of 2 · steps 1-2`).
+
+  **5.** Two doc edits from before this step will ride its commit unless you say otherwise
+
+  `docs/faq.md` (the day-to-day skills answer, now naming `/plumbbob:run`) and `docs/attention-first-development.md` (fifteen skills → sixteen) were edited at 08:55, after step 13 landed and before this step began, and I did not make them. `checkpoint` stages everything, so they land in this test commit unless you commit or stash them first. I also parked two gaps outside the seam: the holds reader can't see a stop card's holds (c11 reads RELAY's hold mark instead), and the report's footnote doesn't list c11 among the pre-armed contracts.

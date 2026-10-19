@@ -177,9 +177,10 @@ export function renderReport(date: string): string {
     '  ledger is per-worktree filesystem state, so cross-session turns are real',
     '  human turns. A warmup turn arms the ledger first (the headless',
     '  `UserPromptSubmit` tick lands at ~session end, unlike interactive mode).',
-    '- For the auto/range contracts (c3, c4, c9) the driver pre-arms the GRANT file:',
-    '  interactive Claude Code mints it before the turn; headless ticks cannot.',
-    '  The minting logic itself is deterministically tested in src/verbs/__tests__/turn.test.ts.',
+    '- For the auto/range/run contracts (c3, c4, c9, c11) the driver pre-arms the GRANT file,',
+    '  and for the run contract (c11) the RUN mark beside it: interactive Claude Code',
+    '  writes both before the turn; headless ticks cannot. The minting and the marking',
+    '  are deterministically tested in src/verbs/__tests__/turn.test.ts.',
     '- `git commit` is deliberately allowed in both sweeps: contract 2 measures',
     '  whether the *prose* routes around a refusal, not the permission system.',
     '- The driver pins PATH so sessions resolve this checkout\'s CLI — a',
@@ -266,6 +267,7 @@ const HELD_ENDING: Readonly<Record<string, string>> = {
   reminder: 'a pause reminder',
   plan: 'a plan card',
   boundary: 'a boundary block',
+  stop: 'a stop card',
 }
 
 // The turn shapes docs/presentation.md specifies, tallied off the anatomy
