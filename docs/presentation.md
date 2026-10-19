@@ -525,9 +525,13 @@ was chosen at step 15's pause of the runs-and-the-stop-card build
 (2026-10-18), over the code-spanned `path:line` the cards printed until
 then, a link to the relative path with no line, and an absolute `file://`
 URL. The plan asked for the four to be clicked in Claude Code's terminal and
-in Zed before the pick; that test was not run at the pause, so which host
-opens the link, and whether it lands on the line, is unrecorded here, and the
-first card the code renders is where to read it.
+in Zed before the pick. That test was waived at the pause and ran instead on
+the first card the code rendered, a boundary after step 16 (2026-10-19): in
+Zed, `[intent.md:150](…/intent.md#L150)` opened the file at line 150, and
+Rob, who drives plumbbob from Zed, called Claude Code's handling fine. A link
+into the build log's Log names a line, not an entry, so it drifts when a
+harvest writes above the entry: the Harvest lines sit above the Log, and after
+range 8's harvest `build-log.md:277` landed five lines above step 16's entry.
 
 Beneath the pointer, one indented line carries what the human would otherwise
 hold in their head, and only when there is something to hold:
@@ -1295,7 +1299,7 @@ constraints  4 of 4 honored
 seam         strayed: 1 path outside step 8's seam
              → src/lib/notice.ts
 diff         +412 -38 across 17 files
-spent        192 min · 1 red run
+spent        3h 12m · 1 red run
 ```
 
 **Verdict**: ◐ A hair off (seam strayed)
@@ -1395,7 +1399,7 @@ decisions    3 of 3 honored
 constraints  4 of 4 honored
 seam         held: 4 of 4 steps, no strays
 diff         +412 -38 across 17 files
-spent        192 min · green first run at every landing
+spent        3h 12m · green first run at every landing
 ```
 
 | row | written by | true | failing |

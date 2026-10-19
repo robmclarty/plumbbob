@@ -154,7 +154,7 @@ ritual. PlumbBob uses a **clock** instead: nothing blocks
 your edits, but the loop does a step's labor and then *pulls up to a line* (the verify
 pause) and idles there until you approve. **Pull, not block.** You stay the decider not
 because a wall refuses you, but because the system stops and waits for you to be the clock.
-Re-firing the next build *is* the clock tick.
+Re-firing the next run, or the next build, *is* the clock tick.
 
 What the loop pulls up to has a fixed shape ([the turn anatomy](presentation.md)): a
 **Now** line naming the step in flight, a **Summary** with numbered highlights, a **Readout** of measured rows (the check, the
@@ -171,8 +171,9 @@ nothing lands until you say `looks good`; `revert` winds the work back.
 > **Unattended option: `--auto`.** `/plumbbob:build --auto` lets the agent self-review and
 > approve in your place, then chain to the next step until done. It halts the moment the
 > check goes red or the self-review finds a mismatch. A step range like `/plumbbob:build 1-3`
-> is a bounded `--auto`: it self-approves through step 3, then stops. These are the only
-> paths that checkpoint without a human pause, and only because you asked for it by name.
+> is a bounded `--auto`: it self-approves through step 3, then stops, and a run (below) is
+> the same walk over a range the plan cut. These are the only paths that checkpoint without
+> a human pause, and only because you asked for it by name.
 
 ### Build ranges say where the clock stops
 
@@ -181,8 +182,8 @@ right clock for a short build and an expensive one for a long build, where most 
 no call from anyone: checkride's polyglot build cut its last 45 steps into six ranges. A
 typed range runs a stretch on your word, but which stretches are safe to run is judgment,
 and it used to live in your head. The plan writes it down instead, under
-`## Build ranges`, one item per range: the command to type, then `**stop:**` and the call
-that ends it.
+`## Build ranges`, one item per range: the command that defines it, then `**stop:**` and
+the call that ends it.
 
 ```markdown
 1. `/plumbbob:build 1`, **stop:** at step 1's pause, pick refill-on-read or a timer
@@ -196,10 +197,23 @@ later steps build on what landed, or a thing only you can do) and nowhere else. 
 command's form says which kind: a bare `1` builds the step to its pause, so the call is
 made before it lands, and a span lands every step it names and stops at the boundary after
 the last. `/plumbbob:plan` cuts the ranges with the steps, and `/plumbbob:step`,
-`/plumbbob:refine`, and `/plumbbob:harvest` keep them true as the plan changes. The card
-names the range to type beneath Next Up, and the boundary where one lands says why the
-build stopped there. A range is advice, never a grant: the latch lands only what you
-typed ([D92 (build-ranges)](decisions.md#d92)).
+`/plumbbob:refine`, and `/plumbbob:harvest` keep them true as the plan changes
+([D92 (build-ranges)](decisions.md#d92)).
+
+**You type the run; the plan names the steps.** `/plumbbob:run` runs what is left of the
+range holding the next step, and `/plumbbob:run 2` runs range 2 by its item number, so the
+step numbers stay the plan's to know ([D95 (run-verb)](decisions.md#d95)). The card names
+the run beneath Next Up, with the steps it will land beside it
+(`· range 2 of 2: /plumbbob:run (steps 2-3)`). A range grants nothing on its own: the turn
+hook mints the run's grant from the plan as you type it, frozen at the keystroke, and the
+latch lands only those steps ([D96 (plan-names-the-grant)](decisions.md#d96)). A bare
+range's run builds its step to the pause the plan reserved. A span's run lands each step on
+green with no pause between them and ends on the **stop card**: the range's review, measured
+across its steps, with every open park beneath it and a lean proposed for each
+([D100 (stop-card)](decisions.md#d100)). One reply settles the card: `looks good` records
+the review and every lean, a change re-renders it, and `/plumbbob:run` records it and runs
+the next range. `/plumbbob:build` stays the granular move, one step to its pause whatever
+the ranges say.
 
 ### The pluggable executor reads the diff, not the author
 
@@ -254,6 +268,11 @@ is worth in the moment. So mid-step ideas are **captured, not acted on.**
 
 You call each one; the skill only proposes. Almost everything that *feels* like a pivot is
 a tangent; require a failed assumption, not a shinier idea, before you pivot.
+
+A range piles up parks, since no harvest runs between the steps inside it, so a run's stop
+card carries the harvest: every open park under its handle (`P3`, the third line ever
+parked) with a lean proposed, and one reply calls them all. `looks good` locks in each lean;
+`make P3 a blocker` changes one first. `plumbbob harvest` records the result either way.
 
 ## Spikes: when the design will not settle
 
@@ -350,12 +369,14 @@ every move and `/plumbbob:status` always names the next one.
 | Sharpen the next step | `/plumbbob:step` | none (edits markdown) | `intent.md` `## Steps` |
 | Stress-test or repair the plan | `/plumbbob:refine` | none (edits markdown) | `intent.md` |
 | Say where the build stops | `/plumbbob:plan` (kept true by step, refine, harvest) | none (edits markdown) | `intent.md` `## Build ranges` |
+| Run a range | `/plumbbob:run` | `plumbbob status --run`, the turn hook | `GRANT`, `RUN` |
+| Review a landed range | `/plumbbob:run` | `plumbbob handoff --stop`, `plumbbob harvest` | `.plumbbob/detail.md`, `build-log.md` Log and Harvest |
 | Build a step | `/plumbbob:build` | `plumbbob build` | `SEAM`, `STEP` (in-flight) |
 | Verify and checkpoint | `/plumbbob:verify` | `plumbbob check`, `plumbbob checkpoint` | `checkpoints` |
 | Render the pause | `/plumbbob:build`, `/plumbbob:verify` | `plumbbob handoff` | `.plumbbob/detail.md` |
 | Orient | `/plumbbob:status` | `plumbbob status` | reads everything |
 | Capture an idea | `/plumbbob:park` | `plumbbob park` | `build-log.md` Park list |
-| Triage parked ideas | `/plumbbob:harvest` | none (edits markdown) | `build-log.md` Harvest |
+| Triage parked ideas | `/plumbbob:harvest` | `plumbbob harvest` | `build-log.md` Harvest |
 | Experiment on a fork | `/plumbbob:spike` | `plumbbob spike` | worktrees, `SPIKE` marker |
 | Undo a step | `/plumbbob:revert` | `plumbbob revert` | `git reset`, `checkpoints` |
 | Drop a step, keep its work | `/plumbbob:abandon` | `plumbbob abandon` | the in-flight markers, `build-log.md` Log |

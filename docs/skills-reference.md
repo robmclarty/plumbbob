@@ -1,6 +1,6 @@
 # Skills reference
 
-The fifteen skills are the surface you actually drive; the CLI underneath
+The sixteen skills are the surface you actually drive; the CLI underneath
 ([`cli-reference.md`](cli-reference.md)) is what they shell out to. This page is the
 reference for that surface: what each skill is for, what it takes, what it reads and
 writes, and when to reach for it.
@@ -11,9 +11,9 @@ Three ground rules apply to all of them:
   invokes one on its own, and `/plumbbob:status` always names your next one.
 - **Namespaced.** Claude Code namespaces the skills under the plugin, so the command is
   `/plumbbob:plan` and these docs write it in full. The bare `/plan` also reaches a
-  plugin skill *unless another command already owns that name*, and four of these
-  (`plan`, `status`, `verify`, `doctor`) share a name with a Claude Code built-in, which
-  wins. Type the verb and pick plumbbob's from the menu, or write the full form.
+  plugin skill *unless another command already owns that name*, and five of these
+  (`plan`, `run`, `status`, `verify`, `doctor`) share a name with a Claude Code built-in,
+  which wins. Type the verb and pick plumbbob's from the menu, or write the full form.
 - **The CLI renders the ending.** At every pause and boundary, the block you read is
   `plumbbob handoff`'s or the transition verb's own output, relayed whole; the model's
   judgment reaches it through `.plumbbob/detail.md`, never the chat
@@ -23,14 +23,15 @@ Three ground rules apply to all of them:
 
 | Skill <img alt="" width="110" height="1"> | Takes <img alt="" width="150" height="1"> | Does |
 | ------------------------------------ | -------------------------------------- | ------ |
-| [`/plumbbob:plan`](#plan) | `[spec-path \| intent]` | open the session and author the whole plan: Frame, Decisions, Constraints, all Steps |
+| [`/plumbbob:plan`](#plan) | `[spec-path \| intent]` | open the session and author the whole plan: Frame, Decisions, Constraints, all Steps, and the build ranges |
 | [`/plumbbob:step`](#step) | `[what-changed]` | revise/sharpen the next step (empty input auto-syncs it to reality) |
+| [`/plumbbob:run`](#run) | `[range-number]` | run what is left of the range holding the next step, or of range N, and end on its stop |
 | [`/plumbbob:build`](#build) | `[step-number \| step-range \| step-list] [--auto]` | implement the next planned step, then verify it to the pause |
 | [`/plumbbob:verify`](#verify) | none | the tick: check → self-review → validate → **PAUSE** → checkpoint |
 | [`/plumbbob:park`](#park) | `[idea]` | capture a mid-build idea without chasing it |
 | [`/plumbbob:order`](#order) | `[steps in sequence]` | set the build order: the undone steps in the sequence to build them |
 | [`/plumbbob:status`](#status) | none | orient: where you are, the next step, the next move |
-| [`/plumbbob:harvest`](#harvest) | none | triage parked ideas at a boundary (blocker / tangent / pivot) |
+| [`/plumbbob:harvest`](#harvest) | none | triage parked ideas at a boundary (blocker / tangent / pivot); a run's stop card carries its own |
 | [`/plumbbob:finish`](#finish) | none | write the report, make the final commit, clear for a fresh goal |
 | [`/plumbbob:refine`](#refine) | `[focus]` | attack the plan for holes, or repair a drifted one |
 | [`/plumbbob:revert`](#revert) | `[--to <step>]` | rewind: `git reset --hard` to a recorded checkpoint |
@@ -50,10 +51,12 @@ an out-of-band spec, any other text is expanded as inline intent. Under the hood
 and **all** Steps, each with a done-when, a seam, and (where the signal is clear) an
 advisory `model:` recommendation naming the smallest model that can carry the step), and
 the **build ranges**: where the build stops for a human call, one item per range, with the
-command to type, the call that ends it, and the model to run it on
+command that defines it, the call that ends it, and the model to run it on
 ([D92 (build-ranges)](decisions.md#d92)). A range ends where a call is due (a decision the
 plan leaves open, a review before later steps build on what landed, or a thing only you
-can do) and nowhere else, so a small plan may carry one range or none. Then it
+can do) and nowhere else, so a small plan may carry one range or none. A plan with ranges
+is driven with [`/plumbbob:run`](#run), one range at a time; one without, with
+`/plumbbob:build`, one step at a time. Then it
 commits the plan on its own
 (`plumbbob checkpoint --plan`), so the first step's diff stays clean. It writes intent
 only, never source. If the build will lean on user-authored agents it also offers to
@@ -81,7 +84,32 @@ has to land before an existing one is placed by sequence (`plumbbob order`, the
 [build order](#order)), never by renumbering, and goes into a range when the plan carries
 build ranges, with any range the edit breaks re-cut in the same before/after. It can also sharpen
 that step's [harness bindings](#the-harness-slots) just-in-time when the agents it wants
-have drifted. Most steps need nothing; skip straight to `/plumbbob:build`.
+have drifted. Most steps need nothing; skip straight to `/plumbbob:run` (or
+`/plumbbob:build`).
+
+### run
+
+Builds one range of the plan: what is left of the range holding the next step, or of range
+3 for `/plumbbob:run 3`, by the item number `## Build ranges` gives it
+([D95 (run-verb)](decisions.md#d95)). The step numbers are the plan's to know, so you never
+type them: the card names the run beneath Next Up with the steps it will land
+(`· range 2 of 2: /plumbbob:run (steps 2-3)`), and the turn hook mints the run's grant from
+the plan as you type it ([D96 (plan-names-the-grant)](decisions.md#d96)). The skill opens on
+the run header `plumbbob status --run` prints (the range, what is left of it, where the run
+ends, its stop, and that grant), then walks the steps the way a typed range is walked,
+reading the build skill beside it for the per-step loop
+([D99 (one-loop)](decisions.md#d99)). It ends where the range does. A bare range builds its
+one step to the pause, where the plan reserved a call. A range that lands its steps lands
+each on green and ends on the [stop card](presentation.md#the-stop-card): the review of the
+whole range, its readout measured across the steps, and every open park with a lean proposed
+([D100 (stop-card)](decisions.md#d100)). One reply settles the card: `looks good` records
+the review and every lean through `plumbbob harvest`, a change re-renders it, a question
+changes nothing, and `/plumbbob:run` records it and runs the next range (`/plumbbob:finish`
+does the same at the last). Typed while a step waits at its pause, a run is that pause's
+`looks good`, then carries on through the rest of the step's range. It refuses, naming the
+move that unblocks it, a plan without ranges, a range that has landed or does not exist, a
+step in flight outside the range typed, and an open spike
+([D97 (run-refuses)](decisions.md#d97)).
 
 ### build
 
@@ -99,10 +127,12 @@ lands steps 1 through 3, then ends on step 3's checkpoint block. A range may als
 steps (`20,5-9`): it lands exactly the steps it names, walked in build order from its first
 undone one, and halts before any step it does not name
 ([D91 (step-list-grants)](decisions.md#d91)). When the plan carries build ranges, the card
-names the range to type beneath Next Up, and the boundary where a range's last step lands
-carries a `**Stop**` part saying why the build stops there, relayed with the rest of the
-checkpoint's block; a bare range's pause is its stop, so the recommendation there speaks to
-the plan's call. At a pause (the default
+names the run to type beneath Next Up, and [`/plumbbob:run`](#run) is the move that walks
+one; `/plumbbob:build` stays the granular one. A range landed by a typed
+`/plumbbob:build 2-3` ends on the boundary where its last step lands, which carries a
+`**Stop**` part saying why the build stops there, relayed with the rest of the checkpoint's
+block; a bare range's pause is its stop, so the recommendation there speaks to the plan's
+call. At a pause (the default
 path, or a halt on a red check or a mismatch) it writes its judgment into `.plumbbob/detail.md`,
 runs `plumbbob handoff`, and pastes the block; you reply with one of the four moves the
 block names (`looks good`, `expand`, a direction, `revert`), and on `looks good` the
@@ -152,7 +182,7 @@ The orientation move: a thin trigger for `plumbbob status`. Prints the dashboard
 phase, the step list with the next step's done-when, seam, and advisory model
 recommendation, last checkpoint, the build order when it departs from the numbering,
 the build ranges when the plan has them, `parked 2 of 7 open`, and the open-question count)
-and names the single next move, which is the range's command when the next step sits in one. The model line is the plan's suggestion of the smallest model that can carry
+and names the single next move, which is the run when the next step sits in a range. The model line is the plan's suggestion of the smallest model that can carry
 the next step: switch before building, or ignore it; guidance, never a gate. Read-only;
 fire it any time you lose the thread.
 
@@ -161,18 +191,25 @@ fire it any time you lose the thread.
 Triage, at a **boundary** only, never mid-step. Walks the park list and proposes exactly
 one class per item: **blocker** (the plan was wrong; fold into intent and handle now),
 **tangent** (different, not clearly better: the default; defer or kill), or **pivot
-signal** (the approach is wrong; stop and replan). You call each one; confirmed items are
-recorded under `## Harvest` and a confirmed blocker is folded into `intent.md`, placed in
-the [build order](#order) with `plumbbob order` when it becomes a step that has to land
-early, and into a build range when the plan carries them. A range's stop is the boundary
-that matters most: no harvest runs between the steps inside a range, so the parks it piled
-up are triaged where it lands.
+signal** (the approach is wrong; stop and replan). It proposes every class at once, so one
+reply settles the list: you call each one, changing any lean before you approve. Confirmed
+items are recorded through `plumbbob harvest`, under `## Harvest`, and a confirmed blocker is
+folded into `intent.md`, placed in the [build order](#order) with `plumbbob order` when it
+becomes a step that has to land early, and into a build range when the plan carries them. A
+range's stop is the boundary that matters most: no harvest runs between the steps inside a
+range, so the parks pile up, and a run's stop card carries their harvest itself, each park
+under its `P3` handle with a lean ([D105 (park-handles)](decisions.md#d105)). Fire
+`/plumbbob:harvest` outside a run's stop: between steps, or after a range a typed
+`/plumbbob:build` landed.
 
 ### finish
 
-The close-out. Writes `report.md` into the build folder (what shipped, the decisions and
-why, how parked items were classified, the deferred tangents), then runs `plumbbob finish`
-for the final commit and the control-state clear. Report by default, no gate; the tracked
+The close-out. A last range's stop card still waiting for its reply is recorded first, the
+way `looks good` would record it, so its review reaches the Log
+([D102 (settle-in-one-reply)](decisions.md#d102)). Then it writes `report.md` into the
+build folder (what shipped, the decisions and why, how parked items were classified, the
+deferred tangents) and runs `plumbbob finish` for the final commit and the control-state
+clear. Report by default, no gate; the tracked
 build folder stays put and rides the branch into the PR.
 
 ## The harness slots

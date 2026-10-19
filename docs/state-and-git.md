@@ -59,16 +59,18 @@ branch.
 | --- | --- | --- | --- |
 | `.plumbbob/STATE` | Session sentinel (its *presence* means a session is live), and its content is the active-build cursor ([D28 (state-cursor)](decisions.md#d28): the cursor lives in STATE, not settings) | `start` | `finish` |
 | `.plumbbob/TURN` | Monotonic count of human turns in this repo. A background job's notice reaches the same hook and is not a turn, so it never ticks ([D90 (notice-not-turn)](decisions.md#d90)) | the `UserPromptSubmit` hook | never (it's a counter) |
-| `.plumbbob/GRANT` | A one-turn self-approval, minted only when *you* typed `/build --auto` (`auto`) or a step range (`steps 5-9,20`, exactly the steps it names; [D91 (step-list-grants)](decisions.md#d91)) | the same hook | your next prompt (a notice leaves it) |
+| `.plumbbob/GRANT` | A one-turn self-approval, minted only when *you* typed `/build --auto` (`auto`), a step range (`steps 5-9,20`, exactly the steps it names; [D91 (step-list-grants)](decisions.md#d91)), or `/plumbbob:run` (the steps its range has left, read from the plan as you typed it; [D96 (plan-names-the-grant)](decisions.md#d96)) | the same hook | your next prompt (a notice leaves it) |
+| `.plumbbob/RUN` | The range a run you typed is landing, so the checkpoint that completes it owes the stop card ([D103 (stop-latched)](decisions.md#d103)); the latch never reads it | the same hook | your next prompt, unless a step of that range waits at its pause (a notice leaves it) |
 | `.plumbbob/PROMPT` | The id of the last prompt the hook saw, typed or not, so a notice folded into a running turn is told from one that starts its own ([D90 (notice-not-turn)](decisions.md#d90)) | the same hook | the next prompt overwrites it |
 | `.plumbbob/settings.local.json` | Your personal settings overlay (for example a per-worktree `"check"` command) | you, by hand | you |
-| `.plumbbob/detail.md` | The in-flight step's full detail, written by the model before each pause; `handoff` renders the turn from it ([D81 (detail-file)](decisions.md#d81)) | the model | `checkpoint`, which records it in the build log's Log first (unless its header names another step) |
+| `.plumbbob/detail.md` | The in-flight step's full detail, written by the model before each pause, or a landed range's at its stop; `handoff` renders the turn from it ([D81 (detail-file)](decisions.md#d81)) | the model | `checkpoint`, which records a step's in the build log's Log first (unless its header names another step), or `plumbbob harvest`, which records a range's |
 | `.plumbbob/RELAY` | The ending the CLI printed last: its tier, its render, the command that reprints a pause, the `TURN` it printed in, and the text itself, so the `Stop` check can tell whether the turn closed on it ([D89 (block-once)](decisions.md#d89)), and, once the check has held a turn open over it, that `TURN` too, so it holds at most once a turn. Written only while `TURN` keeps a count | `handoff` and every verb that prints an ending; the hold, `relay` | never; the next ending overwrites it |
 | `builds/<slug>/STEP` | The step number in flight; its presence *is* the BUILD phase | `build` | `checkpoint` / `revert` / `abandon` |
 | `builds/<slug>/SEAM` | The step's declared paths, one per line (awareness, not a lock) | `build` | `checkpoint` / `revert` / `abandon` |
 | `builds/<slug>/SPIKE` | Marker: a spike fork is open | `spike` | `spike done` |
 | `builds/<slug>/TICK` | The `TURN` value at the moment the step was entered | `build` | `checkpoint` / `abandon` |
 | `builds/<slug>/PAUSE` | The step number and a hash of what the pause card last showed, so a repeat prints the one-line reminder ([D87 (pause-once)](decisions.md#d87)) | `handoff` | `checkpoint` / `revert` / `abandon` |
+| `builds/<slug>/STOP` | The range the stop card last showed, the `TURN` it printed in, and hashes of the card and of the detail file it rendered from, so a repeat prints the reminder and `plumbbob harvest` records only what the card showed, a turn later ([D103 (stop-latched)](decisions.md#d103)) | `handoff --stop` | `plumbbob harvest` |
 | `builds/<slug>/handoff.json` | Ledger of agent runs for this step, so a later call can thread earlier results ([D47 (handoff-ledger)](decisions.md#d47)) | `agent run` | `checkpoint` / `abandon` |
 | `.check/` | The check gate's raw tool output | checkride | overwritten each run |
 
@@ -110,6 +112,7 @@ Here is the complete block it appends:
 .plumbbob/settings.local.json
 .plumbbob/TURN
 .plumbbob/GRANT
+.plumbbob/RUN
 .plumbbob/PROMPT
 .plumbbob/detail.md
 .plumbbob/RELAY
@@ -118,6 +121,7 @@ Here is the complete block it appends:
 .plumbbob/builds/*/SPIKE
 .plumbbob/builds/*/TICK
 .plumbbob/builds/*/PAUSE
+.plumbbob/builds/*/STOP
 .plumbbob/builds/*/handoff.json
 .check/
 ```

@@ -10,11 +10,12 @@
   <a href="https://robmclarty.github.io/plumbbob/api.html">API reference</a>
 </p>
 
-PlumbBob is a Claude Code plugin (fifteen skills and a small CLI) that runs
+PlumbBob is a Claude Code plugin (sixteen skills and a small CLI) that runs
 LLM-assisted coding as a loop you control. You and the model settle the plan in a file
-*before* any code; then the model builds one small step at a time and **stops after
-each one**, waiting for you to read the diff and approve it before anything is
-committed. It's built for the small-to-medium work that fills most days (a feature, a
+*before* any code, down to where the build will stop for you; then the model builds it
+one small step at a time, each checked and committed on its own, and **stops where the
+plan says the call is yours**, waiting for you to read what landed and approve it
+before it goes on. It's built for the small-to-medium work that fills most days (a feature, a
 bug, a refactor) where a fully autonomous build is overkill but freestyle prompting
 leaves you dragged behind the model, reacting instead of deciding.
 
@@ -32,8 +33,9 @@ PlumbBob itself, running its own loop.
 ## Who it's for
 
 - **You already build with a coding agent and end the day reviewing a wall of diff.**
-  PlumbBob turns that wall into steps you approve one at a time, each small enough to
-  read as an editor.
+  PlumbBob turns that wall into small steps, each its own commit, and stops for your
+  review where the plan says one is due, with every step small enough to read as an
+  editor.
 - **You are skeptical of AI-written code.** Nothing lands without a green check, a
   self-review against the plan, and your say-so, and the CLI refuses to record a step
   the model approved for itself.
@@ -53,20 +55,24 @@ PlumbBob itself, running its own loop.
 Everything the model must stay true to lives in one file, the build's `intent.md`
 (under `.plumbbob/builds/<slug>/`), written before any code: the **Frame** (the problem, what done looks like, what you're
 explicitly *not* doing), the **Decisions** and **Constraints** (the settled calls, each
-with its *because*), and the **Steps**: a numbered list where every step carries a
+with its *because*), the **Steps**: a numbered list where every step carries a
 **done-when** (a checkable finish line, ideally a test) and a **seam** (the files it's
-expected to touch).
+expected to touch), and the **Build ranges**: where the build stops for your call, before
+a decision the plan left open or after a stretch of steps worth reviewing.
 
 ```text
-/plumbbob:plan       decide everything on paper — frame, decisions, all steps    (once)
-  per step:
-    /plumbbob:build      implement the next step → run checks → self-review → PAUSE
-    (looks good)         → the step is committed as a checkpoint; fire /plumbbob:build again
-/plumbbob:finish     report what shipped and why, final commit, clear            (once)
+/plumbbob:plan       decide everything on paper: frame, decisions, steps, ranges     (once)
+  per range:
+    /plumbbob:run        each step: implement → check → self-review → checkpoint
+                         then STOP where the plan says: a step's pause, or the stop card
+    (one reply)          → settle the stop; fire /plumbbob:run again
+/plumbbob:finish     report what shipped and why, final commit, clear                (once)
 ```
 
-Nothing is locked and nothing refuses you: the loop does a step's labor, pulls up to
-the line, and waits for you to advance it. **You are the clock.**
+`/plumbbob:build` is the same loop a step at a time, stopping at every step's pause, for
+a plan without ranges or a stretch you want to walk slowly. Nothing is locked and nothing
+refuses you: the loop does the labor, pulls up to the line, and waits for you to advance
+it. **You are the clock.**
 
 ## What a prompt can't replicate
 
@@ -132,19 +138,22 @@ In Claude Code, inside any git repo with a clean tree:
 1. **Plan.** Fire `/plumbbob:plan` and give it whatever you have: nothing (it interviews
    you), a rough line (`/plumbbob:plan rate-limit POST /login, 5/min/IP, return 429`), or a
    path to a spec file. Together you fill the build's `intent.md`: the steps, and the
-   build ranges that say where the build stops for your call. No code is written yet.
-2. **Build.** Fire `/plumbbob:build`. It implements the next undone step, runs the
-   heavy check gate, reviews its own diff against the plan, and stops. What it stops on
-   is one block with a fixed shape (the [turn anatomy](docs/presentation.md)): the CLI
-   measures the check, the seam, and the diff, the model supplies only the judgment, and
-   nothing is written around it.
+   build ranges that say where the build stops for your call. For a three-step rate
+   limiter that might be step 1 alone, to settle how the bucket refills, then steps 2
+   and 3 together. No code is written yet.
+2. **Run.** Fire `/plumbbob:run`. It runs the range holding the next step, here step 1
+   alone, so it implements that step, runs the heavy check gate, reviews its own diff
+   against the plan, and stops at the step's pause, where the plan reserved your call.
+   What it stops on is one block with a fixed shape (the
+   [turn anatomy](docs/presentation.md)): the CLI measures the check, the seam, and the
+   diff, the model supplies only the judgment, and nothing is written around it.
 
    ````markdown
    **Now**: Step 1 of 3 - feat(limiter): add a token-bucket limiter
 
-   **Summary**: A per-IP token bucket now refuses the 6th attempt inside a minute. (details: `.plumbbob/detail.md`)
+   **Summary**: A per-IP token bucket now refuses the 6th attempt inside a minute. (details: [detail.md](.plumbbob/detail.md))
 
-   1. The bucket lives in memory, keyed by IP, refilling five tokens a minute.
+   1. The bucket lives in memory, keyed by IP, refilling on read: five tokens a minute.
    2. The clock is injected, so the test advances time instead of sleeping on it.
 
    **Readout**:
@@ -161,7 +170,8 @@ In Claude Code, inside any git repo with a clean tree:
 
    **Verdict**: ● Plumb
 
-   **Next Up**: Step 2 of 3 - feat(login): wire the limiter into POST /login (model: **Sonnet**, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:20`)
+   **Next Up**: Step 2 of 3 - feat(login): wire the limiter into POST /login (model: **Sonnet**, details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28))
+     · range 1 of 2 lands with step 1
 
    **Your Call**:
 
@@ -170,7 +180,7 @@ In Claude Code, inside any git repo with a clean tree:
    - anything that reads as direction → I take it as what to change; nothing lands until you approve
    - `revert` → I wind the work back to the last checkpoint
 
-   **Recommendation**: Approve it. The gate is green, the seam held, and every call the step made is one the plan already decided.
+   **Recommendation**: Approve it, refilling on read. The gate is green and the seam held, and a bucket that refills when it is read needs no timer for the route to clean up.
    ````
 
    ![The build pause as Claude Code renders it](docs/media/pause.svg)
@@ -181,14 +191,16 @@ In Claude Code, inside any git repo with a clean tree:
    `.plumbbob/settings.json`, for example `"check": "npm test"`; in a repo where
    checkride finds no tools at all, `start` says so up front and names that key.)
 3. **Reply.** Say `looks good` and it commits the step as a checkpoint, marks it done,
-   and returns to the boundary with the same three lines every landed step gets:
+   and returns to the boundary, where the line beneath Next Up names the run to type
+   next and the steps it will land:
 
    ```text
-   **Checkpoint**: Step 1 complete (a1b2c3d4e, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md:44`)
+   **Checkpoint**: Step 1 complete (a1b2c3d4e, details: [build-log.md:70](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md#L70))
 
    **Verdict**: ● Plumb
 
-   **Next Up**: Step 2 of 3 - feat(login): wire the limiter into POST /login (model: **Sonnet**, details: `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md:20`)
+   **Next Up**: Step 2 of 3 - feat(login): wire the limiter into POST /login (model: **Sonnet**, details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28))
+     · range 2 of 2: /plumbbob:run (steps 2-3)
    ```
 
    ![The boundary after looks good](docs/media/checkpoint-boundary.svg)
@@ -197,20 +209,25 @@ In Claude Code, inside any git repo with a clean tree:
    changes nothing. The answer closes on one line pointing back at the step, not on the
    whole block again, since you have already read it; say `show the pause` to see the
    block again. Direct it and it takes that as the fix, and nothing lands until you say
-   `looks good`. Then fire `/plumbbob:build` again for the next step: re-firing it
-   *is* the clock tick. When the plan cut build ranges, the line beneath Next Up names
-   one to type instead (`· range 2 of 2: /plumbbob:build 2-3`): it lands each step it
-   names and stops where the plan reserved a call for you. Whenever you lose the thread, `/plumbbob:status` shows where you
-   are and names the next move.
-4. **Finish.** When the last step is done, `/plumbbob:finish` writes a report of what shipped
-   and why into the build's tracked folder, makes the final commit, and clears the slate
-   for the next goal. The folder rides the branch into the PR: the build's record merges
-   into `main` instead of dying with the worktree.
+   `looks good`.
+4. **Run again.** Fire `/plumbbob:run` again; re-firing it *is* the clock tick. Range 2
+   lands steps 2 and 3, each on a green check with no pause between them, and ends on the
+   **stop card**: the range's review (a summary of both steps, a readout measured across
+   them, the Verdict), with every idea parked along the way listed under `Harvested` and
+   a lean proposed for each. One reply settles it: `looks good` records the review and
+   every lean, and `make P1 a blocker` changes one first. `/plumbbob:build` stays the
+   granular move whenever you want it, one step to its pause. Whenever you lose the
+   thread, `/plumbbob:status` shows where you are and names the next move.
+5. **Finish.** When the last range lands, answer its stop card with `/plumbbob:finish`: it
+   records the card, writes a report of what shipped and why into the build's tracked
+   folder, makes the final commit, and clears the slate for the next goal. The folder
+   rides the branch into the PR: the build's record merges into `main` instead of dying
+   with the worktree.
 
 A mid-build "ooh, what if…" never derails the step: `/plumbbob:park` captures it to a list
-in one line, and `/plumbbob:harvest` triages the list between steps. One goal walked end to
-end, with the real output at every stage, is in
-[`docs/happy-path.md`](docs/happy-path.md).
+in one line, and the next stop card proposes a class for it, settled with the rest of the
+review (`/plumbbob:harvest` triages the list anywhere else). One goal walked end to end,
+with the real output at every stage, is in [`docs/happy-path.md`](docs/happy-path.md).
 
 ## The skills
 
@@ -218,16 +235,17 @@ You drive the whole loop from your IDE with `/plumbbob:*` skills: no step number
 remember, no raw CLI to type. Every skill is `disable-model-invocation`, so *you* fire
 every move, and `/plumbbob:status` always names your next one. (Claude Code namespaces
 them under the plugin, so the command is `/plumbbob:plan`. The bare `/plan` reaches it
-too, but only where nothing else owns that name, and four of the fourteen share one with
+too, but only where nothing else owns that name, and five of the sixteen share one with
 a Claude Code built-in, so these docs write the full form.)
 
-**The happy path**: the three moves every session makes; many sessions need
-nothing else:
+**The happy path**: plan, run each range, finish; many sessions need nothing else, and
+build is the same loop a step at a time:
 
 | Skill <img alt="" width="110" height="1"> | Does |
 | ------------------------------------ | ------ |
 | `/plumbbob:plan` | plan the whole goal: open the session and author intent's Frame, Decisions, Constraints, **and all Steps**, with the build ranges that say where the build stops for you |
-| `/plumbbob:build` | implement the next planned step, then verify it to the pause: `--auto` self-approves and chains to done; a range like `1-3`, or a list like `20,5-9`, self-approves exactly the steps it names, then stops |
+| `/plumbbob:run` | run what is left of the range holding the next step (or range N) and stop where the plan says: at a step's pause, or on the stop card that reviews what landed and settles every parked idea in one reply |
+| `/plumbbob:build` | the granular move: implement the next planned step, then verify it to the pause; `--auto` self-approves and chains to done, and a range like `1-3`, or a list like `20,5-9`, self-approves exactly the steps it names, then stops |
 | `/plumbbob:finish` | finish up: write the report, make the final commit, clear for a fresh goal |
 
 **Plan-shaping moves**: optional, for when the plan needs work mid-flight:
@@ -236,6 +254,7 @@ nothing else:
 | ------------------------------------ | ------ |
 | `/plumbbob:step` | revise/sharpen the next step (empty input auto-syncs it to reality) |
 | `/plumbbob:refine` | attack the frame for holes, or repair a drifted plan (`ranges` re-cuts the build ranges) |
+| `/plumbbob:order` | set the build order: the undone steps in the sequence to build them |
 | `/plumbbob:spike` | throwaway worktree experiment for a fork the plan can't settle |
 
 **Helpers**: orient, verify, recover, diagnose:
@@ -254,16 +273,16 @@ nothing else:
 | Skill <img alt="" width="110" height="1"> | Does |
 | ------------------------------------ | ------ |
 | `/plumbbob:park` | capture a mid-build idea without chasing it |
-| `/plumbbob:harvest` | triage parked ideas between steps (blocker / tangent / pivot) |
+| `/plumbbob:harvest` | triage parked ideas between steps (blocker / tangent / pivot); a run's stop card carries its own |
 
-All fourteen, with inputs and effects, are in
+All sixteen, with inputs and effects, are in
 [`docs/skills-reference.md`](docs/skills-reference.md).
 
 Under the skills ships a lean `plumbbob` CLI (the mechanical verbs the
 skills shell out to), four hooks (a non-blocking post-edit lint, a `git commit`
 ask-hook while a step is in flight, the per-prompt turn ledger the approval latch
-reads, and a check at each turn's end that the turn relayed the ending plumbbob
-printed), and a `.plumbbob/` sidecar you can open and edit by hand at any time: a tracked
+reads, which also mints a run's grant, and a check at each turn's end that the turn
+relayed the ending plumbbob printed), and a `.plumbbob/` sidecar you can open and edit by hand at any time: a tracked
 `builds/<slug>/` folder per build (`intent.md`, `build-log.md`, `checkpoints`, `report.md`)
 that rides the branch into the PR, plus an untracked control plane (`settings.local.json`,
 the session sentinel, the in-flight markers).
@@ -297,9 +316,9 @@ The questions a skeptic should ask, answered straight.
 scoped to one session. The plan lives in the chat, so it fades with the context
 window, and the approval gates the *start* of the work, not each increment of it.
 PlumbBob puts the plan in a file in your repo that survives compaction, restarts,
-and next week; moves the approval to **every step** (each checked, reviewed
-against the plan, and committed as its own checkpoint), so a wrong turn costs one
-step, not the afternoon; and records the *whys* alongside the decisions, so the
+and next week; moves the approval to **the stops the plan names**, down to every step
+when you want it, with each step checked, reviewed against the plan, and committed as
+its own checkpoint, so a wrong turn costs one step, not the afternoon; and records the *whys* alongside the decisions, so the
 archive can still answer "what did we decide, and why" long after the session is
 gone. The two compose fine: plan mode (or anything else) can produce a step's
 diff, and `/plumbbob:verify` reads it like any other.
@@ -316,7 +335,7 @@ modes, spec kits, native checkpoints), and that convergence is evidence *for* th
 premise. PlumbBob is deliberately thin against that future: the artifacts are
 plain markdown and ordinary git commits in your own repo, the CLI is lean
 (node builtins plus one deliberate dependency), and nothing locks you in. The
-investment is small (fourteen
+investment is small (sixteen
 skills over a plain-markdown sidecar, learnable in an afternoon), and what you're
 actually learning is the method: decisions before code, one verified step at a
 time, capture instead of chase. That transfers to whatever tool wins. If
@@ -353,7 +372,7 @@ Each doc answers one question (in rough reading order for a new user):
 - *Show me the artifacts it leaves behind.* → [`examples/`](examples/): that same session's finished build folder, file by file.
 - *Should I / can I / what about…?* → [`docs/faq.md`](docs/faq.md): the adoption questions, answered straight.
 - *What is each method for?* → [`docs/techniques.md`](docs/techniques.md): steps, seams, the pause, park/harvest, spikes.
-- *What does each skill do?* → [`docs/skills-reference.md`](docs/skills-reference.md): all fifteen skills: inputs, effects, when to reach for each.
+- *What does each skill do?* → [`docs/skills-reference.md`](docs/skills-reference.md): all sixteen skills: inputs, effects, when to reach for each.
 - *What does a turn look like, and who renders which part?* → [`docs/presentation.md`](docs/presentation.md): the anatomy of the pause, the boundary, and the driver turns.
 - *How do I plug in my own agent?* → [`docs/agents.md`](docs/agents.md): the subprocess envelope, the manifest, `harness.json`, and working examples (including a local-model reviewer via Ollama).
 - *How do I get a local model reviewing my steps?* → [`docs/local-model-review.md`](docs/local-model-review.md): the ollama-reviewer example walked end to end, install to every-pause review.

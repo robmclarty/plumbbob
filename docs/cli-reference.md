@@ -102,8 +102,9 @@ single suggested next move ([**D8 (status-dashboard)**](decisions.md#d8) / [**D1
 exits 0 when there is no session.
 
 When the plan carries `## Build ranges` ([**D92 (build-ranges)**](decisions.md#d92)), the
-ranges are listed beneath the steps, in the step list's own grammar, and the next move names
-the command that runs what is left of the range holding the next step:
+ranges are listed beneath the steps, in the step list's own grammar, each row the command
+the plan wrote, and the next move names the run for the range holding the next step, with
+the steps it will land beside it ([**D98 (card-names-the-run)**](decisions.md#d98)):
 
 ```text
   ranges  1 of 2 done
@@ -114,7 +115,7 @@ the command that runs what is left of the range holding the next step:
 last checkpoint  step 3 · cbc9d9c
 parked 0 · open questions 0
 
-next → build range 2 of 2 — `/plumbbob:build 4-4`
+next → run range 2 of 2 — `/plumbbob:run` (step 4)
 ```
 
 `✓` marks a range whose every step is done and `▸` the one holding the next undone step;
@@ -133,10 +134,27 @@ substitutes the placeholder) changes nothing.
 
 `--run "<args>"` takes the raw text of a `/plumbbob:run` invocation the same way and
 prints the run it names above the dashboard: a three-line header naming the range, what is
-left of it, its stop, and the grant the turn hook minted
-([**D98 (card-names-the-run)**](decisions.md#d98)). A run that names nothing it can walk
-prints no header, and the next move carries the refusal
-([**D97 (run-refuses)**](decisions.md#d97)).
+left of it, where the run ends, its stop, and the grant the turn hook minted
+([**D98 (card-names-the-run)**](decisions.md#d98)), with the run's first step marked
+`← requested` beneath:
+
+```text
+run  range 2 of 2 · steps 2-3 · ends at step 3's boundary
+     stop: try six logins yourself, then `/plumbbob:finish`
+     grant: steps 2-3
+```
+
+A bare range's header ends at the step's pause instead
+(`grant: none, as a bare range builds to its pause`), a grant the hook never minted or
+minted for another set reads `grant: none` or `unlike the run`, and a fourth line,
+`waiting: range 1 of 2's stop card, recorded before the run`, names a stop card still
+waiting for its reply. A run that names nothing it can walk prints no header, and the next
+move carries the refusal with the move that unblocks it
+([**D97 (run-refuses)**](decisions.md#d97)):
+
+```text
+next → cut the ranges — `/plumbbob:refine ranges` (the plan declares none; `/plumbbob:build` builds step 1 alone)
+```
 
 ### build
 
@@ -200,16 +218,24 @@ At a build pause it renders the turn entire, in this order:
 - `**Next Up**:` the next undone step in build order, its progress count, and a bracket
   carrying the step's `- model:` recommendation and where to read it in full. Beneath it,
   indented, one line of reminders when there is something to remind of: the range holding
-  that step and the command that runs what is left of it (`· range 2 of 2: /plumbbob:build
-  3-4`, when the plan declares build ranges), the build order from that step on (only when
-  `## Build order` departs from the numbering; five steps, then a count), and the park count
-  (`parked 2 of 7 open`, whenever anything has been parked). While the line suggests a range,
-  the bracket's bold model is the range's own `- model:` rather than the step's, and a range
-  the plan has outgrown reads `· range 2 of 2 needs a re-cut (step 9 is not in the plan)` in
-  place of a command ([**D93 (range-on-the-card)**](decisions.md#d93)). The driver tier's
-  pointer carries no such line ([**D86 (build-order)**](decisions.md#d86)).
+  that step and the run that lands what is left of it (`· range 2 of 2: /plumbbob:run
+  (steps 2-3)`, when the plan declares build ranges), the build order from that step on
+  (`order: 7, 8, 5`, only when `## Build order` departs from the numbering; five steps, then
+  a count), and the park count (`parked 2 of 7 open`, whenever anything has been parked). At
+  the pause on a range's last step the segment reads `· range 1 of 2 lands with step 1` and
+  names no run, since a run typed there ends on that range's stop. While the line suggests a
+  range, the bracket's bold model is the range's own `- model:` rather than the step's, and
+  a range the plan has outgrown reads `· range 2 of 2 needs a re-cut (step 9 is not in the
+  plan)` in place of a run ([**D98 (card-names-the-run)**](decisions.md#d98)). The driver
+  tier's pointer carries no such line ([**D86 (build-order)**](decisions.md#d86)). The
+  bracket's `details:` clause is a link whose text is the file's name and line, such as
+  `[intent.md:28](.plumbbob/builds/<slug>/intent.md#L28)`
+  ([**D107 (short-linked-paths)**](decisions.md#d107)).
 - `**Your Call**:` the moves a human actually makes at a pause, each with its outcome. The
-  `expand` move also names the way back to the card: `show the pause`.
+  `expand` move also names the way back to the card: `show the pause`. Inside a range that
+  lands its steps, with steps still ahead of the one in flight, a `/plumbbob:run` row lands
+  the step and runs the rest of the range to its stop
+  ([**D95 (run-verb)**](decisions.md#d95)).
 - `**Recommendation**:` the model's own call, read from the detail file's
   `## Recommendation` section behind a CLI-prepended label. It is the ending's last text,
   Your Call being its last rendered block.
@@ -322,8 +348,14 @@ range's last undone step lands, however it landed, and never for a bare range, w
 its own pause ([**D93 (range-on-the-card)**](decisions.md#d93)):
 
 ```text
-**Stop**: Range 2 of 2 landed - try six logins yourself, then `/plumbbob:finish` (details: `.plumbbob/builds/rate-limit/intent.md:23`)
+**Stop**: Range 2 of 2 landed - try six logins yourself, then `/plumbbob:finish` (details: [intent.md:42](.plumbbob/builds/rate-limit/intent.md#L42))
 ```
+
+When the range was landed by a run (the `RUN` mark names it), that boundary is not the
+turn's end: its `RELAY` record owes the stop card, and the run ends on
+`plumbbob handoff --stop` instead ([**D103 (stop-latched)**](decisions.md#d103)). A range
+landed by a typed `/plumbbob:build`, by `--auto`, or by hand keeps the boundary as its
+ending.
 
 Staged paths outside the step's seam are an advisory, never a gate, and the stray they name
 puts a `seam strayed` rung under that Verdict, the same rung the pause's measured seam row
@@ -379,16 +411,24 @@ plumbbob harvest
 ```
 
 Records a harvest from `.plumbbob/detail.md` ([**D104 (harvest-records)**](decisions.md#d104)):
-it reads the `## Harvest` proposals (`- park 6 → tangent: <the reason>`), flips each settled
-park in `build-log.md`, and appends the dated Harvest lines. When the detail is a range's,
-the stop card's wire, it also writes the range's review beneath a dated Log line
-([the stop's record](presentation.md#the-stops-record)). It clears the detail file and the
-`STOP` stamp, commits nothing, and ends on `**Stop**: Range 3 of 5 recorded (1 blocker, 2
-tangents)`, or `**Harvested**: 2 parked ideas (2 tangents)` outside a stop, then Next Up. A
-stop's record is latched ([**D103 (stop-latched)**](decisions.md#d103)): it refuses in the
-turn the stop card printed, a range's detail no stop card showed, and a range open again.
-It also refuses a proposal naming a park the list lacks or a class other than blocker,
-tangent, or pivot, and a detail file that is no range's or harvest's.
+it reads the `## Harvest` proposals (`- P6 → tangent: <the reason>`, `P6` being the sixth
+line ever parked; [**D105 (park-handles)**](decisions.md#d105)), flips each settled park in
+`build-log.md`, and appends the dated Harvest lines. When the detail is a range's, the stop
+card's wire, it also writes the range's review beneath a dated Log line
+(`range 2 of 2's stop recorded`; [the stop's record](presentation.md#the-stops-record)). It
+clears the detail file and the `STOP` stamp, commits nothing, and ends on its own ending,
+then Next Up:
+
+```text
+**Stop**: Range 2 of 2 recorded (1 tangent)
+**Recorded**: 2 parked ideas (2 tangents)
+```
+
+The first is a stop's record, the second a harvest outside one. A stop's record is latched
+([**D103 (stop-latched)**](decisions.md#d103)): it refuses in the turn the stop card
+printed, a range's detail no stop card showed, and a range open again. It also refuses a
+proposal naming a park the list lacks (`P9 is not in the list; 3 parked`) or a class other
+than blocker, tangent, or pivot, and a detail file that is no range's or harvest's.
 
 ### order
 
@@ -519,10 +559,25 @@ Hook machinery, not a user verb. Registered as the `UserPromptSubmit` hook, it r
 payload from **stdin** (it takes no arguments), ticks the human-turn ledger that the
 checkpoint latch reads, and emits any nudge as `additionalContext` JSON on stdout.
 
+A typed prompt also rewrites `GRANT`, the one-turn self-approval, from what was typed:
+`auto` for `/plumbbob:build --auto`, the steps a range or a list names for
+`/plumbbob:build 2-3` or `/plumbbob:build 20,5-9`, and nothing otherwise
+([**D91 (step-list-grants)**](decisions.md#d91)). `/plumbbob:run` mints from the plan
+instead: the hook reads the active build's `intent.md`, resolves the range the run names
+(the one holding the next step, or range 3 for `/plumbbob:run 3`), and writes
+`steps <what is left>`, frozen at the keystroke, so a later edit to the ranges or the build
+order cannot widen it ([**D96 (plan-names-the-grant)**](decisions.md#d96)). For a range
+that lands its steps it also writes the `RUN` mark naming the range, which the next typed
+prompt clears unless a step of that range waits at its pause, so the checkpoint that
+completes the range knows a run landed it ([**D103 (stop-latched)**](decisions.md#d103)).
+Only the namespaced verb mints, since a bare `/run` reaches Claude Code's own skill; a bare
+range, a run that refuses, a span or a list of ranges (`/plumbbob:run 2-4`), and a plan the
+hook cannot read all mint nothing.
+
 A background job's notice is not a turn ([**D90 (notice-not-turn)**](decisions.md#d90)). The
 harness sends a finished shell job, a Monitor event, or a subagent's report through the same
 hook, as a prompt nobody typed that opens on `<task-notification>` or `<agent-message from="…">`. For
-one of those the hook leaves `TURN` and `GRANT` as they were and emits no nudge, so a range
+one of those the hook leaves `TURN`, `GRANT`, and `RUN` as they were and emits no nudge, so a range
 survives a job that reports back partway through it, and a notice that lands during a pause
 cannot pass for the human's answer. A notice that starts a turn of its own also clears
 `.plumbbob/RELAY`, whose ending was judged when its own turn ended; one folded into a turn
@@ -542,10 +597,12 @@ Hook machinery, not a user verb. Registered as the `Stop` hook, it reads the hoo
 **stdin** and checks that the turn carried the ending plumbbob printed in it
 ([**D89 (block-once)**](decisions.md#d89)). Every verb that prints an ending records it in
 `.plumbbob/RELAY` with its tier and the `TURN` it printed in, and the tier picks the match. A
-pause card, its reminder, or the plan card has to close the turn, with an answer allowed above
-it. A checkpoint's boundary, the plan commit, or finish's ending has to appear somewhere in the
-turn, since an approving message can carry a question answered after it. A driver ending (a
-park, a spike, a `use`) is never checked, and a `RELAY` from an earlier turn is ignored.
+pause card, its reminder, the plan card, or a stop card has to close the turn, with an answer
+allowed above it. A checkpoint's boundary, the plan commit, or finish's ending has to appear
+somewhere in the turn, since an approving message can carry a question answered after it. A
+driver ending (a park, a spike, a `use`) is never checked, and a `RELAY` from an earlier turn
+is ignored. A run's boundary that still owes its stop card is a miss however whole it was
+relayed, since the card is the run's ending ([**D103 (stop-latched)**](decisions.md#d103)).
 
 It reads a relay by its parts, not line for line: the bold labels the printed block opens its
 parts on, in the same order, with no paragraph inside a part that the block does not have there.
@@ -557,7 +614,8 @@ labels no longer open lines of the turn.
 On a miss it holds the turn open once, through `additionalContext`, with a one-line reason
 naming the fix: the command `RELAY` recorded for a pause (`plumbbob handoff --full`, carrying
 a verify pause's step number; `plumbbob handoff` for the reminder; `plumbbob handoff --plan`
-for the plan card), or, for a boundary, the block to paste as it printed. It counts that once
+for the plan card; `plumbbob handoff --stop` for a stop card, owed or dropped), or, for a
+boundary, the block to paste as it printed. It counts that once
 in `RELAY` by the turn it held, never by `stop_hook_active`, which another hook's block sets
 too, and it never sends `continue: false`, which would cancel that hook's block. It reads the
 final message from the payload's `last_assistant_message` and only the turn's earlier messages
@@ -674,10 +732,11 @@ stays git-excluded; a session is live iff `STATE` is present.
 .plumbbob/
   STATE                    # untracked — session sentinel (presence = live) AND the active-build cursor (its content — D28 (state-cursor))
   TURN                     # untracked — the human-turn counter the approval latch reads, ticked by the UserPromptSubmit hook
-  GRANT                    # untracked — a one-turn self-approval, minted only from a typed --auto (auto) or step range (steps 5-9,20: exactly the steps it names)
+  GRANT                    # untracked: a one-turn self-approval, minted only from a typed --auto (auto), a step range (steps 5-9,20: exactly the steps it names), or /plumbbob:run (the steps its range has left, D96 (plan-names-the-grant))
+  RUN                      # untracked: the range a typed run is landing, so the checkpoint that completes it owes the stop card (D103 (stop-latched))
   PROMPT                   # untracked: the id of the last prompt the hook saw, so a notice folded into a running turn reads as one (D90 (notice-not-turn))
   RELAY                    # untracked — the ending the CLI printed last, with its tier and the TURN it printed in, for the Stop hook — D89 (block-once)
-  detail.md                # untracked — the in-flight step's full detail: the wire handoff renders a turn from, recorded under the build-log's Log and truncated at checkpoint — D81 (detail-file)
+  detail.md                # untracked — the in-flight step's full detail: the wire handoff renders a turn from, recorded under the build-log's Log and truncated at checkpoint — D81 (detail-file); a landed range's at its stop, recorded by harvest
   settings.json            # tracked   — project defaults: {} (or {"check": "…"}); start seeds it empty
   settings.local.json      # untracked — personal overlay only, e.g. a per-worktree {"check": "…"} (no cursor — that lives in STATE)
   agents/                  # tracked   — optional: user-authored agents, one dir per agent (D41 (agent-resolution); see agents.md)
@@ -694,6 +753,8 @@ stays git-excluded; a session is live iff `STATE` is present.
       SEAM                 # untracked — the in-flight step's declared paths (awareness, not a lock)
       SPIKE                # untracked — marker, present while a spike fork is open
       TICK                 # untracked — the TURN value stamped when the step was entered; with TURN, the latch's whole state
+      PAUSE                # untracked: what the pause card last showed, so a repeat prints the reminder (D87 (pause-once))
+      STOP                 # untracked: the range the stop card last showed and the TURN it printed in, read by harvest's latch (D103 (stop-latched))
       handoff.json         # untracked — step-scoped agent-run ledger, cleared at checkpoint or abandon — D47 (handoff-ledger)
 ```
 
@@ -728,7 +789,7 @@ default. The known keys:
 the result); **absent, the gate is checkride** ([**D24 (configurable-check)**](decisions.md#d24)/[**D32 (checkride-gate)**](decisions.md#d32)). `auto` is a legacy key
 the latch no longer honors ([**D67 (auto-not-a-grant)**](decisions.md#d67)): set, it is
 named at the pause and by `doctor`, and it grants nothing, since self-approval comes only
-from a typed `/plumbbob:build --auto` or step range. The per-worktree active-build cursor
+from a typed `/plumbbob:build --auto`, step range, or run. The per-worktree active-build cursor
 is **not** a setting: it
 is `STATE`'s content, so plumbbob never rewrites this hand-editable overlay ([**D28 (state-cursor)**](decisions.md#d28)). `agents` sets
 project-wide slot bindings for [user-authored agents](agents.md): the bottom rung under a

@@ -44,12 +44,17 @@ word up without reading the others first. Each entry points at the page that own
   `plumbbob order`; every next-step pick follows it, and the card reminds you of the
   next five when it departs from the numbering.
 - **Build ranges** (`## Build ranges` in `intent.md`): where the build stops for a human
-  call, one item per range: the command to type (`/plumbbob:build 2-5`), then `**stop:**`
-  and the call that ends it, with an optional model. `/plumbbob:plan` writes them with the
-  steps, and step, refine, and harvest keep them true as the plan changes. A bare `N` stops
-  at that step's pause; a span lands every step it names and stops at the boundary after
-  the last, where the card's **Stop** line says why. Advice, never a grant: you still type
-  the command.
+  call, one item per range: the command that defines it (`/plumbbob:build 2-5`), then
+  `**stop:**` and the call that ends it, with an optional model. `/plumbbob:plan` writes
+  them with the steps, and step, refine, and harvest keep them true as the plan changes. A
+  bare `N` stops at that step's pause; a span lands every step it names and stops at the
+  boundary after the last, where the card's **Stop** line says why. A range grants nothing
+  until you type the run that names it.
+- **Run** (`/plumbbob:run`, or `/plumbbob:run 3`): one range of the plan being built:
+  what is left of the range holding the next step, or of range 3. The turn hook mints its
+  grant from the plan as you type it, and it ends where the range does: at a bare range's
+  pause, or on the stop card once a span lands. The card names the run to type beneath
+  Next Up. → [`skills-reference.md`](skills-reference.md#run)
 - **Boundary**: the settled state between steps, with nothing in flight. The dashboard
   calls it `DESIGN`; a step in flight is `BUILD`; an open spike is `SPIKE`. Phase is
   derived from files on disk, never stored.
@@ -72,9 +77,10 @@ word up without reading the others first. Each entry points at the page that own
 - **The latch**: the rule that `checkpoint` refuses to land a step until a human turn has
   landed since the step began, so a model cannot commit its own work past you. Enforced
   on the record, never on edits. → [`decisions.md`](decisions.md#d64)
-- **Auto** (`--auto`, or a range like `1-3` or `20,5-9`): the one self-approval, granted only by a
-  prompt you typed; the agent then approves in your place and halts on red or a mismatch. A range
-  grants exactly the steps it names. → [`decisions.md`](decisions.md#d91)
+- **Auto** (`--auto`, a range like `1-3` or `20,5-9`, or a run): the one self-approval,
+  granted only by a prompt you typed; the agent then approves in your place and halts on red
+  or a mismatch. A range grants exactly the steps it names, and a run the steps its range
+  has left. → [`decisions.md`](decisions.md#d91)
 - **Revert**: `git reset --hard` to a recorded checkpoint, with the build folder
   snapshotted across it so your plan and park lines survive.
 - **Abandon**: the third exit from a step: drop the attempt, keep the diff in the tree,
@@ -82,7 +88,9 @@ word up without reading the others first. Each entry points at the page that own
 - **Park**: capture a mid-step idea as one tagged line in the build log, and go straight
   back to the step. → [`techniques.md`](techniques.md#capture-dont-chase-park-and-harvest)
 - **Harvest**: triage the park list at a boundary; each item becomes a blocker, a
-  tangent, or a pivot signal, and you call each one.
+  tangent, or a pivot signal, and you call each one. A run's stop card carries the
+  harvest with a lean on every park, so one reply settles the lot, and
+  `plumbbob harvest` records it.
 - **Spike**: a throwaway worktree experiment for a fork the plan cannot settle on paper;
   the deliverable is the verdict written back into intent, not the code.
   → [`techniques.md`](techniques.md#spikes-when-the-design-will-not-settle)
@@ -107,12 +115,18 @@ are its parts.
   `◐ A hair off` (green, with advisories on the way), `○ Out of plumb` (fix the work),
   `✗ Not standing` (fix the plan).
 - **Next Up**: the forward pointer: the next step, its progress count, and its model
-  recommendation, with one indented line beneath it carrying the range to type, the
+  recommendation, with one indented line beneath it carrying the run to type, the
   build order, and the park count when any of them has something to say.
 - **Your Call**: the four replies a human makes at a pause, each with its outcome:
   `looks good`, `expand` (or any question), a direction, `revert`.
 - **Recommendation**: the model's own call, the turn's last words: the move, then the
   reason.
+- **Stop card**: the decision turn a run ends on once its range lands: the range's
+  review (a Summary of the whole range, a Readout measured across its steps, the Verdict)
+  and every open park under **Harvested**, each with a lean proposed. One reply settles
+  it: `looks good` records the review and every lean, a change re-renders the card, and
+  `/plumbbob:run` records it and runs the next range.
+  → [`presentation.md`](presentation.md#the-stop-card)
 - **Expand** (`expand 2`): the question that opens one highlight's full story from the detail
   file, changing nothing. The answer closes on the **reminder**, one line pointing back at
   the step, because a pause renders its block once; `show the pause` brings the block
@@ -122,7 +136,7 @@ are its parts.
   step's line in the build log's Log. The file is the wire, and the ledger is the archive.
 - **Footer card**: the ending's last three parts (Verdict, Next Up, Your Call),
   CLI-rendered and relayed verbatim.
-- **Tiers**: a *decision* turn (a pause) carries the whole block; an *orientation* turn
+- **Tiers**: a *decision* turn (a pause, or a stop card) carries the whole block; an *orientation* turn
   (status, a boundary, finish) carries the lead line, the Verdict, and Next Up; a
   *driver* turn (park, spike, revert, use) carries the lead line and Next Up.
 - **Relay**: the skill pasting the CLI's block as the whole turn, writing nothing before
@@ -130,7 +144,7 @@ are its parts.
 
 ## The machinery
 
-- **Skill** (`/plumbbob:<verb>`): one of the fourteen slash commands you fire in Claude
+- **Skill** (`/plumbbob:<verb>`): one of the sixteen slash commands you fire in Claude
   Code; every one is `disable-model-invocation`, so the model never fires one for you.
   → [`skills-reference.md`](skills-reference.md)
 - **Verb** (`plumbbob <verb>`): the CLI underneath, which the skills shell out to; you
