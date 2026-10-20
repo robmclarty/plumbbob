@@ -536,6 +536,8 @@ The record now lives (tracked, on the branch) at:
 Your checkpoint markers and the build folder stay on the feature branch; your normal
 squash-merge collapses the markers at PR time while the folder lands in `main`.
 
+![The build folder in a pull request's file list, beside the source it describes](media/build-record-in-pr.svg)
+
 ---
 
 ## 7. Start the next task: `/plumbbob:plan`

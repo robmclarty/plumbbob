@@ -102,7 +102,7 @@ payoff is [measured, not asserted](#why-not-just), not just claimed. **Guidance 
 work, a latch on the record.**
 
 <p align="center">
-  <img src="docs/media/build-record-in-pr.svg" alt="A pull request's file list with the build folder beside the source" width="760">
+  <img src="site/media/build-record.svg" alt="The record in the wall, drawn: the scaffold is down and stacked on the ground, a bench mark is cut into the end stone of every course, and in the open cornerstone lie the rolled plan, tied with the red line, and the ledger, laid into the wall to stay" width="760">
 </p>
 
 ## Install

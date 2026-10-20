@@ -7,10 +7,12 @@ check confirms that every referenced path exists on disk, which is why the
 placeholders are files rather than comments.
 
 The site keeps its own pictures under `site/media/`, because the Pages workflow deploys
-`site/` alone, and the root README shows three of them too. Those three share a name
-with a slot below (`loop-one-step.svg`, `pause.svg`, and `checkpoint-boundary.svg`),
-but they are illustrations, not captures; a capture that fills a slot here leaves its
-namesake there alone.
+`site/` alone, and the root README shows four of them too. Three share a name with a
+slot below (`loop-one-step.svg`, `pause.svg`, and `checkpoint-boundary.svg`), but they
+are illustrations, not captures; a capture that fills a slot here leaves its namesake
+there alone. The fourth, `build-record.svg`, stands in the README where the
+`build-record-in-pr.svg` capture used to, and that capture now belongs to the happy
+path's finish.
 
 ## Capturing
 
@@ -40,6 +42,6 @@ namesake there alone.
 | `plan-pause.svg` | screenshot | `docs/happy-path.md` (section 0) | the framed plan's tail and the plan-pause card under its rule | the plan pause, before `looks good` |
 | `status-dashboard.svg` | screenshot | `docs/happy-path.md` (section 1) | the dashboard with a done step, a step in flight, and one parked item | mid step 2, after the park |
 | `park.svg` | screenshot | `docs/happy-path.md` (section 4) | the composed line, the OK, and the Parked block with its pointer back | mid step 2 |
-| `build-record-in-pr.svg` | screenshot | `README.md` (the five edges) | a pull request's file list showing `.plumbbob/builds/<slug>/` beside the source | the finished build pushed and opened as a PR on GitHub |
+| `build-record-in-pr.svg` | screenshot | `docs/happy-path.md` (section 6) | a pull request's file list showing `.plumbbob/builds/<slug>/` beside the source | the finished build pushed and opened as a PR on GitHub |
 | `doctor.svg` | screenshot | `docs/install.md` (verify) | `/plumbbob:doctor`'s report, every line green, including the check-gate table | a marketplace install in a repo with tools checkride detects |
 | `local-reviewer.svg` | video | `docs/local-model-review.md` | the reviewer's narration streaming on stderr at a verify pause, then its findings folded into the readout | the ollama-reviewer bound in `harness.json`, Ollama running |
