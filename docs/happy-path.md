@@ -563,6 +563,8 @@ whatever the ranges say. It is how a plan without ranges is driven, and how you 
 stretch slowly when a run would take on too much at once; re-firing it per step is the
 clock tick.
 
+![One step with /plumbbob:build: the pause, looks good, the checkpoint](media/loop-one-step.svg)
+
 A range typed by hand, `/plumbbob:build 2-3`, lands the steps it names the way a run
 does, but its turn ends on the last step's checkpoint block rather than a stop card. That
 block's `**Stop**` part says why the build stopped there:

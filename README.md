@@ -49,7 +49,7 @@ PlumbBob itself, running its own loop.
 ## The loop in one picture
 
 <p align="center">
-  <img src="docs/media/loop-one-step.svg" alt="One step of the loop: /plumbbob:build implements step 1 and stops at the pause, the human says looks good, the step is checkpointed" width="760">
+  <img src="site/media/loop-one-step.svg" alt="One step of the loop, drawn as a wall going up course by course: on the scaffold a person reads a plumb line at the corner, and down the wall a mechanical arm holds the next stone and waits" width="760">
 </p>
 
 Everything the model must stay true to lives in one file, the build's `intent.md`
@@ -183,7 +183,7 @@ In Claude Code, inside any git repo with a clean tree:
    **Recommendation**: Approve it, refilling on read. The gate is green and the seam held, and a bucket that refills when it is read needs no timer for the route to clean up.
    ````
 
-   ![The build pause as Claude Code renders it](docs/media/pause.svg)
+   ![The pause, drawn: a mechanical hand has set its stone on the line and hovers open and still, while a plumb bob in front comes to rest](site/media/pause.svg)
 
    (The check gate is [checkride](https://www.npmjs.com/package/checkride), one
    run across the tools your repo already configures: types, lint, tests, dead
@@ -203,7 +203,7 @@ In Claude Code, inside any git repo with a clean tree:
      · range 2 of 2: /plumbbob:run (steps 2-3)
    ```
 
-   ![The boundary after looks good](docs/media/checkpoint-boundary.svg)
+   ![The boundary, drawn: a bench mark freshly cut into the newest course of a stone wall, older marks below, and the red line raised one course over stones not yet laid](site/media/checkpoint-boundary.svg)
 
    Ask instead (`expand 2`, or any question) and it shows more of what is there and
    changes nothing. The answer closes on one line pointing back at the step, not on the
