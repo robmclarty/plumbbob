@@ -213,7 +213,8 @@ across its steps, with every open park beneath it and a lean proposed for each
 ([D100 (stop-card)](decisions.md#d100)). One reply settles the card: `looks good` records
 the review and every lean, a change re-renders it, and `/plumbbob:run` records it and runs
 the next range. `/plumbbob:build` stays the granular move, one step to its pause whatever
-the ranges say.
+the ranges say. [`runs.md`](runs.md) walks a plan through its runs, a blocker that re-cuts
+a range included, and sets each beside the manual moves it replaces.
 
 ### The pluggable executor reads the diff, not the author
 

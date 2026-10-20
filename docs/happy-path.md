@@ -13,7 +13,9 @@ in one reply, then `/plumbbob:finish` once.** `/plumbbob:build` is the same loop
 time, for a plan without ranges or a stretch you want to walk slowly. In the loop you never
 type the `plumbbob` CLI by hand; the skills shell out to it (only install, `plumbbob init`
 and `doctor`, is manual; even `plumbbob start` is run for you by `/plumbbob:plan`), and
-`/plumbbob:status` always names your next move.
+`/plumbbob:status` always names your next move. The run on its own (a longer plan, a
+blocker that re-cuts a range and moves the build order, and the same plan driven by hand
+beside it) is in [`runs.md`](runs.md).
 
 > The example goal: **rate-limit the login endpoint**, a small feature touching a
 > couple of modules, big enough to show the full cycle.
@@ -586,6 +588,10 @@ block's `**Stop**` part says why the build stopped there:
 > range like `/plumbbob:build 1-3` bounds this: it self-approves through step 3, then stops.
 > A list like `/plumbbob:build 20,5-9` lands exactly the steps it names, in build order.
 > The default (no flag) always waits at the pause.
+
+What the run adds over these moves (the plan holding the numbers, the stop card in place of
+the boundary, and the harvest folded into its reply) is set out side by side in
+[`runs.md`](runs.md#the-same-plan-by-hand).
 
 ---
 

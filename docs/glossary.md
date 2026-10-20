@@ -54,7 +54,7 @@ word up without reading the others first. Each entry points at the page that own
   what is left of the range holding the next step, or of range 3. The turn hook mints its
   grant from the plan as you type it, and it ends where the range does: at a bare range's
   pause, or on the stop card once a span lands. The card names the run to type beneath
-  Next Up. → [`skills-reference.md`](skills-reference.md#run)
+  Next Up. → [`runs.md`](runs.md)
 - **Boundary**: the settled state between steps, with nothing in flight. The dashboard
   calls it `DESIGN`; a step in flight is `BUILD`; an open spike is `SPIKE`. Phase is
   derived from files on disk, never stored.
@@ -81,6 +81,11 @@ word up without reading the others first. Each entry points at the page that own
   granted only by a prompt you typed; the agent then approves in your place and halts on red
   or a mismatch. A range grants exactly the steps it names, and a run the steps its range
   has left. → [`decisions.md`](decisions.md#d91)
+- **Grant** (`.plumbbob/GRANT`): the record of that self-approval, written by the turn
+  hook from the prompt you typed and good for that one turn: `auto`, the steps a typed
+  range names, or the steps a run's range has left, read from the plan at the keystroke.
+  The latch lands what it names and nothing else, and one the model writes is no grant.
+  → [`decisions.md`](decisions.md#d96)
 - **Revert**: `git reset --hard` to a recorded checkpoint, with the build folder
   snapshotted across it so your plan and park lines survive.
 - **Abandon**: the third exit from a step: drop the attempt, keep the diff in the tree,
@@ -127,6 +132,9 @@ are its parts.
   it: `looks good` records the review and every lean, a change re-renders the card, and
   `/plumbbob:run` records it and runs the next range.
   → [`presentation.md`](presentation.md#the-stop-card)
+- **Handle** (`P3`): a park's name on the stop card, in the detail file, and in your
+  reply (`make P3 a blocker`): `P` and the park's place in the list, harvested lines
+  counted, so it never changes for the life of the build. → [`decisions.md`](decisions.md#d105)
 - **Expand** (`expand 2`): the question that opens one highlight's full story from the detail
   file, changing nothing. The answer closes on the **reminder**, one line pointing back at
   the step, because a pause renders its block once; `show the pause` brings the block

@@ -118,6 +118,11 @@ A single JSON object. Two fields are required; the rest default to empty:
 | `blocked` | Couldn't finish: missing input, failed precondition. | Read `notes`, unblock, **re-run** the agent. |
 | `drift` | Finished, but the plan no longer matches reality. | Repair the plan with `/plumbbob:refine` before continuing. |
 
+The routing holds when nobody is pausing between steps. Inside a run, a typed range, or
+`--auto`, a `blocked` or `drift` envelope halts the walk at that step's pause, the same card
+a default build reaches, and the steps after it wait for the human's next run: an agent
+can stop a range, never carry one past its trouble.
+
 `parked[]` is how an agent captures a mid-run "ooh, what if" without acting on it: each
 string becomes a park line the CLI lands through the park verb ([**D44 (cli-side-effects)**](decisions.md#d44)). Unknown fields are
 tolerated and dropped ([**C7 (minimal-envelope)**](decisions.md#c7), see Versioning); a malformed `parked` (non-strings,

@@ -72,7 +72,8 @@ a decision the plan left open or after a stretch of steps worth reviewing.
 `/plumbbob:build` is the same loop a step at a time, stopping at every step's pause, for
 a plan without ranges or a stretch you want to walk slowly. Nothing is locked and nothing
 refuses you: the loop does the labor, pulls up to the line, and waits for you to advance
-it. **You are the clock.**
+it. **You are the clock.** [`docs/runs.md`](docs/runs.md) walks one plan through its runs
+and then drives it by hand, the two side by side.
 
 ## What a prompt can't replicate
 
@@ -360,14 +361,16 @@ that matters.
 > under [`docs/evals/`](docs/evals/): the route the latch owns (*no checkpoint over a red
 > check under pressure*) went from **2/5 prose-only to 5/5 latched** on the first sweep
 > ([2026-07-11](docs/evals/2026-07-11.md)), every sweep since has held it and closed the
-> two gaps that one surfaced, and the latest ([2026-09-17](docs/evals/2026-09-17.md))
-> scores the shape of the turn itself.
+> two gaps that one surfaced, [2026-09-17](docs/evals/2026-09-17.md) began scoring the
+> shape of the turn itself, and the latest ([2026-10-19](docs/evals/2026-10-19.md)) holds a
+> run to its stop card, 5/5.
 
 ## Documentation
 
 Each doc answers one question (in rough reading order for a new user):
 
 - *What does a session actually look like?* → [`docs/happy-path.md`](docs/happy-path.md): one goal walked end to end; read this first.
+- *How do I drive a plan with runs, and what do they replace?* → [`docs/runs.md`](docs/runs.md): ranges, the build order, and the stop card's harvest, walked through three runs and set beside the manual build, harvest, and order moves.
 - *What do the words mean?* → [`docs/glossary.md`](docs/glossary.md): every term the loop mints, one line each, with where to read more.
 - *Show me the artifacts it leaves behind.* → [`examples/`](examples/): that same session's finished build folder, file by file.
 - *Should I / can I / what about…?* → [`docs/faq.md`](docs/faq.md): the adoption questions, answered straight.

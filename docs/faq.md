@@ -63,6 +63,23 @@ change, and nothing lands until you say `looks good`. `revert` winds the work ba
 last checkpoint. The shape of the whole block, and why it never varies, is in
 [`presentation.md`](presentation.md).
 
+A run's stop card takes the same kind of reply, once for the whole range. `looks good`
+records the review and the class proposed for every parked idea, `make P3 a blocker`
+changes one first, and `/plumbbob:run` records the card and runs the next range.
+
+## How is a run different from typing `/plumbbob:build 2-3`?
+
+Both land the steps a range names on green, each with its own check, self-review, and
+checkpoint, and both stop where the range does. The run differs in who holds the numbers
+and what you read at the end. You type `/plumbbob:run`, and the turn hook mints the grant
+from the plan's own range, so after a harvest re-cuts that range the run walks the new one
+without you working out `6,4-5` ([D96 (plan-names-the-grant)](decisions.md#d96)). A run's
+range ends on the stop card, which reviews every step it landed and puts every parked idea
+in front of you with a lean, settled in one reply; a typed range ends on its last step's
+boundary, and the harvest is a turn of its own. In the worked example in
+[`runs.md`](runs.md#the-same-plan-by-hand) the two cost 7 and 8 prompts, and a step at a
+time costs 16.
+
 ## Can't the model just blow through the pause?
 
 On the **work** plane, yes, and that is a deliberate trade ([D10 (pause-not-lock)](decisions.md#d10)/[D13 (no-edit-guards)](decisions.md#d13) in
@@ -93,8 +110,11 @@ checks`) and offers the `looks good` move.
 Whichever you like; the plan may suggest one per step. `/plumbbob:plan` writes an advisory
 `model:` line under a step when the signal is clear (a small model for mechanical wiring,
 a frontier one for test authoring or design), `/plumbbob:status` and every `**Next Up**`
-line surface it, and switching is your `/model` call before the next `/plumbbob:build`.
-Nothing switches for you and nothing refuses a step on the wrong model
+line surface it, and switching is your `/model` call before the next run or build. A build
+range carries a `model:` line of its own, the strongest any step inside it needs, and
+while the card names a run, the bold model on Next Up is the range's, since that is the
+model the whole run builds on ([D93 (range-on-the-card)](decisions.md#d93)). Nothing
+switches for you and nothing refuses a step on the wrong model
 ([D62 (model-recommendation)](decisions.md#d62)).
 
 ## Can I work on more than one goal at once?

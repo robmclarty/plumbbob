@@ -34,12 +34,16 @@ between them is never hidden: the sidecar is the whole memory.
 - `cli-core.ts`: verb routing and the help table.
 - `verbs/`: one file per verb, each a pure `(cwd, args) → exit code` function.
 - `lib/`: the shared mechanics: `git.ts` (additive-only git, [C5 (additive-git)](decisions.md#c5)), `sidecar.ts` (paths,
-  planes, excludes, the detail file), `intent.ts` (step/seam parsing), `orient.ts` (the dashboard),
-  `settings.ts` (the ladder, [D27 (settings-ladder)](decisions.md#d27)), `check.ts` (the gate), `latch.ts` (the approval
-  latch, [D64 (approval-latch)](decisions.md#d64)), `notice.ts` (the one formatter for every line the CLI says and the
+  planes, excludes, the detail file), `intent.ts` (step/seam parsing), `orient.ts` (the dashboard, the build
+  order and the build ranges, and the run a prompt names, [D95 (run-verb)](decisions.md#d95)),
+  `steplist.ts` (the one grammar a typed range and a run's grant are read in, [D91 (step-list-grants)](decisions.md#d91)),
+  `settings.ts` (the ladder, [D27 (settings-ladder)](decisions.md#d27)), `check.ts` (the gate), `reentry.ts` (the
+  marker that keeps a gate from re-entering itself through its own test suite), `latch.ts` (the approval
+  latch, [D64 (approval-latch)](decisions.md#d64), and the stop's, [D103 (stop-latched)](decisions.md#d103)), `notice.ts` (the one formatter for every line the CLI says and the
   order an ending stacks in), `commitmsg.ts` and `commitbody.ts` (Conventional subjects, [D68 (conventional-subjects)](decisions.md#d68),
   and the `--body` reader), `buildlog.ts` and `buildlogsync.ts` (the ledger and its CLI-owned mirror), `agents.ts`
-  (the doorway), `plugins.ts` (install detection).
+  (the doorway), `plugins.ts` (install detection), `templates.ts` (the scaffold templates `start` and
+  `spike` stamp).
 
 Structural invariants are machine-enforced by the ast-grep rules in `rules/`:
 functional/procedural only ([C1 (functional-only)](decisions.md#c1)), node builtins plus the dependency allowlist ([C2 (few-deliberate-deps)](decisions.md#c2)),
@@ -56,9 +60,12 @@ highlights, the three judgment rows, the recommendation) into `.plumbbob/detail.
 `plumbbob handoff` measures the rest (the check row from the gate's summary, the seam and
 diff rows from git, the `spent` row from `stats.json` and the turn ledger), folds the two
 into one block, and the skill pastes that block as the whole turn. A transition verb
-(`checkpoint`, `park`, `revert`, `abandon`, `spike`, `use`, `finish`) prints its own
-ending the same way, through the one formatter in `lib/notice.ts`, so a boundary or a
-driver turn is one command's output and cannot disagree with itself. The detail file is
+(`checkpoint`, `park`, `harvest`, `order`, `revert`, `abandon`, `spike`, `use`, `finish`)
+prints its own ending the same way, through the one formatter in `lib/notice.ts`, so a
+boundary or a driver turn is one command's output and cannot disagree with itself. A run's
+stop card is the decision turn for a whole range: `handoff --stop` renders it from the
+range's detail file and a readout measured across the range's commits, and `harvest`
+records the reply ([D100 (stop-card)](decisions.md#d100)). The detail file is
 the wire and the build log is the archive: `checkpoint` records it beneath the step's
 dated line in `build-log.md`'s Log and truncates it, so the record rides the branch into
 the PR.

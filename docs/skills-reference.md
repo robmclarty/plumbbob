@@ -109,7 +109,8 @@ does the same at the last). Typed while a step waits at its pause, a run is that
 `looks good`, then carries on through the rest of the step's range. It refuses, naming the
 move that unblocks it, a plan without ranges, a range that has landed or does not exist, a
 step in flight outside the range typed, and an open spike
-([D97 (run-refuses)](decisions.md#d97)).
+([D97 (run-refuses)](decisions.md#d97)). The guide to the run, three runs walked through
+and then the same plan driven by hand beside them, is [`runs.md`](runs.md).
 
 ### build
 
@@ -138,7 +139,11 @@ runs `plumbbob handoff`, and pastes the block; you reply with one of the four mo
 block names (`looks good`, `expand`, a direction, `revert`), and on `looks good` the
 checkpoint prints the boundary block for it to relay. An `expand` is answered above one
 line pointing back at the step, since the block renders once per pause, and
-`show the pause` has the skill run `plumbbob handoff --full` to bring it back.
+`show the pause` has the skill run `plumbbob handoff --full` to bring it back. While a
+run's stop card waits for its reply, `plumbbob build` enters no step, since the step's
+pause would write over the range's review in `.plumbbob/detail.md`; the skill relays the
+refusal, which names the reply that records the card, and ends the turn
+([D103 (stop-latched)](decisions.md#d103)).
 
 ### verify
 
@@ -200,7 +205,8 @@ range's stop is the boundary that matters most: no harvest runs between the step
 range, so the parks pile up, and a run's stop card carries their harvest itself, each park
 under its `P3` handle with a lean ([D105 (park-handles)](decisions.md#d105)). Fire
 `/plumbbob:harvest` outside a run's stop: between steps, or after a range a typed
-`/plumbbob:build` landed.
+`/plumbbob:build` landed. While a stop card waits it refuses and points at the card's own
+reply, because writing its detail file would overwrite the range's review.
 
 ### finish
 

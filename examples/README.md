@@ -1,17 +1,17 @@
 # Examples
 
-[`docs/happy-path.md`](../docs/happy-path.md) tells the story of one PlumbBob session —
-rate-limiting a login endpoint. This folder holds the **artifacts that session leaves
-behind**: the build's tracked folder, exactly as it would sit at
-`.plumbbob/builds/rate-limit-the-login-endpoint/` on the feature branch after
+[`docs/happy-path.md`](../docs/happy-path.md) tells the story of one PlumbBob session:
+rate-limiting a login endpoint in two runs. This folder holds the **artifacts that session
+leaves behind**: the build's tracked folder, as it would sit at
+`.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/` on the feature branch after
 `/plumbbob:finish`, ready to ride into the PR.
 
 Read them in the order they were written:
 
 | File | Written by | When |
 | ------ | ----------- | ------ |
-| [`intent.md`](rate-limit-the-login-endpoint/intent.md) | you + `/plumbbob:plan` | before any code — the Frame, Decisions, Constraints, and all Steps |
-| [`build-log.md`](rate-limit-the-login-endpoint/build-log.md) | the loop, as it runs | park lines mid-step, harvest calls and checkpoint lines at each boundary |
+| [`intent.md`](rate-limit-the-login-endpoint/intent.md) | you + `/plumbbob:plan` | before any code: the Frame, Decisions, Constraints, all Steps, and the build ranges |
+| [`build-log.md`](rate-limit-the-login-endpoint/build-log.md) | the loop, as it runs | the plan's cold read, step 1's pause as you approved it, the park line, the steps range 2 landed, and the range's review with the harvest its stop card settled |
 | [`checkpoints`](rate-limit-the-login-endpoint/checkpoints) | the CLI | one SHA per recorded state — baseline, plan, each verified step |
 | [`stats.json`](rate-limit-the-login-endpoint/stats.json) | the CLI | per step, as it runs — when it started and landed, red runs, reverts; the pause's `spent` row and the report's Stats table read it |
 | [`report.md`](rate-limit-the-login-endpoint/report.md) | `/plumbbob:finish` | at close-out — what shipped, why, and what was deferred |
@@ -25,8 +25,8 @@ history reads as the build's spine:
 
 ```text
 f3e9a1b2c chore(rate-limit-the-login-endpoint): finish
-9c4d02e11 feat(config): make the limit configurable via env
-5b8f31da2 feat(login): wire the limiter into POST /login
+e5f6a7b8c feat(config): make the limit configurable via env
+b2c3d4e5f feat(login): wire the limiter into POST /login
 a1b2c3d4e feat(limiter): add a token-bucket limiter
 7d2e94fb0 chore(rate-limit-the-login-endpoint): plan
 3a1f2b0c1 (baseline — wherever the branch stood when the session opened)

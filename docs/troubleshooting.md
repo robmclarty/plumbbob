@@ -131,7 +131,9 @@ and dropping one while keeping its work in the tree is `/plumbbob:abandon`.
 **Cause.** Both need an active session, and `harvest` runs only at a **boundary**. **Fix.**
 Park works any time the session is live; start a session first if there is none. Harvest
 refuses mid-step (a step in flight): finish the step with `/plumbbob:verify` first, then
-harvest from the boundary.
+harvest from the boundary. It also refuses while a run's stop card waits for its reply,
+since the card carries its own harvest and writing a second detail file would overwrite
+the range's review: answer the card instead (`looks good`, or `make P3 a tangent` first).
 
 ## The build loop and checks
 
@@ -169,7 +171,7 @@ iterating: `plumbbob check --bail --only types,lint`.
 and checkride detected no tool configs in this repo; an all-slots-skipped run refuses
 rather than passing vacuously. **Fix.** Either give checkride something to check (a
 `tsconfig.json`, a `vitest.config.ts`, a `checkride.config.json` custom check, …) or set
-the `"check"` key in `.plumbbob/settings.json` to your own command (e.g.
+the `"check"` key in `.plumbbob/settings.json` to your own command (for example
 `"check": "npm test"`). `plumbbob doctor` prints the slot/adapter table. `start` prints
 the same warning the moment a session opens in such a repo, so the first place to set the
 key is while you are still planning.
@@ -194,6 +196,71 @@ a shell.
 Make sure `## Steps` has the step in the standard format with a `- seam:` line of exact
 paths or `dir/` grants, never a glob ([**D23 (no-glob-seams)**](decisions.md#d23)). Sharpen it with `/plumbbob:step`, then
 build again.
+
+## Runs and stop cards
+
+### `/plumbbob:run` builds nothing and names another move
+
+**Cause.** The run names nothing it can walk, so it printed no run header and the hook
+minted no grant ([**D97 (run-refuses)**](decisions.md#d97)): the plan has no ranges, no
+range names the next step, the range is flagged, it has landed, the plan has no range by
+that number, the run named a span of ranges, a step is in flight outside the range, or a
+spike is open. **Fix.** Type the move the refusal quotes from the dashboard's `next →`
+line. Every refusal and its move are tabled in
+[`runs.md`](runs.md#when-a-run-refuses-and-when-it-halts).
+
+### The run header reads `grant: none`, and the run stops without building
+
+**Cause.** The range lands its steps, but the turn hook minted nothing for it: the
+plugin's hook is older than the run, or the prompt that reached the skill was not a typed
+`/plumbbob:run`. With no grant, no step could land without a pause, so the skill reports it
+rather than walk ([**D96 (plan-names-the-grant)**](decisions.md#d96)). **Fix.** Update the
+plugin and `/reload-plugins`, then type `/plumbbob:run` in full. To land the range now,
+type its own command from the plan's `## Build ranges` (`/plumbbob:build 2-3`). Never
+write a grant into a control or settings file to get past it; the latch ignores one the
+model wrote ([**D67 (auto-not-a-grant)**](decisions.md#d67)).
+
+### The run header reads `unlike the run`
+
+**Cause.** The hook minted its grant from the plan as it stood at your keystroke, and the
+run now resolves a different set of steps. Typed at a stop card, the run's record folded a
+blocker that added or moved a step in the range it would walk, after the grant was minted;
+or the host never passed the range number you typed through to the skill. **Fix.** After a
+record, the run ends there, and the record's note names the re-cut run beneath Next Up:
+type `/plumbbob:run` again. When the number was lost, the run walks exactly the steps the
+grant names and says so in one line, so nothing needs fixing.
+
+### `build` refuses: "no step entered (range 2 of 3's stop card is waiting for its reply)"
+
+**Cause.** A run's stop card has not had its reply, and the step's pause would write over
+the range's review in `.plumbbob/detail.md` before anything recorded it
+([**D103 (stop-latched)**](decisions.md#d103)). **Fix.** Reply to the card: `looks good`
+records it, `/plumbbob:run` records it and runs the next range, and on the plan's last
+range `/plumbbob:finish` records it and writes the report. In a session without the card
+on screen, `show the stop` brings it back.
+
+### `harvest` refuses: "range 2 of 3's stop not recorded"
+
+**Cause.** The stop's record is latched ([**D103 (stop-latched)**](decisions.md#d103)), and
+the parenthetical names the rule that held it. **Fix.** By the parenthetical:
+
+| The parenthetical | What happened | The fix |
+| --- | --- | --- |
+| `its card printed this turn` | the model tried to record the card it had just shown | end the turn on the card; your reply records it |
+| `no stop card showed its detail` | the detail file changed since the card rendered, or no card rendered | `plumbbob handoff --stop`, then end the turn on the card |
+| `step 9 is open again` | a step of the range landed and was later cleared | land it, then `plumbbob handoff --stop` |
+| `step 13 joined it after it landed` | a confirmed blocker was folded into the range the card reviews | move the step to a range still to come, or a bare range of its own, leave the detail file alone, and run `plumbbob harvest` again |
+| `P9 is not in the list` | a proposal names a park the list lacks, or a class other than blocker, tangent, or pivot | fix the Harvest proposals in `.plumbbob/detail.md` |
+
+### A range row reads `⚠ needs a re-cut`
+
+**Cause.** The plan outgrew the range: it names a step the plan lacks, two ranges name one
+step, or the build order puts a step from outside it between two of its own. A step no
+range names gets a `⚠` row of its own at the block's end. The CLI reports a drifted range
+and never rewrites it, because only you know where its stop belongs now
+([**D92 (build-ranges)**](decisions.md#d92)). **Fix.** `/plumbbob:refine ranges` re-cuts the
+section by the plan's own rule. A run refuses a flagged range until the row is gone, and
+`/plumbbob:order` names refine as it writes a sequence that breaks one.
 
 ## The post-edit hook (light feedback)
 

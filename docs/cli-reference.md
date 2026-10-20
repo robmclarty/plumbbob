@@ -293,8 +293,8 @@ from that range's detail file, once per stop under a `STOP` stamp of its own, wi
 that lands its steps just landed, or when the detail file is another range's.
 
 Every transition verb prints its own ending through this same code, so `checkpoint`,
-`park`, `revert`, `abandon`, `spike`, `use`, and `finish` each emit the Verdict (where one
-is measured) and the pointer for themselves, and a skill relays one command's output rather
+`park`, `harvest`, `order`, `revert`, `abandon`, `spike`, `use`, and `finish` each emit the
+Verdict (where one is measured) and the pointer for themselves, and a skill relays one command's output rather
 than two. `handoff` stays the way to render an ending where no verb ran: a build pause, a
 re-read of the boundary, the plan pause, or a driver turn a skill drove some other way.
 
@@ -826,5 +826,7 @@ contributes nothing rather than wedging the tool.
 ## See also
 
 - [`techniques.md`](techniques.md): what each verb is *for* and how the methods fit.
+- [`runs.md`](runs.md): `status --run`, `handoff --stop`, `harvest`, and `order` at work
+  across three runs of one plan.
 - [`troubleshooting.md`](troubleshooting.md): what to do when a verb refuses.
 - [`decisions.md`](decisions.md): the `D#` / `C#` tags referenced above.
