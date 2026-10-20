@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.3] - 2026-10-19
+
+- **Added:** `docs/runs.md`, a guide to driving a plan with `/plumbbob:run`. It walks one
+  five-step plan through three runs (a bare range to its pause, a span to the stop card, and
+  a blocker that re-cuts the next range and moves the build order), every card rendered by
+  the CLI, then drives the same plan with typed ranges and a step at a time: 7, 8, and 16
+  prompts. It closes on when a manual move fits better, how the build order and the ranges
+  fit together, and what a run refuses and where it halts. The site's docs page gains a
+  Runs & the stop card section that condenses it.
+- **Added:** illustrations on the site in place of its placeholder boxes, four plates drawn
+  in one world of a stone wall built course by course to a plumb line: the loop, the pause,
+  the boundary, and three authors setting stones flush to the same line for "it reads the
+  diff, not the author". The README shows the first three.
+- **Changed:** the docs catch up with runs and the stop card. Troubleshooting gains a section
+  on runs and stop cards, the glossary gains Grant and Handle, the FAQ answers how a run
+  differs from a typed range, and the skills and CLI references say build and harvest refuse
+  while a stop card waits. The example build folder is regenerated as the happy path's two
+  runs, so it carries the build ranges and the stop's record.
+- **Fixed:** the site's API page rendered its verbs, flags, and skill cards empty. Two
+  unescaped apostrophes made the page's script fail to parse; both are escaped, and the page
+  now also lists the waiting stop card, the run header's lines, and seven missing flags.
+
 ## [0.13.2] - 2026-10-19
 
 - **Added:** `/plumbbob:run`, now the main way to drive a plan with build ranges. It runs
