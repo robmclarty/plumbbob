@@ -4,17 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PlumbBob docs — getting started, the loop, agents, attention-first</title>
-<meta name="description" content="Task-focused guides for PlumbBob: install it, run your first session, work the plan/build/verify/finish loop, plug in your own agents, and the attention-first method underneath.">
+<meta name="description" content="Task-focused guides for PlumbBob: install it, run your first session, drive the plan/run/finish loop, plug in your own agents, and the attention-first method underneath.">
 <link rel="canonical" href="https://robmclarty.github.io/plumbbob/docs.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="PlumbBob">
 <meta property="og:locale" content="en_US">
 <meta property="og:url" content="https://robmclarty.github.io/plumbbob/docs.html">
 <meta property="og:title" content="PlumbBob docs — getting started, the loop, agents, attention-first">
-<meta property="og:description" content="Task-focused guides for PlumbBob: install it, run your first session, work the plan/build/verify/finish loop, plug in your own agents, and the attention-first method underneath.">
+<meta property="og:description" content="Task-focused guides for PlumbBob: install it, run your first session, drive the plan/run/finish loop, plug in your own agents, and the attention-first method underneath.">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="PlumbBob docs — getting started, the loop, agents, attention-first">
-<meta name="twitter:description" content="Task-focused guides for PlumbBob: install it, run your first session, work the plan/build/verify/finish loop, plug in your own agents, and the attention-first method underneath.">
+<meta name="twitter:description" content="Task-focused guides for PlumbBob: install it, run your first session, drive the plan/run/finish loop, plug in your own agents, and the attention-first method underneath.">
 <script src="https://cdn.usefathom.com/script.js" data-site="NXYISAXY" defer></script>
 <script src="./support.js"></script>
 <script src="./stars.js" defer></script>
@@ -186,7 +186,7 @@ plumbbob init" style="background:transparent; color:#8B84A8; font-family:'JetBra
           <div style="margin-top:18px; border:3px solid #181231; background:#181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231, 5px 5px 0 #181231;">
             <img src="media/pause.svg" alt="The pause, drawn: a mechanical hand has set its stone on the line and hovers open and still, while a plumb bob in front comes to rest." style="display:block; width:100%; height:auto;">
           </div>
-          <p style="font-size:16px; line-height:1.6; color:#2E2A44; margin-top:18px;">Nothing is locked and nothing refuses you — the loop does a step's labor, pulls up to the line, and waits for you to advance it. <strong>You are the clock.</strong> Approving commits the step as a checkpoint against a recorded baseline; a wrong turn costs one step, not the afternoon. <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">--auto</span> lets the agent self-approve and chain step after step until the plan is done — halting the moment a check goes red or the self-review finds a mismatch. A range like <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">1-3</span> is a bounded auto, and a run is the same walk over a range the plan cut, ending on the stop card.</p>
+          <p style="font-size:16px; line-height:1.6; color:#2E2A44; margin-top:18px;">Nothing is locked and nothing refuses you — the loop does a step's labor, pulls up to the line, and waits for you to advance it. <strong>You are the clock.</strong> Approving commits the step as a checkpoint against a recorded baseline; a wrong turn costs one step, not the afternoon. <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">--auto</span> lets the agent self-approve and chain step after step until the plan is done — halting the moment a check goes red or the self-review finds a mismatch. A range like <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">1-3</span> is a bounded auto, and a run is the same walk over a range the plan cut, ending on the stop card. The <a href="https://github.com/robmclarty/plumbbob/blob/main/docs/runs.md" style="color:#5A32C8; font-weight:700; border-bottom:2px solid #5A32C8;">runs guide</a> walks one plan through three runs and sets each beside the manual moves.</p>
 
           <h2 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:32px; margin:48px 0 16px;">Swap the executor</h2>
           <p style="font-size:16px; line-height:1.6; color:#2E2A44;"><span style="font-family:'JetBrains Mono',monospace; font-size:14px;">/plumbbob:build</span> is the default engine, not the only one — the loop doesn't care who writes the code. Implement a step by hand, vibe it in another session, or use another harness entirely, then run <span style="font-family:'JetBrains Mono',monospace; font-size:14px; color:#5A32C8;">/plumbbob:verify</span> instead: same check, same pause, same checkpoint. It reads the <em>diff, not the author</em>.</p>
@@ -195,12 +195,105 @@ plumbbob init" style="background:transparent; color:#8B84A8; font-family:'JetBra
           <p style="font-size:16px; line-height:1.6; color:#2E2A44;">A mid-build "ooh, what if…" never derails the step. <span style="font-family:'JetBrains Mono',monospace; font-size:14px; color:#5A32C8;">/plumbbob:park</span> captures it to a list in one line; a run's stop card triages the list where its range lands, and <span style="font-family:'JetBrains Mono',monospace; font-size:14px; color:#5A32C8;">/plumbbob:harvest</span> anywhere else, proposing exactly one class per item: <strong>blocker</strong> (the plan was wrong; fold in now), <strong>tangent</strong> (defer or kill — the default), or <strong>pivot signal</strong> (the approach is wrong; stop and replan). You call each one, in one reply at a stop.</p>
 
           <h2 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:32px; margin:48px 0 16px;">When the plan needs work</h2>
-          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px;">
+          <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:14px;">
             <div style="border-left:3px solid #5A32C8; padding:4px 0 4px 14px;"><div style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:14px; color:#5A32C8;">/plumbbob:step</div><div style="font-size:13.5px; line-height:1.5; color:#4A4562; margin-top:6px;">Revise or sharpen the next step just-in-time. Fired bare, it auto-syncs the step to what the build has taught you.</div></div>
-            <div style="border-left:3px solid #C1922E; padding:4px 0 4px 14px;"><div style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:14px; color:#C1922E;">/plumbbob:refine</div><div style="font-size:13.5px; line-height:1.5; color:#4A4562; margin-top:6px;">Attack the frame for holes (surfaced as Open questions), or repair a plan that drifted from the code.</div></div>
+            <div style="border-left:3px solid #C1922E; padding:4px 0 4px 14px;"><div style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:14px; color:#C1922E;">/plumbbob:refine</div><div style="font-size:13.5px; line-height:1.5; color:#4A4562; margin-top:6px;">Attack the frame for holes (surfaced as Open questions), or repair a plan that drifted from the code. <span style="font-family:'JetBrains Mono',monospace; font-size:12.5px;">refine ranges</span> re-cuts the build ranges.</div></div>
+            <div style="border-left:3px solid #5C5677; padding:4px 0 4px 14px;"><div style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:14px; color:#5C5677;">/plumbbob:order</div><div style="font-size:13.5px; line-height:1.5; color:#4A4562; margin-top:6px;">Set the build order: the undone steps in the sequence to build them, once a step added late has to land before an existing one. A step keeps its number; the sequence moves.</div></div>
             <div style="border-left:3px solid #C43B5B; padding:4px 0 4px 14px;"><div style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:14px; color:#C43B5B;">/plumbbob:spike</div><div style="font-size:13.5px; line-height:1.5; color:#4A4562; margin-top:6px;">A throwaway worktree experiment for a fork the plan can't settle. The deliverable is the verdict, not the spike code.</div></div>
           </div>
           <p style="font-size:15px; line-height:1.6; color:#4A4562; margin-top:24px;">The full reference for all sixteen skills — inputs, effects, when to reach for each — is on the <a href="api.html" style="color:#5A32C8; font-weight:700; border-bottom:2px solid #5A32C8;">API page</a>, alongside the CLI verbs they shell out to.</p>
+
+          <div style="display:flex; gap:16px; margin-top:44px; flex-wrap:wrap;">
+            <div onClick="{{ goRuns }}" style="cursor:pointer; background:#5A32C8; color:#ECEAF4; font-weight:700; font-size:15px; padding:14px 26px; border:3px solid #181231;" class="pb-btn"><span class="pb-btn-label">Next: Runs &amp; the stop card →</span></div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ RUNS ============ -->
+      <sc-if value="{{ isRuns }}">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:3px; color:#5A32C8; margin-bottom:14px;">USING THE LOOP</div>
+          <h1 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:60px; line-height:1; margin:0 0 20px;">Runs &amp; the stop card</h1>
+          <p style="font-size:18px; line-height:1.6; color:#2E2A44; max-width:660px;">A <strong>build range</strong> is a stretch of steps the plan says can land without you, ending where your call is due. <span style="font-family:'JetBrains Mono',monospace; font-size:15px;">/plumbbob:run</span> lays one: each step lands on a green check with no pause between them, and the run stops where the plan said. A range that ends on a decision stops at its step's pause. A range that ends on a review stops on the <strong>stop card</strong>, which reviews the whole range and settles every parked idea in one reply.</p>
+
+          <h2 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:32px; margin:48px 0 16px;">The plan names the steps</h2>
+          <p style="font-size:16px; line-height:1.6; color:#2E2A44; margin-bottom:18px;">You type <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">/plumbbob:run</span>, or <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">/plumbbob:run 3</span> for range 3. The turn hook reads the plan's <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">## Build ranges</span> as you press enter and mints a grant for exactly the steps that range has left, so you never type a step number and the model never decides how far it may go. The run walks those steps in the plan's build order, and it opens on a header naming what it will do:</p>
+          <div style="border:3px solid #181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231, 5px 5px 0 #181231;">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:11px 16px; background:#221A3E; border-bottom:1px solid #3A315C;"><span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8B84A8;">the run header</span></div>
+            <div style="white-space:pre; overflow-x:auto; background:#181231; color:#DAD5EC; padding:18px 20px; font-family:'JetBrains Mono',monospace; font-size:13.5px; line-height:1.8;"><span style="color:#C1922E;">run</span>  range 2 of 3 · steps 2-3 · ends at step 3's boundary
+     <span style="color:#8B84A8;">stop:</span> read one real request's line before the timing and the docs build on it
+     <span style="color:#8B84A8;">grant:</span> steps 2-3</div>
+          </div>
+
+          <h2 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:32px; margin:48px 0 16px;">The stop card</h2>
+          <p style="font-size:16px; line-height:1.6; color:#2E2A44; margin-bottom:18px;">When the range's last step lands, the run ends on the stop card in place of that step's boundary. Its Summary is the whole range's, its Readout is measured across the range's commits, and every idea parked along the way sits under <strong>Harvested</strong>, with a handle (<span style="font-family:'JetBrains Mono',monospace; font-size:14px;">P1</span>, its place in the park list) and the class the model leans toward:</p>
+          <div style="border:3px solid #181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231, 5px 5px 0 #181231;">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:11px 16px; background:#221A3E; border-bottom:1px solid #3A315C;"><span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#8B84A8;">the stop card, abridged</span></div>
+            <div style="white-space:pre-wrap; overflow-x:auto; background:#181231; color:#DAD5EC; padding:18px 20px; font-family:'JetBrains Mono',monospace; font-size:13.5px; line-height:1.8;"><strong style="color:#C1922E;">Stop</strong>: Range 2 of 3 landed - read one real request's line before the timing and the docs build on it
+
+<strong style="color:#C1922E;">Readout</strong>:
+steps        2 of 2 landed
+             - 2 2e47835 · 3 9d2de70
+check        green: 1 of 1 checks, 2 landings
+seam         held: 2 of 2 steps, no strays
+spent        39 min · green first run at every landing
+
+<strong style="color:#C1922E;">Verdict</strong>: ● Plumb
+
+<strong style="color:#C1922E;">Harvested</strong>: 2 of 2 parked ideas open
+- P1 · should a request that arrives with no id get one generated? (tangent) → lean: tangent, an id is still logged when the client sends one
+- P2 · the logger could buffer lines and flush them on exit (tangent) → lean: tangent, a performance call this goal does not make
+
+<strong style="color:#C1922E;">Your Call</strong>:
+Approving locks in each lean above; to change one, say so first (<span style="color:#8A6BE8;">make P1 a blocker</span>).
+- <span style="color:#8A6BE8;">looks good</span> → I record the review and every lean as proposed, folding a blocker into the plan; back to the boundary
+- <span style="color:#8A6BE8;">/plumbbob:run</span> → I record them the same way, then run range 3 of 3 to its stop
+- anything that reads as direction → I re-render the card with the lean changed; nothing is recorded until you approve
+- <span style="color:#8A6BE8;">expand</span>, or any question → I show more of what is there; nothing changes, and <span style="color:#8A6BE8;">show the stop</span> brings all of this back</div>
+          </div>
+
+          <h2 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:32px; margin:48px 0 16px;">One reply settles it</h2>
+          <div style="border:3px solid #181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231, 5px 5px 0 #181231, 6px 6px 0 #181231; overflow:hidden;">
+            <table style="width:100%; border-collapse:collapse; font-size:14px;">
+              <thead>
+                <tr style="background:#181231; color:#ECEAF4; font-family:'JetBrains Mono',monospace;"><th style="text-align:left; padding:13px 18px; letter-spacing:1px; font-size:13px;">YOUR REPLY</th><th style="text-align:left; padding:13px 18px; font-weight:500; font-size:13px;">WHAT HAPPENS</th></tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ stopReplies }}" as="r" hint-placeholder-count="5">
+                  <tr style="border-top:2px solid #181231; background:{{ r.bg }};">
+                    <td style="padding:12px 18px; font-family:'JetBrains Mono',monospace; font-size:13.5px; color:#5A32C8; font-weight:700; white-space:nowrap;">{{ r.reply }}</td>
+                    <td style="padding:12px 18px; color:#2E2A44; line-height:1.5;">{{ r.does }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+          <p style="font-size:16px; line-height:1.6; color:#2E2A44; margin-top:18px;">A confirmed blocker folds into the plan before the record lands: a Decision, a new step under the next free number, a place in a range still to come (never the range the card reviews, which has landed), and a place in the <strong>build order</strong> when it must land before an existing step. The record's ending then names the re-cut run, its steps written in the order they will build: <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">· range 3 of 3: /plumbbob:run (steps 6,4-5)</span>. While a card waits, <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">/plumbbob:build</span> refuses to enter a step, since the step's pause would overwrite the review before your reply recorded it.</p>
+
+          <h2 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:32px; margin:48px 0 16px;">Runs beside the manual moves</h2>
+          <p style="font-size:16px; line-height:1.6; color:#2E2A44; margin-bottom:18px;">The same five-step plan, three ranges and one blocker, driven three ways after the plan is approved:</p>
+          <div style="border:3px solid #181231; box-shadow:1px 1px 0 #181231, 2px 2px 0 #181231, 3px 3px 0 #181231, 4px 4px 0 #181231, 5px 5px 0 #181231, 6px 6px 0 #181231; overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:13.5px;">
+              <thead>
+                <tr style="background:#181231; color:#ECEAF4; font-family:'JetBrains Mono',monospace;"><th style="text-align:left; padding:13px 16px; letter-spacing:1px; font-size:12.5px;">MOMENT</th><th style="text-align:left; padding:13px 16px; font-weight:500; font-size:12.5px;">WITH RUNS</th><th style="text-align:left; padding:13px 16px; font-weight:500; font-size:12.5px;">TYPED RANGES</th><th style="text-align:left; padding:13px 16px; font-weight:500; font-size:12.5px;">A STEP AT A TIME</th></tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ manualRows }}" as="m" hint-placeholder-count="6">
+                  <tr style="border-top:2px solid #181231; background:{{ m.bg }};">
+                    <td style="padding:11px 16px; color:#181231; font-weight:{{ m.weight }}; line-height:1.45;">{{ m.moment }}</td>
+                    <td style="padding:11px 16px; font-family:'JetBrains Mono',monospace; font-size:12.5px; color:#5A32C8; line-height:1.5;">{{ m.runs }}</td>
+                    <td style="padding:11px 16px; font-family:'JetBrains Mono',monospace; font-size:12.5px; color:#2E2A44; line-height:1.5;">{{ m.typed }}</td>
+                    <td style="padding:11px 16px; font-family:'JetBrains Mono',monospace; font-size:12.5px; color:#2E2A44; line-height:1.5;">{{ m.step }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+          <p style="font-size:16px; line-height:1.6; color:#2E2A44; margin-top:18px;">The keystrokes are the smaller difference: typed ranges cost one prompt more than runs. What separates them is who holds the numbers and what the stop shows you. A typed range is your numbers, so after a re-cut you type the new one yourself, and it ends on its last step's boundary, with no review of the range and the harvest left for a turn of its own. A step at a time stops at six pauses the plan never asked for. The <a href="https://github.com/robmclarty/plumbbob/blob/main/docs/runs.md" style="color:#5A32C8; font-weight:700; border-bottom:2px solid #5A32C8;">runs guide</a> walks this plan end to end, every card as the CLI renders it, with the refusals, the halts, and the cases where a manual move fits better.</p>
+
+          <div style="display:flex; gap:16px; margin-top:44px; flex-wrap:wrap;">
+            <div onClick="{{ goAgents }}" style="cursor:pointer; background:#5A32C8; color:#ECEAF4; font-weight:700; font-size:15px; padding:14px 26px; border:3px solid #181231;" class="pb-btn"><span class="pb-btn-label">Next: Working with agents →</span></div>
+          </div>
         </div>
       </sc-if>
 
@@ -252,6 +345,7 @@ plumbbob init" style="background:transparent; color:#8B84A8; font-family:'JetBra
               </tbody>
             </table>
           </div>
+          <p style="font-size:16px; line-height:1.6; color:#2E2A44; margin-top:18px;">The routing holds when nobody is pausing between steps. Inside a run, a typed range, or <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">--auto</span>, a <strong>blocked</strong> or <strong>drift</strong> envelope halts the walk at that step's pause, and the steps after it wait for your next run: an agent can stop a range, never carry one past its trouble.</p>
 
           <h2 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:32px; margin:48px 0 16px;">Bind it to a step</h2>
           <p style="font-size:16px; line-height:1.6; color:#2E2A44;">Drop the agent under <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">.plumbbob/agents/&lt;name&gt;/</span> (or <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">~/.plumbbob/agents/</span> for personal ones), then bind it to a step's lifecycle slot in the build's <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">harness.json</span>: <strong>before</strong> (context in, at build time), <strong>build</strong> (authors the diff in your place, still verified the same way), or <strong>after</strong> (advisory review at the verify pause). <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">/plumbbob:plan</span> authors the bindings at plan time; <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">plumbbob agent list</span> shows what's resolvable. A worked example — a local-model reviewer via Ollama — ships in the repo's <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">docs/local-model-review.md</span>.</p>
@@ -305,10 +399,11 @@ plumbbob init" style="background:transparent; color:#8B84A8; font-family:'JetBra
           <p style="font-size:18px; line-height:1.6; color:#2E2A44; max-width:680px;">A system prompt can <em>ask</em> a model to plan first and stop for review. What it can't do is <strong>hold the line when the model doesn't</strong>. PlumbBob splits that problem across two planes — and is honest about which half is enforceable.</p>
 
           <h2 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:32px; margin:48px 0 16px;">The work plane: guidance, on purpose</h2>
-          <p style="font-size:16px; line-height:1.6; color:#2E2A44;">On the <strong>work</strong> plane the pause is unenforceable, deliberately. A hard lock on every edit buys ritual, not control: a determined model routes around it, and a denial mid-thought leaves no legal move. So PlumbBob guides here rather than fighting — a status dashboard re-injected into every skill keeps the model oriented, and the skills fall into the plan/build/pause rhythm because they were built to. Guidance you fall into, not a lock you fight.</p>
+          <p style="font-size:16px; line-height:1.6; color:#2E2A44;">On the <strong>work</strong> plane the pause is unenforceable, deliberately. A hard lock on every edit buys ritual, not control: a determined model routes around it, and a denial mid-thought leaves no legal move. So PlumbBob guides here rather than fighting — a status dashboard re-injected into every skill keeps the model oriented, and the skills fall into the plan/run/pause rhythm because they were built to. Guidance you fall into, not a lock you fight.</p>
 
           <h2 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:32px; margin:48px 0 16px;">The record plane: the latch</h2>
           <p style="font-size:16px; line-height:1.6; color:#2E2A44;">The <strong>record</strong> is a different plane, and there the tick <em>is</em> latched. <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">checkpoint</span> refuses to land a step until the harness records a human turn since that step began — so the agent cannot self-commit past you. The refusal simply <em>is</em> the pause. It extends the deterministic edges to the one boundary the product is named after, while leaving human what must be human: you, reading the diff.</p>
+          <p style="font-size:16px; line-height:1.6; color:#2E2A44; margin-top:16px;">A run's stop is latched the same way. The checkpoint that lands a run's range owes the stop card, and the turn-end check holds a turn that tries to close without it; <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">plumbbob harvest</span> refuses to record a stop in the turn its card printed, and <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">build</span> refuses to enter a step while a card waits. The review of a range, and the class of every idea parked in it, stay your call.</p>
 
           <h2 style="font-family:'DM Serif Display',serif; font-weight:400; font-size:32px; margin:48px 0 16px;">Measured, not asserted</h2>
           <p style="font-size:16px; line-height:1.6; color:#2E2A44; margin-bottom:24px;">The latch's payoff is a receipt, not a claim. A headless skill-eval harness sweeps the loop — prose-only baseline vs. the shipped latch, N=5 per contract, every assertion a mechanical read of git state — and commits each receipt to the repo.</p>
@@ -325,7 +420,7 @@ plumbbob init" style="background:transparent; color:#8B84A8; font-family:'JetBra
                 <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#8B84A8; margin-top:6px;">SHIPPED LATCH</div>
               </div>
             </div>
-            <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#5C5677; margin-top:22px; line-height:1.6;">opus · first sweep 2026-07-11 · reproduced 2026-07-18 @ plumbbob 0.8.7 · all seven contracts 5/5 latched on 2026-07-27 @ plumbbob 0.9.0 · an eighth contract (legible intent) 7/7 on both arms @ 0.9.4 · park capture 3/5 prose-only against 5/5 latched @ 0.10.0 · latest sweep 2026-09-03 @ 0.10.3. The receipts ride the repo under docs/evals/.</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#5C5677; margin-top:22px; line-height:1.6;">opus · first sweep 2026-07-11 · reproduced 2026-07-18 @ plumbbob 0.8.7 · all seven contracts 5/5 latched on 2026-07-27 @ plumbbob 0.9.0 · an eighth contract (legible intent) 7/7 on both arms @ 0.9.4 · park capture 3/5 prose-only against 5/5 latched @ 0.10.0 · a run held to its stop card 5/5 latched @ 0.13.1 · latest sweep 2026-10-19 @ 0.13.1. The receipts ride the repo under docs/evals/.</div>
           </div>
           <p style="font-size:16px; line-height:1.6; color:#2E2A44; margin-top:24px;">And when a raw commit does slip the ledger, <span style="font-family:'JetBrains Mono',monospace; font-size:14px;">status</span> says so and the checkpoint record makes recovery one command. <strong>Cheap recovery, not a cage, is the control that matters.</strong></p>
 
@@ -367,7 +462,7 @@ class Component extends DCLogic {
     const sec = this.state.section;
     const navDef = [
       { title: 'GET STARTED', items: [['getting-started', 'Getting started']] },
-      { title: 'USING THE LOOP', items: [['loop', 'The loop in depth'], ['agents', 'Working with agents']] },
+      { title: 'USING THE LOOP', items: [['loop', 'The loop in depth'], ['runs', 'Runs & the stop card'], ['agents', 'Working with agents']] },
       { title: 'CONCEPTS', items: [['attention', 'Attention-first'], ['latch', 'The pause & the latch']] },
     ];
     const nav = navDef.map(g => ({
@@ -391,6 +486,23 @@ class Component extends DCLogic {
       ['/plumbbob:finish', 'Write the report, make the final commit, clear for a fresh goal. The build folder rides the branch into the PR.'],
     ].map(([skill, does], i) => ({ skill, does, bg: i % 2 ? '#E1DCF0' : '#ECEAF4' }));
 
+    const stopReplies = [
+      ['looks good', 'Every lean is locked in: a confirmed blocker folds into the plan first, then plumbbob harvest records the parks and the range\'s review in the build log. Back to the boundary.'],
+      ['/plumbbob:run', 'The same record, then the next range\'s run in the same turn. If the record re-cut that range, the turn ends on the record, whose note names the new run to type.'],
+      ['make P1 a blocker', 'Or any other change: the card renders again with it, and nothing is recorded until you approve.'],
+      ['expand 2', 'Or any question: answered from the detail file, the range\'s commits, or the log, closing on one line; show the stop brings the card back.'],
+      ['/plumbbob:finish', 'On the plan\'s last range: the same record, then the report and the final commit.'],
+    ].map(([reply, does], i) => ({ reply, does, bg: i % 2 ? '#E1DCF0' : '#ECEAF4' }));
+
+    const manualRows = [
+      ['Range 1: step 1, a call at its pause', '/plumbbob:run, looks good', '/plumbbob:build 1, looks good', '/plumbbob:build, looks good'],
+      ['Range 2: steps 2 and 3, a review after', '/plumbbob:run', '/plumbbob:build 2-3', '/plumbbob:build, looks good, twice'],
+      ['The parks range 2 piled up', 'make P1 a blocker, then /plumbbob:run', '/plumbbob:harvest, make P1 a blocker, looks good', 'the same three'],
+      ['Range 3: steps 6, 4, and 5, re-cut', '/plumbbob:run', '/plumbbob:build 6,4-5', '/plumbbob:build, looks good, three times'],
+      ['The close', '/plumbbob:finish', '/plumbbob:finish', '/plumbbob:finish'],
+      ['Prompts typed', '7', '8', '16'],
+    ].map(([moment, runs, typed, step], i, all) => ({ moment, runs, typed, step, weight: i === all.length - 1 ? '700' : '500', bg: i % 2 ? '#E1DCF0' : '#ECEAF4' }));
+
     const statuses = [
       ['done', '#8A6BE8', 'Finished.', 'Read the summary; continue the loop.'],
       ['blocked', '#C1922E', 'Couldn\'t finish — missing input or a failed precondition.', 'Read notes, unblock, re-run the agent.'],
@@ -407,13 +519,15 @@ class Component extends DCLogic {
     ].map(([title, body]) => ({ title, body }));
 
     return {
-      nav, happyPath, statuses, principles,
+      nav, happyPath, statuses, principles, stopReplies, manualRows,
       isGettingStarted: sec === 'getting-started',
       isLoop: sec === 'loop',
+      isRuns: sec === 'runs',
       isAgents: sec === 'agents',
       isAttention: sec === 'attention',
       isLatch: sec === 'latch',
       goLoop: () => this.go('loop'),
+      goRuns: () => this.go('runs'),
       goAgents: () => this.go('agents'),
       copy: (e) => this.copy(e),
     };
