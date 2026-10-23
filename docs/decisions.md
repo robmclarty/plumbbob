@@ -1402,8 +1402,8 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   the order settles nothing, and those ranges stay as written and flagged. The verb rewrites only the
   command of each item it re-cuts, its steps in build order (`10,4-6`, and `9-9` for a range left landing
   one step), and its ending names each one, `**Build ranges**: range 2 of 3 re-cut (steps 10,4-6)`, with
-  any range still flagged beneath as an advisory and `/plumbbob:refine ranges` as the move. Rob asked for
-  it on 2026-10-22, *because* a blocker a harvest found at a stop, appended as step 10 and ordered next,
+  any range still flagged beneath as an advisory and `/plumbbob:refine ranges` as the move. Rob's call
+  on 2026-10-22, *because* a blocker a harvest found at a stop, appended as step 10 and ordered next,
   left the ranges as they were and `/plumbbob:run` refusing on `no range names step 10`, while filing the
   step by hand under the last range, where its number suggests, left range 3 flagged and the run refusing
   just the same, both reproduced in a throwaway repo that day; the order is already the plan's statement
