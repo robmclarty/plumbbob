@@ -79,10 +79,10 @@ Revises the **next undone step** just-in-time: the steps were all planned up fro
 this is a sharpening tool, not where steps are born. Fired bare, it re-reads what the
 build has already taught you and syncs the step's done-when and seam to reality; given
 `<what-changed>`, it makes that directed revision (tighten, re-cut, split, or add a step).
-One step at a time, written back into `## Steps` only on your approval. An added step that
-has to land before an existing one is placed by sequence (`plumbbob order`, the
-[build order](#order)), never by renumbering, and goes into a range when the plan carries
-build ranges, with any range the edit breaks re-cut in the same before/after. It can also sharpen
+One step at a time, written back into `## Steps` only on your approval. An added step is
+placed by sequence (`plumbbob order`, the [build order](#order)), never by renumbering, and
+the verb files it into the build range the order puts it in; the skill edits a range itself
+only to give a step a bare range of its own, or to move a stop, in the same before/after. It can also sharpen
 that step's [harness bindings](#the-harness-slots) just-in-time when the agents it wants
 have drifted. Most steps need nothing; skip straight to `/plumbbob:run` (or
 `/plumbbob:build`).
@@ -176,10 +176,11 @@ for a quick OK, then writes it by shelling `plumbbob order`, never by editing `i
 The `## Build order` line it writes is what the dashboard's `← next`, a bare
 `/plumbbob:build`, `checkpoint`'s fallback, and the card's Next Up all follow, and the card
 reminds you of the next five beneath Next Up whenever the sequence departs from the
-numbering. `--reset` drops the line. It edits nothing else, so when the new sequence breaks
-a build range it reads the dashboard after writing and names `/plumbbob:refine` as the move
-that re-cuts it. Step, refine, and harvest shell the same verb when
-they append a step that has to land early, so you rarely need to fire this yourself.
+numbering. `--reset` drops the line. When the plan carries build ranges, the verb re-cuts
+them to follow the sequence, so a run typed next walks what the new order put in its range,
+and its ending names each range it re-cut and any it left for `/plumbbob:refine`
+([D109 (ranges-follow-the-order)](decisions.md#d109)). Step, refine, and harvest shell the
+same verb when they add a step, so you rarely need to fire this yourself.
 
 ### status
 
@@ -199,8 +200,9 @@ one class per item: **blocker** (the plan was wrong; fold into intent and handle
 signal** (the approach is wrong; stop and replan). It proposes every class at once, so one
 reply settles the list: you call each one, changing any lean before you approve. Confirmed
 items are recorded through `plumbbob harvest`, under `## Harvest`, and a confirmed blocker is
-folded into `intent.md`, placed in the [build order](#order) with `plumbbob order` when it
-becomes a step that has to land early, and into a build range when the plan carries them. A
+folded into `intent.md`; when it becomes a step, `plumbbob order` places it in the
+[build order](#order) and files it into the build range still to come that the order puts it
+in. A
 range's stop is the boundary that matters most: no harvest runs between the steps inside a
 range, so the parks pile up, and a run's stop card carries their harvest itself, each park
 under its `P3` handle with a lean ([D105 (park-handles)](decisions.md#d105)). Fire
@@ -247,8 +249,9 @@ Keeps `intent.md` honest, in two modes. **Attack**: a cold, adversarial read of 
 and Decisions that surfaces holes as one-line **Open questions**, never as Decisions,
 because resolving a hole is your call. **Repair**: when the plan has drifted from what the
 code actually does, it proposes the edits that bring it back, before/after, written only
-on your approval, a step it adds going into a build range and a range it breaks re-cut;
-`/plumbbob:refine ranges` re-cuts the whole section on request. Where `/plumbbob:step`
+on your approval, a step it adds placed through `plumbbob order`, which files it into a build
+range, and a range the order cannot settle re-cut by hand; `/plumbbob:refine ranges` re-cuts
+the whole section on request. Where `/plumbbob:step`
 sharpens one step, refine works the whole plan.
 The plan pause's cold read is refine's tip: it surfaces the worst hole and names refine
 for the rest, so the full attack stays optional and arrives when the read says it would

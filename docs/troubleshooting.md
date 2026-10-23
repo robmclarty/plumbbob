@@ -256,11 +256,16 @@ the parenthetical names the rule that held it. **Fix.** By the parenthetical:
 
 **Cause.** The plan outgrew the range: it names a step the plan lacks, two ranges name one
 step, or the build order puts a step from outside it between two of its own. A step no
-range names gets a `⚠` row of its own at the block's end. The CLI reports a drifted range
-and never rewrites it, because only you know where its stop belongs now
-([**D92 (build-ranges)**](decisions.md#d92)). **Fix.** `/plumbbob:refine ranges` re-cuts the
-section by the plan's own rule. A run refuses a flagged range until the row is gone, and
-`/plumbbob:order` names refine as it writes a sequence that breaks one.
+range names gets a `⚠` row of its own at the block's end. `plumbbob order` re-cuts a range
+wherever the build order settles which steps it holds
+([**D109 (ranges-follow-the-order)**](decisions.md#d109)), so a row that stays is one the
+order could not settle: two re-cuts that would move as few steps, a step no range may take,
+a hand edit made after the order was written, or a drift no sequence settles. Only you know
+where its stop belongs then ([**D92 (build-ranges)**](decisions.md#d92)). **Fix.**
+`/plumbbob:refine ranges` re-cuts the section by the plan's own rule; when a hand edit put a
+range out of step with the order, writing the order again with `plumbbob order` re-cuts what
+the order settles. A run refuses a flagged range until the row is gone, and `plumbbob order`
+names each range it left for you beneath its ending.
 
 ## The post-edit hook (light feedback)
 

@@ -31,6 +31,7 @@ import {
   rangeStart,
   readRunArgs,
   recapLines,
+  recutPlan,
   remainingOrder,
   resolveRun,
   resolveRunArgs,
@@ -1762,6 +1763,166 @@ Five commands drive the build. Two stops are calls made at a step's own pause, a
         expect(r.ok && r.range.item).toBe(standing(intent, next).holding?.item)
         expect(r.ok && r.count).toBe(standing(intent, next).count)
       }
+    })
+  })
+
+  describe('recutPlan — D109 (ranges-follow-the-order)', () => {
+    // Three ranges over nine steps: at range 1's stop, a harvest has just added step 10.
+    const THREE = items(
+      '1. `/plumbbob:build 1-3`, **stop:** review the parser',
+      '2. `/plumbbob:build 4-6`, **stop:** review the card',
+      '3. `/plumbbob:build 7-9`, **stop:** the final read',
+    )
+
+    /** Each range's command once the plan is re-cut, by item. */
+    const commands = (intent: string): string[] =>
+      parseBuildRanges(recutPlan(intent).intent).ranges.map((r) => `${r.item} ${r.command.replace('/plumbbob:build ', '')}`)
+
+    /** The run a bare `/plumbbob:run` names, nothing in flight. */
+    const run = (intent: string) => resolveRun({ intent, inFlight: null, spiking: false, item: null })
+
+    it('puts a step no range names, ordered next at a stop, in the range it builds ahead of, so the run starts on it', () => {
+      const intent = plan({ count: 10, done: through(3), order: [10, 4, 5, 6, 7, 8, 9], ranges: THREE })
+      // As written, the run refuses: no range names step 10.
+      expect(run(intent)).toEqual({ ok: false, kind: 'uncovered', step: 10, words: 'no range names step 10' })
+      const { intent: recut, recut: changed } = recutPlan(intent)
+      expect(changed).toEqual([{ item: 2, steps: [10, 4, 5, 6] }])
+      expect(commands(intent)).toEqual(['1 1-3', '2 10,4-6', '3 7-9'])
+      expect(run(recut)).toMatchObject({ ok: true, range: { item: 2 }, steps: '10,4-6', grant: 'steps 4-6,10' })
+      expect(standing(recut, 10).drift).toEqual([])
+    })
+
+    it('moves a step filed under the last range to the range the order builds it with', () => {
+      const filed = THREE.replace('build 7-9', 'build 7-10')
+      const intent = plan({ count: 10, done: through(3), order: [10, 4, 5, 6, 7, 8, 9], ranges: filed })
+      expect(run(intent)).toMatchObject({ ok: false, kind: 'flagged', item: 3, words: 'the build order puts steps 4, 5, 6 inside it' })
+      expect(recutPlan(intent).recut).toEqual([
+        { item: 2, steps: [10, 4, 5, 6] },
+        { item: 3, steps: [7, 8, 9] },
+      ])
+      expect(run(recutPlan(intent).intent)).toMatchObject({ ok: true, range: { item: 2 }, steps: '10,4-6' })
+    })
+
+    it('puts a step among a range’s steps in that range, one between two ranges in the one after, and one after every range in the last', () => {
+      const at = (order: ReadonlyArray<number> | undefined) => commands(plan({ count: 10, done: through(3), order, ranges: THREE }))
+      expect(at([4, 5, 10, 6, 7, 8, 9])).toEqual(['1 1-3', '2 4-5,10,6', '3 7-9'])
+      expect(at([4, 5, 6, 10, 7, 8, 9])).toEqual(['1 1-3', '2 4-6', '3 10,7-9'])
+      // With no line the plan reads in document order, and step 10 builds last.
+      expect(at(undefined)).toEqual(['1 1-3', '2 4-6', '3 7-10'])
+      // Two new steps in a row join one range together.
+      const two = commands(plan({ count: 11, done: through(3), order: [10, 11, 4, 5, 6, 7, 8, 9], ranges: THREE }))
+      expect(two).toEqual(['1 1-3', '2 10-11,4-6', '3 7-9'])
+    })
+
+    it('re-cuts a step the order moves out of its range by the fewest steps moved between ranges', () => {
+      // Step 7 moved between 4 and 5 joins range 2, and step 10 after every range joins range 3.
+      expect(commands(plan({ count: 10, done: through(3), order: [4, 7, 5, 6, 8, 9, 10], ranges: THREE }))).toEqual(['1 1-3', '2 4,7,5-6', '3 8-10'])
+      // Step 6 moved past range 3 joins it, so the review of range 2 still comes before range 3 builds.
+      expect(commands(plan({ count: 9, done: through(3), order: [4, 5, 7, 8, 9, 6], ranges: THREE }))).toEqual(['1 1-3', '2 4-5', '3 7-9,6'])
+      // Moving step 8 into range 2 moves one step; splitting range 2 around it would move two.
+      const halves = items('1. `/plumbbob:build 4-7`, **stop:** review it', '2. `/plumbbob:build 8-11`, **stop:** review it')
+      expect(commands(plan({ count: 11, done: through(3), order: [4, 5, 8, 6, 7, 9, 10, 11], ranges: halves }))).toEqual(['1 4-5,8,6-7', '2 9-11'])
+    })
+
+    it('leaves ranges the order re-sequences whole, or within themselves, as written', () => {
+      for (const order of [[7, 8, 9, 4, 5, 6], [6, 4, 5, 9, 8, 7]]) {
+        const intent = plan({ count: 9, done: through(3), order, ranges: THREE })
+        expect(recutPlan(intent)).toEqual({ intent, recut: [] })
+      }
+    })
+
+    it('leaves a tangle as written when two re-cuts move as few steps, so the dashboard still flags it', () => {
+      // Range 2 holds two steps, and step 6 sits between them: either step 6 joins range 2, or step 5 joins range 3.
+      const pair = items('1. `/plumbbob:build 4-5`, **stop:** review it', '2. `/plumbbob:build 6-10`, **stop:** review it')
+      const intent = plan({ count: 10, done: through(3), order: [4, 6, 5, 7, 8, 9, 10], ranges: pair })
+      expect(recutPlan(intent)).toEqual({ intent, recut: [] })
+      expect(standing(intent, 4).drift.map((d) => d.words)).toEqual([
+        'the build order puts step 6 inside it',
+        'the build order puts step 5 inside it',
+      ])
+      // A step no range names beside the tangle waits for its re-cut too.
+      const beside = plan({ count: 11, done: through(3), order: [4, 6, 5, 11, 7, 8, 9, 10], ranges: pair })
+      expect(recutPlan(beside).recut).toEqual([])
+    })
+
+    it('never gives a landed range a step, or a bare range a second one', () => {
+      const bareNext = items('1. `/plumbbob:build 1-3`, **stop:** review it', "2. `/plumbbob:build 4`, **stop:** at step 4's pause, decide it", '3. `/plumbbob:build 5-7`, **stop:** review it')
+      // Ahead of a bare range, with only a landed range before it, step 8 has nowhere to go.
+      const ahead = plan({ count: 8, done: through(3), order: [8, 4, 5, 6, 7], ranges: bareNext })
+      expect(recutPlan(ahead).recut).toEqual([])
+      expect(run(ahead)).toMatchObject({ ok: false, kind: 'uncovered', step: 8 })
+      // Between a landing range and a bare one, it joins the landing range before it.
+      const bareAfter = items('1. `/plumbbob:build 4-6`, **stop:** review it', "2. `/plumbbob:build 7`, **stop:** at step 7's pause, decide it", '3. `/plumbbob:build 8-9`, **stop:** review it')
+      expect(commands(plan({ count: 10, done: through(3), order: [4, 5, 6, 10, 7, 8, 9], ranges: bareAfter }))).toEqual(['1 4-6,10', '2 7', '3 8-9'])
+      // A bare step the order puts inside a landing range is a call the human places, so both stay as written.
+      const inside = plan({ count: 9, done: through(3), order: [4, 7, 5, 6, 8, 9], ranges: bareAfter })
+      expect(recutPlan(inside).recut).toEqual([])
+      // Once every range has landed, a new step waits for a range of its own.
+      const landed = plan({ count: 10, done: through(9), order: [10], ranges: THREE })
+      expect(recutPlan(landed).recut).toEqual([])
+      expect(standing(landed, 10).drift).toEqual([{ kind: 'uncovered', item: null, words: 'no range names step 10' }])
+    })
+
+    it('keeps a partly landed range’s landed steps in its command, and writes a range landing one step as N-N', () => {
+      const partly = plan({ count: 10, done: through(4), order: [10, 5, 6, 7, 8, 9], ranges: THREE })
+      expect(commands(partly)).toEqual(['1 1-3', '2 4,10,5-6', '3 7-9'])
+      expect(run(recutPlan(partly).intent)).toMatchObject({ ok: true, range: { item: 2 }, steps: '10,5-6' })
+      // Step 9 moved into range 1 leaves range 2 its one step, written to land rather than pause.
+      const pair = items('1. `/plumbbob:build 4-8`, **stop:** review it', '2. `/plumbbob:build 9-10`, **stop:** review it')
+      expect(commands(plan({ count: 10, done: through(3), order: [4, 5, 9, 6, 7, 8, 10], ranges: pair }))).toEqual(['1 4-5,9,6-8', '2 10-10'])
+    })
+
+    it('leaves a re-cut that would move the bulk of a range for the human', () => {
+      // Steps 9 and 10 moved into range 1 are most of range 2, so moving them would re-cut what its stop reviews.
+      const wide = items('1. `/plumbbob:build 4-8`, **stop:** review it', '2. `/plumbbob:build 9-11`, **stop:** review it')
+      const intent = plan({ count: 11, done: through(3), order: [4, 5, 9, 10, 6, 7, 8, 11], ranges: wide })
+      expect(recutPlan(intent)).toEqual({ intent, recut: [] })
+      expect(standing(intent, 4).drift.map((d) => d.words)).toEqual([
+        'the build order puts steps 9, 10 inside it',
+        'the build order puts steps 6, 7, 8 inside it',
+      ])
+    })
+
+    it('re-cuts nothing when an item does not parse, an open range names a step the plan lacks, or two open ranges name one undone step', () => {
+      const order = [10, 4, 5, 6, 7, 8, 9]
+      for (const ranges of [
+        `${THREE}4. \`/plumbbob:build 10\`\n`,
+        THREE.replace('build 7-9', 'build 7-9,14'),
+        THREE.replace('build 4-6', 'build 4-7'),
+      ]) {
+        const intent = plan({ count: 10, done: through(3), order, ranges })
+        expect(recutPlan(intent)).toEqual({ intent, recut: [] })
+      }
+      // A step a landed range shares with an open one has landed, so it settles nothing either way.
+      const shared = plan({ count: 10, done: through(4), order: [10, 5, 6, 7, 8, 9], ranges: THREE.replace('build 1-3', 'build 1-4') })
+      expect(commands(shared)).toEqual(['1 1-4', '2 4,10,5-6', '3 7-9'])
+    })
+
+    it('rewrites the command alone, leaving the stop, the model, the notes, and the paragraph as written, and settles once', () => {
+      // Step 13 joined the plan, and the order builds it between steps 7 and 8.
+      const intent = plan({ count: 13, done: through(5), order: [6, 7, 13, 8, 9, 10, 11, 12], ranges: SECTION })
+      const { intent: recut } = recutPlan(intent)
+      expect(recut).toBe(intent.replace('`/plumbbob:build 6-9`', '`/plumbbob:build 6-7,13,8-9`'))
+      expect(recutPlan(recut)).toEqual({ intent: recut, recut: [] })
+    })
+
+    it('writes nothing when an opener does not hold its command where the re-cut can find it', () => {
+      // The command wraps onto the line beneath its number, so no backticks sit on the opener.
+      const wrapped = THREE.replace('2. `/plumbbob:build 4-6`', '2. \n   `/plumbbob:build 4-6`')
+      expect(parseBuildRanges(plan({ ranges: wrapped })).ranges.map((r) => r.item)).toEqual([1, 2, 3])
+      const intent = plan({ count: 10, done: through(3), order: [10, 4, 5, 6, 7, 8, 9], ranges: wrapped })
+      expect(recutPlan(intent)).toEqual({ intent, recut: [] })
+    })
+
+    it('leaves a tangle too wide to search to the human', () => {
+      // Eight ranges of twenty-five steps, interleaved one by one, would take the search seconds.
+      const count = 200
+      const order = Array.from({ length: count }, (_, i) => (i % 8) * 25 + Math.floor(i / 8) + 1)
+      const ranges = items(...Array.from({ length: 8 }, (_, r) => `${r + 1}. \`/plumbbob:build ${r * 25 + 1}-${r * 25 + 25}\`, **stop:** review it`))
+      const intent = plan({ count, order, ranges })
+      const started = performance.now()
+      expect(recutPlan(intent).recut).toEqual([])
+      expect(performance.now() - started).toBeLessThan(1000)
     })
   })
 

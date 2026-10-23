@@ -534,7 +534,7 @@ export function rangeStanding(plan: BuildRanges, ordered: ReadonlyArray<Step>, s
   return {
     count,
     holding,
-    command: flag === null && left.length > 0 ? `/plumbbob:build ${leftExpression(holding, left)}` : null,
+    command: flag === null && left.length > 0 ? `/plumbbob:build ${leftExpression(holding, left.map((s) => s.n))}` : null,
     flag,
     completed: ordered[at]?.done === true && rangeLanded(holding, ordered) ? holding : null,
     drift,
@@ -626,9 +626,8 @@ function stopCardMove(item: number, count: number, follow: RunRange | 'finish' |
  * step written `9-9` so the command lands it, else the steps in build order
  * with each climbing run folded to a span, a bare range's lone number included.
  */
-function leftExpression(range: BuildRange, left: ReadonlyArray<Step>): string {
-  const ns = left.map((s) => s.n)
-  return !range.bare && ns.length === 1 ? `${ns[0]}-${ns[0]}` : formatStepList(ns)
+function leftExpression(range: BuildRange, left: ReadonlyArray<number>): string {
+  return !range.bare && left.length === 1 ? `${left[0]}-${left[0]}` : formatStepList(left)
 }
 
 /** The words for steps no range names: `no range names step 12`, or `steps 11, 12`. */
@@ -730,6 +729,406 @@ function insideDrift(range: BuildRange, ordered: ReadonlyArray<Step>): RangeDrif
 function stepPhrase(items: ReadonlyArray<string>): { readonly words: string; readonly be: string } {
   const one = items.length === 1 && /^\d+$/.test(items[0] ?? '')
   return { words: `${one ? 'step' : 'steps'} ${items.join(', ')}`, be: one ? 'is' : 'are' }
+}
+
+// --- The re-cut: `plumbbob order` keeps the ranges true to the sequence it
+// writes. The order says when each step builds and a range says where the
+// build stops, so a step the order places or moves falls between the stops the
+// order puts it between, wherever the order settles which range that is. The
+// stops stay the plan's: a re-cut moves steps between them and never adds,
+// drops, or renumbers one. ---
+
+/** A range a re-cut changed: its item, and every step it names once re-cut, in build order. */
+export type Recut = { readonly item: number; readonly steps: ReadonlyArray<number> }
+
+/** The plan with its ranges re-cut to follow its build order, and the ranges the re-cut changed. */
+export type RecutPlan = { readonly intent: string; readonly recut: ReadonlyArray<Recut> }
+
+/**
+ * A stretch of the build order where open ranges interleave: the ranges whose
+ * stretches overlap there, those and the range on either side (which may take
+ * a step from the tangle's edge), and all their steps, in build order.
+ */
+type Tangle = {
+  readonly tangled: ReadonlyArray<BuildRange>
+  readonly ranges: ReadonlyArray<BuildRange>
+  readonly steps: ReadonlyArray<number>
+}
+
+/** A run of one range's steps, unbroken in build order: its range, where it starts, and how many steps it holds. */
+type Stretch = { readonly range: BuildRange; readonly start: number; readonly size: number }
+
+/** One cell of the re-cut's search: the most steps kept so far, how many re-cuts keep that many, and where its block starts. */
+type Cell = {
+  readonly kept: number
+  readonly ways: number // two stands for any tie, which is all the caller asks about
+  readonly from: number
+}
+
+/** A tangle cut in one sequence of its ranges: the steps kept, how many cuts keep as many, and each step's range. */
+type Cut = { readonly kept: number; readonly ways: number; readonly placed: ReadonlyMap<number, BuildRange> }
+
+// The most ways of placing one tangle's ranges the re-cut tries, counted as
+// the product of each range's stretches. A step moved out of a range splits it
+// in two, so one moved step makes two and three make eight, and an order that
+// scatters past this is a re-cut for the human anyway.
+const ORDER_CAP = 64
+
+/**
+ * Re-cut the plan's ranges to follow its build order, and write each command
+ * the re-cut changed into its item.
+ *
+ * The plan comes back as it was, with nothing re-cut, when the order settles
+ * nothing, and when an item's opener does not hold its command where the write
+ * can find it, so a re-cut is written whole or not at all.
+ */
+export function recutPlan(intent: string): RecutPlan {
+  const plan = parseBuildRanges(intent)
+  const recut = recutRanges(plan, parseOrderedSteps(intent))
+  const written = recut.length === 0 ? null : writeRecut(intent, plan.ranges, recut)
+  return written === null ? { intent, recut: [] } : { intent: written, recut }
+}
+
+/**
+ * The ranges re-cut so that each holds one stretch of the build order, with
+ * every undone step in one wherever the order settles which.
+ *
+ * Only an open range moves. A landed range takes no step, since its call was
+ * made; a bare range keeps its one step and takes no other, since it builds
+ * that step to its pause; and every range keeps a step of its own, so no stop
+ * is left with nothing to stop on. Where the order interleaves the steps of two
+ * or more ranges, they are re-cut by the fewest steps moved between them, and
+ * left as written when two re-cuts tie or the one would split a range's longest
+ * stretch. A step no range names then joins one by where the order puts it, the
+ * way a moved step does: the range around it, else the one it builds ahead of,
+ * else the one it builds after. Nothing is re-cut when an item does not parse, an
+ * open range names a step the plan lacks, or two open ranges name one undone
+ * step, since which range holds what is the human's call there.
+ */
+function recutRanges(plan: BuildRanges, ordered: ReadonlyArray<Step>): Recut[] {
+  const open = plan.ranges.filter((r) => !rangeLanded(r, ordered))
+  const owners = ownership(open, ordered)
+  if (owners === null || plan.malformed.length > 0 || open.some((r) => missingDrift(r, ordered).length > 0)) {
+    return []
+  }
+  const undone = ordered.filter((s) => !s.done).map((s) => s.n)
+  const placed = new Map(owners)
+  const unsettled = new Set<BuildRange>()
+  for (const tangle of tangles(undone.filter((n) => owners.has(n)), owners)) {
+    const moved = fewestMoves(tangle, owners)
+    if (moved === null) {
+      tangle.tangled.forEach((r) => unsettled.add(r))
+    }
+    moved?.forEach((range, n) => placed.set(n, range))
+  }
+  placeUnnamed(undone, placed, unsettled)
+  return open.flatMap((range) => {
+    const was = ordered.filter((s) => hasStep(range.steps, s.n)).map((s) => s.n)
+    const now = ordered.filter((s) => (s.done ? hasStep(range.steps, s.n) : placed.get(s.n) === range)).map((s) => s.n)
+    return was.join() === now.join() ? [] : [{ item: range.item, steps: now }]
+  })
+}
+
+/**
+ * Each undone step's open range, or null when two open ranges name one undone
+ * step, which no sequence can settle.
+ */
+function ownership(open: ReadonlyArray<BuildRange>, ordered: ReadonlyArray<Step>): Map<number, BuildRange> | null {
+  const owners = new Map<number, BuildRange>()
+  for (const step of ordered.filter((s) => !s.done)) {
+    const named = open.filter((r) => hasStep(r.steps, step.n))
+    if (named.length > 1) {
+      return null
+    }
+    if (named[0] !== undefined) {
+      owners.set(step.n, named[0])
+    }
+  }
+  return owners
+}
+
+/**
+ * The owned steps' tangles. A range's span runs from its first step in build
+ * order to its last, and ranges whose spans overlap are tangled; a range alone
+ * in its span is already one stretch. Each tangle carries the range on either
+ * side of it as well, since a step at the tangle's edge may join one, and two
+ * tangles that share such a range are one.
+ */
+function tangles(owned: ReadonlyArray<number>, owners: ReadonlyMap<number, BuildRange>): Tangle[] {
+  const cores = spanGroups(owned, owners)
+  const bounds: Array<{ lo: number; hi: number }> = []
+  cores.forEach((core, i) => {
+    const last = bounds.at(-1)
+    if (core.ranges.length < 2) {
+      return
+    }
+    if (last !== undefined && i - 1 <= last.hi) {
+      last.hi = Math.min(i + 1, cores.length - 1)
+    } else {
+      bounds.push({ lo: Math.max(i - 1, 0), hi: Math.min(i + 1, cores.length - 1) })
+    }
+  })
+  return bounds.map(({ lo, hi }) => {
+    const run = cores.slice(lo, hi + 1)
+    return {
+      tangled: run.flatMap((c) => (c.ranges.length > 1 ? c.ranges : [])),
+      ranges: run.flatMap((c) => c.ranges),
+      steps: owned.slice(run[0]?.first ?? 0, (run.at(-1)?.last ?? -1) + 1),
+    }
+  })
+}
+
+/**
+ * The owned steps grouped by span, in build order: ranges whose spans overlap
+ * share a group, and each group carries where its first step and its last sit.
+ */
+function spanGroups(
+  owned: ReadonlyArray<number>,
+  owners: ReadonlyMap<number, BuildRange>,
+): Array<{ readonly ranges: ReadonlyArray<BuildRange>; readonly first: number; readonly last: number }> {
+  const spans = new Map<BuildRange, { readonly first: number; readonly last: number }>()
+  owned.forEach((n, i) => {
+    const range = owners.get(n)
+    if (range !== undefined) {
+      spans.set(range, { first: spans.get(range)?.first ?? i, last: i })
+    }
+  })
+  const groups: Array<{ ranges: BuildRange[]; first: number; last: number }> = []
+  for (const [range, span] of [...spans].sort((a, b) => a[1].first - b[1].first)) {
+    const group = groups.at(-1)
+    if (group !== undefined && span.first < group.last) {
+      group.ranges.push(range)
+      group.last = Math.max(group.last, span.last)
+    } else {
+      groups.push({ ranges: [range], first: span.first, last: span.last })
+    }
+  }
+  return groups
+}
+
+/**
+ * The tangle re-cut by the fewest steps moved between its ranges, as each
+ * step's range once re-cut; null when no cut keeps every range to its rules,
+ * when two cuts move as few, since the order settles neither, when the one
+ * cut splits a range's longest stretch, since that moves the range's body
+ * rather than a step, or when too many sequences of its ranges are in play.
+ *
+ * The ranges may run in any sequence their stretches allow, and each sequence
+ * is cut the way that keeps the most steps where they were.
+ */
+function fewestMoves(tangle: Tangle, owners: ReadonlyMap<number, BuildRange>): Map<number, BuildRange> | null {
+  const stretches = stretchesOf(tangle.steps, owners)
+  const cuts = (rangeOrders(tangle.ranges, stretches) ?? []).flatMap((order) => cutInOrder(order, tangle.steps, owners) ?? [])
+  const most = Math.max(...cuts.map((c) => c.kept))
+  const best = cuts.filter((c) => c.kept === most)
+  const [only] = best
+  if (only === undefined || best.length > 1 || only.ways > 1 || !keepsBodies(tangle, stretches, only.placed)) {
+    return null
+  }
+  return new Map(only.placed)
+}
+
+/**
+ * Whether a cut keeps each range's body: one of its longest stretches, whole,
+ * so a re-cut moves the steps the order moved and never the bulk of a range.
+ */
+function keepsBodies(tangle: Tangle, stretches: ReadonlyArray<Stretch>, placed: ReadonlyMap<number, BuildRange>): boolean {
+  return tangle.ranges.every((range) => {
+    const own = stretches.filter((s) => s.range === range)
+    const longest = Math.max(...own.map((s) => s.size))
+    return own.some((s) => s.size === longest && tangle.steps.slice(s.start, s.start + s.size).every((n) => placed.get(n) === range))
+  })
+}
+
+/**
+ * The sequences a tangle's ranges may run in: each range placed where one of
+ * its stretches sits, so every sequence a cut could take, each once; null when
+ * the stretches would make more than `ORDER_CAP` choices.
+ */
+function rangeOrders(ranges: ReadonlyArray<BuildRange>, stretches: ReadonlyArray<Stretch>): BuildRange[][] | null {
+  const anchors = ranges.map((range) => stretches.filter((s) => s.range === range))
+  if (anchors.reduce((n, a) => n * a.length, 1) > ORDER_CAP) {
+    return null
+  }
+  const choices = anchors.reduce<Stretch[][]>((sets, options) => sets.flatMap((set) => options.map((o) => [...set, o])), [[]])
+  const orders = new Map<string, BuildRange[]>()
+  for (const choice of choices) {
+    const order = [...choice].sort((a, b) => a.start - b.start).map((s) => s.range)
+    orders.set(order.map((r) => r.item).join(), order)
+  }
+  return [...orders.values()]
+}
+
+/** A tangle's steps as stretches, each an unbroken run of one range's steps. */
+function stretchesOf(steps: ReadonlyArray<number>, owners: ReadonlyMap<number, BuildRange>): Stretch[] {
+  const runs: Array<{ range: BuildRange; start: number; size: number }> = []
+  steps.forEach((n, i) => {
+    const range = owners.get(n)
+    const last = runs.at(-1)
+    if (range !== undefined && last?.range === range && last.start + last.size === i) {
+      last.size += 1
+    } else if (range !== undefined) {
+      runs.push({ range, start: i, size: 1 })
+    }
+  })
+  return runs
+}
+
+/**
+ * A tangle cut in one sequence of its ranges, keeping the most steps in the
+ * range that named them; null when no cut keeps every range to its rules.
+ *
+ * Each range takes one block of the tangle's steps, in the sequence given, and
+ * each block holds a step of its own; a bare range's block is its one step. A
+ * block ends on a step of its own unless a bare range follows it, so a step
+ * moved between two ranges joins the one it builds ahead of, or the one before
+ * when the one ahead is bare, the rule a step no range names joins by. The
+ * search keeps, for each range in turn and each step its block may end at, the
+ * most steps kept, so it costs the ranges times the steps squared.
+ */
+function cutInOrder(order: ReadonlyArray<BuildRange>, steps: ReadonlyArray<number>, owners: ReadonlyMap<number, BuildRange>): Cut | null {
+  const rows: Array<Array<Cell | undefined>> = [[{ kept: 0, ways: 1, from: -1 }]]
+  order.forEach((range, j) => {
+    const counts = runningCount(steps, owners, range)
+    const row: Array<Cell | undefined> = []
+    rows[j]?.forEach((cell, from) => {
+      const prior = order[j - 1]
+      if (cell === undefined || (prior !== undefined && !range.bare && owners.get(steps[from - 1] ?? 0) !== prior)) {
+        return
+      }
+      for (const block of rangeBlocks(range, counts, from)) {
+        keep(row, block.to, cell, block.kept, from)
+      }
+    })
+    rows.push(row)
+  })
+  const end = rows[order.length]?.[steps.length]
+  return end === undefined ? null : { kept: end.kept, ways: end.ways, placed: walkBack(rows, order, steps) }
+}
+
+/** How many of a range's own steps sit among a tangle's first `i` steps, for every `i` from none to all. */
+function runningCount(steps: ReadonlyArray<number>, owners: ReadonlyMap<number, BuildRange>, range: BuildRange): number[] {
+  const counts = [0]
+  for (const n of steps) {
+    counts.push((counts.at(-1) ?? 0) + (owners.get(n) === range ? 1 : 0))
+  }
+  return counts
+}
+
+/**
+ * The blocks a range can take from a tangle's step `from`: where each ends,
+ * and how many of the range's own steps it keeps. Each keeps one at least, and
+ * a bare range's block is its one step.
+ */
+function rangeBlocks(
+  range: BuildRange,
+  counts: ReadonlyArray<number>,
+  from: number,
+): Array<{ readonly to: number; readonly kept: number }> {
+  const last = Math.min(range.bare ? from + 1 : Infinity, counts.length - 1)
+  const blocks: Array<{ readonly to: number; readonly kept: number }> = []
+  for (let to = from + 1; to <= last; to += 1) {
+    const kept = (counts[to] ?? 0) - (counts[from] ?? 0)
+    if (kept > 0) {
+      blocks.push({ to, kept })
+    }
+  }
+  return blocks
+}
+
+/**
+ * Record a block in the re-cut's search, in place: the cell where it ends keeps
+ * the most steps any way there does, and a second way to as many is a tie.
+ */
+function keep(row: Array<Cell | undefined>, to: number, prior: Cell, kept: number, from: number): void {
+  const total = prior.kept + kept
+  const at = row[to]
+  if (at === undefined || total > at.kept) {
+    row[to] = { kept: total, ways: prior.ways, from }
+  } else if (total === at.kept) {
+    row[to] = { ...at, ways: Math.min(2, at.ways + prior.ways) }
+  }
+}
+
+/** Each step's range along the cut the search kept, read back from the last range's block. */
+function walkBack(
+  rows: ReadonlyArray<ReadonlyArray<Cell | undefined>>,
+  order: ReadonlyArray<BuildRange>,
+  steps: ReadonlyArray<number>,
+): Map<number, BuildRange> {
+  const placed = new Map<number, BuildRange>()
+  let to = steps.length
+  order.forEach((_, i) => {
+    const j = order.length - i
+    const from = rows[j]?.[to]?.from ?? 0
+    const range = order[j - 1]
+    if (range !== undefined) {
+      steps.slice(from, to).forEach((n) => placed.set(n, range))
+    }
+    to = from
+  })
+  return placed
+}
+
+/**
+ * Give each run of steps no range names the range the order puts it in, in
+ * place in `placed`, read from the ranges on either side of the run. A run no
+ * range can take stays in none, and the dashboard flags it as before.
+ */
+function placeUnnamed(undone: ReadonlyArray<number>, placed: Map<number, BuildRange>, unsettled: ReadonlySet<BuildRange>): void {
+  const named = undone.map((n) => placed.get(n))
+  let start = 0
+  while (start < undone.length) {
+    let end = start
+    while (end < undone.length && named[end] === undefined) {
+      end += 1
+    }
+    const range = end === start ? null : joinRange(named.slice(0, start).findLast((r) => r !== undefined), named[end], unsettled)
+    if (range !== null) {
+      undone.slice(start, end).forEach((n) => placed.set(n, range))
+    }
+    start = Math.max(end, start + 1)
+  }
+}
+
+/**
+ * The range a run of steps no range names joins, from the ranges on either
+ * side of it in build order: the range around it, else the one it builds ahead
+ * of, else the one it builds after. A bare range takes no other step, and a
+ * range the order left tangled takes none either, since where its stretch runs
+ * is still the human's call.
+ */
+function joinRange(before: BuildRange | undefined, after: BuildRange | undefined, unsettled: ReadonlySet<BuildRange>): BuildRange | null {
+  if ((before !== undefined && unsettled.has(before)) || (after !== undefined && unsettled.has(after))) {
+    return null
+  }
+  if (before !== undefined && before === after) {
+    return before
+  }
+  return [after, before].find((r) => r !== undefined && !r.bare) ?? null
+}
+
+/**
+ * Write each re-cut range's command into its item's opener: its steps in build
+ * order, a landing range down to one step written `9-9` so it still lands. The
+ * stop, the model, and every other line of the item stay as written. Null when
+ * an opener does not hold its command in its first backticks, so the caller
+ * writes nothing rather than half a re-cut.
+ */
+function writeRecut(intent: string, ranges: ReadonlyArray<BuildRange>, recut: ReadonlyArray<Recut>): string | null {
+  const lines = intent.split('\n')
+  for (const cut of recut) {
+    const range = ranges.find((r) => r.item === cut.item)
+    const at = (range?.line ?? 0) - 1
+    const opener = lines[at] ?? ''
+    const quoted = /`([^`]*)`/.exec(opener)
+    if (range === undefined || quoted === null || (quoted[1] ?? '').trim() !== range.command) {
+      return null
+    }
+    const command = `\`/plumbbob:build ${leftExpression(range, cut.steps)}\``
+    lines[at] = `${opener.slice(0, quoted.index)}${command}${opener.slice(quoted.index + quoted[0].length)}`
+  }
+  return lines.join('\n')
 }
 
 // --- The run: what `/plumbbob:run` names. The turn hook reads it to mint the

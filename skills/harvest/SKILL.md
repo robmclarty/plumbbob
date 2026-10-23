@@ -77,18 +77,23 @@ the call on each one theirs. The detail file you write first is the proposal; re
 - A confirmed **blocker** also folds its decision into `intent.md`, slugged at birth
   like any Decision, anchored the same way
   (`- <a id="d5"></a>**D5 (retry-cap)**: <the call>, *because* <why>`), never a bare `D5`.
-  A blocker that becomes a new step takes the next free number under `## Steps` and,
-  when it has to land before an existing undone step, its place in the sequence through
-  `plumbbob order 7 8 5` (the `## Build order` line), never by renumbering. When the plan
-  carries `## Build ranges`, the new step goes into a range too: a range still to come
-  (the one it builds with), or a bare range of its own when it brings a call the human
-  has to make before it lands, and never a range that has landed, since that range's call
-  was made and the step would reopen it. A new range takes the next free item number, and
-  no item is renumbered, because the stop card's stamp, the detail file's header, and
-  `plumbbob harvest` find a landed range by its number. A range the step breaks is re-cut
-  in the same confirmed edit
-  ([D92 (build-ranges)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d92));
-  `plumbbob status` afterward carries a `⚠` row for any range still broken.
+  A blocker that becomes a new step takes the next free number under `## Steps` and its
+  place in the sequence through `plumbbob order 7 8 5` (the `## Build order` line, every
+  undone step in the sequence to build them), never by renumbering, even when it builds
+  last. When the plan carries `## Build ranges`, the verb files the new step for you: it
+  re-cuts the ranges to follow the sequence it writes, so the step joins the range still
+  to come that the order puts it in, the one it builds ahead of when it lands first, and
+  never a range that has landed, since that range's call was made and the step would
+  reopen it
+  ([D109 (ranges-follow-the-order)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d109)).
+  Give the step a bare range of its own instead, written before you run the verb, when it
+  brings a call the human has to make before it lands. A new range takes the next free item
+  number, and no item is renumbered, because the stop card's stamp, the detail file's
+  header, and `plumbbob harvest` find a landed range by its number
+  ([D92 (build-ranges)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d92)).
+  The verb's ending names each range it re-cut, and an advisory names any it left for
+  you; re-cut that one in the same confirmed edit, and `plumbbob status` afterward carries
+  a `⚠` row for any range still broken.
 - Fold a confirmed blocker into `intent.md` before you run `plumbbob harvest`, so the
   record and the plan agree when it lands.
 - Never reclassify or resolve an item the human hasn't confirmed, and default every

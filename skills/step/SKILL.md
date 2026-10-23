@@ -48,29 +48,33 @@ grew, but its everyday job is to sharpen, not to invent.
    `**Scope:**` header; drop the scope and it falls back to that default → build slug →
    bare, and the type to `feat` ([D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68)). Aim for a soft
    ≤72 chars, no gate. Revise the existing step in place; only append when you are
-   genuinely adding an increment. An appended step keeps the next free number for life;
-   when it has to land before an existing undone step, place it by sequence, never by
-   renumbering: shell `plumbbob order 7 8 5` with every undone step in the sequence to
-   build them, and the `## Build order` line it writes is what `status`, a bare
+   genuinely adding an increment. An appended step keeps the next free number for life,
+   and it takes its place by sequence, never by renumbering: shell `plumbbob order 7 8 5`
+   with every undone step in the sequence to build them, the new step included even when
+   it builds last, and the `## Build order` line it writes is what `status`, a bare
    `/plumbbob:build`, and the card's Next Up then follow.
 
-   **Keep the build ranges true.** When the plan carries `## Build ranges`, a step you add
-   goes into a range: the one it builds with (`/plumbbob:build 6-9` becomes `6-10`, or
-   `6-9,14` for a step numbered past the next range), or a bare range of its own when it
-   brings a call the human has to make before it lands
+   **Keep the build ranges true.** When the plan carries `## Build ranges`,
+   `plumbbob order` files the step for you: it re-cuts the ranges to follow the sequence it
+   writes, so a step joins the range whose steps sit on both sides of it, else the range it
+   builds ahead of, else the one it builds after
+   ([D109 (ranges-follow-the-order)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d109)):
+   never a bare range, and never a range that has landed, since that range's call was made
+   and the step would reopen it. Edit `## Build ranges` yourself only where the order
+   cannot say what you mean, and before you run the verb. A step that brings a call the
+   human has to make before it lands gets a bare range of its own
    ([D92 (build-ranges)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d92)).
-   Either way it is a range still to come, never a range that has landed, since that
-   range's call was made and the step would reopen it. A new range takes the next free
-   item number, and no item is renumbered, because the stop card's stamp, the detail
-   file's header, and `plumbbob harvest` find a landed range by its number.
-   A step the build order places between two of a range's steps belongs to that range. A
-   split or re-cut that moves where a call falls moves the stop with it, so re-cut any
-   range the edit breaks, and show the range edit in the same before/after, since it
-   changes where the human will be asked. The edit lands on the item's command, the
-   range's definition, not on the command the card names: the card names `/plumbbob:run`
-   for the range, and the turn hook mints a run's grant from the plan as the human types
-   the run, so the next run lands the range as you re-cut it, while a run already typed
-   keeps the grant it minted
+   A new range takes the next free item number, and no item is renumbered, because the
+   stop card's stamp, the detail file's header, and `plumbbob harvest` find a landed range
+   by its number. A split or re-cut that moves where a call falls moves the stop with it. Show
+   any range edit in the same before/after, since it changes where the human will be
+   asked. The verb's ending names each range it re-cut
+   (`**Build ranges**: range 3 of 5 re-cut (steps 14,6-9)`), and an advisory beneath it
+   names any range the order left for you: re-cut that one by hand, in the same approved
+   edit. The edit lands on the item's command, the range's definition, not on the command
+   the card names: the card names `/plumbbob:run` for the range, and the turn hook mints a
+   run's grant from the plan as the human types the run, so the next run lands the range
+   as re-cut, while a run already typed keeps the grant it minted
    ([D96 (plan-names-the-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d96)).
    Then read `plumbbob status`: its ranges block carries a `⚠` row for any range still
    broken, and none once every undone step sits in exactly one range.
@@ -88,9 +92,10 @@ grew, but its everyday job is to sharpen, not to invent.
 - **One verifiable increment.** Each step carries a done-when `/plumbbob:verify` can check
   and a seam small enough to review in one pass.
 - **Edit `## Steps` only**, in the standard format `status` and `build` parse, plus the
-  `## Build ranges` items a step edit moves: never the Roadmap, never loose prose. A done
-  step (`[x]`) is history; do not rewrite it. The `## Build order` line is
-  `plumbbob order`'s to write, never yours to edit.
+  `## Build ranges` items the order cannot settle (a bare range of its own, a stop that
+  moves): never the Roadmap, never loose prose. A done step (`[x]`) is history; do not
+  rewrite it. The `## Build order` line is `plumbbob order`'s to write, never yours to
+  edit, and so is a range the order re-cuts.
 - **Cite the plan's own numbers in the linked form.** A `D`/`C`/`Q` you write into a
   step's done-when, seam, or notes reads `[D4 (default-waves)](#d4)`; the slug travels
   with the number, and the link lands on the `<a id="d4">` anchor minted where the item

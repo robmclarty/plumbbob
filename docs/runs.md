@@ -25,7 +25,7 @@ in the chat:
 
 | Section | File | What the run takes from it | Who writes it |
 | --- | --- | --- | --- |
-| `## Build ranges` | `intent.md` | the steps it may land, and where it stops | `/plumbbob:plan`, kept true by step, refine, and harvest |
+| `## Build ranges` | `intent.md` | the steps it may land, and where it stops | `/plumbbob:plan`, kept true by step, refine, harvest, and `plumbbob order` |
 | `## Build order` | `intent.md` | the sequence it walks those steps in | `/plumbbob:order`, or a skill that adds a step to land early |
 | `## Park list` | `build-log.md` | the ideas the stop card proposes a class for | `/plumbbob:park`, or the model mid-step |
 
@@ -276,12 +276,16 @@ into the plan by the harvest skill's rules. The call becomes a Decision, slugged
 (`D3 (generate-missing-id)` in the example's own numbering). The work becomes step 6, the
 next free number, since a step keeps its number for life. Step 6 goes into a range still to
 come, never into range 2: that range has landed, its call is the one this card is making,
-and a step added to it would reopen it. So range 3's command widens to `/plumbbob:build 4-6`,
-and because the docs in step 5 must describe a generated id, the build order puts step 6
-first:
+and a step added to it would reopen it. The docs in step 5 must describe a generated id, so
+the model places step 6 first with `plumbbob order 6 4 5`, and the verb files the step in
+the range the new order puts it in
+([D109 (ranges-follow-the-order)](decisions.md#d109)). Step 6 now builds ahead of range 3's
+steps, so range 3's command becomes `/plumbbob:build 6,4-5`, written in the order it builds:
 
 ```text
 **Build order**: 6, 4, 5
+
+**Build ranges**: range 3 of 3 re-cut (steps 6,4-5)
 
 **Next Up**: Step 6 of 6 - feat(http): generate a request id when the client sends none (model: **Sonnet**, details: [intent.md:40](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L40))
 ```
@@ -325,10 +329,11 @@ run  range 3 of 3 · steps 6,4-5 · ends at step 5's boundary
 ```
 
 A range names plan numbers, and the build order says when each one builds. The plan writes
-range 3 as `4-6` and the grant holds the same set, but the walk starts at the range's first
-undone step in build order and takes the next one after each landing, so `plumbbob build`
-enters step 6, then 4, then 5 ([D91 (step-list-grants)](decisions.md#d91)). The header's
-bracket, `steps 6,4-5`, is that walk written down. When step 5 lands, the run ends on
+range 3 as `6,4-5` and the grant holds the same set in its normal form, `steps 4-6`; the
+walk starts at the range's first undone step in build order and takes the next one after
+each landing, so `plumbbob build` enters step 6, then 4, then 5
+([D91 (step-list-grants)](decisions.md#d91)). The header's bracket, `steps 6,4-5`, is that
+walk written down. When step 5 lands, the run ends on
 range 3's stop card. On the plan's last range the card's second move is the finish:
 
 ```text
@@ -424,8 +429,9 @@ has a case it fits better:
 - **Parks outside a stop** (between steps `/plumbbob:build` landed, or after a typed range)
   are triaged with `/plumbbob:harvest`. It refuses while a stop card waits, since the card
   carries its own harvest.
-- **A new sequence** is set with `/plumbbob:order`, which shells `plumbbob order` and edits
-  nothing else. The skills that add a step to land early run the same verb for you.
+- **A new sequence** is set with `/plumbbob:order`, which shells `plumbbob order`. The verb
+  re-cuts the ranges to follow it, so the next run walks what the new order put in its
+  range. The skills that add a step run the same verb for you.
 - **`/plumbbob:build --auto`** chains to the end of the plan, halting at each bare range's
   pause, since that is a call the plan reserved ([D94 (auto-and-stops)](decisions.md#d94)). It
   ends on boundaries rather than stop cards.
@@ -437,14 +443,29 @@ where the build stops; the build order says the sequence they build in, once it 
 their numbering ([D86 (build-order)](decisions.md#d86)). A step keeps its number for life,
 so a step added late is placed by the order line and never by renumbering.
 
+**The order moves the steps; the plan keeps the stops.** `plumbbob order` re-cuts the ranges
+to follow every sequence it writes
+([D109 (ranges-follow-the-order)](decisions.md#d109)). A step no range names joins the
+range whose steps sit on both sides of it, else the one it builds ahead of, else the one it
+builds after, so a blocker ordered next joins the range the next run walks, as step 6 did,
+and a step ordered after every range joins the last. A step the order moves out of its range
+is placed by the same rule, and where the order tangles two ranges, the re-cut moves the
+fewest steps between them. A landed range takes no step, a bare range keeps its one step and
+takes no other, and every range keeps its longest stretch, so a re-cut moves steps and never
+the bulk of a range. Only the command changes: the stop, the model, and the item's number
+stay as you wrote them, and the verb's ending names each range it re-cut.
+
 A run walks its range in build order however the plan writes it, as range 3 did, and every
 surface that names the run writes what is left in that order: the card's bracket, the run
 header, and the dashboard's pointer all read `steps 6,4-5`. A list range in the plan, such as
 `/plumbbob:build 20,5-9`, works the same way.
 
-A range the plan has outgrown is reported, never rewritten by the CLI, because only you know
-where its stop belongs now. Four drifts flag one, each in the same words on the card and the
-dashboard:
+What the order cannot settle stays yours, because only you know where a stop belongs then.
+When two re-cuts would move as few steps, or a step sits where no range may take it (ahead
+of a bare range, with nothing open before it), the ranges stay as written, and the verb names
+each one beneath its ending with `/plumbbob:refine ranges` as the move. Four drifts flag a
+range, each in the same words on the card and the dashboard, and the first two are ones no
+sequence can settle, so the order leaves the ranges alone while either stands:
 
 | The drift | Its words |
 | --- | --- |
@@ -454,9 +475,8 @@ dashboard:
 | an undone step sits in no range | `no range names step 12` |
 
 A flagged range gets a `⚠` row on the dashboard, the card names no run for it, and a run
-typed at it refuses with `/plumbbob:refine ranges` as the move. `/plumbbob:order` edits
-nothing but the order line, so when a new sequence breaks a range it says so in one line and
-names refine. Two rules keep the flags honest as a range lands. A landed step the order line
+typed at it refuses with `/plumbbob:refine ranges` as the move. Two rules keep the flags
+honest as a range lands. A landed step the order line
 leaves out counts as built ahead of the line, since `plumbbob order` lists undone steps
 alone, so re-ordering what is left of a partly landed range moves nothing that landed. And a
 range's span ends at its last undone step, since a step placed after all of them cuts nothing

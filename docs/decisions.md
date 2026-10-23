@@ -1059,7 +1059,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   it; a new range takes the next free item number and no item is renumbered, since the STOP stamp, the
   detail file's header, and the record find a landed range by its number. `plumbbob harvest` refuses a
   range holding an undone step the ledger never landed, `step 13 joined it after it landed`, apart from
-  a step landed and reopened, and its remedy is the move and a rerun in the same reply.) Promoted from the
+  a step landed and reopened, and its remedy is the move and a rerun in the same reply.) (Revised
+  2026-10-22 by [**D109 (ranges-follow-the-order)**](#d109): `plumbbob order` files a step it places in
+  the range the order puts it in, and re-cuts a range the order moves a step out of, wherever the order
+  settles which; the stops stay the plan's.) Promoted from the
   2026-10-17 build-ranges build, merging its locals `plan-holds-ranges`, `range-grammar`,
   `form-says-where`, `advice-not-grant`, `one-grammar`, `state-is-derived`, `plan-places-stops`,
   `model-declared`, and `scaffold-range`. *Tagged in* `docs/presentation.md`.
@@ -1092,7 +1095,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   `recover` names one that points at a step the plan lacks (as it does for the build order), and the card
   says the range needs a re-cut, and why, in place of a command, *because* only the human knows where the
   stop belongs now, and a suggested command that halts early is the failure ranges exist to remove. The
-  exact strings are `docs/presentation.md`'s. Promoted from the 2026-10-17 build-ranges build, merging
+  exact strings are `docs/presentation.md`'s. (Revised 2026-10-22 by
+  [**D109 (ranges-follow-the-order)**](#d109): the two drifts a sequence can settle, a step no range names
+  and a step the build order puts inside a range, are re-cut by `plumbbob order` wherever the order
+  settles them, and reported as before where it does not.) Promoted from the 2026-10-17 build-ranges build, merging
   its locals `informative-only`, `drift-reported`, `card-shape`, and `range-model`. Amends
   [**D83 (card-teaches-itself)**](#d83) (a labeled part on one boundary) and
   [**D86 (build-order)**](#d86) (the note's first segment). *Tagged in* `docs/presentation.md`.
@@ -1383,6 +1389,29 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   finds one in a line of three. Rob's call at range 4's stop (2026-10-18). Revises the phrase
   [**D86 (build-order)**](#d86) gave the line. Promoted from the 2026-10-17 runs-and-the-stop-card build,
   merging its local `order-label`. *Tagged in* `docs/presentation.md`.
+
+- <a id="d109"></a>**D109 (ranges-follow-the-order): `plumbbob order` re-cuts the build ranges to follow the
+  order it writes, wherever the order settles which range a step is in.** A step no range names joins the
+  range whose steps sit on both sides of it, else the range it builds ahead of, else the one it builds
+  after; a step the order moves out of its range is placed the same way; and where the order tangles two
+  ranges, the re-cut moves the fewest steps between them. A landed range takes no step, since its call was
+  made ([**D92 (build-ranges)**](#d92)); a bare range keeps its one step and takes no other, since it builds
+  that step to its pause; and every range keeps its longest stretch, so a re-cut moves steps and never the
+  bulk of a range. Where two re-cuts would move as few steps, a step sits where no range may take it, an
+  item does not parse, an open range names a step the plan lacks, or two open ranges name one undone step,
+  the order settles nothing, and those ranges stay as written and flagged. The verb rewrites only the
+  command of each item it re-cuts, its steps in build order (`10,4-6`, and `9-9` for a range left landing
+  one step), and its ending names each one, `**Build ranges**: range 2 of 3 re-cut (steps 10,4-6)`, with
+  any range still flagged beneath as an advisory and `/plumbbob:refine ranges` as the move. Rob asked for
+  it on 2026-10-22, *because* a blocker a harvest found at a stop, appended as step 10 and ordered next,
+  left the ranges as they were and `/plumbbob:run` refusing on `no range names step 10`, while filing the
+  step by hand under the last range, where its number suggests, left range 3 flagged and the run refusing
+  just the same, both reproduced in a throwaway repo that day; the order is already the plan's statement
+  of what builds when, and a range's command was a second copy of it, kept by hand. The plan still places
+  every stop: a re-cut moves which steps fall between the stops and never adds, drops, or renumbers one.
+  Revises [**D93 (range-on-the-card)**](#d93), whose drift the CLI now re-cuts wherever the order settles
+  it. *Tagged in* `orient.ts`, `order.ts`, the `order`, `step`, `refine`, and `harvest` skills,
+  `docs/presentation.md`, `docs/runs.md`, and `docs/cli-reference.md`.
 
 ### Superseded
 

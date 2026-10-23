@@ -46,7 +46,8 @@ word up without reading the others first. Each entry points at the page that own
 - **Build ranges** (`## Build ranges` in `intent.md`): where the build stops for a human
   call, one item per range: the command that defines it (`/plumbbob:build 2-5`), then
   `**stop:**` and the call that ends it, with an optional model. `/plumbbob:plan` writes
-  them with the steps, and step, refine, and harvest keep them true as the plan changes. A
+  them with the steps, `plumbbob order` re-cuts them to follow the build order, and step,
+  refine, and harvest keep them true as the plan changes. A
   bare `N` stops at that step's pause; a span lands every step it names and stops at the
   boundary after the last, where the card's **Stop** line says why. A range grants nothing
   until you type the run that names it.

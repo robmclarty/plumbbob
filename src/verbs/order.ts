@@ -7,16 +7,30 @@
 // `checkpoint`, `handoff`), so the dashboard's `← next`, a bare
 // `plumbbob build`, and the card's Next Up agree. The verb validates what a
 // hand edit cannot: every number names an undone step, none twice. `--reset`
-// drops the line, and the plan reads in document order again. It runs in any
-// state, since re-sequencing what comes after the step in flight is the
-// mid-step use, and the sidecar sits outside every seam.
+// drops the line, and the plan reads in document order again. Either way the
+// build ranges are re-cut to follow the order written, wherever the order
+// settles which range a step is in, so a step placed next runs in the range
+// it now builds with. It runs in any state, since re-sequencing what comes
+// after the step in flight is the mid-step use, and the sidecar sits outside
+// every seam.
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { activeBuild, hasSession, intentPath } from '../lib/sidecar.ts'
-import { clearBuildOrder, orderSteps, parseSteps, setBuildOrder } from '../lib/orient.ts'
-import { expandStepList, parseStepList } from '../lib/steplist.ts'
-import { ending, notice, printEnding, transition } from '../lib/notice.ts'
+import {
+  clearBuildOrder,
+  orderSteps,
+  parseBuildRanges,
+  parseOrderedSteps,
+  parseSteps,
+  rangeStanding,
+  recutPlan,
+  setBuildOrder,
+  type RangeStanding,
+  type Recut,
+} from '../lib/orient.ts'
+import { expandStepList, formatStepList, parseStepList } from '../lib/steplist.ts'
+import { advisory, blocks, ending, notice, printEnding, transition } from '../lib/notice.ts'
 import { driverPointer } from './handoff.ts'
 
 /**
@@ -41,15 +55,7 @@ export function order(cwd: string, args: ReadonlyArray<string>): number {
   const intent = readFileSync(path, 'utf8')
 
   if (args.includes('--reset')) {
-    writeFileSync(path, clearBuildOrder(intent))
-    printEnding(root, {
-      tier: 'driver',
-      render: 'order',
-      text: ending({
-        lead: transition({ label: 'Build order', fact: 'document order' }),
-        pointer: driverPointer(root, activeBuild(root)),
-      }),
-    })
+    writeOrder(root, path, clearBuildOrder(intent), 'document order')
     return 0
   }
 
@@ -116,17 +122,69 @@ export function order(cwd: string, args: ReadonlyArray<string>): number {
   const full = orderSteps(steps, given)
     .filter((s) => !s.done)
     .map((s) => s.n)
-  writeFileSync(path, setBuildOrder(intent, full))
-  // The pointer reads the plan back from disk, so it already follows the
-  // order just written: back at the step in flight, or forward from the
-  // boundary to the first step in the new sequence.
+  writeOrder(root, path, setBuildOrder(intent, full), full.join(', '))
+  return 0
+}
+
+/**
+ * Write the plan under its new build order, its ranges re-cut to follow it,
+ * and print the ending: the order, the ranges the re-cut changed, any range it
+ * left for the human to re-cut, and the pointer.
+ *
+ * The pointer reads the plan back from disk, so it already follows the order
+ * just written: back at the step in flight, or forward from the boundary to
+ * the first step in the new sequence.
+ */
+function writeOrder(root: string, path: string, ordered: string, sequence: string): void {
+  const { intent, recut } = recutPlan(ordered)
+  writeFileSync(path, intent)
+  const standing = rangeStanding(parseBuildRanges(intent), parseOrderedSteps(intent), null)
   printEnding(root, {
     tier: 'driver',
     render: 'order',
     text: ending({
-      lead: transition({ label: 'Build order', fact: full.join(', ') }),
+      lead: blocks([transition({ label: 'Build order', fact: sequence }), recutLead(recut, standing.count)]),
+      advisories: rangeAdvisories(standing),
       pointer: driverPointer(root, activeBuild(root)),
     }),
   })
-  return 0
+}
+
+/**
+ * The lead naming each range the re-cut changed and the steps it names now,
+ * `range 2 of 3 re-cut (steps 10,4-6)`; null when it changed none.
+ */
+function recutLead(recut: ReadonlyArray<Recut>, count: number): string | null {
+  const [only] = recut
+  if (only === undefined) {
+    return null
+  }
+  const steps = (cut: Recut): string => `${cut.steps.length === 1 ? 'step' : 'steps'} ${formatStepList(cut.steps)}`
+  const items = recut.map((cut) => cut.item).join(', ')
+  return transition({
+    label: 'Build ranges',
+    fact: `${recut.length === 1 ? 'range' : 'ranges'} ${items} of ${count} re-cut`,
+    detail: recut.length === 1 ? [steps(only)] : recut.map((cut) => `range ${cut.item}: ${steps(cut)}`),
+  })
+}
+
+/**
+ * Every range still flagged once the re-cut is written, in the words the
+ * dashboard flags it with, and beneath the last the move that re-cuts it by
+ * hand: the ties the order did not settle, a step no range can take, and the
+ * plan's other drift. Empty when every undone step sits in one stretch of one
+ * range.
+ */
+function rangeAdvisories(standing: RangeStanding): string[] {
+  const { count, drift } = standing
+  const own = drift.filter((d) => d.item !== null && d.kind !== 'malformed')
+  const flagged = [...new Set(own.map((d) => d.item))].map((item) => ({
+    fact: `range ${item} of ${count} needs a re-cut`,
+    detail: own.filter((d) => d.item === item).map((d) => d.words),
+  }))
+  const lines = [...flagged, ...drift.filter((d) => d.item === null || d.kind === 'malformed').map((d) => ({ fact: d.words }))]
+  if (lines.length === 0) {
+    return []
+  }
+  return [lines.map((l, i) => advisory(i === lines.length - 1 ? { ...l, remedy: '/plumbbob:refine ranges' } : l)).join('')]
 }

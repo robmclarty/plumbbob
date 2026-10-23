@@ -906,7 +906,9 @@ decision the plan could not make on paper, made at a step's own pause; a
 review before later steps build on what landed, made at the boundary after a
 range's last step; and a thing only a human can do, such as a push or a live
 key. The plan places the stops and the CLI never does, because where a call
-falls is judgment.
+falls is judgment. When the build order moves, `plumbbob order` moves which
+steps fall between the stops, and nothing more
+([the re-cut](#the-re-cut-the-order-makes)).
 
 ### The plan's section
 
@@ -965,10 +967,12 @@ only once a real range parses. The placeholder, exactly:
    - model: <the strongest model any step inside it recommends>
 ````
 
-A range the plan has outgrown is reported and never rewritten by the CLI,
-because only the human knows where the stop belongs now, and a suggested
-command that halts early is the failure ranges exist to remove. Four things
-flag one, and each has its words, the same on the card and the dashboard:
+A range the plan has outgrown is reported, and the CLI rewrites one only where
+the build order settles which steps it holds
+([the re-cut](#the-re-cut-the-order-makes)), because only the human knows
+where a stop belongs, and a suggested command that halts early is the failure
+ranges exist to remove. Four things flag one, and each has its words, the same
+on the card and the dashboard:
 
 | the drift | its words |
 | --- | --- |
@@ -990,6 +994,57 @@ nothing that landed. And a range's span ends at its last undone step, since a
 step placed after every one of them cuts nothing short. The span still opens
 at the range's first step, landed or not, so a range a run halted inside stays
 flagged until the step that halted it lands.
+
+### The re-cut the order makes
+
+`plumbbob order` keeps the ranges true to every sequence it writes, `--reset`
+included ([D109 (ranges-follow-the-order)](decisions.md#d109)). The order says
+when each step builds and a range says where the build stops, so once the
+sequence moves, a step belongs between the stops the order put it between. A
+step no range names joins the range whose steps sit on both sides of it, else
+the range it builds ahead of, else the range it builds after: a blocker found
+at a stop and ordered next joins the range the next run walks, and a step
+ordered after every range joins the last. A step the order moves out of its
+range is placed by the same rule, and where the order tangles two ranges, the
+re-cut moves the fewest steps between them, a step at the seam joining the
+range it builds ahead of. A landed range takes no step, since its call was
+made; a bare range keeps its one step and takes no other, since it builds that
+step to its pause; and every range keeps its longest stretch, so a re-cut moves
+steps and never the bulk of a range.
+
+The order settles nothing when two re-cuts would move as few steps, when a step
+sits where no range may take it (ahead of a bare range, with nothing open
+before it), or while the section holds drift no sequence can settle: an item
+that does not parse, a range naming a step the plan lacks, or one undone step
+two ranges name. Those ranges stay as written, and their rows stay flagged.
+
+A re-cut rewrites the command in each item it changes and nothing else in the
+item: the steps in build order, so `/plumbbob:build 4-6` with step 10 ordered
+ahead of it becomes `/plumbbob:build 10,4-6`, and a range that lands its steps,
+down to one, is written `9-9` so it still lands. The verb's ending names what it
+re-cut on a second lead beneath the order:
+
+```text
+**Build order**: 10, 4, 5, 6, 7, 8, 9
+
+**Build ranges**: range 2 of 3 re-cut (steps 10,4-6)
+
+**Next Up**: Step 10 of 10 - fix(parser): accept an empty header (details: [intent.md:24](.plumbbob/builds/x/intent.md#L24))
+```
+
+Two ranges or more read `ranges 2, 3 of 3 re-cut (range 2: steps 10,4-6,
+range 3: steps 7-9)`, each range's steps as its command now writes them. A range
+the order leaves for the human rides beneath the leads as an advisory, in the
+words its row carries, and the last one names the move:
+
+```text
+Range 2 of 3 needs a re-cut ⚠ (the build order puts step 6 inside it)
+No range names step 11 ⚠
+  → /plumbbob:refine ranges
+```
+
+An order that changes no range adds neither part, so the ending reads as it
+always has.
 
 ### The range segment beneath Next Up
 

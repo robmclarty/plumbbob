@@ -464,6 +464,18 @@ the step a bare `/plumbbob:build` enters, and the card agree. Prints its ending,
 forward to the first step in the new sequence). `--reset` drops the line, and the plan reads
 in document order again.
 
+When the plan carries build ranges, the verb re-cuts them to follow the order it writes,
+`--reset` included ([**D109 (ranges-follow-the-order)**](decisions.md#d109)). A step no range
+names joins the range whose steps sit on both sides of it, else the one it builds ahead of,
+else the one it builds after; a step the order moves out of its range is placed the same way,
+and where two ranges tangle, the fewest steps move between them. A landed range takes no
+step, a bare range keeps its one, and every range keeps its longest stretch. Only the command
+in each re-cut item changes, its steps in build order (`/plumbbob:build 10,4-6`), and the
+ending gains a second lead, `**Build ranges**: range 2 of 3 re-cut (steps 10,4-6)`. A range
+the order cannot settle (two re-cuts that move as few steps, a step no range may take, or
+drift no sequence settles) stays as written and rides the ending as an advisory, with
+`/plumbbob:refine ranges` beneath it.
+
 `<steps>` is step numbers and spans (`2-4`), separated by spaces or commas, with or without a
 space after a comma, so `plumbbob order 1, 6, 2-4, 7, 5`, `plumbbob order 1,6,2-4,7,5`, and
 `plumbbob order 1 6 2-4 7 5` all write `1, 6, 2, 3, 4, 7, 5`: a span names its steps in place,

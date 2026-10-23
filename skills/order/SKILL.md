@@ -1,6 +1,6 @@
 ---
 name: order
-description: "Set the build order: turn the human's sequence (or a relative one, such as 7 and 8 before 5) into the full list of undone steps and write it by shelling `plumbbob order`, never by editing intent.md. A step keeps its number; the sequence moves."
+description: "Set the build order: turn the human's sequence (or a relative one, such as 7 and 8 before 5) into the full list of undone steps and write it by shelling `plumbbob order`, never by editing intent.md. A step keeps its number; the sequence moves, and the CLI re-cuts the build ranges to follow it."
 argument-hint: "[steps in the sequence to build them, such as 1, 6, 2-4, 7, 5]"
 disable-model-invocation: true
 model: haiku
@@ -15,7 +15,10 @@ A step keeps its number for life, so once `/plumbbob:step` or `/plumbbob:refine`
 that has to land before an existing one, the sequence to build them stops being the
 numbering (`4, 7, 8, 5, 10, 6`). This skill writes that sequence down where every other move
 reads it: the `## Build order` line in `intent.md`, which `plumbbob status`, a bare
-`/plumbbob:build`, `plumbbob checkpoint`, and the card's Next Up all follow.
+`/plumbbob:build`, `plumbbob checkpoint`, and the card's Next Up all follow. When the plan
+carries `## Build ranges`, the same verb re-cuts them to follow the sequence, so
+`/plumbbob:run` walks the steps the new order put in its range
+([D109 (ranges-follow-the-order)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d109)).
 
 ## Wrong-state refusal
 
@@ -39,22 +42,22 @@ after the step in flight is the usual reason to run it.
    as typed, and the line it writes spells the span out. `plumbbob order --reset` drops the
    line, and the plan reads in document order again.
 4. **Relay the ending verbatim, then stop.** The verb prints its whole ending: the
-   `**Build order**: 7, 8, 5, 10, 6` line, a blank line, and the `**Next Up**` pointer (back
-   at the step in flight, or forward to the first step in the new sequence). Run no second
-   command but the one in step 5. A refusal (a number the plan lacks, a repeat, a step
-   already checkpointed) is the CLI's call: report it verbatim, never retry or work around
-   it, and ask the human which number they meant.
-5. **Read the ranges when the plan has them.** If the dashboard injected above shows a
-   `ranges` block, run `plumbbob status` after the verb and read that block again. A `⚠`
-   row that was not there before means the new sequence broke a range (most often
-   `the build order puts step 11 inside it`). This skill edits nothing, so it cannot re-cut
-   one: open the turn with one line naming the range, its drift words, and
-   `/plumbbob:refine` as the move that re-cuts it, then the verb's ending, whole, as the
-   turn's last text. With no new `⚠` row, or no ranges block, relay the ending alone.
+   `**Build order**: 7, 8, 5, 10, 6` line; a
+   `**Build ranges**: range 2 of 3 re-cut (steps 10,4-6)` line when the new sequence moved a
+   step into or out of a range, naming each range it re-cut; an advisory for each range the
+   order left for the human, in the words its dashboard row carries
+   (`Range 2 of 3 needs a re-cut ⚠ (...)`), with
+   `→ /plumbbob:refine ranges` beneath the last; and the `**Next Up**` pointer (back at the
+   step in flight, or forward to the first step in the new sequence). Relay it whole as the
+   turn's last text and run no second command: the advisory already names the range and the
+   move, so there is no dashboard to read again. A refusal (a number the plan lacks, a
+   repeat, a step already checkpointed) is the CLI's call: report it verbatim, never retry
+   or work around it, and ask the human which number they meant.
 
 ## The one hard contract
 
 The line is written by the **dumb CLI**, never by an edit. This skill carries **no Edit and
 no Write tool** on purpose: you may not touch `intent.md` yourself. Compose, get approval,
-then shell `plumbbob order`; that is the only write path, and it is the one that validates
-every number against the plan.
+then shell `plumbbob order`; that is the only write path, it validates every number against
+the plan, and it is the one that re-cuts the ranges, so a range the order leaves for the
+human is `/plumbbob:refine`'s to re-cut, never yours to edit here.

@@ -3,7 +3,7 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { order } from '../order.ts'
 import { start } from '../start.ts'
 import { activeBuild, intentPath, stepPath } from '../../lib/sidecar.ts'
-import { ending, transition } from '../../lib/notice.ts'
+import { blocks, ending, transition } from '../../lib/notice.ts'
 import { driverPointer } from '../handoff.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
@@ -126,5 +126,88 @@ describe('order', () => {
     expect(captureIo(() => order(dir, [])).stderr).toContain('order needs step numbers')
     expect(captureIo(() => order(dir, ['4', 'then', '3'])).stderr).toContain('`then` is not a step number')
     expect(captureIo(() => order(makeTempRepo(), ['2'])).stderr).toContain('no active session')
+  })
+})
+
+// Range 1 has landed and its stop found step 5, a blocker that has to land
+// before step 2: the plan as the harvest left it, before the order places it.
+const RANGED = `# Order test
+
+## Steps
+
+1. [x] First — **done when:** a works.
+2. [ ] Second — **done when:** b works.
+3. [ ] Third — **done when:** c works.
+4. [ ] Fourth — **done when:** d works.
+5. [ ] Fifth — **done when:** the blocker is fixed.
+
+## Build ranges
+
+1. \`/plumbbob:build 1\`, **stop:** at step 1's pause, approve it
+2. \`/plumbbob:build 2-3\`, **stop:** review the parser
+   - model: opus
+3. \`/plumbbob:build 4-4\`, **stop:** the final read
+
+## Open questions
+`
+
+async function ranged(intent = RANGED): Promise<string> {
+  const dir = makeTempRepo()
+  await captureIoAsync(() => start(dir, ['Order test']))
+  writeFileSync(intentPath(dir), intent)
+  return dir
+}
+
+describe('order re-cuts the build ranges — D109 (ranges-follow-the-order)', () => {
+  it('puts a step ordered next in the range it builds ahead of, and names the re-cut in its ending', async () => {
+    const dir = await ranged()
+    const { code, stdout } = captureIo(() => order(dir, ['5', '2', '3', '4']))
+    expect(code).toBe(0)
+    const intent = readFileSync(intentPath(dir), 'utf8')
+    // Only the command moved: the stop and the model line stay as written.
+    expect(intent).toContain('2. `/plumbbob:build 5,2-3`, **stop:** review the parser\n   - model: opus')
+    expect(intent).toContain('## Build order\n\n5, 2, 3, 4\n')
+    expect(stdout).toBe(
+      ending({
+        lead: blocks([
+          transition({ label: 'Build order', fact: '5, 2, 3, 4' }),
+          transition({ label: 'Build ranges', fact: 'range 2 of 3 re-cut', detail: ['steps 5,2-3'] }),
+        ]),
+        pointer: driverPointer(dir, activeBuild(dir)),
+      }),
+    )
+    expect(stdout).toContain('**Build ranges**: range 2 of 3 re-cut (steps 5,2-3)')
+  })
+
+  it('names each range it re-cut, and --reset re-cuts them back to the numbering', async () => {
+    const dir = await ranged()
+    captureIo(() => order(dir, ['5', '2', '3', '4']))
+    const { code, stdout } = captureIo(() => order(dir, ['--reset']))
+    expect(code).toBe(0)
+    // In document order step 5 builds last, so it joins the last range.
+    expect(stdout).toContain('**Build order**: document order\n\n**Build ranges**: ranges 2, 3 of 3 re-cut (range 2: steps 2-3, range 3: steps 4-5)')
+    const intent = readFileSync(intentPath(dir), 'utf8')
+    expect(intent).toContain('2. `/plumbbob:build 2-3`')
+    expect(intent).toContain('3. `/plumbbob:build 4-5`')
+    expect(intent).not.toContain('## Build order')
+  })
+
+  it('says nothing of the ranges when the order changes none of them', async () => {
+    // Every step already sits in a range, and the order only re-sequences inside range 2.
+    const dir = await ranged(RANGED.replace('build 4-4`', 'build 4-5`'))
+    const { stdout } = captureIo(() => order(dir, ['3', '2', '4', '5']))
+    expect(stdout).toContain('**Build order**: 3, 2, 4, 5\n\n**Next Up**')
+    expect(stdout).not.toContain('Build ranges')
+    expect(stdout).not.toContain('⚠')
+  })
+
+  it('names a step the order puts where no range can take it, with the move that re-cuts the ranges by hand', async () => {
+    // Range 3 is a bare call, and step 5 ordered ahead of it has no open range before it.
+    const dir = await ranged(RANGED.replace('build 4-4`, **stop:** the final read', "build 4`, **stop:** at step 4's pause, decide it"))
+    const { code, stdout } = captureIo(() => order(dir, ['5', '4', '2', '3']))
+    expect(code).toBe(0)
+    expect(stdout).not.toContain('**Build ranges**')
+    expect(stdout).toContain('**Build order**: 5, 4, 2, 3\n\nNo range names step 5 ⚠\n  → /plumbbob:refine ranges\n\n**Next Up**')
+    expect(readFileSync(intentPath(dir), 'utf8')).toContain('2. `/plumbbob:build 2-3`')
   })
 })

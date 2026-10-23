@@ -54,18 +54,25 @@ is fine; refining is always available.
   Show the before/after for each, and **write only what the human approves**. A repair
   that inserts a step, or moves one ahead of another, keeps every number where it is and
   writes the sequence instead: shell `plumbbob order 7 8 5` with the undone steps in the
-  sequence to build them, and the `## Build order` line it writes is what every next-step
-  pick follows. Never renumber, and never edit that line by hand.
+  sequence to build them, an inserted step included even when it builds last, and the
+  `## Build order` line it writes is what every next-step pick follows. Never renumber,
+  and never edit that line by hand.
 
-  **A repair keeps the build ranges true.** When the plan carries `## Build ranges`, a
-  step the repair adds goes into a range (the one it builds with, or a bare range of its
-  own when it brings a call the human has to make before it lands), never a range that
-  has landed, since that range's call was made and the step would reopen it. A new range
-  takes the next free item number, and no item is renumbered, because the stop card's
-  stamp, the detail file's header, and `plumbbob harvest` find a landed range by its
-  number. A range the repair breaks is re-cut in the same before/after
+  **A repair keeps the build ranges true.** When the plan carries `## Build ranges`,
+  `plumbbob order` re-cuts them to follow the sequence it writes
+  ([D109 (ranges-follow-the-order)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d109)):
+  a step it places joins the range whose steps sit on both sides of it, else the one it
+  builds ahead of, else the one it builds after, never a bare range, and never a range that
+  has landed, since that range's call was made and the step would reopen it; its ending
+  names each range it re-cut. Edit a range yourself only where the
+  order cannot say it, and before you run the verb: a bare range of its own for a step
+  that brings a call the human has to make before it lands, or a re-cut that moves where a
+  call falls, shown in the same before/after
   ([D92 (build-ranges)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d92)).
-  Read `plumbbob status` once the edits are written: its ranges block carries a `⚠` row
+  A new range takes the next free item number, and no item is renumbered, because the stop
+  card's stamp, the detail file's header, and `plumbbob harvest` find a landed range by its
+  number. A range the verb's ending names as still needing a re-cut is yours to re-cut in
+  the same approved edit. Read `plumbbob status` once the edits are written: its ranges block carries a `⚠` row
   for a range naming a step the plan lacks, a step two ranges name, a step the build order
   puts inside a range that does not name it, and an undone step no range names, and none
   once the section is sound.
