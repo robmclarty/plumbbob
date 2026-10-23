@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.4] - 2026-10-22
+
+- **Added:** a fifth plate in the README, in place of its last placeholder box: a build
+  record that rides the PR, drawn in the site's builder's-wall world, with the scaffold
+  stacked on the ground and the plan and the ledger laid into the cornerstone. The
+  screenshot slot it held moves to the happy path, beside the build folder landing in main.
+- **Fixed:** `/plumbbob:run` refused a step added mid-build and ordered next, since no build
+  range named it (`no range names step 10`) until the ranges were edited by hand, and a step
+  filed under the range its number suggests left that range cut by the order. Now
+  `plumbbob order` re-cuts the ranges to follow every order it writes, `--reset` included.
+  A step no range names joins the range around it, else the one it builds ahead of, else
+  the one before; a step the order moves out of its range is placed the same way, and
+  where ranges tangle the fewest steps move. A landed range takes no step, a bare range
+  keeps its one, and where the order settles nothing the ranges stay flagged. Only each
+  item's command changes, and the ending names each range it re-cut,
+  `**Build ranges**: range 2 of 3 re-cut (steps 10,4-6)`. The step, refine, and harvest
+  skills now place every new step through the verb. D109 (ranges-follow-the-order)
+  records it.
+
 ## [0.13.3] - 2026-10-19
 
 - **Added:** `docs/runs.md`, a guide to driving a plan with `/plumbbob:run`. It walks one
