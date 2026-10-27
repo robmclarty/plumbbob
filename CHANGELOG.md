@@ -5,6 +5,35 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.5] - 2026-10-27
+
+- **Changed:** a card shows once. After a pause, a stop, or a boundary has shown its card,
+  every later turn there is the model's own reply, a question answered or a change made in
+  its own words, closed by the one line that points back at it
+  (`**Next Up**: Back to Step 2 of 3 - …`). The card comes back only on `show the pause` or
+  `show the stop`, and the next one prints when the work is done again. A lean changed at a
+  stop is a reply too, and the record takes it as written. D110 (reply-after-the-card)
+  records it.
+- **Changed:** the card is shorter, and the state it ends in reads apart from its prose. The
+  numbered highlights stay in the detail file, behind one `[more details](…)` link at the
+  card's foot; the readout lists the changed files beneath its diff row; and the Verdict,
+  the step in flight, Next Up, and the range, the build order, the parks, and the open
+  questions ride one two-column table at the foot of every card and orientation ending,
+  headed by the Verdict. D111 (state-table) and D113 (short-card) record it.
+- **Added:** parks with leans render as a table, each park's handle and a short title, its
+  text, why it matters, and the lean, on the stop card, in the stop's record, and from a new
+  `plumbbob handoff --harvest` that renders a boundary harvest's leans. The detail file adds
+  `- title:` and `- why:` lines beneath each proposal. D112 (lean-table) records it.
+- **Added:** eval contract c12, feedback at the pause, with receipts for it and for c10: both
+  5 of 5, and c10's reminder ending whole in 5 of 5 where every earlier receipt read 0.
+- **Fixed:** a follow-up turn at a pause came back as the whole card again, burying the reply
+  to it. The stamp that picked the card or the reminder hashed the card's check row, and
+  checkride's per-turn gate, which skips the test slot, rewrote that row after nearly every
+  turn; an edit anywhere in the tree did the same. The turn hook also gave its park line at
+  a pause, filing feedback as a tangent, and a fresh session asked to show the card retyped
+  it under a line of its own. The hook now reads its session from the payload's working
+  directory, as the Stop check does, so the two never judge different turns.
+
 ## [0.13.4] - 2026-10-22
 
 - **Added:** a fifth plate in the README, in place of its last placeholder box: a build
