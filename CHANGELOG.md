@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.6] - 2026-10-27
+
+- **Changed:** a shell command in a card's recommendation gets a fenced `sh` block of its own,
+  one command to a line, where it used to ride inline in the sentence. A recommendation that
+  named several commands read as one paragraph of code and prose, and none of them could be
+  copied out whole. The sentence that names a command now ends on a colon; a slash command or
+  a path stays in backticks. The build, verify, plan, and run skills teach it, and
+  D114 (command-fences) records it.
+- **Fixed:** handoff joined every line of a recommendation's paragraph into one, so a fenced
+  block written there would have run its commands together on a single line. A fence is now
+  kept line for line and set between blank lines, even when written straight under its
+  sentence, and one left open is closed so the `more details` link beneath it still renders.
+
 ## [0.13.5] - 2026-10-27
 
 - **Changed:** a card shows once. After a pause, a stop, or a boundary has shown its card,
