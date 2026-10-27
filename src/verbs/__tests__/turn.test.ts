@@ -476,9 +476,9 @@ describe('a background notice is not a human turn — D90 (notice-not-turn)', ()
   })
 })
 
-/** The additionalContext line `turnContext` emits for a session, or '' when it emits none. */
-function nudgeOf(dir: string): string {
-  const out = turnContext(dir)
+/** The additionalContext line `turnContext` emits for a session and a prompt, or '' when it emits none. */
+function nudgeOf(dir: string, prompt = ''): string {
+  const out = turnContext(dir, prompt)
   return out === null ? '' : (JSON.parse(out) as { hookSpecificOutput: { additionalContext: string } }).hookSpecificOutput.additionalContext
 }
 
@@ -552,7 +552,9 @@ describe('turnContext — the nudge, D64 (approval-latch) amended: guidance, not
     expect(context).toContain('Anything else is answered in your own words')
     expect(context).toContain('write `.plumbbob/detail.md` again so the record matches what lands')
     expect(context).toContain('Print no card for it: run `plumbbob handoff` and end the turn on the one line it prints')
-    expect(context).toContain('run `plumbbob handoff --full` only when the human asks to see the card again')
+    expect(context).toContain(
+      'Only when the human asks to see the card again, run `plumbbob handoff --full` and paste its output exactly as it printed, as the whole turn',
+    )
     // Feedback at a pause is not a tangent: the park line would swallow it.
     expect(context).not.toContain('a new idea or tangent is a park, not an edit')
     expect(context).toContain('A tangent the human hands you is still a park')
@@ -577,10 +579,46 @@ describe('turnContext — the nudge, D64 (approval-latch) amended: guidance, not
     expect(context).toContain('then run `plumbbob harvest` and relay its ending')
     expect(context).toContain("(a lean is its line under the detail file's `## Harvest`)")
     expect(context).toContain('run `plumbbob handoff --stop` and end the turn on the one line it prints')
-    expect(context).toContain('run `plumbbob handoff --stop --full` only when the human asks to see the card again')
+    expect(context).toContain(
+      'Only when the human asks to see the card again, run `plumbbob handoff --stop --full` and paste its output exactly as it printed, as the whole turn',
+    )
     // The record clears the detail file, and the wait ends with it.
     writeFileSync(detailPath(dir), '')
     expect(turnContext(dir)).toBeNull()
+  })
+
+  it('answers a request to see the card with the one way to relay it: --full, exactly as it printed, as the whole turn', async () => {
+    // In a fresh session the model ran `--full` on `show the pause` and then
+    // retyped the card behind a line of its own, three runs in five of the
+    // 2026-10-27 eval, since nothing in its context said how to relay it.
+    const dir = await startedSession()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(pausePath(dir), '2\n')
+    for (const prompt of ['show the pause', 'Show the pause.', 'can you show me the card again?']) {
+      const context = nudgeOf(dir, prompt)
+      expect(context, prompt).toBe(
+        "plumbbob: the human asked to see step 2's card again. " +
+          'Run `plumbbob handoff --full` and paste its output exactly as it printed, as the whole turn: ' +
+          'no line before it, nothing after it, and nothing in it retyped, reworded, or cut.',
+      )
+    }
+    // Any other message at the pause is still the reply.
+    expect(nudgeOf(dir, 'why does the bucket refill on read?')).toContain("step 2's card has shown")
+    // Mid-build, before any card, the request is no request for a card.
+    writeFileSync(pausePath(dir), 'landed 1\n')
+    expect(nudgeOf(dir, 'show the pause')).toContain('step 2 is in flight')
+  })
+
+  it('answers a request to see the stop card the same way, with --stop --full', async () => {
+    const dir = await startedSession()
+    writeFileSync(intentPath(dir), STOPPING)
+    writeFileSync(stopPath(dir), '1 3\n')
+    writeFileSync(detailPath(dir), '# Detail · Range 1 · review the first\n')
+    expect(nudgeOf(dir, 'show the stop')).toBe(
+      "plumbbob: the human asked to see range 1 of 2's stop card again. " +
+        'Run `plumbbob handoff --stop --full` and paste its output exactly as it printed, as the whole turn: ' +
+        'no line before it, nothing after it, and nothing in it retyped, reworded, or cut.',
+    )
   })
 
   it('goes quiet again once the step checkpoints (STEP marker gone)', async () => {
@@ -624,6 +662,17 @@ describe('turn (the verb)', () => {
     } finally {
       stdin.isTTY = had
     }
+  })
+
+  it('reads the prompt off the real hook payload, so a request to see the card gets the show nudge', async () => {
+    const dir = await startedSession()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(pausePath(dir), '2\n')
+    const shown = runCli(dir, ['turn'], {}, JSON.stringify({ prompt: 'show the pause', cwd: dir }))
+    expect(shown.status).toBe(0)
+    expect(shown.stdout).toContain("the human asked to see step 2's card again")
+    const asked = runCli(dir, ['turn'], {}, JSON.stringify({ prompt: 'why 429?', cwd: dir }))
+    expect(asked.stdout).toContain("step 2's card has shown, and this message is the human's reply to it")
   })
 
   it("ticks the session the payload's cwd names, and its own when the payload names none that holds one", async () => {

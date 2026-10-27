@@ -56,10 +56,10 @@ import { waitingCard } from './handoff.ts'
 export function turn(cwd: string, _args: ReadonlyArray<string>): number {
   try {
     const raw = readStdin()
-    const named = readPayload(raw).cwd
+    const { cwd: named, prompt } = readPayload(raw)
     const where = named !== null && findSessionRoot(named) !== null ? named : cwd
     if (applyTurn(where, raw)) {
-      const context = turnContext(where)
+      const context = turnContext(where, prompt)
       if (context !== null) process.stdout.write(context)
     }
   } catch {
@@ -78,27 +78,39 @@ export function turn(cwd: string, _args: ReadonlyArray<string>): number {
  * words, and closed on the one line `handoff` prints rather than the card
  * again (D110 (reply-after-the-card)). A step in flight with no card yet is
  * mid-build, where a tangent is a park and not an edit. A stop card waiting
- * for its reply is the pause's beat at a stop. Guidance only, since none of
- * the build, run, or park prose may be in context after compaction or on a
- * scripted turn. Exported because an in-process test cannot read the hook's
- * real stdout.
+ * for its reply is the pause's beat at a stop. At a pause or a stop, a
+ * `prompt` asking to see the card (`show the pause`, the phrase the card's
+ * `expand` move teaches) gets the one instruction that matters for it: paste
+ * the `--full` output exactly as it printed, as the whole turn. Guidance only,
+ * since none of the build, run, or park prose may be in context after
+ * compaction or on a scripted turn. Exported because an in-process test cannot
+ * read the hook's real stdout.
  */
-export function turnContext(cwd: string): string | null {
+export function turnContext(cwd: string, prompt = ''): string | null {
   const root = findSessionRoot(cwd)
   if (root === null) return null
-  const text = nudgeText(root)
+  const text = nudgeText(root, SHOW_REQUEST.test(prompt))
   return text === null ? null : `${JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: text } })}\n`
 }
 
+// A message asking to see the card again: `show the pause` and `show the stop`,
+// the phrases the card's `expand` move teaches, and `show me the card` beside
+// them. In a fresh session the model ran `--full` on that request and then
+// retyped the card behind a line of its own, three runs in five of the
+// 2026-10-27 eval, because nothing in its context said how to relay it.
+const SHOW_REQUEST = /\bshow\s+(?:me\s+)?the\s+(?:pause|stop|card)\b/i
+
 /**
  * The nudge's words for the beat the session is on, or null when it is on
- * none: no step in flight and no stop card waiting.
+ * none: no step in flight and no stop card waiting. `showing` is a message
+ * that asks to see the card, which at a pause or a stop takes the show nudge.
  */
-function nudgeText(root: string): string | null {
+function nudgeText(root: string, showing: boolean): string | null {
   const step = inFlightStep(root)
   if (step !== null) {
     const shown = readPause(root)
-    return shown?.kind === 'pause' && shown.step === step ? pauseNudge(step) : parkNudge(step)
+    if (shown?.kind !== 'pause' || shown.step !== step) return parkNudge(step)
+    return showing ? showNudge(`step ${step}'s card`, 'plumbbob handoff --full') : pauseNudge(step)
   }
   const slug = activeBuild(root)
   let intent = ''
@@ -108,7 +120,23 @@ function nudgeText(root: string): string | null {
     return null
   }
   const card = waitingCard(root, slug, intent)
-  return card === null ? null : stopNudge(card.range, card.count)
+  if (card === null) return null
+  return showing
+    ? showNudge(`range ${card.range} of ${card.count}'s stop card`, 'plumbbob handoff --stop --full')
+    : stopNudge(card.range, card.count)
+}
+
+/**
+ * The nudge when the human asks to see a card again: the one command and how
+ * to relay what it prints, since the card is the whole turn and a retyped one
+ * is the miss the relay check holds.
+ */
+function showNudge(card: string, command: string): string {
+  return (
+    `plumbbob: the human asked to see ${card} again. ` +
+    `Run \`${command}\` and paste its output exactly as it printed, as the whole turn: ` +
+    `no line before it, nothing after it, and nothing in it retyped, reworded, or cut.`
+  )
 }
 
 /** The mid-build nudge: a tangent is a park, not an edit, and the step lands on approval. */
@@ -131,8 +159,8 @@ function pauseNudge(step: number): string {
     `An approval lands the step: run \`plumbbob checkpoint ${step}\` and relay its ending. ` +
     `Anything else is answered in your own words: answer the question, or make the change it asks for, ` +
     `and when a change moves what the card said, write \`.plumbbob/detail.md\` again so the record matches what lands. ` +
-    `Print no card for it: run \`plumbbob handoff\` and end the turn on the one line it prints, with nothing after it, ` +
-    `and run \`plumbbob handoff --full\` only when the human asks to see the card again. ` +
+    `Print no card for it: run \`plumbbob handoff\` and end the turn on the one line it prints, with nothing after it. ` +
+    `Only when the human asks to see the card again, run \`plumbbob handoff --full\` and paste its output exactly as it printed, as the whole turn. ` +
     `A tangent the human hands you is still a park: \`plumbbob park "<one line>"\`.`
   )
 }
@@ -144,8 +172,8 @@ function stopNudge(range: number, count: number): string {
     `An approval records the stop: fold each confirmed blocker into the plan, then run \`plumbbob harvest\` and relay its ending. ` +
     `Anything else is answered in your own words: answer the question, or make the change it asks for ` +
     `(a lean is its line under the detail file's \`## Harvest\`). ` +
-    `Print no card for it: run \`plumbbob handoff --stop\` and end the turn on the one line it prints, with nothing after it, ` +
-    `and run \`plumbbob handoff --stop --full\` only when the human asks to see the card again.`
+    `Print no card for it: run \`plumbbob handoff --stop\` and end the turn on the one line it prints, with nothing after it. ` +
+    `Only when the human asks to see the card again, run \`plumbbob handoff --stop --full\` and paste its output exactly as it printed, as the whole turn.`
   )
 }
 

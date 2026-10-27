@@ -1485,8 +1485,12 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   Revises [**D87 (pause-once)**](#d87), whose card came back when the pause changed, [**D89 (block-once)**](#d89),
   whose reminder retry could escalate to the whole card, [**D102 (settle-in-one-reply)**](#d102), whose direction
   printed the stop card again, and [**D103 (stop-latched)**](#d103), whose record compared the detail file's
-  digest. *Tagged in* `handoff.ts`, `turn.ts`, `harvest.ts`, `sidecar.ts`, the `build`, `verify`, `run`, and `step`
-  skills, and `docs/presentation.md`.
+  digest.
+  (Revised 2026-10-27: a message asking to see the card, the `show the pause` the card teaches, gets a nudge of
+  its own, to run `--full` and paste what it prints exactly as it printed, as the whole turn, *because* the
+  2026-10-27 eval found fresh sessions running `--full` on that request and retyping the card behind a line of
+  their own in three runs of five, each held by the relay check.) *Tagged in* `handoff.ts`, `turn.ts`,
+  `harvest.ts`, `sidecar.ts`, the `build`, `verify`, `run`, and `step` skills, and `docs/presentation.md`.
 
 - <a id="d111"></a>**D111 (state-table): The state a card or an orientation ending closes on rides one two-column
   table, headed by the Verdict wherever one was measured.** The rows, in order and each only when it says

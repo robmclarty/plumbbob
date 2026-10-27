@@ -222,7 +222,10 @@ export function renderReport(date: string): string {
     '  [D110 (reply-after-the-card)](../decisions.md#d110) the pause stamp records',
     '  only that the card showed, and the nudge at a pause names the reply where',
     '  it used to give the park line, so c10\'s reminder rate is not comparable',
-    '  across that line, and no receipt before it measured c12.',
+    '  across that line, and no receipt before it measured c12. From 2026-10-27',
+    '  a request to see the card (`show the pause`) gets a nudge of its own, to',
+    '  paste the `--full` output as the whole turn, so c10\'s show-turn rate is',
+    '  not comparable across that line either.',
     ...(relayed
       ? [
           '- `no-relay` and `latched` ran at one commit and differ in one hook: the',

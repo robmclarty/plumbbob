@@ -174,7 +174,13 @@ so the record matches what lands, and prints no card for it. The card comes
 back on request: `plumbbob handoff --full` prints it, the `expand` move names
 the phrase that asks for it (`show the pause`), and a human who wants it in a
 fresh window asks the same way. The model never runs `--full` to read the
-card for itself, since what `handoff` prints is the turn's ending. The next
+card for itself, since what `handoff` prints is the turn's ending. When the
+message is that phrase, the turn hook's nudge says the one thing a session
+with no skill prose in context needs to hear: run `--full` and paste what it
+prints exactly, as the whole turn. Without it, a fresh session ran `--full`
+and then retyped the card behind a line of its own in three runs of five,
+and the relay check held each one
+([D89 (block-once)](decisions.md#d89)). The next
 card is the next point where work is done: `looks good` lands the step, and
 the checkpoint prints the boundary. A revert or an abandon clears the stamp,
 so the next pause renders whole. A boundary keeps the rule too: once
