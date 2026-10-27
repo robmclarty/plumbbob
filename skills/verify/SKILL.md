@@ -114,7 +114,10 @@ this skill verifies it the same way: **it reads the diff, not the author**
    sentence, closed by a period, then the reason as a capitalized sentence or two. The lead
    and the recommendation are flowing prose and handoff unwraps both to the renderer's
    width, so never hard-wrap them; handoff also prepends the bold `**Recommendation**:`
-   label, which you never type. This is the **one** file `/plumbbob:verify` writes, and it
+   label, which you never type. A shell command you want the human to run never rides
+   inside a sentence: end the sentence on a colon and give the command a fenced `sh` block
+   of its own, one command to a line, which handoff keeps line for line. A slash command
+   or a path stays in backticks in the sentence. This is the **one** file `/plumbbob:verify` writes, and it
    is turn presentation, never the diff under review; the author-blind contract below still
    holds. `checkpoint` records this file beneath the step's dated line in the build-log's
    `## Log` and then truncates it (the detail plane in the

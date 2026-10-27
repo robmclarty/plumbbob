@@ -147,6 +147,8 @@ export function readAnatomy(text: string): Anatomy {
   // How many labels had already been seen when the last stray landed: every
   // label after that one belongs to the ending, and nothing before it does.
   let lastStray = 0
+  // Whether the card's foot has passed: past it, the recommendation owns nothing.
+  let footed = false
   let nestedFence = false
   let fence: { readonly info: string; readonly ticks: string; readonly owner: string | null } | null = null
 
@@ -200,6 +202,7 @@ export function readAnatomy(text: string): Anatomy {
     }
 
     if (MORE_DETAILS.test(line.trim())) {
+      footed = true
       endsOn = current
       continue
     }
@@ -226,6 +229,13 @@ export function readAnatomy(text: string): Anatomy {
       continue
     }
     if (/^\s/.test(line)) {
+      endsOn = current
+      continue
+    }
+    // The recommendation runs on in prose between the command fences it
+    // carries (D114 (command-fences)), as handoff printed it, until the card's
+    // foot.
+    if (current === 'Recommendation' && !footed) {
       endsOn = current
       continue
     }

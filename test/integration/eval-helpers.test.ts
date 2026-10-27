@@ -1086,7 +1086,7 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
     expect(a.moves).toHaveLength(2)
     expect(readAnatomy(card.replace('**Your Call**:\n\n', '**Your Call**:\n\nOne more thing.\n\n')).strays).toEqual(['One more thing.'])
     expect(
-      readAnatomy(card.replace(/\n\nApproving locks in[^\n]*/, '').replace('**Recommendation**: Approve it.\n', '**Recommendation**: Approve it.\n\nApproving locks in each lean above.\n'))
+      readAnatomy(card.replace(/\n\nApproving locks in[^\n]*/, '').replace('stops.\n', 'stops.\n\nApproving locks in each lean above.\n'))
         .strays,
     ).toEqual(['Approving locks in each lean above.'])
     expect(a.rows.get('steps')).toBe('4 of 4 landed')
@@ -1103,6 +1103,36 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
     const reminder = readAnatomy("It reads the plan first.\n\n**Next Up**: Back to Range 3 of 5's stop - review the card\n")
     expect(isBackPointer(reminder)).toBe(true)
     expect(endingRenders(reminder, 'reminder')).toBe(true)
+  })
+
+  it('reads a recommendation that carries command fences as one part, up to the card’s foot', () => {
+    const { stdout } = runCli(pausedFixture(), ['handoff'])
+    const fenced = stdout.replace(
+      /\*\*Recommendation\*\*: [^\n]*\n/,
+      [
+        '**Recommendation**: Try the install, then approve it. Pack it first:',
+        '',
+        '```sh',
+        'pnpm -C apps/atis pack --pack-destination /tmp',
+        '```',
+        '',
+        'Then, in an empty directory:',
+        '',
+        '```sh',
+        'npm install /tmp/robmclarty-atis-0.0.0.tgz',
+        '```',
+        '',
+        'The gate is green.',
+        '',
+      ].join('\n'),
+    )
+    expect(fenced).toContain('Then, in an empty directory:')
+    const a = readAnatomy(fenced)
+    expect(a.strays).toEqual([])
+    expect(a.endsOn).toBe('Recommendation')
+    expect(anatomyChecks(fenced, 'decision').every((c) => c.pass)).toBe(true)
+    // Past the foot, the recommendation owns nothing: talk there is still a stray.
+    expect(readAnatomy(`${fenced}\nShall I run them?`).strays).toEqual(['Shall I run them?'])
   })
 
   it('keeps the advisory and its remedy inside the ending, not outside it', () => {

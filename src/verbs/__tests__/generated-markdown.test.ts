@@ -123,12 +123,17 @@ describe('generated markdown lints clean under a consumer-strict gate', () => {
         '',
         '## Recommendation',
         '',
-        'Approve it. Nothing is off.',
+        'Approve it. Nothing is off, and one command shows it:',
+        '```sh',
+        'node src/a.ts',
+        '```',
+        'Run it before you land.',
         '',
       ].join('\n'),
     )
     await captureIoAsync(() => checkpoint(dir, ['1']))
     expect(readFileSync(buildLogPath(dir), 'utf8')).toContain('  **Summary**: A works now')
+    expect(readFileSync(buildLogPath(dir), 'utf8')).toContain('shows it:\n\n  ```sh\n  node src/a.ts\n  ```\n\n  Run it')
     expect(await lintFindings(dir, [buildLogPath(dir)])).toEqual([])
   })
 

@@ -751,7 +751,33 @@ It is flowing text. handoff joins each paragraph's lines into one on the way
 out, so the recommendation wraps at the renderer's width however the detail
 file was written; the model should write it as sentences anyway, never
 hard-wrapped to 72 or 80 columns, because unfenced prose carrying a fence's
-line breaks reads as machine noise. Every decision turn ends on it: the
+line breaks reads as machine noise. The one thing in it that is not prose is
+a shell command the human is meant to run. It never rides inside a sentence:
+the sentence ends on a colon, and the command takes a fenced `sh` block of
+its own, one command to a line
+([D114 (command-fences)](decisions.md#d114)). handoff keeps a fence line for
+line and sets it between blank lines, even when the model wrote it straight
+under the sentence. A slash command or a path stays in backticks in the
+sentence, since it is typed into the chat or read, not copied to a shell.
+
+````markdown
+**Recommendation**: Try the install, then approve it. Pack it first:
+
+```sh
+pnpm -C apps/limiter pack --pack-destination /tmp
+```
+
+Then, in an empty directory, install it and ask for its version:
+
+```sh
+npm install /tmp/limiter-0.1.0.tgz
+npx limiter --version
+```
+
+The gate is green, and the pack is the one path no test walks.
+````
+
+Every decision turn ends on it: the
 build/verify pause, the plan pause, and an auto halt on trouble. Orientation
 and driver turns carry none, since nothing is pending there. At the plan pause the
 recommendation is the model's cold read of the plan it just framed: one
@@ -2127,8 +2153,9 @@ The numeric lines, in one place:
 - **No hard wrap outside the fence.** The Summary, the labeled lines, the
   table cells, and the recommendation flow at the renderer's width. Only the
   readout's columns are laid out to a number, because only they are columns.
-- **Zero code blocks** in the default turn body beyond the readout fence and
-  the one inline-diff exception above.
+- **Zero code blocks** in the default turn body beyond the readout fence, the
+  one inline-diff exception above, and a shell command's own `sh` fence in
+  the recommendation ([D114 (command-fences)](decisions.md#d114)).
 - **Two tables at most.** The state table on every card and orientation
   ending, and the lean table on a stop card or a harvest's render.
 

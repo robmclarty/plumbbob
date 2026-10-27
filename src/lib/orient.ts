@@ -2571,15 +2571,66 @@ function sectionProse(detail: string, heading: RegExp): string | null {
   if (text.length === 0) {
     return null
   }
-  return text
-    .split(/\n{2,}/)
-    .map((paragraph) =>
-      paragraph
-        .split('\n')
-        .map((l) => l.trim())
-        .join(' '),
-    )
-    .join('\n\n')
+  return proseBlocks(text).join('\n\n')
+}
+
+/**
+ * Prose's blocks, in order: each paragraph unwrapped onto one line, and each
+ * fenced block kept line for line with its fences trimmed flush.
+ *
+ * A command the human is meant to copy rides a fence of its own
+ * (D114 (command-fences)), and joining its lines would run two commands into
+ * one. A fence opened straight under a sentence still ends that paragraph, so
+ * it always stands between blank lines and renders as a block, never as
+ * backticks inside the sentence. A fence left unclosed keeps everything after
+ * it and is closed here, so it cannot swallow the `more details` link the
+ * card prints beneath it.
+ */
+function proseBlocks(text: string): string[] {
+  const blocks: string[] = []
+  let paragraph: string[] = []
+  let fence: Fence | null = null
+  let fenced: string[] = []
+  for (const line of text.split('\n')) {
+    if (fence !== null) {
+      const closed = closesFence(line, fence)
+      fenced.push(closed ? line.trim() : line.trimEnd())
+      if (closed) {
+        blocks.push(fenced.join('\n'))
+        fence = null
+      }
+      continue
+    }
+    const opened = fenceOpening(line)
+    if (opened !== null || line.trim() === '') {
+      if (paragraph.length > 0) blocks.push(paragraph.join(' '))
+      paragraph = []
+    }
+    if (opened !== null) {
+      fence = opened
+      fenced = [line.trim()]
+    } else if (line.trim() !== '') {
+      paragraph.push(line.trim())
+    }
+  }
+  if (fence !== null) blocks.push([...fenced, fence.char.repeat(fence.length)].join('\n'))
+  if (paragraph.length > 0) blocks.push(paragraph.join(' '))
+  return blocks
+}
+
+/** A fence's marker character and how many of it opened the fence. */
+type Fence = { readonly char: string; readonly length: number }
+
+/** The fence a line opens: three or more backticks or tildes, indented three spaces at most. Null when it opens none. */
+function fenceOpening(line: string): Fence | null {
+  const marker = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1]
+  return marker === undefined ? null : { char: marker.charAt(0), length: marker.length }
+}
+
+/** Whether a line closes an open fence: the same character, at least as many of it, and nothing after. */
+function closesFence(line: string, fence: Fence): boolean {
+  const marker = /^ {0,3}(`{3,}|~{3,})\s*$/.exec(line)?.[1]
+  return marker !== undefined && marker.startsWith(fence.char) && marker.length >= fence.length
 }
 
 /** One highlight: the handle `expand` binds to, and the title of the `## <n>` section behind it. */
@@ -2630,12 +2681,11 @@ export function parseSummary(detail: string): Summary | null {
  */
 export function normalizeDetailHeadings(detail: string): string {
   const out: string[] = []
-  let fence: { readonly char: string; readonly length: number } | null = null
+  let fence: Fence | null = null
   let afterHeading = false
   for (const line of detail.split('\n')) {
     if (fence !== null) {
-      const close = /^ {0,3}(`{3,}|~{3,})\s*$/.exec(line)?.[1]
-      if (close !== undefined && close.startsWith(fence.char) && close.length >= fence.length) {
+      if (closesFence(line, fence)) {
         fence = null
       }
       out.push(line)
@@ -2646,10 +2696,7 @@ export function normalizeDetailHeadings(detail: string): string {
     if ((heading || afterHeading) && line.trim() !== '' && prior !== undefined && prior.trim() !== '') {
       out.push('')
     }
-    const open = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1]
-    if (open !== undefined) {
-      fence = { char: open.charAt(0), length: open.length }
-    }
+    fence = fenceOpening(line)
     out.push(line)
     afterHeading = heading
   }
@@ -2692,8 +2739,9 @@ export function parseSections(detail: string): ReadonlyArray<DetailSection> {
 
 /**
  * The `## Recommendation` section of `.plumbbob/detail.md`: the one or two
- * plain sentences a decision turn ends on, or null when the model wrote none.
- * `handoff` emits it after the card, unfenced; the eye lands on the last text,
+ * plain sentences a decision turn ends on, each shell command they name in a
+ * `sh` fence of its own, or null when the model wrote none. `handoff` emits it
+ * after the card, the prose itself unfenced; the eye lands on the last text,
  * and the last text should say which move the model would take.
  */
 export function parseRecommendation(detail: string): string | null {

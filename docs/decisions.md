@@ -1543,6 +1543,16 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   [**D107 (short-linked-paths)**](#d107), whose Summary lead carried a bracket. *Tagged in* `handoff.ts`,
   `orient.ts`, the `build`, `verify`, and `run` skills, and `docs/presentation.md`.
 
+- <a id="d114"></a>**D114 (command-fences): A shell command in the recommendation rides a fenced `sh` block of its
+  own.** The sentence that names it ends on a colon, and the block holds one command to a line; a slash command or
+  a path stays in backticks in the sentence. handoff unwraps the recommendation's paragraphs as before, but keeps a
+  fence line for line, sets it between blank lines when the model wrote it straight under the sentence, and closes
+  one left open so the `more details` link beneath it still renders. *because* a recommendation that named four
+  commands inline read as one paragraph of code and prose, and none of the commands could be copied out whole (Rob,
+  2026-10-27). Revises the presentation spec's zero-code-blocks rule, which allowed only the readout fence and the
+  inline diff. *Tagged in* `orient.ts`, the eval anatomy reader, the `build`, `verify`, `plan`, and `run` skills,
+  and `docs/presentation.md`.
+
 ### Superseded
 
 - <a id="d20"></a>**D20 (local-archive): The archive was local-only markdown.** Wrapping wrote a plain-markdown archive

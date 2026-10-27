@@ -283,7 +283,10 @@ read checked and found sound. A plan with a hole gets `Sharpen <the one worst ho
 and why it matters; when the read found more than one, say how many sit behind `expand`
 and name `/plumbbob:refine` as the move that writes them up as Open questions, with their
 plain and lean sub-lines, for the human to settle. Three findings at most; the rest is
-refine's. `plumbbob handoff --plan` prints the label and your recommendation beneath the
+refine's. A shell command you want the human to run never rides inside a sentence: end the
+sentence on a colon and give the command a fenced `sh` block of its own, one command to a
+line, which handoff keeps line for line; `/plumbbob:refine` stays in backticks in the
+sentence. `plumbbob handoff --plan` prints the label and your recommendation beneath the
 state table, then the `more details` link to the file, "expand 2" opens `## 2`, and `checkpoint --plan` records the read beneath the
 plan's line in the build-log's `## Log`, the build's first entry. The cold read is the tip of refine: it makes the
 full attack discoverable at the moment it would pay, and lets a sound plan skip it. Refine

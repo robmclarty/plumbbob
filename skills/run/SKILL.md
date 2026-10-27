@@ -196,7 +196,10 @@ A park you leave out reads `no lean proposed` on the card and stays open, and a 
 reads `not given`. The section vanishes when no park is open, and so does the card's Harvested part
 ([D100 (stop-card)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d100)).
 The recommendation speaks to the plan's stop, the header's `stop:` line, and to the
-proposals: the move you would take on both, then why.
+proposals: the move you would take on both, then why. A shell command you want the human to
+run never rides inside a sentence: end the sentence on a colon and give the command a fenced
+`sh` block of its own, one command to a line, which handoff keeps line for line. A slash
+command or a path stays in backticks in the sentence.
 
 *Render it and stop.* Run `plumbbob handoff --stop` and paste its output whole, verbatim, at
 top level, trailing blank line included, then end the turn. Write nothing before it or after

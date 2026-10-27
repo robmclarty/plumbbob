@@ -856,6 +856,65 @@ describe('handoff', () => {
     expect(stdout).toContain('**Recommendation**: Approve it. The gate is green and the seam held, so nothing blocks the land.')
   })
 
+  it('keeps each command fence in the recommendation line for line, between blank lines, while the prose around it unwraps', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(
+      detailPath(dir),
+      [
+        `${GREEN_RECAP}`,
+        '## Recommendation',
+        '',
+        'Try the install, then approve it. Pack it',
+        'first:',
+        '   ```sh',
+        'pnpm -C apps/atis pack --pack-destination /tmp',
+        '   ```',
+        'Then, in an empty directory:',
+        '',
+        '```sh',
+        'npm install /tmp/robmclarty-atis-0.0.0.tgz',
+        '  npx atis --version',
+        '',
+        '```',
+        'The gate is green.',
+        '',
+      ].join('\n'),
+    )
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).toContain(
+      [
+        '**Recommendation**: Try the install, then approve it. Pack it first:',
+        '',
+        '```sh',
+        'pnpm -C apps/atis pack --pack-destination /tmp',
+        '```',
+        '',
+        'Then, in an empty directory:',
+        '',
+        '```sh',
+        'npm install /tmp/robmclarty-atis-0.0.0.tgz',
+        '  npx atis --version',
+        '',
+        '```',
+        '',
+        'The gate is green.',
+        '',
+        MORE_DETAILS,
+      ].join('\n'),
+    )
+  })
+
+  it('closes a command fence left open, so the link beneath it still renders as a link', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(detailPath(dir), `${GREEN_RECAP}\n## Recommendation\n\nRun it:\n~~~~sh\nnpx atis --version\n`)
+    const { code, stdout } = captureIo(() => handoff(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).toContain(`**Recommendation**: Run it:\n\n~~~~sh\nnpx atis --version\n~~~~\n\n${MORE_DETAILS}`)
+  })
+
   it('labels the recommendation on the plan pause too, as the ending of a decision turn', async () => {
     const dir = await started()
     writeFileSync(detailPath(dir), '## recommendation\n\nDecide it. Every open question is closed.\n')

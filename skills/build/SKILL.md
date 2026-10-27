@@ -181,7 +181,10 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    sentence, closed by a period, then the reason as a capitalized sentence or two. The lead
    and the recommendation are flowing prose and handoff unwraps both to the renderer's
    width, so never hard-wrap them; handoff also prepends the bold `**Recommendation**:`
-   label, which you never type. `checkpoint` records this file beneath the step's dated
+   label, which you never type. A shell command you want the human to run never rides
+   inside a sentence: end the sentence on a colon and give the command a fenced `sh` block
+   of its own, one command to a line, which handoff keeps line for line. A slash command
+   or a path stays in backticks in the sentence. `checkpoint` records this file beneath the step's dated
    line in the build-log's `## Log` and then truncates it, so the detail lands in the
    tracked ledger rather than piling up on disk.
 
