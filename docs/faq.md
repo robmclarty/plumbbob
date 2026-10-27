@@ -109,8 +109,8 @@ checks`) and offers the `looks good` move.
 
 Whichever you like; the plan may suggest one per step. `/plumbbob:plan` writes an advisory
 `model:` line under a step when the signal is clear (a small model for mechanical wiring,
-a frontier one for test authoring or design), `/plumbbob:status` and every `**Next Up**`
-line surface it, and switching is your `/model` call before the next run or build. A build
+a frontier one for test authoring or design), `/plumbbob:status` and every Next Up surface
+it, and switching is your `/model` call before the next run or build. A build
 range carries a `model:` line of its own, the strongest any step inside it needs, and
 while the card names a run, the bold model on Next Up is the range's, since that is the
 model the whole run builds on ([D93 (range-on-the-card)](decisions.md#d93)). Nothing

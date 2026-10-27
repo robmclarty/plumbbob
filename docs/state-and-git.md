@@ -69,8 +69,8 @@ branch.
 | `builds/<slug>/SEAM` | The step's declared paths, one per line (awareness, not a lock) | `build` | `checkpoint` / `revert` / `abandon` |
 | `builds/<slug>/SPIKE` | Marker: a spike fork is open | `spike` | `spike done` |
 | `builds/<slug>/TICK` | The `TURN` value at the moment the step was entered | `build` | `checkpoint` / `abandon` |
-| `builds/<slug>/PAUSE` | The step number and a hash of what the pause card last showed, so a repeat prints the one-line reminder ([D87 (pause-once)](decisions.md#d87)) | `handoff` | `checkpoint` / `revert` / `abandon` |
-| `builds/<slug>/STOP` | The range the stop card last showed, the `TURN` it printed in, and hashes of the card and of the detail file it rendered from, so a repeat prints the reminder and `plumbbob harvest` records only what the card showed, a turn later ([D103 (stop-latched)](decisions.md#d103)) | `handoff --stop` | `plumbbob harvest` |
+| `builds/<slug>/PAUSE` | Which card has shown: the step whose pause card showed (`2`) or, after a checkpoint, the step whose boundary did (`landed 2`), so a repeat prints its one line whatever changed since ([D110 (reply-after-the-card)](decisions.md#d110)) | `handoff`, `checkpoint` | `revert` / `abandon` |
+| `builds/<slug>/STOP` | The range whose stop card has shown and the `TURN` it printed in, so a repeat prints the reminder and `plumbbob harvest` records only a range a card showed, a turn later ([D103 (stop-latched)](decisions.md#d103), [D110 (reply-after-the-card)](decisions.md#d110)) | `handoff --stop` | `plumbbob harvest` |
 | `builds/<slug>/handoff.json` | Ledger of agent runs for this step, so a later call can thread earlier results ([D47 (handoff-ledger)](decisions.md#d47)) | `agent run` | `checkpoint` / `abandon` |
 | `.check/` | The check gate's raw tool output | checkride | overwritten each run |
 

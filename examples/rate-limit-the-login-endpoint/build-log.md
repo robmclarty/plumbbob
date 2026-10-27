@@ -89,6 +89,8 @@ folder, so it rides the branch into the PR.)*
   constraints  1 of 1 honored
   seam         held: 2 of 2 declared, no strays
   diff         +61 -3 across 2 files
+               - src/limiter.ts +38 -3
+               - test/limiter.test.ts +23 -0
   spent        22 min · 2 turns · 41s gate · green first run
   ```
 
@@ -128,6 +130,11 @@ folder, so it rides the branch into the PR.)*
   constraints  1 of 1 honored
   seam         held: 2 of 2 steps, no strays
   diff         +48 -6 across 5 files
+               - .env.example +1 -0
+               - src/config.ts +9 -0
+               - src/routes/login.ts +14 -6
+               - test/config.test.ts +11 -0
+               - test/login.rate.test.ts +13 -0
   spent        31 min · green first run at every landing
   ```
 
@@ -135,7 +142,9 @@ folder, so it rides the branch into the PR.)*
 
   **Harvested**: 1 of 1 parked idea open
 
-  - P1 · should /password-reset get the same throttle? (tangent) → lean: tangent, a separate route and a separate decision, not a blocker for this goal
+  | Park | What it is | Why it matters | Lean |
+  | --- | --- | --- | --- |
+  | P1 · reset throttle | should /password-reset get the same throttle? (tangent) | it is the next brute-force target once login is closed | tangent: a separate route and a separate decision, not a blocker for this goal |
 
   **Recommendation**: Approve it, then try six logins yourself before you finish. The gate was green at both landings, and the one park is future work, not this goal's.
 

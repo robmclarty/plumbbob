@@ -101,15 +101,13 @@ plan, gives it a cold read (one adversarial pass under `/plumbbob:refine`'s lens
 surfacing holes without writing any), and writes that read into `.plumbbob/detail.md`;
 then it relays the CLI's plan-pause card (`plumbbob handoff --plan`), which opens on a
 rule because the plan itself sits above it. Nothing is measured yet, so it carries no
-Verdict, and nothing has landed, so `revert` is not among the moves. The recommendation
-is the cold read's verdict: `Approve it`, or `Sharpen <the worst hole> first` with
-refine named for the rest:
+Verdict, and the state table at its foot is headed by Next Up instead; nothing has
+landed, so `revert` is not among the moves. The recommendation is the cold read's
+verdict: `Approve it`, or `Sharpen <the worst hole> first` with refine named for the
+rest, and the card closes on one link to the read itself:
 
 ```text
 ---
-
-**Next Up**: Step 1 of 3 - feat(limiter): add a token-bucket limiter (model: **Opus**, details: [intent.md:25](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L25))
-  · range 1 of 2: /plumbbob:run (step 1 to its pause)
 
 **Your Call**:
 
@@ -117,7 +115,13 @@ refine named for the rest:
 - `expand`, or any question → I show more of what is there; nothing changes
 - anything that reads as direction → I take it as what to sharpen; the plan is cheap to change now
 
+| **Next Up** | Step 1 of 3 - feat(limiter): add a token-bucket limiter (model: **Opus**, details: [intent.md:25](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L25)) |
+| --- | --- |
+| Range | 1 of 2: /plumbbob:run (step 1 to its pause) |
+
 **Recommendation**: Approve it. Every step carries a done-when a test can measure, the seams name files that exist, and each Decision states its because.
+
+[more details](.plumbbob/detail.md)
 ```
 
 ![The plan pause under the framed plan](media/plan-pause.svg)
@@ -129,8 +133,9 @@ prints its own close:
 ```text
 **Plan**: committed (7d2e94fb0, details: [build-log.md:62](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md#L62))
 
-**Next Up**: Step 1 of 3 - feat(limiter): add a token-bucket limiter (model: **Opus**, details: [intent.md:25](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L25))
-  · range 1 of 2: /plumbbob:run (step 1 to its pause)
+| **Next Up** | Step 1 of 3 - feat(limiter): add a token-bucket limiter (model: **Opus**, details: [intent.md:25](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L25)) |
+| --- | --- |
+| Range | 1 of 2: /plumbbob:run (step 1 to its pause) |
 ```
 
 > **Plan as far as you can see clearly.** Later steps may be fuzzier than the first;
@@ -234,13 +239,7 @@ agent pastes the result and writes nothing around it (the
 [turn anatomy](presentation.md) fixes every part of the shape):
 
 ````markdown
-**Now**: Step 1 of 3 - feat(limiter): add a token-bucket limiter
-
-**Summary**: A per-IP token bucket now refuses the 6th attempt inside a minute. (details: [detail.md](.plumbbob/detail.md))
-
-1. The bucket lives in memory, keyed by IP, refilling on read: five tokens a minute.
-2. The clock is injected, so the test advances time instead of sleeping on it.
-3. `test/limiter.test.ts` covers refill, exhaustion, and the per-IP split.
+**Summary**: A per-IP token bucket now refuses the 6th attempt inside a minute.
 
 **Readout**:
 
@@ -251,33 +250,40 @@ decisions    2 of 2 honored
 constraints  1 of 1 honored
 seam         held: 2 of 2 declared, no strays
 diff         +61 -3 across 2 files
+             - src/limiter.ts +38 -3
+             - test/limiter.test.ts +23 -0
 spent        22 min · 2 turns · 41s gate · green first run
 ```
-
-**Verdict**: ● Plumb
-
-**Next Up**: Step 2 of 3 - feat(login): wire the limiter into POST /login (model: **Sonnet**, details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28))
-  · range 1 of 2 lands with step 1
 
 **Your Call**:
 
 - `looks good` → I checkpoint Step 1; back to the boundary
 - `expand`, or any question → I show more of what is there; nothing changes, and `show the pause` brings all of this back
-- anything that reads as direction → I take it as what to change; nothing lands until you approve
+- anything that reads as direction → I make the change and say what moved; nothing lands until you approve
 - `revert` → I wind the work back to the last checkpoint
 
+| **Verdict** | ● Plumb |
+| --- | --- |
+| Now | Step 1 of 3 - feat(limiter): add a token-bucket limiter |
+| Next Up | Step 2 of 3 - feat(login): wire the limiter into POST /login (model: **Sonnet**, details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28)) |
+| Range | 1 of 2 lands with step 1 |
+
 **Recommendation**: Approve it, refilling on read. The gate is green and the seam held, and a bucket that refills when it is read needs no timer for the route to clean up.
+
+[more details](.plumbbob/detail.md)
 ````
 
 ![The pause as Claude Code renders it](media/pause.svg)
 
 Every deterministic line there is measured, not composed: the check row comes from the
-gate's own summary, the seam row from the declared seam against `git diff`, the diff and
-`spent` rows from git and the step's receipts, and the Verdict is the worst of them all.
-Only the Summary, the three judgment rows, and the recommendation are the agent's, and
-they reach the turn through the detail file rather than the chat. The recommendation
-speaks to the call the plan reserved here, and the line beneath Next Up says range 1 ends
-with this step.
+gate's own summary, the seam row from the declared seam against `git diff`, the diff
+row and the files beneath it and the `spent` row from git and the step's receipts, and
+the Verdict, which heads the state table, is the worst of them all. Only the Summary,
+the three judgment rows, and the recommendation are the agent's, and they reach the turn
+through the detail file rather than the chat. The rest of the agent's story (the numbered
+sections behind the Summary) stays in that file, one `more details` link away. The
+recommendation speaks to the call the plan reserved here, and the Range row says range 1
+ends with this step.
 
 The four moves are the ones you actually make. `expand 2` (or any question at all) opens
 the matching section of the detail file and changes nothing. The answer closes on one
@@ -288,9 +294,10 @@ lines beneath an answer push it off the screen:
 **Next Up**: Back to Step 1 of 3 - feat(limiter): add a token-bucket limiter
 ```
 
-Say `show the pause` and the whole block comes back; it also comes back on its own once
-the work, the check, or the detail behind it changes. Anything that reads as direction is taken as what to fix, and
-still nothing lands until you say `looks good`.
+Anything that reads as direction is a reply too: the agent makes the change, says what
+moved and what the check found, and closes on that same line, and still nothing lands
+until you say `looks good`. The block comes back only when you say `show the pause`
+([D110 (reply-after-the-card)](decisions.md#d110)).
 
 > **This pause is the product.** You read the diff and say "yes, this matches what I
 > intended." It reads the *diff, not the author*: a step you wrote by hand or vibed in
@@ -351,17 +358,18 @@ building. Nothing triages the list mid-range; the parks wait for the range's sto
 Back at step 1's pause, you approve. Only then does it checkpoint: committing the work,
 recording the SHA, flipping the step to `[x]`, and returning to the `DESIGN` boundary,
 where it **stops**. The boundary turn scales the anatomy down to what a landed step needs:
-the lead line, then the Verdict and Next Up, with no Your Call block, because no decision
-is pending. `plumbbob checkpoint` prints all three itself, as one block, so what the agent
-relays is one command's output:
+the lead line, then the state table (the Verdict, Next Up, and the rows beneath it), with
+no Your Call block, because no decision is pending. `plumbbob checkpoint` prints it all
+itself, as one block, so what the agent relays is one command's output:
 
 ```text
 **Checkpoint**: Step 1 complete (a1b2c3d4e, details: [build-log.md:70](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md#L70))
 
-**Verdict**: ● Plumb
-
-**Next Up**: Step 2 of 3 - feat(login): wire the limiter into POST /login (model: **Sonnet**, details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28))
-  · range 2 of 2: /plumbbob:run (steps 2-3) · parked 1 of 1 open
+| **Verdict** | ● Plumb |
+| --- | --- |
+| Next Up | Step 2 of 3 - feat(login): wire the limiter into POST /login (model: **Sonnet**, details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28)) |
+| Range | 2 of 2: /plumbbob:run (steps 2-3) |
+| Parked | 1 of 1 open |
 ```
 
 ![The boundary after looks good](media/checkpoint-boundary.svg)
@@ -370,12 +378,12 @@ The `details:` pointer is where the pause's record went: `checkpoint` writes the
 you approved beneath the step's dated line in `build-log.md`'s Log, so an older step's
 detail is a scroll, and the record rides the branch into the PR.
 
-That Next Up line is what carries the plan's model recommendation across a context
+That Next Up row is what carries the plan's model recommendation across a context
 window: a fresh window inherits the session's model rather than the plan's suggestion, so
-the line names the `/model` to select before the next run, the range's own when a run
+the row names the `/model` to select before the next run, the range's own when a run
 comes next. Guidance, never a gate.
 
-The line beneath it names the run to type, and the steps it will land. **Fire
+The Range row beneath it names the run to type, and the steps it will land. **Fire
 `/plumbbob:run` again**: *re-firing it is the clock tick*. The hook mints `steps 2-3` from
 the plan as you type, and the header says so:
 
@@ -389,17 +397,12 @@ Range 2 lands both steps without a pause between them. Each still runs the whole
 the pause (the check, the self-review against the plan, and a checkpoint of its own), so a
 wrong turn still costs one step to revert, and a red check or a mismatch halts the run at
 that step's pause, on the same card as step 1's. When step 3 lands, the run ends on the
-**stop card**: the plan's stop for range 2 as its lead, a review of the whole range written
-from the steps' commits, a Readout measured across both landings, and every open park with
-a lean proposed for it:
+**stop card**: a review of the whole range written from the steps' commits, a Readout
+measured across both landings, every open park as a row of the lean table with a lean
+proposed for it, and the plan's stop for range 2 in the state table at its foot:
 
 ````markdown
-**Stop**: Range 2 of 2 landed - try six logins yourself, then `/plumbbob:finish` (details: [intent.md:42](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L42))
-
-**Summary**: POST /login now answers the 6th attempt inside a minute with 429, and `RATE_LIMIT_MAX` moves the limit. (details: [detail.md](.plumbbob/detail.md))
-
-1. The route takes one bucket per IP from the limiter step 1 built.
-2. `RATE_LIMIT_MAX` overrides the default of five, read once at startup.
+**Summary**: POST /login now answers the 6th attempt inside a minute with 429, and `RATE_LIMIT_MAX` moves the limit.
 
 **Readout**:
 
@@ -412,16 +415,19 @@ decisions    2 of 2 honored
 constraints  1 of 1 honored
 seam         held: 2 of 2 steps, no strays
 diff         +48 -6 across 5 files
+             - .env.example +1 -0
+             - src/config.ts +9 -0
+             - src/routes/login.ts +14 -6
+             - test/config.test.ts +11 -0
+             - test/login.rate.test.ts +13 -0
 spent        31 min · green first run at every landing
 ```
 
-**Verdict**: ● Plumb
-
 **Harvested**: 1 of 1 parked idea open
 
-- P1 · should /password-reset get the same throttle? (tangent) → lean: tangent, a separate route and a separate decision, not a blocker for this goal
-
-**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish
+| Park | What it is | Why it matters | Lean |
+| --- | --- | --- | --- |
+| P1 · reset throttle | should /password-reset get the same throttle? (tangent) | it is the next brute-force target once login is closed | tangent: a separate route and a separate decision, not a blocker for this goal |
 
 **Your Call**:
 
@@ -429,21 +435,31 @@ Approving locks in each lean above; to change one, say so first (`make P1 a bloc
 
 - `looks good` → I record the review and every lean as proposed, folding a blocker into the plan; back to the boundary
 - `/plumbbob:finish` → I record them the same way, then write the report and close the build
-- anything that reads as direction → I re-render the card with the lean changed; nothing is recorded until you approve
+- anything that reads as direction → I change the lean and say what moved; nothing is recorded until you approve
 - `expand`, or any question → I show more of what is there; nothing changes, and `show the stop` brings all of this back
 
+| **Verdict** | ● Plumb |
+| --- | --- |
+| Stop | Range 2 of 2 landed - try six logins yourself, then `/plumbbob:finish` (details: [intent.md:42](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L42)) |
+| Next Up | Nothing planned - /plumbbob:step or /plumbbob:finish |
+
 **Recommendation**: Approve it, then try six logins yourself before you finish. The gate was green at both landings, and the one park is future work, not this goal's.
+
+[more details](.plumbbob/detail.md)
 ````
 
 The Harvested part is the harvest. No harvest ran between the steps, so every idea parked
-along the way is here, under its handle (`P1`, the first line ever parked), with the class
-the model leans toward and why. Each park gets exactly one class: **blocker** (the plan was
+along the way is here, as a row of the lean table: its handle (`P1`, the first line ever
+parked) and a short title, its text as you parked it, why it matters, and the class the
+model leans toward with its reason ([D112 (lean-table)](decisions.md#d112)). Each park
+gets exactly one class: **blocker** (the plan was
 wrong; fold into intent and handle now), **tangent** (different, not clearly better: the
 default; defer or kill), or **pivot signal** (the whole approach is wrong; stop and replan).
 One reply settles the whole card ([D102 (settle-in-one-reply)](decisions.md#d102)):
 `looks good` records the review and every lean as proposed; `make P1 a blocker`, or any
-change, re-renders the card with it changed, and nothing is recorded until you approve; a
-question changes nothing and closes on one line. On this, the plan's last range,
+change, is the agent's reply, which makes the change, says so, and closes on one line,
+and nothing is recorded until you approve; a question changes nothing and closes on the
+same line. On this, the plan's last range,
 `/plumbbob:finish` records the card and closes the build; before the last range, a
 `/plumbbob:run` row records it and runs the next range in the same reply.
 
@@ -455,8 +471,9 @@ into the PR. It commits nothing; the record rides the next commit:
 ```text
 **Stop**: Range 2 of 2 recorded (1 tangent)
 
-**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish
-  · parked 0 of 1 open
+| **Next Up** | Nothing planned - /plumbbob:step or /plumbbob:finish |
+| --- | --- |
+| Parked | 0 of 1 open |
 ```
 
 A confirmed blocker folds into `intent.md` first, by the harvest skill's rules, placed in
@@ -497,7 +514,9 @@ different number.
   the account system already enforces.
 
 ## Parked & harvested
-- "should /password-reset get the same throttle?" → tangent, deferred.
+| Park | What it is | Why it matters | Settled |
+| --- | --- | --- | --- |
+| P1 · reset throttle | should /password-reset get the same throttle? | it is the next brute-force target once login is closed | tangent: a separate route and decision, deferred |
 
 ## Final status
 Done. All three steps checkpointed and green.
@@ -519,7 +538,8 @@ the record now, so it merges into `main` with the branch:
 ```text
 **Session**: finished (f3e9a1b2c, .plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/ rides your branch into the PR)
 
-**Next Up**: Nothing planned - /plumbbob:plan
+| **Next Up** | Nothing planned - /plumbbob:plan |
+| --- | --- |
 ```
 
 The record now lives (tracked, on the branch) at:
@@ -571,16 +591,15 @@ clock tick.
 
 A range typed by hand, `/plumbbob:build 2-3`, lands the steps it names the way a run
 does, but its turn ends on the last step's checkpoint block rather than a stop card. That
-block's `**Stop**` part says why the build stopped there:
+block's `Stop` row says why the build stopped there:
 
 ```text
 **Checkpoint**: Step 3 complete (e5f6a7b8c, details: [build-log.md:107](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md#L107))
 
-**Verdict**: ● Plumb
-
-**Stop**: Range 2 of 2 landed - try six logins yourself, then `/plumbbob:finish` (details: [intent.md:42](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L42))
-
-**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish
+| **Verdict** | ● Plumb |
+| --- | --- |
+| Stop | Range 2 of 2 landed - try six logins yourself, then `/plumbbob:finish` (details: [intent.md:42](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L42)) |
+| Next Up | Nothing planned - /plumbbob:step or /plumbbob:finish |
 ```
 
 > **Unattended option: `/plumbbob:build --auto`.** When you'd rather not approve each step

@@ -226,7 +226,7 @@ model wrote ([**D67 (auto-not-a-grant)**](decisions.md#d67)).
 run now resolves a different set of steps. Typed at a stop card, the run's record folded a
 blocker that added or moved a step in the range it would walk, after the grant was minted;
 or the host never passed the range number you typed through to the skill. **Fix.** After a
-record, the run ends there, and the record's note names the re-cut run beneath Next Up:
+record, the run ends there, and the record's Range row names the re-cut run beneath Next Up:
 type `/plumbbob:run` again. When the number was lost, the run walks exactly the steps the
 grant names and says so in one line, so nothing needs fixing.
 

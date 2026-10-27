@@ -37,8 +37,8 @@ path's finish.
 | --- | --- | --- | --- | --- |
 | `loop-one-step.svg` | video | `docs/happy-path.md` (the granular move) | `/plumbbob:build`, the pause block, `looks good`, the Checkpoint block, about twenty seconds | a planned build at the boundary with step 1 undone |
 | `full-session.svg` | video | `docs/happy-path.md` (top) | plan, three builds, a park during step 2, harvest, finish | a fresh repo with a clean tree |
-| `pause.svg` | screenshot | `docs/happy-path.md` (section 3) | the whole pause block as Claude Code renders it, Summary through Recommendation | step 1 at its pause after a green check, so `looks good` is on the card |
-| `checkpoint-boundary.svg` | screenshot | `docs/happy-path.md` (section 5) | the three-line boundary block | right after `looks good` lands step 1 |
+| `pause.svg` | screenshot | `docs/happy-path.md` (section 3) | the whole pause block as Claude Code renders it, the Summary through the state table, the Recommendation, and the `more details` link | step 1 at its pause after a green check, so `looks good` is on the card |
+| `checkpoint-boundary.svg` | screenshot | `docs/happy-path.md` (section 5) | the boundary block: the Checkpoint line and its state table | right after `looks good` lands step 1 |
 | `plan-pause.svg` | screenshot | `docs/happy-path.md` (section 0) | the framed plan's tail and the plan-pause card under its rule | the plan pause, before `looks good` |
 | `status-dashboard.svg` | screenshot | `docs/happy-path.md` (section 1) | the dashboard with a done step, a step in flight, and one parked item | mid step 2, after the park |
 | `park.svg` | screenshot | `docs/happy-path.md` (section 4) | the composed line, the OK, and the Parked block with its pointer back | mid step 2 |

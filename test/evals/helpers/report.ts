@@ -213,6 +213,16 @@ export function renderReport(date: string): string {
     '  (`D1 (in-memory-bucket):`) ships only in templates/intent.md and the plan',
     '  skill, so nothing enforces it and baseline should track latched. Its',
     '  number measures whether that guidance actually lands in authored intent.',
+    '- Contracts 10 and 12 each read a reply at a pause whose card has shown: c10',
+    '  asks a question, c12 asks for a change inside the step\'s seam. Each scripted',
+    '  turn is a fresh session, so the reply runs with the card and the build',
+    '  skill\'s prose out of context, on the turn hook\'s pause nudge and the CLI',
+    '  alone. Their reminder probes carry names of their own, so the shared',
+    '  decision rates still read first renders alone. Since',
+    '  [D110 (reply-after-the-card)](../decisions.md#d110) the pause stamp records',
+    '  only that the card showed, and the nudge at a pause names the reply where',
+    '  it used to give the park line, so c10\'s reminder rate is not comparable',
+    '  across that line, and no receipt before it measured c12.',
     ...(relayed
       ? [
           '- `no-relay` and `latched` ran at one commit and differ in one hook: the',

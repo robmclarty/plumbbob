@@ -92,8 +92,8 @@ have drifted. Most steps need nothing; skip straight to `/plumbbob:run` (or
 Builds one range of the plan: what is left of the range holding the next step, or of range
 3 for `/plumbbob:run 3`, by the item number `## Build ranges` gives it
 ([D95 (run-verb)](decisions.md#d95)). The step numbers are the plan's to know, so you never
-type them: the card names the run beneath Next Up with the steps it will land
-(`· range 2 of 2: /plumbbob:run (steps 2-3)`), and the turn hook mints the run's grant from
+type them: the card names the run in the Range row beneath Next Up with the steps it will
+land (`| Range | 2 of 2: /plumbbob:run (steps 2-3) |`), and the turn hook mints the run's grant from
 the plan as you type it ([D96 (plan-names-the-grant)](decisions.md#d96)). The skill opens on
 the run header `plumbbob status --run` prints (the range, what is left of it, where the run
 ends, its stop, and that grant), then walks the steps the way a typed range is walked,
@@ -101,10 +101,11 @@ reading the build skill beside it for the per-step loop
 ([D99 (one-loop)](decisions.md#d99)). It ends where the range does. A bare range builds its
 one step to the pause, where the plan reserved a call. A range that lands its steps lands
 each on green and ends on the [stop card](presentation.md#the-stop-card): the review of the
-whole range, its readout measured across the steps, and every open park with a lean proposed
-([D100 (stop-card)](decisions.md#d100)). One reply settles the card: `looks good` records
-the review and every lean through `plumbbob harvest`, a change re-renders it, a question
-changes nothing, and `/plumbbob:run` records it and runs the next range (`/plumbbob:finish`
+whole range, its readout measured across the steps, and every open park in the lean table
+([D100 (stop-card)](decisions.md#d100), [D112 (lean-table)](decisions.md#d112)). One reply
+settles the card: `looks good` records the review and every lean through `plumbbob harvest`,
+a change is answered in the model's words and closed on the reminder, a question changes
+nothing, and `/plumbbob:run` records it and runs the next range (`/plumbbob:finish`
 does the same at the last). Typed while a step waits at its pause, a run is that pause's
 `looks good`, then carries on through the rest of the step's range. It refuses, naming the
 move that unblocks it, a plan without ranges, a range that has landed or does not exist, a
@@ -128,18 +129,20 @@ lands steps 1 through 3, then ends on step 3's checkpoint block. A range may als
 steps (`20,5-9`): it lands exactly the steps it names, walked in build order from its first
 undone one, and halts before any step it does not name
 ([D91 (step-list-grants)](decisions.md#d91)). When the plan carries build ranges, the card
-names the run to type beneath Next Up, and [`/plumbbob:run`](#run) is the move that walks
-one; `/plumbbob:build` stays the granular one. A range landed by a typed
-`/plumbbob:build 2-3` ends on the boundary where its last step lands, which carries a
-`**Stop**` part saying why the build stops there, relayed with the rest of the checkpoint's
-block; a bare range's pause is its stop, so the recommendation there speaks to the plan's
+names the run to type in the Range row beneath Next Up, and [`/plumbbob:run`](#run) is the
+move that walks one; `/plumbbob:build` stays the granular one. A range landed by a typed
+`/plumbbob:build 2-3` ends on the boundary where its last step lands, whose state table
+carries a `Stop` row saying why the build stops there, relayed with the rest of the
+checkpoint's block; a bare range's pause is its stop, so the recommendation there speaks to the plan's
 call. At a pause (the default
 path, or a halt on a red check or a mismatch) it writes its judgment into `.plumbbob/detail.md`,
 runs `plumbbob handoff`, and pastes the block; you reply with one of the four moves the
 block names (`looks good`, `expand`, a direction, `revert`), and on `looks good` the
-checkpoint prints the boundary block for it to relay. An `expand` is answered above one
-line pointing back at the step, since the block renders once per pause, and
-`show the pause` has the skill run `plumbbob handoff --full` to bring it back. While a
+checkpoint prints the boundary block for it to relay. An `expand`, or a direction, is
+answered in the model's own words above one line pointing back at the step, since a card
+shows once and every later turn at it is a reply
+([D110 (reply-after-the-card)](decisions.md#d110)), and `show the pause` has the skill run
+`plumbbob handoff --full` to bring it back. While a
 run's stop card waits for its reply, `plumbbob build` enters no step, since the step's
 pause would write over the range's review in `.plumbbob/detail.md`; the skill relays the
 refusal, which names the reply that records the card, and ends the turn
@@ -174,9 +177,8 @@ numbering (`4, 7, 8, 5, 10, 6`) and used to live in your head. Give it the full 
 or a relative one ("7 and 8 before 5"); it composes every undone step in order, shows it
 for a quick OK, then writes it by shelling `plumbbob order`, never by editing `intent.md`.
 The `## Build order` line it writes is what the dashboard's `← next`, a bare
-`/plumbbob:build`, `checkpoint`'s fallback, and the card's Next Up all follow, and the card
-reminds you of the next five beneath Next Up whenever the sequence departs from the
-numbering. `--reset` drops the line. When the plan carries build ranges, the verb re-cuts
+`/plumbbob:build`, `checkpoint`'s fallback, and the card's Next Up all follow, and the card's
+Order row reminds you of the next five whenever the sequence departs from the numbering. `--reset` drops the line. When the plan carries build ranges, the verb re-cuts
 them to follow the sequence, so a run typed next walks what the new order put in its range,
 and its ending names each range it re-cut and any it left for `/plumbbob:refine`
 ([D109 (ranges-follow-the-order)](decisions.md#d109)). Step, refine, and harvest shell the
@@ -199,13 +201,14 @@ one class per item: **blocker** (the plan was wrong; fold into intent and handle
 **tangent** (different, not clearly better: the default; defer or kill), or **pivot
 signal** (the approach is wrong; stop and replan). It proposes every class at once, so one
 reply settles the list: you call each one, changing any lean before you approve. Confirmed
-items are recorded through `plumbbob harvest`, under `## Harvest`, and a confirmed blocker is
+items are recorded through `plumbbob harvest`, under `## Harvest`, after `plumbbob handoff
+--harvest` shows every proposal in the lean table, and a confirmed blocker is
 folded into `intent.md`; when it becomes a step, `plumbbob order` places it in the
 [build order](#order) and files it into the build range still to come that the order puts it
 in. A
 range's stop is the boundary that matters most: no harvest runs between the steps inside a
 range, so the parks pile up, and a run's stop card carries their harvest itself, each park
-under its `P3` handle with a lean ([D105 (park-handles)](decisions.md#d105)). Fire
+a row of the lean table under its `P3` handle ([D105 (park-handles)](decisions.md#d105)). Fire
 `/plumbbob:harvest` outside a run's stop: between steps, or after a range a typed
 `/plumbbob:build` landed. While a stop card waits it refuses and points at the card's own
 reply, because writing its detail file would overwrite the range's review.

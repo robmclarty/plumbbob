@@ -24,8 +24,9 @@ policy, and overridable by env.
 
 ## Parked and harvested
 
-- P1, "should /password-reset get the same throttle?" → tangent, deferred at range 2's
-  stop: a separate route and a separate decision.
+| Park | What it is | Why it matters | Settled |
+| --- | --- | --- | --- |
+| P1 · reset throttle | should /password-reset get the same throttle? | it is the next brute-force target once login is closed | tangent, deferred at range 2's stop: a separate route and a separate decision |
 
 ## Final status
 

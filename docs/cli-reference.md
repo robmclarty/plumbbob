@@ -203,98 +203,109 @@ plumbbob handoff [<n>] [--full] [--plan] [--driver] [--stop] [--harvest] [--buil
 Prints the whole CLI-rendered **ending of a turn** ([the turn anatomy](presentation.md);
 [**D80 (cli-renders-model-relays)**](decisions.md#d80)) as one contiguous block, closed by a trailing blank line so nothing that follows can clobber
 it. It writes three things and changes nothing else: at a pause it leaves `.plumbbob/detail.md`
-with a blank line around each heading, at a step pause it stamps what the card showed in
-`builds/<slug>/PAUSE`, and every render records itself in `.plumbbob/RELAY` for
-[`relay`](#relay) to check at the turn's end. Every part outside the readout fence is a bold label, a
-colon, and text that wraps, with one blank line between blocks and no fence but the
-readout's own (plus the inline diff's).
+with a blank line around each heading, it stamps which card has shown in
+`builds/<slug>/PAUSE` (or `STOP`, for a stop card), and every render records itself in
+`.plumbbob/RELAY` for [`relay`](#relay) to check at the turn's end. Every part outside the
+readout fence is a bold label, a colon, and text that wraps, except the state the turn ends
+in, which rides one two-column table ([**D111 (state-table)**](decisions.md#d111)).
 
 At a build pause it renders the turn entire, in this order:
 
-- `**Now**:` the step in flight, its count out of the whole plan, and its title, written
-  the way Next Up writes the step to come, so the two lines agree under a re-sequenced
-  build order. A step the plan no longer holds is named by its number alone
-  ([**D88 (current-step-shown)**](decisions.md#d88)).
 - `**Summary**:` the lead the model wrote as `.plumbbob/detail.md`'s `## Summary`
-  section, with the `(details: …)` bracket appended, then the `## <n>` section titles
-  beneath it as the numbered highlights.
-- `**Readout**:` the label alone, since the Now line already names the step, then the
-  fence: the `check` row measured from
+  section. The `## <n>` sections stay in the detail file, where `expand 2` opens `## 2`
+  ([**D113 (short-card)**](decisions.md#d113)).
+- `**Readout**:` the label alone, then the fence: the `check` row measured from
   `.check/summary.json`, `seam` and `diff` from the SEAM marker against the step's whole
   product (everything changed since HEAD, staged or not, plus each non-ignored new file),
-  and `spent` from `stats.json` and the turn ledger, folded with the three judgment rows
-  (`done-when`, `decisions`, `constraints`) the model wrote into the detail file. Green
-  rows collapse to a count, red rows name the one offender.
+  each changed file on a continuation line beneath `diff` (`- src/login.ts +40 -3`, seven
+  named and the rest a count past eight), and `spent` from `stats.json` and the turn
+  ledger, folded with the three judgment rows (`done-when`, `decisions`, `constraints`) the
+  model wrote into the detail file. Green rows collapse to a count, red rows name the one
+  offender.
 - a `diff` fence, when the change is 20 lines or fewer and a patch could be produced.
-- `**Verdict**:` the ladder rung, computed worst-of over those same rows plus the step's
-  accrued stats, naming its worst component in a trailing parenthetical
-  ([**D82 (readout-ladder)**](decisions.md#d82)).
-- `**Next Up**:` the next undone step in build order, its progress count, and a bracket
-  carrying the step's `- model:` recommendation and where to read it in full. Beneath it,
-  indented, one line of reminders when there is something to remind of: the range holding
-  that step and the run that lands what is left of it (`· range 2 of 2: /plumbbob:run
-  (steps 2-3)`, when the plan declares build ranges), the build order from that step on
-  (`order: 7, 8, 5`, only when `## Build order` departs from the numbering; five steps, then
-  a count), and the park count (`parked 2 of 7 open`, whenever anything has been parked). At
-  the pause on a range's last step the segment reads `· range 1 of 2 lands with step 1` and
-  names no run, since a run typed there ends on that range's stop. While the line suggests a
-  range, the bracket's bold model is the range's own `- model:` rather than the step's, and
-  a range the plan has outgrown reads `· range 2 of 2 needs a re-cut (step 9 is not in the
-  plan)` in place of a run ([**D98 (card-names-the-run)**](decisions.md#d98)). The driver
-  tier's pointer carries no such line ([**D86 (build-order)**](decisions.md#d86)). The
-  bracket's `details:` clause is a link whose text is the file's name and line, such as
-  `[intent.md:28](.plumbbob/builds/<slug>/intent.md#L28)`
-  ([**D107 (short-linked-paths)**](decisions.md#d107)).
 - `**Your Call**:` the moves a human actually makes at a pause, each with its outcome. The
   `expand` move also names the way back to the card: `show the pause`. Inside a range that
   lands its steps, with steps still ahead of the one in flight, a `/plumbbob:run` row lands
   the step and runs the rest of the range to its stop
   ([**D95 (run-verb)**](decisions.md#d95)).
+- the state table, its rows in this order, each only when it says something:
+  - `Verdict`, the header: the ladder rung, computed worst-of over the readout's rows plus
+    the step's accrued stats, naming its worst component in a trailing parenthetical
+    ([**D82 (readout-ladder)**](decisions.md#d82)).
+  - `Now`: the step in flight, its count out of the whole plan, and its title, written the
+    way Next Up writes the step to come, so the two rows agree under a re-sequenced build
+    order. A step the plan no longer holds is named by its number alone
+    ([**D88 (current-step-shown)**](decisions.md#d88)).
+  - `Next Up`: the next undone step in build order, its progress count, and a bracket
+    carrying the step's `- model:` recommendation and where to read it in full. While the
+    Range row suggests a range, the bracket's bold model is the range's own `- model:`
+    rather than the step's ([**D98 (card-names-the-run)**](decisions.md#d98)). The
+    bracket's `details:` clause is a link whose text is the file's name and line, such as
+    `[intent.md:28](.plumbbob/builds/<slug>/intent.md#L28)`
+    ([**D107 (short-linked-paths)**](decisions.md#d107)).
+  - `Range`: the range holding that step and the run that lands what is left of it
+    (`2 of 2: /plumbbob:run (steps 2-3)`, when the plan declares build ranges). At the
+    pause on a range's last step it reads `1 of 2 lands with step 1` and names no run,
+    since a run typed there ends on that range's stop, and a range the plan has outgrown
+    reads `2 of 2 needs a re-cut (step 9 is not in the plan)`.
+  - `Order`: the build order from that step on (`7, 8, 5`, only when `## Build order`
+    departs from the numbering; five steps, then a count,
+    [**D86 (build-order)**](decisions.md#d86)).
+  - `Parked`: the park count (`2 of 7 open`, whenever anything has been parked).
+  - `Questions`: the open questions the plan still carries (`1 open`, while one is).
 - `**Recommendation**:` the model's own call, read from the detail file's
-  `## Recommendation` section behind a CLI-prepended label. It is the ending's last text,
-  Your Call being its last rendered block.
+  `## Recommendation` section behind a CLI-prepended label.
+- `[more details](.plumbbob/detail.md)`: the card's last line and its one link to the
+  detail file, when the file holds something.
 
 The tiers below it are derived, not passed. A landed step with none in flight yields the
-orientation-tier ending (the Verdict and Next Up only: no Your Call, no recommendation),
-and a fresh session with nothing measured yields the forward pointer alone. An explicit
-`<n>` overrides which step it reports on; otherwise it uses the in-flight step, else the
-last checkpointed one. With nothing in flight, an explicit `<n>` naming a step that has not
-landed renders that step's pause, which is how `/plumbbob:verify` reaches the pause for a
-diff built outside `/plumbbob:build`.
+orientation-tier ending (the state table headed by the Verdict, with the Stop row when the
+landing finished a range: no Your Call, no recommendation), and a fresh session with
+nothing measured yields the table's pointer alone. An explicit `<n>` overrides which step
+it reports on; otherwise it uses the in-flight step, else the last checkpointed one. With
+nothing in flight, an explicit `<n>` naming a step that has not landed renders that step's
+pause, which is how `/plumbbob:verify` reaches the pause for a diff built outside
+`/plumbbob:build`.
 
-A step pause renders its card once ([**D87 (pause-once)**](decisions.md#d87)). The stamp
-in `PAUSE` holds the step number and a hash of the detail file, the measured `check`,
-`seam`, and `diff` rows, and the patch the diff row counts, never `spent`, which counts
-turns and would make every render look new. While a later render matches it, `handoff`
-prints one line, the driver pointer back at the step:
+A card shows once ([**D110 (reply-after-the-card)**](decisions.md#d110)). The stamp in
+`PAUSE` records which card has shown, the step whose pause showed (`2`) or, after a
+checkpoint, the step whose boundary did (`landed 2`), and nothing about what the card said.
+A later render of the same pause prints one line, the driver pointer back at the step,
+whatever changed since (a rewritten detail file, an edit, a gate run that moved the check
+row):
 
 ```text
 **Next Up**: Back to Step 2 of 3 - feat(login): wire the limiter into POST /login
 ```
 
-The card comes back on its own once the pause changes (a rewritten detail file, a touched
-file, a check that went red or came back green), and `--full` prints it whatever the stamp
-says. `checkpoint`, `revert`, and `abandon` clear the stamp, so the next pause renders
-whole. A stamp that cannot be written costs one more full card on a later turn, never this
-turn's output or exit code. `--plan`, `--driver`, and the boundary are never stamped.
+A later render of a boundary already shown prints its forward pointer alone, the labeled
+Next Up line. `--full` prints the card, or the boundary, whatever the stamp says. `revert`
+and `abandon` clear the stamp, so the next pause renders whole. A stamp that cannot be
+written costs one more full card on a later turn, never this turn's output or exit code.
+`--plan` and `--driver` are never stamped.
 
-Two endings no session state can tell apart from those take a flag, so every tier's ending
-is emitted here rather than faked in a skill's prose: `--plan` renders the plan-pause
-ending (a leading `---` rule, since the model's framed plan precedes it, then Next Up, a
-your-call block carrying the two plan moves, and the recommendation; nothing is measured
-yet, so no Verdict), and `--driver` renders a driver turn's pointer alone, which aims back
-at the step still open instead of forward at the next one. Owning every ending here rather
-than as prose in the skills keeps them from drifting out of sync with `status`, which
-renders the same next-step detail. `--stop` renders the stop card that closes a run's range
+Three endings no session state can tell apart from those take a flag, so every tier's
+ending is emitted here rather than faked in a skill's prose: `--plan` renders the
+plan-pause ending (a leading `---` rule, since the model's framed plan precedes it, then a
+your-call block carrying the plan moves, the state table headed by Next Up, the
+recommendation, and the `more details` link; nothing is measured yet, so no Verdict),
+`--driver` renders a driver turn's pointer alone, which aims back at the step still open
+instead of forward at the next one, and `--harvest` renders a boundary harvest's lean
+table and the moves that settle it, from a `# Detail · Harvest` detail file
+([**D112 (lean-table)**](decisions.md#d112)). Owning every ending here rather than as prose
+in the skills keeps them from drifting out of sync with `status`, which renders the same
+next-step detail. `--stop` renders the stop card that closes a run's range
 ([the stop card](presentation.md#the-stop-card)), for the range the last landing completed and
 from that range's detail file, once per stop under a `STOP` stamp of its own, with
 `--stop --full` to bring it back. Refuses (exit 1) with no session, with two of `--plan`,
-`--driver`, and `--stop` together, and with `--stop` while a step is in flight, when no range
-that lands its steps just landed, or when the detail file is another range's.
+`--driver`, `--stop`, and `--harvest` together, with `--stop` while a step is in flight,
+when no range that lands its steps just landed, or when the detail file is another
+range's, and with `--harvest` when the detail file is not a harvest's or no park is open.
 
 Every transition verb prints its own ending through this same code, so `checkpoint`,
 `park`, `harvest`, `order`, `revert`, `abandon`, `spike`, `use`, and `finish` each emit the
-Verdict (where one is measured) and the pointer for themselves, and a skill relays one command's output rather
+state table (the Verdict where one is measured, and the pointer) or a driver's one pointer
+line for themselves, and a skill relays one command's output rather
 than two. `handoff` stays the way to render an ending where no verb ran: a build pause, a
 re-read of the boundary, the plan pause, or a driver turn a skill drove some other way.
 
@@ -340,9 +351,11 @@ commits any pending work (or records the existing `HEAD` if the tree is already 
 CLI-owned Conventional subject `<type>(<scope>): <description>` (scope from the build slug, type
 from the step title; author prefix honored, else `feat`), appends `step <n> <sha>` to `checkpoints`,
 flips the step to `[x]`, and clears `SEAM`/`STEP`, dropping the dashboard back to the
-`DESIGN` boundary. It also appends the step's entry to the build-log's `## Log`: the dated
-line, and beneath it the pause as the human approved it (the Summary and highlights, the
-Readout, the Verdict, the recommendation, and the full story behind each highlight), read
+`DESIGN` boundary, and stamps `PAUSE` with the boundary it prints (`landed <n>`), so a
+later `handoff` there ends on its pointer. It also appends the step's entry to the
+build-log's `## Log`: the dated line, and beneath it the pause as the human approved it
+(the Summary and the highlights the card leaves in the detail file, the Readout, the
+Verdict as a line, the recommendation, and the full story behind each highlight), read
 from `.plumbbob/detail.md`, which it then truncates ([**D81 (detail-file)**](decisions.md#d81));
 the lead line's bracket carries a `details:` pointer at that entry. A detail file whose
 header names a different step is a leftover from a step that already landed, so it is
@@ -355,14 +368,15 @@ proportional); without it a deterministic fallback carries done-when + seam + di
 the first step's diff doesn't absorb the scaffold ([**D36 (plan-commit)**](decisions.md#d36));
 it records the plan pause's cold read the same way, beneath a `plan committed` line in
 the Log. Either form closes on its
-whole ending, `handoff`-rendered and printed here: the lead line, the Verdict the step just
-earned (the plan commit measures nothing, so it has none), any advisory, the Stop part when
-the step completes a range, and the pointer. The Stop part renders on the one boundary where a
-range's last undone step lands, however it landed, and never for a bare range, whose stop is
-its own pause ([**D93 (range-on-the-card)**](decisions.md#d93)):
+whole ending, `handoff`-rendered and printed here: the lead line, any advisory, and the
+state table, headed by the Verdict the step just earned (the plan commit measures nothing,
+so Next Up heads its table), with the Stop row when the step completes a range, then Next
+Up and the rows beneath it. The Stop row renders on the one boundary where a range's last
+undone step lands, however it landed, and never for a bare range, whose stop is its own
+pause ([**D93 (range-on-the-card)**](decisions.md#d93)):
 
 ```text
-**Stop**: Range 2 of 2 landed - try six logins yourself, then `/plumbbob:finish` (details: [intent.md:42](.plumbbob/builds/rate-limit/intent.md#L42))
+| Stop | Range 2 of 2 landed - try six logins yourself, then `/plumbbob:finish` (details: [intent.md:42](.plumbbob/builds/rate-limit/intent.md#L42)) |
 ```
 
 When the range was landed by a run (the `RUN` mark names it), that boundary is not the
@@ -426,12 +440,14 @@ plumbbob harvest
 
 Records a harvest from `.plumbbob/detail.md` ([**D104 (harvest-records)**](decisions.md#d104)):
 it reads the `## Harvest` proposals (`- P6 → tangent: <the reason>`, `P6` being the sixth
-line ever parked; [**D105 (park-handles)**](decisions.md#d105)), flips each settled park in
+line ever parked; [**D105 (park-handles)**](decisions.md#d105)), with the `- title:` and
+`- why:` lines the lean table shows indented beneath each
+([**D112 (lean-table)**](decisions.md#d112)), flips each settled park in
 `build-log.md`, and appends the dated Harvest lines. When the detail is a range's, the stop
 card's wire, it also writes the range's review beneath a dated Log line
 (`range 2 of 2's stop recorded`; [the stop's record](presentation.md#the-stops-record)). It
-clears the detail file and the `STOP` stamp, commits nothing, and ends on its own ending,
-then Next Up:
+clears the detail file and the `STOP` stamp, commits nothing, and ends on its own lead,
+then the state table headed by Next Up:
 
 ```text
 **Stop**: Range 2 of 2 recorded (1 tangent)
@@ -440,8 +456,9 @@ then Next Up:
 
 The first is a stop's record, the second a harvest outside one. A stop's record is latched
 ([**D103 (stop-latched)**](decisions.md#d103)): it refuses in the turn the stop card
-printed, a range's detail no stop card showed, a range open again, and a range a step joined
-after it landed. It also refuses a proposal naming a park the list lacks
+printed, a range no stop card showed, a range open again, and a range a step joined after
+it landed. A detail file a reply rewrote since the card printed (a lean the human changed)
+records as it now reads ([**D110 (reply-after-the-card)**](decisions.md#d110)). It also refuses a proposal naming a park the list lacks
 (`P9 is not in the list; 3 parked`) or a class other than blocker, tangent, or pivot, and a
 detail file that is no range's or harvest's.
 
@@ -572,9 +589,9 @@ leads with a `plumbbob finish` marker, then an optional `--body` heredoc), and c
 the control state (`STATE`, the cursor, the in-flight markers). No separate archive copy: the
 tracked build folder already *is* the record and merges into `main` with the branch, so it
 rides into the PR ([**D26 (build-folders)**](decisions.md#d26)). **No** refuse-without-report gate stands in the way. It closes on its own ending: the
-lead line naming the folder that now rides the branch, then `**Next Up**: Nothing planned -
-/plumbbob:plan`, printed here because finish has just cleared the session `handoff` would
-read one from. Refuses (exit 1) only with no session.
+lead line naming the folder that now rides the branch, then its state table, whose one row
+is `| **Next Up** | Nothing planned - /plumbbob:plan |`, printed here because finish has just
+cleared the session `handoff` would read one from. Refuses (exit 1) only with no session.
 
 ### turn
 
@@ -631,11 +648,13 @@ driver ending (a park, a spike, a `use`) is never checked, and a `RELAY` from an
 is ignored. A run's boundary that still owes its stop card is a miss however whole it was
 relayed, since the card is the run's ending ([**D103 (stop-latched)**](decisions.md#d103)).
 
-It reads a relay by its parts, not line for line: the bold labels the printed block opens its
-parts on, in the same order, with no paragraph inside a part that the block does not have there.
-Only the Readout table and the Verdict line are compared exactly, since those are the facts the
-CLI measured, so a reworded Summary or a reordered Your Call passes and a check row turned from
-red to green does not. A relay wrapped in a fence of its own reads as missed, because its
+It reads a relay by its parts, not line for line: the bold labels and the state-table rows
+the printed block opens its parts on, in the same order, with no paragraph inside a part that
+the block does not have there. Only the Readout table and the Verdict are compared exactly,
+the Verdict as the fact in the state table's header row, since those are the facts the CLI
+measured ([**D111 (state-table)**](decisions.md#d111)), so a reworded Summary, a reordered
+Your Call, or a table whose spacing changed passes, and a check row turned from red to
+green does not. A relay wrapped in a fence of its own reads as missed, because its
 labels no longer open lines of the turn.
 
 On a miss it holds the turn open once, through `additionalContext`, with a one-line reason
@@ -780,7 +799,7 @@ stays git-excluded; a session is live iff `STATE` is present.
       SEAM                 # untracked — the in-flight step's declared paths (awareness, not a lock)
       SPIKE                # untracked — marker, present while a spike fork is open
       TICK                 # untracked — the TURN value stamped when the step was entered; with TURN, the latch's whole state
-      PAUSE                # untracked: what the pause card last showed, so a repeat prints the reminder (D87 (pause-once))
+      PAUSE                # untracked: which card has shown, a step's pause or (`landed <n>`) its boundary, so a repeat prints its one line (D110 (reply-after-the-card))
       STOP                 # untracked: the range the stop card last showed and the TURN it printed in, read by harvest's latch (D103 (stop-latched))
       handoff.json         # untracked — step-scoped agent-run ledger, cleared at checkpoint or abandon — D47 (handoff-ledger)
 ```

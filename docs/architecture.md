@@ -58,8 +58,11 @@ Every turn ends in the same shape, and the split above decides who renders which
 ([the turn anatomy](presentation.md); [D80 (cli-renders-model-relays)](decisions.md#d80)). The model writes its judgment (the summary, the
 highlights, the three judgment rows, the recommendation) into `.plumbbob/detail.md`;
 `plumbbob handoff` measures the rest (the check row from the gate's summary, the seam and
-diff rows from git, the `spent` row from `stats.json` and the turn ledger), folds the two
-into one block, and the skill pastes that block as the whole turn. A transition verb
+diff rows and the changed files from git, the `spent` row from `stats.json` and the turn
+ledger, the state table's Verdict and pointers), folds the two into one block, and the
+skill pastes that block as the whole turn. The highlights stay in the file, one link away
+from the card. A card shows once: a later turn at it is the model's reply, closed by one
+line ([D110 (reply-after-the-card)](decisions.md#d110)). A transition verb
 (`checkpoint`, `park`, `harvest`, `order`, `revert`, `abandon`, `spike`, `use`, `finish`)
 prints its own ending the same way, through the one formatter in `lib/notice.ts`, so a
 boundary or a driver turn is one command's output and cannot disagree with itself. A run's

@@ -150,12 +150,7 @@ In Claude Code, inside any git repo with a clean tree:
    diff, the model supplies only the judgment, and nothing is written around it.
 
    ````markdown
-   **Now**: Step 1 of 3 - feat(limiter): add a token-bucket limiter
-
-   **Summary**: A per-IP token bucket now refuses the 6th attempt inside a minute. (details: [detail.md](.plumbbob/detail.md))
-
-   1. The bucket lives in memory, keyed by IP, refilling on read: five tokens a minute.
-   2. The clock is injected, so the test advances time instead of sleeping on it.
+   **Summary**: A per-IP token bucket now refuses the 6th attempt inside a minute.
 
    **Readout**:
 
@@ -166,22 +161,27 @@ In Claude Code, inside any git repo with a clean tree:
    constraints  1 of 1 honored
    seam         held: 2 of 2 declared, no strays
    diff         +61 -3 across 2 files
+                - src/limiter.ts +38 -3
+                - test/limiter.test.ts +23 -0
    spent        22 min · 2 turns · 41s gate · green first run
    ```
-
-   **Verdict**: ● Plumb
-
-   **Next Up**: Step 2 of 3 - feat(login): wire the limiter into POST /login (model: **Sonnet**, details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28))
-     · range 1 of 2 lands with step 1
 
    **Your Call**:
 
    - `looks good` → I checkpoint Step 1; back to the boundary
    - `expand`, or any question → I show more of what is there; nothing changes, and `show the pause` brings all of this back
-   - anything that reads as direction → I take it as what to change; nothing lands until you approve
+   - anything that reads as direction → I make the change and say what moved; nothing lands until you approve
    - `revert` → I wind the work back to the last checkpoint
 
+   | **Verdict** | ● Plumb |
+   | --- | --- |
+   | Now | Step 1 of 3 - feat(limiter): add a token-bucket limiter |
+   | Next Up | Step 2 of 3 - feat(login): wire the limiter into POST /login (model: **Sonnet**, details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28)) |
+   | Range | 1 of 2 lands with step 1 |
+
    **Recommendation**: Approve it, refilling on read. The gate is green and the seam held, and a bucket that refills when it is read needs no timer for the route to clean up.
+
+   [more details](.plumbbob/detail.md)
    ````
 
    ![The pause, drawn: a mechanical hand has set its stone on the line and hovers open and still, while a plumb bob in front comes to rest](site/media/pause.svg)
@@ -192,30 +192,30 @@ In Claude Code, inside any git repo with a clean tree:
    `.plumbbob/settings.json`, for example `"check": "npm test"`; in a repo where
    checkride finds no tools at all, `start` says so up front and names that key.)
 3. **Reply.** Say `looks good` and it commits the step as a checkpoint, marks it done,
-   and returns to the boundary, where the line beneath Next Up names the run to type
+   and returns to the boundary, where the Range row beneath Next Up names the run to type
    next and the steps it will land:
 
    ```text
    **Checkpoint**: Step 1 complete (a1b2c3d4e, details: [build-log.md:70](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md#L70))
 
-   **Verdict**: ● Plumb
-
-   **Next Up**: Step 2 of 3 - feat(login): wire the limiter into POST /login (model: **Sonnet**, details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28))
-     · range 2 of 2: /plumbbob:run (steps 2-3)
+   | **Verdict** | ● Plumb |
+   | --- | --- |
+   | Next Up | Step 2 of 3 - feat(login): wire the limiter into POST /login (model: **Sonnet**, details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28)) |
+   | Range | 2 of 2: /plumbbob:run (steps 2-3) |
    ```
 
    ![The boundary, drawn: a bench mark freshly cut into the newest course of a stone wall, older marks below, and the red line raised one course over stones not yet laid](site/media/checkpoint-boundary.svg)
 
    Ask instead (`expand 2`, or any question) and it shows more of what is there and
-   changes nothing. The answer closes on one line pointing back at the step, not on the
-   whole block again, since you have already read it; say `show the pause` to see the
-   block again. Direct it and it takes that as the fix, and nothing lands until you say
-   `looks good`.
+   changes nothing. Direct it and it makes the change and tells you what moved. Either
+   way the reply is its own, and it closes on one line pointing back at the step, not on
+   the whole block again, since you have already read it; say `show the pause` to see
+   the block again. Nothing lands until you say `looks good`.
 4. **Run again.** Fire `/plumbbob:run` again; re-firing it *is* the clock tick. Range 2
    lands steps 2 and 3, each on a green check with no pause between them, and ends on the
    **stop card**: the range's review (a summary of both steps, a readout measured across
-   them, the Verdict), with every idea parked along the way listed under `Harvested` and
-   a lean proposed for each. One reply settles it: `looks good` records the review and
+   them, the Verdict), with every idea parked along the way in a table under `Harvested`:
+   each park, why it matters, and the lean proposed for it. One reply settles it: `looks good` records the review and
    every lean, and `make P1 a blocker` changes one first. `/plumbbob:build` stays the
    granular move whenever you want it, one step to its pause. Whenever you lose the
    thread, `/plumbbob:status` shows where you are and names the next move.

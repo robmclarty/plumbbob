@@ -49,7 +49,7 @@ word up without reading the others first. Each entry points at the page that own
   them with the steps, `plumbbob order` re-cuts them to follow the build order, and step,
   refine, and harvest keep them true as the plan changes. A
   bare `N` stops at that step's pause; a span lands every step it names and stops at the
-  boundary after the last, where the card's **Stop** line says why. A range grants nothing
+  boundary after the last, where the card's **Stop** row says why. A range grants nothing
   until you type the run that names it.
 - **Run** (`/plumbbob:run`, or `/plumbbob:run 3`): one range of the plan being built:
   what is left of the range holding the next step, or of range 3. The turn hook mints its
@@ -111,35 +111,42 @@ word up without reading the others first. Each entry points at the page that own
 The shape every turn ends in is specified in [`presentation.md`](presentation.md); these
 are its parts.
 
-- **Now**: the line a step pause opens on: the step in flight, its count, and its title.
-- **Summary**: the outcome, not the activity, then up to five numbered **highlights**,
-  each a handle `expand` can open.
+- **Summary**: the card's opening line: the outcome, not the activity. Up to five
+  numbered **highlights** stay in the detail file behind it, each a handle `expand` can
+  open, one `more details` link away.
 - **Readout**: the fenced rows of measured facts: `check`, `done-when`, `decisions`,
-  `constraints`, `seam`, `diff`, `spent`. Green collapses to a count; red names one
-  offender.
-- **Verdict**: one line on a four-rung ladder, worst-of over the readout: `● Plumb`,
-  `◐ A hair off` (green, with advisories on the way), `○ Out of plumb` (fix the work),
-  `✗ Not standing` (fix the plan).
+  `constraints`, `seam`, `diff` (with each changed file beneath it), `spent`. Green
+  collapses to a count; red names one offender.
+- **State table**: the two-column table a card and an orientation ending close on, the
+  facts you scan for set apart from the prose: the **Verdict** as its header, then
+  **Now**, **Stop**, **Next Up**, and the Range, Order, Parked, and Questions rows, each
+  only when it has something to say. → [`presentation.md`](presentation.md#the-footer-card)
+- **Verdict**: the state table's header, a four-rung ladder worst-of over the readout:
+  `● Plumb`, `◐ A hair off` (green, with advisories on the way), `○ Out of plumb` (fix
+  the work), `✗ Not standing` (fix the plan).
+- **Now**: the row naming the step in flight, its count, and its title.
 - **Next Up**: the forward pointer: the next step, its progress count, and its model
-  recommendation, with one indented line beneath it carrying the run to type, the
-  build order, and the park count when any of them has something to say.
+  recommendation; a row of the state table, or the one line a driver turn ends on.
 - **Your Call**: the four replies a human makes at a pause, each with its outcome:
   `looks good`, `expand` (or any question), a direction, `revert`.
 - **Recommendation**: the model's own call, the turn's last words: the move, then the
-  reason.
+  reason, with the card's one `more details` link beneath it.
 - **Stop card**: the decision turn a run ends on once its range lands: the range's
-  review (a Summary of the whole range, a Readout measured across its steps, the Verdict)
-  and every open park under **Harvested**, each with a lean proposed. One reply settles
-  it: `looks good` records the review and every lean, a change re-renders the card, and
-  `/plumbbob:run` records it and runs the next range.
-  → [`presentation.md`](presentation.md#the-stop-card)
+  review (a Summary of the whole range, a Readout measured across its steps) and every
+  open park in the lean table under **Harvested**, with the Verdict and the plan's stop
+  in the state table. One reply settles it: `looks good` records the review and every
+  lean, a change is answered and closed on the reminder, and `/plumbbob:run` records it
+  and runs the next range. → [`presentation.md`](presentation.md#the-stop-card)
+- **Lean table**: the table parks with leans ride in, on the stop card and a harvest's
+  render: the park's handle and a short title, its text, why it matters, and the lean.
+  → [`decisions.md`](decisions.md#d112)
 - **Handle** (`P3`): a park's name on the stop card, in the detail file, and in your
   reply (`make P3 a blocker`): `P` and the park's place in the list, harvested lines
   counted, so it never changes for the life of the build. → [`decisions.md`](decisions.md#d105)
 - **Expand** (`expand 2`): the question that opens one highlight's full story from the detail
   file, changing nothing. The answer closes on the **reminder**, one line pointing back at
-  the step, because a pause renders its block once; `show the pause` brings the block
-  back.
+  the step, because a card shows once and every later turn at it is a reply; `show the
+  pause` brings the block back.
 - **Detail file** (`.plumbbob/detail.md`): where the model writes its judgment before a
   pause; `handoff` renders the turn from it, and `checkpoint` records it beneath the
   step's line in the build log's Log. The file is the wire, and the ledger is the archive.

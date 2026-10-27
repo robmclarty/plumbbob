@@ -157,16 +157,18 @@ because a wall refuses you, but because the system stops and waits for you to be
 Re-firing the next run, or the next build, *is* the clock tick.
 
 What the loop pulls up to has a fixed shape ([the turn anatomy](presentation.md)): a
-**Now** line naming the step in flight, a **Summary** with numbered highlights, a **Readout** of measured rows (the check, the
-done-when, the decisions and constraints, the seam, the diff, what the step spent), a
+**Summary** of the outcome, a **Readout** of measured rows (the check, the done-when, the
+decisions and constraints, the seam, the diff with each changed file beneath it, what the
+step spent), the **Your Call** block naming the replies, a state table headed by the
 **Verdict** on a four-rung ladder (`● Plumb`, `◐ A hair off`, `○ Out of plumb`,
-`✗ Not standing`), a **Next Up** pointer, the **Your Call** block naming the replies, and
-the model's **Recommendation** last. The CLI measures whatever can be measured and the
+`✗ Not standing`) with the step **Now** in flight and **Next Up** beneath it, then the
+model's **Recommendation** and one link to the rest of its story. The CLI measures whatever can be measured and the
 model supplies only the judgment, so the block reads the same from any model on any day.
 You reply with one of four moves: `looks good` lands the step; `expand` (or any question)
 shows more and changes nothing, closing on a one-line reminder rather than the whole block
-again (`show the pause` brings it back); anything that reads as direction is taken as the fix, and
-nothing lands until you say `looks good`; `revert` winds the work back.
+again (`show the pause` brings it back); anything that reads as direction is taken as the
+fix, answered with what moved and closed on the same line, and nothing lands until you say
+`looks good`; `revert` winds the work back.
 
 > **Unattended option: `--auto`.** `/plumbbob:build --auto` lets the agent self-review and
 > approve in your place, then chain to the next step until done. It halts the moment the
@@ -203,16 +205,17 @@ the last. `/plumbbob:plan` cuts the ranges with the steps, and `/plumbbob:step`,
 **You type the run; the plan names the steps.** `/plumbbob:run` runs what is left of the
 range holding the next step, and `/plumbbob:run 2` runs range 2 by its item number, so the
 step numbers stay the plan's to know ([D95 (run-verb)](decisions.md#d95)). The card names
-the run beneath Next Up, with the steps it will land beside it
-(`· range 2 of 2: /plumbbob:run (steps 2-3)`). A range grants nothing on its own: the turn
+the run in the Range row beneath Next Up, with the steps it will land beside it
+(`| Range | 2 of 2: /plumbbob:run (steps 2-3) |`). A range grants nothing on its own: the turn
 hook mints the run's grant from the plan as you type it, frozen at the keystroke, and the
 latch lands only those steps ([D96 (plan-names-the-grant)](decisions.md#d96)). A bare
 range's run builds its step to the pause the plan reserved. A span's run lands each step on
 green with no pause between them and ends on the **stop card**: the range's review, measured
-across its steps, with every open park beneath it and a lean proposed for each
-([D100 (stop-card)](decisions.md#d100)). One reply settles the card: `looks good` records
-the review and every lean, a change re-renders it, and `/plumbbob:run` records it and runs
-the next range. `/plumbbob:build` stays the granular move, one step to its pause whatever
+across its steps, with every open park in a table beneath it, why it matters and a lean
+proposed for each ([D100 (stop-card)](decisions.md#d100)). One reply settles the card:
+`looks good` records the review and every lean, a change is answered in the model's words
+and closes on the one-line reminder, and `/plumbbob:run` records it and runs the next
+range. `/plumbbob:build` stays the granular move, one step to its pause whatever
 the ranges say. [`runs.md`](runs.md) walks a plan through its runs, a blocker that re-cuts
 a range included, and sets each beside the manual moves it replaces.
 

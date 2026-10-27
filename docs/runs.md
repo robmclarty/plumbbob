@@ -118,16 +118,16 @@ stops on the step's pause card, whose recommendation speaks to the stop: here, t
 field names. The card itself is the one [`happy-path.md`](happy-path.md#3-run-the-first-range-plumbbobrun)
 shows whole.
 
-Say `looks good` and the step lands. The boundary's note names the next run and the steps it
-will land:
+Say `looks good` and the step lands. The boundary's Range row names the next run and the
+steps it will land:
 
 ```text
 **Checkpoint**: Step 1 complete (8cae4b906, details: [build-log.md:67](.plumbbob/builds/2026-07-14-add-structured-request-logging/build-log.md#L67))
 
-**Verdict**: ● Plumb
-
-**Next Up**: Step 2 of 5 - feat(log): redact secret fields by name (model: **Sonnet**, details: [intent.md:27](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L27))
-  · range 2 of 3: /plumbbob:run (steps 2-3)
+| **Verdict** | ● Plumb |
+| --- | --- |
+| Next Up | Step 2 of 5 - feat(log): redact secret fields by name (model: **Sonnet**, details: [intent.md:27](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L27)) |
+| Range | 2 of 3: /plumbbob:run (steps 2-3) |
 ```
 
 The bold model is range 2's own, since the run is the range, and the range's first step is
@@ -165,7 +165,7 @@ Ideas that arrive mid-step are parked, not chased; the model parks what it meets
 ```
 
 No harvest runs between the steps inside a range, so the parks wait for its stop. When step 3
-lands, its checkpoint prints the boundary with a `**Stop**` line, but that boundary is not
+lands, its checkpoint prints the boundary with a `Stop` row, but that boundary is not
 where the turn ends. The hook marked the run in `.plumbbob/RUN` as it minted the grant, so
 the checkpoint that completes the range owes the stop card, and the check at the turn's end
 holds a turn that tries to close without it ([D103 (stop-latched)](decisions.md#d103)). The
@@ -174,12 +174,7 @@ their Log entries rather than from recall, and `plumbbob handoff --stop` renders
 ([D100 (stop-card)](decisions.md#d100)):
 
 ````markdown
-**Stop**: Range 2 of 3 landed - read one real request's line before the timing and the docs build on it (details: [intent.md:48](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L48))
-
-**Summary**: Every request now writes one JSON line carrying its id, with `password`, `token`, and `authorization` redacted before it is written. (details: [detail.md](.plumbbob/detail.md))
-
-1. Redaction runs inside the logger, so no caller can write a line that skips it.
-2. The id is read from the `x-request-id` header the client sends.
+**Summary**: Every request now writes one JSON line carrying its id, with `password`, `token`, and `authorization` redacted before it is written.
 
 **Readout**:
 
@@ -192,18 +187,19 @@ decisions    2 of 2 honored
 constraints  1 of 1 honored
 seam         held: 2 of 2 steps, no strays
 diff         +4 -0 across 4 files
+             - src/http/request-log.ts +1 -0
+             - src/log/logger.ts +1 -0
+             - src/log/redact.ts +1 -0
+             - test/request-log.test.ts +1 -0
 spent        39 min · green first run at every landing
 ```
 
-**Verdict**: ● Plumb
-
 **Harvested**: 2 of 2 parked ideas open
 
-- P1 · should a request that arrives with no id get one generated? (tangent) → lean: tangent, an id is still logged when the client sends one, so the line stays parseable without it
-- P2 · the logger could buffer lines and flush them on exit (tangent) → lean: tangent, a buffer is a performance call this goal does not make, and D1 (json-lines) writes each line as it happens
-
-**Next Up**: Step 4 of 5 - feat(http): log how long each request took (model: **Sonnet**, details: [intent.md:33](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L33))
-  · range 3 of 3: /plumbbob:run (steps 4-5)
+| Park | What it is | Why it matters | Lean |
+| --- | --- | --- | --- |
+| P1 · missing request id | should a request that arrives with no id get one generated? (tangent) | a line with no id cannot be traced to its request | tangent: an id is still logged when the client sends one, so the line stays parseable without it |
+| P2 · buffered lines | the logger could buffer lines and flush them on exit (tangent) | a write per request costs a syscall under load | tangent: a buffer is a performance call this goal does not make, and D1 (json-lines) writes each line as it happens |
 
 **Your Call**:
 
@@ -211,22 +207,33 @@ Approving locks in each lean above; to change one, say so first (`make P1 a bloc
 
 - `looks good` → I record the review and every lean as proposed, folding a blocker into the plan; back to the boundary
 - `/plumbbob:run` → I record them the same way, then run range 3 of 3 to its stop
-- anything that reads as direction → I re-render the card with the lean changed; nothing is recorded until you approve
+- anything that reads as direction → I change the lean and say what moved; nothing is recorded until you approve
 - `expand`, or any question → I show more of what is there; nothing changes, and `show the stop` brings all of this back
 
+| **Verdict** | ● Plumb |
+| --- | --- |
+| Stop | Range 2 of 3 landed - read one real request's line before the timing and the docs build on it (details: [intent.md:48](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L48)) |
+| Next Up | Step 4 of 5 - feat(http): log how long each request took (model: **Sonnet**, details: [intent.md:33](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L33)) |
+| Range | 3 of 3: /plumbbob:run (steps 4-5) |
+
 **Recommendation**: Approve it, then curl one request and read its line before the timing builds on it. The gate was green at both landings and both parks are future work.
+
+[more details](.plumbbob/detail.md)
 ````
 
-The Summary and its highlights are the whole range's, not the last step's. The Readout is
-measured across the range ([D101 (range-readout)](decisions.md#d101)): the `steps` row names
-each landing by its checkpoint, so `git show 2e47835` opens one; `check` counts the landings
-behind it; `seam` holds each step's commit to that step's own seam; `spent` runs from the
-first step's start to the last step's landing. Under **Harvested**, each open park carries a
-handle, `P` and its place in the park list counting the harvested lines too, so `P1` is the
-first line ever parked and stays `P1` for the life of the build
-([D105 (park-handles)](decisions.md#d105)). The text behind the handle is the CLI's, read
-from the list, and the lean behind the arrow is the model's proposal, `tangent` whenever it
-is unsure.
+The Summary is the whole range's, not the last step's, and so are the numbered sections the
+model wrote behind the `more details` link. The Readout is measured across the range
+([D101 (range-readout)](decisions.md#d101)): the `steps` row names each landing by its
+checkpoint, so `git show 2e47835` opens one; `check` counts the landings behind it; `seam`
+holds each step's commit to that step's own seam; `diff` sums the commits and lists the
+files they changed; `spent` runs from the first step's start to the last step's landing.
+Under **Harvested**, each open park is a row of the lean table under a handle, `P` and its
+place in the park list counting the harvested lines too, so `P1` is the first line ever
+parked and stays `P1` for the life of the build
+([D105 (park-handles)](decisions.md#d105)). The park's text is the CLI's, read from the
+list; the title, why it matters, and the lean are the model's, the lean `tangent` whenever
+it is unsure ([D112 (lean-table)](decisions.md#d112)). The plan's stop rides the state
+table at the card's foot, under the Verdict.
 
 ## One reply settles the card
 
@@ -238,23 +245,26 @@ replies:
 | --- | --- |
 | `looks good` | every lean is locked in: a confirmed blocker folds into `intent.md` first, then `plumbbob harvest` records the parks and the range's review; back to the boundary |
 | `/plumbbob:run` | the same record, then the next range's run in the same turn |
-| `make P1 a blocker`, or any other change | the model rewrites that line of the detail file and the card renders again with the change in it; nothing is recorded yet |
+| `make P1 a blocker`, or any other change | the model rewrites that line of the detail file, says what moved, and closes on one line; nothing is recorded yet, and `show the stop` brings the card back with the change in it |
 | `expand 2`, or any question | answered from the detail file, the range's commits, or the Log; nothing changes, and the answer closes on one line |
 | `/plumbbob:finish` | on the plan's last range: the same record, then the report and the final commit |
 
 You read the card and disagree about P1: a line with a null id is a line nobody can trace.
-Say `make P1 a blocker` and the card comes back whole with the lean as it will be recorded,
-and the example in Your Call flips to name the change you could still make:
+Say `make P1 a blocker` and the model rewrites that proposal, says which lean moved, and
+closes on one line, since the card is already on screen
+([D110 (reply-after-the-card)](decisions.md#d110)). Say `show the stop` and the card comes
+back with the lean as it will be recorded, and the example in Your Call flips to name the
+change you could still make:
 
 ```text
-- P1 · should a request that arrives with no id get one generated? (tangent) → lean: blocker, a line with a null id cannot be traced, and step 5 would document a field that is often empty
-- P2 · the logger could buffer lines and flush them on exit (tangent) → lean: tangent, a buffer is a performance call this goal does not make, and D1 (json-lines) writes each line as it happens
+| P1 · missing request id | should a request that arrives with no id get one generated? (tangent) | a line with no id cannot be traced to its request | blocker: a line with a null id cannot be traced, and step 5 would document a field that is often empty |
+| P2 · buffered lines | the logger could buffer lines and flush them on exit (tangent) | a write per request costs a syscall under load | tangent: a buffer is a performance call this goal does not make, and D1 (json-lines) writes each line as it happens |
 
 Approving locks in each lean above; to change one, say so first (`make P1 a tangent`).
 ```
 
-A question closes on the reminder rather than the card, since the card is already on
-screen, and `show the stop` brings it back:
+A change and a question both close on the reminder, and only `show the stop` brings the
+card back:
 
 ```text
 **Next Up**: Back to Range 2 of 3's stop - read one real request's line before the timing and the docs build on it
@@ -299,8 +309,11 @@ checkpoint:
 ```text
 **Stop**: Range 2 of 3 recorded (1 blocker, 1 tangent)
 
-**Next Up**: Step 6 of 6 - feat(http): generate a request id when the client sends none (model: **Sonnet**, details: [intent.md:40](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L40))
-  · range 3 of 3: /plumbbob:run (steps 6,4-5) · order: 6, 4, 5 · parked 0 of 2 open
+| **Next Up** | Step 6 of 6 - feat(http): generate a request id when the client sends none (model: **Sonnet**, details: [intent.md:40](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L40)) |
+| --- | --- |
+| Range | 3 of 3: /plumbbob:run (steps 6,4-5) |
+| Order | 6, 4, 5 |
+| Parked | 0 of 2 open |
 ```
 
 Here the run you typed stops, and the reason is the grant. The hook minted it when you
@@ -314,7 +327,7 @@ run  range 3 of 3 · steps 6,4-5 · ends at step 5's boundary
 ```
 
 A run that walked `steps 4-5` would halt before step 6, the very step its own harvest added.
-So the turn ends on the record instead, whose note already names the re-cut run, and you type
+So the turn ends on the record instead, whose Range row already names the re-cut run, and you type
 it. When the record changes nothing the run would walk, `/plumbbob:run` at the card records
 and walks in the same turn.
 
@@ -366,38 +379,41 @@ step at a time costs more than twice as many, because each of six steps stops at
 plan never asked for. What separates the first two columns is who holds the numbers and what
 the stop shows you.
 
-A typed range ends on the last step's boundary, the same `**Stop**` line the run's landing
+A typed range ends on the last step's boundary, the same `Stop` row the run's landing
 printed, as the whole ending of the turn:
 
 ```text
 **Checkpoint**: Step 3 complete (a344b4314, details: [build-log.md:72](.plumbbob/builds/2026-07-14-add-structured-request-logging/build-log.md#L72))
 
-**Verdict**: ● Plumb
-
-**Stop**: Range 2 of 3 landed - read one real request's line before the timing and the docs build on it (details: [intent.md:48](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L48))
-
-**Next Up**: Step 4 of 5 - feat(http): log how long each request took (model: **Sonnet**, details: [intent.md:33](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L33))
-  · range 3 of 3: /plumbbob:run (steps 4-5) · parked 2 of 2 open
+| **Verdict** | ● Plumb |
+| --- | --- |
+| Stop | Range 2 of 3 landed - read one real request's line before the timing and the docs build on it (details: [intent.md:48](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L48)) |
+| Next Up | Step 4 of 5 - feat(http): log how long each request took (model: **Sonnet**, details: [intent.md:33](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L33)) |
+| Range | 3 of 3: /plumbbob:run (steps 4-5) |
+| Parked | 2 of 2 open |
 ```
 
 That block is an orientation turn: a Verdict for step 3 alone, no review of step 2, no
 Your Call, and the two parks behind a count. The harvest is a turn of its own.
 `/plumbbob:harvest` writes its proposals into the detail file under a `# Detail · Harvest`
-header, lists them in the turn, and takes the same one reply a stop card does; on
-`looks good` it records through the same verb, which says what it recorded and nothing about
-a range:
+header, renders them as the same lean table with `plumbbob handoff --harvest`, and takes the
+same one reply a stop card does; on `looks good` it records through the same verb, which
+says what it recorded and nothing about a range:
 
 ```text
 **Recorded**: 2 parked ideas (1 blocker, 1 tangent)
 
-**Next Up**: Step 6 of 6 - feat(http): generate a request id when the client sends none (model: **Sonnet**, details: [intent.md:39](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L39))
-  · range 3 of 3: /plumbbob:run (steps 6,4-5) · order: 6, 4, 5 · parked 0 of 2 open
+| **Next Up** | Step 6 of 6 - feat(http): generate a request id when the client sends none (model: **Sonnet**, details: [intent.md:39](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L39)) |
+| --- | --- |
+| Range | 3 of 3: /plumbbob:run (steps 6,4-5) |
+| Order | 6, 4, 5 |
+| Parked | 0 of 2 open |
 ```
 
 Then the re-cut range is yours to type. `/plumbbob:build 4-5`, the range as you remember it,
 grants steps 4 and 5 and never step 6, so the step the harvest added cannot land in it. The
-range that walks the whole stretch is `/plumbbob:build 6,4-5`, which is what the card's note
-names for the run.
+range that walks the whole stretch is `/plumbbob:build 6,4-5`, which is what the card's Range
+row names for the run.
 
 Side by side, what the run changes:
 
@@ -405,7 +421,7 @@ Side by side, what the run changes:
 | --- | --- | --- |
 | The step numbers | the plan's; the card names the run and brackets its steps, `(steps 6,4-5)` | yours: `2-3`, then the re-cut `6,4-5` |
 | The grant | minted from the plan's range at the keystroke | minted from the numbers you typed, or none for a bare `/plumbbob:build` |
-| A span's ending | the stop card: the range's review, a readout across its steps, every open park with a lean, and Your Call | the last step's boundary with its `**Stop**` line, and no Your Call |
+| A span's ending | the stop card: the range's review, a readout across its steps, every open park in the lean table, and Your Call | the last step's boundary with its `Stop` row, and no Your Call |
 | The parks | on the card, settled by the reply that settles the review | a `/plumbbob:harvest` turn, then a reply |
 | The range's review in the Log | written beneath `range 2 of 3's stop recorded` | not written; each step keeps its own dated line |
 | Holding the stop | the landing owes the card, `plumbbob harvest` refuses in the turn the card printed, and `/plumbbob:build` refuses while it waits | nothing is owed; the boundary is the ending |
@@ -509,8 +525,8 @@ check, a self-review that finds a mismatch, a bound agent that returns `blocked`
 or a decision the plan did not make. Each ends at that step's pause card, the step unlanded,
 and the grant ends with the turn. Say `looks good` once the step is right and it lands; when
 that landing completes the range, the stop card follows in the same turn, since the run's
-mark outlives the pause. Otherwise the note names the run for what is left
-(`· range 2 of 3: /plumbbob:run (step 3)`), and you type it.
+mark outlives the pause. Otherwise the Range row names the run for what is left
+(`| Range | 2 of 3: /plumbbob:run (step 3) |`), and you type it.
 
 ## What a run never does
 
