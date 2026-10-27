@@ -13,22 +13,26 @@
 // range the run is landing. The harness also sends a background job's
 // completion notice through this event, as a prompt the human never typed, so
 // a notice ticks nothing, keeps the grant and the mark, and clears only the
-// ending `RELAY` holds from an earlier turn. When a step is in flight a typed
-// prompt also emits ONE `UserPromptSubmit` additionalContext line so a fresh
-// session (post-compaction, or a scripted `-p` turn where no skill prose is in
-// context) still knows the beat: a tangent is parked, not chased, and a
-// message that also asks something is answered before the park's block.
-// Guidance only: it blocks nothing. It ALWAYS exits 0 and any failure degrades
-// to no output, so neither the tick nor the emit can ever wedge prompting.
+// ending `RELAY` holds from an earlier turn. A typed prompt also emits ONE
+// `UserPromptSubmit` additionalContext line when there is a beat to keep, so a
+// fresh session (post-compaction, or a scripted `-p` turn where no skill prose
+// is in context) still knows it: mid-step, a tangent is parked, not chased;
+// at a pause or a stop whose card has shown, the message is the human's reply,
+// answered in the model's own words and closed on the one line `handoff`
+// prints, never on the card again (D110 (reply-after-the-card)). Guidance
+// only: it blocks nothing. It ALWAYS exits 0 and any failure degrades to no
+// output, so neither the tick nor the emit can ever wedge prompting.
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { parseBuildRanges, readRunArgs, resolveRun, type RunInput } from '../lib/orient.ts'
 import {
+  activeBuild,
   clearRelay,
   findSessionRoot,
   inSpike,
   intentPath,
   notePrompt,
+  readPause,
   readPrompt,
   readRun,
   setGrant,
@@ -37,18 +41,25 @@ import {
   turnPath,
 } from '../lib/sidecar.ts'
 import { hasStep, normalizeStepList, readBuildArgs } from '../lib/steplist.ts'
+import { waitingCard } from './handoff.ts'
 
 /**
- * The hook entry point: apply the prompt, then emit the in-flight-step nudge
- * when it counted as a human turn.
+ * The hook entry point: apply the prompt, then emit the nudge when it counted
+ * as a human turn.
  *
+ * The session is the one the payload's `cwd` names when it names one, else
+ * the one the process stands in, the rule the `Stop` check follows too, so the
+ * turn that ticks and the turn that is judged are always the same session's.
  * Always returns 0: a broken turn must never wedge a prompt, so any failure is
  * swallowed and degrades to no output.
  */
 export function turn(cwd: string, _args: ReadonlyArray<string>): number {
   try {
-    if (applyTurn(cwd, readStdin())) {
-      const context = stepInFlightContext(cwd)
+    const raw = readStdin()
+    const named = readPayload(raw).cwd
+    const where = named !== null && findSessionRoot(named) !== null ? named : cwd
+    if (applyTurn(where, raw)) {
+      const context = turnContext(where)
       if (context !== null) process.stdout.write(context)
     }
   } catch {
@@ -58,23 +69,51 @@ export function turn(cwd: string, _args: ReadonlyArray<string>): number {
 }
 
 /**
- * The `UserPromptSubmit` additionalContext payload when a step is in flight, or null.
+ * The `UserPromptSubmit` additionalContext payload for the beat the session is
+ * on, or null when there is none to keep.
  *
- * A step is in flight when a STEP marker (the flat control file recording the
- * step between `build` and `checkpoint`) is present. Guidance only: it reminds a
- * fresh session that a tangent is a park (not an edit), that the park's own
- * block is the whole turn when the message is only a tangent, that a message
- * which also asks something is answered first with the block after the answer,
- * and how the step lands, since neither the build nor the park prose may be in
- * context after compaction or on a scripted turn.
- * Exported because an in-process test cannot read the hook's real stdout.
+ * Three beats, read off the control files. A step whose pause card has shown
+ * (STEP, and PAUSE naming that step's pause) is waiting for the human's call,
+ * so the message is the reply to it: answered or acted on in the model's own
+ * words, and closed on the one line `handoff` prints rather than the card
+ * again (D110 (reply-after-the-card)). A step in flight with no card yet is
+ * mid-build, where a tangent is a park and not an edit. A stop card waiting
+ * for its reply is the pause's beat at a stop. Guidance only, since none of
+ * the build, run, or park prose may be in context after compaction or on a
+ * scripted turn. Exported because an in-process test cannot read the hook's
+ * real stdout.
  */
-export function stepInFlightContext(cwd: string): string | null {
+export function turnContext(cwd: string): string | null {
   const root = findSessionRoot(cwd)
   if (root === null) return null
+  const text = nudgeText(root)
+  return text === null ? null : `${JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: text } })}\n`
+}
+
+/**
+ * The nudge's words for the beat the session is on, or null when it is on
+ * none: no step in flight and no stop card waiting.
+ */
+function nudgeText(root: string): string | null {
   const step = inFlightStep(root)
-  if (step === null) return null
-  const text =
+  if (step !== null) {
+    const shown = readPause(root)
+    return shown?.kind === 'pause' && shown.step === step ? pauseNudge(step) : parkNudge(step)
+  }
+  const slug = activeBuild(root)
+  let intent = ''
+  try {
+    intent = readFileSync(intentPath(root, slug), 'utf8')
+  } catch {
+    return null
+  }
+  const card = waitingCard(root, slug, intent)
+  return card === null ? null : stopNudge(card.range, card.count)
+}
+
+/** The mid-build nudge: a tangent is a park, not an edit, and the step lands on approval. */
+function parkNudge(step: number): string {
+  return (
     `plumbbob: step ${step} is in flight — a new idea or tangent is a park, not an edit: ` +
     `capture it with \`plumbbob park "<one line>"\` and relay the block it prints whole, ` +
     `with nothing written around it, since that block is the whole turn. ` +
@@ -82,7 +121,32 @@ export function stepInFlightContext(cwd: string): string | null {
     `then relay the park's block after the answer and write nothing after it. ` +
     `The block's pointer back at the step closes the turn either way, so run no \`plumbbob handoff\` after it. ` +
     `The step stays open and lands when you run \`plumbbob checkpoint ${step}\` after approval.`
-  return `${JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: text } })}\n`
+  )
+}
+
+/** The nudge at a pause whose card has shown: the message is the reply, and the card is not printed again. */
+function pauseNudge(step: number): string {
+  return (
+    `plumbbob: step ${step}'s card has shown, and this message is the human's reply to it. ` +
+    `An approval lands the step: run \`plumbbob checkpoint ${step}\` and relay its ending. ` +
+    `Anything else is answered in your own words: answer the question, or make the change it asks for, ` +
+    `and when a change moves what the card said, write \`.plumbbob/detail.md\` again so the record matches what lands. ` +
+    `Print no card for it: run \`plumbbob handoff\` and end the turn on the one line it prints, with nothing after it, ` +
+    `and run \`plumbbob handoff --full\` only when the human asks to see the card again. ` +
+    `A tangent the human hands you is still a park: \`plumbbob park "<one line>"\`.`
+  )
+}
+
+/** The nudge at a stop card waiting for its reply: the stop's version of the pause's. */
+function stopNudge(range: number, count: number): string {
+  return (
+    `plumbbob: range ${range} of ${count}'s stop card has shown, and this message is the human's reply to it. ` +
+    `An approval records the stop: fold each confirmed blocker into the plan, then run \`plumbbob harvest\` and relay its ending. ` +
+    `Anything else is answered in your own words: answer the question, or make the change it asks for ` +
+    `(a lean is its line under the detail file's \`## Harvest\`). ` +
+    `Print no card for it: run \`plumbbob handoff --stop\` and end the turn on the one line it prints, with nothing after it, ` +
+    `and run \`plumbbob handoff --stop --full\` only when the human asks to see the card again.`
+  )
 }
 
 /**
@@ -271,23 +335,24 @@ function readBuild(root: string): BuildRead | null {
 }
 
 /**
- * The `prompt` and `prompt_id` fields of the UserPromptSubmit JSON, as '' and
- * null when either is absent.
+ * The `prompt`, `prompt_id`, and `cwd` fields of the UserPromptSubmit JSON, as
+ * '' and null when any is absent.
  *
  * Absent, unparseable, or non-string input contributes nothing rather than
  * wedging the tool: the tick still lands (a human turn did occur), the empty
- * prompt clears any GRANT, and a missing id records none; the verb never
- * throws over bad stdin.
+ * prompt clears any GRANT, a missing id records none, and a missing `cwd`
+ * leaves the process's; the verb never throws over bad stdin.
  */
-function readPayload(raw: string): { readonly prompt: string; readonly promptId: string | null } {
+function readPayload(raw: string): { readonly prompt: string; readonly promptId: string | null; readonly cwd: string | null } {
   try {
-    const parsed = JSON.parse(raw) as { prompt?: unknown; prompt_id?: unknown }
+    const parsed = JSON.parse(raw) as { prompt?: unknown; prompt_id?: unknown; cwd?: unknown }
     return {
       prompt: typeof parsed.prompt === 'string' ? parsed.prompt : '',
       promptId: typeof parsed.prompt_id === 'string' && parsed.prompt_id !== '' ? parsed.prompt_id : null,
+      cwd: typeof parsed.cwd === 'string' && parsed.cwd !== '' ? parsed.cwd : null,
     }
   } catch {
-    return { prompt: '', promptId: null }
+    return { prompt: '', promptId: null, cwd: null }
   }
 }
 

@@ -1,47 +1,49 @@
 // `plumbbob handoff`: emit the CLI-owned ending of a turn as one contiguous
 // block (docs/presentation.md). Changes no state but three: at a pause it
-// leaves the detail file with a blank line around each heading, at a step pause
-// it stamps what the card showed in `PAUSE`, and every render it prints is
-// recorded in `RELAY` for the check at the turn's end. Every part outside
-// the readout fence is a bold label, a colon, and text that wraps, one blank
-// line between blocks and no fence but the readout's own. It derives the moment
-// from the session: a step in flight ⇒ the decision-tier ending (the Now line
-// naming that step, the labeled Readout and its fence, the inline diff when
-// the change is 20 lines or fewer, the Verdict, Next Up, Your Call, and the
-// Recommendation last); a landed step
-// with none in flight ⇒ the orientation-tier ending (Verdict and Next Up); a
-// fresh session with nothing yet measured ⇒ the forward pointer alone.
+// leaves the detail file with a blank line around each heading, it stamps
+// which card has shown in `PAUSE` (or `STOP`, for a stop card), and every
+// render it prints is recorded in `RELAY` for the check at the turn's end. It
+// derives the moment from the session: a step in flight ⇒ the decision-tier
+// card (the Summary, the labeled Readout and its fence, the inline diff when
+// the change is 20 lines or fewer, Your Call, the state table, the
+// Recommendation, and the `more details` link last); a landed step with none
+// in flight ⇒ the orientation-tier ending (the state table, headed by the
+// Verdict); a fresh session with nothing yet measured ⇒ the table's pointer
+// alone.
 //
-// A step pause renders its card once (D87 (pause-once)). While the stamp still
-// matches, a later render is the one-line reminder, the driver pointer back at
-// the step; the card comes back when the pause changes or on `--full`.
+// A card shows once (D110 (reply-after-the-card)). After a pause, a stop, or
+// a boundary has shown, every later render of it is the one line that points
+// back at it, whatever the work did since: the turn that asked is the model's
+// reply, closed by that line, and the card comes back only on `--full`.
 //
 // The whole decision turn is rendered here, its opening block included: the
-// Summary lead and the numbered highlights come out of `.plumbbob/detail.md`
-// as the markdown the model wrote, with the `(details: …)` bracket appended so
-// the model never types a path. A region the model does not author is a region
-// it cannot narrate into.
+// Summary lead comes out of `.plumbbob/detail.md` as the markdown the model
+// wrote, and the card closes on one `more details` link to the file, so the
+// model never types a path (D113 (short-card)). A region the model does not
+// author is a region it cannot narrate into.
 //
 // If the CLI can compute a recap row, the CLI does: the check row comes from
 // the last run's summary, the seam and diff rows from the SEAM marker against
 // the step's whole product (everything changed since HEAD, staged or not, plus
-// each non-ignored new file). The model's part (`.plumbbob/detail.md`) supplies
-// only what takes judgment: the Summary, the three judgment rows, and the
-// recommendation; the Verdict folds the same assembled rows worst-of with the
-// step's accrued stats, so the fence shows exactly what the fold saw.
+// each non-ignored new file), with the changed files listed beneath the diff
+// row. The model's part (`.plumbbob/detail.md`) supplies only what takes
+// judgment: the Summary, the three judgment rows, and the recommendation; the
+// Verdict folds the same assembled rows worst-of with the step's accrued
+// stats, so the fence shows exactly what the fold saw.
 //
 // Every tier's ending is emitted here, so no skill has to fake the furniture in
 // prose: `--plan` renders the plan-pause ending and `--driver` the driver
 // turn's pointer, the two endings the session state cannot tell apart from the
-// ones above, and `--stop` the stop card that closes a run's range, which reads
-// a boundary the session state cannot tell from a plain one either. The stop
-// card renders once too, under its own stamp in `STOP`, which also carries the
-// turn it printed in for `plumbbob harvest`'s latch. The driver pointer reads the phase it lands in: a spike open over
-// the step names closing the spike, a step exit (a revert, an abandon, a spike
-// closed at the boundary) finds nothing in flight and points forward, with no
-// Verdict either way, since nothing landed.
+// ones above; `--stop` the stop card that closes a run's range, which reads
+// a boundary the session state cannot tell from a plain one either; and
+// `--harvest` a boundary harvest's leans, as the same table the stop card
+// carries (D112 (lean-table)). The stop card shows once too, under its own
+// stamp in `STOP`, which also carries the turn it printed in for
+// `plumbbob harvest`'s latch. The driver pointer reads the phase it lands in:
+// a spike open over the step names closing the spike, a step exit (a revert,
+// an abandon, a spike closed at the boundary) finds nothing in flight and
+// points forward, with no Verdict either way, since nothing landed.
 
-import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { basename, join, relative } from 'node:path'
 import {
@@ -54,7 +56,7 @@ import {
   diffPatch,
   findRepoRoot,
 } from '../lib/git.ts'
-import { blocks, notice, printEnding, transition } from '../lib/notice.ts'
+import { blocks, cell, notice, printEnding, type StateRow, stateTable } from '../lib/notice.ts'
 import { hasStep } from '../lib/steplist.ts'
 import { isArtifactPath, parseStepSeam } from '../lib/intent.ts'
 import {
@@ -64,8 +66,8 @@ import {
   hasSession,
   inSpike,
   intentPath,
-  pausePath,
   type Relay,
+  readPause,
   readStats,
   readStop,
   readTurn,
@@ -73,6 +75,7 @@ import {
   seamPath,
   stepPath,
   tickPath,
+  writePause,
   writeStop,
 } from '../lib/sidecar.ts'
 import {
@@ -89,16 +92,17 @@ import {
   type Summary,
   buildOrderPhrase,
   countDiff,
+  diffFileItems,
   diffRowValue,
   foldVerdict,
   lastLedgerSha,
   measureRange,
   normalizeDetailHeadings,
-  parkedPhrase,
   parseBuildOrder,
   parseBuildRanges,
   parseConstraintCount,
   parseLastCheckpoint,
+  parseOpenQuestions,
   parseOrderedSteps,
   parseParkTotals,
   parseRecap,
@@ -139,19 +143,21 @@ const SEAM_RULE = '\n---'
  *
  * Requires an active session (the STATE sentinel under `.plumbbob/`). The step
  * tiers are derived, not passed: a step in flight yields the full
- * decision-tier ending (the Now line, the Readout and its fence, the inline
- * diff when small enough, the Verdict, Next Up, Your Call, and the
- * Recommendation), and so does
- * a named step that has not landed when nothing is in flight (a hand-built diff
- * under verify). That card renders once: a later render of the same pause, with
- * nothing in it changed, is the one-line reminder, and `--full` prints the card
- * whatever the stamp says. A landed step yields the orientation-tier ending
- * (Verdict and Next Up, no Your Call),
- * and a fresh session with nothing to report yields only
- * the forward pointer. The two endings no session state can distinguish are
- * named by a flag: `--plan` is the plan pause (a decision turn about the plan,
- * not a diff) and `--driver` is a driver turn (a park, a spike, a `use`), which
- * interrupts a step without ending it.
+ * decision-tier card (the Summary, the Readout and its fence, the inline diff
+ * when small enough, Your Call, the state table, the Recommendation, and the
+ * `more details` link), and so does a named step that has not landed when
+ * nothing is in flight (a hand-built diff under verify). A landed step yields
+ * the orientation-tier ending (the state table, no Your Call), and a fresh
+ * session with nothing to report yields the table's pointer alone.
+ *
+ * Each card shows once (D110 (reply-after-the-card)): once a pause or a
+ * boundary has shown, a later render of it is the one line that points back
+ * at it, whatever the work did since, and `--full` prints the card again. The
+ * endings no session state can distinguish are named by a flag: `--plan` is
+ * the plan pause (a decision turn about the plan, not a diff), `--driver` is a
+ * driver turn (a park, a spike, a `use`), which interrupts a step without
+ * ending it, `--stop` is the stop card, and `--harvest` a boundary harvest's
+ * leans.
  */
 export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   const root = findRepoRoot(cwd)
@@ -161,7 +167,7 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   }
 
   const { build: slug, rest } = resolveBuild(root, args)
-  const tiers = ['--plan', '--driver', '--stop'].filter((flag) => rest.includes(flag))
+  const tiers = ['--plan', '--driver', '--stop', '--harvest'].filter((flag) => rest.includes(flag))
   if (tiers.length > 1) {
     process.stderr.write(`plumbbob: handoff: ${tiers.join(' and ')} name different tiers; pass one.\n`)
     return 1
@@ -169,8 +175,12 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   // A build named by flag rides any command that reprints this ending, since
   // the cursor may point elsewhere.
   const named = args.includes('--build') ? slug : null
+  const full = rest.includes('--full')
   if (rest.includes('--stop')) {
-    return stopCard(root, slug, named, rest.includes('--full'))
+    return stopCard(root, slug, named, full)
+  }
+  if (rest.includes('--harvest')) {
+    return harvestCard(root, slug)
   }
   const intent = readOr(intentPath(root, slug))
   // In build order, so the pointer names the step a bare `plumbbob build`
@@ -182,20 +192,21 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   // Where a pointer sends the reader to read the step itself: the intent file
   // as the human would type it, relative to the repo root.
   const where = relative(root, intentPath(root, slug))
+  const detailWhere = relative(root, detailPath(root))
 
   if (rest.includes('--plan')) {
     // The plan pause judges the plan, so nothing is measured and no Verdict
-    // renders; the pointer and the moves both aim at the first undone step. A
+    // renders; the moves and the table both aim at the first undone step. A
     // decision turn still ends on the model's recommendation when it wrote one.
     const first = steps.find((s) => !s.done)
     const detail = settleDetail(root, rawDetail)
     const plan = [
       SEAM_RULE,
-      nextUpBlock(intent, buildLog, first, null, where),
       planCallBlock(first, cardRun(intent, null)),
+      stateTable(stateRows({ intent, buildLog, verdict: null, now: null, stop: null, nextUp: first, exclude: null, where })),
     ]
     const command = reprintCommand('--plan', undefined, named)
-    return emit(root, { tier: 'decision', render: 'plan', command }, withRecommendation(plan, parseRecommendation(detail)))
+    return emit(root, { tier: 'decision', render: 'plan', command }, cardFoot(plan, detail, detailWhere))
   }
 
   const explicit = rest.find((a) => /^\d+$/.test(a))
@@ -222,9 +233,9 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   }
 
   if (current === null) {
-    // Nothing measured yet (a fresh session): no Verdict, just the forward pointer.
+    // Nothing measured yet (a fresh session): no Verdict, just the table's pointer.
     return emit(root, { tier: 'orientation', render: 'pointer' }, [
-      nextUpBlock(intent, buildLog, nextUp, current, where),
+      stateTable(stateRows({ intent, buildLog, verdict: null, now: null, stop: null, nextUp, exclude: current, where })),
     ])
   }
 
@@ -234,53 +245,56 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   // `/plumbbob:verify` with no STEP marker, and the number is how the skill says
   // which pause to render.
   const pending = inFlight !== null || (explicit !== undefined && steps.some((s) => s.n === current && !s.done))
+  const shown = readPause(root, slug)
   if (!pending) {
-    // The boundary: the orientation-tier ending, the state word, the Stop part
-    // where a range just landed, and the forward pointer, no decision pending
-    // and so no Your Call. The same parts the checkpoint printed for itself,
-    // from the same call.
-    const landed = boundaryEnding(root, slug, current)
-    return emit(root, { tier: 'orientation', render: 'boundary' }, [landed.verdict, landed.stop, landed.pointer])
+    if (!full && shown?.kind === 'landed' && shown.step === current) {
+      // The boundary the human already read: the reply above this line is what
+      // they asked for, and the block would push it off the screen. Driver
+      // tier, since nothing is pending to hold the turn for.
+      return emit(root, { tier: 'driver', render: 'pointer' }, [pointerLine(intent, nextUp, current, where)])
+    }
+    // The boundary: the orientation-tier ending, the state table headed by the
+    // Verdict, with the Stop row where a range just landed, and no decision
+    // pending, so no Your Call. The same table the checkpoint printed for
+    // itself, from the same call.
+    writePause(root, slug, { kind: 'landed', step: current })
+    return emit(root, { tier: 'orientation', render: 'boundary' }, [stateTable(boundaryEnding(root, slug, current).state)])
   }
 
   // The pause: the whole turn as one contiguous block, each part a labeled line
-  // with one blank line between, and the only fence the readout's own (plus the
-  // inline diff when the change is small enough). It opens on the step in
-  // flight and then the Summary the model wrote into the detail file, so there
-  // is no seam left to rule off.
+  // or the state table, with one blank line between, and the only fence the
+  // readout's own (plus the inline diff when the change is small enough). It
+  // opens on the Summary the model wrote into the detail file, so there is no
+  // seam left to rule off.
   const detail = settleDetail(root, rawDetail)
-  const { rows, work, summary, checkGreen } = measured(root, slug, intent, detail, current)
-  const { ladder, worst } = foldVerdict(rows, accruedStats(root, slug, current))
-  const verdict = verdictLine(ladder, worst)
-  const counts = countDiff(work)
-  const changed = counts.added + counts.removed
-  // The patch comes first so `· inline below` is a promise the fence keeps: a
-  // small change git can still print nothing for (a vanished path) falls back
-  // to the bare counts rather than pointing at a fence that never arrives. The
-  // stamp hashes it at any size, so it is read whenever there is a change.
-  const fullPatch = changed > 0 ? diffPatch(root, work) : ''
-  const patch = changed <= INLINE_DIFF_MAX ? fullPatch : ''
-  const inline = patch.length > 0
-  const diffRow = diffRowValue(counts, inline)
-  const stamp = pauseStamp(current, detail, measuredLines(rows, diffRow), fullPatch)
-  if (!rest.includes('--full') && readOr(pausePath(root, slug)).trim() === stamp) {
-    // The pause the human already read, unchanged: the answer above this line
-    // is what they asked for, and the card would push it off the screen.
+  if (!full && shown?.kind === 'pause' && shown.step === current) {
+    // The pause the human already read: the reply above this line is what
+    // they asked for, and the card would push it off the screen. It stays the
+    // reminder whatever changed since, a rewritten detail file, an edit, or a
+    // gate run that moved the check row, because a later turn at the pause is
+    // the model's reply, and the card comes back only when asked.
     const command = reprintCommand(null, explicit, named)
     return emit(root, { tier: 'decision', render: 'reminder', command }, [
       `**Next Up**: Back to ${stepPhrase(current, steps)}`,
     ])
   }
-  writePause(root, slug, stamp)
+  const { rows, work, summary, checkGreen } = measured(root, slug, intent, detail, current)
+  const { ladder, worst } = foldVerdict(rows, accruedStats(root, slug, current))
+  const counts = countDiff(work)
+  const changed = counts.added + counts.removed
+  // The patch comes first so `· inline below` is a promise the fence keeps: a
+  // small change git can still print nothing for (a vanished path) falls back
+  // to the bare counts rather than pointing at a fence that never arrives.
+  const patch = changed > 0 && changed <= INLINE_DIFF_MAX ? diffPatch(root, work) : ''
+  const inline = patch.length > 0
+  writePause(root, slug, { kind: 'pause', step: current })
   const readout = recapLines(rows, {
-    diff: diffRow,
+    diff: diffRowValue(counts, inline),
+    files: diffFileItems(work),
     spent: spentRowValue(spentInputs(root, slug, current, summary)),
     constraints: parseConstraintCount(intent),
   })
-  const parts: string[] = [
-    `**Now**: ${stepPhrase(current, steps)}`,
-    summaryBlock(parseSummary(detail), relative(root, detailPath(root))),
-  ]
+  const parts: string[] = [summaryBlock(parseSummary(detail))]
   if (readout.length > 0) {
     parts.push([READOUT_LABEL, '', ...fence('text', readout)].join('\n'))
   }
@@ -288,12 +302,22 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     parts.push(fence('diff', patch.split('\n')).join('\n'))
   }
   parts.push(
-    verdict,
-    nextUpBlock(intent, buildLog, nextUp, current, where),
     yourCallBlock(current, checkGreen, cardRun(intent, current)),
+    stateTable(
+      stateRows({
+        intent,
+        buildLog,
+        verdict: verdictValue(ladder, worst),
+        now: stepPhrase(current, steps),
+        stop: null,
+        nextUp,
+        exclude: current,
+        where,
+      }),
+    ),
   )
   const command = reprintCommand('--full', explicit, named)
-  return emit(root, { tier: 'decision', render: 'card', command }, withRecommendation(parts, parseRecommendation(detail)))
+  return emit(root, { tier: 'decision', render: 'card', command }, cardFoot(parts, detail, detailWhere))
 }
 
 /**
@@ -318,62 +342,16 @@ function settleDetail(root: string, raw: string): string {
 }
 
 /**
- * The stamp of a step pause: its number and a hash of everything on the card a
- * later turn could change, so the reminder prints only while the pause is the
- * one the human already read.
+ * The CLI-rendered state of a boundary ending: the state table's rows, headed
+ * by the Verdict folded from everything measurable right now, with the Stop
+ * row when the landing finished a range, then Next Up and the rows beneath it.
  *
- * Hashed: the detail file as normalized, the measured check and seam rows and
- * the diff row as rendered, and the patch the diff row counts, so an edit that
- * keeps the counts still reads as a touched file. Never `spent`: it counts
- * turns, so it moves on every turn and would make every render look new.
- */
-function pauseStamp(step: number, detail: string, rendered: ReadonlyArray<string>, patch: string): string {
-  const hash = createHash('sha256')
-  for (const part of [detail, ...rendered, patch]) {
-    hash.update(part).update('\0')
-  }
-  return `${step} ${hash.digest('hex')}`
-}
-
-/**
- * The readout rows the CLI measured, as the card renders them: `check`,
- * `seam`, and `diff`. The judgment rows ride the detail file, which the stamp
- * hashes whole, and `spent` stays out of it.
- */
-function measuredLines(rows: Partial<Record<RecapRowName, RecapRow>>, diff: string | null): string[] {
-  const measuredRows: Partial<Record<RecapRowName, RecapRow>> = {}
-  if (rows.check !== undefined) {
-    measuredRows.check = rows.check
-  }
-  if (rows.seam !== undefined) {
-    measuredRows.seam = rows.seam
-  }
-  return recapLines(measuredRows, { diff, spent: null, constraints: 0 })
-}
-
-/**
- * Record the stamp of the card just printed. A failed write costs one more
- * full card on a later turn, never this turn's output or its exit code.
- */
-function writePause(root: string, slug: string | null, stamp: string): void {
-  try {
-    writeFileSync(pausePath(root, slug), `${stamp}\n`)
-  } catch {
-    // A read-only tree or a vanished build folder: the card still renders.
-  }
-}
-
-/**
- * The CLI-rendered parts of a boundary ending: the Verdict folded from
- * everything measurable right now, the Stop part when the landing finished a
- * range, and the pointer at the step to come.
- *
- * `step` is the step that just landed, or null at a plan commit, where nothing
- * was measured and the Verdict and the Stop part both vanish. A transition verb
- * prints these beneath its own lead line, so a boundary reads identically
- * whether `checkpoint` emitted it or a later `handoff` did; the paths a stray
- * advisory named are the one part that does not survive, and the commit holds
- * those.
+ * `step` is the step that just landed, or null at a plan commit and a stop's
+ * record, where nothing was measured and the Verdict and the Stop row both
+ * vanish. A transition verb prints the table beneath its own lead line, so a
+ * boundary reads identically whether `checkpoint` emitted it or a later
+ * `handoff` did; the paths a stray advisory named are the one part that does
+ * not survive, and the commit holds those.
  */
 export function boundaryEnding(root: string, slug: string | null, step: number | null): BoundaryEnding {
   const intent = readOr(intentPath(root, slug))
@@ -382,23 +360,28 @@ export function boundaryEnding(root: string, slug: string | null, step: number |
   const where = relative(root, intentPath(root, slug))
   const landed = landedRange(intent, steps, step)
   return {
-    verdict: step === null ? null : landedVerdict(root, slug, intent, step),
-    stop: landed === null ? null : stopLead(landed, where),
+    state: stateRows({
+      intent,
+      buildLog: readOr(buildLogPath(root, slug)),
+      verdict: step === null ? null : landedVerdict(root, slug, intent, step),
+      now: null,
+      stop: landed === null ? null : stopValue(landed, where),
+      nextUp,
+      exclude: step,
+      where,
+    }),
     range: landed === null ? null : { item: landed.range.item, count: landed.count },
-    pointer: nextUpBlock(intent, readOr(buildLogPath(root, slug)), nextUp, step, where),
   }
 }
 
 /**
- * A boundary ending's CLI-rendered parts: the Verdict and the Stop part, where
- * either applies, and the pointer; and the range whose landing earned the Stop
- * part, so a run's checkpoint can say its boundary owes the stop card.
+ * A boundary ending's CLI-rendered state: the table's rows, and the range
+ * whose landing earned the Stop row, so a run's checkpoint can say its
+ * boundary owes the stop card.
  */
 export type BoundaryEnding = {
-  readonly verdict: string | null
-  readonly stop: string | null
+  readonly state: ReadonlyArray<StateRow>
   readonly range: { readonly item: number; readonly count: number } | null
-  readonly pointer: string
 }
 
 /** A range that lands its steps, completed by the landing of `step`, and the plan's count of ranges. */
@@ -419,17 +402,13 @@ function landedRange(intent: string, steps: ReadonlyArray<Step>, step: number | 
 }
 
 /**
- * The Stop part: why the build stops at this boundary. One labeled line, the
- * range over the count, a plain hyphen, the stop as the plan wrote it, and a
- * bracket pointing at the item, where its note can be read. The stop card
- * opens on the same line, moved to the top of the card.
+ * The Stop row's fact: why the build stops at this boundary. The range over
+ * the count, a plain hyphen, the stop as the plan wrote it, and a bracket
+ * pointing at the item, where its note can be read. The stop card's state
+ * table carries the same row.
  */
-function stopLead(landed: LandedRange, where: string): string {
-  return transition({
-    label: 'Stop',
-    fact: `Range ${landed.range.item} of ${landed.count} landed - ${landed.range.stop}`,
-    detail: [detailsLink(where, landed.range.line)],
-  })
+function stopValue(landed: LandedRange, where: string): string {
+  return `Range ${landed.range.item} of ${landed.count} landed - ${landed.range.stop} (${detailsLink(where, landed.range.line)})`
 }
 
 /**
@@ -449,19 +428,20 @@ export function detailsLink(path: string, line: number | null): string {
 }
 
 /**
- * The stop card that closes a run's range (docs/presentation.md): the Stop
- * lead, the range's Summary and highlights from the range's detail file, the
- * Readout measured across the range, the Verdict, the Harvested part while a
- * park is open, Next Up, Your Call, and the recommendation.
+ * The stop card that closes a run's range (docs/presentation.md): the range's
+ * Summary from the range's detail file, the Readout measured across the range,
+ * the Harvested part while a park is open, Your Call, the state table headed
+ * by the Verdict, with the Stop row, Next Up, and the rows beneath it, the
+ * recommendation, and the `more details` link.
  *
  * It renders for the range the last landing completed, and refuses with a
  * step in flight, with no range just landed, and with a detail file written
  * for anything but that range, since a card with none of the model's review
- * on it would ask the human to approve nothing. It renders once per stop:
- * while the STOP stamp matches the range and what the card showed, a later
- * render is the one-line reminder, and `--full` prints the card whatever the
- * stamp says. Every card it prints rewrites the stamp with the turn it printed
- * in, which is the turn `plumbbob harvest` waits past.
+ * on it would ask the human to approve nothing. It shows once per stop: while
+ * the STOP stamp names the range, a later render is the one-line reminder,
+ * whatever changed since (a lean the human changed, a park, a gate run), and
+ * `--full` prints the card again. Every card it prints rewrites the stamp with
+ * the turn it printed in, which is the turn `plumbbob harvest` waits past.
  */
 function stopCard(root: string, slug: string | null, named: string | null, full: boolean): number {
   const intent = readOr(intentPath(root, slug))
@@ -483,41 +463,44 @@ function stopCard(root: string, slug: string | null, named: string | null, full:
     )
     return 1
   }
-  const where = relative(root, intentPath(root, slug))
-  const buildLog = readOr(buildLogPath(root, slug))
-  const review = stopReview(root, slug, intent, range, detail)
-  const parks = parkList(buildLog)
-  const harvest = harvestPart(parks, harvestProposals(detail))
-  const hash = stopHash(detail, review.stamped, harvest ?? '')
   const stamp = readStop(root, slug)
-  if (!full && stamp !== null && stamp.range === range.item && stamp.hash === hash) {
-    // The stop the human already read, unchanged: the answer above this line
-    // is what they asked for, and the card would push it off the screen.
+  if (!full && stamp !== null && stamp.range === range.item) {
+    // The stop the human already read: the reply above this line is what they
+    // asked for, and the card would push it off the screen.
     const command = reprintCommand('--stop', undefined, named)
     return emit(root, { tier: 'decision', render: 'stop-reminder', command }, [
       `**Next Up**: Back to Range ${range.item} of ${count}'s stop - ${range.stop}`,
     ])
   }
-  writeStop(root, slug, { range: range.item, turn: readTurn(root), hash })
+  writeStop(root, slug, { range: range.item, turn: readTurn(root) })
+  const where = relative(root, intentPath(root, slug))
+  const review = stopReview(root, slug, intent, range, detail)
+  const parks = parkList(readOr(buildLogPath(root, slug)))
+  const proposals = harvestProposals(detail)
   const nextUp = steps.find((s) => !s.done && s.n !== step)
-  const parts: string[] = [
-    stopLead(landed, where),
-    summaryBlock(parseSummary(detail), relative(root, detailPath(root))),
-  ]
+  const parts: string[] = [summaryBlock(parseSummary(detail))]
   if (review.readout.length > 0) {
     parts.push([READOUT_LABEL, '', ...fence('text', review.readout)].join('\n'))
   }
-  parts.push(review.verdict)
-  if (harvest !== null) {
-    parts.push(harvest)
-  }
   parts.push(
-    // The note carries no parks segment here: the Harvested lead above sizes the list.
-    nextUpBlock(intent, '', nextUp, step, where),
-    stopCallBlock(leanExample(parks, harvestProposals(detail)), intent),
+    harvestPart(parks, proposals) ?? '',
+    stopCallBlock(leanExample(parks, proposals), intent),
+    stateTable(
+      stateRows({
+        intent,
+        // No Parked row here: the Harvested lead above sizes the list.
+        buildLog: '',
+        verdict: review.verdict,
+        now: null,
+        stop: stopValue(landed, where),
+        nextUp,
+        exclude: step,
+        where,
+      }),
+    ),
   )
   const command = reprintCommand('--stop --full', undefined, named)
-  return emit(root, { tier: 'decision', render: 'stop', command }, withRecommendation(parts, parseRecommendation(detail)))
+  return emit(root, { tier: 'decision', render: 'stop', command }, cardFoot(parts, detail, relative(root, detailPath(root))))
 }
 
 /**
@@ -547,8 +530,8 @@ function stopRange(root: string, slug: string | null, intent: string, steps: Rea
   return landed
 }
 
-/** A stop's review as the CLI measures it: the Readout's lines, the Verdict line, and the measured lines its stamp hashes. */
-type StopReview = { readonly readout: ReadonlyArray<string>; readonly verdict: string; readonly stamped: ReadonlyArray<string> }
+/** A stop's review as the CLI measures it: the Readout's lines, and the Verdict's fact. */
+type StopReview = { readonly readout: ReadonlyArray<string>; readonly verdict: string }
 
 /**
  * Measure a landed range and fold its Verdict: the CLI's rows across the
@@ -567,11 +550,11 @@ function stopReview(root: string, slug: string | null, intent: string, range: Bu
     readout: recapLines(rows, {
       steps: measure.steps,
       diff: measure.diff,
+      files: measure.files,
       spent: measure.spent,
       constraints: parseConstraintCount(intent),
     }),
-    verdict: verdictLine(ladder, worst),
-    stamped: recapLines(measure.rows, { steps: measure.steps, diff: measure.diff, spent: null, constraints: 0 }),
+    verdict: verdictValue(ladder, worst),
   }
 }
 
@@ -603,19 +586,6 @@ function rangeMeasure(root: string, slug: string | null, intent: string, range: 
   })
 }
 
-/**
- * The stamp's hash of a stop card: the range's detail file, the measured rows
- * as rendered, and the Harvested part, which reads the park list. Never `spent`,
- * as at a pause.
- */
-function stopHash(detail: string, measured: ReadonlyArray<string>, harvest: string): string {
-  const hash = createHash('sha256')
-  for (const part of [detail, ...measured, harvest]) {
-    hash.update(part).update('\0')
-  }
-  return hash.digest('hex')
-}
-
 /** One line of the park list: its handle, whether it is still open, and its text as the list holds it. */
 export type Park = { readonly handle: number; readonly open: boolean; readonly text: string }
 
@@ -643,18 +613,38 @@ export function parkList(buildLog: string): Park[] {
   }).map((park, i) => ({ handle: i + 1, ...park }))
 }
 
-/** One proposal from a detail file's `## Harvest` section: the park's handle, the class proposed, and the reason. */
-export type Proposal = { readonly handle: number; readonly kind: string; readonly reason: string }
+/**
+ * One proposal from a detail file's `## Harvest` section: the park's handle,
+ * the class proposed and its reason, and the short title and the why the lean
+ * table shows beside the park's own text ('' where the model wrote none).
+ */
+export type Proposal = {
+  readonly handle: number
+  readonly kind: string
+  readonly reason: string
+  readonly title: string
+  readonly why: string
+}
+
+// A proposal's first line: `- P6 → tangent: <the reason>`, or the `- park 6 →`
+// form a detail written before D105 (park-handles) carried.
+const PROPOSAL = /^-\s+(?:P|park\s+)(\d+)\s*(?:→|->)\s*([\w-]+)\s*(?::\s*(.*))?$/i
+
+// A proposal's indented field line: `- title: <2 to 5 words>` or `- why: <one clause>`.
+const PROPOSAL_FIELD = /^-\s+(title|why)\s*:\s*(.*)$/i
 
 /**
  * The proposals under a detail file's `## Harvest` section, one per
- * `- P6 → tangent: <the reason>` line, in the order written. The handle is the
- * one the card prints (D105 (park-handles)); the `- park 6 →` form a detail
- * written before it carried is still read.
+ * `- P6 → tangent: <the reason>` line, in the order written, each with the
+ * `- title:` and `- why:` lines indented beneath it. The handle is the one the
+ * card prints (D105 (park-handles)); the `- park 6 →` form a detail written
+ * before it carried is still read, and so is a proposal with no field lines,
+ * the shape every detail had before the lean table (D112 (lean-table)).
  *
  * The class is read as written, whatever its word: the card shows the
  * proposal the model made, and `plumbbob harvest` is what refuses one outside
- * blocker, tangent, and pivot. A line in any other shape is not a proposal.
+ * blocker, tangent, and pivot. A line in any other shape is not a proposal,
+ * and a field line is read only indented beneath one.
  */
 export function harvestProposals(detail: string): Proposal[] {
   const lines = detail.split('\n')
@@ -663,10 +653,20 @@ export function harvestProposals(detail: string): Proposal[] {
     return []
   }
   const end = lines.findIndex((l, i) => i > start && l.startsWith('## '))
-  return lines.slice(start + 1, end === -1 ? lines.length : end).flatMap((line) => {
-    const m = /^-\s+(?:P|park\s+)(\d+)\s*(?:→|->)\s*([\w-]+)\s*(?::\s*(.*))?$/i.exec(line.trim())
-    return m === null ? [] : [{ handle: Number(m[1]), kind: (m[2] ?? '').toLowerCase(), reason: (m[3] ?? '').trim() }]
-  })
+  const proposals: Array<{ handle: number; kind: string; reason: string; title: string; why: string }> = []
+  for (const line of lines.slice(start + 1, end === -1 ? lines.length : end)) {
+    const m = PROPOSAL.exec(line.trim())
+    if (m !== null) {
+      proposals.push({ handle: Number(m[1]), kind: (m[2] ?? '').toLowerCase(), reason: (m[3] ?? '').trim(), title: '', why: '' })
+      continue
+    }
+    const field = /^\s+/.test(line) ? PROPOSAL_FIELD.exec(line.trim()) : null
+    const last = proposals.at(-1)
+    if (field !== null && last !== undefined) {
+      last[(field[1] ?? '').toLowerCase() === 'title' ? 'title' : 'why'] = (field[2] ?? '').trim()
+    }
+  }
+  return proposals
 }
 
 /**
@@ -689,10 +689,10 @@ export type WaitingCard = { readonly range: number; readonly count: number }
  * still parsing and reading as landed. The record clears the stamp and the
  * detail file, so the wait ends with it.
  *
- * The digest is left to the record's own latch: a detail file rewritten for
- * a re-render that has not run yet still waits, and a stamp from before the
- * digest carries none. The landed condition is what keeps a re-cut from
- * wedging the build, since a range re-cut to take a new step stops waiting.
+ * A detail file rewritten since the card showed (a lean the human changed)
+ * still waits, since the stamp names the range and nothing it said. The
+ * landed condition is what keeps a re-cut from wedging the build, since a
+ * range re-cut to take a new step stops waiting.
  * The stamp is the build's own but the detail file is the session's, so in a
  * session of several builds, a stamp left in this build and another build's
  * card for the same range number read as this build's card waiting.
@@ -711,30 +711,92 @@ export function waitingCard(root: string, slug: string | null, intent: string): 
 }
 
 /**
- * The Harvested part: a lead that sizes the list, then one bullet per open
- * park in list order, its `P6` handle and text from the list and, behind the
- * arrow, the lean the detail file proposes: `lean: tangent, <the reason>`. A
- * park the detail left out reads `no lean proposed`, so a silent omission is
- * one on the card. Null with no park open, which renders the card without the
- * part.
+ * The Harvested part: a lead that sizes the list, then the lean table, one row
+ * per open park in list order (D112 (lean-table)). The first column is the
+ * park's `P6` handle with the short title the detail file gives it, the second
+ * the park's text exactly as the list holds it, so the card can never
+ * misquote a park, the third why it matters, and the fourth the lean:
+ * `tangent: <the reason>`. A park the detail left out reads
+ * `no lean proposed`, and a missing why reads `not given`, so a silent
+ * omission is one on the card. Null with no park open, which renders the card
+ * without the part.
  *
- * A bullet, never a numbered item, because a markdown list renumbers: open
- * parks 6 and 8 would render as 6 and 7, and the number read would not be the
- * one the record matches (D105 (park-handles)).
+ * The handle rides its own cell, never a list number, because the number the
+ * human reads has to be the one the record matches (D105 (park-handles)).
  */
 function harvestPart(parks: ReadonlyArray<Park>, proposals: ReadonlyArray<Proposal>): string | null {
   const open = parks.filter((p) => p.open)
   if (open.length === 0) {
     return null
   }
-  const items = open.map((park) => {
+  const rows = open.map((park) => {
     const proposal = proposals.find((p) => p.handle === park.handle)
-    const lean =
-      proposal === undefined ? 'no lean proposed' : proposal.reason.length === 0 ? `lean: ${proposal.kind}` : `lean: ${proposal.kind}, ${proposal.reason}`
-    return `- P${park.handle} · ${park.text} → ${lean}`
+    const name = proposal === undefined || proposal.title.length === 0 ? `P${park.handle}` : `P${park.handle} · ${proposal.title}`
+    const why = proposal === undefined || proposal.why.length === 0 ? 'not given' : proposal.why
+    const lean = proposal === undefined ? 'no lean proposed' : proposal.reason.length === 0 ? proposal.kind : `${proposal.kind}: ${proposal.reason}`
+    return `| ${cell(name)} | ${cell(park.text)} | ${cell(why)} | ${cell(lean)} |`
   })
   const lead = `**Harvested**: ${open.length} of ${parks.length} parked idea${parks.length === 1 ? '' : 's'} open`
-  return [lead, '', ...items].join('\n')
+  return [lead, '', LEAN_TABLE_HEAD, '| --- | --- | --- | --- |', ...rows].join('\n')
+}
+
+// The lean table's header row, the same on the stop card, a boundary
+// harvest's render, and the stop's record.
+const LEAN_TABLE_HEAD = '| Park | What it is | Why it matters | Lean |'
+
+/**
+ * A boundary harvest's leans (`plumbbob handoff --harvest`): the Harvested
+ * part, the lean table the stop card carries, read from a `# Detail · Harvest`
+ * file, then the moves that settle it in one reply. A driver-tier render with
+ * no stamp: nothing is pending on the session, and the record waits for no
+ * card. It refuses a detail file that is no harvest's, and a list with no park
+ * open, since there is then nothing to propose.
+ */
+function harvestCard(root: string, slug: string | null): number {
+  const detail = settleDetail(root, readOr(detailPath(root)))
+  if (!isHarvestDetail(detail)) {
+    process.stderr.write(
+      notice({
+        fact: 'no harvest to render',
+        detail: ["the detail file is not a harvest's"],
+        remedy: 'write the proposals in .plumbbob/detail.md under `# Detail · Harvest`, then plumbbob handoff --harvest',
+      }),
+    )
+    return 1
+  }
+  const parks = parkList(readOr(buildLogPath(root, slug)))
+  const proposals = harvestProposals(detail)
+  const part = harvestPart(parks, proposals)
+  if (part === null) {
+    process.stderr.write(notice({ fact: 'no harvest to render', detail: ['no park is open'], remedy: 'plumbbob park "<one line>" captures one' }))
+    return 1
+  }
+  return emit(root, { tier: 'driver', render: 'harvest-card' }, [part, harvestCallBlock(leanExample(parks, proposals))])
+}
+
+/**
+ * A boundary harvest's Your Call block: the lock-in line, then the moves that
+ * settle every lean in one reply, as at a stop with no run to name.
+ */
+function harvestCallBlock(example: string | null): string {
+  return [
+    '**Your Call**:',
+    '',
+    `Approving locks in each lean above; to change one, say so first (\`${example ?? 'make P1 a blocker'}\`).`,
+    '',
+    callLine('`looks good`', 'I record every lean as proposed, folding a blocker into the plan'),
+    callLine('anything that reads as direction', 'I change the lean and say what moved; nothing is recorded until you approve'),
+    callLine('`expand`, or any question', 'I show more of what is there; nothing changes'),
+  ].join('\n')
+}
+
+/**
+ * Whether a detail file is a boundary harvest's wire, read off its
+ * `# Detail · Harvest` header.
+ */
+export function isHarvestDetail(detail: string): boolean {
+  const first = detail.trimStart().split('\n', 1)[0] ?? ''
+  return /^#\s+Detail\s*·\s*Harvest\s*$/.test(first)
 }
 
 /**
@@ -769,7 +831,7 @@ function stopCallBlock(example: string | null, intent: string): string {
     moves.push(callLine('`/plumbbob:run`', `I record ${what} the same way, then run range ${follow.range.item} of ${follow.count} to its stop`))
   }
   moves.push(
-    callLine('anything that reads as direction', `I re-render the card with the ${parked ? 'lean' : 'review'} changed; nothing is recorded until you approve`),
+    callLine('anything that reads as direction', `I change the ${parked ? 'lean' : 'review'} and say what moved; nothing is recorded until you approve`),
     callLine('`expand`, or any question', 'I show more of what is there; nothing changes, and `show the stop` brings all of this back'),
   )
   const lockIn = parked ? [`Approving locks in each lean above; to change one, say so first (\`${example}\`).`, ''] : []
@@ -821,7 +883,7 @@ export function stopRecord(root: string, slug: string | null, detail: string, bu
   if (review.readout.length > 0) {
     parts.push([READOUT_LABEL, '', ...fence('text', review.readout)].join('\n'))
   }
-  parts.push(review.verdict)
+  parts.push(verdictLine(review.verdict))
   const harvest = harvestPart(parkList(buildLog), harvestProposals(detail))
   if (harvest !== null) {
     parts.push(harvest)
@@ -860,6 +922,7 @@ export function stepRecord(root: string, slug: string | null, step: number, deta
   const { ladder, worst } = foldVerdict(rows, accruedStats(root, slug, step))
   const readout = recapLines(rows, {
     diff: diffRowValue(countDiff(work), false),
+    files: diffFileItems(work),
     spent: spentRowValue(spentInputs(root, slug, step, check)),
     constraints: parseConstraintCount(intent),
   })
@@ -870,7 +933,7 @@ export function stepRecord(root: string, slug: string | null, step: number, deta
   if (readout.length > 0) {
     parts.push([READOUT_LABEL, '', ...fence('text', readout)].join('\n'))
   }
-  parts.push(verdictLine(ladder, worst))
+  parts.push(verdictLine(verdictValue(ladder, worst)))
   return [...withRecommendation(parts, recommendation), ...sectionBlocks(sections)].join('\n\n')
 }
 
@@ -934,12 +997,12 @@ export function driverPointer(root: string, slug: string | null): string {
 
 /**
  * The Verdict for a step that just landed: the assembled rows folded worst-of
- * with the step's accrued stats, rendered as the line.
+ * with the step's accrued stats, as the state table's header states it.
  */
 function landedVerdict(root: string, slug: string | null, intent: string, step: number): string {
   const { rows } = measured(root, slug, intent, readOr(detailPath(root)), step)
   const { ladder, worst } = foldVerdict(rows, accruedStats(root, slug, step))
-  return verdictLine(ladder, worst)
+  return verdictValue(ladder, worst)
 }
 
 /** The measured inputs a Verdict and a readout are both built from. */
@@ -1004,37 +1067,40 @@ function reprintCommand(
 }
 
 /**
- * The Verdict line from an already-folded result: the ladder rung, and the
- * worst component in a trailing parenthetical when one exists.
+ * The Verdict's fact from an already-folded result: the ladder rung, and the
+ * worst component in a trailing parenthetical when one exists. The state
+ * table's header row carries it on a card; the record keeps it as a line.
  *
- * No step segment rides here. The identity renders once per turn: the Now line
+ * No step segment rides here. The identity renders once per turn: the Now row
  * names the step in flight with its count, Next Up names the step to come with
  * its own, and the Verdict is left saying the one thing only it says.
  */
-function verdictLine(ladder: Ladder, worst: string | null): string {
-  const state = `**Verdict**: ${ladder.glyph} ${ladder.state}`
+function verdictValue(ladder: Ladder, worst: string | null): string {
+  const state = `${ladder.glyph} ${ladder.state}`
   return worst === null ? state : `${state} (${worst})`
 }
 
 /**
- * The turn's opening block: the model's lead behind the Summary label, with the
- * `(details: …)` bracket appended, then the numbered highlights beneath it.
- *
- * The lead and the titles are the markdown the model wrote, passed through; the
- * label, the bracket, and the numbering are the CLI's, so the model never types
- * a path and the block cannot drift from where the detail actually is. Empty
- * when the detail file carries no lead: a Summary that says nothing vanishes
- * rather than labeling nothing.
+ * The Verdict as the build-log record keeps it, a labeled line, since the
+ * record is the archive and carries no state table.
  */
-function summaryBlock(summary: Summary | null, where: string): string {
-  if (summary === null) {
-    return ''
-  }
-  const lead = `**Summary**: ${summary.lead} (${detailsLink(where, null)})`
-  if (summary.highlights.length === 0) {
-    return lead
-  }
-  return [lead, '', ...summary.highlights.map((h) => `${h.n}. ${h.title}`)].join('\n')
+function verdictLine(value: string): string {
+  return `**Verdict**: ${value}`
+}
+
+/**
+ * The card's opening block: the model's lead behind the Summary label, and
+ * nothing beneath it.
+ *
+ * The numbered highlights stay in the detail file, behind the `more details`
+ * link the card closes on and the `expand` move, and the build-log record
+ * still lists them: the card is read for the Verdict, the lead, and the call,
+ * and a list read past is a list in the way (D113 (short-card)). Empty when
+ * the detail file carries no lead: a Summary that says nothing vanishes rather
+ * than labeling nothing.
+ */
+function summaryBlock(summary: Summary | null): string {
+  return summary === null ? '' : `**Summary**: ${summary.lead}`
 }
 
 // The Readout's label, bare on the card and in the record alike: the Now line
@@ -1122,12 +1188,25 @@ const RECOMMENDATION_LABEL = '**Recommendation**: '
 
 /**
  * Append the recommendation beneath a block, blank-line separated, when the
- * model wrote one; the ending's last text is then the model's own call. The
- * label is the CLI's: it announces what the last text is before the eye
- * reads it, and a label the model typed would be one more line to drift.
+ * model wrote one. The label is the CLI's: it announces what the text is
+ * before the eye reads it, and a label the model typed would be one more line
+ * to drift.
  */
 function withRecommendation(parts: ReadonlyArray<string>, recommendation: string | null): string[] {
   return recommendation === null ? [...parts] : [...parts, `${RECOMMENDATION_LABEL}${recommendation}`]
+}
+
+/**
+ * A card's foot: the recommendation the detail file carries, then one
+ * `more details` link to the file, the card's last line.
+ *
+ * The link is the one place the card points at the detail, out of the way of
+ * the parts the human reads (D113 (short-card)). It renders only when the file
+ * holds something, since a link to an empty file points at nothing.
+ */
+function cardFoot(parts: ReadonlyArray<string>, detail: string, where: string): string[] {
+  const foot = withRecommendation(parts, parseRecommendation(detail))
+  return detail.trim().length === 0 ? foot : [...foot, `[more details](${where})`]
 }
 
 /**
@@ -1191,7 +1270,7 @@ function yourCallBlock(step: number, checkGreen: boolean, run: Run): string {
   moves.push(
     callLine('`expand`, or any question', 'I show more of what is there; nothing changes, and `show the pause` brings all of this back'),
   )
-  moves.push(callLine('anything that reads as direction', 'I take it as what to change; nothing lands until you approve'))
+  moves.push(callLine('anything that reads as direction', 'I make the change and say what moved; nothing lands until you approve'))
   moves.push(callLine('`revert`', 'I wind the work back to the last checkpoint'))
   return ['**Your Call**:', '', ...moves].join('\n')
 }
@@ -1251,58 +1330,71 @@ function spikeNextUpLine(inFlight: number | null): string {
   return `**Next Up**: Close the spike - /plumbbob:spike done${back}`
 }
 
-// The card's cap on the build-order reminder: the next five steps, the rest a
-// count. The line is a reminder; the dashboard holds the whole sequence.
+// The Order row's cap: the next five steps, the rest a count. The row is a
+// reminder; the dashboard holds the whole sequence.
 const ORDER_CAP = 5
 
-/**
- * The line beneath the forward pointer: the range segment, when the plan
- * declares build ranges; the build order from the step the pointer names, when
- * `## Build order` re-sequences the plan away from its numbering; and the park
- * count, when anything has been parked. '' when none says anything, so a plan
- * with no ranges, nobody re-sequenced, and an empty park list renders the
- * pointer alone, as before.
- *
- * Indented two spaces, because an indented line continues the part above it
- * to every reader of the anatomy (the advisory's `→` remedy line is the
- * precedent), where a flush one would open a stray. The parks ride even under
- * `Nothing planned`: an unharvested list at the end of the plan is the one
- * reminder that matters there.
- */
-function nextUpNote(intent: string, buildLog: string, exclude: number | null, range: string): string {
-  const parks = parseParkTotals(buildLog)
-  const segments = [
-    range,
-    buildOrderPhrase(remainingOrder(parseSteps(intent), parseBuildOrder(intent), exclude), ORDER_CAP),
-    parks.total > 0 ? parkedPhrase(parks) : '',
-  ].filter((s) => s.length > 0)
-  return segments.length === 0 ? '' : `  · ${segments.join(' · ')}`
+/** What a state table is read from: the plan, the park list, and the facts the turn measured. */
+type StateInput = {
+  readonly intent: string
+  readonly buildLog: string // '' where the Parked row would repeat the Harvested lead
+  readonly verdict: string | null // the Verdict's fact where one was measured; it heads the table
+  readonly now: string | null // the step in flight, on a pause card
+  readonly stop: string | null // the Stop row's fact, where a range just landed or a stop card waits
+  readonly nextUp: Step | undefined
+  readonly exclude: number | null // the step the turn is about, so Next Up and the order skip it
+  readonly where: string // the intent file, for Next Up's `details:` link
 }
 
 /**
- * The forward pointer with its note beneath, as one part: `blocks` keeps a
- * part's own newlines, so the note rides flush under the line it qualifies.
+ * The state table's rows, in their fixed order, each only when it says
+ * something: the Verdict, the step in flight, the Stop, Next Up, the range the
+ * next run walks, the build order where `## Build order` re-sequences the
+ * plan, the parks once anything has been parked, and the open questions the
+ * plan still carries. The first row present becomes the header, which is the
+ * Verdict wherever one was measured (D111 (state-table)).
  *
- * `exclude` is the step the turn is about: the step in flight at a pause, the
- * step just landed at a boundary, null at the plan pause and the plan commit.
- * While the note suggests a range, the bracket bolds the range's model, since
- * the run is the range and that is the `/model` the human picks before typing
- * it.
+ * The Range, Order, and Parked rows are the segments the note beneath Next Up
+ * used to carry on one indented line; as rows each one has a label of its own,
+ * the way the human scans for it.
  */
-function nextUpBlock(intent: string, buildLog: string, nextUp: Step | undefined, exclude: number | null, where: string): string {
+function stateRows(input: StateInput): StateRow[] {
+  const steps = parseOrderedSteps(input.intent)
+  const range = rangeSegment(input.intent, steps, input.nextUp, input.exclude)
+  const order = buildOrderPhrase(remainingOrder(parseSteps(input.intent), parseBuildOrder(input.intent), input.exclude), ORDER_CAP)
+  const parks = parseParkTotals(input.buildLog)
+  const questions = parseOpenQuestions(input.intent)
+  const rows: Array<StateRow | null> = [
+    input.verdict === null ? null : { label: 'Verdict', value: input.verdict },
+    input.now === null ? null : { label: 'Now', value: input.now },
+    input.stop === null ? null : { label: 'Stop', value: input.stop },
+    { label: 'Next Up', value: pointerText(input.nextUp, steps.length, input.where, range.model ?? input.nextUp?.model ?? null) },
+    range.segment.length === 0 ? null : { label: 'Range', value: range.segment },
+    order.length === 0 ? null : { label: 'Order', value: order },
+    parks.total === 0 ? null : { label: 'Parked', value: `${parks.open} of ${parks.total} open` },
+    questions === 0 ? null : { label: 'Questions', value: `${questions} open` },
+  ]
+  return rows.filter((r): r is StateRow => r !== null)
+}
+
+/**
+ * The bare forward pointer, the one line a boundary already shown ends on:
+ * the Next Up line the driver tier keeps, with the range's model in its
+ * bracket while the next run is a range, as the table's Next Up row has it.
+ */
+function pointerLine(intent: string, nextUp: Step | undefined, exclude: number | null, where: string): string {
   const steps = parseOrderedSteps(intent)
   const range = rangeSegment(intent, steps, nextUp, exclude)
-  const line = nextUpLine(nextUp, steps.length, where, range.model ?? nextUp?.model ?? null)
-  const note = nextUpNote(intent, buildLog, exclude, range.segment)
-  return note.length === 0 ? line : `${line}\n${note}`
+  return nextUpLine(nextUp, steps.length, where, range.model ?? nextUp?.model ?? null)
 }
 
 /**
- * The range segment that leads the note, and the model the pointer's bracket
- * bolds while it suggests a range: the run `/plumbbob:run` typed now would
- * walk, `range 3 of 5: /plumbbob:run (steps 6-9)`, with the model of the range
- * holding the step Next Up names; the re-cut words for a flagged range; the
- * words for a step no range names; or '' for a plan without ranges.
+ * The Range row's fact, and the model the pointer's bracket bolds while it
+ * suggests a range: the run `/plumbbob:run` typed now would walk,
+ * `3 of 5: /plumbbob:run (steps 6-9)`, with the model of the range holding
+ * the step Next Up names; the re-cut words for a flagged range; the words for
+ * a step no range names; or '' for a plan without ranges. The row's label
+ * says `Range`, so the fact opens on the range's count.
  *
  * The bracket is the grant the hook would mint. At a step pause that is the
  * range holding the step in flight, its bracket opening on that step, since a
@@ -1325,14 +1417,14 @@ function rangeSegment(
   const paused = steps.some((s) => s.n === exclude && !s.done) ? exclude : null
   const run = cardRun(intent, paused)
   if (run.ok) {
-    const name = `range ${run.range.item} of ${run.count}`
+    const name = `${run.range.item} of ${run.count}`
     const lands = paused !== null && run.left.length === 1
     return { segment: lands ? `${name} lands with step ${paused}` : `${name}: /plumbbob:run (${runBracket(run)})`, model }
   }
   if (run.kind === 'uncovered') {
     return { segment: run.words, model }
   }
-  return { segment: run.kind === 'flagged' ? `range ${run.item} of ${run.count} needs a re-cut (${run.words})` : '', model }
+  return { segment: run.kind === 'flagged' ? `${run.item} of ${run.count} needs a re-cut (${run.words})` : '', model }
 }
 
 /**
@@ -1346,26 +1438,34 @@ function cardRun(intent: string, paused: number | null): Run {
 }
 
 /**
- * The forward pointer: the next undone step with the progress count, its
- * title, and a closing bracket carrying its advisory `- model:` recommendation
- * and where to read the step in full. No next step ⇒ the finish/step nudge
- * instead.
+ * The forward pointer's fact: the next undone step with the progress count,
+ * its title, and a closing bracket carrying its advisory `- model:`
+ * recommendation and where to read the step in full. No next step ⇒ the
+ * finish/step nudge instead.
  *
  * The model is the second bold token the line spends, because it is the one
  * the human acts on (a `/model` call) before the next run; the path is the
- * short link every `details:` bracket carries (`detailsLink`). The line alone
- * is the driver tier's pointer; every other tier rides `nextUpNote` beneath
- * it, through `nextUpBlock`.
+ * short link every `details:` bracket carries (`detailsLink`). The state
+ * table's Next Up row carries it; `nextUpLine` labels it for the one line a
+ * driver turn ends on.
  */
-function nextUpLine(nextUp: Step | undefined, total: number, where: string, model = nextUp?.model ?? null): string {
+function pointerText(nextUp: Step | undefined, total: number, where: string, model = nextUp?.model ?? null): string {
   if (nextUp === undefined) {
-    return '**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish'
+    return 'Nothing planned - /plumbbob:step or /plumbbob:finish'
   }
   const title = nextUp.title.length > 0 ? ` - ${nextUp.title}` : ''
   const token = modelToken(model)
   const bracket = token === null ? [] : [`model: **${capitalize(token)}**`]
   bracket.push(detailsLink(where, nextUp.line))
-  return `**Next Up**: Step ${nextUp.n} of ${total}${title} (${bracket.join(', ')})`
+  return `Step ${nextUp.n} of ${total}${title} (${bracket.join(', ')})`
+}
+
+/**
+ * The forward pointer as one labeled line: the driver tier's pointer, and the
+ * line a boundary already shown ends on.
+ */
+function nextUpLine(nextUp: Step | undefined, total: number, where: string, model = nextUp?.model ?? null): string {
+  return `**Next Up**: ${pointerText(nextUp, total, where, model)}`
 }
 
 /**

@@ -48,7 +48,7 @@ describe('finish', () => {
             remedy: '/plumbbob:finish normally writes the report first',
           }),
         ],
-        pointer: '**Next Up**: Nothing planned - /plumbbob:plan',
+        state: [{ label: 'Next Up', value: 'Nothing planned - /plumbbob:plan' }],
       }),
     )
   })
@@ -112,8 +112,9 @@ describe('finish', () => {
     const { code, stdout } = captureIo(() => finish(dir))
     expect(code).toBe(0)
     // The one ending handoff cannot render: finish has just deleted the session
-    // it would read, so the pointer is printed here, last, and blank-line separated.
-    expect(stdout.endsWith('\n\n**Next Up**: Nothing planned - /plumbbob:plan\n\n')).toBe(true)
+    // it would read, so the pointer is printed here, the state table's one row,
+    // last, and blank-line separated.
+    expect(stdout.endsWith('\n\n| **Next Up** | Nothing planned - /plumbbob:plan |\n| --- | --- |\n\n')).toBe(true)
   })
 
   it('refuses with no active session', async () => {

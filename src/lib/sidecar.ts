@@ -19,7 +19,6 @@
 // phase the dashboard shows (DESIGN/BUILD/SPIKE) is derived, not stored: BUILD ⇔
 // a STEP is in flight, SPIKE ⇔ the SPIKE marker is present, otherwise DESIGN.
 
-import { createHash } from 'node:crypto'
 import { existsSync, readdirSync, readFileSync, writeFileSync, appendFileSync, rmSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { gitPath } from './git.ts'
@@ -233,17 +232,51 @@ export function clearStep(root: string, slug?: string | null): void {
 }
 
 /**
- * PAUSE: the stamp of the step pause `handoff` last rendered whole, the step
- * number and a hash of what the card showed. While a later render matches it,
- * handoff prints the one-line reminder instead of the card.
+ * PAUSE: which card the human has already read, so a later `handoff` prints
+ * the one line that points back at it instead of the card. It holds a step
+ * number once that step's pause card has shown (`2`), or `landed 2` once the
+ * boundary step 2 landed on has shown.
+ *
+ * It records that a card showed, never what the card said: a later turn that
+ * changes the work is the model's reply, and the card comes back only on
+ * request (D110 (reply-after-the-card)).
  */
 export function pausePath(root: string, slug?: string | null): string {
   return join(artifactDir(root, slug), 'PAUSE')
 }
 
+/** A PAUSE stamp: a step whose pause card has shown, or the step whose landing's boundary has. */
+export type PauseStamp = { readonly kind: 'pause' | 'landed'; readonly step: number }
+
 /**
- * Remove the PAUSE stamp: a checkpoint, a revert, or an abandon ends the pause
- * it recorded, so the next pause renders whole. Absent is a no-op.
+ * The card PAUSE says has shown, or null when the file is absent or does not
+ * parse. A stamp written before D110 (reply-after-the-card) holds a step
+ * number and a hash, and reads as that step's pause.
+ */
+export function readPause(root: string, slug?: string | null): PauseStamp | null {
+  try {
+    const m = /^(landed )?(\d+)(?:\s|$)/.exec(readFileSync(pausePath(root, slug), 'utf8').trim())
+    return m === null ? null : { kind: m[1] === undefined ? 'pause' : 'landed', step: Number(m[2]) }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Record that a card has shown. Best-effort: a failed write costs one more
+ * full card on a later turn, never this turn's output or its exit code.
+ */
+export function writePause(root: string, slug: string | null | undefined, stamp: PauseStamp): void {
+  try {
+    writeFileSync(pausePath(root, slug), `${stamp.kind === 'landed' ? 'landed ' : ''}${stamp.step}\n`)
+  } catch {
+    // A read-only tree or a vanished build folder: the card still renders.
+  }
+}
+
+/**
+ * Remove the PAUSE stamp: a revert or an abandon ends the pause it recorded,
+ * so the next pause renders whole. Absent is a no-op.
  */
 export function clearPause(root: string, slug?: string | null): void {
   rmSync(pausePath(root, slug), { force: true })
@@ -251,52 +284,47 @@ export function clearPause(root: string, slug?: string | null): void {
 
 /**
  * STOP: the stamp of the stop card `handoff --stop` last rendered whole, the
- * range it reviews, the TURN it printed in, a hash of what the card showed,
- * and a digest of the detail file it printed from. While a later render
- * matches the range and the hash, handoff prints the one-line reminder;
- * `plumbbob harvest` records the stop only from the detail the card showed,
- * and only once a human turn has read it.
+ * range it reviews and the TURN it printed in. While a later render names the
+ * same range, handoff prints the one-line reminder, whatever changed since;
+ * `plumbbob harvest` records the stop only once a card for the range has shown
+ * and a human turn has read it.
  */
 export function stopPath(root: string, slug?: string | null): string {
   return join(artifactDir(root, slug), 'STOP')
 }
 
 /**
- * A stop card's stamp: the range it reviews, the turn it printed in (null with
- * no turn hook), the hash of what it showed, and the digest of the detail file
- * it printed from (null on a stamp written before the digest was kept).
+ * A stop card's stamp: the range it reviews, and the turn it printed in (null
+ * with no turn hook).
  */
 export type StopStamp = {
   readonly range: number
   readonly turn: number | null
-  readonly hash: string
-  readonly detail: string | null
 }
 
 /**
  * The stamp of the stop card last rendered, or null when STOP is absent or
- * does not parse.
+ * does not parse. A stamp written before D110 (reply-after-the-card) carries
+ * a hash and a digest after the turn, and both are ignored.
  */
 export function readStop(root: string, slug?: string | null): StopStamp | null {
   try {
-    const m = /^(\d+) (\d+|-) (\S+)(?: (\S+))?$/.exec(readFileSync(stopPath(root, slug), 'utf8').trim())
+    const m = /^(\d+) (\d+|-)(?:\s|$)/.exec(readFileSync(stopPath(root, slug), 'utf8').trim())
     if (m === null) return null
-    return { range: Number(m[1]), turn: m[2] === '-' ? null : Number(m[2]), hash: m[3] ?? '', detail: m[4] ?? null }
+    return { range: Number(m[1]), turn: m[2] === '-' ? null : Number(m[2]) }
   } catch {
     return null
   }
 }
 
 /**
- * Record the stamp of the stop card just printed, with the digest of the
- * detail file as it stands, which is the file the card was rendered from.
- * Best-effort: a failed write costs one more full card on a later turn, never
- * this turn's output or its exit code.
+ * Record the stamp of the stop card just printed. Best-effort: a failed write
+ * costs one more full card on a later turn, never this turn's output or its
+ * exit code.
  */
-export function writeStop(root: string, slug: string | null | undefined, stamp: Omit<StopStamp, 'detail'>): void {
+export function writeStop(root: string, slug: string | null | undefined, stamp: StopStamp): void {
   try {
-    const detail = detailDigest(readFileSync(detailPath(root), 'utf8'))
-    writeFileSync(stopPath(root, slug), `${stamp.range} ${stamp.turn ?? '-'} ${stamp.hash} ${detail}\n`)
+    writeFileSync(stopPath(root, slug), `${stamp.range} ${stamp.turn ?? '-'}\n`)
   } catch {
     // A read-only tree or a vanished build folder: the card still renders.
   }
@@ -308,14 +336,6 @@ export function writeStop(root: string, slug: string | null | undefined, stamp: 
  */
 export function clearStop(root: string, slug?: string | null): void {
   rmSync(stopPath(root, slug), { force: true })
-}
-
-/**
- * The digest a STOP stamp keeps of a detail file, so the record can tell the
- * detail a card showed from one written after it.
- */
-export function detailDigest(detail: string): string {
-  return createHash('sha256').update(detail).digest('hex')
 }
 
 /**
@@ -800,7 +820,7 @@ export function readTurn(root: string): number | null {
 // it, and a driver ending is recorded only so that the last ending wins.
 const RELAY_TIERS = ['decision', 'orientation', 'driver'] as const
 
-// Which ending printed: handoff's eight forms first, then one per transition.
+// Which ending printed: handoff's nine forms first, then one per transition.
 // It is what the check's reason names when the ending went missing.
 const RELAY_RENDERS = [
   'card',
@@ -811,6 +831,7 @@ const RELAY_RENDERS = [
   'boundary',
   'pointer',
   'driver',
+  'harvest-card',
   'checkpoint',
   'plan-commit',
   'park',
@@ -1053,10 +1074,10 @@ export function excludeControl(root: string): void {
     // The entry stamp is in-flight control like STEP/SEAM: checkpoint's
     // stageAll must never sweep it into a step commit.
     `${DIRNAME}/builds/*/TICK`,
-    // The pause stamp is in-flight control too: what handoff last showed, so
-    // a repeat prints the reminder. It must never ride a step commit.
+    // The pause stamp is in-flight control too: which card has shown, so a
+    // later handoff prints its one line. It must never ride a step commit.
     `${DIRNAME}/builds/*/PAUSE`,
-    // The stop stamp likewise: what the stop card last showed, and the turn it
+    // The stop stamp likewise: the range whose card has shown, and the turn it
     // printed in, for the reminder and the record's latch.
     `${DIRNAME}/builds/*/STOP`,
     // The agent-run handoff ledger is step-scoped in-flight state, not a

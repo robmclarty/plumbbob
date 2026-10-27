@@ -11,9 +11,11 @@
 // the edge, and an optional indented arrow line carrying what to do next. One
 // shape, so moving it is one edit rather than a sweep. The pointer at the next
 // step is not a line's job: `handoff` renders one, and the verb prints it as
-// the ending's last part. The formatters are pure string assembly, no fs, no
-// gate; `printEnding` is the one function here that writes, and every ending
-// a verb prints goes through it so the relay check knows what was said.
+// the ending's last part, either as the state table that closes a card or an
+// orientation ending (D111 (state-table)) or as the one labeled line a driver
+// turn ends on. The formatters are pure string assembly, no fs, no gate;
+// `printEnding` is the one function here that writes, and every ending a verb
+// prints goes through it so the relay check knows what was said.
 
 import { type Relay, writeRelay } from './sidecar.ts'
 
@@ -68,22 +70,24 @@ export type Advisory = {
   readonly remedy?: string
 }
 
+/** One row of the state table: the label in the first column, the fact in the second. */
+export type StateRow = { readonly label: string; readonly value: string }
+
 /** The parts of an ending, in the fixed order a transition prints them. */
 export type Ending = {
   // The labeled lead line: the transition that just happened. Several, where a
   // verb lands two artifacts at once.
   readonly lead: string
-  // The Verdict, where one is measured. Only the checkpoint boundary measures
-  // anything; every other transition leaves it out.
-  readonly verdict?: string | null
   // The advisories qualifying the lead, one rendered entry each, in the order
   // they were found.
   readonly advisories?: ReadonlyArray<string>
-  // Why the build stops here: the Stop part, on the one boundary where a
-  // range's last step landed. Absent everywhere else.
-  readonly stop?: string | null
-  // The Next Up pointer `handoff` rendered. Absent only where no step is left
-  // to point at.
+  // The state an orientation ending closes on, as the table's rows: the
+  // Verdict where one was measured, the Stop row where a range landed, Next
+  // Up, and the rows beneath it. Absent on a driver ending.
+  readonly state?: ReadonlyArray<StateRow>
+  // The one labeled Next Up line a driver ending closes on. Absent on an
+  // ending that closes on the state table, and where no step is left to point
+  // at.
   readonly pointer?: string | null
 }
 
@@ -137,15 +141,49 @@ export function advisory(a: Advisory): string {
 }
 
 /**
- * Assemble a transition's whole ending: the labeled lead line, the Verdict
- * where one was measured, the advisories, the Stop part where a range landed,
- * and the pointer.
+ * Assemble a transition's whole ending: the labeled lead line, the
+ * advisories, then the state table or the driver's pointer.
  *
  * The order is the type's field order, so a verb composes parts and never a
  * sequence. A part with nothing in it vanishes rather than leaving a gap.
  */
 export function ending(e: Ending): string {
-  return blocks([e.lead, e.verdict ?? null, ...(e.advisories ?? []), e.stop ?? null, e.pointer ?? null])
+  return blocks([e.lead, ...(e.advisories ?? []), stateTable(e.state ?? []), e.pointer ?? null])
+}
+
+/**
+ * Render the state table: two columns, one row per fact, the first row the
+ * header. '' with no rows, so a caller can pass a table it may not have.
+ *
+ * The header is the fact the human reads first, the Verdict wherever one was
+ * measured, and its label rides bold so it reads as the headline even where a
+ * renderer does not bolden a header row. The rows beneath keep plain labels.
+ * A table rather than labeled lines because these are the facts the human
+ * scans for, and a table is the shape that sets them apart from the prose
+ * around them (D111 (state-table)).
+ *
+ * ```text
+ * | **Verdict** | ● Plumb |
+ * | --- | --- |
+ * | Now | Step 2 of 3 - feat(login): wire the limiter into POST /login |
+ * ```
+ */
+export function stateTable(rows: ReadonlyArray<StateRow>): string {
+  const [head, ...body] = rows
+  if (head === undefined) return ''
+  return [
+    `| **${cell(head.label)}** | ${cell(head.value)} |`,
+    '| --- | --- |',
+    ...body.map((r) => `| ${cell(r.label)} | ${cell(r.value)} |`),
+  ].join('\n')
+}
+
+/**
+ * A table cell's text: on one line, with every pipe escaped, so a step title
+ * or a park holding one cannot split its row.
+ */
+export function cell(text: string): string {
+  return text.replace(/\s*\n\s*/g, ' ').replace(/\|/g, '\\|').trim()
 }
 
 /**

@@ -22,7 +22,6 @@ import {
   checkpointsPath,
   clearDetail,
   clearHandoff,
-  clearPause,
   clearTick,
   detailPath,
   hasSession,
@@ -33,6 +32,7 @@ import {
   seamPath,
   stampStepStat,
   stepPath,
+  writePause,
 } from '../lib/sidecar.ts'
 import { runCheck } from '../lib/check.ts'
 import { readCommitBody } from '../lib/commitbody.ts'
@@ -43,8 +43,7 @@ import { conventionalSubject, subjectFromTitle, withMarker } from '../lib/commit
 import { appendToSection, checkpointLogLine, logEntry, planLogLine } from '../lib/buildlog.ts'
 import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
 import { advisory, ending, notice, printEnding, transition } from '../lib/notice.ts'
-import { boundaryEnding, detailsLink, parseDetailRange, planRecord, stepRecord } from './handoff.ts'
-import { isHarvestDetail } from './harvest.ts'
+import { boundaryEnding, detailsLink, isHarvestDetail, parseDetailRange, planRecord, stepRecord } from './handoff.ts'
 
 /**
  * Land a step: latch, check gate, commit, record, return to the boundary.
@@ -155,12 +154,15 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   rmSync(stepPath(root), { force: true })
   clearHandoff(root) // the agent-run handoff ledger is step-scoped; clear it with the markers.
   clearTick(root) // the step's entry stamp is spent; the next `build <n>` re-stamps.
-  clearPause(root) // the pause it stamped is over; the next step's pause renders whole.
+  // The pause it stamped is over, and the boundary this ending prints is the
+  // card the stamp now names, so a later handoff here ends on its pointer
+  // (D110 (reply-after-the-card)); the next step's pause renders whole.
+  writePause(root, undefined, { kind: 'landed', step })
 
-  // The whole ending, one block: the lead line, the Verdict folded over what
-  // just landed, the advisories this checkpoint alone can state, and the
-  // pointer. Read after the flip and the ledger append, so the fold and the
-  // pointer both see the boundary the human is standing at.
+  // The whole ending, one block: the lead line, the advisories this checkpoint
+  // alone can state, and the state table headed by the Verdict folded over
+  // what just landed. Read after the flip and the ledger append, so the fold
+  // and the pointer both see the boundary the human is standing at.
   const landed = boundaryEnding(root, activeBuild(root), step)
   // A landing that completes the range a typed run marked owes the stop card:
   // the record says so, and the relay check holds a turn that ends here.
@@ -172,10 +174,8 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
     ...(owes === null ? {} : { owes }),
     text: ending({
       lead: transition({ label: 'Checkpoint', fact: `Step ${step} complete`, detail: leadDetail(sha, pointer) }),
-      verdict: landed.verdict,
       advisories: [drift, flipNotice],
-      stop: landed.stop,
-      pointer: landed.pointer,
+      state: landed.state,
     }),
   })
   return 0
@@ -240,7 +240,7 @@ function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
               remedy: 'unignore .plumbbob/builds/ to keep the record in the tree',
             }),
           ],
-      pointer: boundaryEnding(root, activeBuild(root), null).pointer,
+      state: boundaryEnding(root, activeBuild(root), null).state,
     }),
   })
   return 0

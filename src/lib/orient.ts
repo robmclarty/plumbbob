@@ -288,14 +288,14 @@ export function remainingOrder(
 }
 
 /**
- * The build order as the note's labeled field: `order:`, then the next `cap`
- * step numbers in sequence, the rest folded to a count (`and 2 more`), the way
- * a long detail degrades on every one-liner; '' for an empty order. With no
- * cap, the whole sequence.
+ * The build order as the state table's Order row says it: the next `cap` step
+ * numbers in sequence, the rest folded to a count (`and 2 more`), the way a
+ * long detail degrades on every one-liner; '' for an empty order. With no cap,
+ * the whole sequence.
  *
- * A label, where the phrase once read `build order 7, 8, 5`, because the
- * note's other segments read as labeled fields and a label is how the eye
- * finds one in a line of three (D108 (order-label)).
+ * The label is the row's, `Order`, which is where the note's `order:` field
+ * went when the note became rows (D111 (state-table), revising
+ * D108 (order-label)).
  */
 export function buildOrderPhrase(order: ReadonlyArray<number>, cap?: number): string {
   if (order.length === 0) {
@@ -303,7 +303,7 @@ export function buildOrderPhrase(order: ReadonlyArray<number>, cap?: number): st
   }
   const shown = cap === undefined ? order : order.slice(0, cap)
   const rest = order.length - shown.length
-  return `order: ${shown.join(', ')}${rest > 0 ? ` (and ${rest} more)` : ''}`
+  return `${shown.join(', ')}${rest > 0 ? ` (and ${rest} more)` : ''}`
 }
 
 /**
@@ -2056,6 +2056,35 @@ export function countDiff(entries: ReadonlyArray<{ readonly added: number; reado
   }
 }
 
+// How many lines the changed files take beneath the diff row before the rest
+// folds to a count: seven named and `and 5 more`, so the list never runs past
+// eight lines.
+const DIFF_FILES_CAP = 8
+
+/**
+ * The changed files beneath the diff row, one `<path> +<added> -<removed>`
+ * item per file, in git's path order. A file several commits touched is
+ * counted once, its lines summed. Past eight files the tail folds to a count
+ * (`and 5 more`), never a silent cut, and a path is never shortened: it is the
+ * name the human opens, and a cut one is wrong where a wrapped one is legible
+ * (D113 (short-card)).
+ */
+export function diffFileItems(entries: ReadonlyArray<{ readonly path: string; readonly added: number; readonly removed: number }>): string[] {
+  const byPath = new Map<string, { added: number; removed: number }>()
+  for (const e of entries) {
+    const prior = byPath.get(e.path) ?? { added: 0, removed: 0 }
+    byPath.set(e.path, { added: prior.added + e.added, removed: prior.removed + e.removed })
+  }
+  const items = [...byPath.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([path, c]) => `${path} +${c.added} -${c.removed}`)
+  if (items.length <= DIFF_FILES_CAP) {
+    return items
+  }
+  const shown = items.slice(0, DIFF_FILES_CAP - 1)
+  return [...shown, `and ${items.length - shown.length} more`]
+}
+
 /**
  * The diff row's value: `+<added> -<removed> across <N> files`, plus the
  * `inline below` pointer when the patch rides the turn. Null when nothing
@@ -2174,6 +2203,7 @@ function collapseRow(name: RecapRowName, row: RecapRow, constraints: number): Re
 export type RecapExtras = {
   readonly steps?: StepsRow // a stop card's identity row, first in its fence; a step's readout has none
   readonly diff: string | null
+  readonly files?: ReadonlyArray<string> // the changed files, on continuation lines beneath the diff row
   readonly spent: string | null
   readonly constraints: number
 }
@@ -2214,6 +2244,9 @@ export function recapLines(rows: Readonly<Partial<Record<RecapRowName, RecapRow>
   }
   if (extras.diff !== null) {
     body.push(`${'diff'.padEnd(13)}${extras.diff}`)
+    for (const item of extras.files ?? []) {
+      body.push(`${RECAP_INDENT}- ${item}`)
+    }
   }
   if (extras.spent !== null) {
     body.push(`${'spent'.padEnd(13)}${extras.spent}`)
@@ -2258,6 +2291,7 @@ export type RangeMeasure = {
   readonly steps: StepsRow
   readonly rows: Readonly<Partial<Record<RecapRowName, RecapRow>>> // the measured check and seam
   readonly diff: string // the commits summed; at a stop it never vanishes
+  readonly files: ReadonlyArray<string> // the files the commits changed, each counted once, beneath the diff row
   readonly spent: string | null
   readonly stats: AccruedStats // summed across the steps, for `foldVerdict(rows, stats, 'range')`
 }
@@ -2300,6 +2334,7 @@ export function measureRange(input: RangeInput): RangeMeasure {
     steps: stepsRow(held, shas),
     rows,
     diff: rangeDiffValue(landed.flatMap((l) => l.files)),
+    files: diffFileItems(landed.flatMap((l) => l.files).filter((f) => !isArtifactPath(f.path))),
     spent: rangeSpentValue(stats),
     stats: {
       driftWarnings: sum('driftWarnings'),

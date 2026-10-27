@@ -2,18 +2,21 @@ import { existsSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'n
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
-import { applyTurn, grantFromPrompt, isNotice, mintFromPrompt, stepInFlightContext, turn, type BuildRead } from '../turn.ts'
+import { applyTurn, grantFromPrompt, isNotice, mintFromPrompt, turn, turnContext, type BuildRead } from '../turn.ts'
 import { start } from '../start.ts'
 import {
+  detailPath,
   grantPath,
   intentPath,
   markSpike,
+  pausePath,
   promptPath,
   readRelay,
   readRun,
   relayPath,
   runPath,
   stepPath,
+  stopPath,
   turnPath,
   writeRelay,
 } from '../../lib/sidecar.ts'
@@ -473,20 +476,43 @@ describe('a background notice is not a human turn — D90 (notice-not-turn)', ()
   })
 })
 
-describe('stepInFlightContext — the park nudge, D64 (approval-latch) amended: guidance, not silence', () => {
-  it('is null when no step is in flight (session started, none entered)', async () => {
+/** The additionalContext line `turnContext` emits for a session, or '' when it emits none. */
+function nudgeOf(dir: string): string {
+  const out = turnContext(dir)
+  return out === null ? '' : (JSON.parse(out) as { hookSpecificOutput: { additionalContext: string } }).hookSpecificOutput.additionalContext
+}
+
+// Two steps, step 1 landed, each in a range that lands its steps, so range 1's
+// stop card can wait for its reply.
+const STOPPING = `# The turn ledger
+
+## Steps
+
+1. [x] First — **done when:** a works.
+   - seam: \`src/a.ts\`
+2. [ ] Second — **done when:** b works.
+   - seam: \`src/b.ts\`
+
+## Build ranges
+
+1. \`/plumbbob:build 1-1\`, **stop:** review the first
+2. \`/plumbbob:build 2-2\`, **stop:** review the second
+`
+
+describe('turnContext — the nudge, D64 (approval-latch) amended: guidance, not silence', () => {
+  it('is null with no step in flight and no stop card waiting (session started, none entered)', async () => {
     const dir = await startedSession()
-    expect(stepInFlightContext(dir)).toBeNull()
+    expect(turnContext(dir)).toBeNull()
   })
 
   it('is null outside a session', () => {
-    expect(stepInFlightContext(makeTempRepo())).toBeNull()
+    expect(turnContext(makeTempRepo())).toBeNull()
   })
 
   it('emits one UserPromptSubmit additionalContext line naming the in-flight step and the park verb', async () => {
     const dir = await startedSession()
     writeFileSync(stepPath(dir), '2\n') // a step entered, as `build 2` would mark it
-    const out = stepInFlightContext(dir)
+    const out = turnContext(dir)
     expect(out).not.toBeNull()
     if (out === null) return
     const parsed = JSON.parse(out) as {
@@ -506,8 +532,7 @@ describe('stepInFlightContext — the park nudge, D64 (approval-latch) amended: 
   it('states both halves of answer-then-park: a tangent alone ends on the block, a question beside it is answered first', async () => {
     const dir = await startedSession()
     writeFileSync(stepPath(dir), '2\n')
-    const out = stepInFlightContext(dir) ?? ''
-    const context = (JSON.parse(out) as { hookSpecificOutput: { additionalContext: string } }).hookSpecificOutput.additionalContext
+    const context = nudgeOf(dir)
     // Only a tangent: the park's block is the whole turn, the rule df9b393 set.
     expect(context).toContain('relay the block it prints whole, with nothing written around it, since that block is the whole turn')
     // A tangent beside a question: the answer first, the block after it, nothing after the block.
@@ -517,13 +542,55 @@ describe('stepInFlightContext — the park nudge, D64 (approval-latch) amended: 
     expect(context).toContain('run no `plumbbob handoff` after it')
   })
 
+  it('reads a message at a pause whose card has shown as the reply, answered in the model\'s words, with no card — D110 (reply-after-the-card)', async () => {
+    const dir = await startedSession()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(pausePath(dir), '2\n') // step 2's card has shown
+    const context = nudgeOf(dir)
+    expect(context).toContain("step 2's card has shown, and this message is the human's reply to it")
+    expect(context).toContain('An approval lands the step: run `plumbbob checkpoint 2`')
+    expect(context).toContain('Anything else is answered in your own words')
+    expect(context).toContain('write `.plumbbob/detail.md` again so the record matches what lands')
+    expect(context).toContain('Print no card for it: run `plumbbob handoff` and end the turn on the one line it prints')
+    expect(context).toContain('run `plumbbob handoff --full` only when the human asks to see the card again')
+    // Feedback at a pause is not a tangent: the park line would swallow it.
+    expect(context).not.toContain('a new idea or tangent is a park, not an edit')
+    expect(context).toContain('A tangent the human hands you is still a park')
+  })
+
+  it('keeps the park nudge while the stamp names another card: the boundary before, or another step', async () => {
+    const dir = await startedSession()
+    writeFileSync(stepPath(dir), '2\n')
+    for (const stamp of ['landed 1\n', '1\n']) {
+      writeFileSync(pausePath(dir), stamp)
+      expect(nudgeOf(dir)).toContain('step 2 is in flight')
+    }
+  })
+
+  it("reads a message at a stop card waiting for its reply the same way, with handoff's --stop", async () => {
+    const dir = await startedSession()
+    writeFileSync(intentPath(dir), STOPPING)
+    writeFileSync(stopPath(dir), '1 3\n') // range 1's card printed in turn 3
+    writeFileSync(detailPath(dir), '# Detail · Range 1 · review the first\n')
+    const context = nudgeOf(dir)
+    expect(context).toContain("range 1 of 2's stop card has shown, and this message is the human's reply to it")
+    expect(context).toContain('then run `plumbbob harvest` and relay its ending')
+    expect(context).toContain("(a lean is its line under the detail file's `## Harvest`)")
+    expect(context).toContain('run `plumbbob handoff --stop` and end the turn on the one line it prints')
+    expect(context).toContain('run `plumbbob handoff --stop --full` only when the human asks to see the card again')
+    // The record clears the detail file, and the wait ends with it.
+    writeFileSync(detailPath(dir), '')
+    expect(turnContext(dir)).toBeNull()
+  })
+
   it('goes quiet again once the step checkpoints (STEP marker gone)', async () => {
     const dir = await startedSession()
     writeFileSync(stepPath(dir), '2\n')
-    expect(stepInFlightContext(dir)).not.toBeNull()
-    // checkpoint clears STEP; the nudge must stop so the boundary reads as guidance-free
+    expect(turnContext(dir)).not.toBeNull()
+    // checkpoint clears STEP and stamps the boundary; the nudge must stop so the boundary reads as guidance-free
     rmSync(stepPath(dir), { force: true })
-    expect(stepInFlightContext(dir)).toBeNull()
+    writeFileSync(pausePath(dir), 'landed 2\n')
+    expect(turnContext(dir)).toBeNull()
   })
 })
 
@@ -557,6 +624,16 @@ describe('turn (the verb)', () => {
     } finally {
       stdin.isTTY = had
     }
+  })
+
+  it("ticks the session the payload's cwd names, and its own when the payload names none that holds one", async () => {
+    const dir = await startedSession()
+    const elsewhere = makeTempRepo() // no session here
+    expect(runCli(elsewhere, ['turn'], {}, JSON.stringify({ prompt: 'carry on', cwd: dir })).status).toBe(0)
+    expect(readFileSync(turnPath(dir), 'utf8').trim()).toBe('1')
+    // A cwd that holds no session, as a payload replayed from another machine does, falls back to the process's.
+    expect(runCli(dir, ['turn'], {}, JSON.stringify({ prompt: 'carry on', cwd: '/nowhere/at/all' })).status).toBe(0)
+    expect(readFileSync(turnPath(dir), 'utf8').trim()).toBe('2')
   })
 })
 

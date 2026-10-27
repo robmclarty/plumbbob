@@ -125,18 +125,19 @@ const VERBS: ReadonlyArray<Verb> = [
   {
     name: 'handoff',
     description:
-      'print the footer card that ends a turn (pause, boundary, plan, driver, or stop), or a reminder for a pause or a stop already shown',
-    synopsis: ['handoff [<n>] [--full] [--plan] [--driver] [--stop] [--build <slug>]'],
+      'print the footer card that ends a turn (pause, boundary, plan, driver, stop, or harvest), or the one line for a card already shown',
+    synopsis: ['handoff [<n>] [--full] [--plan] [--driver] [--stop] [--harvest] [--build <slug>]'],
     args: [{ name: '<n>', gloss: 'step to report on (default: the in-flight step, else the last checkpointed one)' }],
     flags: [
-      { name: '--full', gloss: 'print the whole pause card, or with --stop the whole stop card, even when it was already shown' },
+      { name: '--full', gloss: 'print the whole pause card or boundary, or with --stop the whole stop card, even when it was already shown' },
       { name: '--plan', gloss: 'render the plan-pause card instead of a step tier' },
       { name: '--driver', gloss: "render a driver turn's pointer back at the open step" },
       { name: '--stop', gloss: "render the stop card for the range the last landing completed, from the range's detail file" },
+      { name: '--harvest', gloss: "render a boundary harvest's lean table and its moves, from a `# Detail · Harvest` detail file" },
       BUILD_FLAG,
     ],
     notes:
-      "Writes only the detail file (a blank line around each heading), the PAUSE stamp, and with --stop the STOP stamp; refuses (exit 1) with no session, with two of --plan, --driver, and --stop together, and with --stop when a step is in flight, no range that lands its steps just landed, or the detail file is not that range's.",
+      "Writes only the detail file (a blank line around each heading), the PAUSE stamp naming the card shown, and with --stop the STOP stamp; refuses (exit 1) with no session, with two of --plan, --driver, --stop, and --harvest together, with --stop when a step is in flight, no range that lands its steps just landed, or the detail file is not that range's, and with --harvest when the detail file is not a harvest's or no park is open.",
   },
   {
     name: 'check',
@@ -210,7 +211,7 @@ const VERBS: ReadonlyArray<Verb> = [
     description: "record a harvest from the detail file, and at a run's stop the range's review",
     synopsis: ['harvest'],
     notes:
-      "Reads the detail file's `## Harvest` proposals (`- park 6 → tangent: <reason>`), flips each settled park in build-log.md, appends the dated Harvest lines, and, when the detail is a range's, writes the range's review beneath a dated Log line; then clears the detail file and the STOP stamp, and commits nothing. Refuses (exit 1) with no session, a detail file that is no range's or harvest's, a range's detail in the turn its stop card printed, one no stop card showed, one whose range is open again, or one whose range a step joined after it landed, and a proposal naming a park the list lacks or a class other than blocker, tangent, or pivot.",
+      "Reads the detail file's `## Harvest` proposals (`- P6 → tangent: <reason>`, with `- title:` and `- why:` lines beneath), flips each settled park in build-log.md, appends the dated Harvest lines, and, when the detail is a range's, writes the range's review beneath a dated Log line; then clears the detail file and the STOP stamp, and commits nothing. Refuses (exit 1) with no session, a detail file that is no range's or harvest's, a range's detail in the turn its stop card printed, a range no stop card showed, one whose range is open again, or one whose range a step joined after it landed, and a proposal naming a park the list lacks or a class other than blocker, tangent, or pivot.",
   },
   {
     name: 'spike',

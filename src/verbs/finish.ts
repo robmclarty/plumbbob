@@ -36,10 +36,10 @@ import { conventionalSubject, withMarker } from '../lib/commitmsg.ts'
 import { parseBuildScope } from '../lib/intent.ts'
 import { advisory, ending, notice, printEnding, transition } from '../lib/notice.ts'
 
-// The pointer finish leaves the turn on. Every other one is `handoff`'s, but a
-// finished session has no state left to render from, and past a closed build
-// the only move is framing the next goal.
-const NEXT_UP = '**Next Up**: Nothing planned - /plumbbob:plan'
+// The pointer finish leaves the turn on, as its state table's one row. Every
+// other one is `handoff`'s, but a finished session has no state left to render
+// from, and past a closed build the only move is framing the next goal.
+const NEXT_UP = 'Nothing planned - /plumbbob:plan'
 
 /**
  * Close out the active build: report tail, final commit, control-state cleanup.
@@ -105,8 +105,8 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
 
   // The whole ending in the fixed order: the lead line, the advisory that
   // qualifies it (finishing without a report is guidance, never a gate; the
-  // session is already closed by the time it prints), and the pointer, which is
-  // the turn's last text. finish renders that pointer itself: it just cleared
+  // session is already closed by the time it prints), and the state table's
+  // pointer, which is the turn's last text. finish renders that pointer itself: it just cleared
   // the session `handoff` would read one from.
   const where = slug === null ? '.plumbbob/' : `.plumbbob/builds/${slug}/`
   printEnding(root, {
@@ -127,7 +127,7 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
               remedy: '/plumbbob:finish normally writes the report first',
             }),
           ],
-      pointer: NEXT_UP,
+      state: [{ label: 'Next Up', value: NEXT_UP }],
     }),
   })
   return 0

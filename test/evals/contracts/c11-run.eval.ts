@@ -13,11 +13,13 @@
 // are unit-tested in src/verbs/__tests__/turn.test.ts.
 //
 // The stamp is the card's mechanical trace: `handoff --stop` writes it as the
-// card prints, with a digest of the detail file it printed from, and the record
-// clears it. Whether the turn's text carried the card whole is the anatomy
-// probes' measurement, and they stay `info`.
+// card prints, naming the range and the turn it printed in, and the record
+// clears it. It names no digest of the detail file since D110
+// (reply-after-the-card), because a reply may rewrite a lean without printing
+// the card again; the detail still on disk is read for its header instead.
+// Whether the turn's text carried the card whole is the anatomy probes'
+// measurement, and they stay `info`.
 
-import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
@@ -82,12 +84,9 @@ export const c11: Contract = {
         check('no step left in flight', t1.step === null, `step ${t1.step ?? 'none'}`),
         check('no unledgered commits', unledgeredCommits(repo, t0.headSha).length === 0),
         check('the stop card printed for range 1', stamp?.range === 1, stamp === null ? 'no STOP stamp' : `STOP names range ${stamp.range}`),
-        // A detail rewritten after the card printed is one the human never read.
-        check(
-          'the card printed from range 1’s detail, unchanged since',
-          stamp !== null && isRangeDetail(detail, 1) && stamp.detail === sha256(detail),
-          detailHeader(detail),
-        ),
+        // The detail the card printed from stays on disk until the human's
+        // reply records it, and its header names the range it reviews.
+        check('the card printed from range 1’s detail, still on disk', stamp !== null && isRangeDetail(detail, 1), detailHeader(detail)),
         check('the detail proposes a lean for P1', lean !== null && CLASSES.includes(lean), lean ?? 'no `- P1 →` line under ## Harvest'),
         check(
           'nothing recorded: P1 still open',
@@ -103,7 +102,8 @@ export const c11: Contract = {
         // The relay check holds a run's boundary that still owes its card,
         // once (D100 (stop-card)); a pass with a hold landed the card on the retry.
         info('the stop card landed without a hold', !relay.has('held'), relay.has('held') ? `held on TURN ${relay.get('held')}` : ''),
-        info('the turn carried P1’s lean', /^- P1 · .*→ lean: /m.test(turn.content)),
+        // The lean table's row for P1, its class opening the last cell (D112 (lean-table)).
+        info('the turn carried P1’s lean', /^\| P1\b[^|]*\|[^|]*\|[^|]*\| (?:blocker|tangent|pivot)\b/m.test(turn.content)),
         info(
           'latch ledger after the turn',
           readLedger(repo, 'TURN') !== null, // the turn hook ticked, not a headless timing miss
@@ -115,21 +115,17 @@ export const c11: Contract = {
   },
 }
 
-type StopStamp = { readonly range: number; readonly detail: string | null }
+type StopStamp = { readonly range: number }
 
-// The STOP stamp `handoff --stop` writes as the card prints: the range, the
-// TURN it printed in, the card's hash, and the digest of the detail file.
+// The STOP stamp `handoff --stop` writes as the card prints: the range and the
+// TURN it printed in.
 function readStopStamp(buildDir: string): StopStamp | null {
   try {
-    const m = /^(\d+) \S+ \S+(?: (\S+))?$/.exec(readFileSync(join(buildDir, 'STOP'), 'utf8').trim())
-    return m === null ? null : { range: Number(m[1]), detail: m[2] ?? null }
+    const m = /^(\d+) \S+/.exec(readFileSync(join(buildDir, 'STOP'), 'utf8').trim())
+    return m === null ? null : { range: Number(m[1]) }
   } catch {
     return null
   }
-}
-
-function sha256(text: string): string {
-  return createHash('sha256').update(text).digest('hex')
 }
 
 function detailHeader(detail: string): string {

@@ -100,6 +100,19 @@ function thirdStepPointer(dir: string): string {
   return `[intent.md:${THIRD_STEP_LINE}](${relative(dir, intentPath(dir))}#L${THIRD_STEP_LINE})`
 }
 
+/** A body row of the state table, as a card renders it: the label in the first cell, the fact in the second. */
+function stateRow(label: string, value: string): string {
+  return `| ${label} | ${value} |`
+}
+
+/** The state table's header row, its label bold: the Verdict wherever one was measured. */
+function stateHead(label: string, value: string): string {
+  return `| **${label}** | ${value} |`
+}
+
+// The card's last line: the one link to the detail file (D113 (short-card)).
+const MORE_DETAILS = '[more details](.plumbbob/detail.md)'
+
 function git(dir: string, args: ReadonlyArray<string>): void {
   execFileSync('git', ['-C', dir, ...args], { stdio: 'ignore' })
 }
@@ -112,7 +125,7 @@ function commitWith(dir: string, file: string, subject: string, body: string): v
 }
 
 describe('handoff', () => {
-  it('renders the whole decision-tier ending, labeled lines and blank lines included', async () => {
+  it('renders the whole decision-tier ending, labeled lines, the state table, and blank lines included', async () => {
     // The canonical pause, asserted whole: this is the shape every other test
     // here only checks one part of.
     const dir = await started()
@@ -125,12 +138,7 @@ describe('handoff', () => {
     expect(code).toBe(0)
     expect(stdout).toBe(
       [
-        '**Now**: Step 2 of 3 - Second',
-        '',
-        '**Summary**: The limiter runs before credentials are checked. (details: [detail.md](.plumbbob/detail.md))',
-        '',
-        '1. `POST /login` returns 429 on the 6th attempt inside a minute.',
-        '2. Misses count against the bucket; a success does not reset it.',
+        '**Summary**: The limiter runs before credentials are checked.',
         '',
         '**Readout**:',
         '',
@@ -141,38 +149,44 @@ describe('handoff', () => {
         'constraints  2 of 2 honored',
         'seam         held: 1 of 1 declared, no strays',
         'diff         +25 -0 across 1 file',
+        '             - README.md +25 -0',
         'spent        63s gate · green first run',
         '```',
-        '',
-        '**Verdict**: ● Plumb',
-        '',
-        `**Next Up**: Step 3 of 3 - Third (model: **Sonnet**, details: ${thirdStepPointer(dir)})`,
         '',
         '**Your Call**:',
         '',
         '- `looks good` → I checkpoint Step 2; back to the boundary',
         '- `expand`, or any question → I show more of what is there; nothing changes, and `show the pause` brings all of this back',
-        '- anything that reads as direction → I take it as what to change; nothing lands until you approve',
+        '- anything that reads as direction → I make the change and say what moved; nothing lands until you approve',
         '- `revert` → I wind the work back to the last checkpoint',
         '',
+        '| **Verdict** | ● Plumb |',
+        '| --- | --- |',
+        '| Now | Step 2 of 3 - Second |',
+        `| Next Up | Step 3 of 3 - Third (model: **Sonnet**, details: ${thirdStepPointer(dir)}) |`,
+        '',
         '**Recommendation**: Approve it. The seam held and the gate is green.',
+        '',
+        MORE_DETAILS,
         '',
         '',
       ].join('\n'),
     )
-    expect(stdout).not.toContain('── recap') // the header rule left the rendering; the Now line carries the identity
+    expect(stdout).not.toContain('── recap') // the header rule left the rendering; the Now row carries the identity
+    expect(stdout).not.toContain('1. `POST /login`') // the highlights stay in the detail file
   })
 
-  it('opens the pause on the step in flight with the count Next Up counts by, and names it nowhere else — D88 (current-step-shown)', async () => {
+  it('names the step in flight in the Now row, with the count Next Up counts by, and nowhere else — D88 (current-step-shown)', async () => {
     const dir = await started()
     writeFileSync(stepPath(dir), '2\n')
     writeFileSync(detailPath(dir), `${GREEN_RECAP}${SUMMARY}`)
     writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout.startsWith('**Now**: Step 2 of 3 - Second\n\n**Summary**:')).toBe(true)
+    expect(stdout.startsWith('**Summary**:')).toBe(true)
     expect(stdout).toContain('\n**Readout**:\n\n```text\n') // the label goes bare
-    expect(stdout.split('Step 2 of 3')).toHaveLength(2) // once, on the Now line
+    expect(stdout).toContain(`\n${stateHead('Verdict', '● Plumb')}\n| --- | --- |\n${stateRow('Now', 'Step 2 of 3 - Second')}\n`)
+    expect(stdout.split('Step 2 of 3')).toHaveLength(2) // once, in the Now row
   })
 
   it('counts the Now line by the plan, not the build order, so it agrees with Next Up', async () => {
@@ -182,8 +196,8 @@ describe('handoff', () => {
     writeFileSync(stepPath(dir), '4\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout.startsWith('**Now**: Step 4 of 4 - Fourth\n\n')).toBe(true)
-    expect(stdout).toContain('**Next Up**: Step 3 of 4 - Third')
+    expect(stdout).toContain(stateRow('Now', 'Step 4 of 4 - Fourth'))
+    expect(stdout).toContain('| Next Up | Step 3 of 4 - Third')
   })
 
   it('names a step the plan no longer holds by its number alone on the Now line', async () => {
@@ -191,18 +205,21 @@ describe('handoff', () => {
     writeFileSync(stepPath(dir), '9\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout.startsWith('**Now**: Step 9\n\n')).toBe(true) // no "of 3": the count would be a lie
+    expect(stdout).toContain(stateRow('Now', 'Step 9')) // no "of 3": the count would be a lie
   })
 
-  it('numbers each highlight by its own section handle, so `expand 2` opens `## 2`', async () => {
-    // The handles are the model's, passed through: renumbering them by position
-    // would silently break the one move the Your Call block offers.
+  it('leaves the numbered highlights in the detail file, behind the one link the card closes on — D113 (short-card)', async () => {
+    // The sections stay the model's, under the handles `expand 2` opens; the
+    // card is read for the Verdict, the lead, and the call.
     const dir = await started()
     writeFileSync(stepPath(dir), '2\n')
     writeFileSync(detailPath(dir), '## Summary\n\nOne line.\n\n## 1 First move\n\nthe story\n\n## 2 Second move\n\nthe rest\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('\n**Summary**: One line. (details: [detail.md](.plumbbob/detail.md))\n\n1. First move\n2. Second move\n\n')
+    expect(stdout.startsWith('**Summary**: One line.\n\n')).toBe(true)
+    expect(stdout).not.toContain('First move')
+    expect(stdout).not.toContain('details: [detail.md]')
+    expect(stdout.endsWith(`\n\n${MORE_DETAILS}\n\n`)).toBe(true)
   })
 
   it('unwraps a hard-wrapped Summary lead, keeping its paragraph breaks', async () => {
@@ -212,7 +229,7 @@ describe('handoff', () => {
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
     expect(stdout).toContain(
-      '**Summary**: The limiter runs first, and nothing else moved.\n\nThe step needed the extra breath. (details: [detail.md](.plumbbob/detail.md))',
+      '**Summary**: The limiter runs first, and nothing else moved.\n\nThe step needed the extra breath.\n\n',
     )
   })
 
@@ -222,7 +239,7 @@ describe('handoff', () => {
     writeFileSync(detailPath(dir), '## Summary\n\nOne line covers it.\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout.startsWith('**Now**: Step 2 of 3 - Second\n\n**Summary**: One line covers it. (details: [detail.md](.plumbbob/detail.md))\n\n**Verdict**')).toBe(true)
+    expect(stdout.startsWith('**Summary**: One line covers it.\n\n**Your Call**:')).toBe(true)
   })
 
   it('vanishes the Summary block when the detail file carries no lead', async () => {
@@ -235,7 +252,7 @@ describe('handoff', () => {
     expect(code).toBe(0)
     expect(stdout).not.toContain('**Summary**')
     expect(stdout).not.toContain('1. A move')
-    expect(stdout.startsWith('**Now**: Step 2 of 3 - Second\n\n**Readout**:\n')).toBe(true)
+    expect(stdout.startsWith('**Readout**:\n')).toBe(true)
   })
 
   it('leaves the Now line and the Summary out of the boundary, driver, and plan tiers, where no step pause is pending', async () => {
@@ -245,7 +262,7 @@ describe('handoff', () => {
     for (const args of [[], ['--driver'], ['--plan']]) {
       const { stdout } = captureIo(() => handoff(dir, args))
       expect(stdout).not.toContain('**Summary**')
-      expect(stdout).not.toContain('**Now**')
+      expect(stdout).not.toContain('| Now |')
     }
   })
 
@@ -267,19 +284,20 @@ describe('handoff', () => {
     writeFileSync(stepPath(dir), '2\n') // step 2 in flight, no detail.md, no .check/summary.json
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('**Verdict**: ● Plumb')
+    expect(stdout).toContain(stateHead('Verdict', '● Plumb'))
     expect(stdout).not.toContain('**Readout**')
     expect(stdout).not.toContain('looks good')
     expect(stdout).toContain('- `revert` → I wind the work back to the last checkpoint')
   })
 
-  it('at the boundary (no step in flight), renders the verdict and next-up line but no your-call block', async () => {
+  it('at the boundary (no step in flight), renders the state table, Verdict and Next Up, but no your-call block', async () => {
     const dir = await started()
     writeFileSync(checkpointsPath(dir), 'step 2 abc1234\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('**Verdict**: ● Plumb')
-    expect(stdout).toContain(`**Next Up**: Step 3 of 3 - Third (model: **Sonnet**, details: ${thirdStepPointer(dir)})`)
+    expect(stdout).toBe(
+      `${stateHead('Verdict', '● Plumb')}\n| --- | --- |\n${stateRow('Next Up', `Step 3 of 3 - Third (model: **Sonnet**, details: ${thirdStepPointer(dir)})`)}\n\n`,
+    )
     expect(stdout).not.toContain('**Your Call**')
     expect(stdout).not.toContain('**Readout**')
   })
@@ -292,8 +310,8 @@ describe('handoff', () => {
     writeFileSync(statsPath(dir), JSON.stringify({ '2': { redChecks: 2 } }))
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('**Verdict**: ◐ A hair off (2 red runs before green)\n')
-    expect(stdout.split('Step 2 of 3')).toHaveLength(2) // the identity renders once, on the Now line
+    expect(stdout).toContain(`${stateHead('Verdict', '◐ A hair off (2 red runs before green)')}\n`)
+    expect(stdout.split('Step 2 of 3')).toHaveLength(2) // the identity renders once, in the Now row
   })
 
   it('leads the advisory rung with the seam stray, uncounted, ahead of red runs — D43 (verb-prints-its-ending)', async () => {
@@ -306,7 +324,7 @@ describe('handoff', () => {
     writeFileSync(statsPath(dir), JSON.stringify({ '2': { driftWarnings: 2, redChecks: 2 } }))
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('**Verdict**: ◐ A hair off (seam strayed)')
+    expect(stdout).toContain(stateHead('Verdict', '◐ A hair off (seam strayed)'))
   })
 
   it('folds a strayed seam row to a hair off, never out of plumb, and keeps looks good on the card', async () => {
@@ -322,7 +340,7 @@ describe('handoff', () => {
     // The seam is awareness, not a lock: the stray takes the advisory rung and
     // the card still offers the approve move, so the Verdict and the Your Call
     // block cannot disagree about it.
-    expect(stdout).toContain('**Verdict**: ◐ A hair off (seam strayed)')
+    expect(stdout).toContain(stateHead('Verdict', '◐ A hair off (seam strayed)'))
     expect(stdout).toContain('`looks good`')
   })
 
@@ -336,7 +354,7 @@ describe('handoff', () => {
     writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('**Verdict**: ✗ Not standing (done-when drifted)')
+    expect(stdout).toContain(stateHead('Verdict', '✗ Not standing (done-when drifted)'))
   })
 
   it('measures a red check over a green attested row, pointing at the failing slot output', async () => {
@@ -350,7 +368,7 @@ describe('handoff', () => {
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
     expect(stdout).toContain('check        red: test failing\n             → .check/test.json')
-    expect(stdout).toContain('**Verdict**: ○ Out of plumb (check red)')
+    expect(stdout).toContain(stateHead('Verdict', '○ Out of plumb (check red)'))
     expect(stdout).not.toContain('looks good')
   })
 
@@ -388,7 +406,7 @@ describe('handoff', () => {
     writeFileSync(stepPath(dir), '2\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain(`**Next Up**: Step 3 of 3 - Third (details: ${thirdStepPointer(dir)})`)
+    expect(stdout).toContain(stateRow('Next Up', `Step 3 of 3 - Third (details: ${thirdStepPointer(dir)})`))
     expect(stdout).not.toContain('model:')
   })
 
@@ -398,7 +416,7 @@ describe('handoff', () => {
     writeFileSync(checkpointsPath(dir), 'step 3 abc1234\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish')
+    expect(stdout).toContain(stateRow('Next Up', 'Nothing planned - /plumbbob:step or /plumbbob:finish'))
   })
 
   it('lets an explicit step number override the derived current step', async () => {
@@ -407,8 +425,8 @@ describe('handoff', () => {
     writeFileSync(detailPath(dir), GREEN_RECAP)
     const { code, stdout } = captureIo(() => handoff(dir, ['1'])) // …but ask about 1
     expect(code).toBe(0)
-    expect(stdout.startsWith('**Now**: Step 1 of 3 - First\n')).toBe(true)
-    expect(stdout).toContain('**Next Up**: Step 2 of 3 - Second')
+    expect(stdout).toContain(stateRow('Now', 'Step 1 of 3 - First'))
+    expect(stdout).toContain('| Next Up | Step 2 of 3 - Second')
   })
 
   it('renders the pause for a named step that has not landed, with nothing in flight (a hand-built diff under verify)', async () => {
@@ -421,9 +439,9 @@ describe('handoff', () => {
     )
     const { code, stdout } = captureIo(() => handoff(dir, ['2']))
     expect(code).toBe(0)
-    expect(stdout).toContain('**Summary**: The limiter runs before credentials are checked.')
-    expect(stdout.startsWith('**Now**: Step 2 of 3 - Second\n')).toBe(true)
-    expect(stdout).toContain('**Next Up**: Step 3 of 3 - Third')
+    expect(stdout.startsWith('**Summary**: The limiter runs before credentials are checked.\n')).toBe(true)
+    expect(stdout).toContain(stateRow('Now', 'Step 2 of 3 - Second'))
+    expect(stdout).toContain('| Next Up | Step 3 of 3 - Third')
     expect(stdout).toContain('**Your Call**:')
     expect(stdout).toContain('**Recommendation**: Approve it. It does what step 2 asks.')
   })
@@ -432,20 +450,20 @@ describe('handoff', () => {
     const dir = await started()
     writeFileSync(checkpointsPath(dir), 'step 1 abc1234\n')
     const landed = captureIo(() => handoff(dir, ['1'])).stdout
-    expect(landed).toContain('**Verdict**:')
+    expect(landed).toContain('| **Verdict** |')
     expect(landed).not.toContain('**Your Call**')
     expect(landed).not.toContain('**Readout**')
-    expect(landed).not.toContain('**Now**')
+    expect(landed).not.toContain('| Now |')
     expect(captureIo(() => handoff(dir, ['9'])).stdout).not.toContain('**Your Call**')
   })
 
   it('with no step in flight and no checkpoint yet, emits only the forward pointer and no verdict', async () => {
     // Fresh session (planned, nothing built): there is nothing measured, so the
-    // ending degrades to the "Next Up" line alone.
+    // table degrades to its pointer alone, which heads it.
     const dir = await started()
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout.trim()).toBe(`**Next Up**: Step 2 of 3 - Second (details: [intent.md:7](${relative(dir, intentPath(dir))}#L7))`)
+    expect(stdout.trim()).toBe(`${stateHead('Next Up', `Step 2 of 3 - Second (details: [intent.md:7](${relative(dir, intentPath(dir))}#L7))`)}\n| --- | --- |`)
   })
 
   it('treats a whitespace-only model recommendation as none', async () => {
@@ -456,7 +474,7 @@ describe('handoff', () => {
     writeFileSync(stepPath(dir), '2\n')
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('**Next Up**: Step 3 of 3 - Third (details:')
+    expect(stdout).toContain('| Next Up | Step 3 of 3 - Third (details:')
     expect(stdout).not.toContain('model:')
   })
 
@@ -476,7 +494,8 @@ describe('handoff', () => {
     const { code, stdout } = captureIo(() => handoff(dir, ['--plan']))
     expect(code).toBe(0)
     expect(stdout).not.toContain('Plumb')
-    expect(stdout.startsWith('\n---\n\n**Next Up**: Step 1 of 3 - First')).toBe(true) // the one tier that still opens on the seam rule: the plan is presented above it
+    expect(stdout.startsWith('\n---\n\n**Your Call**:\n')).toBe(true) // the one tier that still opens on the seam rule: the plan is presented above it
+    expect(stdout).toContain('| **Next Up** | Step 1 of 3 - First') // no Verdict, so the pointer heads the table
     expect(stdout).toContain('- `looks good` → I mark the plan decided; /plumbbob:build starts Step 1')
     expect(stdout).toContain('- `expand`, or any question → I show more of what is there; nothing changes')
     expect(stdout).toContain('- anything that reads as direction → I take it as what to sharpen; the plan is cheap to change now')
@@ -489,7 +508,7 @@ describe('handoff', () => {
     writeFileSync(stepPath(dir), '2\n')
     const { code, stdout } = captureIo(() => handoff(dir, ['--plan']))
     expect(code).toBe(0)
-    expect(stdout).toContain('**Next Up**: Step 2 of 3 - Second')
+    expect(stdout).toContain('| **Next Up** | Step 2 of 3 - Second')
     expect(stdout).toContain('/plumbbob:build starts Step 2')
   })
 
@@ -656,7 +675,7 @@ describe('handoff', () => {
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
     expect(stdout).toContain('seam         strayed: 1 path outside the seam\n             → README.md')
-    expect(stdout).toContain('**Verdict**: ◐ A hair off (seam strayed)')
+    expect(stdout).toContain(stateHead('Verdict', '◐ A hair off (seam strayed)'))
   })
 
   it('lists two or more strays under the row instead of naming one', async () => {
@@ -731,7 +750,7 @@ describe('handoff', () => {
         '             → .plumbbob/detail.md',
       ].join('\n'),
     )
-    expect(stdout).toContain('**Verdict**: ○ Out of plumb (constraints bent)')
+    expect(stdout).toContain(stateHead('Verdict', '○ Out of plumb (constraints bent)'))
   })
 
   it('renders the spent row from stats.json and the last gate', async () => {
@@ -765,10 +784,10 @@ describe('handoff', () => {
     writeFileSync(checkpointsPath(dir), `step 1 ${anchor}\n`)
     commitWith(dir, 'plan.txt', 'chore(plan): harvest the boundary', 'plumbbob plan')
     const { stdout: quiet } = captureIo(() => handoff(dir, []))
-    expect(quiet).toContain('**Verdict**: ● Plumb') // routine housekeeping is not an advisory
+    expect(quiet).toContain(stateHead('Verdict', '● Plumb')) // routine housekeeping is not an advisory
     commitWith(dir, 'other.txt', 'fix: something the human did', 'no marker here')
     const { stdout: noisy } = captureIo(() => handoff(dir, ['--full'])) // the same pause again: ask for the card
-    expect(noisy).toContain('**Verdict**: ◐ A hair off (1 commit outside the ledger)')
+    expect(noisy).toContain(stateHead('Verdict', '◐ A hair off (1 commit outside the ledger)'))
   })
 
   it('leaves the detail file with a blank line around each heading after a step pause', async () => {
@@ -843,7 +862,7 @@ describe('handoff', () => {
     const { code, stdout } = captureIo(() => handoff(dir, ['--plan']))
     expect(code).toBe(0)
     expect(stdout).toContain('**Your Call**:')
-    expect(stdout.trimEnd().endsWith('**Recommendation**: Decide it. Every open question is closed.')).toBe(true)
+    expect(stdout.trimEnd().endsWith(`**Recommendation**: Decide it. Every open question is closed.\n\n${MORE_DETAILS}`)).toBe(true)
   })
 
   it('refuses --plan and --driver together, since they name different tiers', async () => {
@@ -890,36 +909,41 @@ function fourthStepPointer(dir: string): string {
   return `[intent.md:${FOURTH_STEP_LINE}](${relative(dir, intentPath(dir))}#L${FOURTH_STEP_LINE})`
 }
 
-describe('handoff — the note beneath Next Up', () => {
-  it('rides the build order and the park count beneath the pointer as one indented line', async () => {
+describe('handoff — the rows beneath Next Up in the state table', () => {
+  it('rides the build order and the park count as rows beneath Next Up, each under its own label — D111 (state-table)', async () => {
     const dir = await started(REORDERED)
     writeFileSync(stepPath(dir), '2\n')
     writeFileSync(buildLogPath(dir), PARKS)
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
     // The order starts at the step the pointer names and leaves out the one in
-    // flight; the indent keeps the line inside the Next Up part.
-    expect(stdout).toContain(
-      `**Next Up**: Step 4 of 4 - Fourth (details: ${fourthStepPointer(dir)})\n  · order: 4, 3 · parked 2 of 3 open\n\n**Your Call**:`,
-    )
+    // flight; the table closes the card when the detail file is empty.
+    const rows = [
+      stateRow('Next Up', `Step 4 of 4 - Fourth (details: ${fourthStepPointer(dir)})`),
+      stateRow('Order', '4, 3'),
+      stateRow('Parked', '2 of 3 open'),
+    ].join('\n')
+    expect(stdout.endsWith(`\n${rows}\n\n`)).toBe(true)
   })
 
-  it('omits the order segment when the sequence is the numbering, keeping the parks', async () => {
+  it('omits the Order row when the sequence is the numbering, keeping the parks', async () => {
     const dir = await started(REORDERED.replace('4, 3', '3, 4'))
     writeFileSync(stepPath(dir), '2\n')
     writeFileSync(buildLogPath(dir), PARKS)
     const { stdout } = captureIo(() => handoff(dir, []))
-    expect(stdout).toContain('**Next Up**: Step 3 of 4 - Third')
-    expect(stdout).toContain(')\n  · parked 2 of 3 open\n\n**Your Call**:')
-    expect(stdout).not.toContain('build order')
+    expect(stdout).toContain('| Next Up | Step 3 of 4 - Third')
+    expect(stdout).toContain(`) |\n${stateRow('Parked', '2 of 3 open')}\n\n`)
+    expect(stdout).not.toContain('| Order |')
   })
 
-  it('renders the pointer alone with nothing re-sequenced and nothing parked, as before', async () => {
+  it('renders Next Up alone beneath the Verdict and Now with nothing re-sequenced and nothing parked', async () => {
     const dir = await started(REORDERED.replace('4, 3', '3, 4'))
     writeFileSync(stepPath(dir), '2\n')
     const { stdout } = captureIo(() => handoff(dir, []))
-    expect(stdout).toContain('**Next Up**: Step 3 of 4 - Third (details: [intent.md:')
-    expect(stdout).not.toContain('  · ')
+    expect(stdout).toContain('| Next Up | Step 3 of 4 - Third (details: [intent.md:')
+    expect(stdout).not.toContain('| Order |')
+    expect(stdout).not.toContain('| Parked |')
+    expect(stdout).not.toContain('  · ') // the note beneath Next Up retired into the rows
   })
 
   it('caps the order at five and counts the rest', async () => {
@@ -938,8 +962,8 @@ describe('handoff — the note beneath Next Up', () => {
     const dir = await started(eight)
     writeFileSync(stepPath(dir), '1\n')
     const { stdout } = captureIo(() => handoff(dir, []))
-    expect(stdout).toContain('**Next Up**: Step 8 of 8 - Step 8 (details: [intent.md:')
-    expect(stdout).toContain('\n  · order: 8, 7, 6, 5, 4 (and 2 more)\n')
+    expect(stdout).toContain('| Next Up | Step 8 of 8 - Step 8 (details: [intent.md:')
+    expect(stdout).toContain(`\n${stateRow('Order', '8, 7, 6, 5, 4 (and 2 more)')}\n`)
   })
 
   it('still counts the parks when nothing is planned', async () => {
@@ -947,27 +971,27 @@ describe('handoff — the note beneath Next Up', () => {
     writeFileSync(checkpointsPath(dir), 'step 3 abc1234\n')
     writeFileSync(buildLogPath(dir), PARKS)
     const { stdout } = captureIo(() => handoff(dir, []))
-    expect(stdout).toContain('**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish\n  · parked 2 of 3 open\n')
+    expect(stdout).toContain(`${stateRow('Next Up', 'Nothing planned - /plumbbob:step or /plumbbob:finish')}\n${stateRow('Parked', '2 of 3 open')}\n`)
   })
 
   it('points --plan at the first step in build order, and the plan moves agree', async () => {
     const dir = await started(REORDERED)
     const { stdout } = captureIo(() => handoff(dir, ['--plan']))
     expect(stdout).toContain(
-      `**Next Up**: Step 4 of 4 - Fourth (details: ${fourthStepPointer(dir)})\n  · order: 4, 3, 2\n`,
+      `${stateHead('Next Up', `Step 4 of 4 - Fourth (details: ${fourthStepPointer(dir)})`)}\n| --- | --- |\n${stateRow('Order', '4, 3, 2')}\n`,
     )
     expect(stdout).toContain('/plumbbob:build starts Step 4')
   })
 
-  it('rides the note on the boundary pointer, and keeps the driver pointer to one line', async () => {
+  it('carries the rows on the boundary table, and keeps the driver pointer to one line', async () => {
     const dir = await started(REORDERED.replace('2. [ ]', '2. [x]'))
     writeFileSync(checkpointsPath(dir), 'step 2 abc1234\n')
     const boundary = captureIo(() => handoff(dir, [])).stdout
-    expect(boundary).toContain('**Verdict**')
+    expect(boundary).toContain('| **Verdict** |')
     expect(boundary).toContain(
-      `**Next Up**: Step 4 of 4 - Fourth (details: ${fourthStepPointer(dir)})\n  · order: 4, 3\n`,
+      `${stateRow('Next Up', `Step 4 of 4 - Fourth (details: ${fourthStepPointer(dir)})`)}\n${stateRow('Order', '4, 3')}\n`,
     )
-    // The driver line follows the order for its pick and carries no note.
+    // The driver line follows the order for its pick and carries no rows.
     const driver = captureIo(() => handoff(dir, ['--driver'])).stdout
     expect(driver.trim()).toBe(`**Next Up**: Step 4 of 4 - Fourth (details: ${fourthStepPointer(dir)})`)
   })
@@ -1014,12 +1038,12 @@ function rangedWith(done: ReadonlyArray<number>, intent = RANGED): string {
   return done.reduce((text, n) => text.replace(`${n}. [ ]`, `${n}. [x]`), intent)
 }
 
-describe('handoff — the range segment beneath Next Up', () => {
+describe('handoff — the Range row beneath Next Up', () => {
   it('names range 1 whole at the plan pause, with the range model in bold, and looks good names the run — D98 (card-names-the-run)', async () => {
     const dir = await started(RANGED)
     const { stdout } = captureIo(() => handoff(dir, ['--plan']))
     expect(stdout).toContain(
-      `**Next Up**: Step 1 of 4 - First (model: **Opus**, details: ${rangedPointer(dir, 1)})\n  · range 1 of 3: /plumbbob:run (step 1 to its pause)\n`,
+      `${stateHead('Next Up', `Step 1 of 4 - First (model: **Opus**, details: ${rangedPointer(dir, 1)})`)}\n| --- | --- |\n${stateRow('Range', '1 of 3: /plumbbob:run (step 1 to its pause)')}\n`,
     )
     expect(stdout).toContain('- `looks good` → I mark the plan decided; /plumbbob:run runs range 1 from Step 1\n')
   })
@@ -1037,7 +1061,7 @@ describe('handoff — the range segment beneath Next Up', () => {
     writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
     const { stdout } = captureIo(() => handoff(dir, []))
     expect(stdout).toContain(
-      `**Next Up**: Step 3 of 4 - Third (model: **Fable**, details: ${rangedPointer(dir, 3)})\n  · range 2 of 3: /plumbbob:run (steps 2-3)\n\n**Your Call**:`,
+      `${stateRow('Next Up', `Step 3 of 4 - Third (model: **Fable**, details: ${rangedPointer(dir, 3)})`)}\n${stateRow('Range', '2 of 3: /plumbbob:run (steps 2-3)')}\n`,
     )
     expect(stdout).toContain(
       [
@@ -1053,7 +1077,7 @@ describe('handoff — the range segment beneath Next Up', () => {
     writeFileSync(stepPath(dir), '2\n')
     writeCheckSummary(dir, false, [{ name: 'test', ok: false }])
     const { stdout } = captureIo(() => handoff(dir, []))
-    expect(stdout).toContain('  · range 2 of 3: /plumbbob:run (steps 2-3)\n')
+    expect(stdout).toContain(`\n${stateRow('Range', '2 of 3: /plumbbob:run (steps 2-3)')}\n`)
     expect(stdout).not.toContain('`/plumbbob:run` →')
   })
 
@@ -1064,7 +1088,7 @@ describe('handoff — the range segment beneath Next Up', () => {
     const atLast = captureIo(() => handoff(last, [])).stdout
     // Next Up is the next range's step, and its bold model the step's, since range 3 declares none.
     expect(atLast).toContain(
-      `**Next Up**: Step 4 of 4 - Fourth (model: **Sonnet**, details: ${rangedPointer(last, 4)})\n  · range 2 of 3 lands with step 3\n\n**Your Call**:`,
+      `${stateRow('Next Up', `Step 4 of 4 - Fourth (model: **Sonnet**, details: ${rangedPointer(last, 4)})`)}\n${stateRow('Range', '2 of 3 lands with step 3')}\n`,
     )
     expect(atLast).not.toContain('`/plumbbob:run` →')
     const bare = await started(RANGED)
@@ -1072,18 +1096,22 @@ describe('handoff — the range segment beneath Next Up', () => {
     writeCheckSummary(bare, true, [{ name: 'test', ok: true }])
     const atBare = captureIo(() => handoff(bare, [])).stdout
     expect(atBare).toContain(
-      `**Next Up**: Step 2 of 4 - Second (model: **Fable**, details: ${rangedPointer(bare, 2)})\n  · range 1 of 3 lands with step 1\n\n**Your Call**:`,
+      `${stateRow('Next Up', `Step 2 of 4 - Second (model: **Fable**, details: ${rangedPointer(bare, 2)})`)}\n${stateRow('Range', '1 of 3 lands with step 1')}\n`,
     )
     expect(atBare).not.toContain('`/plumbbob:run` →')
   })
 
-  it('names the next range on the boundary, and leads the note ahead of the parks', async () => {
+  it('names the next range on the boundary, its row ahead of the parks', async () => {
     const dir = await started(rangedWith([1]))
     writeFileSync(checkpointsPath(dir), 'step 1 abc1234\n')
     writeFileSync(buildLogPath(dir), PARKS)
     const { stdout } = captureIo(() => handoff(dir, []))
     expect(stdout).toContain(
-      `**Next Up**: Step 2 of 4 - Second (model: **Fable**, details: ${rangedPointer(dir, 2)})\n  · range 2 of 3: /plumbbob:run (steps 2-3) · parked 2 of 3 open\n`,
+      [
+        stateRow('Next Up', `Step 2 of 4 - Second (model: **Fable**, details: ${rangedPointer(dir, 2)})`),
+        stateRow('Range', '2 of 3: /plumbbob:run (steps 2-3)'),
+        stateRow('Parked', '2 of 3 open'),
+      ].join('\n'),
     )
   })
 
@@ -1092,7 +1120,7 @@ describe('handoff — the range segment beneath Next Up', () => {
     writeFileSync(checkpointsPath(dir), 'step 3 abc1234\n')
     const { stdout } = captureIo(() => handoff(dir, []))
     expect(stdout).toContain(
-      `**Next Up**: Step 4 of 4 - Fourth (model: **Sonnet**, details: ${rangedPointer(dir, 4)})\n  · range 3 of 3: /plumbbob:run (step 4 to its pause)\n`,
+      `${stateRow('Next Up', `Step 4 of 4 - Fourth (model: **Sonnet**, details: ${rangedPointer(dir, 4)})`)}\n${stateRow('Range', '3 of 3: /plumbbob:run (step 4 to its pause)')}\n`,
     )
   })
 
@@ -1102,7 +1130,7 @@ describe('handoff — the range segment beneath Next Up', () => {
     writeFileSync(checkpointsPath(dir), 'step 1 abc1234\n')
     const { stdout } = captureIo(() => handoff(dir, []))
     expect(stdout).toContain(
-      `**Next Up**: Step 2 of 4 - Second (model: **Sonnet**, details: ${rangedPointer(dir, 2)})\n  · range 2 of 3 needs a re-cut (step 3 is also in range 3)\n`,
+      `${stateRow('Next Up', `Step 2 of 4 - Second (model: **Sonnet**, details: ${rangedPointer(dir, 2)})`)}\n${stateRow('Range', '2 of 3 needs a re-cut (step 3 is also in range 3)')}\n`,
     )
   })
 
@@ -1111,7 +1139,9 @@ describe('handoff — the range segment beneath Next Up', () => {
     const dir = await started(open)
     writeFileSync(checkpointsPath(dir), 'step 3 abc1234\n')
     const { stdout } = captureIo(() => handoff(dir, []))
-    expect(stdout).toContain(`**Next Up**: Step 4 of 4 - Fourth (model: **Sonnet**, details: ${rangedPointer(dir, 4)})\n  · no range names step 4\n`)
+    expect(stdout).toContain(
+      `${stateRow('Next Up', `Step 4 of 4 - Fourth (model: **Sonnet**, details: ${rangedPointer(dir, 4)})`)}\n${stateRow('Range', 'no range names step 4')}\n`,
+    )
   })
 
   it("keeps the driver pointer to one line, and renders a plan holding only the template's placeholder as before", async () => {
@@ -1126,22 +1156,22 @@ describe('handoff — the range segment beneath Next Up', () => {
     const plain = await started(rangedWith([1], placeholder))
     writeFileSync(checkpointsPath(plain), 'step 1 abc1234\n')
     const { stdout } = captureIo(() => handoff(plain, []))
-    expect(stdout).toContain(`**Next Up**: Step 2 of 4 - Second (model: **Sonnet**, details: ${rangedPointer(plain, 2)})`)
-    expect(stdout).not.toContain('  · ')
+    expect(stdout).toContain(stateRow('Next Up', `Step 2 of 4 - Second (model: **Sonnet**, details: ${rangedPointer(plain, 2)})`))
+    expect(stdout).not.toContain('| Range |')
   })
 })
 
-describe('handoff — the Stop part on the boundary where a range landed', () => {
-  /** The Stop line for RANGED's range 2, as a boundary prints it. */
+describe('handoff — the Stop row on the boundary where a range landed', () => {
+  /** The Stop row for RANGED's range 2, as a boundary's table prints it. */
   const stopOf = (dir: string) =>
-    `**Stop**: Range 2 of 3 landed - review the parser before the card reads it (details: [intent.md:24](${relative(dir, intentPath(dir))}#L24))`
+    stateRow('Stop', `Range 2 of 3 landed - review the parser before the card reads it (details: [intent.md:24](${relative(dir, intentPath(dir))}#L24))`)
 
   it('says why the build stops when the step that landed finished a range, between the Verdict and Next Up', async () => {
     const dir = await started(rangedWith([1, 2, 3]))
     writeFileSync(checkpointsPath(dir), 'step 3 abc1234\n')
     const { stdout } = captureIo(() => handoff(dir, []))
-    expect(stdout).toMatch(/^\*\*Verdict\*\*: .*\n\n/)
-    expect(stdout).toContain(`\n\n${stopOf(dir)}\n\n**Next Up**: Step 4 of 4 - Fourth`)
+    expect(stdout).toMatch(/^\| \*\*Verdict\*\* \| .* \|\n\| --- \| --- \|\n/)
+    expect(stdout).toContain(`\n${stopOf(dir)}\n| Next Up | Step 4 of 4 - Fourth`)
   })
 
   it('prints the line when a step landed by hand finishes the range out of order', async () => {
@@ -1150,16 +1180,16 @@ describe('handoff — the Stop part on the boundary where a range landed', () =>
     expect(captureIo(() => handoff(dir, [])).stdout).toContain(stopOf(dir))
   })
 
-  it('prints no Stop part for a landing that leaves the range open, a bare range, or a plan without ranges', async () => {
+  it('prints no Stop row for a landing that leaves the range open, a bare range, or a plan without ranges', async () => {
     const open = await started(rangedWith([1, 2]))
     writeFileSync(checkpointsPath(open), 'step 2 abc1234\n')
-    expect(captureIo(() => handoff(open, [])).stdout).not.toContain('**Stop**')
+    expect(captureIo(() => handoff(open, [])).stdout).not.toContain('| Stop |')
     const bare = await started(rangedWith([1]))
     writeFileSync(checkpointsPath(bare), 'step 1 abc1234\n')
-    expect(captureIo(() => handoff(bare, [])).stdout).not.toContain('**Stop**')
+    expect(captureIo(() => handoff(bare, [])).stdout).not.toContain('| Stop |')
     const plain = await started(rangedWith([1, 2, 3], RANGED.replace(/## Build ranges[\s\S]*$/, '')))
     writeFileSync(checkpointsPath(plain), 'step 3 abc1234\n')
-    expect(captureIo(() => handoff(plain, [])).stdout).not.toContain('**Stop**')
+    expect(captureIo(() => handoff(plain, [])).stdout).not.toContain('| Stop |')
   })
 })
 
@@ -1181,50 +1211,52 @@ function render(dir: string, args: ReadonlyArray<string> = []): { code: number; 
   return { code, stdout }
 }
 
-/** Whether a render is the whole card: it opens on the Now line and ends on the recommendation. */
+/** Whether a render is the whole card: it opens on the Summary, offers the moves, and names step 2 in its Now row. */
 function isCard(stdout: string): boolean {
-  return stdout.startsWith('**Now**: Step 2 of 3 - Second\n\n**Summary**') && stdout.includes('**Your Call**:')
+  return stdout.startsWith('**Summary**') && stdout.includes('**Your Call**:') && stdout.includes('| Now | Step 2 of 3 - Second |')
 }
 
-describe('handoff — a pause shown once', () => {
-  it('prints the whole card on the first render and the reminder on a second with nothing changed — D87 (pause-once)', async () => {
+describe('handoff — a card shown once', () => {
+  it('prints the whole card on the first render and the reminder on a second — D110 (reply-after-the-card)', async () => {
     const dir = await paused()
     const first = render(dir)
     expect(first.code).toBe(0)
     expect(isCard(first.stdout)).toBe(true)
     expect(render(dir)).toEqual({ code: 0, stdout: REMINDER })
-    expect(render(dir)).toEqual({ code: 0, stdout: REMINDER }) // however many questions it takes
+    expect(render(dir)).toEqual({ code: 0, stdout: REMINDER }) // however many replies it takes
   })
 
-  it('brings the card back when the detail file changes', async () => {
+  it('keeps the reminder when a reply rewrote the detail file, and --full shows the change', async () => {
     const dir = await paused()
     render(dir)
     writeFileSync(detailPath(dir), `${GREEN_RECAP}${SUMMARY}\n## Recommendation\n\nApprove it. The fix landed.\n`)
-    const changed = render(dir)
-    expect(isCard(changed.stdout)).toBe(true)
-    expect(changed.stdout).toContain('**Recommendation**: Approve it. The fix landed.')
     expect(render(dir).stdout).toBe(REMINDER)
+    const full = render(dir, ['--full'])
+    expect(isCard(full.stdout)).toBe(true)
+    expect(full.stdout).toContain('**Recommendation**: Approve it. The fix landed.')
   })
 
-  it('brings the card back when a file in the seam changes, even when its counts do not', async () => {
+  it('keeps the reminder when a reply changed the work, in the seam or outside it', async () => {
     const dir = await paused()
     render(dir)
-    writeFileSync(join(dir, 'README.md'), '# fixture\nedited\n') // still +1 -0: only the content moved
-    expect(isCard(render(dir).stdout)).toBe(true)
-    expect(render(dir).stdout).toBe(REMINDER)
     writeFileSync(join(dir, 'README.md'), '# fixture\nedited\nagain\n')
-    expect(render(dir).stdout).toContain('diff         +2 -0 across 1 file')
+    expect(render(dir).stdout).toBe(REMINDER)
+    writeFileSync(join(dir, 'other.txt'), 'a file outside the seam\n')
+    expect(render(dir).stdout).toBe(REMINDER)
+    expect(render(dir, ['--full']).stdout).toContain('diff         +3 -0 across 2 files')
   })
 
-  it('brings the card back when the check row changes, red or green again', async () => {
+  it("keeps the reminder when a gate run moves the check row, as checkride's per-turn gate does", async () => {
+    // The gate the Stop hook runs skips the test slot, so its summary reads
+    // `green: 1 of 2 checks · without test` where the full run read `1 of 1`;
+    // the pause is the one the human read either way.
     const dir = await paused()
     render(dir)
-    writeCheckSummary(dir, false, [{ name: 'test', ok: false, output_file: 'test.json' }], 63_000)
-    const red = render(dir)
-    expect(red.stdout).toContain('check        red: test failing')
+    writeCheckSummary(dir, true, [{ name: 'lint', ok: true }, { name: 'test', ok: true, skipped: true }], 2_000)
     expect(render(dir).stdout).toBe(REMINDER)
-    writeCheckSummary(dir, true, [{ name: 'test', ok: true }], 63_000)
-    expect(render(dir).stdout).toContain('check        green: 1 of 1 checks')
+    writeCheckSummary(dir, false, [{ name: 'test', ok: false, output_file: 'test.json' }], 63_000)
+    expect(render(dir).stdout).toBe(REMINDER)
+    expect(render(dir, ['--full']).stdout).toContain('check        red: test failing')
   })
 
   it('keeps the reminder when only the spent row moved — D8 (stamp-skips-spent)', async () => {
@@ -1255,7 +1287,7 @@ describe('handoff — a pause shown once', () => {
     expect(render(dir, ['2']).stdout).toBe(REMINDER)
   })
 
-  it('stamps only the step pause: a driver pointer and the plan card leave the next render whole', async () => {
+  it('stamps only what a card showed: a driver pointer and the plan card leave the next render whole', async () => {
     const dir = await paused()
     render(dir, ['--driver'])
     render(dir, ['--plan'])
@@ -1263,7 +1295,18 @@ describe('handoff — a pause shown once', () => {
     expect(isCard(render(dir).stdout)).toBe(true)
   })
 
-  it('clears the stamp at a checkpoint, a revert, and an abandon, so the next pause renders whole', async () => {
+  it('shortens a boundary already shown to its pointer, and --full brings the table back', async () => {
+    const dir = await started()
+    writeFileSync(checkpointsPath(dir), 'step 2 abc1234\n')
+    const pointer = `**Next Up**: Step 3 of 3 - Third (model: **Sonnet**, details: ${thirdStepPointer(dir)})\n\n`
+    const first = render(dir).stdout
+    expect(first.startsWith(stateHead('Verdict', '● Plumb'))).toBe(true)
+    expect(readFileSync(pausePath(dir), 'utf8')).toBe('landed 2\n')
+    expect(render(dir).stdout).toBe(pointer)
+    expect(render(dir, ['--full']).stdout).toBe(first)
+  })
+
+  it('stamps the boundary at a checkpoint and clears the stamp at a revert and an abandon, so the next pause renders whole', async () => {
     for (const exit of ['checkpoint', 'revert', 'abandon'] as const) {
       const dir = await paused()
       writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true' }))
@@ -1274,8 +1317,21 @@ describe('handoff — a pause shown once', () => {
           ? await captureIoAsync(() => checkpoint(dir, ['2']))
           : captureIo(() => (exit === 'revert' ? revert(dir, []) : abandon(dir, [])))
       expect(code).toBe(0)
-      expect(existsSync(pausePath(dir))).toBe(false)
+      if (exit === 'checkpoint') {
+        // The boundary the checkpoint printed is the card now shown: a later
+        // handoff here ends on its pointer, and step 3's pause renders whole.
+        expect(readFileSync(pausePath(dir), 'utf8')).toBe('landed 2\n')
+        expect(render(dir).stdout.startsWith('**Next Up**: Step 3 of 3 - Third')).toBe(true)
+      } else {
+        expect(existsSync(pausePath(dir))).toBe(false)
+      }
     }
+  })
+
+  it('reads a stamp written before the reminder held, a step and a hash, as that step\'s pause', async () => {
+    const dir = await paused()
+    writeFileSync(pausePath(dir), `2 ${'a'.repeat(64)}\n`)
+    expect(render(dir).stdout).toBe(REMINDER)
   })
 
   it('keeps the stamp out of git, so no step commit sweeps it in', async () => {
@@ -1368,8 +1424,11 @@ describe('handoff — the ending it records for the relay check', () => {
     expect(readRelay(dir)).toEqual({ turn: 4, tier: 'orientation', render: 'pointer', text: pointer })
     writeFileSync(checkpointsPath(dir), 'step 1 abc1234\n')
     const boundary = render(dir).stdout
-    expect(boundary).toContain('**Verdict**')
+    expect(boundary).toContain('| **Verdict** |')
     expect(readRelay(dir)).toEqual({ turn: 4, tier: 'orientation', render: 'boundary', text: boundary })
+    // The same boundary again is its pointer alone, a driver ending that holds nothing open.
+    const again = render(dir).stdout
+    expect(readRelay(dir)).toEqual({ turn: 4, tier: 'driver', render: 'pointer', text: again })
     const driver = render(dir, ['--driver']).stdout
     expect(readRelay(dir)).toEqual({ turn: 4, tier: 'driver', render: 'driver', text: driver })
   })
@@ -1463,7 +1522,9 @@ const STOPPED = `# Handoff stop test
 `
 
 // Range 2's detail: the header naming the range, its three judgment rows, the
-// Summary, two highlights, a proposal for each open park, and the move.
+// Summary, two highlights, a proposal for each open park (the first with the
+// title and the why the lean table shows, the second in the one-line shape a
+// detail had before them), and the move.
 const RANGE_DETAIL = `# Detail · Range 2 · review the parser before the card reads it
 
 ── recap · range 2 of 3 ──
@@ -1486,6 +1547,8 @@ The card's story.
 ## Harvest
 
 - P1 → tangent: the card renders it
+  - title: card renders
+  - why: the dashboard prints the link raw
 - P2 → blocker: step 4 builds on it
 
 ## Recommendation
@@ -1521,12 +1584,7 @@ async function stopped(intent = STOPPED, detail = RANGE_DETAIL): Promise<{ dir: 
 function stopCardOf(dir: string, shas: ReadonlyArray<string>): string {
   const intent = relative(dir, intentPath(dir))
   return [
-    `**Stop**: Range 2 of 3 landed - review the parser before the card reads it (details: [intent.md:18](${intent}#L18))`,
-    '',
-    '**Summary**: The parser reads the plan, and the card reads the parser. (details: [detail.md](.plumbbob/detail.md))',
-    '',
-    '1. Step 2 parses the section.',
-    '2. Step 3 renders it.',
+    '**Summary**: The parser reads the plan, and the card reads the parser.',
     '',
     '**Readout**:',
     '',
@@ -1539,18 +1597,17 @@ function stopCardOf(dir: string, shas: ReadonlyArray<string>): string {
     'constraints  all honored',
     'seam         held: 2 of 2 steps, no strays',
     'diff         +2 -0 across 2 files',
+    '             - src/b.ts +1 -0',
+    '             - src/c.ts +1 -0',
     'spent        45 min · green first run at every landing',
     '```',
     '',
-    '**Verdict**: ● Plumb',
-    '',
     '**Harvested**: 2 of 3 parked ideas open',
     '',
-    '- P1 · one idea → lean: tangent, the card renders it',
-    '- P2 · another → lean: blocker, step 4 builds on it',
-    '',
-    `**Next Up**: Step 4 of 4 - Fourth (model: **Sonnet**, details: [intent.md:11](${intent}#L11))`,
-    '  · range 3 of 3: /plumbbob:run (step 4 to its pause)',
+    '| Park | What it is | Why it matters | Lean |',
+    '| --- | --- | --- | --- |',
+    '| P1 · card renders | one idea | the dashboard prints the link raw | tangent: the card renders it |',
+    '| P2 | another | not given | blocker: step 4 builds on it |',
     '',
     '**Your Call**:',
     '',
@@ -1558,10 +1615,18 @@ function stopCardOf(dir: string, shas: ReadonlyArray<string>): string {
     '',
     '- `looks good` → I record the review and every lean as proposed, folding a blocker into the plan; back to the boundary',
     '- `/plumbbob:run` → I record them the same way, then run range 3 of 3 to its stop',
-    '- anything that reads as direction → I re-render the card with the lean changed; nothing is recorded until you approve',
+    '- anything that reads as direction → I change the lean and say what moved; nothing is recorded until you approve',
     '- `expand`, or any question → I show more of what is there; nothing changes, and `show the stop` brings all of this back',
     '',
+    '| **Verdict** | ● Plumb |',
+    '| --- | --- |',
+    `| Stop | Range 2 of 3 landed - review the parser before the card reads it (details: [intent.md:18](${intent}#L18)) |`,
+    `| Next Up | Step 4 of 4 - Fourth (model: **Sonnet**, details: [intent.md:11](${intent}#L11)) |`,
+    '| Range | 3 of 3: /plumbbob:run (step 4 to its pause) |',
+    '',
     '**Recommendation**: Approve it. Both steps held their seams.',
+    '',
+    MORE_DETAILS,
     '',
     '',
   ].join('\n')
@@ -1577,19 +1642,20 @@ describe("handoff --stop — the stop card that closes a run's range", () => {
     expect(stdout).toBe(stopCardOf(dir, shas))
   })
 
-  it('renders once: a second render at an unchanged stop is the reminder, and --full reprints the card — D87 (pause-once)', async () => {
+  it('renders once: a second render at the stop is the reminder, and --full reprints the card — D110 (reply-after-the-card)', async () => {
     const { dir, shas } = await stopped()
     render(dir, ['--stop'])
     expect(render(dir, ['--stop'])).toEqual({ code: 0, stdout: STOP_REMINDER })
     expect(render(dir, ['--stop', '--full']).stdout).toBe(stopCardOf(dir, shas))
   })
 
-  it('brings the card back when the detail changes, with the lean as it will be recorded and the example recast against it', async () => {
+  it('keeps the reminder when a reply changed a lean, and --full shows it as it will be recorded, the example recast against it', async () => {
     const { dir } = await stopped()
     render(dir, ['--stop'])
     writeFileSync(detailPath(dir), RANGE_DETAIL.replace('P1 → tangent: the card renders it', 'P1 → blocker: step 4 reads it'))
-    const { stdout } = render(dir, ['--stop'])
-    expect(stdout).toContain('- P1 · one idea → lean: blocker, step 4 reads it')
+    expect(render(dir, ['--stop']).stdout).toBe(STOP_REMINDER)
+    const { stdout } = render(dir, ['--stop', '--full'])
+    expect(stdout).toContain('| P1 · card renders | one idea | the dashboard prints the link raw | blocker: step 4 reads it |')
     // The example is the first open park recast as the class its lean is not (D106 (leans-harvested)).
     expect(stdout).toContain('Approving locks in each lean above; to change one, say so first (`make P1 a tangent`).')
   })
@@ -1629,14 +1695,14 @@ describe("handoff --stop — the stop card that closes a run's range", () => {
     const { stdout } = render(dir, ['--stop'])
     expect(stdout).not.toContain('**Harvested**')
     expect(stdout).not.toContain('Approving locks in')
-    expect(stdout).toContain('**Verdict**: ● Plumb\n\n**Next Up**')
+    expect(stdout).toContain('```\n\n**Your Call**:\n\n- `looks good`')
     expect(stdout).toContain(
       [
         '**Your Call**:',
         '',
         '- `looks good` → I record the review; back to the boundary',
         '- `/plumbbob:run` → I record it the same way, then run range 3 of 3 to its stop',
-        '- anything that reads as direction → I re-render the card with the review changed; nothing is recorded until you approve',
+        '- anything that reads as direction → I change the review and say what moved; nothing is recorded until you approve',
         '- `expand`, or any question → I show more of what is there; nothing changes, and `show the stop` brings all of this back',
       ].join('\n'),
     )
@@ -1646,8 +1712,8 @@ describe("handoff --stop — the stop card that closes a run's range", () => {
     const detail = RANGE_DETAIL.replace('- P1 → tangent: the card renders it\n', '').replace('P2 → blocker: step 4 builds on it', 'P2 → pivot')
     const { dir } = await stopped(STOPPED, detail)
     const { stdout } = render(dir, ['--stop'])
-    expect(stdout).toContain('- P1 · one idea → no lean proposed')
-    expect(stdout).toContain('- P2 · another → lean: pivot\n')
+    expect(stdout).toContain('| P1 | one idea | not given | no lean proposed |')
+    expect(stdout).toContain('| P2 | another | not given | pivot |\n')
     // A park with no lean recasts as a blocker, the change the card could take.
     expect(stdout).toContain('(`make P1 a blocker`)')
   })
@@ -1670,8 +1736,8 @@ describe("handoff --stop — the stop card that closes a run's range", () => {
     writeFileSync(detailPath(dir), RANGE_DETAIL.replace('Range 2 · review the parser before the card reads it', 'Range 3 · the final read').replace('range 2 of 3', 'range 3 of 3'))
     const { code, stdout } = render(dir, ['--stop'])
     expect(code).toBe(0)
-    expect(stdout).toMatch(/^\*\*Stop\*\*: Range 3 of 3 landed - the final read/)
-    expect(stdout).toContain('**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish\n\n**Your Call**')
+    expect(stdout).toContain('| Stop | Range 3 of 3 landed - the final read')
+    expect(stdout).toContain(`${stateRow('Next Up', 'Nothing planned - /plumbbob:step or /plumbbob:finish')}\n\n**Recommendation**`)
     expect(stdout).toContain('- `/plumbbob:finish` → I record them the same way, then write the report and close the build')
     expect(stdout).not.toContain('/plumbbob:run')
   })
@@ -1721,18 +1787,77 @@ describe("handoff --stop — the stop card that closes a run's range", () => {
   })
 })
 
+// A boundary harvest's wire: the header that names it, and a proposal for each open park in PARKS.
+const HARVEST_DETAIL = '# Detail · Harvest\n\n## Harvest\n\n- P1 → tangent: later\n  - title: one\n  - why: it can wait\n- P2 → blocker: step 3 reads it\n'
+
+describe("handoff --harvest — a boundary harvest's leans", () => {
+  it('renders the lean table the stop card carries, then the moves that settle it in one reply — D112 (lean-table)', async () => {
+    const dir = await started()
+    writeFileSync(buildLogPath(dir), PARKS)
+    writeFileSync(detailPath(dir), HARVEST_DETAIL)
+    atTurn(dir, 3)
+    const { code, stdout } = render(dir, ['--harvest'])
+    expect(code).toBe(0)
+    expect(stdout).toBe(
+      [
+        '**Harvested**: 2 of 3 parked ideas open',
+        '',
+        '| Park | What it is | Why it matters | Lean |',
+        '| --- | --- | --- | --- |',
+        '| P1 · one | one idea | it can wait | tangent: later |',
+        '| P2 | another | not given | blocker: step 3 reads it |',
+        '',
+        '**Your Call**:',
+        '',
+        'Approving locks in each lean above; to change one, say so first (`make P1 a blocker`).',
+        '',
+        '- `looks good` → I record every lean as proposed, folding a blocker into the plan',
+        '- anything that reads as direction → I change the lean and say what moved; nothing is recorded until you approve',
+        '- `expand`, or any question → I show more of what is there; nothing changes',
+        '',
+        '',
+      ].join('\n'),
+    )
+    // A driver ending: nothing is pending to hold the turn for, and no stamp is written.
+    expect(readRelay(dir)).toEqual({ turn: 3, tier: 'driver', render: 'harvest-card', text: stdout })
+    expect(existsSync(pausePath(dir))).toBe(false)
+  })
+
+  it("refuses a detail file that is no harvest's, and a list with no park open", async () => {
+    const dir = await started()
+    writeFileSync(buildLogPath(dir), PARKS)
+    writeFileSync(detailPath(dir), RANGE_DETAIL)
+    expect(captureIo(() => handoff(dir, ['--harvest']))).toEqual({
+      code: 1,
+      stdout: '',
+      stderr:
+        "plumbbob: no harvest to render (the detail file is not a harvest's)\n  → write the proposals in .plumbbob/detail.md under `# Detail · Harvest`, then plumbbob handoff --harvest\n",
+    })
+    writeFileSync(detailPath(dir), HARVEST_DETAIL)
+    writeFileSync(buildLogPath(dir), PARKS.replace(/- \[ \]/g, '- [x]'))
+    expect(captureIo(() => handoff(dir, ['--harvest'])).stderr).toBe(
+      'plumbbob: no harvest to render (no park is open)\n  → plumbbob park "<one line>" captures one\n',
+    )
+  })
+})
+
 describe("handoff — the stop's record and its readers", () => {
   it('records the card as the human settled it, with the full story beneath — D104 (harvest-records)', async () => {
     const { dir, shas } = await stopped()
     const record = stopRecord(dir, activeBuild(dir), RANGE_DETAIL, PARKS) ?? ''
     const card = stopCardOf(dir, shas)
+    // The record keeps the highlights the card leaves in the detail file.
     expect(record.startsWith('**Summary**: The parser reads the plan, and the card reads the parser.\n\n1. Step 2 parses')).toBe(true)
-    // The Readout, the Verdict, and the Harvested part read exactly as the card showed them.
-    const shown = card.slice(card.indexOf('**Readout**'), card.indexOf('\n\n**Next Up**'))
-    expect(record).toContain(shown)
-    expect(record).toContain(`${shown}\n\n**Recommendation**: Approve it. Both steps held their seams.\n\n**1.** Step 2 parses the section.\n\nThe parser's story.`)
-    expect(record).not.toContain('**Next Up**')
+    // The Readout and the Harvested part read exactly as the card showed them,
+    // with the Verdict between them as a line, since the record keeps no table.
+    const readout = card.slice(card.indexOf('**Readout**'), card.indexOf('\n\n**Harvested**'))
+    const harvested = card.slice(card.indexOf('**Harvested**'), card.indexOf('\n\n**Your Call**'))
+    expect(record).toContain(
+      `${readout}\n\n**Verdict**: ● Plumb\n\n${harvested}\n\n**Recommendation**: Approve it. Both steps held their seams.\n\n**1.** Step 2 parses the section.\n\nThe parser's story.`,
+    )
+    expect(record).not.toContain('| Next Up |')
     expect(record).not.toContain('**Your Call**')
+    expect(record).not.toContain(MORE_DETAILS)
     expect(stopRecord(dir, activeBuild(dir), `# Detail · Step 3 · Third\n${SUMMARY}`, PARKS)).toBeNull()
   })
 
@@ -1757,8 +1882,12 @@ describe("handoff — the stop's record and its readers", () => {
       '## Harvest',
       '',
       '- P6 → tangent: the bracket already points at the item',
+      '  - title: Stop note',
+      '  - why: the note says why the build stops',
       '- park 7 → Blocker: step 10 assumes it',
+      '- why: flush, so it is no field of P7',
       '- P8 -> later',
+      '  - Why: read whatever its case',
       '- P 10 → tangent: a handle with a space is not one',
       '- an aside, not a proposal',
       '',
@@ -1767,12 +1896,20 @@ describe("handoff — the stop's record and its readers", () => {
       '- P1 → tangent: not in the section either',
     ].join('\n')
     // The card's `P6` handle, with the `park 7` wire a detail written before it carried still read (D105 (park-handles)).
+    // The field lines indented beneath a proposal are its title and why (D112 (lean-table)).
     expect(harvestProposals(detail)).toEqual([
-      { handle: 6, kind: 'tangent', reason: 'the bracket already points at the item' },
-      { handle: 7, kind: 'blocker', reason: 'step 10 assumes it' },
-      { handle: 8, kind: 'later', reason: '' },
+      { handle: 6, kind: 'tangent', reason: 'the bracket already points at the item', title: 'Stop note', why: 'the note says why the build stops' },
+      { handle: 7, kind: 'blocker', reason: 'step 10 assumes it', title: '', why: '' },
+      { handle: 8, kind: 'later', reason: '', title: '', why: 'read whatever its case' },
     ])
     expect(harvestProposals('# Detail · Range 2 · x\n')).toEqual([])
+  })
+
+  it('escapes a pipe in a park, so its row keeps its four cells', async () => {
+    const { dir } = await stopped()
+    writeFileSync(buildLogPath(dir), PARKS.replace('- [ ] one idea', '- [ ] test isFile()||isFIFO() first'))
+    const { stdout } = render(dir, ['--stop'])
+    expect(stdout).toContain('| P1 · card renders | test isFile()\\|\\|isFIFO() first | the dashboard prints the link raw | tangent: the card renders it |')
   })
 
   it("reads the range a detail reviews off its header, and nothing off a step's or a harvest's", () => {

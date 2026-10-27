@@ -81,8 +81,10 @@ function printed(dir: string, args: ReadonlyArray<string> = []): string {
 function recordBoundary(dir: string): string {
   const text = ending({
     lead: transition({ label: 'Checkpoint', fact: 'Step 2 complete', detail: ['b4c5d6e7f'] }),
-    verdict: '**Verdict**: ● Plumb',
-    pointer: '**Next Up**: Step 3 of 3 - Third',
+    state: [
+      { label: 'Verdict', value: '● Plumb' },
+      { label: 'Next Up', value: 'Step 3 of 3 - Third' },
+    ],
   })
   writeRelay(dir, { tier: 'orientation', render: 'checkpoint', text })
   return text
@@ -422,24 +424,39 @@ describe('relay — the holds the 2026-10-17 A/B made, replayed — D19 (facts-e
     const dir = await paused()
     const card = printed(dir)
     expect(held(relayCheck(dir, stop(dir, { last: `${card}${card}` })))).toBeNull()
-    expect(held(relayCheck(dir, stop(dir, { last: `${card}${card.replace('**Verdict**: ', '**Verdict**: ✗ ')}` })))).not.toBeNull()
+    expect(held(relayCheck(dir, stop(dir, { last: `${card}${card.replace('| **Verdict** | ', '| **Verdict** | ✗ ')}` })))).not.toBeNull()
   })
 
-  it('lets a boundary relayed whole with its Stop part through, and holds one that dropped it', async () => {
+  it("holds a card whose Verdict row changed, and lets through one whose table was respaced, read as the fact — D111 (state-table)", async () => {
+    const dir = await paused()
+    const card = printed(dir)
+    const verdict = /^\| \*\*Verdict\*\* \| (.*) \|$/m.exec(card)
+    expect(verdict).not.toBeNull()
+    const laundered = card.replace(verdict?.[0] ?? '', '| **Verdict** | ✗ Not standing (done-when drifted) |')
+    expect(held(relayCheck(dir, stop(dir, { last: laundered })))).not.toBeNull()
+    writeFileSync(turnPath(dir), '5\n')
+    printed(dir, ['--full'])
+    const respaced = card.replace(verdict?.[0] ?? '', `|**Verdict**|${verdict?.[1] ?? ''}|`)
+    expect(held(relayCheck(dir, stop(dir, { last: respaced })))).toBeNull()
+  })
+
+  it('lets a boundary relayed whole with its Stop row through, and holds one that dropped it', async () => {
     const dir = await paused()
     const text = ending({
       lead: transition({ label: 'Checkpoint', fact: 'Step 3 complete', detail: ['b4c5d6e7f'] }),
-      verdict: '**Verdict**: ● Plumb',
-      stop: transition({ label: 'Stop', fact: 'Range 2 of 2 landed - review the parser', detail: ['details: [intent.md:16](x/intent.md#L16)'] }),
-      pointer: '**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish',
+      state: [
+        { label: 'Verdict', value: '● Plumb' },
+        { label: 'Stop', value: 'Range 2 of 2 landed - review the parser (details: [intent.md:16](x/intent.md#L16))' },
+        { label: 'Next Up', value: 'Nothing planned - /plumbbob:step or /plumbbob:finish' },
+      ],
     })
     writeRelay(dir, { tier: 'orientation', render: 'checkpoint', text })
     const path = transcript(dir, ['Landing it now.'])
     expect(held(relayCheck(dir, stop(dir, { last: text, transcript: path })))).toBeNull()
     writeFileSync(turnPath(dir), '5\n')
     writeRelay(dir, { tier: 'orientation', render: 'checkpoint', text })
-    const dropped = text.replace(/\*\*Stop\*\*:.*\n\n/, '')
-    expect(dropped).not.toContain('**Stop**')
+    const dropped = text.replace(/\| Stop \|.*\n/, '')
+    expect(dropped).not.toContain('| Stop |')
     expect(held(relayCheck(dir, stop(dir, { last: dropped, transcript: path })))).not.toBeNull()
   })
 
@@ -461,15 +478,11 @@ describe('relay — the holds the 2026-10-17 A/B made, replayed — D19 (facts-e
   })
 })
 
-// A stop card as `handoff --stop` prints it, whole: the Stop lead, the range's
-// review, the Harvested part, the line that says approving locks in the
-// leans, and the moves that settle it.
+// A stop card as `handoff --stop` prints it, whole: the range's review, the
+// Harvested part's lean table, the line that says approving locks in the
+// leans, the moves that settle it, the state table, and the foot.
 const STOP_CARD = [
-  '**Stop**: Range 2 of 2 landed - review the parser (details: [intent.md:16](x/intent.md#L16))',
-  '',
-  '**Summary**: The parser reads the plan. (details: [detail.md](.plumbbob/detail.md))',
-  '',
-  '1. Step 2 parses the section.',
+  '**Summary**: The parser reads the plan.',
   '',
   '**Readout**:',
   '',
@@ -480,15 +493,15 @@ const STOP_CARD = [
   'done-when    met',
   'seam         held: 2 of 2 steps, no strays',
   'diff         +2 -0 across 2 files',
+  '             - src/b.ts +1 -0',
+  '             - src/c.ts +1 -0',
   '```',
-  '',
-  '**Verdict**: ● Plumb',
   '',
   '**Harvested**: 1 of 1 parked idea open',
   '',
-  '- P1 · one idea → lean: tangent, the card renders it',
-  '',
-  '**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish',
+  '| Park | What it is | Why it matters | Lean |',
+  '| --- | --- | --- | --- |',
+  '| P1 · card renders | one idea | the dashboard prints it raw | tangent: the card renders it |',
   '',
   '**Your Call**:',
   '',
@@ -497,7 +510,14 @@ const STOP_CARD = [
   '- `looks good` → I record the review and every lean as proposed, folding a blocker into the plan; back to the boundary',
   '- `/plumbbob:finish` → I record them the same way, then write the report and close the build',
   '',
+  '| **Verdict** | ● Plumb |',
+  '| --- | --- |',
+  '| Stop | Range 2 of 2 landed - review the parser (details: [intent.md:16](x/intent.md#L16)) |',
+  '| Next Up | Nothing planned - /plumbbob:step or /plumbbob:finish |',
+  '',
   '**Recommendation**: Approve it. Both steps held their seams.',
+  '',
+  '[more details](.plumbbob/detail.md)',
   '',
   '',
 ].join('\n')
@@ -507,9 +527,11 @@ describe('relay — a run owes its stop card — D103 (stop-latched)', () => {
     const dir = await paused()
     const text = ending({
       lead: transition({ label: 'Checkpoint', fact: 'Step 3 complete', detail: ['b4c5d6e7f'] }),
-      verdict: '**Verdict**: ● Plumb',
-      stop: transition({ label: 'Stop', fact: 'Range 2 of 2 landed - review the parser', detail: ['details: [intent.md:16](x/intent.md#L16)'] }),
-      pointer: '**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish',
+      state: [
+        { label: 'Verdict', value: '● Plumb' },
+        { label: 'Stop', value: 'Range 2 of 2 landed - review the parser (details: [intent.md:16](x/intent.md#L16))' },
+        { label: 'Next Up', value: 'Nothing planned - /plumbbob:step or /plumbbob:finish' },
+      ],
     })
     writeRelay(dir, { tier: 'orientation', render: 'checkpoint', owes: { range: 2, count: 2, step: 3 }, text })
     expect(held(relayCheck(dir, stop(dir, { last: text })))).toBe(
@@ -531,7 +553,7 @@ describe('relay — a run owes its stop card — D103 (stop-latched)', () => {
   it('holds a stop card that dropped a part, naming `plumbbob handoff --stop --full`', async () => {
     const dir = await paused()
     writeRelay(dir, { tier: 'decision', render: 'stop', command: 'plumbbob handoff --stop --full', text: STOP_CARD })
-    const dropped = STOP_CARD.replace(/\*\*Harvested\*\*:[\s\S]*?\n\n- P1 [^\n]*\n\n/, '')
+    const dropped = STOP_CARD.replace(/\*\*Harvested\*\*:[\s\S]*?\n\n\| Park [\s\S]*?\n\n/, '')
     expect(dropped).not.toContain('**Harvested**')
     expect(held(relayCheck(dir, stop(dir, { last: dropped })))).toBe(
       'plumbbob: the turn did not close on the stop card it printed. ' +

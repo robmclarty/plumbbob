@@ -986,10 +986,11 @@ describe('the build order', () => {
     expect(remainingOrder(steps, [3, 2], 3)).toEqual([])
   })
 
-  it('buildOrderPhrase writes a labeled `order:` field, capping the sequence and folding the rest to a count — D108 (order-label)', () => {
-    expect(buildOrderPhrase([7, 8, 5, 10, 6, 9, 11], 5)).toBe('order: 7, 8, 5, 10, 6 (and 2 more)')
-    expect(buildOrderPhrase([7, 8], 5)).toBe('order: 7, 8')
-    expect(buildOrderPhrase([7, 8, 5, 10, 6, 9, 11])).toBe('order: 7, 8, 5, 10, 6, 9, 11')
+  it('buildOrderPhrase writes the sequence the Order row shows, capping it and folding the rest to a count — D111 (state-table)', () => {
+    // The label is the table row's now, so the phrase is the sequence alone.
+    expect(buildOrderPhrase([7, 8, 5, 10, 6, 9, 11], 5)).toBe('7, 8, 5, 10, 6 (and 2 more)')
+    expect(buildOrderPhrase([7, 8], 5)).toBe('7, 8')
+    expect(buildOrderPhrase([7, 8, 5, 10, 6, 9, 11])).toBe('7, 8, 5, 10, 6, 9, 11')
     expect(buildOrderPhrase([])).toBe('')
   })
 

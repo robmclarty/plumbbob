@@ -41,8 +41,8 @@ this skill verifies it the same way: **it reads the diff, not the author**
    - the **Constraints**: are any violated?
    - any **`after`-agent findings** from step 2: advisory, weigh them, don't defer to them.
    A mismatch surfaces in exactly two places: as the failing word in its recap row, and
-   as one highlight with its full story in a detail section, never as a freeform
-   paragraph. When you cite a Decision or Constraint, carry its slug from `intent.md`
+   as a numbered section of the detail file with its full story, which the row's `→`
+   line points at, never as a freeform paragraph. When you cite a Decision or Constraint, carry its slug from `intent.md`
    (`C1 (no-new-deps)`, never a bare `C1`) so each finding reads on its own. You are
    reviewing, not building; do not fix anything.
 4. **Validate.** Decide, yes or no, whether the step's done-when is met. That verdict and
@@ -101,14 +101,16 @@ this skill verifies it the same way: **it reads the diff, not the author**
    fence's 80 columns (13 of label, 67 of value); two or more items break onto indented
    continuation lines opening with `-`, and a red row's evidence onto an indented `→` line.
 
-   The `## Summary` lead and the `## <n>` section titles are the turn's opening block:
-   handoff prints the lead behind the `**Summary**:` label, appends the `(details: …)`
-   bracket, and renders the titles as the numbered highlights, so you type neither the path
-   nor the list. Five highlights at most, each one move in plain English, drawn from the
-   self-review. The numbers are handles: "expand 2" opens `## 2`, so every highlight has a
-   section behind it. A judgment or a flag (a stray the seam row will name, a decision the
-   diff bent, a doubt about the done-when) is one of those highlights, never a paragraph of
-   its own. The recommendation is the last section: the move you would take as its own
+   The `## Summary` lead opens the card: handoff prints it behind the `**Summary**:` label.
+   The `## <n>` sections stay in the detail file, where `expand 2` opens `## 2` and the
+   build log's record keeps them; the card prints none of them and closes instead on a
+   `[more details](…)` link to the file, which handoff writes, so you type no path. Five
+   sections at most, each titled with one move in plain English, drawn from the
+   self-review. A judgment or a flag (a stray the seam row will name, a decision the diff
+   bent, a doubt about the done-when) is one of those sections, and the card carries it
+   where it bears on the call: a bent row's `→` line points at it, and your recommendation
+   names it when it changes the move. It is never a paragraph of its own. The
+   recommendation is the last section: the move you would take as its own
    sentence, closed by a period, then the reason as a capitalized sentence or two. The lead
    and the recommendation are flowing prose and handoff unwraps both to the renderer's
    width, so never hard-wrap them; handoff also prepends the bold `**Recommendation**:`
@@ -123,13 +125,14 @@ this skill verifies it the same way: **it reads the diff, not the author**
    turn. The number is what lets a diff built outside `/plumbbob:build` reach its pause:
    nothing is in flight for that diff, and a bare `handoff` would read the moment as a
    boundary and render no Your Call block. Never nest it inside a fence of
-   your own; it carries fences of its own and they cannot nest. It prints the Now line
-   naming the step you reviewed, the Summary and its highlights, the Readout fence (its
-   measured `check`, `seam`, `diff`, and `spent` rows folded with your three), a `diff`
-   fence when the change is 20 lines or fewer, the Verdict folded worst-of from the same
-   rows, Next Up, Your Call, and your recommendation last. Run it once: a second run at an
-   unchanged pause prints the one-line reminder instead of the card, so if that line comes
-   back where the card belongs (you ran handoff earlier in this turn), run
+   your own; it carries fences of its own and they cannot nest. It prints the Summary, the
+   Readout fence (its measured `check`, `seam`, `diff`, and `spent` rows folded with your
+   three, the changed files listed beneath `diff`), a `diff` fence when the change is 20
+   lines or fewer, Your Call, the state table (the Verdict folded worst-of from the same
+   rows, the Now row naming the step you reviewed, Next Up, and the rows beneath it), your
+   recommendation, and the `more details` link last. Run it once: a second run at the same
+   pause prints the one-line reminder instead of the card, so if that line comes back
+   where the card belongs (you ran handoff earlier in this turn), run
    `plumbbob handoff <n> --full` and paste that. At the pause the check row reads green,
    since a red one stopped you back at step 1. The gate verdict's one home is that row:
    no standalone verdict line exists, and you never restate the verdict in prose. A
@@ -140,32 +143,34 @@ this skill verifies it the same way: **it reads the diff, not the author**
    one, the write-versus-relay line of
    [D78 (em-dash-ban)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d78).
 
-   *Then read the reply as an ask or a direction.* A message that **asks** ("expand 2",
-   "what does that mean?", "why did the seam row flag that?") is an expand: answer it from
-   the detail file, from `git diff`, or from the build-log's `## Log` for an older step,
-   never from recall, then run `plumbbob handoff <n>` and paste its output beneath your
-   answer, whole and verbatim. The turn is your answer, then that output, and nothing after
-   it. The pause renders its card once
-   ([D87 (pause-once)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d87)):
-   while nothing about it has changed, handoff prints one line,
-   `**Next Up**: Back to Step <N> of <M> - <title>`, in place of the card the human already
-   read, so your answer stays on screen. The CLI picks the form, never you: paste whichever
-   one it prints, and never retype the card or reach for `--full` to put it beneath an
-   answer.
+   *Then answer the reply in your own words.* The card shows once
+   ([D110 (reply-after-the-card)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d110)):
+   every later turn at this pause is your reply, closed by one line. A message that
+   **asks** ("expand 2", "what does that mean?", "why did the seam row flag that?") is an
+   expand: answer it from the detail file, from `git diff`, or from the build-log's
+   `## Log` for an older step, never from recall. A message that **directs** is needs-work:
+   make the change, run the check, and say what moved and what the check found; when the
+   change moves what the card said, write the detail file again so the record matches what
+   lands. Nothing lands until the human says `looks good`. Either way, then run
+   `plumbbob handoff <n>` and paste its output beneath your reply, whole and verbatim: at a
+   pause whose card has shown it prints one line,
+   `**Next Up**: Back to Step <N> of <M> - <title>`, whatever changed since, so your reply
+   stays on screen. The turn is your reply, then that line, and nothing after it. The CLI
+   picks the form, never you: paste whichever one it prints, and never retype the card.
 
-   Two moments bring the whole card back, and in both you run `plumbbob handoff <n> --full`
-   and paste its output whole, with nothing written around it: the human asks to see the
-   pause (`show the pause`, or any wording of it), or the card is not in this conversation
-   (a fresh session, or one after `/clear`, that finds the step still at its pause). A
-   message that **directs** is needs-work: take it as what to change, and nothing lands
-   until the human says `looks good`.
+   The card comes back one way: the human asks to see it (`show the pause`, or any wording
+   of it). Then run `plumbbob handoff <n> --full` and paste its output whole, with nothing
+   written around it. Never run `--full` to read the card for yourself, after a compaction
+   or in a fresh session; what it prints is the turn's ending, and the relay check holds a
+   turn that does not close on it. Read the detail file and `plumbbob status` instead.
 
    - **Reconcile a drifted subject here, in the open.** The planned title *is* the
      checkpoint subject ([D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68)). If the diff drifted from it (the
      step landed something the title no longer describes), the body pass may propose a
-     corrected subject, but it **presents** it at this pause for explicit approval: one
-     highlight reading `planned title → proposed subject`, part of what the human OKs.
-     That highlight is a `## <n>` section title in the detail file like any other.
+     corrected subject, but it **presents** it at this pause for explicit approval, in
+     the recommendation the card shows (`Approve it, landing it as <proposed subject>.`),
+     so it is part of what the human OKs, with the reasoning in a `## <n>` section of the
+     detail file titled `planned title → proposed subject`.
      This is the exception, not the default: with **nothing presented**, the deterministic
      title-derived subject lands untouched. A silent `-m` swap is exactly the
      agent-authored subject [D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68) refuses, so a reconcile is

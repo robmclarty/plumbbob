@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { advisory, blocks, ending, notice, transition } from '../notice.ts'
+import { advisory, blocks, cell, ending, notice, stateTable, transition } from '../notice.ts'
 
 describe('notice', () => {
   it('renders the bare shape: one prefix colon, the fact, no terminal period', () => {
@@ -142,54 +142,60 @@ describe('advisory — D43 (verb-prints-its-ending)', () => {
 })
 
 describe('ending — D43 (verb-prints-its-ending)', () => {
-  it('stacks the parts in one fixed order, blank-line separated, and closes on a blank line', () => {
+  it('stacks the parts in one fixed order, blank-line separated, the state table last, and closes on a blank line', () => {
     expect(
       ending({
         lead: transition({ label: 'Checkpoint', fact: 'Step 16 complete', detail: ['f2b83e17c'] }),
-        verdict: '**Verdict**: ◐ A hair off (seam strayed)',
         advisories: [advisory({ fact: 'staged paths reach outside Step 16\'s seam', detail: ['test/a.ts'] })],
-        pointer: '**Next Up**: Step 17 of 18 - feat(ending): every transition prints its whole ending',
+        state: [
+          { label: 'Verdict', value: '◐ A hair off (seam strayed)' },
+          { label: 'Next Up', value: 'Step 17 of 18 - feat(ending): every transition prints its whole ending' },
+        ],
       }),
     ).toBe(
       [
         '**Checkpoint**: Step 16 complete (f2b83e17c)',
         '',
-        '**Verdict**: ◐ A hair off (seam strayed)',
-        '',
         "Staged paths reach outside Step 16's seam ⚠ (test/a.ts)",
         '',
-        '**Next Up**: Step 17 of 18 - feat(ending): every transition prints its whole ending',
+        '| **Verdict** | ◐ A hair off (seam strayed) |',
+        '| --- | --- |',
+        '| Next Up | Step 17 of 18 - feat(ending): every transition prints its whole ending |',
         '',
         '',
       ].join('\n'),
     )
   })
 
-  it('stands the Stop part after the advisories and before the pointer', () => {
-    const stop = transition({ label: 'Stop', fact: 'Range 3 of 5 landed - review the card', detail: ['details: [intent.md:63](x/intent.md#L63)'] })
+  it('closes a driver ending on its one labeled pointer, with no table', () => {
     expect(
       ending({
-        lead: transition({ label: 'Checkpoint', fact: 'Step 9 complete', detail: ['c7d8e9f0a'] }),
-        verdict: '**Verdict**: ● Plumb',
-        advisories: [advisory({ fact: 'the plan rides the commit message' })],
-        stop,
-        pointer: '**Next Up**: Step 10 of 12 - feat(docs): name the label',
+        lead: transition({ label: 'Parked', fact: 'a tangent' }),
+        pointer: '**Next Up**: Back to Step 2 of 3 - Second',
       }),
+    ).toBe('**Parked**: a tangent\n\n**Next Up**: Back to Step 2 of 3 - Second\n\n')
+  })
+
+  it('renders the state table with its first row as the header, bold, and every pipe in a cell escaped — D111 (state-table)', () => {
+    expect(
+      stateTable([
+        { label: 'Verdict', value: '● Plumb' },
+        { label: 'Stop', value: 'Range 3 of 5 landed - review the card' },
+        { label: 'Next Up', value: 'Step 10 of 12 - feat(x): a | b' },
+      ]),
     ).toBe(
       [
-        '**Checkpoint**: Step 9 complete (c7d8e9f0a)',
-        '',
-        '**Verdict**: ● Plumb',
-        '',
-        'The plan rides the commit message ⚠',
-        '',
-        '**Stop**: Range 3 of 5 landed - review the card (details: [intent.md:63](x/intent.md#L63))',
-        '',
-        '**Next Up**: Step 10 of 12 - feat(docs): name the label',
-        '',
-        '',
+        '| **Verdict** | ● Plumb |',
+        '| --- | --- |',
+        '| Stop | Range 3 of 5 landed - review the card |',
+        '| Next Up | Step 10 of 12 - feat(x): a \\| b |',
       ].join('\n'),
     )
+    expect(stateTable([{ label: 'Next Up', value: 'Nothing planned - /plumbbob:plan' }])).toBe(
+      '| **Next Up** | Nothing planned - /plumbbob:plan |\n| --- | --- |',
+    )
+    expect(stateTable([])).toBe('')
+    expect(cell('two\n  lines | one cell ')).toBe('two lines \\| one cell')
   })
 
   it('vanishes the parts a transition does not have rather than leaving a gap', () => {

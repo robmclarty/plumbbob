@@ -111,7 +111,7 @@ ends there: relay the checkpoint's block whole and end the turn. A run whose lan
 that step completed ends on the stop card, below, even when the paused step was the range's
 last. Otherwise carry on through what is left, below. A halt the human approves with
 `looks good` lands its step the same way, and when that landing completes the run's range
-(its checkpoint block carries the `**Stop**:` part for it), the run ends on the stop card
+(its checkpoint block's table carries the `Stop` row for it), the run ends on the stop card
 too.
 
 **A range that lands its steps.** Walk it exactly as the build skill walks a typed range,
@@ -122,7 +122,7 @@ walk before it, since the checkpoint would refuse it. The halt list is the build
 red check, a self-review mismatch, a bound agent's `blocked` or `drift`, or a new decision
 ends at that step's pause card. `plumbbob build` names the top step as the top of the range
 you granted when it enters it. Once that step lands, its checkpoint prints the boundary
-with the Stop part (`**Stop**: Range 3 of 5 landed - <its stop>`); relay none of it, and end
+with the Stop row (`| Stop | Range 3 of 5 landed - <its stop> |`); relay none of it, and end
 the run on the stop card, below, in the same turn.
 
 **A bare range.** `grant: none, as a bare range builds to its pause`: build the range's one
@@ -161,6 +161,8 @@ constraints  all honored
 ## Harvest
 
 - P<handle> → <blocker, tangent, or pivot>: <the reason, one clause>
+  - title: <two to five words naming the park>
+  - why: <why it matters, one clause>
 
 ## Recommendation
 
@@ -170,22 +172,28 @@ constraints  all honored
 The header names the range by its item number, and that is how `checkpoint` and
 `plumbbob harvest` tell the file from a step's. The three rows judge the whole range: every
 step's done-when, the decisions any step exercised, and the constraints. The Summary and the
-highlights are the range's, not its last step's, and you draw them from the range's
+numbered sections are the range's, not its last step's, and you draw them from the range's
 checkpoint bodies (`git log` over its commits) and their entries in the build-log's `## Log`,
 never from recall, since a long run can compact its context partway through and lose its
-early steps. A step that landed a hair off comes first among the highlights; five at most.
+early steps. A step that landed a hair off comes first among the sections; five at most. The
+card prints the Summary and links the rest
+([D113 (short-card)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d113)).
 
-The `## Harvest` section carries one line for every open park in the build-log's
+The `## Harvest` section carries one proposal for every open park in the build-log's
 `## Park list`. A park's handle is `P` and its place in that list, counting the harvested
-lines too, which is the count the note sizes as `parked 3 of 8 open`: the third line ever
-parked is `P3` whether or not the two above it are flipped, and the card, the detail file,
-and the human's reply all name it `P3`
+lines too, which is the count the table's Parked row sizes as `3 of 8 open`: the third line
+ever parked is `P3` whether or not the two above it are flipped, and the card, the detail
+file, and the human's reply all name it `P3`
 ([D105 (park-handles)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d105)).
 Propose one class per park by the harvest skill's rules, `tangent` for anything uncertain,
-with the reason in one clause; the card prints it as the park's lean
-(`→ lean: tangent, <the reason>`), so write the class and the reason alone and leave the
-punctuation to handoff. A park you leave out reads `no lean proposed` on the card and stays
-open. The section vanishes when no park is open, and so does the card's Harvested part
+with the reason in one clause, and beneath it two indented lines: a title of two to five
+words that names the park, and why it matters in one clause. The card prints each park as a
+row of the lean table: its handle and your title, the park's text as the list holds it, your
+why, and the lean (`tangent: <the reason>`)
+([D112 (lean-table)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d112)),
+so write the class, the reason, the title, and the why alone and leave the table to handoff.
+A park you leave out reads `no lean proposed` on the card and stays open, and a missing why
+reads `not given`. The section vanishes when no park is open, and so does the card's Harvested part
 ([D100 (stop-card)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d100)).
 The recommendation speaks to the plan's stop, the header's `stop:` line, and to the
 proposals: the move you would take on both, then why.
@@ -210,29 +218,32 @@ and the Your Call block names the replies. Read the human's message as one of th
   own, never into the range this card reviews: that range has landed, its call is the one
   being made, and the step would reopen it. Relay the record's ending whole and end the
   turn. It commits nothing; the record rides the next step's checkpoint.
-- **A change** (`make P7 a tangent`, or a change to the review) is direction. Rewrite the
-  detail file's line or section, run `plumbbob handoff --stop`, paste the whole card it
-  prints, and end the turn. Nothing is recorded until `looks good`.
+- **A change** (`make P7 a tangent`, or a change to the review) is direction, and the turn
+  that makes it is your reply
+  ([D110 (reply-after-the-card)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d110)).
+  Rewrite the detail file's line or section, say in your own words what moved, then run
+  `plumbbob handoff --stop` and paste the one-line reminder it prints beneath your reply.
+  The card does not come back for a change; nothing is recorded until `looks good`, which
+  records every lean as the detail file then reads.
 - **A question**, or `expand 2`, is answered from the detail file, the range's commits, or
-  the Log, never from recall; then run `plumbbob handoff --stop` and paste what it prints
-  beneath your answer, which is the one-line reminder while the stop is unchanged.
-  `show the stop`, or a session without the card in front of it, takes
-  `plumbbob handoff --stop --full`.
+  the Log, never from recall; then run `plumbbob handoff --stop` and paste the one-line
+  reminder it prints beneath your answer. Only `show the stop`, or any wording of it, takes
+  `plumbbob handoff --stop --full`, and never to read the card for yourself.
 - **`/plumbbob:run`** typed at the card confirms everything the way `looks good` does, and
   runs the next range. Record first: fold the blockers and run `plumbbob harvest`, then read
   `plumbbob status --run "<the same argument>"` again. When its grant line says
   `unlike the run`, the record re-cut the range the run would walk (a blocker added or moved a
   step in it), and the grant the hook minted before the record no longer covers it: relay
-  the record's ending whole and end the turn there, where its note names the re-cut run for
-  the human to type
+  the record's ending whole and end the turn there, where its Range row names the re-cut run
+  for the human to type
   ([D102 (settle-in-one-reply)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d102)).
   Otherwise relay the record's ending and walk the run from section 4.
 - **`/plumbbob:finish`** at the plan's last range is the finish skill's to settle: it
   records the card the way `looks good` would before it writes the report.
 
 `plumbbob harvest` refuses a proposal naming a handle the list lacks (`P9` with eight
-parked) and a class outside the three, and it refuses a detail file no card showed; fix what the refusal names, run
-`plumbbob handoff --stop` again, and end the turn on the card. One refusal takes another
+parked) and a class outside the three, and it refuses a range no card showed; fix what the
+refusal names, run `plumbbob handoff --stop` again, and end the turn on what it prints. One refusal takes another
 path: `step 13 joined it after it landed` means a blocker went into the range the card
 reviews. Move that step to a range still to come, or a bare range of its own, leave
 `.plumbbob/detail.md` as it is, fold nothing again, and run `plumbbob harvest` once more in

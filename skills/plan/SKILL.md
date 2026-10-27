@@ -163,8 +163,8 @@ The argument only seeds how you get there.
 
    **The card names the run, not the item.** The item's command is the range's
    definition: the form the parser reads, and the kind of stop it makes. The card names
-   `/plumbbob:run` beneath Next Up for the range holding the next step, with the steps it
-   will land beside it, and `/plumbbob:run 3` runs range 3 by its item number
+   `/plumbbob:run` in the Range row beneath Next Up for the range holding the next step,
+   with the steps it will land beside it, and `/plumbbob:run 3` runs range 3 by its item number
    ([D95 (run-verb)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d95)).
    A range grants nothing until the human types the run that names it, and then the turn
    hook mints the grant from the plan as it stands
@@ -205,8 +205,9 @@ The argument only seeds how you get there.
      its build ranges with it (each range's command and its stop, since a stop is where
      the human will be asked, and moving one is cheapest now), then give it the cold
      read (**§ The cold read**), write the result into `.plumbbob/detail.md`, and relay `plumbbob handoff --plan`'s block whole: the CLI
-     renders the your-call block with the moves that apply before anything is recorded and
-     prints your recommendation last (the decision tier of the
+     renders the your-call block with the moves that apply before anything is recorded,
+     the state table headed by Next Up, your recommendation, and a `more details` link to
+     the cold read (the decision tier of the
      [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)),
      so the moves are relayed, never hand-composed. *looks good* marks the plan decided, and
      its row names the move the human types next: `/plumbbob:run` for the range holding
@@ -224,9 +225,9 @@ The argument only seeds how you get there.
      commit predates the ledger and stays guidance-governed; it lands without a
      refusal.)
    - **The plan commit prints its own close.** `plumbbob checkpoint --plan` emits the
-     whole boundary ending: `**Plan**: committed (<sha>)`, any advisory, and the pointer at
-     the step the build starts on, with the run that lands its range named beneath it when
-     the plan declares ranges. Relay that block whole and run no second command; the
+     whole boundary ending: `**Plan**: committed (<sha>)`, any advisory, and the state
+     table headed by the pointer at the step the build starts on, its Range row naming the
+     run that lands that step's range when the plan declares ranges. Relay that block whole and run no second command; the
      plan-pause card above is the one place `handoff` is still called, because no verb has
      run yet there.
    - **Say what the commit publishes.** The close-out line names the tracked folder:
@@ -282,8 +283,8 @@ read checked and found sound. A plan with a hole gets `Sharpen <the one worst ho
 and why it matters; when the read found more than one, say how many sit behind `expand`
 and name `/plumbbob:refine` as the move that writes them up as Open questions, with their
 plain and lean sub-lines, for the human to settle. Three findings at most; the rest is
-refine's. `plumbbob handoff --plan` prints the label and your recommendation as the turn's
-last text, "expand 2" opens `## 2`, and `checkpoint --plan` records the read beneath the
+refine's. `plumbbob handoff --plan` prints the label and your recommendation beneath the
+state table, then the `more details` link to the file, "expand 2" opens `## 2`, and `checkpoint --plan` records the read beneath the
 plan's line in the build-log's `## Log`, the build's first entry. The cold read is the tip of refine: it makes the
 full attack discoverable at the moment it would pay, and lets a sound plan skip it. Refine
 is where the real adversary looks; this is an estimate, and it says so by staying short.

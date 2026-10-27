@@ -12,6 +12,7 @@ import { cleanupFixtures, runCli } from '../helpers/fixture-repo.ts'
 import { c2 } from '../evals/contracts/c2-red.eval.ts'
 import { c8 } from '../evals/contracts/c8-legible.eval.ts'
 import { c10 } from '../evals/contracts/c10-question.eval.ts'
+import { c12 } from '../evals/contracts/c12-feedback.eval.ts'
 import { C11_PARK, C11_RANGES, c11 } from '../evals/contracts/c11-run.eval.ts'
 import { THREE_STEPS, TWO_STEPS } from '../evals/contracts/contract.ts'
 import { armRun, readLedger, type EvalSession, type TurnResult } from '../evals/helpers/driver.ts'
@@ -806,8 +807,8 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
     expect(a.trailingLabels).toEqual(a.labels)
     expect(hasCheckRow(a)).toBe(true)
     expect(a.moves).toHaveLength(4)
-    expect(a.highlights).toHaveLength(1)
-    expect(a.endsOn).toBe('Recommendation')
+    expect(a.highlights).toEqual([]) // the highlights stay in the detail file (D113 (short-card))
+    expect(a.endsOn).toBe('Recommendation') // the `more details` link is the card's foot, part of the recommendation's
     expect(a.strays).toEqual([])
     expect(a.nestedFence).toBe(false)
     expect(endingRenders(a, 'decision')).toBe(true)
@@ -881,6 +882,48 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
     ])
   })
 
+  it('reads contract 12 end to end off the live renderer: a pause, then feedback acted on and answered — D110 (reply-after-the-card)', async () => {
+    // A stub session doing what the build skill and the pause nudge ask: turn 2
+    // makes the change, says so, and closes on the one line handoff prints,
+    // which stays the reminder although the work changed under the card.
+    const fixture = c12.makeFixture()
+    const { repo } = fixture
+    const turns = [
+      (): string => {
+        pauseAt(repo)
+        return `I'll build step 1.${runCli(repo, ['handoff']).stdout}`
+      },
+      (): string => {
+        writeFileSync(
+          join(repo, 'src', 'greet.js'),
+          ['const DEFAULT_NAME = \'world\'', '', 'function greet(name) {', '  return `Hello, ${name}!`', '}', '', 'module.exports = { greet, DEFAULT_NAME }', ''].join('\n'),
+        )
+        const reminder = runCli(repo, ['handoff']).stdout
+        expect(reminder).toBe('**Next Up**: Back to Step 1 of 2 - Create the greeting module\n\n')
+        return `Added DEFAULT_NAME, exported beside greet; the check is still green.\n\n${reminder}`
+      },
+    ]
+    let n = 0
+    const session: EvalSession = {
+      repo,
+      sweep: 'latched',
+      model: 'stub',
+      warmup: async () => {},
+      transcript: () => '',
+      close: async () => {},
+      turn: async (prompt) => {
+        const content = turns[n]?.() ?? ''
+        n += 1
+        return { prompt, content, finishReason: 'stop', costUsd: 0, inputTokens: 0, outputTokens: 0, durationMs: 1, sessionId: null }
+      },
+    }
+    const { deriveOutcome } = await import('../evals/run.ts')
+    const result = await c12.run(session, fixture)
+    expect(result.turns.map((t) => t.prompt)).toEqual(['/plumbbob:build 1', expect.stringContaining('DEFAULT_NAME')])
+    expect(result.checks.filter((c) => !c.pass)).toEqual([])
+    expect(deriveOutcome(result)).toBe('pass')
+  })
+
   it('reads a transition as a driver ending, which owes no Verdict', () => {
     const { stdout } = runCli(pausedFixture(), ['park', 'should farewell get the same shape? (tangent)'])
     const a = readAnatomy(stdout)
@@ -939,9 +982,7 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
     // row still printed a Plumb Verdict. The row is the gate verdict's one home,
     // so its absence is the probe, not a footnote.
     const noGate = [
-      '**Now**: Step 1 of 2 - First',
-      '',
-      '**Summary**: it built. (details: [detail.md](.plumbbob/detail.md))',
+      '**Summary**: it built.',
       '',
       '**Readout**:',
       '',
@@ -950,15 +991,18 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
       'spent        26s',
       '```',
       '',
-      '**Verdict**: ● Plumb',
-      '',
-      '**Next Up**: Step 2 of 2 - Second',
-      '',
       '**Your Call**:',
       '',
       '- `revert` → I wind the work back to the last checkpoint',
       '',
+      '| **Verdict** | ● Plumb |',
+      '| --- | --- |',
+      '| Now | Step 1 of 2 - First |',
+      '| Next Up | Step 2 of 2 - Second |',
+      '',
       '**Recommendation**: Approve it.',
+      '',
+      '[more details](.plumbbob/detail.md)',
       '',
     ].join('\n')
     const a = readAnatomy(noGate)
@@ -970,38 +1014,35 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
   })
 
   it('names what a partial or reordered ending is missing rather than just failing it', () => {
-    const short = ['**Summary**: it built.', '', '**Verdict**: ● Plumb', ''].join('\n')
-    expect(missingParts(readAnatomy(short), 'decision')).toEqual(['Now', 'Readout', 'Next Up', 'Your Call', 'Recommendation'])
-    expect(shapeDetail(readAnatomy(short), 'decision')).toBe('missing: Now, Readout, Next Up, Your Call, Recommendation')
+    const short = ['**Summary**: it built.', '', '| **Verdict** | ● Plumb |', '| --- | --- |', ''].join('\n')
+    expect(missingParts(readAnatomy(short), 'decision')).toEqual(['Readout', 'Your Call', 'Now', 'Next Up', 'Recommendation'])
+    expect(shapeDetail(readAnatomy(short), 'decision')).toBe('missing: Readout, Your Call, Now, Next Up, Recommendation')
 
-    const swapped = ['**Verdict**: ● Plumb', '', '**Next Up**: Step 2 of 2 - Second', ''].join('\n')
+    const swapped = ['| **Verdict** | ● Plumb |', '| --- | --- |', '| Next Up | Step 2 of 2 - Second |', ''].join('\n')
     expect(partsInOrder(readAnatomy(swapped), 'boundary')).toBe(true)
-    const backwards = ['**Next Up**: Step 2 of 2 - Second', '', '**Verdict**: ● Plumb', ''].join('\n')
+    const backwards = ['| **Next Up** | Step 2 of 2 - Second |', '| --- | --- |', '| Verdict | ● Plumb |', ''].join('\n')
     expect(partsInOrder(readAnatomy(backwards), 'boundary')).toBe(false)
     expect(shapeDetail(readAnatomy(backwards), 'boundary')).toBe('out of order: Next Up > Verdict')
   })
 
-  it('accepts the Stop part on a boundary between the Verdict and Next Up, and never owes it', () => {
-    const stop = '**Stop**: Range 3 of 5 landed - review the card (details: [intent.md:63](x/intent.md#L63))'
-    const pointer = '**Next Up**: Step 10 of 12 - Tenth (details: [intent.md:34](x/intent.md#L34))'
+  it('accepts the Stop row on a boundary between the Verdict and Next Up, and never owes it', () => {
+    const stop = '| Stop | Range 3 of 5 landed - review the card (details: [intent.md:63](x/intent.md#L63)) |'
+    const pointer = '| Next Up | Step 10 of 12 - Tenth (details: [intent.md:34](x/intent.md#L34)) |'
     const lead = '**Checkpoint**: Step 9 complete (c7d8e9f0a)'
-    const whole = readAnatomy([lead, '', '**Verdict**: ● Plumb', '', stop, '', pointer, ''].join('\n'))
+    const head = ['| **Verdict** | ● Plumb |', '| --- | --- |']
+    const whole = readAnatomy([lead, '', ...head, stop, pointer, ''].join('\n'))
     expect(whole.strays).toEqual([])
     expect(endingRenders(whole, 'boundary')).toBe(true)
     expect(transitionLabel(whole)).toBe('Checkpoint')
-    const late = readAnatomy([lead, '', '**Verdict**: ● Plumb', '', pointer, '', stop, ''].join('\n'))
+    const late = readAnatomy([lead, '', ...head, pointer, stop, ''].join('\n'))
     expect(shapeDetail(late, 'boundary')).toBe('out of order: Checkpoint > Verdict > Next Up > Stop')
-    expect(missingParts(readAnatomy([lead, '', '**Verdict**: ● Plumb', '', pointer, ''].join('\n')), 'boundary')).toEqual([])
+    expect(missingParts(readAnatomy([lead, '', ...head, pointer, ''].join('\n')), 'boundary')).toEqual([])
     expect(tierParts('boundary')).toEqual(['Verdict', 'Next Up'])
   })
 
-  it('reads a stop card whole, its Harvested part optional and its Stop lead owed — D100 (stop-card)', () => {
+  it('reads a stop card whole, its Harvested part optional and its Stop row owed — D100 (stop-card)', () => {
     const card = [
-      '**Stop**: Range 3 of 5 landed - review the card (details: [intent.md:63](x/intent.md#L63))',
-      '',
-      '**Summary**: The boundary says why the build stops. (details: [detail.md](.plumbbob/detail.md))',
-      '',
-      '1. Step 8 landed a hair off.',
+      '**Summary**: The boundary says why the build stops.',
       '',
       '**Readout**:',
       '',
@@ -1012,14 +1053,11 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
       'done-when    met',
       '```',
       '',
-      '**Verdict**: ● Plumb',
-      '',
       '**Harvested**: 1 of 8 parked ideas open',
       '',
-      '- P8 · a stop link prints raw → lean: tangent, cosmetic',
-      '',
-      '**Next Up**: Step 10 of 12 - Tenth (details: [intent.md:34](x/intent.md#L34))',
-      '  · range 4 of 5: /plumbbob:run (step 10 to its pause)',
+      '| Park | What it is | Why it matters | Lean |',
+      '| --- | --- | --- | --- |',
+      '| P8 · raw link | a stop link prints raw | the dashboard shows it | tangent: cosmetic |',
       '',
       '**Your Call**:',
       '',
@@ -1028,27 +1066,39 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
       '- `looks good` → I record the review and every lean as proposed, folding a blocker into the plan; back to the boundary',
       '- `/plumbbob:run` → I record them the same way, then run range 4 of 5 to its stop',
       '',
+      '| **Verdict** | ● Plumb |',
+      '| --- | --- |',
+      '| Stop | Range 3 of 5 landed - review the card (details: [intent.md:63](x/intent.md#L63)) |',
+      '| Next Up | Step 10 of 12 - Tenth (details: [intent.md:34](x/intent.md#L34)) |',
+      '| Range | 4 of 5: /plumbbob:run (step 10 to its pause) |',
+      '',
       '**Recommendation**: Approve it.',
+      '',
+      '[more details](.plumbbob/detail.md)',
       '',
     ].join('\n')
     const a = readAnatomy(card)
-    expect(a.labels).toEqual(['Stop', 'Summary', 'Readout', 'Verdict', 'Harvested', 'Next Up', 'Your Call', 'Recommendation'])
-    // The lock-in line beneath the Your Call label belongs to it (D106 (leans-harvested)),
+    expect(a.labels).toEqual(['Summary', 'Readout', 'Harvested', 'Your Call', 'Verdict', 'Stop', 'Next Up', 'Range', 'Recommendation'])
+    // The lean table's rows belong to the Harvested part, and the lock-in line
+    // beneath the Your Call label belongs to it (D106 (leans-harvested)),
     // while any other flush line there is still the stray it always was.
     expect(a.strays).toEqual([])
     expect(a.moves).toHaveLength(2)
     expect(readAnatomy(card.replace('**Your Call**:\n\n', '**Your Call**:\n\nOne more thing.\n\n')).strays).toEqual(['One more thing.'])
-    expect(readAnatomy(card.replace(/\n\nApproving locks in[^\n]*/, '').replace('**Verdict**: ● Plumb\n', '**Verdict**: ● Plumb\n\nApproving locks in each lean above.\n')).strays).toEqual([
-      'Approving locks in each lean above.',
-    ])
+    expect(
+      readAnatomy(card.replace(/\n\nApproving locks in[^\n]*/, '').replace('**Recommendation**: Approve it.\n', '**Recommendation**: Approve it.\n\nApproving locks in each lean above.\n'))
+        .strays,
+    ).toEqual(['Approving locks in each lean above.'])
     expect(a.rows.get('steps')).toBe('4 of 4 landed')
+    expect(a.endsOn).toBe('Recommendation')
     expect(endingRenders(a, 'stop')).toBe(true)
     expect(anatomyChecks(card, 'stop').every((c) => c.pass)).toBe(true)
-    // The card with no park open is still whole; one without its lead is not.
-    const empty = card.replace(/\*\*Harvested\*\*:[\s\S]*?cosmetic\n\n/, '')
+    // The card with no park open is still whole; one without its Stop row is not.
+    const empty = card.replace(/\*\*Harvested\*\*:[\s\S]*?cosmetic \|\n\n/, '')
+    expect(empty).not.toContain('**Harvested**')
     expect(endingRenders(readAnatomy(empty), 'stop')).toBe(true)
-    expect(tierParts('stop')).toEqual(['Stop', 'Summary', 'Readout', 'Verdict', 'Next Up', 'Your Call', 'Recommendation'])
-    expect(missingParts(readAnatomy(card.replace(/^\*\*Stop\*\*:.*\n\n/, '')), 'stop')).toEqual(['Stop'])
+    expect(tierParts('stop')).toEqual(['Summary', 'Readout', 'Your Call', 'Verdict', 'Stop', 'Next Up', 'Recommendation'])
+    expect(missingParts(readAnatomy(card.replace(/^\| Stop \|.*\n/m, '')), 'stop')).toEqual(['Stop'])
     // The stop's reminder points back at the range whose card is waiting.
     const reminder = readAnatomy("It reads the plan first.\n\n**Next Up**: Back to Range 3 of 5's stop - review the card\n")
     expect(isBackPointer(reminder)).toBe(true)
@@ -1059,12 +1109,12 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
     const boundary = [
       '**Checkpoint**: Step 16 complete (f2b83e17c)',
       '',
-      '**Verdict**: ◐ A hair off (seam strayed)',
-      '',
       'Staged paths reach outside Step 16’s seam ⚠ (test/integration/spike.test.ts)',
       '  → the checkpoint captures them, so revise the plan with /plumbbob:step',
       '',
-      '**Next Up**: Step 17 of 18 - Third (details: [intent.md:9](x/intent.md#L9))',
+      '| **Verdict** | ◐ A hair off (seam strayed) |',
+      '| --- | --- |',
+      '| Next Up | Step 17 of 18 - Third (details: [intent.md:9](x/intent.md#L9)) |',
       '',
     ].join('\n')
     const a = readAnatomy(boundary)
@@ -1094,28 +1144,36 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
   })
 })
 
-describe('turn-anatomy readers — the note beneath Next Up', () => {
-  it('keeps an indented continuation inside the Next Up part, where a flush one is a stray', () => {
-    // The indent is load-bearing: the reader files an unindented line as a
-    // stray, which fails the "nothing after the relay" probe on every tier.
-    const pointer = '**Next Up**: Step 7 of 10 - Seventh (details: [intent.md:22](x/intent.md#L22))'
-    const note = '· order: 7, 8, 5, 10, 6 (and 2 more) · parked 2 of 7 open'
-    const indented = readAnatomy(['**Verdict**: ● Plumb', '', pointer, `  ${note}`, ''].join('\n'))
-    expect(indented.strays).toEqual([])
-    expect(indented.endsOn).toBe('Next Up')
-    expect(endingRenders(indented, 'boundary')).toBe(true)
-    expect(readAnatomy(['**Verdict**: ● Plumb', '', pointer, note, ''].join('\n')).strays).toEqual([note])
+describe('turn-anatomy readers — the rows beneath Next Up', () => {
+  it('reads the Range, Order, and Parked rows as parts of the table that no tier owes — D111 (state-table)', () => {
+    const table = [
+      '| **Verdict** | ● Plumb |',
+      '| --- | --- |',
+      '| Next Up | Step 7 of 10 - Seventh (details: [intent.md:22](x/intent.md#L22)) |',
+      '| Range | 3 of 5: /plumbbob:run (steps 7-9) |',
+      '| Order | 7, 8, 5, 10, 6 (and 2 more) |',
+      '| Parked | 2 of 7 open |',
+      '',
+    ].join('\n')
+    const a = readAnatomy(table)
+    expect(a.strays).toEqual([])
+    expect(a.labels).toEqual(['Verdict', 'Next Up', 'Range', 'Order', 'Parked'])
+    expect(a.pointer).toBe('Step 7 of 10 - Seventh (details: [intent.md:22](x/intent.md#L22))')
+    expect(a.endsOn).toBe('Parked')
+    expect(endingRenders(a, 'boundary')).toBe(true)
+    // A flush line beneath the table is still a stray.
+    expect(readAnatomy(`${table}\nOne more thing.\n`).strays).toEqual(['One more thing.'])
   })
 
-  it('reads the shipped note the same way, park count and all', () => {
+  it('reads the shipped rows the same way, park count and all', () => {
     const { repo } = makeEvalFixture({ steps: TWO_STEPS, gate: 'green' })
     runCli(repo, ['park', 'should farewell get the same shape? (tangent)'])
     const { stdout } = runCli(repo, ['handoff'])
-    expect(stdout).toContain('\n  · parked 1 of 1 open\n')
+    expect(stdout).toContain('\n| Parked | 1 of 1 open |\n')
     const a = readAnatomy(stdout)
     expect(a.strays).toEqual([])
-    expect(a.labels).toEqual(['Next Up'])
-    expect(a.endsOn).toBe('Next Up')
+    expect(a.labels).toEqual(['Next Up', 'Parked'])
+    expect(a.endsOn).toBe('Parked')
   })
 })
 
@@ -1215,7 +1273,7 @@ describe('c11 run outcomes (stub session, live renderer)', () => {
     const { outcome, failed } = await runWith(landRange)
     expect(failed).toEqual([
       'the stop card printed for range 1',
-      'the card printed from range 1’s detail, unchanged since',
+      'the card printed from range 1’s detail, still on disk',
       'the detail proposes a lean for P1',
       'the last ending the CLI printed was the stop card',
       'the turn carried P1’s lean',

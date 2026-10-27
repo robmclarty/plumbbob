@@ -2,7 +2,7 @@
 name: harvest
 description: "Triage the park list at a step boundary: propose one class (blocker/tangent/pivot) for every open parked item at once, and once the human settles them in one reply, fold a confirmed blocker into intent and record the rest with plumbbob harvest. A run's stop card carries its own harvest."
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob order:*), Bash(plumbbob harvest:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob order:*), Bash(plumbbob handoff:*), Bash(plumbbob harvest:*)
 ---
 
 # PlumbBob: harvest the park list
@@ -54,24 +54,37 @@ the call on each one theirs. The detail file you write first is the proposal; re
 **only after** that reply confirms them:
 
 - Write the proposals into `.plumbbob/detail.md` first, under a `# Detail · Harvest`
-  header, one line per open item in a `## Harvest` section:
-  `- P6 → tangent: <the reason, one clause>`, the class written `blocker`, `tangent`,
-  or `pivot` (for a pivot signal). A park's handle is `P` and its place in the
-  Park list, counting the harvested lines too (the count the note sizes as
-  `parked 3 of 8 open`), and it is the one name the detail file, the turn, and the
-  human's reply all use
+  header, one proposal per open item in a `## Harvest` section, with two lines indented
+  beneath it:
+
+  ```markdown
+  - P6 → tangent: <the reason, one clause>
+    - title: <two to five words naming the park>
+    - why: <why it matters, one clause>
+  ```
+
+  The class is written `blocker`, `tangent`, or `pivot` (for a pivot signal). A park's
+  handle is `P` and its place in the Park list, counting the harvested lines too (the
+  count the state table's Parked row sizes as `3 of 8 open`), and it is the one name the
+  detail file, the turn, and the human's reply all use
   ([D105 (park-handles)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d105)).
-  Then list the same proposals in the turn, each with its handle and the park's text, and
-  end the turn there.
-- A reply that changes a proposal (`make P7 a tangent`) is the human's call: rewrite
-  that line, list the proposals again, and end the turn. A reply that confirms them
-  (`looks good`) is what lets you write.
+  Then run `plumbbob handoff --harvest` and paste its output whole, verbatim, and end the
+  turn there: it prints the lean table, one row per open park with its handle and your
+  title, the park's text as the list holds it, your why, and your lean, then the moves that
+  settle it
+  ([D112 (lean-table)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d112)).
+  Write nothing before or after it; the park's text is the CLI's to quote, never yours.
+- A reply that changes a proposal (`make P7 a tangent`) is the human's call and your
+  reply: rewrite that line, say in your own words which lean moved, and end the turn
+  without printing the table again; the human who wants to see it asks, and
+  `plumbbob handoff --harvest` prints it. A reply that confirms them (`looks good`) is what
+  lets you write.
 - On that confirmation, run `plumbbob harvest`
   ([D104 (harvest-records)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d104)).
   It flips each settled item from `- [ ]` to `- [x]` in the Park list, so
   `/plumbbob:status` stops counting it as open, and records each confirmed class under
   `build-log.md`'s `## Harvest` section. Relay its ending whole, the `**Recorded**:` line
-  and the Next Up beneath it. It refuses a proposal naming a handle the list lacks (`P9`
+  and the state table beneath it. It refuses a proposal naming a handle the list lacks (`P9`
   with eight parked) or a class other than blocker, tangent, or pivot; fix the line it
   names and run it again.
 - A confirmed **blocker** also folds its decision into `intent.md`, slugged at birth

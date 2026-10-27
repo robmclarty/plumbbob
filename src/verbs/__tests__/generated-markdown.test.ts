@@ -6,6 +6,7 @@
 // what the CLI actually writes, in a throwaway repo, under the same rules
 // .markdownlint-cli2.jsonc enforces on the docs we track.
 
+import { execFileSync } from 'node:child_process'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
@@ -15,8 +16,19 @@ import { park } from '../park.ts'
 import { finish } from '../finish.ts'
 import { checkpoint } from '../checkpoint.ts'
 import { handoff } from '../handoff.ts'
+import { harvest } from '../harvest.ts'
 import { appendToSection, checkpointLogLine } from '../../lib/buildlog.ts'
-import { buildLogPath, bumpStepStat, detailPath, intentPath, reportPath, stampStepStat, stepPath } from '../../lib/sidecar.ts'
+import {
+  buildLogPath,
+  bumpStepStat,
+  checkpointsPath,
+  detailPath,
+  intentPath,
+  reportPath,
+  stampStepStat,
+  stepPath,
+  turnPath,
+} from '../../lib/sidecar.ts'
 import { settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
@@ -117,6 +129,71 @@ describe('generated markdown lints clean under a consumer-strict gate', () => {
     )
     await captureIoAsync(() => checkpoint(dir, ['1']))
     expect(readFileSync(buildLogPath(dir), 'utf8')).toContain('  **Summary**: A works now')
+    expect(await lintFindings(dir, [buildLogPath(dir)])).toEqual([])
+  })
+
+  it("a stop's record: the lean table nested under the range's Log line, a pipe in a park included — D112 (lean-table)", async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Record the stop', '--slug', 'record-the-stop']))
+    writeFileSync(
+      intentPath(dir),
+      [
+        '# Record the stop',
+        '',
+        '## Steps',
+        '',
+        '1. [x] First — **done when:** a works.',
+        '   - seam: `src/a.ts`',
+        '2. [x] Second — **done when:** b works.',
+        '   - seam: `src/b.ts`',
+        '',
+        '## Build ranges',
+        '',
+        '1. `/plumbbob:build 1-2`, **stop:** review both before the next',
+        '',
+      ].join('\n'),
+    )
+    mkdirSync(join(dir, 'src'), { recursive: true })
+    const shas = ['a', 'b'].map((name, i) => {
+      writeFileSync(join(dir, 'src', `${name}.ts`), `export const ${name} = ${i}\n`)
+      execFileSync('git', ['-C', dir, 'add', '-A'], { stdio: 'ignore' })
+      execFileSync('git', ['-C', dir, 'commit', '-q', '-m', `step ${i + 1}`], { stdio: 'ignore' })
+      return execFileSync('git', ['-C', dir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+    })
+    writeFileSync(checkpointsPath(dir), shas.map((sha, i) => `step ${i + 1} ${sha}\n`).join(''))
+    captureIo(() => park(dir, ['test isFile()||isFIFO() first (tangent)']))
+    captureIo(() => park(dir, ['a second idea']))
+    writeFileSync(
+      detailPath(dir),
+      [
+        '# Detail · Range 1 · review both before the next',
+        '',
+        '── recap · range 1 of 1 ──',
+        'done-when    met',
+        '',
+        '## Summary',
+        '',
+        'Both steps landed inside their seams.',
+        '',
+        '## Harvest',
+        '',
+        '- P1 → tangent: it can wait',
+        '  - title: pipe check',
+        '  - why: the check reads both kinds of file',
+        '- P2 → blocker: the next range reads it',
+        '',
+        '## Recommendation',
+        '',
+        'Approve it. Both steps held.',
+        '',
+      ].join('\n'),
+    )
+    writeFileSync(turnPath(dir), '4\n')
+    expect(captureIo(() => handoff(dir, ['--stop'])).code).toBe(0)
+    writeFileSync(turnPath(dir), '5\n')
+    expect(captureIo(() => harvest(dir, [])).code).toBe(0)
+    const log = readFileSync(buildLogPath(dir), 'utf8')
+    expect(log).toContain('  | P1 · pipe check | test isFile()\\|\\|isFIFO() first (tangent) | the check reads both kinds of file | tangent: it can wait |')
     expect(await lintFindings(dir, [buildLogPath(dir)])).toEqual([])
   })
 

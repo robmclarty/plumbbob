@@ -2,8 +2,8 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { handoff } from '../handoff.ts'
-import { harvest, isHarvestDetail } from '../harvest.ts'
+import { handoff, isHarvestDetail } from '../handoff.ts'
+import { harvest } from '../harvest.ts'
 import { park } from '../park.ts'
 import { start } from '../start.ts'
 import { buildLogPath, checkpointsPath, detailPath, intentPath, readRelay, statsPath, stopPath, turnPath } from '../../lib/sidecar.ts'
@@ -132,8 +132,9 @@ describe("harvest — a stop's record — D104 (harvest-records)", () => {
     expect(entry).toContain('\n\n  **Summary**: The parser reads the plan, and the card reads the parser.')
     expect(entry).toContain('  **Verdict**: ● Plumb')
     expect(entry).toContain('  **Harvested**: 3 of 3 parked ideas open')
-    expect(entry).toContain('  - P1 · one idea → lean: tangent, the card renders it')
-    expect(entry).toContain('  - P2 · another (tangent) → no lean proposed')
+    expect(entry).toContain('  | Park | What it is | Why it matters | Lean |')
+    expect(entry).toContain('  | P1 | one idea | not given | tangent: the card renders it |')
+    expect(entry).toContain('  | P2 | another (tangent) | not given | no lean proposed |')
     expect(entry).toContain("  **1.** Step 2 parses the section.\n\n  The parser's story.")
     // Nothing committed; the detail file and the stamp are spent.
     expect(git(dir, ['rev-parse', 'HEAD'])).toBe(head)
@@ -143,8 +144,10 @@ describe("harvest — a stop's record — D104 (harvest-records)", () => {
       [
         '**Stop**: Range 2 of 3 recorded (1 blocker, 1 tangent)',
         '',
-        '**Next Up**: Step 4 of 4 - Fourth (details: [intent.md:11](.plumbbob/builds/harvest-test/intent.md#L11))',
-        '  · range 3 of 3: /plumbbob:run (step 4 to its pause) · parked 1 of 3 open',
+        '| **Next Up** | Step 4 of 4 - Fourth (details: [intent.md:11](.plumbbob/builds/harvest-test/intent.md#L11)) |',
+        '| --- | --- |',
+        '| Range | 3 of 3: /plumbbob:run (step 4 to its pause) |',
+        '| Parked | 1 of 3 open |',
         '',
         '',
       ].join('\n'),
@@ -160,7 +163,7 @@ describe("harvest — a stop's record — D104 (harvest-records)", () => {
     writeFileSync(turnPath(dir), '5\n')
     const { code, stdout } = captureIo(() => harvest(dir, []))
     expect(code).toBe(0)
-    expect(stdout.startsWith('**Stop**: Range 2 of 3 recorded (nothing parked)\n\n**Next Up**')).toBe(true)
+    expect(stdout.startsWith('**Stop**: Range 2 of 3 recorded (nothing parked)\n\n| **Next Up** |')).toBe(true)
     expect(log(dir)).toContain("range 2 of 3's stop recorded")
     expect(log(dir)).toContain('- (none yet)') // no Harvest lines to write
   })
@@ -184,24 +187,27 @@ describe("harvest — the stop's latch — D103 (stop-latched)", () => {
     expect(captureIo(() => harvest(dir, [])).code).toBe(0)
   })
 
-  it('refuses a range detail no stop card showed: no card, another range, or a detail rewritten after it', async () => {
-    const refusal =
-      "plumbbob: range 2 of 3's stop not recorded (no stop card showed its detail)\n  → plumbbob handoff --stop, then end the turn on the card\n"
+  it('refuses a range no stop card showed, no card or another range, and records a detail a reply rewrote since — D110 (reply-after-the-card)', async () => {
+    const refusal = "plumbbob: range 2 of 3's stop not recorded (no stop card showed it)\n  → plumbbob handoff --stop, then end the turn on the card\n"
     const unshown = await atStop({ card: false })
     expect(captureIo(() => harvest(unshown, [])).stderr).toBe(refusal)
-    const rewritten = await atStop()
-    writeFileSync(detailPath(rewritten), RANGE_DETAIL.replace('P3 → blocker', 'P3 → tangent'))
-    expect(captureIo(() => harvest(rewritten, [])).stderr).toBe(refusal)
     const other = await atStop()
     writeFileSync(detailPath(other), RANGE_DETAIL.replace('# Detail · Range 2', '# Detail · Range 3'))
-    expect(captureIo(() => harvest(other, [])).stderr).toContain("range 3 of 3's stop not recorded (no stop card showed its detail)")
+    expect(captureIo(() => harvest(other, [])).stderr).toContain("range 3 of 3's stop not recorded (no stop card showed it)")
+    // A reply that changed a lean rewrote the file without printing the card
+    // again; the change is the human's own, so the record takes it as written.
+    const rewritten = await atStop()
+    writeFileSync(detailPath(rewritten), RANGE_DETAIL.replace('P3 → blocker', 'P3 → tangent'))
+    const { code, stdout } = captureIo(() => harvest(rewritten, []))
+    expect(code).toBe(0)
+    expect(stdout.startsWith('**Stop**: Range 2 of 3 recorded (2 tangents)')).toBe(true)
   })
 
   it('refuses a range whose landed step was cleared by hand since, as open again', async () => {
     const dir = await atStop()
     writeFileSync(intentPath(dir), INTENT.replace('3. [x] Third', '3. [ ] Third'))
     expect(captureIo(() => harvest(dir, [])).stderr).toBe(
-      "plumbbob: range 2 of 3's stop not recorded (step 3 is open again)\n  → land it, then plumbbob handoff --stop\n",
+      "plumbbob: range 2 of 3's stop not recorded (step 3 is open again)\n  → land it, then plumbbob handoff --stop --full\n",
     )
   })
 
@@ -252,7 +258,7 @@ describe('harvest — the proposals it settles', () => {
     const dir = await atStop({ card: false, detail: HARVEST_DETAIL })
     const { code, stdout } = captureIo(() => harvest(dir, []))
     expect(code).toBe(0)
-    expect(stdout.startsWith('**Recorded**: 2 parked ideas (2 tangents)\n\n**Next Up**: Step 4 of 4')).toBe(true)
+    expect(stdout.startsWith('**Recorded**: 2 parked ideas (2 tangents)\n\n| **Next Up** | Step 4 of 4')).toBe(true)
     expect(stdout).not.toContain('**Harvested**')
     const after = log(dir)
     expect(after).toContain('- [x] one idea\n- [x] another (tangent)\n- [ ] a third')

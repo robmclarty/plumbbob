@@ -400,8 +400,8 @@ describe('build — a run hands its range section a range the plan names — D96
     const section = body.slice(body.indexOf('### A step range'), body.indexOf('## The hard contracts'))
     expect(section).toMatch(/\/plumbbob:run/)
     expect(section).toMatch(/walked the same way/i)
-    // The early-stop note names the run the card prints, not the old explicit command.
-    expect(section).toContain('`· range 3 of 5: /plumbbob:run (steps 8-9)`')
+    // The early-stop note names the run the card's Range row prints, not the old explicit command.
+    expect(section).toContain('`| Range | 3 of 5: /plumbbob:run (steps 8-9) |`')
   })
 
   it("names the stop card in its note on harvesting at a range's stop — D100 (stop-card)", () => {
@@ -495,7 +495,7 @@ describe('run — a range of the plan, walked by the build skill — D95 (run-ve
     expect(body).toContain('`../harvest/SKILL.md`')
   })
 
-  it('settles the card in one reply: looks good records it, a change re-renders it, a question ends on the reminder — D102 (settle-in-one-reply)', () => {
+  it('settles the card in one reply: looks good records it, a change and a question each end on the reminder — D102 (settle-in-one-reply), D110 (reply-after-the-card)', () => {
     const section = body.slice(body.indexOf('## 6. The reply at a stop'), body.indexOf('## The hard contracts'))
     const flat = section.replace(/\s+/g, ' ')
     expect(flat).toMatch(/\*\*`looks good`\*\* confirms the review and locks in every lean as proposed/)
@@ -503,8 +503,10 @@ describe('run — a range of the plan, walked by the build skill — D95 (run-ve
     // A change names the park the way the card's lock-in line does (D105 (park-handles)).
     expect(section).toContain('`make P7 a tangent`')
     expect(section).not.toMatch(/park \d+ is a/)
-    expect(section).toMatch(/\*\*A change\*\*[\s\S]*run `plumbbob handoff --stop`, paste the whole card/)
-    expect(section).toMatch(/\*\*A question\*\*[\s\S]*one-line reminder/)
+    // A change is the model's reply, closed on the reminder; the card comes back only on request.
+    expect(flat).toMatch(/\*\*A change\*\*.*say in your own words what moved, then run `plumbbob handoff --stop` and paste the one-line reminder/)
+    expect(flat).toMatch(/The card does not come back for a change/)
+    expect(section).toMatch(/\*\*A question\*\*[\s\S]*one-line\s+reminder/)
     expect(section).toContain('plumbbob handoff --stop --full')
   })
 
@@ -695,7 +697,12 @@ describe('harvest — propose, the human confirms', () => {
     expect(data['allowed-tools']).toContain('Bash(plumbbob harvest:*)')
     expect(data['allowed-tools']).toMatch(/\bWrite\b/)
     expect(body).toContain('`# Detail · Harvest`')
-    expect(body).toContain('`- P6 → tangent: <the reason, one clause>`')
+    expect(body).toContain('- P6 → tangent: <the reason, one clause>')
+    // The lean table's title and why ride two field lines beneath the proposal (D112 (lean-table)).
+    expect(body).toContain('  - title: <two to five words naming the park>')
+    expect(body).toContain('  - why: <why it matters, one clause>')
+    expect(data['allowed-tools']).toContain('Bash(plumbbob handoff:*)')
+    expect(body).toMatch(/run `plumbbob handoff --harvest` and paste its output whole/)
     expect(body).not.toMatch(/- park \d+ →/)
     expect(body).toContain('`make P7 a tangent`')
     expect(body).toMatch(/run `plumbbob harvest`/)

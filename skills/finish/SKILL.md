@@ -41,7 +41,13 @@ record.
    - `## Decisions and why`: the settled calls that shaped the build (the *why* behind
      the log). Copy each one's `D# (slug)` from `intent.md` (never a bare `D#`) so
      the report reads without flipping back to the intent.
-   - `## Parked & harvested`: what was captured and how each was classified.
+   - `## Parked & harvested`: what was captured and how each was classified, as the
+     table the stop card's leans use, with the settled class where the card had the lean
+     ([D112 (lean-table)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d112)):
+     `| Park | What it is | Why it matters | Settled |`, one row per park, its handle and a
+     short title, the park's text as the Park list holds it, why it matters (the why the
+     stop's record kept, or your own clause for a park harvested before the table), and
+     the class it settled as with its reason.
    - `## Final status`: done or partial, and what is left.
    - `## Deferred tangents`: the harvested items that become future work.
    Stop there. `plumbbob finish` appends `## Checkpoints` (the baseline and step SHAs) and
@@ -74,9 +80,9 @@ record.
    the `plumbbob finish` marker subject only.
 4. **Point at the next goal.** Relay `plumbbob finish`'s output verbatim, blank lines
    included: its lead line, which names the branch the tracked folder now rides into the
-   PR, any advisory beneath it, and `**Next Up**: Nothing planned - /plumbbob:plan`. That
-   is the orientation tier's close (the
-   [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)):
+   PR, any advisory beneath it, and its state table, whose one row is
+   `| **Next Up** | Nothing planned - /plumbbob:plan |`. That is the orientation tier's close
+   (the [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)):
    the lead line, then the forward pointer. `finish` renders that pointer itself rather
    than leaving it to `plumbbob handoff`, because finish has just cleared the session
    handoff would read one from. Relay the block and write nothing after it.

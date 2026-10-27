@@ -663,7 +663,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   (`checkpoint`, `park`, `revert`, `abandon`, `spike`, `use`, `finish`) prints its whole ending itself,
   through the one formatter in `src/lib/notice.ts`, so a boundary or a driver turn is one command's output
   and cannot be relayed out of order or disagree with itself. The spec for the shape is
-  `docs/presentation.md`; a change to the shape is a change to that file first. Promoted from the
+  `docs/presentation.md`; a change to the shape is a change to that file first. (Revised 2026-10-26 by [**D110
+  (reply-after-the-card)**](#d110): a turn after a card has shown is the model's own reply, closed by the one
+  line `handoff` prints, so the positional rule holds for that line and the reply stands above it.) Promoted
+  from the
   2026-08-28 presentation build, merging its locals `consistency-from-ownership`, `cli-does-what-it-can`,
   `recap-split-by-nature`, `recap-as-wire`, `turn-is-the-anatomy`, `one-seam-turn`, `zero-seam-turn`,
   `whole-anatomy-emitted`, `handoff-owns-every-pointer`, `verb-prints-its-ending`, and
@@ -694,7 +697,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   look is introduced by one word, `details:`, a code-spanned `path:line` inside the closing bracket of the
   Summary lead and of Next Up, the form that opens in every host and survives as plain text. (Revised
   2026-10-18 by [**D107 (short-linked-paths)**](#d107): the bracket shows the file's name and line as a
-  link, `[intent.md:41](.plumbbob/builds/x/intent.md#L41)`, in place of the code-spanned full path.)
+  link, `[intent.md:41](.plumbbob/builds/x/intent.md#L41)`, in place of the code-spanned full path.) (Revised
+  2026-10-26 by [**D113 (short-card)**](#d113): the highlights leave the card for the detail file and the
+  record, and the card points at the file once, from a `[more details](…)` link at its foot, in place of the
+  Summary lead's bracket.)
   Promoted from
   the 2026-08-28 presentation build, merging its locals `latest-detail-file`, `latest-card-addressing`,
   `honest-elision`, `code-on-request`, and `details-one-word`. *Tagged in* `docs/presentation.md`,
@@ -729,7 +735,9 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   `diff` rows measure the step's whole product, everything changed since HEAD with new files counted as
   all-added lines, because the previous measure was the working tree against the index and so went blind on
   exactly the step whose product is a new file: no seam row, no diff row, and a Verdict folded without
-  either.) Promoted from the 2026-08-28
+  either.) (Revised 2026-10-26 by [**D113 (short-card)**](#d113): the `diff` row lists the changed files on
+  continuation lines beneath it; and by [**D111 (state-table)**](#d111): the Verdict is the header row of the
+  card's state table, folded from the same rows.) Promoted from the 2026-08-28
   presentation build, merging its locals
   `readout-and-summary`, `collapse-to-count`, `vanish-or-collapse`, `worst-of-banner`, `circle-ladder`,
   `plumb-when-natural`, `verdict-in-the-row`, `narrowing-named-not-shouted`, `recap-width-budget`,
@@ -763,7 +771,12 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   ([**D62 (model-recommendation)**](#d62)), the one token besides the label a line may bold, because it is the
   token the human acts on before the next run. (Revised 2026-09-22 by [**D86 (build-order)**](#d86): Next Up
   may carry one indented line beneath it, the build order and the park count, the one continuation outside
-  a fence that wears no label of its own.) Promoted from the 2026-08-28 presentation build, merging its
+  a fence that wears no label of its own.) (Revised 2026-10-26 by [**D111 (state-table)**](#d111): the Verdict,
+  Now, Next Up, and the rows beneath Next Up ride a two-column table at the card's foot, above the
+  recommendation, and Your Call stands above the table; by [**D113 (short-card)**](#d113): the highlights leave
+  the card, and a `[more details](…)` link follows the recommendation; and by [**D110
+  (reply-after-the-card)**](#d110): the direction move's outcome reads `I make the change and say what moved`.)
+  Promoted from the 2026-08-28 presentation build, merging its
   locals `labeled-lines`, `instructive-choice`, `real-moves`, `verdict-last`, `recommendation-last`,
   `labeled-recommendation`, and `three-tier-anatomy`. *Tagged in* `docs/presentation.md` and
   `docs/skills-reference.md`.
@@ -789,7 +802,9 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   2026-08-28 presentation build: the dashboard's `next → build step 1 — /plumbbob:build` keeps naming the
   move while every ending's `**Next Up**` keeps stating the fact, because the dashboard is the one surface
   read while choosing what to type, and it renders inside a `text` fence where a bold label would be
-  literal characters.) Promoted from the 2026-08-28 presentation build, merging its locals
+  literal characters.) (Revised 2026-10-26 by [**D111 (state-table)**](#d111): an orientation ending closes on
+  its state table, Next Up one of its rows; a driver ending keeps the one labeled line.) Promoted from the
+  2026-08-28 presentation build, merging its locals
   `own-lines-one-colon`, `fact-not-move`, `advisory-glyph`, `register-is-one-liners`,
   `transitions-wear-the-label`, `word-carries-meaning`, and `text-glyphs-only`. *Tagged in*
   `docs/presentation.md` and `docs/cli-reference.md`.
@@ -853,7 +868,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   undone sequence is unchanged, and a line written while a range is partly landed no longer reads as
   cutting that range. A range's span in the build order ends at its last undone step, so a step placed
   after all of them flags nothing.) Amends [**D6 (parseable-steps)**](#d6) (a second machine-read section) and
-  [**D83 (card-teaches-itself)**](#d83) (the one unlabeled continuation under Next Up). *Tagged in*
+  [**D83 (card-teaches-itself)**](#d83) (the one unlabeled continuation under Next Up). (Revised 2026-10-26 by
+  [**D111 (state-table)**](#d111): the build order and the park count are rows of the state table, `Order` and
+  `Parked`, where they rode the indented note; the order still renders only while `## Build order` re-sequences
+  the plan.) *Tagged in*
   `orient.ts`, `order.ts`, `build.ts`, `checkpoint.ts`, `handoff.ts`, `recover.ts`, the `order`, `step`,
   `refine`, and `harvest` skills, `templates/intent.md`, `docs/presentation.md`, and
   `docs/cli-reference.md`.
@@ -876,7 +894,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   (Revised 2026-10-18 by [**D100 (stop-card)**](#d100): the stop card that closes a run's range renders
   once too, under a stamp of its own (the range, the detail file, and the measured rows); its reminder
   reads `Back to Range 3 of 5's stop - <its stop>`, `plumbbob handoff --stop --full` brings it back, and
-  the record clears the stamp.)
+  the record clears the stamp.) (Revised 2026-10-26 by [**D110 (reply-after-the-card)**](#d110): the stamp
+  records that the card showed, never what it said, so a changed detail file, an edit, or a gate run that moved
+  the check row keeps the reminder; the card comes back only on `--full`, and a boundary already shown ends on
+  its pointer the same way.)
   Promoted from the 2026-10-08 said-once-said-whole build, merging its locals `pause-once`,
   `cli-picks-the-form`, and `stamp-skips-spent`. *Tagged in* `docs/presentation.md`.
 
@@ -892,7 +913,9 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   bare `**Readout**:`, on the block and in the build-log record alike, because the record's dated Log line
   already names the step and one `readoutLabel` stays one function; the count is the plan's own, the step
   number over the total, the way Next Up counts, so the two lines agree under a re-sequenced build order
-  ([**D86 (build-order)**](#d86)). The plan pause has no step in flight and renders no `Now` line. Promoted
+  ([**D86 (build-order)**](#d86)). The plan pause has no step in flight and renders no `Now` line. (Revised
+  2026-10-26 by [**D111 (state-table)**](#d111): the step in flight is the state table's Now row, beneath the
+  Verdict, where it opened the card.) Promoted
   from the 2026-10-08 said-once-said-whole build, where Q2 (reminder-shape) settled it with the human's
   addition, merging its locals `current-step-shown` and `record-follows-card`. *Tagged in*
   `docs/presentation.md`.
@@ -954,7 +977,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   checkpoint that completes a range under the `RUN` mark writes its `RELAY` record as owing the stop
   card, and the check holds a turn whose last ending still owes it, once, naming
   `plumbbob handoff --stop` as the retry; the card's own render then takes the record's place at the
-  decision tier, with `plumbbob handoff --stop --full` as its reprint.) Promoted from the
+  decision tier, with `plumbbob handoff --stop --full` as its reprint.) (Revised 2026-10-26 by [**D110
+  (reply-after-the-card)**](#d110): a reminder's retry prints the reminder again, whatever changed since the
+  card; and by [**D111 (state-table)**](#d111): the check reads each state-table row as a part and compares the
+  Verdict as the header row's fact.) Promoted from the
   2026-10-08 said-once-said-whole build, where Q1 (relay-check-tier) settled the tier and the spike
   settled the mechanics, merging its local `block-once`. *Evidence in*
   `.plumbbob/builds/2026-10-08-said-once-said-whole/spike-01-stop-hook.md` and
@@ -1098,7 +1124,9 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   exact strings are `docs/presentation.md`'s. (Revised 2026-10-22 by
   [**D109 (ranges-follow-the-order)**](#d109): the two drifts a sequence can settle, a step no range names
   and a step the build order puts inside a range, are re-cut by `plumbbob order` wherever the order
-  settles them, and reported as before where it does not.) Promoted from the 2026-10-17 build-ranges build, merging
+  settles them, and reported as before where it does not.) (Revised 2026-10-26 by [**D111
+  (state-table)**](#d111): the range segment is the state table's Range row, and the Stop part its Stop row.)
+  Promoted from the 2026-10-17 build-ranges build, merging
   its locals `informative-only`, `drift-reported`, `card-shape`, and `range-model`. Amends
   [**D83 (card-teaches-itself)**](#d83) (a labeled part on one boundary) and
   [**D86 (build-order)**](#d86) (the note's first segment). *Tagged in* `docs/presentation.md`.
@@ -1202,7 +1230,9 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   a run that does not reach it. The bracket's bold model stays that of the range holding the step Next
   Up names, the run the human picks a model for. A flagged range, a step no range names, and a plan
   without ranges render exactly as they did. Amends [**D93 (range-on-the-card)**](#d93), whose segment
-  and pointer name the run. Promoted from the 2026-10-17 runs-and-the-stop-card build, merging its local
+  and pointer name the run. (Revised 2026-10-26 by [**D111 (state-table)**](#d111): the run rides the Range row,
+  `3 of 5: /plumbbob:run (steps 6-9)`.) Promoted from the 2026-10-17 runs-and-the-stop-card build, merging its
+  local
   `card-names-the-run`. *Tagged in* `docs/presentation.md`.
 
 - <a id="d99"></a>**D99 (one-loop): The run skill carries only what is the run's own and reads the build
@@ -1237,7 +1267,11 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   still waiting, and `plumbbob handoff --stop --full` brings it back. It renders for a run's landing
   only: a range landed by `/plumbbob:build`, a typed range, `--auto`, or by hand keeps the boundary and
   its Stop part, and a bare range's stop is its own pause. Amends [**D85 (range-top-lands)**](#d85): a
-  run's clean halt lands its top step first, then ends on the card. Promoted from the 2026-10-17
+  run's clean halt lands its top step first, then ends on the card. (Revised 2026-10-26 by [**D111
+  (state-table)**](#d111) and [**D113 (short-card)**](#d113): the stop card opens on the range's Summary, its
+  Stop lead a row of the state table at its foot and its highlights left in the detail file; and by [**D110
+  (reply-after-the-card)**](#d110): a rewritten detail file keeps the reminder, and the card comes back only on
+  `--stop --full`.) Promoted from the 2026-10-17
   runs-and-the-stop-card build, merging its locals `stop-card` and `empty-stop`. *Tagged in*
   `docs/presentation.md`.
 
@@ -1255,7 +1289,9 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   step is held to its own seam rather than the range's union, *because* a step that wandered into
   another step's seam still wandered. No gate or turn clause rides the range's `spent` row, since a gate
   is one run's wall clock and a range has several, only the last on disk, and the ledger counts turns
-  from the tick that entered a step. Promoted from the 2026-10-17 runs-and-the-stop-card build, merging
+  from the tick that entered a step. (Revised 2026-10-26 by [**D113 (short-card)**](#d113): the range's `diff`
+  row lists the files its commits changed, each counted once.) Promoted from the 2026-10-17
+  runs-and-the-stop-card build, merging
   its local `range-readout`. *Tagged in* `docs/presentation.md`.
 
 - <a id="d102"></a>**D102 (settle-in-one-reply): The stop card's proposals are settled in one reply,
@@ -1282,7 +1318,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   `/plumbbob:finish` on its card in the run's place, and the finish skill records a waiting stop card
   the way `looks good` would, through `plumbbob harvest`, before it writes the report, *because* every
   build whose plan declares ranges ends its last run on a stop card, finish is the move after it, and a
-  review the finish skipped would never reach the Log or the report. Promoted from the 2026-10-17
+  review the finish skipped would never reach the Log or the report. (Revised 2026-10-26 by [**D110
+  (reply-after-the-card)**](#d110): a reply that changes a lean rewrites its line and ends on the reminder, the
+  change said in the model's words, and the card comes back only on `show the stop`.) Promoted from the
+  2026-10-17
   runs-and-the-stop-card build, merging its locals `settle-in-one-reply`, `fold-then-run`, and
   `finish-at-a-stop`. *Tagged in* `docs/presentation.md`.
 
@@ -1309,7 +1348,9 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   step and its pause wrote over the range's review. The landed condition is what keeps a re-cut from
   wedging the build, the rule [**D92 (build-ranges)**](#d92) set for a step found at a stop keeps builds
   from needing it, and the card, the dashboard, and the refusal read the move after the stop through one
-  call.) Promoted from the
+  call.) (Revised 2026-10-26 by [**D110 (reply-after-the-card)**](#d110): the record refuses a range no card
+  showed, and the turn the card printed in, and compares no digest of the detail file, since a reply may rewrite
+  a lean without printing the card again.) Promoted from the
   2026-10-17 runs-and-the-stop-card build, merging its locals `stop-latched` and `stop-card-held`.
   *Tagged in* `docs/presentation.md`.
 
@@ -1346,7 +1387,9 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   the life of the build. Rob's call at range 4's stop (2026-10-18), reading a stop card in a throwaway
   repo, over the `park 6` phrase the spec first carried and a plain numbered list; letters had been
   dropped earlier for needing a second mapping and running out. Revises
-  [**D102 (settle-in-one-reply)**](#d102)'s `park 6`. Promoted from the 2026-10-17 runs-and-the-stop-card
+  [**D102 (settle-in-one-reply)**](#d102)'s `park 6`. (Revised 2026-10-26 by [**D112 (lean-table)**](#d112):
+  each park rides a row of the lean table, its handle in the first cell, where it rode a bullet line.) Promoted
+  from the 2026-10-17 runs-and-the-stop-card
   build, merging its local `park-handles`. *Tagged in* `docs/presentation.md`.
 
 - <a id="d106"></a>**D106 (leans-harvested): The stop card's part is labeled `Harvested`, each proposal
@@ -1363,7 +1406,9 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   stop reads `**Recorded**: 2 parked ideas (2 tangents)` where it read `**Harvested**:`, *because* one
   label over a part that proposes and an ending that records would mean two things. A stop with no
   park open renders no lean line, since nothing is there to lock in. Rob's call at range 4's stop
-  (2026-10-18). Revises [**D104 (harvest-records)**](#d104)'s ending. Promoted from the 2026-10-17
+  (2026-10-18). Revises [**D104 (harvest-records)**](#d104)'s ending. (Revised 2026-10-26 by [**D112
+  (lean-table)**](#d112): the lean is the table's last cell, `tangent: <reason>`, beside the park's why, where
+  it read `→ lean: tangent, <reason>`.) Promoted from the 2026-10-17
   runs-and-the-stop-card build, merging its locals `leans-harvested` and `leans-lock-in`. *Tagged in*
   `docs/presentation.md`.
 
@@ -1378,7 +1423,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   of the runs-and-the-stop-card build (2026-10-18), over the code-spanned `path:line`, a link to the
   relative path with no line, and an absolute `file://` URL; the click test the plan asked for, in
   Claude Code's terminal and in Zed, was not run at that pause, and `docs/presentation.md` says so
-  beside the form, leaving what each host opens to the first card the code renders. Revises [**D81 (detail-file)**](#d81)'s code-spanned `path:line`. Promoted
+  beside the form, leaving what each host opens to the first card the code renders. Revises [**D81
+  (detail-file)**](#d81)'s code-spanned `path:line`. (Revised 2026-10-26 by [**D113 (short-card)**](#d113): the
+  Summary lead carries no bracket; the card links the detail file once, from `[more details](…)` at its foot.)
+  Promoted
   from the 2026-10-17 runs-and-the-stop-card build, merging its local `short-linked-paths`. *Tagged in*
   `docs/presentation.md`.
 
@@ -1387,7 +1435,9 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   `· build order 7, 8, 5, 10, 6 (and 2 more)`, *because* the note's other segments read as labeled
   fields (`range 3 of 5:` names its range, `parked 2 of 7 open` its count) and a label is how the eye
   finds one in a line of three. Rob's call at range 4's stop (2026-10-18). Revises the phrase
-  [**D86 (build-order)**](#d86) gave the line. Promoted from the 2026-10-17 runs-and-the-stop-card build,
+  [**D86 (build-order)**](#d86) gave the line. (Revised 2026-10-26 by [**D111 (state-table)**](#d111): the label
+  is the state table's, its Order row, and the row's fact is the sequence alone.) Promoted from the 2026-10-17
+  runs-and-the-stop-card build,
   merging its local `order-label`. *Tagged in* `docs/presentation.md`.
 
 - <a id="d109"></a>**D109 (ranges-follow-the-order): `plumbbob order` re-cuts the build ranges to follow the
@@ -1412,6 +1462,82 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   Revises [**D93 (range-on-the-card)**](#d93), whose drift the CLI now re-cuts wherever the order settles
   it. *Tagged in* `orient.ts`, `order.ts`, the `order`, `step`, `refine`, and `harvest` skills,
   `docs/presentation.md`, `docs/runs.md`, and `docs/cli-reference.md`.
+
+- <a id="d110"></a>**D110 (reply-after-the-card): A card shows once, when the work reaches it; every later turn at
+  the same pause, stop, or boundary is the model's own reply, closed by the one line that points back at it, and the
+  card comes back only on request.** A question, a discussion, and a change the human asked for are all replies: the
+  model answers or makes the change in its own words, writes the detail file again when a change moves what the card
+  said, so the record matches what lands, and ends on the line `plumbbob handoff` prints
+  (`**Next Up**: Back to Step 2 of 3 - <title>`, and its stop's and its boundary's forms). The card returns on
+  `--full`, which `show the pause` and `show the stop` ask for, and the next card is the next point where work is
+  done: the checkpoint's ending after `looks good`, the record's at a stop. *because* follow-up turns kept answering
+  with the card again, Rob's feedback lost beneath it (2026-10-26), and every cause was mechanical. The stamp hashed
+  what the card showed, so checkride's per-turn gate, which skips the test slot, rewrote the check row the stamp
+  hashed after nearly every turn and the next `handoff` printed the whole card; an edit anywhere in the tree, or a
+  rewritten detail file, did the same; the skills sent a reply that changed the work to the card; the turn hook's
+  park line fired at a pause and filed feedback as a tangent; and the record's latch refused a stop whose detail a
+  reply had rewritten. So PAUSE and STOP record that a card showed, never what it said: PAUSE holds the step whose
+  pause showed (`2`) or the step whose boundary did (`landed 2`), STOP the range and the turn its card printed in,
+  and the record compares no digest, since a lean changed in a reply is the human's own change. The turn hook reads
+  the stamps, so at a pause or a stop whose card has shown it says the message is the reply, mid-step it keeps the
+  park line, and it finds the session as the Stop check does, from the payload's `cwd` and else its own. Rob chose
+  the reply closed by the pointer over a reply with nothing after it and over the card again once a change lands.
+  Revises [**D87 (pause-once)**](#d87), whose card came back when the pause changed, [**D89 (block-once)**](#d89),
+  whose reminder retry could escalate to the whole card, [**D102 (settle-in-one-reply)**](#d102), whose direction
+  printed the stop card again, and [**D103 (stop-latched)**](#d103), whose record compared the detail file's
+  digest. *Tagged in* `handoff.ts`, `turn.ts`, `harvest.ts`, `sidecar.ts`, the `build`, `verify`, `run`, and `step`
+  skills, and `docs/presentation.md`.
+
+- <a id="d111"></a>**D111 (state-table): The state a card or an orientation ending closes on rides one two-column
+  table, headed by the Verdict wherever one was measured.** The rows, in order and each only when it says
+  something: the Verdict, Now (the step in flight), Stop (the range that landed, or the one a stop card reviews),
+  Next Up with its model and its `details:` link, Range (the run the next `/plumbbob:run` walks), Order (only
+  while `## Build order` re-sequences the plan, the rule [**D86 (build-order)**](#d86) set), Parked
+  (`2 of 7 open`), and Questions (the open questions the plan still carries). The first row present is the header,
+  its label bold, so the Verdict heads the table on the pause, the stop card, and the boundary, and Next Up heads it
+  on the plan pause, a stop's record, finish, and a fresh session. On a card the table sits at the foot, above the
+  recommendation, so the last screenful holds whether it is plumb, where the build stands, and what the model
+  suggests. A driver turn and a reminder keep the one labeled Next Up line, and the dashboard keeps its fence.
+  *because* the labeled lines read as more prose, and the note beneath Next Up packed three facts into one indented
+  line; Rob asked for the ending's state in a table that stands apart from the prose (2026-10-26), and picked the
+  foot with the Verdict as the header over a Verdict line above a table with a blank header and over the table at the card's
+  head. The relay check reads each row as a part labeled by its first cell and compares the Verdict as the header's
+  fact, and the eval's anatomy reader reads the rows the same way. Revises [**D83 (card-teaches-itself)**](#d83),
+  whose every part outside the fence was a labeled line, [**D88 (current-step-shown)**](#d88), whose Now line opened
+  the card, and [**D84 (one-liner-register)**](#d84), whose every ending closed on its Next Up line; folds the note
+  of [**D86 (build-order)**](#d86), the range segment of [**D93 (range-on-the-card)**](#d93) and
+  [**D98 (card-names-the-run)**](#d98), and the label of [**D108 (order-label)**](#d108) into rows. *Tagged in*
+  `notice.ts`, `handoff.ts`, `checkpoint.ts`, `harvest.ts`, `finish.ts`, `relay.ts`,
+  `test/evals/helpers/anatomy.ts`, and `docs/presentation.md`.
+
+- <a id="d112"></a>**D112 (lean-table): Parks presented with leans render as a four-column table: the park's handle
+  and a short title, its text, why it matters, and the lean.** The handle and the text are the CLI's, read from the
+  park list, so the card can never misquote a park; the title, the why, and the lean are the model's, written in the
+  detail file's `## Harvest` section as two field lines indented beneath the proposal (`- title: <2 to 5 words>`,
+  `- why: <one clause>`), and a detail written without them still parses. A gap reads as one: `P6` alone with no
+  title, `not given` with no why, `no lean proposed` with no proposal. The stop card carries the table, and so do
+  the stop's record in the Log and `plumbbob handoff --harvest`, which renders a boundary harvest's leans where the
+  harvest skill used to compose its own list; the finish report takes the same columns, with the settled class in
+  place of the lean. *because* a bullet per park ran the handle, the text, and the lean into one line, and nothing
+  said why a park mattered, the column a reply to the card turns on; Rob asked for every lean in that shape
+  (2026-10-26), and chose the CLI's handle with a title the model writes, beside the park's own text, over the
+  handle alone and over a description the model condenses. Revises [**D105 (park-handles)**](#d105), whose parks
+  rode bullet lines, and [**D106 (leans-harvested)**](#d106), whose lean read `→ lean: <class>, <reason>`.
+  *Tagged in* `handoff.ts`, `harvest.ts`, the `run`, `harvest`, and `finish` skills, and `docs/presentation.md`.
+
+- <a id="d113"></a>**D113 (short-card): The card keeps what is read to decide, and points at the detail file once,
+  from its foot.** It keeps the Summary lead, the Readout with the changed files listed beneath its `diff` row, the
+  inline diff, the moves, the state table, and the recommendation, and closes on one `[more details](…)` link to
+  the detail file. The numbered highlights leave the card for the detail file, where `expand 2` still opens `## 2`
+  and the build-log record still lists them, and the Summary lead loses its `(details: …)` bracket. The `diff` row
+  lists each changed file on a continuation line (`- src/login.ts +40 -3`), in git's path order, seven named and
+  `and 5 more` past eight, a path never shortened. *because* Rob reads the Verdict, the Summary, the recommendation,
+  the changed files, and the diff, and reads past the highlights (2026-10-26); a list read past is a list in the
+  way, and the changed files were the one fact the readout counted without naming. Revises
+  [**D81 (detail-file)**](#d81), whose highlights rode the card behind a bracket on the Summary lead,
+  [**D82 (readout-ladder)**](#d82), whose `diff` row counted and named nothing, and
+  [**D107 (short-linked-paths)**](#d107), whose Summary lead carried a bracket. *Tagged in* `handoff.ts`,
+  `orient.ts`, the `build`, `verify`, and `run` skills, and `docs/presentation.md`.
 
 ### Superseded
 

@@ -66,7 +66,9 @@ export function relayCheck(cwd: string, raw: string): string | null {
   const payload = parsePayload(raw)
   // A host too old to send the final message has nothing to check against.
   if (payload === null || typeof payload.last_assistant_message !== 'string') return null
-  const root = findSessionRoot(typeof payload.cwd === 'string' ? payload.cwd : cwd)
+  // The session the payload names, else the one the process stands in: the
+  // rule the turn hook ticks by, so the two always read the same session.
+  const root = (typeof payload.cwd === 'string' ? findSessionRoot(payload.cwd) : null) ?? findSessionRoot(cwd)
   if (root === null) return null
   const record = readRelay(root)
   const turn = readTurn(root)
@@ -142,13 +144,25 @@ function sameParts(relayed: ReadonlyArray<Part>, printed: ReadonlyArray<Part>, c
 
 /**
  * The facts the CLI measured, as one comparable string: the Readout table,
- * whitespace aside, and the Verdict line. Every other line of a block may be
+ * whitespace aside, and the Verdict's fact. Every other line of a block may be
  * reworded or reordered without the relay counting as missed.
  */
 function factsOf(parts: ReadonlyArray<Part>): string {
   const readout = parts.find((p) => p.label === 'Readout')
   const verdict = parts.find((p) => p.label === 'Verdict')
-  return `${flat(readout === undefined ? '' : tableOf(readout))}\n${flat(verdict?.lines[0] ?? '')}`
+  return `${flat(readout === undefined ? '' : tableOf(readout))}\n${flat(verdict === undefined ? '' : verdictOf(verdict))}`
+}
+
+/**
+ * The Verdict's fact: the second cell of the state table's header row, where
+ * a card carries it (D111 (state-table)), or the text after the label on the
+ * line an older ending printed. Read as the fact, not the line, so a relay
+ * that changed the spacing around the table's pipes still carries the Verdict
+ * it printed.
+ */
+function verdictOf(part: Part): string {
+  const first = part.lines[0] ?? ''
+  return stateRowOf(first)?.value ?? first.replace(/^\*\*Verdict\*\*:\s*/, '')
 }
 
 /** The `text` fence inside the Readout part, rails included, or '' when it has none. */
@@ -190,8 +204,8 @@ type Part = { readonly label: string; readonly lines: ReadonlyArray<string> }
 
 /**
  * An ending's labeled parts, in order: each opens on a line that starts with a
- * bold label and a colon, outside a fence, and runs to the next. Text before
- * the first label is not part of any.
+ * bold label and a colon, or on a row of the state table, outside a fence, and
+ * runs to the next. Text before the first label is not part of any.
  */
 function partsOf(text: string): ReadonlyArray<Part> {
   const parts: Array<{ label: string; lines: string[] }> = []
@@ -205,7 +219,7 @@ function partsOf(text: string): ReadonlyArray<Part> {
       parts.at(-1)?.lines.push(line)
       continue
     }
-    const label = rail === null ? /^\*\*([^*\n]+)\*\*:(?:\s|$)/.exec(line)?.[1] : undefined
+    const label = rail === null ? labelOf(line) : undefined
     if (label !== undefined) {
       parts.push({ label, lines: [line] })
     } else {
@@ -213,6 +227,36 @@ function partsOf(text: string): ReadonlyArray<Part> {
     }
   }
   return parts
+}
+
+/**
+ * The label a line opens a part on, or undefined when it opens none: a bold
+ * label and a colon at the line's start, or a state-table row, whose first
+ * cell is its label. Each row of the table is a part of its own, so the
+ * table's rows are read in order as the labeled lines were.
+ */
+function labelOf(line: string): string | undefined {
+  return /^\*\*([^*\n]+)\*\*:(?:\s|$)/.exec(line)?.[1] ?? stateRowOf(line)?.label
+}
+
+/**
+ * A state-table row's label and fact, or null for any other line: a table row
+ * of two cells, its label with the bold stripped. The delimiter row and the
+ * lean table's four-cell rows are no state row, so they stay inside the part
+ * above them.
+ */
+function stateRowOf(line: string): { readonly label: string; readonly value: string } | null {
+  const cells = tableCells(line)
+  const [label, value] = cells ?? []
+  if (cells === null || cells.length !== 2 || label === undefined || value === undefined || /^:?-{3,}:?$/.test(label)) return null
+  return { label: label.replace(/^\*\*(.*)\*\*$/, '$1').trim(), value }
+}
+
+/** The cells of a markdown table row, split on unescaped pipes, or null when the line is not one. */
+function tableCells(line: string): string[] | null {
+  const text = line.trim()
+  if (text.length < 2 || !text.startsWith('|') || !text.endsWith('|')) return null
+  return text.slice(1, -1).split(/(?<!\\)\|/).map((c) => c.trim())
 }
 
 /**

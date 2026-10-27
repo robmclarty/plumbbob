@@ -24,8 +24,18 @@
 import { info, type Check } from './assert.ts'
 
 // A labeled line: one bold token, a colon, then text that wraps. Every part of
-// an ending outside the readout fence is one of these.
+// an ending outside the readout fence and the state table is one of these.
 const LABEL = /^\*\*([^*]+)\*\*:/
+// A markdown table row. A row of two cells is a state-table row, a part of its
+// own labeled by its first cell (D111 (state-table)); any other row, the
+// delimiter or the lean table's four cells (D112 (lean-table)), belongs to the
+// part above it.
+const TABLE_ROW = /^\|.*\|$/
+// The table's delimiter row, which labels nothing.
+const DELIMITER = /^:?-{3,}:?$/
+// The card's last line, the one link to the detail file (D113 (short-card)). It
+// is the card's foot, so it belongs to the part above it, the recommendation.
+const MORE_DETAILS = /^\[more details\]\(/
 // A fence delimiter and its info string (```text, ```diff, or a bare ```).
 const FENCE = /^(`{3,})(.*)$/
 // A readout row: the name in the label column, two or more spaces, the value.
@@ -63,27 +73,30 @@ export type Anatomy = {
 // names three — decision, orientation, driver — and two of them render more
 // than one ending, so each gets its own name here: `plan` is the decision
 // tier's plan pause, which judges a plan rather than a diff, `reminder` is a
-// step pause already shown (D87 (pause-once)), which ends on the one line that
-// points back at the step, `boundary` is the orientation tier's landed step,
+// card already shown (D110 (reply-after-the-card)), which ends on the one line
+// that points back at it, `boundary` is the orientation tier's landed step,
 // and `stop` is the decision tier at a stop, the card that closes a run's range
-// (D100 (stop-card)).
+// (D100 (stop-card)). The Verdict, Now, Stop, and Next Up parts are rows of the
+// state table at a card's foot, each labeled by its first cell, so they read in
+// order as the labeled lines did; the Range, Order, Parked, and Questions rows
+// render only when they say something, and no tier owes them.
 export type Tier = 'decision' | 'plan' | 'reminder' | 'boundary' | 'driver' | 'stop'
 
 const TIER_PARTS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
-  decision: ['Now', 'Summary', 'Readout', 'Verdict', 'Next Up', 'Your Call', 'Recommendation'],
-  plan: ['Next Up', 'Your Call', 'Recommendation'],
+  decision: ['Summary', 'Readout', 'Your Call', 'Verdict', 'Now', 'Next Up', 'Recommendation'],
+  plan: ['Your Call', 'Next Up', 'Recommendation'],
   reminder: ['Next Up'],
   boundary: ['Verdict', 'Stop', 'Next Up'],
   driver: ['Next Up'],
-  stop: ['Stop', 'Summary', 'Readout', 'Verdict', 'Harvested', 'Next Up', 'Your Call', 'Recommendation'],
+  stop: ['Summary', 'Readout', 'Harvested', 'Your Call', 'Verdict', 'Stop', 'Next Up', 'Recommendation'],
 }
 
-// The parts a tier may carry without owing them. The Stop part rides only the
+// The parts a tier may carry without owing them. The Stop row rides only the
 // boundary where a range's last step landed, so a boundary without it is whole,
 // and one with it still has to stand it between the Verdict and Next Up. The
 // Harvested part rides a stop card only while a park is open (D100 (stop-card),
-// labeled by D106 (leans-harvested)), and the Stop part there is the card's
-// lead, which it always owes.
+// labeled by D106 (leans-harvested)), and the Stop row there names the range
+// the card reviews, which it always owes.
 const OPTIONAL_PARTS: Readonly<Partial<Record<Tier, ReadonlyArray<string>>>> = {
   boundary: ['Stop'],
   stop: ['Harvested'],
@@ -91,7 +104,7 @@ const OPTIONAL_PARTS: Readonly<Partial<Record<Tier, ReadonlyArray<string>>>> = {
 
 // What each tier must NOT render. The Your Call block belongs only where a
 // decision is pending; a Verdict only where something was measured; the Now
-// line only where a step pause is open (the plan pause has no step in flight,
+// row only where a step pause is open (the plan pause has no step in flight,
 // and a boundary's lead line already names the step that landed).
 const TIER_FORBIDS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
   decision: [],
@@ -175,6 +188,22 @@ export function readAnatomy(text: string): Anatomy {
       continue
     }
 
+    if (TABLE_ROW.test(line.trim())) {
+      const state = stateRow(line.trim())
+      if (state !== null) {
+        current = state.label
+        labels.push(current)
+        if (current === 'Next Up') pointer = state.value
+      }
+      endsOn = current
+      continue
+    }
+
+    if (MORE_DETAILS.test(line.trim())) {
+      endsOn = current
+      continue
+    }
+
     if (RULE.test(line.trim())) continue
 
     if (ITEM.test(line)) {
@@ -218,6 +247,16 @@ export function readAnatomy(text: string): Anatomy {
     nestedFence,
     strays,
   }
+}
+
+// A state-table row's label and fact, or null for any other table row: the
+// row has two cells, the first is no delimiter, and its bold, where the header
+// row carries it, is not part of the label.
+function stateRow(line: string): { readonly label: string; readonly value: string } | null {
+  const cells = line.slice(1, -1).split(/(?<!\\)\|/).map((c) => c.trim())
+  const [label, value] = cells
+  if (cells.length !== 2 || label === undefined || value === undefined || DELIMITER.test(label)) return null
+  return { label: label.replace(/^\*\*(.*)\*\*$/, '$1').trim(), value }
 }
 
 // A label the driver glued to the text before it (`…state.**Summary**: …`)
@@ -280,7 +319,7 @@ export function hasCheckRow(a: Anatomy): boolean {
 
 // The lead line's label, when the ending opens on a transition rather than on
 // one of the anatomy's own parts (`Checkpoint`, `Parked`, `Plan`). Null when the
-// first label is a part, which is what a pause opens on (its Now line).
+// first label is a part, which is what a pause opens on (its Summary).
 export function transitionLabel(a: Anatomy): string | null {
   const first = a.trailingLabels[0]
   if (first === undefined) return null

@@ -22,7 +22,7 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 | `start` | `start <title> [--slug <name>] [--local] [--allow-dirty]` | scaffold `builds/<slug>/`, record baseline, open the session |
 | `status` | `status [--build <slug>] [--invoked "<args>"] [--run "<args>"]` | print the orientation dashboard (or `NO ACTIVE SESSION`) |
 | `build` | `build [<n>] [--build <slug>]` | write step `n`'s seam + `STEP` (goes in-flight) |
-| `handoff` | `handoff [<n>] [--full] [--plan] [--driver] [--stop] [--build <slug>]` | print the turn's whole CLI-rendered ending by tier, or a reminder for a pause already shown |
+| `handoff` | `handoff [<n>] [--full] [--plan] [--driver] [--stop] [--harvest] [--build <slug>]` | print the turn's whole CLI-rendered ending by tier, or the one line for a card already shown |
 | `check` | `check [--bail] [--changed] [--all] [--only a,b] [--skip a,b] [--include a,b]` | run the heavy gate; no state change |
 | `checkpoint` | `checkpoint [<n>] [--plan] [-m <msg>] [--body <<'BODY'…]` | gate on green, commit, record SHA, mark step done |
 | `revert` | `revert [--to <n>] [--build <slug>]` | `git reset --hard` to a checkpoint SHA |
@@ -197,7 +197,7 @@ plumbbob: no step entered (range 1 of 2's stop card is waiting for its reply)
 ### handoff
 
 ```text
-plumbbob handoff [<n>] [--full] [--plan] [--driver] [--stop] [--build <slug>]
+plumbbob handoff [<n>] [--full] [--plan] [--driver] [--stop] [--harvest] [--build <slug>]
 ```
 
 Prints the whole CLI-rendered **ending of a turn** ([the turn anatomy](presentation.md);

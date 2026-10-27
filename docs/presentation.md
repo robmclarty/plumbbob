@@ -35,8 +35,8 @@ there.
 
 | what | whose judgment | how it reaches the turn |
 | --- | --- | --- |
-| the Summary lead, the numbered highlights, the `done-when`, `decisions`, and `constraints` rows, the lean proposed for each park at a stop, the recommendation | the model | written into `.plumbbob/detail.md`, read back and rendered by handoff |
-| the Now line, the Readout's other rows, the inline diff when the change is small, the Verdict, the Stop part on the boundary that earns one, the Stop lead and each park's handle and text on a stop card, every `details:` link, Next Up, Your Call | the CLI | measured from the session, the gate, the plan, the build log, and git |
+| the Summary lead, the numbered highlights (kept in the detail file and the record), the `done-when`, `decisions`, and `constraints` rows, the title, the why, and the lean for each park at a stop, the recommendation | the model | written into `.plumbbob/detail.md`, read back and rendered by handoff |
+| the Readout's other rows and the changed files beneath its `diff` row, the inline diff when the change is small, Your Call, the state table (the Verdict, Now, Stop, Next Up, and the rows beneath it), each park's handle and text on a stop card, every `details:` link, the `more details` link | the CLI | measured from the session, the gate, the plan, the build log, and git |
 
 The model authors nothing in the turn but the relay. Every defect the build
 that wrote this spec found in a live turn sat in the region the model was
@@ -45,28 +45,22 @@ the anatomy), and a region the model does not own is a region it cannot
 narrate into. The turn is the anatomy and nothing else.
 
 **Every part outside the readout fence is a bold label, a colon, and text
-that wraps.** A block sits beneath a label only where the block is the
-content: the highlights under the Summary, the rows under the Readout, the
-moves under Your Call. One blank line separates every block. The pause used
-to run five visual grammars at once (a bare headline, a list, a label, two
-fences) when only the columnar rows need a fence, and a label announces what
-a line is before the eye reads it. The one line that wears no label of its
-own is the note beneath Next Up: indented two spaces, it continues the part
-above it, the way an advisory's remedy line does, and it renders only when
-there is something to remind of.
+that wraps, except the state the turn ends in, which rides one table.** A
+block sits beneath a label only where the block is the content: the rows
+under the Readout, the lean table under Harvested, the moves under Your Call.
+One blank line separates every block. The pause used to run five visual
+grammars at once (a bare headline, a list, a label, two fences) when only the
+columnar rows need a fence, and a label announces what a line is before the
+eye reads it. The state is the exception: the Verdict, the step in flight,
+Next Up, and what rides beneath Next Up are the facts the human scans for, so
+they ride a two-column table at the card's foot, the one shape on the card
+that is not prose ([D111 (state-table)](decisions.md#d111)).
 
 The whole turn, rendered (the running example is
 [`happy-path.md`](happy-path.md)'s rate limiter, at step 2's pause):
 
 ````markdown
-**Now**: Step 2 of 3 - feat(login): wire the limiter into POST /login
-
-**Summary**: The 6th login attempt inside a minute now gets 429. (details: [detail.md](.plumbbob/detail.md))
-
-1. `POST /login` runs the limiter before credentials are checked; over-limit
-   requests return 429.
-2. Misses count against the bucket and successes do not reset it, as planned.
-3. `test/login.rate.test.ts` covers the 6th-request case red-to-green.
+**Summary**: The 6th login attempt inside a minute now gets 429.
 
 **Readout**:
 
@@ -77,31 +71,37 @@ decisions    2 of 2 honored
 constraints  4 of 4 honored
 seam         held: 2 of 2 declared, no strays
 diff         +61 -3 across 2 files
+             - src/routes/login.ts +40 -3
+             - test/login.rate.test.ts +21 -0
 spent        88 min · 3 turns · 63s gate · green first run
 ```
-
-**Verdict**: ● Plumb
-
-**Next Up**: Step 3 of 3 - feat(config): make the limit configurable via env (model: **Sonnet**, details: [intent.md:41](.plumbbob/builds/rate-limit/intent.md#L41))
 
 **Your Call**:
 
 - `looks good` → I checkpoint Step 2; back to the boundary
 - `expand`, or any question → I show more of what is there; nothing changes, and `show the pause` brings all of this back
-- anything that reads as direction → I take it as what to change; nothing lands until you approve
+- anything that reads as direction → I make the change and say what moved; nothing lands until you approve
 - `revert` → I wind the work back to the last checkpoint
 
+| **Verdict** | ● Plumb |
+| --- | --- |
+| Now | Step 2 of 3 - feat(login): wire the limiter into POST /login |
+| Next Up | Step 3 of 3 - feat(config): make the limit configurable via env (model: **Sonnet**, details: [intent.md:41](.plumbbob/builds/rate-limit/intent.md#L41)) |
+
 **Recommendation**: Approve it. The gate is green, the seam held, and the one call the step made (misses count, successes do not reset) is what the plan already decided.
+
+[more details](.plumbbob/detail.md)
 ````
 
-Alignment survives only inside a fence in the renderers this has to read well
-in (Claude Code, Cursor, a PR diff), so the readout's columnar rows ride in a
-`text` fence and nothing else does. Everything else is a labeled line that
-wraps at the renderer's width, which is what the label buys back: the parts
-that are prose behave like prose. Fences never nest. handoff's output is
-pasted at top level, never inside a fence of the model's own, because a
-butted or nested fence breaks in exactly the renderers this document exists
-to survive.
+Alignment survives only inside a fence or a table in the renderers this has
+to read well in (Claude Code, Cursor, Zed, a PR diff), so the readout's
+columnar rows ride in a `text` fence, and the state the turn ends in rides a
+markdown table, which every one of them draws and whose cells wrap where a
+fence row would scroll. Everything else is a labeled line that wraps at the
+renderer's width, which is what the label buys back: the parts that are
+prose behave like prose. Fences never nest. handoff's output is pasted at top
+level, never inside a fence of the model's own, because a butted or nested
+fence breaks in exactly the renderers this document exists to survive.
 
 ### One block, relayed whole
 
@@ -110,8 +110,8 @@ runs `plumbbob handoff`, and pastes its output at top level; the turn begins
 where that output begins and ends where it ends. A positional rule holds
 where a list of forbidden phrases does not, because it leaves the
 meta-narration nowhere to live: there is no line above the Summary for "here
-is the pause", none between the highlights and the Readout for "the check
-came back green", and none after the recommendation for a closing courtesy.
+is the pause", none between the Summary and the Readout for "the check came
+back green", and none after the card's last line for a closing courtesy.
 Three consequences, spelled out because each was a real defect:
 
 - The model never frames or narrates the block. It does not introduce the
@@ -120,9 +120,11 @@ Three consequences, spelled out because each was a real defect:
   the check row; it does not also open the Summary or close the turn. (Step
   5 of the build that wrote this spec stated it three times in one pause.)
 - A judgment or a flag (a stray the seam row will name, a decision the step
-  had to bend, a doubt about the done-when) is a highlight: one sentence,
-  with its full story in the numbered detail section behind it. It is never a
-  freeform paragraph above or below the block.
+  had to bend, a doubt about the done-when) is a numbered section of the
+  detail file, and the card carries it where it bears on the call: a bent
+  row's `→` line points at the section, and the recommendation names it when
+  it changes the move. It is never a freeform paragraph above or below the
+  block.
 
 One tier still has a seam to mark. At the plan pause the model presents the
 framed plan itself and then relays `plumbbob handoff --plan`, so that block
@@ -133,120 +135,121 @@ only rule in the anatomy and the only seam left in it. The step pause, the
 boundary, and a driver turn carry none, because nothing of the model's
 precedes their lines.
 
-### One pause, rendered once
+### One card, shown once
 
-The block renders once per pause ([D87 (pause-once)](decisions.md#d87)). The
-turn that reaches a pause is the block and nothing else; a later turn at the
-same pause, with nothing about it changed, is the model's answer and then one
-line:
+A card shows once, when the work reaches it
+([D110 (reply-after-the-card)](decisions.md#d110)). Every later turn at the
+same pause, stop, or boundary is the model's own reply, closed by one line,
+and that holds for a question, a discussion, and a change the human asked
+for alike:
 
 ```text
 **Next Up**: Back to Step 2 of 3 - feat(login): wire the limiter into POST /login
 ```
 
-That is the driver pointer, the line a park already closes on, so a question
-and a tangent at the same pause end on the same line. It names the step still
-waiting, with its count, and no move: the moves are on the block, one screen
-up, and a lead line states its fact and leaves the move to the human
-([D84 (one-liner-register)](decisions.md#d84)). The answer is what the rule
-protects. A reply during a pause used to carry the whole block, about 40
-lines, beneath an answer of a sentence or two, and the answer the human asked
-for was pushed off the screen by a block they had already read. So the expand
-turn is the one turn where the model's prose stands above the CLI's line, and
-the line still closes it: the positional rule holds, because the CLI's line is
-still the last text.
+That is the driver pointer, the line a park already closes on, so every
+reply at a pause ends on the same line. It names the step still waiting,
+with its count, and no move: the moves are on the card, one screen up, and a
+lead line states its fact and leaves the move to the human
+([D84 (one-liner-register)](decisions.md#d84)). The reply is what the rule
+protects: the answer, or what changed and what the check found, in the
+model's own words. A reply during a pause used to carry the whole card,
+about 40 lines, beneath an answer of a sentence or two, and a change the
+human asked for used to print the card again, so the reply to their feedback
+sank beneath a card they had already read. So the reply is the one turn
+where the model's prose stands above the CLI's line, and the line still
+closes it: the positional rule holds, because the CLI's line is still the
+last text.
 
-The CLI chooses the form, never the model. `plumbbob handoff` keeps a stamp of
-what it last rendered for the step (the step number, the detail file, and its
-measured `check`, `seam`, and `diff` rows; never `spent`, which counts turns
-and would make every render look new) and prints the reminder while the stamp
-still matches. The block comes back two ways. It comes back on its own the
-moment the pause changes: a rewritten detail file, a touched file in the
-seam, a check that went red or came back green. And it comes back on request:
-`plumbbob handoff --full` prints the block whatever the stamp says, the
-`expand` move on the Your Call block names the phrase that asks for it
-(`show the pause`), and a session that no longer has the block in front of it
-(a fresh window, or one after `/clear`) asks the same way. A checkpoint, a
-revert, or an abandon clears the stamp, so the next pause renders whole.
-The stop card that closes a run's range keeps the rule under a stamp of its
-own, with a reminder naming the stop still waiting and
+The CLI chooses the form, never the model. `plumbbob handoff` keeps a stamp
+that says which card has shown, `PAUSE` holding the step whose pause showed
+or, after a checkpoint, the step whose boundary did, and nothing about what
+the card said, so the reminder prints whatever changed since: a rewritten
+detail file, an edit anywhere in the tree, a check that went red or came back
+green. The stamp used to hash what the card showed, and checkride's per-turn
+gate, which skips the test slot, rewrote the check row after nearly every
+turn, so the next reply came back as the whole card. A reply that changes the
+work writes the detail file again when the change moves what the card said,
+so the record matches what lands, and prints no card for it. The card comes
+back on request: `plumbbob handoff --full` prints it, the `expand` move names
+the phrase that asks for it (`show the pause`), and a human who wants it in a
+fresh window asks the same way. The model never runs `--full` to read the
+card for itself, since what `handoff` prints is the turn's ending. The next
+card is the next point where work is done: `looks good` lands the step, and
+the checkpoint prints the boundary. A revert or an abandon clears the stamp,
+so the next pause renders whole. A boundary keeps the rule too: once
+`checkpoint` has printed it, a later `handoff` there prints its forward
+pointer alone. The stop card that closes a run's range keeps it under a stamp
+of its own, with a reminder naming the stop still waiting and
 `plumbbob handoff --stop --full` to bring it back
 ([the stop card](#the-stop-card)).
 
-## The Now line
+## The Now row
 
-The block opens on the step in flight: its count, then its title behind a
-plain hyphen, written the way Next Up writes the step to come:
+The step in flight is the state table's second row, beneath the Verdict: its
+count, then its title behind a plain hyphen, written the way Next Up writes
+the step to come:
 
 ```text
-**Now**: Step 2 of 3 - feat(login): wire the limiter into POST /login
+| Now | Step 2 of 3 - feat(login): wire the limiter into POST /login |
 ```
 
 The step used to be named once on the block, in the Readout label, mid-block
 and without its count, while the one `Step N of M` the eye found was Next
 Up's, a step ahead; a human who asked "which step am I on?" was answering it
-by subtraction. So the identity moves to the top of the block with its count,
-and the Readout label stops repeating it
-([D88 (current-step-shown)](decisions.md#d88)). The label is `Now` because it
-pairs with `Next Up`: the two lines bracket the block, what is on the bench
-and what comes after it, and a reader who has learned one reads the other.
-It states the fact and no move, the register every lead line keeps
+by subtraction. So the identity moved to the top of the block with its count
+([D88 (current-step-shown)](decisions.md#d88)), and then into the state
+table, where the eye that looks for where the build stands finds it between
+the Verdict and Next Up ([D111 (state-table)](decisions.md#d111)). The label
+is `Now` because it pairs with `Next Up`: the two rows name what is on the
+bench and what comes after it, and a reader who has learned one reads the
+other. It states the fact and no move, the register every lead line keeps
 ([D84 (one-liner-register)](decisions.md#d84)). The count is the plan's own,
-the step number over the total, the way Next Up counts, so the two lines
-agree under a re-sequenced build order too: a step keeps its number for life
+the step number over the total, the way Next Up counts, so the two rows agree
+under a re-sequenced build order too: a step keeps its number for life
 ([D86 (build-order)](decisions.md#d86)).
 
-The line renders on every step pause at the decision tier (the build and
-verify pauses, and an auto halt on trouble), and the reminder a pause already
+The row renders on every step pause at the decision tier (the build and
+verify pauses, and an auto halt on trouble), and the reminder a card already
 shown ends on names the same step, `Back to Step 2 of 3`. The plan pause has
 no step in flight and renders none; the boundary's lead line already names
 the step that landed.
 
-## The Summary and the highlights
+## The Summary
 
-The turn opens on `**Summary**:`. Its lead states the outcome, not the
+The card opens on `**Summary**:`. Its lead states the outcome, not the
 activity: "The 6th login attempt inside a minute now gets 429", never "I have
 implemented the rate limiting functionality". One sentence when one will do,
-a short paragraph when the step needs explaining. That is an aim rather than a
-limit, and it is still a summary. The lead closes on a bracket naming where
-the rest of the story is:
+a short paragraph when the step needs explaining. That is an aim, not a
+limit, and it is still a summary:
 
 ```text
-**Summary**: <the lead>. (details: [detail.md](.plumbbob/detail.md))
+**Summary**: <the lead>
 ```
 
-The bracket takes the short linked form every `details:` bracket takes
-([the Next Up line](#the-next-up-line)): the file's name as a link to the
-file, with no line behind it, because the whole file is the detail.
+The numbered highlights stay in the detail file
+([D113 (short-card)](decisions.md#d113)). The model still writes them, each
+the title of a `## <n>` section with the full story beneath it, five at most,
+and the build-log record still lists them over the stories, but the card no
+longer prints them: the card is read for the Verdict, the lead, and the call,
+and a list the human reads past is a list in the way. The numbers are still
+handles, so `expand 2` opens the matching section. What the card carries for
+the rest of the story is one link at its foot, `[more details](.plumbbob/detail.md)`
+([the recommendation](#the-recommendation)); the lead's own bracket,
+`(details: [detail.md](.plumbbob/detail.md))`, retired with the list, since
+the foot points at the same file once.
 
-The highlights are a numbered list beneath it, five entries at most, each one
-sentence and one move. Plain English first: a path or identifier appears in
-backticks only when the name itself is the news. The numbers are handles, not
-decoration: "expand 2" opens the matching section of the detail file, so
-every highlight has a section behind it with the full story. A step so small
-that one sentence covers it has one highlight and one section; the handle
-still holds.
-
-Both come out of the detail file. The model writes the lead as that file's
-`## Summary` section and each highlight as the title of the `## <n>` section
-behind it; handoff prints the label, appends the bracket, and numbers the
-list from the handles the model wrote. So the model never types a path, and
-the handle on the card is the heading the `expand` move will open, not a
-number composed a second time.
-
-The Detail line retires with the rest of the model's typing. "5 sections in
-.plumbbob/detail.md; expand 2 opens one" was plumbbob talking to itself: the
-visible highlights already carry the count, and the `expand` move on the Your
-Call block already carries the affordance. Hidden detail is still counted and
-pointed at, because a silent cut reads as coverage; the counting is now done
-by two things the reader was going to look at anyway.
+The lead comes out of the detail file: the model writes it as that file's
+`## Summary` section, and handoff prints the label, so the model never types
+a path. Hidden detail is still pointed at, because a silent cut reads as
+coverage; the link and the `expand` move are where.
 
 ## The readout
 
 The readout is the step's instrument ([D82 (readout-ladder)](decisions.md#d82)):
 labeled rows inside one fence, assembled
 and emitted by `plumbbob handoff` under the bare label `**Readout**:`. Rows,
-not a retelling. The label used to carry the step's identity; the Now line
+not a retelling. The label used to carry the step's identity; the Now row
 carries it now, with its count, and a label that repeated it would put the
 step on the block twice ([D88 (current-step-shown)](decisions.md#d88)).
 
@@ -272,6 +275,8 @@ decisions    2 of 2 honored
 constraints  4 of 4 honored
 seam         held: 2 of 2 declared, no strays
 diff         +61 -3 across 2 files
+             - src/routes/login.ts +40 -3
+             - test/login.rate.test.ts +21 -0
 spent        88 min · 3 turns · 63s gate · green first run
 ```
 
@@ -285,7 +290,7 @@ offender when it is not:
 | `done-when` | model | `met` | `not met: <what is missing>` | `drift: <why no diff can meet it>` |
 | `decisions` | model | `<N> of <N> honored`, or `none exercised` | `bent: <tag>, <how>` | `drift: <which one reality broke>` |
 | `constraints` | model | `<N> of <N> honored` | `bent: <tag>, <how>` | `drift: <which one reality broke>` |
-| `seam` | CLI | `held: <N> of <M> declared, no strays` | `strayed: <N> paths outside the seam` | never; a seam the plan got wrong shows as a stray, and a highlight says so |
+| `seam` | CLI | `held: <N> of <M> declared, no strays` | `strayed: <N> paths outside the seam` | never; a seam the plan got wrong shows as a stray, and the detail file says so |
 
 The rules the rows follow:
 
@@ -322,14 +327,20 @@ The rules the rows follow:
   good state is meaningful collapses to it. Silence and absence are different
   signals, and the readout keeps them apart.
 - The `diff` row is information, not a measure: `+<added> -<removed> across
-  <N> files`, counted against HEAD with new files included. It never folds into
-  the Verdict, and it vanishes when nothing changed.
+  <N> files`, counted against HEAD with new files included, and beneath it
+  each changed file on a continuation line, `- <path> +<added> -<removed>`, in
+  git's path order ([D113 (short-card)](decisions.md#d113)). Past eight files
+  the list names seven and folds the rest to `and 5 more`, never a silent cut,
+  and a path is never shortened: it is the name the human opens, so it is the
+  second legal overflow of the 80 columns, beside a human-authored step title.
+  The row never folds into the Verdict, and it vanishes, list and all, when
+  nothing changed.
 - Every fence line fits 80 columns: the 13-character label pad leaves 67 for
   the value. The CLI's rows conform by counted degradation, never a silent
   cut: a long list of deselected slots collapses to `· without 9 others`.
   The model's three rows are written to fit, which the collapsed forms make
   easy: one short clause after the verdict word, with the full story in the
-  detail section behind the matching highlight.
+  detail file.
 - Measured beats attested. The model has no check or seam row to write; the
   CLI's measurement is the only one, so a model cannot vibe the gate green or
   the seam held.
@@ -397,30 +408,55 @@ in the next check row as `· without test` and nowhere else.
 
 ## The footer card
 
-The card is the ending's three closing parts
+The card is the ending's closing parts
 ([D83 (card-teaches-itself)](decisions.md#d83)), CLI-rendered by `plumbbob
-handoff` and relayed verbatim: the Verdict, the Next Up line, and the Your
-Call block, one blank line between each so the eye gets rungs to land on.
-Its fence is gone. Each part is a labeled line now, and a fence around three
-labeled lines was furniture holding up furniture; only the readout's columns
-need one. The card is human-facing, so its labels are title case and take a
-colon and every clause opens with a capital letter; the readout above it is
-an instrument, and its lowercase machine labels stay as they are.
+handoff` and relayed verbatim: the Your Call block, the state table, and, on
+a decision turn, the recommendation and the `more details` link beneath it,
+one blank line between each so the eye gets rungs to land on. The state
+table is the part that moved most ([D111 (state-table)](decisions.md#d111)):
+the Verdict, the step in flight, Next Up, and what rides beneath Next Up were
+labeled lines, and they are rows of one two-column table now, the facts the
+human scans for in the one shape on the card that is not prose:
+
+```text
+| **Verdict** | ● Plumb |
+| --- | --- |
+| Now | Step 2 of 3 - feat(login): wire the limiter into POST /login |
+| Next Up | Step 3 of 3 - feat(config): make the limit configurable via env (model: **Sonnet**, details: [intent.md:41](.plumbbob/builds/rate-limit/intent.md#L41)) |
+| Parked | 1 of 2 open |
+```
+
+Its rows, in order, each only when it says something: the Verdict, Now,
+Stop, Next Up, Range, Order, Parked, and Questions. The first row present is
+the header, its label bold, so the Verdict heads the table wherever one was
+measured, and Next Up heads it where nothing was (the plan pause, a stop's
+record, finish, a fresh session). A pipe in any cell is escaped, so a title
+holding one keeps its row. The table stands beneath Your Call and above the
+recommendation, so the last screenful of a card holds whether it is plumb,
+where the build stands, and what the model suggests, while the moves, which a
+human who has learned them reads past, stand above it. The card is
+human-facing, so its labels are title case; the readout above it is an
+instrument, and its lowercase machine labels stay as they are.
 
 ### The Verdict
 
-One line: the state word behind its glyph, then the worst component in a
-trailing parenthetical when one exists. The parenthetical vanishes when
-nothing is off:
+The state table's header row: the state word behind its glyph, then the
+worst component in a trailing parenthetical when one exists. The
+parenthetical vanishes when nothing is off:
 
 ```text
-**Verdict**: ● Plumb
-**Verdict**: ◐ A hair off (seam strayed)
-**Verdict**: ○ Out of plumb (check red)
-**Verdict**: ✗ Not standing (done-when drifted)
+| **Verdict** | ● Plumb |
+| **Verdict** | ◐ A hair off (seam strayed) |
+| **Verdict** | ○ Out of plumb (check red) |
+| **Verdict** | ✗ Not standing (done-when drifted) |
 ```
 
-No step segment rides here. The identity renders once per turn: the Now line
+It heads the table because it is the fact read first: whether the step is
+plumb decides how closely the rest is read. The build-log record keeps it as
+a labeled line, `**Verdict**: ● Plumb`, since the record is the archive and
+carries no table.
+
+No step segment rides here. The identity renders once per turn: the Now row
 names the step in flight with its count, Next Up names the step to come with
 its own, and the Verdict is left saying the one thing only it says. The card
 used to render "Step 10 of 14" twice.
@@ -451,7 +487,7 @@ of the plan rather than of the work, and it is the one rung that carries no
 count. At the pause the measured `seam` row carries it and names the paths
 itself; at the boundary the working tree is clean, the row has vanished, and
 the stat the checkpoint bumped once carries it instead, the paths riding the
-advisory printed beside the Verdict. Both wear the same words, `seam
+advisory printed above the table. Both wear the same words, `seam
 strayed`, so a stray earns the same rung whichever command rendered it.
 
 That last rung counts only commits that are not plumbbob's own. A
@@ -462,49 +498,53 @@ commits carrying the `plumbbob plan` body marker from the count. They share the
 marker, so the same history gives the same number on either.
 
 The Verdict names one component, the hunt-saver; the readout above it holds
-the rest. A fresh session with nothing measured renders no Verdict at all.
+the rest. A fresh session with nothing measured renders no Verdict at all,
+and Next Up heads its table.
 
-### The Next Up line
+### The Next Up row
 
-The forward pointer, one line: the step and the progress count, the title
-behind a plain hyphen, and a closing bracket carrying the plan's model
-recommendation when the step has one (advisory metadata,
+The forward pointer: the step and the progress count, the title behind a
+plain hyphen, and a closing bracket carrying the plan's model recommendation
+when the step has one (advisory metadata,
 [D62 (model-recommendation)](decisions.md#d62)) and where to read the step in
-full:
+full. On a card and an orientation ending it is the state table's Next Up
+row; on a driver turn and a reminder it is the one labeled line the turn
+closes on:
 
 ```text
-**Next Up**: Step 3 of 3 - feat(config): make the limit configurable via env (model: **Sonnet**, details: [intent.md:41](.plumbbob/builds/rate-limit/intent.md#L41))
+| Next Up | Step 3 of 3 - feat(config): make the limit configurable via env (model: **Sonnet**, details: [intent.md:41](.plumbbob/builds/rate-limit/intent.md#L41)) |
 
-**Next Up**: Step 3 of 3 - feat(config): make the limit configurable via env (details: [intent.md:41](.plumbbob/builds/rate-limit/intent.md#L41))
+| Next Up | Step 3 of 3 - feat(config): make the limit configurable via env (details: [intent.md:41](.plumbbob/builds/rate-limit/intent.md#L41)) |
+
+| Next Up | Nothing planned - /plumbbob:step or /plumbbob:finish |
+
+| **Next Up** | Nothing planned - /plumbbob:plan |
 
 **Next Up**: Back to Step 2 of 3 - feat(login): wire the limiter into POST /login
 
 **Next Up**: Back to Range 3 of 5's stop - review the card on a live boundary before the skills teach it
 
 **Next Up**: Close the spike - /plumbbob:spike done, then back to Step 2
-
-**Next Up**: Nothing planned - /plumbbob:step or /plumbbob:finish
-
-**Next Up**: Nothing planned - /plumbbob:plan
 ```
 
-The `Back to` form is the pointer a park closes on, and the reminder a pause
+The `Back to` form is the pointer a park closes on, and the reminder a card
 already shown ends on; a stop card already shown ends on the same form,
 naming the range and its stop where a step's names its title
-([the stop card](#the-stop-card)). The progress count rides Next Up in every tier,
-because Next Up is the one line present at the pause, at the boundary, and on
-a driver turn. It is dropped only where it would lie: a driver pointer back at
-a step the plan no longer holds says `Back to Step 9` and no count, and an
-open spike outranks the step it interrupted, so the move named is closing it
-and the step to come back to rides as a trailing clause. The last shape is
-`plumbbob finish`'s own: finish clears the session the pointer would be read
-from, so it prints the line itself, and the only move left is a fresh plan.
+([the stop card](#the-stop-card)). The progress count rides Next Up in every
+tier, because Next Up is the one fact present at the pause, at the boundary,
+and on a driver turn. It is dropped only where it would lie: a driver pointer
+back at a step the plan no longer holds says `Back to Step 9` and no count,
+and an open spike outranks the step it interrupted, so the move named is
+closing it and the step to come back to rides as a trailing clause. The
+header row naming `/plumbbob:plan` is `plumbbob finish`'s own: finish clears
+the session the pointer would be read from, so it prints the table itself,
+its one row, and the only move left is a fresh plan.
 
-The model is the second bold token the line spends, because it is the one the
+The model is the second bold token the row spends, because it is the one the
 human acts on (a `/model` call) before the next run. The rationale behind the
 recommendation lives on the dashboard, and the choice stays the human's. A
-title long enough to push the line past the width budget wraps; it is never
-truncated.
+title long enough to push the row past the width budget wraps in its cell;
+it is never truncated.
 
 The `details:` clause is a link, and its text is the file's name and line,
 `intent.md:41`, where it used to be the full sidecar path in a code span
@@ -512,10 +552,12 @@ The `details:` clause is a link, and its text is the file's name and line,
 ([D107 (short-linked-paths)](decisions.md#d107)). The target is the path from
 the repo root with the line as a `#L41` fragment,
 `[intent.md:41](.plumbbob/builds/rate-limit/intent.md#L41)`, and the same
-form rides every `details:` bracket the anatomy prints: the Summary lead's,
-which names the detail file with no line (`[detail.md](.plumbbob/detail.md)`),
-the Stop part's and the stop card's lead, and a transition's lead, where the
-sha comes first (`b4c5d6e7f, details: [build-log.md:52](.plumbbob/builds/rate-limit/build-log.md#L52)`).
+form rides every `details:` bracket the anatomy prints: Next Up's, the Stop
+row's, and a transition's lead, where the sha comes first
+(`b4c5d6e7f, details: [build-log.md:52](.plumbbob/builds/rate-limit/build-log.md#L52)`).
+The card's `more details` link to the detail file is the one link whose text
+is no file name, since it closes the card rather than qualifying a fact
+([D113 (short-card)](decisions.md#d113)).
 The full path was noise on every card, seventeen characters of
 `.plumbbob/builds/` and a slug ahead of the one word that said which file,
 while the short name still says it. The target stays relative so a card
@@ -533,33 +575,37 @@ into the build log's Log names a line, not an entry, so it drifts when a
 harvest writes above the entry: the Harvest lines sit above the Log, and after
 range 8's harvest `build-log.md:277` landed five lines above step 16's entry.
 
-Beneath the pointer, one indented line carries what the human would otherwise
-hold in their head, and only when there is something to hold:
+#### The rows beneath Next Up
+
+Beneath the Next Up row, the table carries what the human would otherwise
+hold in their head, a row each and each only when there is something to hold
+([D111 (state-table)](decisions.md#d111)):
 
 ```text
-**Next Up**: Step 7 of 10 - feat(x): title (model: **Sonnet**, details: [intent.md:22](.plumbbob/builds/x/intent.md#L22))
-  · order: 7, 8, 5, 10, 6 (and 2 more) · parked 2 of 7 open
+| Next Up | Step 7 of 10 - feat(x): title (model: **Sonnet**, details: [intent.md:22](.plumbbob/builds/x/intent.md#L22)) |
+| Range | 3 of 5: /plumbbob:run (steps 7-9) |
+| Order | 7, 8, 5, 10, 6 (and 2 more) |
+| Parked | 2 of 7 open |
+| Questions | 1 open |
 ```
 
-The build-order segment is the remaining sequence from the step the pointer
-names, five steps and then a count, and it renders only when `## Build order`
+The Range row names the range holding the step and the run that lands what
+is left of it; its forms are under [the build ranges](#the-build-ranges). The
+Order row is the remaining sequence from the step the pointer names, five
+steps and then a count, and it renders only when `## Build order`
 re-sequences the plan away from its numbering
 ([D86 (build-order)](decisions.md#d86)): a plan nobody re-sequenced already
-carries its sequence in the numbers. It is written as a labeled field,
-`order:`, where it read `build order 7, 8, 5`
-([D108 (order-label)](decisions.md#d108)), because the note's other segments
-read as labeled fields (`range 3 of 5:` names its range, `parked 2 of 7 open`
-its count) and a label is how the eye finds one in a line of three. The parks
-segment is the open count
-against everything ever parked, whenever anything has been parked; it rides
-even under `Nothing planned`, where an unharvested list is the one reminder
-that matters. When the plan declares build ranges, a third segment leads the
-line and names the range holding the step and the run that lands what is
-left of it, `· range 3 of 5: /plumbbob:run (steps 6-9)`; its forms are under
-[the build ranges](#the-build-ranges). With none of the three, the line
-vanishes. The indent is what keeps it inside the part: a reader of the anatomy
-files an indented line under the label above it and a flush one as a stray.
-The driver pointer carries no note; a one-line register stays one line.
+carries its sequence in the numbers. The Parked row is the open count against
+everything ever parked, whenever anything has been parked; it rides even
+under `Nothing planned`, where an unharvested list is the one reminder that
+matters. The Questions row counts the open questions the plan still carries,
+the count the dashboard prints beside the parks, while one is open. The
+first three rode one line indented beneath the pointer,
+`· range 3 of 5: … · order: … · parked 2 of 7 open`, three labeled fields in
+a line whose indent was all that kept it inside the part
+([D108 (order-label)](decisions.md#d108)); a row each gives every fact the
+label the eye looks for. A driver turn and a reminder carry none of them; a
+one-line register stays one line.
 
 ### The Your Call block
 
@@ -572,7 +618,7 @@ and states what happens next, exactly:
 
 - `looks good` → I checkpoint Step 2; back to the boundary
 - `expand`, or any question → I show more of what is there; nothing changes, and `show the pause` brings all of this back
-- anything that reads as direction → I take it as what to change; nothing lands until you approve
+- anything that reads as direction → I make the change and say what moved; nothing lands until you approve
 - `revert` → I wind the work back to the last checkpoint
 ```
 
@@ -585,14 +631,21 @@ last, because a destructive move is named rather than discovered.
 The moves stay lowercase, because they quote what the human says; each
 outcome clause after the arrow opens with a capital letter. The block names
 `expand` bare, as the label of the move: what follows it is the human's
-choice, a number (`expand 2` opens that highlight's section) or a phrase
-("explain that thing about the seam", "what does 'xyz' even mean?"), and it
-is answered from the detail file, the diff, or the build-log's Log for an
-older step, never from recall. An expand turn ends on the one-line reminder,
-not on the Your Call block again ([D87 (pause-once)](decisions.md#d87)): the
-answer is what the human asked for, and about 40 lines beneath it push it off
-the screen. The `expand` move is where the block says how it comes back, so
-the reminder never has to.
+choice, a number (`expand 2` opens that section of the detail file) or a
+phrase ("explain that thing about the seam", "what does 'xyz' even mean?"),
+and it is answered from the detail file, the diff, or the build-log's Log
+for an older step, never from recall. An expand turn ends on the one-line
+reminder, not on the card again: the answer is what the human asked for, and
+about 40 lines beneath it push it off the screen. The `expand` move is where
+the block says how the card comes back, so the reminder never has to.
+
+A message that directs is the fix, and the turn that makes it is a reply
+like any other ([D110 (reply-after-the-card)](decisions.md#d110)): the model
+makes the change, says what moved and what the check found, writes the
+detail file again when the change moved what the card said, and ends on the
+reminder. It does not print the card again. The human who wants the card's
+view of the change asks for it with `show the pause`, and `looks good` lands
+it as it stands, the checkpoint refusing on red as always.
 
 The `looks good` line renders only while the measured check is green: on red,
 or with no run to measure, the checkpoint would refuse, and offering a move
@@ -600,8 +653,8 @@ that cannot happen teaches a false ceremony. The others always render. The
 block is the face of the approval latch
 ([D64 (approval-latch)](decisions.md#d64)): the human's next message is the
 tick, and the card is where they learn what each tick does. It teaches the
-moves without saying which one to take; that is the recommendation's job, and
-it follows.
+moves without saying which one to take; that is the recommendation's job,
+and it closes the card beneath the state table.
 
 When the plan declares build ranges and the step in flight sits in a range
 that lands its steps, with steps still ahead of it, a fifth move rides
@@ -613,7 +666,7 @@ second, beneath `looks good`:
 - `looks good` → I checkpoint Step 6; back to the boundary
 - `/plumbbob:run` → I checkpoint Step 6, then run the rest of range 3 to its stop
 - `expand`, or any question → I show more of what is there; nothing changes, and `show the pause` brings all of this back
-- anything that reads as direction → I take it as what to change; nothing lands until you approve
+- anything that reads as direction → I make the change and say what moved; nothing lands until you approve
 - `revert` → I wind the work back to the last checkpoint
 ```
 
@@ -626,8 +679,8 @@ range because the outcome is two beats where `looks good` is one. The row
 renders only where the run does more than `looks good`: inside a bare range
 the run ends once its step lands, and so does one typed at the pause on a
 range's last step, so at those pauses the block keeps its four moves and
-the segment beneath Next Up says the range lands with the step
-([the range segment](#the-range-segment-beneath-next-up)). The stop card
+the Range row says the range lands with the step
+([the Range row](#the-range-row-beneath-next-up)). The stop card
 that closes a run's range carries a block of its own, with the record in
 place of the checkpoint ([the reply at a stop](#the-reply-at-a-stop)).
 
@@ -655,14 +708,14 @@ has landed, and nothing is left for the human to decide.
 
 ## The recommendation
 
-A decision turn's last words are the model's recommendation: the move it
-would take, then why. The Your Call block teaches the moves; a pause that
-leaves the human deciding unassisted is a defect, not a missing nicety. The
-model writes it into the detail file as a `## Recommendation` section,
-handoff emits it after the card behind a bold label, and it is relayed as
-plain prose, never fenced, so the card stays the last rendered block and the
-recommendation is the last text. It is the last of the labeled lines, and its
-label is the one they all copied. The shape is exact:
+A decision turn's last words are the model's recommendation, the move it
+would take and then why, and beneath it the one link to the rest of the
+story. The Your Call block teaches the moves; a pause that leaves the human
+deciding unassisted is a defect, not a missing nicety. The model writes it
+into the detail file as a `## Recommendation` section, handoff emits it after
+the state table behind a bold label, and it is relayed as plain prose, never
+fenced. It is the last of the labeled lines, and its label is the one they
+all copied. The shape is exact:
 
 ```text
 **Recommendation**: <The move.> <The reason, one or two sentences.>
@@ -675,6 +728,18 @@ clause, and the label announces what the last text is before the eye reads
 it. Written into the detail file, that is `Approve it. The gate is green and
 the seam held.`; the turn shows it as
 `**Recommendation**: Approve it. The gate is green and the seam held.`
+
+Beneath it the card closes on one line, the detail file the recommendation
+draws on:
+
+```text
+[more details](.plumbbob/detail.md)
+```
+
+It is the card's last line and the only place the card points at the detail
+file ([D113 (short-card)](decisions.md#d113)), out of the way of the parts
+the human reads to decide, and it renders only when the file holds
+something, since a link to an empty file points at nothing.
 
 It is flowing text. handoff joins each paragraph's lines into one on the way
 out, so the recommendation wraps at the renderer's width however the detail
@@ -712,10 +777,10 @@ scales down with the turn:
 
 | tier | turns | the ending renders |
 | --- | --- | --- |
-| decision | the build/verify pause, the plan pause, an auto halt on trouble | the whole block: the Now line, the Summary and its highlights, the Readout, the inline diff when small, the Verdict, Next Up, Your Call, and the recommendation, rendered once per pause; a later turn at the same pause ends on the one-line reminder. The plan pause judges no diff and has no step in flight, so it renders the pointer, the moves, and the recommendation alone |
-| decision, at a stop | the stop card that closes a run's range | the whole block in the range's shape: the Stop lead, the Summary and its highlights, the Readout measured across the range, the Verdict, the Harvested part while a park is open, Next Up, Your Call, and the recommendation, rendered once per stop; a later turn at the same stop ends on the one-line reminder ([the stop card](#the-stop-card)) |
-| orientation | the checkpoint boundary (a clean halt's included), a stop's record, finish, status | the transition's lead line, the Verdict where one was measured (a stop's record measures nothing and renders none), any advisories, the Stop part on the boundary where a range's last step landed, and Next Up with its note; no Your Call block, no recommendation. `status` is the exception: it renders the dashboard and nothing else, and the dashboard's last line is its own pointer |
-| driver | park, order, spike, use, recover, revert, agent runs | the transition's lead line, any advisories, and Next Up alone, no note beneath it; no Verdict, since nothing landed |
+| decision | the build/verify pause, the plan pause, an auto halt on trouble | the whole block: the Summary, the Readout with its changed files, the inline diff when small, Your Call, the state table (the Verdict, Now, Next Up, and the rows beneath it), the recommendation, and the `more details` link, shown once per pause; a later turn at the same pause is the model's reply, closed by the one-line reminder. The plan pause judges no diff and has no step in flight, so it renders the moves, the table headed by Next Up, the recommendation, and the link |
+| decision, at a stop | the stop card that closes a run's range | the whole block in the range's shape: the Summary, the Readout measured across the range, the Harvested part's lean table while a park is open, Your Call, the state table (the Verdict, Stop, Next Up, and the rows beneath it), the recommendation, and the link, shown once per stop; a later turn at the same stop is the model's reply, closed by the one-line reminder ([the stop card](#the-stop-card)) |
+| orientation | the checkpoint boundary (a clean halt's included), a stop's record, finish, status | the transition's lead line, any advisories, and the state table: the Verdict where one was measured (a stop's record measures nothing and renders none), the Stop row on the boundary where a range's last step landed, Next Up, and the rows beneath it; no Your Call block, no recommendation. A boundary already shown ends on its pointer alone. `status` is the exception: it renders the dashboard and nothing else, and the dashboard's last line is its own pointer |
+| driver | park, order, spike, use, recover, revert, agent runs | the transition's lead line, any advisories, and the one labeled Next Up line, no table; no Verdict, since nothing landed |
 
 **An auto halt takes the tier of what it leaves behind**
 ([D85 (range-top-lands)](decisions.md#d85)). A halt on trouble (a red check,
@@ -743,9 +808,9 @@ A boundary turn, whole:
 ```text
 **Checkpoint**: Step 2 complete (b4c5d6e7f, details: [build-log.md:52](.plumbbob/builds/rate-limit/build-log.md#L52))
 
-**Verdict**: ● Plumb
-
-**Next Up**: Step 3 of 3 - feat(config): make the limit configurable via env (model: **Sonnet**, details: [intent.md:41](.plumbbob/builds/rate-limit/intent.md#L41))
+| **Verdict** | ● Plumb |
+| --- | --- |
+| Next Up | Step 3 of 3 - feat(config): make the limit configurable via env (model: **Sonnet**, details: [intent.md:41](.plumbbob/builds/rate-limit/intent.md#L41)) |
 ```
 
 A driver turn, whole (a mid-step park):
@@ -757,9 +822,9 @@ A driver turn, whole (a mid-step park):
 ```
 
 **One command emits each of those, and the verb that made the transition is
-that command.** `checkpoint` prints its own Verdict and its own pointer,
-`park` prints the pointer back at the step it interrupted, and a skill relays
-the block whole. handoff still renders both parts and still stands alone for
+that command.** `checkpoint` prints its own table, its own Verdict and
+pointer in it, `park` prints the pointer back at the step it interrupted,
+and a skill relays the block whole. handoff still renders both parts and still stands alone for
 a turn where no verb ran (`status`, the pause, a re-read of the boundary),
 but a transition no longer needs a second call to finish its sentence. The
 boundary that taught this ran two commands and, between them, two grammars:
@@ -845,8 +910,8 @@ the tail and says how many it left (`and 2 others`), keeping two named so the
 count sizes something the reader can see. One or two items never degrade,
 because a notice wraps where a fence row cannot.
 
-No pointer rides a single line. Every ending closes on its Next Up line
-instead, so a verb that carried its own tail (`Back at the boundary.`,
+No pointer rides a single line. Every ending closes on its Next Up instead,
+a row of its state table or a driver's one labeled line, so a verb that carried its own tail (`Back at the boundary.`,
 `` `status` to orient. ``) was a second seam in a turn that has one. The one
 exception is `start`, which ends on its remedy line: the plan skill owns the
 turn that follows, and there is no step yet to aim at.
@@ -857,28 +922,27 @@ spends that same line on what unblocks it. The `heads-up` and `note` labels
 are retired, because the glyph table already gives `⚠` to a warning and `→`
 to what happens next.
 
-The order of an ending is fixed: the lead line, the Verdict where one was
-measured, the advisories, the Stop part on the one boundary that earns it, and
-the pointer, one blank line between each. So a relay never has to work out
-which line leads, and a stray a checkpoint alone can see lands under the
-Verdict it just earned a rung on:
+The order of an ending is fixed: the lead line, the advisories, then the
+state table, or a driver's one pointer line, one blank line between each.
+So a relay never has to work out which line leads, and a stray a checkpoint
+alone can see lands just above the Verdict it earned a rung on:
 
 ```text
 **Checkpoint**: Step 16 complete (f2b83e17c, details: [build-log.md:97](.plumbbob/builds/presentation/build-log.md#L97))
 
-**Verdict**: ◐ A hair off (seam strayed)
-
 Staged paths reach outside Step 16's seam ⚠ (test/integration/spike.test.ts, test/integration/use.test.ts)
   → the checkpoint captures them, so revise the plan with /plumbbob:step if that is real scope drift
 
-**Next Up**: Step 17 of 18 - feat(ending): every transition prints its whole ending (model: **Opus**, details: [intent.md:512](.plumbbob/builds/presentation/intent.md#L512))
+| **Verdict** | ◐ A hair off (seam strayed) |
+| --- | --- |
+| Next Up | Step 17 of 18 - feat(ending): every transition prints its whole ending (model: **Opus**, details: [intent.md:512](.plumbbob/builds/presentation/intent.md#L512)) |
 ```
 
 Every one of these lines is rendered by one formatter in `src/lib/notice.ts`:
 `transition()` for the labeled head, `advisory()` for the bare one,
 `notice()` for the prefixed one, a single assembly under all three for the
-fact, the detail list, and the remedy, and `ending()` for the order they
-stack in. A verb composes those parts and never a string, so moving the shape
+fact, the detail list, and the remedy, `stateTable()` for the table, and
+`ending()` for the order they stack in. A verb composes those parts and never a string, so moving the shape
 is one edit here and one there rather than a sweep across the verbs, and the
 tests assert through the same renderer.
 
@@ -1046,28 +1110,29 @@ No range names step 11 ⚠
 An order that changes no range adds neither part, so the ending reads as it
 always has.
 
-### The range segment beneath Next Up
+### The Range row beneath Next Up
 
-The note beneath the pointer opens on the range holding the step Next Up
+The first row beneath Next Up names the range holding the step Next Up
 names, numbered as the plan's item over the count of ranges, and the run
 that lands what is left of it from that step, the steps in a bracket:
 
 ```text
-**Next Up**: Step 6 of 12 - feat(orient): read the ranges (model: **Opus**, details: [intent.md:30](.plumbbob/builds/x/intent.md#L30))
-  · range 3 of 5: /plumbbob:run (steps 6-9) · parked 2 of 7 open
+| Next Up | Step 6 of 12 - feat(orient): read the ranges (model: **Opus**, details: [intent.md:30](.plumbbob/builds/x/intent.md#L30)) |
+| Range | 3 of 5: /plumbbob:run (steps 6-9) |
+| Parked | 2 of 7 open |
 ```
 
-The segment leads the note, ahead of the build order and the parks, because
-it is the one segment that names what to type. Its forms:
+The row comes first beneath Next Up, ahead of the order and the parks,
+because it is the one that names what to type. Its forms:
 
 ```text
-  · range 3 of 5: /plumbbob:run (steps 6-9)
-  · range 3 of 5: /plumbbob:run (steps 8-9)
-  · range 3 of 5: /plumbbob:run (step 9)
-  · range 4 of 5: /plumbbob:run (step 10 to its pause)
-  · range 3 of 5 lands with step 9
-  · range 3 of 5 needs a re-cut (the build order puts step 11 inside it)
-  · no range names step 12
+| Range | 3 of 5: /plumbbob:run (steps 6-9) |
+| Range | 3 of 5: /plumbbob:run (steps 8-9) |
+| Range | 3 of 5: /plumbbob:run (step 9) |
+| Range | 4 of 5: /plumbbob:run (step 10 to its pause) |
+| Range | 3 of 5 lands with step 9 |
+| Range | 3 of 5 needs a re-cut (the build order puts step 11 inside it) |
+| Range | no range names step 12 |
 ```
 
 The first is a range not yet started. The second and third are what is left
@@ -1078,7 +1143,10 @@ The fourth is a bare range, whose run builds its step to the pause, and the
 bracket says so. The fifth is the pause on a range's last step, below. The
 last two are the drift words above, in place of a run. A list range writes
 what is left in build order (`20,5-9`), so the first number in the bracket
-is where the run starts.
+is where the run starts. The row's label says `Range`, so its fact opens on
+the count; the row was a segment of the note beneath Next Up,
+`· range 3 of 5: /plumbbob:run (steps 6-9)`, until the note became rows
+([D111 (state-table)](decisions.md#d111)).
 
 The verb is the same at every site, so the bracket is what changes, and it
 is written as the grant the hook will mint
@@ -1091,36 +1159,36 @@ the run because the run is what the human types now, and the steps because
 they are what it will land
 ([D98 (card-names-the-run)](decisions.md#d98)).
 
-The segment renders at every site the note does: the plan pause and the
-plan commit, where Next Up names step 1 and the segment names range 1
-whole; a step pause; and a boundary. The driver pointer and the `Back to`
-reminder carry no note, as before. At a step pause the segment names the
-range holding the step in flight, and the bracket opens on that step,
-because `/plumbbob:run` typed there is that pause's `looks good`
+The row renders at every site the table does: the plan pause and the plan
+commit, where Next Up names step 1 and the row names range 1 whole; a step
+pause; and a boundary. The driver pointer and the `Back to` reminder carry no
+rows, as before. At a step pause the row names the range holding the step in
+flight, and the bracket opens on that step, because `/plumbbob:run` typed
+there is that pause's `looks good`
 ([D95 (run-verb)](decisions.md#d95)): it lands the step on a green check
 and runs on through what is left of the range, and the grant the hook mints
 counts the step in flight as undone. So at step 6's pause, where Next Up
-names step 7, the segment reads `range 3 of 5: /plumbbob:run (steps 6-9)`,
-and the Your Call block offers the run as a move
+names step 7, the row reads `3 of 5: /plumbbob:run (steps 6-9)`, and the
+Your Call block offers the run as a move
 ([the Your Call block](#the-your-call-block)). At the pause on a range's
 last step a run would land that step and end on the range's stop rather
-than start the next range, so the segment names no run: it reads
-`range 3 of 5 lands with step 9`, and Next Up's step 10 waits for the
-boundary, where the Stop part and the next range's segment render. A bare
-range's pause is the same case, since its run ends once its step lands.
+than start the next range, so the row names no run: it reads
+`3 of 5 lands with step 9`, and Next Up's step 10 waits for the boundary,
+where the Stop row and the next range's Range row render. A bare range's
+pause is the same case, since its run ends once its step lands.
 
-**While the segment suggests a range, the bracket's bold model is the
+**While the Range row suggests a range, the bracket's bold model is the
 range's.** Next Up's bracket reads `model: **Opus**` from the `- model:`
 line of the range holding the step Next Up names, rather than the step's,
-and the segment names no model of its own, because the bold token is the
+and the Range row names no model of its own, because the bold token is the
 one the human acts on before the next run, the run is the range, and a
 range's first step is often not its hardest. At the pause on a range's last
 step that is the next range, the one the human picks a model for, while
-the segment names the range that is finishing. A range with no model line
+the Range row names the range that is finishing. A range with no model line
 leaves the step's in place, and the pointer at a step in no range, or in a
-flagged range, keeps the step's, as today.
+flagged range, keeps the step's, as before.
 
-### The Stop part
+### The Stop row
 
 The boundary where a range's last step lands says why the build stops there.
 A boundary turn with it, whole:
@@ -1128,25 +1196,24 @@ A boundary turn with it, whole:
 ```text
 **Checkpoint**: Step 9 complete (c7d8e9f0a, details: [build-log.md:140](.plumbbob/builds/x/build-log.md#L140))
 
-**Verdict**: ● Plumb
-
-**Stop**: Range 3 of 5 landed - review the card on a live boundary before the skills teach it (details: [intent.md:63](.plumbbob/builds/x/intent.md#L63))
-
-**Next Up**: Step 10 of 12 - feat(docs): name the label (model: **Fable**, details: [intent.md:34](.plumbbob/builds/x/intent.md#L34))
-  · range 4 of 5: /plumbbob:run (step 10 to its pause)
+| **Verdict** | ● Plumb |
+| --- | --- |
+| Stop | Range 3 of 5 landed - review the card on a live boundary before the skills teach it (details: [intent.md:63](.plumbbob/builds/x/intent.md#L63)) |
+| Next Up | Step 10 of 12 - feat(docs): name the label (model: **Fable**, details: [intent.md:34](.plumbbob/builds/x/intent.md#L34)) |
+| Range | 4 of 5: /plumbbob:run (step 10 to its pause) |
 ```
 
-The shape is one labeled line: `Range N of M landed`, a plain hyphen, the
-stop's text as the plan wrote it, and a bracket pointing at the item, where
-the `- note:` the card does not carry can be read. The label is `Stop` because
-it names the thing the plan wrote (`**stop:**` is the item's own key), it
-reads as a noun on the card the way `Checkpoint` does, and the question the
-human brings to that boundary is why the build stopped here. It rides between
-the advisories and Next Up, so the Verdict the step earned and any stray land
-first and the stop reads straight into the pointer that names the next range.
-The part is the CLI's, measured from the plan and the boxes;
-`checkpoint` prints it and a later `handoff` at the same boundary prints it
-the same way, and the relay check reads it as a part of the block.
+The shape is one row labeled `Stop`: `Range N of M landed`, a plain hyphen,
+the stop's text as the plan wrote it, and a bracket pointing at the item,
+where the `- note:` the card does not carry can be read. The label is `Stop`
+because it names the thing the plan wrote (`**stop:**` is the item's own
+key), it reads as a noun on the card the way `Checkpoint` does, and the
+question the human brings to that boundary is why the build stopped here. It
+rides between the Verdict and Next Up, so the Verdict the step earned lands
+first and the stop reads straight into the pointer that names the next
+range. The row is the CLI's, measured from the plan and the boxes;
+`checkpoint` prints it, `handoff --full` at the same boundary prints it the
+same way, and the relay check reads it as a part of the block.
 
 It renders on exactly one boundary per range: the one where the range's last
 undone step lands, whichever step that is and however it landed, by the range,
@@ -1154,11 +1221,12 @@ by `--auto`, or by hand. A bare range never earns one, because its stop is its
 own pause: the step's `plumbbob status` carries the stop text, in the ranges
 block and in the run header, and the model writing that pause's
 recommendation reads it there. The plan commit carries
-none, since nothing landed. The boundary keeps its tier: the part is
+none, since nothing landed. The boundary keeps its tier: the row is
 orientation, and no Your Call block follows it. A run that lands its range
-ends on the stop card instead, where the part is the card's lead
-([the stop card](#the-stop-card)); the boundary above is what a range landed
-by `/plumbbob:build`, a typed range, `--auto`, or by hand still ends on.
+ends on the stop card instead, where the row rides the card's own state
+table ([the stop card](#the-stop-card)); the boundary above is what a range
+landed by `/plumbbob:build`, a typed range, `--auto`, or by hand still ends
+on.
 
 ### The dashboard's ranges block
 
@@ -1190,7 +1258,7 @@ the stops ahead are what the human steers by, and a landed range folds to its
 row, because its call was made. The block is the reference surface, so no
 stop is cut to a count. The dashboard's pointer names the run when the next
 step sits in a range, `run range 3 of 5`, with the verb and the bracket the
-card's segment carries: `(steps 8-9)` once two of its steps have landed,
+card's Range row carries: `(steps 8-9)` once two of its steps have landed,
 `(step 10 to its pause)` for a bare range. With the step in flight, or an
 explicit request, the pointer reads as it does today; `--run` is the one
 request that keeps it, below.
@@ -1374,7 +1442,7 @@ a range the human typed a run for. The turn hook marks the run in a `RUN`
 control file as it mints the grant ([the stop's record](#the-stops-record)),
 so the checkpoint can tell a run's landing from any other, and a range landed
 by `/plumbbob:build 6-9`, by `--auto`, or by hand keeps the boundary above,
-Stop part and all. A run that halts on trouble mid-range ends at that step's
+Stop row and all. A run that halts on trouble mid-range ends at that step's
 pause, as a typed range does; the mark outlives the pause, so a `looks good`
 that lands the range's last step still owes the card, and the human who
 approved the halt reads the review in the same turn. A bare range earns no
@@ -1384,13 +1452,7 @@ to it.
 The card, whole, at the boundary where the running example's range 3 landed:
 
 ````markdown
-**Stop**: Range 3 of 5 landed - review the card on a live boundary before the skills teach it (details: [intent.md:63](.plumbbob/builds/x/intent.md#L63))
-
-**Summary**: The boundary where a range's last step lands now says why the build stops there, and the dashboard lists the ranges beneath the steps. (details: [detail.md](.plumbbob/detail.md))
-
-1. Steps 6 and 7 read the section and flag its four drifts in one parser the card and the dashboard share.
-2. Step 8 landed a hair off: its commit reached `src/lib/notice.ts`, outside its seam, for the Stop part's label.
-3. Step 9's ranges block folds a landed range to its row, as the spec says, and the eval's anatomy reader needed no change.
+**Summary**: The boundary where a range's last step lands now says why the build stops there, and the dashboard lists the ranges beneath the steps.
 
 **Readout**:
 
@@ -1404,19 +1466,24 @@ constraints  4 of 4 honored
 seam         strayed: 1 path outside step 8's seam
              → src/lib/notice.ts
 diff         +412 -38 across 17 files
+             - docs/presentation.md +96 -12
+             - src/lib/notice.ts +14 -2
+             - src/lib/orient.ts +188 -9
+             - src/verbs/checkpoint.ts +22 -4
+             - src/verbs/handoff.ts +61 -7
+             - src/verbs/status.ts +9 -1
+             - test/evals/helpers/anatomy.ts +4 -1
+             - and 10 more
 spent        3h 12m · 1 red run
 ```
 
-**Verdict**: ◐ A hair off (seam strayed)
-
 **Harvested**: 3 of 8 parked ideas open
 
-- P6 · the Stop part could carry the range's note too → lean: tangent, the bracket already points at the item, where the note is
-- P7 · recover reports a range naming a step the plan lacks, but not two ranges naming one step → lean: blocker, step 10's done-when assumes recover flags it, so a step before 10 teaches it the second drift
-- P8 · a stop's markdown link prints raw on the dashboard → lean: tangent, cosmetic, and the card renders it
-
-**Next Up**: Step 10 of 12 - feat(docs): name the label (model: **Fable**, details: [intent.md:34](.plumbbob/builds/x/intent.md#L34))
-  · range 4 of 5: /plumbbob:run (step 10 to its pause)
+| Park | What it is | Why it matters | Lean |
+| --- | --- | --- | --- |
+| P6 · note on the card | the Stop row could carry the range's note too | the note says what to watch for at the stop | tangent: the bracket already points at the item, where the note is |
+| P7 · second drift | recover reports a range naming a step the plan lacks, but not two ranges naming one step | step 10's done-when assumes recover flags both drifts | blocker: a step before 10 teaches recover the second one |
+| P8 · raw link | a stop's markdown link prints raw on the dashboard | the dashboard is read in a fence, where the link stays text | tangent: cosmetic, and the card renders it |
 
 **Your Call**:
 
@@ -1424,67 +1491,77 @@ Approving locks in each lean above; to change one, say so first (`make P6 a bloc
 
 - `looks good` → I record the review and every lean as proposed, folding a blocker into the plan; back to the boundary
 - `/plumbbob:run` → I record them the same way, then run range 4 of 5 to its stop
-- anything that reads as direction → I re-render the card with the lean changed; nothing is recorded until you approve
+- anything that reads as direction → I change the lean and say what moved; nothing is recorded until you approve
 - `expand`, or any question → I show more of what is there; nothing changes, and `show the stop` brings all of this back
 
-**Recommendation**: Approve it, with P7 as the blocker it is. Step 8's stray is the label the Stop part needed, in a file the plan should have named, and the drift recover misses is the one step 10 builds on.
+| **Verdict** | ◐ A hair off (seam strayed) |
+| --- | --- |
+| Stop | Range 3 of 5 landed - review the card on a live boundary before the skills teach it (details: [intent.md:63](.plumbbob/builds/x/intent.md#L63)) |
+| Next Up | Step 10 of 12 - feat(docs): name the label (model: **Fable**, details: [intent.md:34](.plumbbob/builds/x/intent.md#L34)) |
+| Range | 4 of 5: /plumbbob:run (step 10 to its pause) |
+
+**Recommendation**: Approve it, with P7 as the blocker it is. Step 8's stray is the label the Stop row needed, in a file the plan should have named, and the drift recover misses is the one step 10 builds on.
+
+[more details](.plumbbob/detail.md)
 ````
 
 Its parts, in order, and what each one is:
 
-- **The Stop lead** opens the card where the Now line opens a pause: the
-  Stop part of the boundary above, moved to the top of the card, with the
-  range's count, the stop's text as the plan wrote it, and the bracket
-  pointing at the item. The card has no Now line, since no step is in
-  flight, and no `Checkpoint` lead, since the range's checkpoints are the
-  readout's first row. The label is `Stop` because the question the human
-  brings to a landed range is why the build stopped here, and the plan's own
-  words answer it.
-- **The Summary and the highlights** are the whole range's, not the last
-  step's: the lead states what the range built, and the highlights are the
-  five things worth a reviewer's eye across its steps, a step that landed a
-  hair off first among them. The model writes them from the steps' checkpoint
+- **The Summary** is the whole range's, not the last step's: the lead states
+  what the range built. The model writes it from the steps' checkpoint
   bodies and the build-log's Log, not from recall, because a long run can
-  compact its context partway through and lose its early steps.
+  compact its context partway through and lose its early steps, and it
+  writes the five things worth a reviewer's eye across the range as the
+  detail file's numbered sections, a step that landed a hair off first among
+  them, behind the `more details` link
+  ([D113 (short-card)](decisions.md#d113)).
 - **The Readout** is measured across the range
-  ([the range readout](#the-range-readout)).
-- **The Verdict** folds the readout's rows worst-of with the range's accrued
-  stats, the same fold a step's Verdict runs.
-- **The Harvested part** lists every open park under its handle with the
-  lean the model proposes for it, a class and one clause of reason
-  ([the Harvested part](#the-harvested-part)). A stop with no park open renders
-  the card without it ([D100 (stop-card)](decisions.md#d100)): the review is
-  the stop's point, the plain block left it nothing to read, and the one
-  reply the card then costs is the run the human was going to type anyway.
-- **Next Up** names the next range's first step, with the segment beneath it
-  naming that range's run, as the boundary's would. The parks segment does
-  not ride the note here, because the Harvested lead above carries the count.
-  On the plan's last range the pointer reads `Nothing planned`, and the note
-  vanishes.
+  ([the range readout](#the-range-readout)), the files the range's commits
+  changed listed beneath its `diff` row.
+- **The Harvested part** lists every open park as a row of the lean table:
+  its handle and title, its text, why it matters, and the lean the model
+  proposes ([the Harvested part](#the-harvested-part)). A stop with no park
+  open renders the card without it ([D100 (stop-card)](decisions.md#d100)):
+  the review is the stop's point, the plain block left it nothing to read,
+  and the one reply the card then costs is the run the human was going to
+  type anyway.
 - **Your Call** says that approving locks in the leans, then names the
   replies that settle the card in one message
   ([the reply at a stop](#the-reply-at-a-stop)).
+- **The state table** is the Verdict, folded from the readout's rows
+  worst-of with the range's accrued stats, the same fold a step's Verdict
+  runs; the Stop row, `Range N of M landed`, the stop's text as the plan
+  wrote it, and the bracket pointing at the item, which used to open the
+  card as its lead and moved into the table the way the Now line did
+  ([D111 (state-table)](decisions.md#d111)); Next Up, naming the next
+  range's first step; and the Range row, naming that range's run, as the
+  boundary's would. The Parked row does not ride here, because the
+  Harvested lead above carries the count. On the plan's last range the
+  pointer reads `Nothing planned`, and no Range row follows it. The card has
+  no Now row, since no step is in flight, and no `Checkpoint` lead, since the
+  range's checkpoints are the readout's first row.
 - **The recommendation** is the move on the review and the proposals
   together: `Approve it`, or `Approve it, with P7 as the blocker it is`,
   then why, and a range that landed a step the human should look at before
-  the next run says so here.
+  the next run says so here. The `more details` link closes the card.
 
-The card renders once per stop ([D87 (pause-once)](decisions.md#d87)), under
-a stamp of its own: the range number, the detail file, and the measured rows.
-A later turn at the same stop, with nothing about it changed, is the model's
-answer and then the reminder, naming the stop still waiting:
+The card shows once per stop
+([D110 (reply-after-the-card)](decisions.md#d110)), under a stamp of its
+own: the range and the turn the card printed in. Every later turn at the
+same stop is the model's reply, closed by the reminder naming the stop still
+waiting:
 
 ```text
 **Next Up**: Back to Range 3 of 5's stop - review the card on a live boundary before the skills teach it
 ```
 
-The card comes back when the stop changes (a rewritten detail file, so a
-proposal the human changed re-renders the whole card with the change in it)
-and on request: `plumbbob handoff --stop --full` prints it whatever the stamp
-says, the `expand` move names the phrase (`show the stop`), and a session
-without the card in front of it asks the same way. The record clears the
-stamp. The card carries no inline diff: a range's change is its commits, read by the shas on
-the steps row, and the diff row sums them.
+The reminder prints whatever changed since: a lean the human changed, a
+park, a gate run. The card comes back on request:
+`plumbbob handoff --stop --full` prints it, the `expand` move names the
+phrase (`show the stop`), and a human who wants it in a fresh window asks the
+same way. The record clears the stamp. The card carries no inline diff: a
+range's change is its commits, read by the shas on the steps row, and the
+diff row sums them.
 
 ### The range readout
 
@@ -1503,6 +1580,9 @@ decisions    3 of 3 honored
 constraints  4 of 4 honored
 seam         held: 4 of 4 steps, no strays
 diff         +412 -38 across 17 files
+             - docs/presentation.md +96 -12
+             - …
+             - and 10 more
 spent        3h 12m · green first run at every landing
 ```
 
@@ -1536,7 +1616,10 @@ The rules the range's rows add to the step's:
   as at a pause, since a stray in a landed commit asks the same question of
   the plan.
 - The `diff` row sums the commits, a file counted once however many commits
-  touched it. It never folds, and at a stop it never vanishes.
+  touched it, and lists those files beneath it the way a step's does, seven
+  named and the rest a count past eight
+  ([D113 (short-card)](decisions.md#d113)). It never folds, and at a stop it
+  never vanishes.
 - The `spent` row runs from the first step's `startedAt` to the last step's
   `landedAt`, then the red runs summed across the steps, or
   `green first run at every landing` when there were none, then any drift
@@ -1559,49 +1642,62 @@ checkpoints that are not plumbbob's own), then `● Plumb`.
 A park is a line under `## Park list` in `build-log.md`, and the card gives
 each one a handle it did not have: `P6` for the sixth line ever parked,
 harvested lines counted, so the number is the park's place in that list
-([D105 (park-handles)](decisions.md#d105)). That is the count the note
-already sizes (`parked 3 of 8 open` counts the same lines), a line is never
-deleted from the list, only flipped, so the handle is stable for the life of
-the build, and the record can match a proposal to its park by the number
-alone, with no guessing against the text. The handle reads `P6` on the card,
-in the detail file, and in a reply, one name at every site so nothing has to
-be mapped between them, and never a bare number, because the bare numbers are
-the highlights' (`expand 2` opens a section) and one reply at a stop can
-carry both ([D102 (settle-in-one-reply)](decisions.md#d102)). Each park
-rides a bullet line, not a numbered one, because a markdown list renumbers
-its items: open parks 6 and 8 on a numbered list render as 6 and 7, and the
-number the human reads would not be the one the record matches.
+([D105 (park-handles)](decisions.md#d105)). That is the count the Parked row
+already sizes (`3 of 8 open` counts the same lines), a line is never deleted
+from the list, only flipped, so the handle is stable for the life of the
+build, and the record can match a proposal to its park by the number alone,
+with no guessing against the text. The handle reads `P6` on the card, in the
+detail file, and in a reply, one name at every site so nothing has to be
+mapped between them, and never a bare number, because the bare numbers are
+the detail file's sections (`expand 2` opens one) and one reply at a stop can
+carry both ([D102 (settle-in-one-reply)](decisions.md#d102)).
 
-The part is a label, a lead that sizes the list, and one item per open park
-in list order:
+The part is a label, a lead that sizes the list, and the lean table, one row
+per open park in list order ([D112 (lean-table)](decisions.md#d112)):
 
 ```text
 **Harvested**: 3 of 8 parked ideas open
 
-- P6 · the Stop part could carry the range's note too → lean: tangent, the bracket already points at the item, where the note is
-- P7 · recover reports a range naming a step the plan lacks, but not two ranges naming one step → lean: blocker, step 10's done-when assumes recover flags it, so a step before 10 teaches it the second drift
-- P8 · a stop's markdown link prints raw on the dashboard → lean: tangent, cosmetic, and the card renders it
+| Park | What it is | Why it matters | Lean |
+| --- | --- | --- | --- |
+| P6 · note on the card | the Stop row could carry the range's note too | the note says what to watch for at the stop | tangent: the bracket already points at the item, where the note is |
+| P7 · second drift | recover reports a range naming a step the plan lacks, but not two ranges naming one step | step 10's done-when assumes recover flags both drifts | blocker: a step before 10 teaches recover the second one |
+| P8 · raw link | a stop's markdown link prints raw on the dashboard | the dashboard is read in a fence, where the link stays text | tangent: cosmetic, and the card renders it |
 ```
 
-An item is the handle, the park's text as the list holds it, and behind the
-arrow the lean: the word `lean:`, the class the model proposes, a comma, and
-its reason in one clause. The class is the model's suggestion and has to
-read as one, and `lean` is the plan's own word for a proposed answer, the
-one an open question's `*lean:*` already carries, so it names the suggestion
-without a second term (`suggested:` was dropped for that reason). The part
-is labeled `Harvested` because it lists what the run harvested for the human
-to judge ([D106 (leans-harvested)](decisions.md#d106)). The handle and the
+A row is the park's handle and the short title the model gives it, the
+park's text as the list holds it, why it matters, and the lean: the class
+the model proposes, a colon, and its reason in one clause. The handle and the
 text are the CLI's, read from the list, so the card can never misquote a
-park; the class and the reason are the model's, written into the detail
-file's `## Harvest` section as `- P6 → tangent: <the reason>`, one line per
-open park, and handoff joins the two and writes the lean's punctuation. The
-classes are the harvest skill's three, `blocker`, `tangent`, and `pivot`,
-and the default for anything uncertain is `tangent`, as the skill has always
-said; a park the section leaves out renders with `→ no lean proposed` in its
-place, so a silent omission reads as one on the card, and the record leaves
-that park open. A tag a park's line carries (`(tangent)` from
-`plumbbob park`) is the parker's own guess and stays in the text; the lean
-behind the arrow is the proposal.
+park; the title, the why, and the lean are the model's, written into the
+detail file's `## Harvest` section as a proposal line with two field lines
+indented beneath it, and handoff joins them into the row:
+
+```markdown
+- P6 → tangent: the bracket already points at the item, where the note is
+  - title: note on the card
+  - why: the note says what to watch for at the stop
+```
+
+The why is the column a reply turns on: a park's text says what it is, and
+nothing on the card used to say whether it mattered, so a human settling
+eight leans read eight parks cold. The parks rode bullet lines,
+`- P6 · <the text> → lean: tangent, <the reason>`, the handle, the text, and
+the lean run into one line, until the leans became a table. The class is the
+model's suggestion and has to read as one, and `lean` is the plan's own word
+for a proposed answer, the one an open question's `*lean:*` already carries,
+so the column names the suggestion without a second term
+([D106 (leans-harvested)](decisions.md#d106)). The part is labeled
+`Harvested` because it lists what the run harvested for the human to judge.
+The classes are the harvest skill's three, `blocker`, `tangent`, and
+`pivot`, and the default for anything uncertain is `tangent`, as the skill
+has always said. A gap reads as one: a park the section leaves out renders
+`no lean proposed` in the Lean column, and the record leaves that park open;
+a proposal with no field lines renders the handle alone and `not given` for
+the why, which is also how a detail written before the table still reads. A
+tag a park's line carries (`(tangent)` from `plumbbob park`) is the parker's
+own guess and stays in the text; the Lean column is the proposal. A pipe in
+a park's text is escaped, so its row keeps its four cells.
 
 ### The reply at a stop
 
@@ -1628,7 +1724,7 @@ Approving locks in each lean above; to change one, say so first (`make P6 a bloc
 
 - `looks good` → I record the review and every lean as proposed, folding a blocker into the plan; back to the boundary
 - `/plumbbob:run` → I record them the same way, then run range 4 of 5 to its stop
-- anything that reads as direction → I re-render the card with the lean changed; nothing is recorded until you approve
+- anything that reads as direction → I change the lean and say what moved; nothing is recorded until you approve
 - `expand`, or any question → I show more of what is there; nothing changes, and `show the stop` brings all of this back
 ```
 
@@ -1636,9 +1732,12 @@ Approving locks in each lean above; to change one, say so first (`make P6 a bloc
 `intent.md` by the harvest skill's rules first, then records the stop
 through `plumbbob harvest`, and relays its ending. A reply that changes a
 lean is direction (`make P7 a tangent`), and the handle is how it names one:
-the model rewrites the detail file's line and runs `plumbbob handoff --stop`,
-the stamp sees the change, and the whole card comes back with the lean as it
-will be recorded. Nothing lands until `looks good`. A blocker that becomes
+the model rewrites the detail file's line, says which lean moved, and ends
+on the reminder `plumbbob handoff --stop` prints, since the card has shown
+([D110 (reply-after-the-card)](decisions.md#d110)). `show the stop` brings
+the card back with the lean as it will be recorded, and `looks good`
+records every lean as the detail file now reads. Nothing lands until
+`looks good`. A blocker that becomes
 a step goes into a range still to come, the one it builds with, or into a
 bare range of its own when it brings a call; never into the range that just
 landed, whose call the card is making, since the step would reopen it. A new
@@ -1674,8 +1773,8 @@ through `plumbbob harvest`, before it writes the report, so the last range's
 review and its parks reach the Log and the report, where a finish that
 skipped them would leave the parks open on the one stop every ranged build
 has. When the next range is flagged, or no range names the next step, the
-row does not render, because the run would refuse, and the note beneath Next
-Up carries the drift words. A stop with no park open keeps the four moves
+row does not render, because the run would refuse, and the Range row
+carries the drift words. A stop with no park open keeps the four moves
 with the record in their clauses and no line beneath the label, since no
 lean is there to lock in: `looks good` records the review, `/plumbbob:run`
 records it and runs the next range, and direction is a change to the review.
@@ -1723,14 +1822,16 @@ commit would need a fourth kind of ledger line that `recover`, `revert`,
 learn, while the Log already carries the review into the PR.
 
 The record's ending is the orientation tier's: the lead line, any advisory,
-and Next Up with its note, which names the next run, re-cut or not. No
-Verdict rides it, since nothing was measured:
+and the state table, its Range row naming the next run, re-cut or not. No
+Verdict rides it, since nothing was measured, so Next Up heads the table:
 
 ```text
 **Stop**: Range 3 of 5 recorded (1 blocker, 2 tangents)
 
-**Next Up**: Step 10 of 12 - feat(docs): name the label (model: **Fable**, details: [intent.md:34](.plumbbob/builds/x/intent.md#L34))
-  · range 4 of 5: /plumbbob:run (step 10 to its pause) · parked 0 of 8 open
+| **Next Up** | Step 10 of 12 - feat(docs): name the label (model: **Fable**, details: [intent.md:34](.plumbbob/builds/x/intent.md#L34)) |
+| --- | --- |
+| Range | 4 of 5: /plumbbob:run (step 10 to its pause) |
+| Parked | 0 of 8 open |
 ```
 
 The label is `Stop` again, because the artifact that landed is the stop's
@@ -1746,17 +1847,17 @@ The record is latched ([D103 (stop-latched)](decisions.md#d103)). A run's
 turn is long, it ends on proposals, and that is exactly where a model would
 carry straight on into recording its own; the record is where plumbbob holds
 the line, as the checkpoint is for a step. So `plumbbob harvest` refuses in
-the turn the stop card printed, refuses a range's detail that no stop card
-showed, and refuses one whose range no longer reads as landed, each with the
-move that unblocks it, while a harvest outside a stop needs no stamp:
+the turn the stop card printed, refuses a range no stop card showed, and
+refuses one whose range no longer reads as landed, each with the move that
+unblocks it, while a harvest outside a stop needs no stamp:
 
 ```text
 plumbbob: range 3 of 5's stop not recorded (its card printed this turn, and no human turn has read it)
   → end the turn on the card; the human's reply is what records it
-plumbbob: range 3 of 5's stop not recorded (no stop card showed its detail)
+plumbbob: range 3 of 5's stop not recorded (no stop card showed it)
   → plumbbob handoff --stop, then end the turn on the card
 plumbbob: range 3 of 5's stop not recorded (step 9 is open again)
-  → land it, then plumbbob handoff --stop
+  → land it, then plumbbob handoff --stop --full
 plumbbob: range 3 of 5's stop not recorded (step 13 joined it after it landed)
   → move step 13 to a range still to come, then plumbbob harvest
 plumbbob: range 3 of 5's stop not recorded (P9 is not in the list; 8 parked)
@@ -1769,14 +1870,20 @@ plumbbob: nothing to record (the detail file is Step 9's, not a range's or a har
 
 The first is the latch itself: the card's stamp carries the turn it printed
 in, and the record waits for a human turn after it, the way a step's
-checkpoint waits for one after `plumbbob build`. The ledger tells the two
-open steps apart. A step with a `step 9 <sha>` line landed and was cleared by
-hand since, so it lands again and the card re-renders. A step with no line
+checkpoint waits for one after `plumbbob build`. The stamp names the range
+and nothing the card said, so a detail file a reply rewrote since, a lean the
+human changed, records as it now reads
+([D110 (reply-after-the-card)](decisions.md#d110)); the record used to
+compare the file to a digest the stamp kept, and refused the human's own
+change. The ledger tells the two open steps apart. A step with a
+`step 9 <sha>` line landed and was cleared by hand since, so it lands again,
+and the card prints again on `--stop --full`, since the range it reviews has
+changed under it. A step with no line
 never landed: a blocker was folded into the range the card reviews, and the
 remedy moves it out. A rerun of `plumbbob harvest` in the same reply then
-records, since the stamp's digest covers the detail file, which nothing
-rewrote, and the latch needs only a turn after the card's; `handoff --stop`
-would refuse there, because the last landing no longer completes the range.
+records, since the stamp still names the range and the latch needs only a
+turn after the card's; `handoff --stop` would refuse there, because the last
+landing no longer completes the range.
 A proposal naming a handle the list lacks (`P9` with eight parked), or a class outside the three,
 refuses the whole record
 rather than recording the rest, because a partial record would leave the
@@ -1813,10 +1920,10 @@ before, in 2 of 4 runs ([D85 (range-top-lands)](decisions.md#d85)).
 ### Without the section
 
 None of this renders for a plan without `## Build ranges`, or with only the
-template's placeholder under it: the note beneath Next Up is today's build
-order and parks, the bracket's model is the step's, the Your Call block keeps
+template's placeholder under it: the rows beneath Next Up are the build order
+and the parks, the bracket's model is the step's, the Your Call block keeps
 its four moves and the plan pause's row names the build, no boundary carries
-a Stop part, no run ends on a stop card, a harvest records through
+a Stop row, no run ends on a stop card, a harvest records through
 `plumbbob harvest` with no range parts, the dashboard has no ranges block, its pointer reads
 `build step 6`, and `status --run` prints no header, only the pointer that
 says to cut the ranges.
@@ -1843,18 +1950,20 @@ the sole channel. At line start, the glyph is followed by a space.
 | `●` `◐` `○` `✗` | the ladder words | the Verdict; `✗` alone also marks a hard failure (`harness bindings: ✗`) |
 | `⚠` | a named warning | binding warnings and advisories |
 | `·` | (separator) | between facts on one line |
-| `→` | what happens next | `next →`, the Your Call outcomes, a park's lean on the stop card, a red row's evidence line, a notice's remedy |
+| `→` | what happens next | `next →`, the Your Call outcomes, a proposal line in the detail file's `## Harvest`, a red row's evidence line, a notice's remedy |
 | `──` | (rule) | the detail file's readout header |
 | `---` | (rule) | the seam: the first line of the plan pause's block, the one tier with a model region above it |
 
 Hierarchy comes from position, shape, and whitespace. The anatomy spends one
 bold token per line and no italics: the label, which every part outside the
-readout fence carries. Next Up spends a second on the model name, because
-that is the token the human acts on before the next run. One bold token a
-line is the budget before bold stops meaning anything, and a fixed allocation
-is the next best thing to zero for policing. A link is budgeted the same way:
-one a line, the `details:` bracket's, whose text is a file's name and line
-([D107 (short-linked-paths)](decisions.md#d107)).
+readout fence carries, and on the state table the header's label alone, so
+the Verdict is the one bold word in the table. Next Up spends a second on the
+model name, because that is the token the human acts on before the next run.
+One bold token a line is the budget before bold stops meaning anything, and a
+fixed allocation is the next best thing to zero for policing. A link is
+budgeted the same way: one a line, the `details:` bracket's, whose text is a
+file's name and line ([D107 (short-linked-paths)](decisions.md#d107)), or
+the card's closing `more details` link.
 
 ## The detail plane
 
@@ -1920,7 +2029,11 @@ constraints  all honored
 ## Harvest
 
 - P6 → tangent: <the reason>
+  - title: <two to five words>
+  - why: <why it matters, one clause>
 - P7 → blocker: <the reason>
+  - title: <two to five words>
+  - why: <why it matters, one clause>
 
 ## Recommendation
 
@@ -1935,12 +2048,18 @@ range it reviews, so a step's checkpoint records a detail that names its step
 or no step at all, and leaves one naming a range, or a harvest
 (`# Detail · Harvest`, the boundary harvest's wire), where it is. The
 `## Harvest` section sits after the numbered sections and before the
-recommendation, one line per open park under the handle the card prints
-(`P6`, never a bare number), and vanishes when no park is open.
+recommendation, one proposal per open park under the handle the card prints
+(`P6`, never a bare number), with the title and the why the lean table shows
+on two field lines indented beneath it
+([D112 (lean-table)](decisions.md#d112)), and vanishes when no park is open.
+A boundary harvest's wire, `# Detail · Harvest`, carries the same section
+and no range parts, and `plumbbob handoff --harvest` renders it as the same
+table.
 `plumbbob harvest` records the file beneath the range's dated Log line (the
-Summary and highlights, the Readout, the Verdict, the Harvested part as the
-human settled it, the recommendation, then the full story behind each
-highlight) and truncates it, as `checkpoint` does for a step's.
+Summary and the highlights the card leaves here, the Readout, the Verdict as
+a line, the Harvested part's table as the human settled it, the
+recommendation, then the full story behind each highlight) and truncates it,
+as `checkpoint` does for a step's.
 
 The model writes it fresh before every pause: the three judgment rows under
 the header rule first (contiguous, since the first blank line ends them; no
@@ -1954,17 +2073,17 @@ count declared in intent.md, whatever the model attested. The header rule
 keeps the word `recap`: it is the wire's parse anchor rather than a
 rendering, and what a reader sees is the `**Readout**:` label above the
 fence. At checkpoint the CLI records the file beneath the step's dated line
-in the build-log's `## Log` (the Summary and highlights, the Readout, the
-Verdict, the recommendation, then the full story behind each highlight, as
-the pause showed them) and then truncates it: the tracked ledger is the
+in the build-log's `## Log` (the Summary and the highlights the card leaves
+here, the Readout, the Verdict as a line, the recommendation, then the full
+story behind each highlight) and then truncates it: the tracked ledger is the
 durable archive, and it rides the branch into the PR where a commit body
 would not survive the squash-merge. The commit body keeps its marker and the
 `--body` prose only, the diff stays in the tree and the commit, and the lead
 line's bracket links the entry (`details: [build-log.md:412](…/build-log.md#L412)`).
 
-Expansion is a lookup, never a recall. "expand 2" binds to the latest card,
-the move the Your Call block names, and is answered by reading the detail
-file's `## 2`; an older step takes its
+Expansion is a lookup, never a recall. "expand 2" binds to the latest detail
+file, the move the Your Call block names, and is answered by reading its
+`## 2`; an older step takes its
 step number and is answered from its entry in the Log. The diff itself never
 rides the detail file: at the pause it is the working tree against HEAD, new
 files included, and after the checkpoint it is the commit.
@@ -1981,8 +2100,11 @@ The numeric lines, in one place:
   when the fence follows it; when no patch could be produced the row keeps its
   bare counts. Code is the single largest source of
   visual flood, and the counted row already says what moved.
-- **Five highlights.** More means the step's story has not been compressed;
-  the overflow belongs in the detail file, behind the `expand` move.
+- **Five highlights, in the detail file.** More means the step's story has
+  not been compressed. The card prints none of them; the `more details` link
+  and the `expand` move are where they are read.
+- **Eight lines of files.** The changed files beneath a `diff` row name
+  seven and fold the rest to a count past eight, at a pause and at a stop.
 - **Two levels.** The turn body, then the detail plane. Nothing hides at a
   third level, and every elision is counted and pointed at.
 - **Column 14.** Readout labels pad to 13 characters so values align inside
@@ -1993,14 +2115,16 @@ The numeric lines, in one place:
   exactly the renderers this spec exists for. The CLI's rows degrade by count
   to fit and the model's are written to fit, which the collapsed forms make
   easy: 67 columns is room for a clause where the old 58 turned evidence into
-  telegraph. The one legal overflow is a human-authored step title, which is
-  never truncated: a wrapped title is legible where a cut one is wrong.
-- **No hard wrap outside the fence.** The Summary, the highlights, the
-  labeled lines, and the recommendation flow at the renderer's width. Only
-  the readout's columns are laid out to a number, because only they are
-  columns.
+  telegraph. The two legal overflows are a human-authored step title and a
+  changed file's path, neither ever truncated: a wrapped name is legible
+  where a cut one is wrong.
+- **No hard wrap outside the fence.** The Summary, the labeled lines, the
+  table cells, and the recommendation flow at the renderer's width. Only the
+  readout's columns are laid out to a number, because only they are columns.
 - **Zero code blocks** in the default turn body beyond the readout fence and
   the one inline-diff exception above.
+- **Two tables at most.** The state table on every card and orientation
+  ending, and the lean table on a stop card or a harvest's render.
 
 ## What this spec leaves alone
 

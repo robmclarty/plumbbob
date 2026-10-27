@@ -467,9 +467,10 @@ describe('build — a stop card waiting for its reply — D103 (stop-latched)', 
     const dir = makeTempRepo()
     await captureIoAsync(() => start(dir, ['Build test']))
     writeFileSync(intentPath(dir), intent)
-    // The stamp keeps the detail file's digest, and writes nothing without one.
+    // The card's stamp names the range and the turn it printed in; the detail
+    // file it reviews is what tells a card still waiting from one recorded.
     writeFileSync(detailPath(dir), RANGE_DETAIL)
-    writeStop(dir, undefined, { range, turn: 4, hash: 'card' })
+    writeStop(dir, undefined, { range, turn: 4 })
     writeFileSync(turnPath(dir), '5\n')
     return dir
   }
@@ -487,7 +488,7 @@ describe('build — a stop card waiting for its reply — D103 (stop-latched)', 
   it("names the finish on the plan's last range, ahead of the refusal for no undone step", async () => {
     const dir = await atCard(RANGED.replace('4. [ ] Fourth', '4. [x] Fourth').replace('3. `/plumbbob:build 4`', '3. `/plumbbob:build 4-4`'), 3)
     writeFileSync(detailPath(dir), RANGE_DETAIL.replace('Range 2', 'Range 3'))
-    writeStop(dir, undefined, { range: 3, turn: 4, hash: 'card' })
+    writeStop(dir, undefined, { range: 3, turn: 4 })
     expect(captureIo(() => build(dir, [])).stderr).toBe(refusal(3, 3, ', and /plumbbob:finish records it, then writes the report'))
   })
 
