@@ -45,10 +45,11 @@ fragments), wrapped to roughly the same width as the surrounding entries.
 Both the npm package and the GitHub Release are driven by CI, triggered by a
 pushed `vA.B.C` git tag — **not** by this skill running `npm publish` directly:
 
-- `.github/workflows/publish.yaml` reruns the check gate, builds, and runs
-  `npm publish --provenance` over tokenless OIDC. It **pauses at the `npm-publish`
-  environment for a required-reviewer approval** — nothing reaches npm until a
-  maintainer approves that run in the Actions tab.
+- `.github/workflows/publish.yaml` reruns the check gate, builds, and packs the
+  tarball in a `build` job that can't publish. Its `publish` job then **pauses at
+  the `npm-publish` environment for a required-reviewer approval** and runs
+  `npm publish --provenance` on that tarball over tokenless OIDC — nothing
+  reaches npm until a maintainer approves that run in the Actions tab.
 - `.github/workflows/release.yaml` creates the GitHub Release immediately on the
   tag push (no approval gate), pulling notes from the matching `## [A.B.C]`
   section of `CHANGELOG.md`.
