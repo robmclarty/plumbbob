@@ -5,6 +5,47 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.7] - 2026-10-31
+
+- **Added:** open questions reach the chat as one table, a row per question with the question,
+  why it matters, and the lean, each linked to its entry in `intent.md`. The plan card prints
+  it above its moves with a `yes to all leans` move, and `plumbbob status --questions` prints
+  it alone. D118 (questions-table) records it (#8).
+- **Added:** a question the human leaves to the work is deferred, not resolved:
+  `*deferred:* <date>, until <what settles it>` on its opener line keeps it open but counts
+  it apart. The Questions row reads `**1** to answer · 2 deferred`, the plan card's table
+  lists only the questions to answer, the deferred ones ride a `Deferred` line beneath it,
+  and a `defer Q3 until …` move writes the marker. D120 (deferred-questions) records it.
+- **Added:** eval contract c13, a short stop card after an approved halt, with receipts for
+  c11 and c13, and for c10 and c12 under a new probe that reads whether the reply followed
+  the turn's last tool call.
+- **Changed:** a card names each step and range by its number in bold and the model its plan
+  line names for it, with no count: Now and Next Up read `**Step 2** on Sonnet - <title>`,
+  and the Range row names the range a run would walk on its own model. The Parked row keeps
+  its open count bold and names `/plumbbob:harvest` while a park is open.
+  D115 (card-weights) records it.
+- **Changed:** until the plan commit lands, the plan card says what approving publishes, the
+  tracked folder or a record-only commit, and a tracked folder adds a `keep it local` move,
+  which `plumbbob start --local` on the open session now carries out instead of refusing.
+  D117 (publish-on-the-card) records it (#10).
+- **Changed:** a stop card that follows a halt the human just approved prints short, its
+  Harvested table, moves, and state table without the Summary, Readout, and recommendation
+  the pause card showed a minute before; `show the stop` prints it whole.
+  D119 (short-stop-after-a-halt) records it (#11).
+- **Changed:** the publish workflow keeps its npm identity out of the job that installs and
+  builds. A `build` job runs the gate and packs the tarball with read-only access, and the
+  `publish` job, behind the reviewer gate, only publishes that tarball.
+- **Fixed:** a reply at a card already shown could vanish in a client that folds text written
+  before a tool call, Zed through the Claude agent bridge among them, because the model
+  wrote its answer and then ran `plumbbob handoff`. The model now makes every tool call
+  first and writes the reply last, above the line it ends on, and the relay check holds once
+  a turn whose reply stood above a tool call. D121 (reply-after-the-tools) records it (#12).
+- **Fixed:** the step, plan, and stop records re-aim the detail file's relative links at the
+  build folder the log lives in, so a link written right in `.plumbbob/detail.md` no longer
+  turns the gate red once copied into `build-log.md`. D116 (links-re-rooted) records it (#7).
+- **Fixed:** a range typed past an earlier undone step halts after its first step, as the
+  build skill said, and the notice names the step it halts before (#9).
+
 ## [0.13.6] - 2026-10-27
 
 - **Changed:** a shell command in a card's recommendation gets a fenced `sh` block of its own,
