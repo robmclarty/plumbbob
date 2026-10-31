@@ -8,7 +8,7 @@ import { existsSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { detectGate } from '../lib/check.ts'
 import { readTemplate, stampTemplate } from '../lib/templates.ts'
-import { findRepoRoot, hasCommit, headSha, isDirty, isIgnored } from '../lib/git.ts'
+import { findRepoRoot, hasCommit, headSha, isDirty } from '../lib/git.ts'
 import {
   sidecarDir,
   buildDir,
@@ -21,6 +21,8 @@ import {
   hasSession,
   excludeControl,
   excludeSidecar,
+  buildFolderIgnored,
+  planCommitted,
   setGrant,
   stampTick,
 } from '../lib/sidecar.ts'
@@ -58,6 +60,13 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
   // Every advisory the session accrues on its way open, collected rather than
   // printed: they belong inside the one ending below, in the order found.
   const advisories: string[] = []
+
+  // `--local` on a session already open is the plan card's way out: keep this
+  // build untracked before its plan commit lands. It needs no title.
+  const open = local ? findRepoRoot(cwd) : null
+  if (open !== null && hasSession(open)) {
+    return keepLocal(open)
+  }
 
   if (title.length === 0) {
     process.stderr.write(
@@ -195,7 +204,7 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
   // excludes the whole sidecar by design and says so, so skip the probe there.
   // Guidance only, and the session is already open: a probe hiccup stays silent
   // rather than half-crashing a scaffolded session.
-  if (!local && sidecarIsIgnored(root, slug)) {
+  if (!local && buildFolderIgnored(root, slug)) {
     advisories.push(
       advisory({
         fact: 'this repo gitignores .plumbbob/',
@@ -258,19 +267,42 @@ function datedSlug(title: string): string {
 }
 
 /**
- * Whether the tracked build folder is gitignored: the record-only advisory's
- * predicate, probing exactly the path `checkpoint --plan` will try to stage.
+ * Keep an open session untracked: `plumbbob start --local` typed while a build
+ * is open and its plan not yet committed, the way out the plan card offers
+ * (D117 (publish-on-the-card)).
  *
- * Best-effort: a probe that throws (a fatal `git check-ignore`) reads as
- * not-ignored so the advisory stays silent rather than crashing a session that
- * is already open.
+ * It writes the blanket `.plumbbob/` line to this clone's info/exclude, the
+ * line a `--local` start writes, so the plan and finish commits land
+ * record-only and nothing under `.plumbbob/` rides the branch. The folder
+ * keeps its place and its slug; only git's view of it changes. Refuses once the
+ * plan has landed, since the folder is in a commit by then and an exclude
+ * cannot take it back.
  */
-function sidecarIsIgnored(root: string, slug: string): boolean {
-  try {
-    return isIgnored(root, buildDir(root, slug))
-  } catch {
-    return false
+function keepLocal(root: string): number {
+  if (planCommitted(root)) {
+    process.stderr.write(
+      notice({
+        fact: 'this session can no longer be kept local',
+        detail: ['its plan is already committed with the build folder'],
+        remedy: 'plumbbob finish to close it before starting another',
+      }),
+    )
+    return 1
   }
+  excludeSidecar(root)
+  printEnding(root, {
+    tier: 'driver',
+    render: 'start',
+    text: ending({
+      lead: transition({
+        label: 'Session',
+        fact: 'kept local',
+        detail: ['.plumbbob/ excluded in this clone', 'the plan and finish commits land record-only'],
+        remedy: 'plumbbob handoff --plan to show the plan card again',
+      }),
+    }),
+  })
+  return 0
 }
 
 /**

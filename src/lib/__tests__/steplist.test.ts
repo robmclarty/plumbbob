@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { expandStepList, formatStepList, hasStep, normalizeStepList, parseStepList, readBuildArgs } from '../steplist.ts'
 
-describe('parseStepList — D12 (step-list-grants)', () => {
+describe('parseStepList — D91 (step-list-grants)', () => {
   it('reads a number, a span, and numbers and spans joined by commas, in the order written', () => {
     expect(parseStepList('3')).toEqual([{ from: 3, to: 3 }])
     expect(parseStepList('2-4')).toEqual([{ from: 2, to: 4 }])

@@ -126,8 +126,8 @@ steps it will land:
 
 | **Verdict** | ● Plumb |
 | --- | --- |
-| Next Up | Step 2 of 5 - feat(log): redact secret fields by name (model: **Sonnet**, details: [intent.md:27](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L27)) |
-| Range | 2 of 3: /plumbbob:run (steps 2-3) |
+| Next Up | **Step 2** on Sonnet - feat(log): redact secret fields by name (details: [intent.md:27](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L27)) |
+| Range | **2** on Sonnet: /plumbbob:run (steps 2-3) |
 ```
 
 The bold model is range 2's own, since the run is the range, and the range's first step is
@@ -161,7 +161,7 @@ Ideas that arrive mid-step are parked, not chased; the model parks what it meets
 ```text
 **Parked**: should a request that arrives with no id get one generated? (tangent)
 
-**Next Up**: Back to Step 3 of 5 - feat(http): log every request with its id
+**Next Up**: Back to **Step 3** on Sonnet - feat(http): log every request with its id
 ```
 
 No harvest runs between the steps inside a range, so the parks wait for its stop. When step 3
@@ -194,7 +194,7 @@ diff         +4 -0 across 4 files
 spent        39 min · green first run at every landing
 ```
 
-**Harvested**: 2 of 2 parked ideas open
+**Harvested**: **2** of 2 parked ideas open
 
 | Park | What it is | Why it matters | Lean |
 | --- | --- | --- | --- |
@@ -212,9 +212,9 @@ Approving locks in each lean above; to change one, say so first (`make P1 a bloc
 
 | **Verdict** | ● Plumb |
 | --- | --- |
-| Stop | Range 2 of 3 landed - read one real request's line before the timing and the docs build on it (details: [intent.md:48](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L48)) |
-| Next Up | Step 4 of 5 - feat(http): log how long each request took (model: **Sonnet**, details: [intent.md:33](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L33)) |
-| Range | 3 of 3: /plumbbob:run (steps 4-5) |
+| Stop | **Range 2** landed - read one real request's line before the timing and the docs build on it (details: [intent.md:48](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L48)) |
+| Next Up | **Step 4** on Sonnet - feat(http): log how long each request took (details: [intent.md:33](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L33)) |
+| Range | **3** on Sonnet: /plumbbob:run (steps 4-5) |
 
 **Recommendation**: Approve it, then curl one request and read its line before the timing builds on it. The gate was green at both landings and both parks are future work.
 
@@ -267,7 +267,7 @@ A change and a question both close on the reminder, and only `show the stop` bri
 card back:
 
 ```text
-**Next Up**: Back to Range 2 of 3's stop - read one real request's line before the timing and the docs build on it
+**Next Up**: Back to **Range 2**'s stop - read one real request's line before the timing and the docs build on it
 ```
 
 While the card waits, `/plumbbob:build` refuses to enter a step, because the step's pause
@@ -297,7 +297,7 @@ steps, so range 3's command becomes `/plumbbob:build 6,4-5`, written in the orde
 
 **Build ranges**: range 3 of 3 re-cut (steps 6,4-5)
 
-**Next Up**: Step 6 of 6 - feat(http): generate a request id when the client sends none (model: **Sonnet**, details: [intent.md:40](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L40))
+**Next Up**: **Step 6** on Sonnet - feat(http): generate a request id when the client sends none (details: [intent.md:40](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L40))
 ```
 
 Then `plumbbob harvest` records the stop ([D104 (harvest-records)](decisions.md#d104)). It
@@ -307,13 +307,13 @@ rides the branch into the PR. It commits nothing; the record rides the next step
 checkpoint:
 
 ```text
-**Stop**: Range 2 of 3 recorded (1 blocker, 1 tangent)
+**Stop**: **Range 2** recorded (1 blocker, 1 tangent)
 
-| **Next Up** | Step 6 of 6 - feat(http): generate a request id when the client sends none (model: **Sonnet**, details: [intent.md:40](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L40)) |
+| **Next Up** | **Step 6** on Sonnet - feat(http): generate a request id when the client sends none (details: [intent.md:40](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L40)) |
 | --- | --- |
-| Range | 3 of 3: /plumbbob:run (steps 6,4-5) |
+| Range | **3** on Sonnet: /plumbbob:run (steps 6,4-5) |
 | Order | 6, 4, 5 |
-| Parked | 0 of 2 open |
+| Parked | **0** of 2 open |
 ```
 
 Here the run you typed stops, and the reason is the grant. The hook minted it when you
@@ -387,10 +387,10 @@ printed, as the whole ending of the turn:
 
 | **Verdict** | ● Plumb |
 | --- | --- |
-| Stop | Range 2 of 3 landed - read one real request's line before the timing and the docs build on it (details: [intent.md:48](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L48)) |
-| Next Up | Step 4 of 5 - feat(http): log how long each request took (model: **Sonnet**, details: [intent.md:33](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L33)) |
-| Range | 3 of 3: /plumbbob:run (steps 4-5) |
-| Parked | 2 of 2 open |
+| Stop | **Range 2** landed - read one real request's line before the timing and the docs build on it (details: [intent.md:48](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L48)) |
+| Next Up | **Step 4** on Sonnet - feat(http): log how long each request took (details: [intent.md:33](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L33)) |
+| Range | **3** on Sonnet: /plumbbob:run (steps 4-5) |
+| Parked | **2** of 2 open: /plumbbob:harvest |
 ```
 
 That block is an orientation turn: a Verdict for step 3 alone, no review of step 2, no
@@ -403,17 +403,20 @@ says what it recorded and nothing about a range:
 ```text
 **Recorded**: 2 parked ideas (1 blocker, 1 tangent)
 
-| **Next Up** | Step 6 of 6 - feat(http): generate a request id when the client sends none (model: **Sonnet**, details: [intent.md:39](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L39)) |
+| **Next Up** | **Step 6** on Sonnet - feat(http): generate a request id when the client sends none (details: [intent.md:39](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L39)) |
 | --- | --- |
-| Range | 3 of 3: /plumbbob:run (steps 6,4-5) |
+| Range | **3** on Sonnet: /plumbbob:run (steps 6,4-5) |
 | Order | 6, 4, 5 |
-| Parked | 0 of 2 open |
+| Parked | **0** of 2 open |
 ```
 
 Then the re-cut range is yours to type. `/plumbbob:build 4-5`, the range as you remember it,
-grants steps 4 and 5 and never step 6, so the step the harvest added cannot land in it. The
-range that walks the whole stretch is `/plumbbob:build 6,4-5`, which is what the card's Range
-row names for the run.
+grants steps 4 and 5 and never step 6, so the step the harvest added cannot land in it. Nor
+does the range reach step 5: step 4 enters as a jump over step 6, and once it lands, step 6 is
+next in the build order and the range does not name it, so the walk halts there, and
+`plumbbob build` has already named step 4 as the last undone step in the range. The range that
+walks the whole stretch is `/plumbbob:build 6,4-5`, which is what the card's Range row names
+for the run.
 
 Side by side, what the run changes:
 
@@ -525,8 +528,9 @@ check, a self-review that finds a mismatch, a bound agent that returns `blocked`
 or a decision the plan did not make. Each ends at that step's pause card, the step unlanded,
 and the grant ends with the turn. Say `looks good` once the step is right and it lands; when
 that landing completes the range, the stop card follows in the same turn, since the run's
-mark outlives the pause. Otherwise the Range row names the run for what is left
-(`| Range | 2 of 3: /plumbbob:run (step 3) |`), and you type it.
+mark outlives the pause. It comes short, since you read that step's card a moment ago: the
+leans, the moves, and the state table, and `show the stop` brings the rest. Otherwise the Range row names the run for what is left
+(`| Range | **2** on Sonnet: /plumbbob:run (step 3) |`), and you type it.
 
 ## What a run never does
 

@@ -111,13 +111,14 @@ rest, and the card closes on one link to the read itself:
 
 **Your Call**:
 
-- `looks good` → I mark the plan decided; /plumbbob:run runs range 1 from Step 1
+- `looks good` → I mark the plan decided and commit it, so `.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/` rides this branch into the PR; /plumbbob:run runs range 1 from Step 1
 - `expand`, or any question → I show more of what is there; nothing changes
 - anything that reads as direction → I take it as what to sharpen; the plan is cheap to change now
+- `keep it local` → I run `plumbbob start --local`, so the plan commits record-only and the folder stays off the branch
 
-| **Next Up** | Step 1 of 3 - feat(limiter): add a token-bucket limiter (model: **Opus**, details: [intent.md:25](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L25)) |
+| **Next Up** | **Step 1** on Opus - feat(limiter): add a token-bucket limiter (details: [intent.md:25](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L25)) |
 | --- | --- |
-| Range | 1 of 2: /plumbbob:run (step 1 to its pause) |
+| Range | **1** on Opus: /plumbbob:run (step 1 to its pause) |
 
 **Recommendation**: Approve it. Every step carries a done-when a test can measure, the seams name files that exist, and each Decision states its because.
 
@@ -133,9 +134,9 @@ prints its own close:
 ```text
 **Plan**: committed (7d2e94fb0, details: [build-log.md:62](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md#L62))
 
-| **Next Up** | Step 1 of 3 - feat(limiter): add a token-bucket limiter (model: **Opus**, details: [intent.md:25](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L25)) |
+| **Next Up** | **Step 1** on Opus - feat(limiter): add a token-bucket limiter (details: [intent.md:25](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L25)) |
 | --- | --- |
-| Range | 1 of 2: /plumbbob:run (step 1 to its pause) |
+| Range | **1** on Opus: /plumbbob:run (step 1 to its pause) |
 ```
 
 > **Plan as far as you can see clearly.** Later steps may be fuzzier than the first;
@@ -264,9 +265,9 @@ spent        22 min · 2 turns · 41s gate · green first run
 
 | **Verdict** | ● Plumb |
 | --- | --- |
-| Now | Step 1 of 3 - feat(limiter): add a token-bucket limiter |
-| Next Up | Step 2 of 3 - feat(login): wire the limiter into POST /login (model: **Sonnet**, details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28)) |
-| Range | 1 of 2 lands with step 1 |
+| Now | **Step 1** on Opus - feat(limiter): add a token-bucket limiter |
+| Next Up | **Step 2** on Sonnet - feat(login): wire the limiter into POST /login (details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28)) |
+| Range | **1** lands with step 1 |
 
 **Recommendation**: Approve it, refilling on read. The gate is green and the seam held, and a bucket that refills when it is read needs no timer for the route to clean up.
 
@@ -291,7 +292,7 @@ line, not on the whole block again, because you have already read the block and 
 lines beneath an answer push it off the screen:
 
 ```text
-**Next Up**: Back to Step 1 of 3 - feat(limiter): add a token-bucket limiter
+**Next Up**: Back to **Step 1** on Opus - feat(limiter): add a token-bucket limiter
 ```
 
 Anything that reads as direction is a reply too: the agent makes the change, says what
@@ -336,7 +337,7 @@ one command's output here too.
 ```text
 **Parked**: should /password-reset get the same throttle? (tangent)
 
-**Next Up**: Back to Step 1 of 3 - feat(limiter): add a token-bucket limiter
+**Next Up**: Back to **Step 1** on Opus - feat(limiter): add a token-bucket limiter
 ```
 
 ![A park and its pointer back at the step](media/park.svg)
@@ -367,9 +368,9 @@ itself, as one block, so what the agent relays is one command's output:
 
 | **Verdict** | ● Plumb |
 | --- | --- |
-| Next Up | Step 2 of 3 - feat(login): wire the limiter into POST /login (model: **Sonnet**, details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28)) |
-| Range | 2 of 2: /plumbbob:run (steps 2-3) |
-| Parked | 1 of 1 open |
+| Next Up | **Step 2** on Sonnet - feat(login): wire the limiter into POST /login (details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28)) |
+| Range | **2** on Sonnet: /plumbbob:run (steps 2-3) |
+| Parked | **1** of 1 open: /plumbbob:harvest |
 ```
 
 ![The boundary after looks good](media/checkpoint-boundary.svg)
@@ -423,7 +424,7 @@ diff         +48 -6 across 5 files
 spent        31 min · green first run at every landing
 ```
 
-**Harvested**: 1 of 1 parked idea open
+**Harvested**: **1** of 1 parked idea open
 
 | Park | What it is | Why it matters | Lean |
 | --- | --- | --- | --- |
@@ -440,7 +441,7 @@ Approving locks in each lean above; to change one, say so first (`make P1 a bloc
 
 | **Verdict** | ● Plumb |
 | --- | --- |
-| Stop | Range 2 of 2 landed - try six logins yourself, then `/plumbbob:finish` (details: [intent.md:42](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L42)) |
+| Stop | **Range 2** landed - try six logins yourself, then `/plumbbob:finish` (details: [intent.md:42](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L42)) |
 | Next Up | Nothing planned - /plumbbob:step or /plumbbob:finish |
 
 **Recommendation**: Approve it, then try six logins yourself before you finish. The gate was green at both landings, and the one park is future work, not this goal's.
@@ -469,11 +470,11 @@ writes the range's review beneath a dated line in the Log, so the review rides t
 into the PR. It commits nothing; the record rides the next commit:
 
 ```text
-**Stop**: Range 2 of 2 recorded (1 tangent)
+**Stop**: **Range 2** recorded (1 tangent)
 
 | **Next Up** | Nothing planned - /plumbbob:step or /plumbbob:finish |
 | --- | --- |
-| Parked | 0 of 1 open |
+| Parked | **0** of 1 open |
 ```
 
 A confirmed blocker folds into `intent.md` first, by the harvest skill's rules, placed in
@@ -598,7 +599,7 @@ block's `Stop` row says why the build stopped there:
 
 | **Verdict** | ● Plumb |
 | --- | --- |
-| Stop | Range 2 of 2 landed - try six logins yourself, then `/plumbbob:finish` (details: [intent.md:42](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L42)) |
+| Stop | **Range 2** landed - try six logins yourself, then `/plumbbob:finish` (details: [intent.md:42](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L42)) |
 | Next Up | Nothing planned - /plumbbob:step or /plumbbob:finish |
 ```
 

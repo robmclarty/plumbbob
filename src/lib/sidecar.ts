@@ -21,7 +21,7 @@
 
 import { existsSync, readdirSync, readFileSync, writeFileSync, appendFileSync, rmSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { gitPath } from './git.ts'
+import { gitPath, isIgnored } from './git.ts'
 
 const DIRNAME = '.plumbbob' // the sidecar folder name at the repo root
 
@@ -189,6 +189,37 @@ export function buildFolder(root: string, slug?: string | null): string {
 }
 
 /**
+ * Whether git ignores the build folder here, by the repo's own `.gitignore` or
+ * by a `.plumbbob/` line in info/exclude (`--local`): the probe `checkpoint
+ * --plan` acts on, since an ignored folder lands its plan commit record-only.
+ *
+ * Best-effort: a probe that throws (a fatal `git check-ignore`) reads as not
+ * ignored, so a caller only warning about it stays quiet rather than crashing.
+ */
+export function buildFolderIgnored(root: string, slug?: string | null): boolean {
+  try {
+    return isIgnored(root, buildFolder(root, slug))
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Whether the build's plan has landed: a `plan <sha>` line in its checkpoints
+ * ledger, which only `checkpoint --plan` writes. A missing ledger reads as not
+ * landed.
+ */
+export function planCommitted(root: string, slug?: string | null): boolean {
+  try {
+    return readFileSync(checkpointsPath(root, slug), 'utf8')
+      .split('\n')
+      .some((line) => line.startsWith('plan '))
+  } catch {
+    return false
+  }
+}
+
+/**
  * The SPIKE marker: a single-purpose presence flag, like SEAM/STEP.
  *
  * Written by `spike` on open, removed on `spike done`. Its existence is the one
@@ -235,7 +266,8 @@ export function clearStep(root: string, slug?: string | null): void {
  * PAUSE: which card the human has already read, so a later `handoff` prints
  * the one line that points back at it instead of the card. It holds a step
  * number once that step's pause card has shown (`2`), or `landed 2` once the
- * boundary step 2 landed on has shown.
+ * boundary step 2 landed on has shown, `landed 2 answered` when that landing
+ * answered step 2's pause card.
  *
  * It records that a card showed, never what the card said: a later turn that
  * changes the work is the model's reply, and the card comes back only on
@@ -245,8 +277,13 @@ export function pausePath(root: string, slug?: string | null): string {
   return join(artifactDir(root, slug), 'PAUSE')
 }
 
-/** A PAUSE stamp: a step whose pause card has shown, or the step whose landing's boundary has. */
-export type PauseStamp = { readonly kind: 'pause' | 'landed'; readonly step: number }
+/**
+ * A PAUSE stamp: a step whose pause card has shown, or the step whose landing's
+ * boundary has. A landing that answered its own pause card, already shown, is
+ * `answered`, so a stop card that follows it prints short
+ * (D119 (short-stop-after-a-halt)).
+ */
+export type PauseStamp = { readonly kind: 'pause' | 'landed'; readonly step: number; readonly answered?: true }
 
 /**
  * The card PAUSE says has shown, or null when the file is absent or does not
@@ -255,8 +292,12 @@ export type PauseStamp = { readonly kind: 'pause' | 'landed'; readonly step: num
  */
 export function readPause(root: string, slug?: string | null): PauseStamp | null {
   try {
-    const m = /^(landed )?(\d+)(?:\s|$)/.exec(readFileSync(pausePath(root, slug), 'utf8').trim())
-    return m === null ? null : { kind: m[1] === undefined ? 'pause' : 'landed', step: Number(m[2]) }
+    const m = /^(landed )?(\d+)(?:\s+(\S+))?/.exec(readFileSync(pausePath(root, slug), 'utf8').trim())
+    if (m === null) {
+      return null
+    }
+    const stamp = { kind: m[1] === undefined ? ('pause' as const) : ('landed' as const), step: Number(m[2]) }
+    return stamp.kind === 'landed' && m[3] === 'answered' ? { ...stamp, answered: true } : stamp
   } catch {
     return null
   }
@@ -268,7 +309,8 @@ export function readPause(root: string, slug?: string | null): PauseStamp | null
  */
 export function writePause(root: string, slug: string | null | undefined, stamp: PauseStamp): void {
   try {
-    writeFileSync(pausePath(root, slug), `${stamp.kind === 'landed' ? 'landed ' : ''}${stamp.step}\n`)
+    const answered = stamp.kind === 'landed' && stamp.answered === true ? ' answered' : ''
+    writeFileSync(pausePath(root, slug), `${stamp.kind === 'landed' ? 'landed ' : ''}${stamp.step}${answered}\n`)
   } catch {
     // A read-only tree or a vanished build folder: the card still renders.
   }

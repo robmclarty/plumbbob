@@ -96,6 +96,38 @@ describe('status', () => {
   })
 })
 
+describe('status --questions — D118 (questions-table)', () => {
+  it('prints the open questions as the plan card tables them, and nothing else', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Ask first', '--slug', 'ask-first']))
+    const intent = join(buildDir(dir, 'ask-first'), 'intent.md')
+    writeFileSync(
+      intent,
+      '# Ask first\n\n## Open questions\n\n- <a id="q1"></a>**Q1 (slug)**: Which one?, *resolve by:* decide\n  - *plain:* It matters. A lot.\n  - *lean:* The first.\n',
+    )
+    const { code, stdout } = captureIo(() => status(dir, ['--questions']))
+    expect(code).toBe(0)
+    expect(stdout).toBe(
+      [
+        '**Open questions**: 1 open',
+        '',
+        '| Question | Why it matters | Lean |',
+        '| --- | --- | --- |',
+        '| [**Q1** (slug)](.plumbbob/builds/ask-first/intent.md#L5): Which one? | It matters | The first |',
+        '',
+        '',
+      ].join('\n'),
+    )
+    expect(stdout).not.toContain('next →') // the table alone, no dashboard
+  })
+
+  it('says so when the plan holds no open question', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Ask first', '--slug', 'ask-first']))
+    expect(captureIo(() => status(dir, ['--questions'])).stdout).toBe('plumbbob: no open questions in this plan\n')
+  })
+})
+
 describe('status — the build ranges', () => {
   const RANGED = [
     '# Ranged',

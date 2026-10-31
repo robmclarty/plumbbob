@@ -165,7 +165,7 @@ export function ending(e: Ending): string {
  * ```text
  * | **Verdict** | ● Plumb |
  * | --- | --- |
- * | Now | Step 2 of 3 - feat(login): wire the limiter into POST /login |
+ * | Now | **Step 2** on Sonnet - feat(login): wire the limiter into POST /login |
  * ```
  */
 export function stateTable(rows: ReadonlyArray<StateRow>): string {

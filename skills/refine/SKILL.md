@@ -38,10 +38,13 @@ is fine; refining is always available.
   may stay one bare line; the sub-lines earn their keep only when a human decision
   genuinely waits on it.)
 
-  Then walk the human through it in the chat: list every hole you appended, each as
-  its explanation first and its lean second, and invite per-question answers; the
-  human can settle any of them right there in one message, no doc-flipping, no extra
-  round-trip per hole.
+  Then show the human what is open: run `plumbbob status --questions` and paste its
+  table whole, one row per open question with why it matters and your lean, each cell
+  the first sentence of its line, so write each line to stand on that sentence. Then
+  invite per-question answers; the human can settle any of them right there in one
+  message (`yes to all leans`, or `yes to all leans except Q3: <their answer>`), no
+  doc-flipping, no extra round-trip per hole. Never retype the table as a list of your
+  own ([D118 (questions-table)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d118)).
 - **Repair (re-sync to reality).** When the plan has drifted (a Decision was overtaken
   by what you built, a Constraint changed, a Step no longer matches the seam, or a
   **step's title no longer describes what the diff actually does**), propose the edits

@@ -75,7 +75,15 @@ The argument only seeds how you get there.
    stake, in plain words, enough to judge it cold), then a `*lean:*` sub-line (your
    proposed resolution: one answer to react to, not a menu), so the human settles it in
    one pass without a round-trip. (A tiny, obvious question may stay one bare line; the
-   sub-lines earn their keep only when a human decision genuinely waits on it.)
+   sub-lines earn their keep only when a human decision genuinely waits on it.) The plan
+   card tables the open questions, one row each, and a cell shows only the first sentence
+   of its line, so write each to stand on that sentence: the opener asks one question in
+   one sentence, `*plain:*` opens on why it matters, and `*lean:*` opens on the answer
+   ([D118 (questions-table)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d118)).
+   The rest of each line is for the cold reader of `intent.md`. The card's
+   `yes to all leans` move (or `yes to all leans except Q3: <their answer>`) settles them
+   in one reply: on each opener line swap `*resolve by:*` for `*resolved:* <date>, <the
+   answer>`, add the Decision the answer settles, and run `plumbbob handoff --plan` again.
 4. **Author the Steps.** Write the **full build plan** under `## Steps` (each step a
    small, verifiable increment) in the exact format the parser reads:
 
@@ -215,7 +223,8 @@ The argument only seeds how you get there.
      a message that asks (`expand 2`, or any question) is answered from the detail file or
      `intent.md` and changes nothing; a message that directs is what to sharpen, cheap
      now, before any code. The revert move vanishes there on its own: nothing has landed
-     to wind back.
+     to wind back. The turn is your framed plan, then that block, and nothing after it:
+     anything you would add goes above the `---` rule the block opens on.
    - **The plan commit is latched too.** Once the turn ledger exists, `checkpoint
      --plan` refuses to land in the same turn `start` stamped it: present the plan,
      **end the turn**, and the human's approving message is the tick that lets it
@@ -230,17 +239,21 @@ The argument only seeds how you get there.
      run that lands that step's range when the plan declares ranges. Relay that block whole and run no second command; the
      plan-pause card above is the one place `handoff` is still called, because no verb has
      run yet there.
-   - **Say what the commit publishes.** The close-out line names the tracked folder:
-     `.plumbbob/builds/<slug>/` now rides this branch into the PR, so teammates will
-     see the plan and build record in review. In the same breath, offer the way out:
-     a repo that won't track a tool folder can restart with `plumbbob start --local`
-     (a fully untracked sidecar) before any steps are built.
-     - **Record-only variant.** When the repo's own `.gitignore` excludes `.plumbbob/`,
-       the folder can't ride the branch; `start` flags this up front, and the plan
-       commit lands *record-only*: an empty commit whose message carries the plan
-       (the `--body` earns its keep here), the files staying untracked. Say that
-       instead: the rationale is published in `git log`, not the folder, so pass a
-       fuller `--body` than you otherwise would, since the message is the whole record.
+   - **The card says what the commit publishes.** Until the plan commit lands, the plan
+     card's `looks good` row names the tracked folder, which rides this branch into the PR
+     (teammates will see the plan and build record in review), and a `keep it local` row
+     offers the way out. You compose neither note, before the
+     card or after it. When the human picks `keep it local`, run `plumbbob start --local`
+     on the open session: it excludes `.plumbbob/` in this clone, so the plan and finish
+     commits land record-only and the folder never rides the branch. Then run
+     `plumbbob handoff --plan` and end on the card, which now says record-only. Once the
+     plan has landed, the folder is in a commit and `start --local` refuses.
+     - **Record-only variant.** When the repo's own `.gitignore` excludes `.plumbbob/`, or
+       the session was kept local, the folder can't ride the branch; `start` flags a
+       gitignored repo up front, the card's `looks good` row says record-only, and the plan
+       commit lands as an empty commit whose message carries the plan, the files staying
+       untracked. The rationale is published in `git log`, not the folder, so pass a fuller
+       `--body` than you otherwise would, since the message is the whole record.
 8. **Offer to stress-test it.** Suggest `/plumbbob:refine` to attack the frame for holes (or
    to repair the plan as it drifts). Optional, the human's call.
 

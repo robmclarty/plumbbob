@@ -130,7 +130,7 @@ export function harvest(cwd: string, _args: ReadonlyArray<string>): number {
   const lead =
     stop === null
       ? transition({ label: 'Recorded', fact: `${settled.length} parked idea${settled.length === 1 ? '' : 's'}`, detail: [counted] })
-      : transition({ label: 'Stop', fact: `Range ${stop.item} of ${stop.count} recorded`, detail: [counted] })
+      : transition({ label: 'Stop', fact: `**Range ${stop.item}** recorded`, detail: [counted] })
   printEnding(root, {
     tier: 'orientation',
     render: 'harvest',

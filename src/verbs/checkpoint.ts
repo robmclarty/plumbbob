@@ -26,6 +26,7 @@ import {
   detailPath,
   hasSession,
   intentPath,
+  readPause,
   readRun,
   readStats,
   refreshExcludes,
@@ -156,8 +157,12 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   clearTick(root) // the step's entry stamp is spent; the next `build <n>` re-stamps.
   // The pause it stamped is over, and the boundary this ending prints is the
   // card the stamp now names, so a later handoff here ends on its pointer
-  // (D110 (reply-after-the-card)); the next step's pause renders whole.
-  writePause(root, undefined, { kind: 'landed', step })
+  // (D110 (reply-after-the-card)); the next step's pause renders whole. A
+  // landing that answers this step's own pause card, already shown, says so,
+  // and the stop card it may owe prints short (D119 (short-stop-after-a-halt)).
+  const shown = readPause(root)
+  const answered = shown?.kind === 'pause' && shown.step === step
+  writePause(root, undefined, { kind: 'landed', step, ...(answered ? { answered: true } : {}) })
 
   // The whole ending, one block: the lead line, the advisories this checkpoint
   // alone can state, and the state table headed by the Verdict folded over
@@ -219,7 +224,7 @@ function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
   appendFileSync(checkpointsPath(root), `plan ${sha}\n`)
   // The cold read that approved the plan is the Log's first entry, beneath a
   // dated plan line; the detail file is then spent, the same as at a step.
-  const pointer = logPlan(root, sha, planRecord(readDetail(root, null) ?? ''))
+  const pointer = logPlan(root, sha, planRecord(root, activeBuild(root), readDetail(root, null) ?? ''))
   clearDetail(root)
   // Landing the plan consumes `start`'s entry stamp: a later hand-built diff
   // (no `build <n>`) must find no stale TICK and stay guidance-governed.

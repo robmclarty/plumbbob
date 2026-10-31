@@ -206,7 +206,7 @@ the last. `/plumbbob:plan` cuts the ranges with the steps, and `/plumbbob:step`,
 range holding the next step, and `/plumbbob:run 2` runs range 2 by its item number, so the
 step numbers stay the plan's to know ([D95 (run-verb)](decisions.md#d95)). The card names
 the run in the Range row beneath Next Up, with the steps it will land beside it
-(`| Range | 2 of 2: /plumbbob:run (steps 2-3) |`). A range grants nothing on its own: the turn
+(`| Range | **2** on Sonnet: /plumbbob:run (steps 2-3) |`). A range grants nothing on its own: the turn
 hook mints the run's grant from the plan as you type it, frozen at the keystroke, and the
 latch lands only those steps ([D96 (plan-names-the-grant)](decisions.md#d96)). A bare
 range's run builds its step to the pause the plan reserved. A span's run lands each step on

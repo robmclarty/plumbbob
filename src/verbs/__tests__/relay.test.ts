@@ -196,7 +196,7 @@ describe('relay — a decision ending has to close the turn', () => {
     printed(dir)
     writeFileSync(turnPath(dir), '5\n') // the human asked a question
     const reminder = printed(dir)
-    expect(reminder).toBe('**Next Up**: Back to Step 2 of 3 - Second\n\n')
+    expect(reminder).toBe('**Next Up**: Back to **Step 2** - Second\n\n')
     const last = `The limiter runs first because a miss has to count.\n\n${reminder}`
     expect(held(relayCheck(dir, stop(dir, { last })))).toBeNull()
   })
@@ -308,7 +308,7 @@ describe('relay — a background notice after a pause — D90 (notice-not-turn)'
     const dir = await paused()
     printed(dir)
     applyTurn(dir, notice('notice-1'))
-    expect(printed(dir)).toBe('**Next Up**: Back to Step 2 of 3 - Second\n\n')
+    expect(printed(dir)).toBe('**Next Up**: Back to **Step 2** - Second\n\n')
     expect(held(relayCheck(dir, stop(dir, { last: 'The sweep finished green.' })))).toContain(
       'the pause reminder it printed',
     )
@@ -558,6 +558,22 @@ describe('relay — a run owes its stop card — D103 (stop-latched)', () => {
     expect(held(relayCheck(dir, stop(dir, { last: dropped })))).toBe(
       'plumbbob: the turn did not close on the stop card it printed. ' +
         'Run `plumbbob handoff --stop --full` and end the turn on its output, whole, with nothing after it.',
+    )
+  })
+
+  it('lets the turn end on the short stop card, and holds one that dropped its Harvested part — D119 (short-stop-after-a-halt)', async () => {
+    // After an approved halt the card prints short: from the Harvested part to
+    // the link, with no Summary, Readout, or recommendation.
+    const short = `${STOP_CARD.slice(STOP_CARD.indexOf('**Harvested**:'), STOP_CARD.indexOf('**Recommendation**:'))}[more details](.plumbbob/detail.md)\n\n`
+    const dir = await paused()
+    writeRelay(dir, { tier: 'orientation', render: 'checkpoint', owes: { range: 2, count: 2, step: 3 }, text: '**Checkpoint**: x\n\n' })
+    writeRelay(dir, { tier: 'decision', render: 'stop', command: 'plumbbob handoff --stop', text: short })
+    expect(held(relayCheck(dir, stop(dir, { last: `Step 3 is in, and range 2 with it.\n\n${short}` })))).toBeNull()
+    // The retry is plain `--stop`, which reprints the short card in this turn rather than the whole one.
+    const dropped = short.replace(/\*\*Harvested\*\*:[\s\S]*?\n\n\| Park [\s\S]*?\n\n/, '')
+    expect(held(relayCheck(dir, stop(dir, { last: dropped })))).toBe(
+      'plumbbob: the turn did not close on the stop card it printed. ' +
+        'Run `plumbbob handoff --stop` and end the turn on its output, whole, with nothing after it.',
     )
   })
 

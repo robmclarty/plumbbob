@@ -288,4 +288,37 @@ describe('start', () => {
     expect(code).toBe(1)
     expect(stderr).toContain('already active')
   })
+
+  it('keeps an open session local before its plan commit lands — D117 (publish-on-the-card)', async () => {
+    // The plan card's way out: `--local` on the open build writes the blanket
+    // exclude a `--local` start writes, so git stops seeing the build folder.
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['first']))
+    const { code, stdout } = await captureIoAsync(() => start(dir, ['--local']))
+    expect(code).toBe(0)
+    expect(stdout).toBe(
+      ending({
+        lead: transition({
+          label: 'Session',
+          fact: 'kept local',
+          detail: ['.plumbbob/ excluded in this clone', 'the plan and finish commits land record-only'],
+          remedy: 'plumbbob handoff --plan to show the plan card again',
+        }),
+      }),
+    )
+    const exclude = readFileSync(join(dir, '.git', 'info', 'exclude'), 'utf8')
+    expect(exclude.split('\n')).toContain('.plumbbob/')
+    const ignored = execFileSync('git', ['check-ignore', '-q', '--', buildDir(dir, activeBuild(dir) ?? '')], { cwd: dir, stdio: 'pipe' })
+    expect(ignored.toString()).toBe('') // exit 0: the build folder is ignored now
+  })
+
+  it('refuses to keep a session local once its plan has landed — D117 (publish-on-the-card)', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['first']))
+    writeFileSync(join(buildDir(dir, activeBuild(dir) ?? ''), 'checkpoints'), 'baseline abc1234\nplan def5678\n')
+    const { code, stderr } = await captureIoAsync(() => start(dir, ['--local']))
+    expect(code).toBe(1)
+    expect(stderr).toContain('this session can no longer be kept local')
+    expect(stderr).toContain('plumbbob finish')
+  })
 })

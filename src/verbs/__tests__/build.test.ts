@@ -256,28 +256,36 @@ describe('build — the last step a grant reaches — D85 (range-top-lands)', ()
   })
 })
 
-describe('build — the last step a step-list grant reaches — D12 (step-list-grants)', () => {
+describe('build — the last step a step-list grant reaches — D91 (step-list-grants)', () => {
   const REMEDY = 'land it on green, then stop at the boundary'
 
   it('names the last undone step the list holds as its top, in build order', async () => {
     // `steps 2-3` over the order 1, 3, 2: the walk runs 3 then 2, so 2 is the top.
+    // Step 3 lands before 2 enters; were it still undone, the range names it,
+    // so the walk would take it next and the line would stay quiet.
     const dir = await startedWithSteps()
     writeFileSync(intentPath(dir), REORDERED.replace('1. [ ]', '1. [x]'))
     writeFileSync(grantPath(dir), 'steps 2-3\n')
     expect(captureIo(() => build(dir, ['3'])).stdout).not.toContain(REMEDY)
     rmSync(stepPath(dir), { force: true })
+    writeFileSync(intentPath(dir), REORDERED.replace('1. [ ]', '1. [x]').replace('3. [ ]', '3. [x]'))
     expect(captureIo(() => build(dir, ['2'])).stdout).toContain(
       notice({ fact: 'step 2 is the top of the range you granted', remedy: REMEDY }),
     )
   })
 
   it('names the step before one the list does not hold, where the walk halts', async () => {
-    // `steps 1-2` over the order 1, 3, 2: step 3 comes next and is not named.
+    // `steps 1-2` over the order 1, 3, 2: step 3 comes next and is not named,
+    // and the detail says so.
     const dir = await startedWithSteps()
     writeFileSync(intentPath(dir), REORDERED)
     writeFileSync(grantPath(dir), 'steps 1-2\n')
     expect(captureIo(() => build(dir, ['1'])).stdout).toContain(
-      notice({ fact: 'step 1 is the last undone step in the range you granted', remedy: REMEDY }),
+      notice({
+        fact: 'step 1 is the last undone step in the range you granted',
+        detail: ['step 3 is next in the build order, and the range does not name it'],
+        remedy: REMEDY,
+      }),
     )
   })
 
@@ -286,6 +294,7 @@ describe('build — the last step a step-list grant reaches — D12 (step-list-g
     writeFileSync(grantPath(dir), 'steps 1-9\n')
     expect(captureIo(() => build(dir, ['1'])).stdout).not.toContain(REMEDY)
     rmSync(stepPath(dir), { force: true })
+    writeFileSync(intentPath(dir), INTENT.replace('1. [ ]', '1. [x]')) // step 1 landed
     expect(captureIo(() => build(dir, ['2'])).stdout).toContain(
       notice({ fact: 'step 2 is the top of the range you granted', remedy: REMEDY }),
     )
@@ -373,8 +382,72 @@ describe('build — the build order', () => {
     writeFileSync(grantPath(dir), 'range 2\n')
     const { stdout } = captureIo(() => build(dir, ['1']))
     expect(stdout).toContain(
-      notice({ fact: 'step 1 is the last undone step in the range you granted', remedy: 'land it on green, then stop at the boundary' }),
+      notice({
+        fact: 'step 1 is the last undone step in the range you granted',
+        detail: ['step 3 is next in the build order, and the range does not name it'],
+        remedy: 'land it on green, then stop at the boundary',
+      }),
     )
+  })
+})
+
+// Three undone steps and a build order putting 3 first: the plan of GitHub
+// issue #9, where a range typed as `1-2` starts above step 3.
+const JUMPED = `# Jumped step test
+
+## Steps
+
+1. [ ] First — **done when:** a works.
+   - seam: \`src/a.ts\`
+2. [ ] Second — **done when:** b works.
+   - seam: \`src/b.ts\`
+3. [ ] Third — **done when:** c works.
+   - seam: \`src/c.ts\`
+
+## Build order
+
+3, 1, 2
+`
+
+describe('build — a range typed above an earlier undone step', () => {
+  const REMEDY = 'land it on green, then stop at the boundary'
+  const HALT = notice({
+    fact: 'step 1 is the last undone step in the range you granted',
+    detail: ['step 3 is next in the build order, and the range does not name it'],
+    remedy: REMEDY,
+  })
+
+  it('halts after its first step, naming the jumped step as the reason — D91 (step-list-grants)', async () => {
+    // `steps 1-2` over the order 3, 1, 2: step 1 enters as a jump over step 3,
+    // and once it lands step 3 is the next undone step in build order, which
+    // the range does not name, so the walk halts there and never reaches 2.
+    const dir = await startedWithSteps()
+    writeFileSync(intentPath(dir), JUMPED)
+    writeFileSync(grantPath(dir), 'steps 1-2\n')
+    const { code, stdout } = captureIo(() => build(dir, ['1']))
+    expect(code).toBe(0)
+    expect(stdout).toContain(
+      notice({ fact: 'building step 1', detail: ['explicitly requested', 'skips 1 undone step'] }) + HALT,
+    )
+  })
+
+  it('reads a legacy ceiling the same way — D91 (step-list-grants)', async () => {
+    // `range 2` covers steps 1 and 2; step 3 is next in build order and above it.
+    const dir = await startedWithSteps()
+    writeFileSync(intentPath(dir), JUMPED)
+    writeFileSync(grantPath(dir), 'range 2\n')
+    expect(captureIo(() => build(dir, ['1'])).stdout).toContain(HALT)
+  })
+
+  it('stays quiet where the next undone step in build order is one the range names — D91 (step-list-grants)', async () => {
+    // `steps 1-3` and `range 3` both name step 3, so the walk goes on to it.
+    const dir = await startedWithSteps()
+    writeFileSync(intentPath(dir), JUMPED)
+    writeFileSync(grantPath(dir), 'steps 1-3\n')
+    expect(captureIo(() => build(dir, ['1'])).stdout).not.toContain(REMEDY)
+    rmSync(stepPath(dir), { force: true })
+    writeFileSync(grantPath(dir), 'range 3\n')
+    expect(captureIo(() => build(dir, ['1'])).stdout).not.toContain(REMEDY)
   })
 })
 

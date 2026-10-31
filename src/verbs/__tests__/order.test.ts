@@ -53,7 +53,7 @@ describe('order', () => {
     )
     // The pointer already follows the order just written: forward from the
     // boundary to step 4, not to step 2.
-    expect(stdout).toContain('**Next Up**: Step 4 of 4 - Fourth')
+    expect(stdout).toContain('**Next Up**: **Step 4** - Fourth')
   })
 
   it('reads comma-separated numbers the same as spaced ones, and replaces the line in place', async () => {
@@ -92,7 +92,7 @@ describe('order', () => {
     const { code, stdout } = captureIo(() => order(dir, ['4', '3']))
     expect(code).toBe(0)
     expect(stdout).toContain('**Build order**: 4, 3, 2')
-    expect(stdout).toContain('**Next Up**: Back to Step 2 of 4 - Second')
+    expect(stdout).toContain('**Next Up**: Back to **Step 2** - Second')
   })
 
   it('--reset drops the line, and the plan reads in document order again', async () => {
@@ -102,7 +102,7 @@ describe('order', () => {
     expect(code).toBe(0)
     expect(readFileSync(intentPath(dir), 'utf8')).toBe(INTENT)
     expect(stdout).toContain('**Build order**: document order')
-    expect(stdout).toContain('**Next Up**: Step 2 of 4 - Second')
+    expect(stdout).toContain('**Next Up**: **Step 2** - Second')
   })
 
   it('refuses a number the plan lacks, naming what is planned, and writes nothing', async () => {

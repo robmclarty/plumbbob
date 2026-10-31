@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { dirname, join, relative } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { checkpoint } from '../checkpoint.ts'
 import { handoff } from '../handoff.ts'
@@ -282,6 +282,24 @@ describe('checkpoint', () => {
     expect(body).not.toContain('The whole story')
   })
 
+  it('re-aims a relative link from the detail file at the build folder the log lives in — D116 (links-re-rooted)', async () => {
+    // detail.md sits at `.plumbbob/`; the log one folder deeper, in the build's
+    // own folder. A link written right for the first is wrong in the second
+    // unless the record moves it, while a URL and a link inside code stay put.
+    const dir = await startedGreen()
+    mkdirSync(join(dir, 'src'), { recursive: true })
+    writeFileSync(join(dir, 'src', 'a.ts'), 'in seam\n')
+    const intent = relative(join(dir, '.plumbbob'), intentPath(dir))
+    const story = `It settles [the first decision](${intent}#d1), per [the spec](https://example.com/spec), not \`[a sample](${intent})\`.`
+    writeFileSync(detailPath(dir), DETAIL.replace('The whole story.', story))
+    await captureIoAsync(() => checkpoint(dir, ['1']))
+    const log = readFileSync(buildLogPath(dir), 'utf8')
+    expect(dirname(buildLogPath(dir))).toBe(dirname(intentPath(dir))) // the log and the plan share the build folder
+    expect(log).toContain('[the first decision](intent.md#d1)')
+    expect(log).toContain('[the spec](https://example.com/spec)')
+    expect(log).toContain(`\`[a sample](${intent})\``)
+  })
+
   it('records no leftover detail written for another step, and clears it anyway — D81 (detail-file)', async () => {
     // A detail file whose header names a step that already landed: a clean
     // halt once wrote one after its own checkpoint, and the next step to land
@@ -540,7 +558,7 @@ describe('checkpoint', () => {
       expect(stdout).toBe(
         ending({
           lead: transition({ label: 'Plan', fact: 'committed', detail: [ledgerSha(dir, 'plan'), `details: ${logPointer(dir, 'plan committed')}`] }),
-          state: [{ label: 'Next Up', value: 'Step 1 of 1 - First (details: [intent.md:5](.plumbbob/builds/checkpoint-test/intent.md#L5))' }],
+          state: [{ label: 'Next Up', value: '**Step 1** - First (details: [intent.md:5](.plumbbob/builds/checkpoint-test/intent.md#L5))' }],
         }),
       ) // short SHA, not the full 40
       const subject = execFileSync('git', ['log', '-1', '--format=%s'], { cwd: dir, encoding: 'utf8' }).trim()
@@ -602,7 +620,7 @@ describe('checkpoint', () => {
               remedy: 'unignore .plumbbob/builds/ to keep the record in the tree',
             }),
           ],
-          state: [{ label: 'Next Up', value: 'Step 1 of 1 - First (details: [intent.md:5](.plumbbob/builds/checkpoint-test/intent.md#L5))' }],
+          state: [{ label: 'Next Up', value: '**Step 1** - First (details: [intent.md:5](.plumbbob/builds/checkpoint-test/intent.md#L5))' }],
         }),
       )
       expect(stderr).toBe('') // an ending is one block, and it is not stderr's
@@ -911,7 +929,7 @@ describe('checkpoint — the Range and Stop rows in the boundary table', () => {
     const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
     expect(code).toBe(0)
     expect(stdout).toContain(
-      '| **Next Up** | Step 1 of 3 - First (details: [intent.md:5](.plumbbob/builds/checkpoint-test/intent.md#L5)) |\n| --- | --- |\n| Range | 1 of 2: /plumbbob:run (step 1 to its pause) |\n',
+      '| **Next Up** | **Step 1** - First (details: [intent.md:5](.plumbbob/builds/checkpoint-test/intent.md#L5)) |\n| --- | --- |\n| Range | **1**: /plumbbob:run (step 1 to its pause) |\n',
     )
   })
 
@@ -920,7 +938,7 @@ describe('checkpoint — the Range and Stop rows in the boundary table', () => {
     writeFileSync(intentPath(dir), RANGED.replace('1. [ ]', '1. [x]').replace('2. [ ]', '2. [x]'))
     const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['3']))
     expect(code).toBe(0)
-    const stop = '| Stop | Range 2 of 2 landed - review the parser (details: [intent.md:16](.plumbbob/builds/checkpoint-test/intent.md#L16)) |'
+    const stop = '| Stop | **Range 2** landed - review the parser (details: [intent.md:16](.plumbbob/builds/checkpoint-test/intent.md#L16)) |'
     expect(stdout).toContain(`\n${stop}\n| Next Up | Nothing planned`)
     // The boundary has shown, so a later handoff ends on its pointer, and --full
     // brings the table back (D110 (reply-after-the-card)).
@@ -938,13 +956,13 @@ describe('checkpoint — the Range and Stop rows in the boundary table', () => {
     expect((await captureIoAsync(() => checkpoint(dir, ['1']))).stdout).not.toContain('| Stop |')
   })
 
-  it("names the next range on the boundary a landing prints, with the range's model in bold", async () => {
+  it("names the next range on the boundary a landing prints, each model beside the step or range it is for — D115 (card-weights)", async () => {
     const dir = await startedGreen()
     writeFileSync(intentPath(dir), RANGED)
     const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['1']))
     expect(code).toBe(0)
     expect(stdout).toContain(
-      '| Next Up | Step 2 of 3 - Second (model: **Opus**, details: [intent.md:7](.plumbbob/builds/checkpoint-test/intent.md#L7)) |\n| Range | 2 of 2: /plumbbob:run (steps 2-3) |\n',
+      '| Next Up | **Step 2** on Sonnet - Second (details: [intent.md:7](.plumbbob/builds/checkpoint-test/intent.md#L7)) |\n| Range | **2** on Opus: /plumbbob:run (steps 2-3) |\n',
     )
   })
 
@@ -953,7 +971,7 @@ describe('checkpoint — the Range and Stop rows in the boundary table', () => {
     writeFileSync(intentPath(dir), RANGED.replace('1. [ ]', '1. [x]'))
     const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['2']))
     expect(code).toBe(0)
-    expect(stdout).toContain('\n| Range | 2 of 2: /plumbbob:run (step 3) |\n')
+    expect(stdout).toContain('\n| Range | **2** on Opus: /plumbbob:run (step 3) |\n')
   })
 
   it("records a run's landing that completes the range it marked as owing the stop card — D103 (stop-latched)", async () => {
@@ -963,7 +981,7 @@ describe('checkpoint — the Range and Stop rows in the boundary table', () => {
     writeFileSync(runPath(dir), '2\n')
     const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['3']))
     expect(code).toBe(0)
-    expect(stdout).toContain('| Stop | Range 2 of 2 landed - review the parser')
+    expect(stdout).toContain('| Stop | **Range 2** landed - review the parser')
     expect(readRelay(dir)).toEqual({
       turn: 4,
       tier: 'orientation',

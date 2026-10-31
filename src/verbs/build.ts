@@ -219,13 +219,15 @@ function reservedCallNotice(intent: string, steps: ReadonlyArray<Step>, step: nu
  * That step lands like every step before it, and then the turn ends on its
  * checkpoint: a clean halt. Saying so as the step is entered puts the fact in
  * front of the model before it chooses between landing the step and holding it
- * at a pause, which is the choice a clean halt kept getting wrong. A range
- * reaches its top, or the last undone step under its top when the plan ends
- * first, or when the build order puts a number past the top ahead of the rest
- * (a range names plan numbers, and the skill halts before one past its top);
- * `--auto` reaches the plan's last undone step. A range that lists its steps
- * walks them in build order, so its top is the last undone step it names, and
- * it reaches no further than a step it does not name.
+ * at a pause, which is the choice a clean halt kept getting wrong. The next
+ * step is the first undone step in build order other than this one, wherever
+ * it sits, because a range names plan numbers and the skill halts before any
+ * step the range does not name: a range typed above an earlier undone step
+ * halts after its first step, and the detail names the step it halts before.
+ * A range reaches its top, or the last undone step it names when the plan ends
+ * first or the next step in build order is one it does not name; `--auto`
+ * reaches the plan's last undone step. A range that lists its steps walks them
+ * in build order, so its top is the last undone step it names.
  */
 function lastGrantedNotice(grant: Grant | null, steps: ReadonlyArray<Step>, step: number): string {
   if (grant === null) {
@@ -234,23 +236,30 @@ function lastGrantedNotice(grant: Grant | null, steps: ReadonlyArray<Step>, step
   const remedy = 'land it on green, then stop at the boundary'
   if (grant.kind === 'steps') {
     if (!hasStep(grant.steps, step)) return ''
-    const rest = steps.slice(steps.findIndex((s) => s.n === step) + 1).filter((s) => !s.done && s.n !== step)
+    const rest = steps.filter((s) => !s.done && s.n !== step)
     const after = rest[0]
     if (after !== undefined && hasStep(grant.steps, after.n)) return ''
+    const detail = after === undefined ? [] : [unnamedNext(after.n)]
     return rest.some((s) => hasStep(grant.steps, s.n))
-      ? notice({ fact: `step ${step} is the last undone step in the range you granted`, remedy })
-      : notice({ fact: `step ${step} is the top of the range you granted`, remedy })
+      ? notice({ fact: `step ${step} is the last undone step in the range you granted`, detail, remedy })
+      : notice({ fact: `step ${step} is the top of the range you granted`, detail, remedy })
   }
   if (grant.kind === 'range') {
     if (step === grant.ceiling) {
       return notice({ fact: `step ${step} is the top of the range you granted`, remedy })
     }
-    const after = steps.slice(steps.findIndex((s) => s.n === step) + 1).find((s) => !s.done)
+    const after = steps.find((s) => !s.done && s.n !== step)
     const more = after !== undefined && after.n <= grant.ceiling
+    const detail = after === undefined ? [] : [unnamedNext(after.n)]
     return step < grant.ceiling && !more
-      ? notice({ fact: `step ${step} is the last undone step in the range you granted`, remedy })
+      ? notice({ fact: `step ${step} is the last undone step in the range you granted`, detail, remedy })
       : ''
   }
   const more = steps.some((s) => !s.done && s.n !== step)
   return more ? '' : notice({ fact: `step ${step} is the last undone step in the plan`, remedy })
+}
+
+/** The detail naming the step a range halts before: the next undone one in build order, which the range does not name. */
+function unnamedNext(n: number): string {
+  return `step ${n} is next in the build order, and the range does not name it`
 }

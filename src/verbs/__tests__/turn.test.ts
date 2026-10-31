@@ -46,7 +46,7 @@ describe('grantFromPrompt', () => {
     expect(grantFromPrompt('/plumbbob:build 1-2')).toBe('steps 1-2') // what contract 4's armGrant pre-arms
   })
 
-  it('mints `steps N-M` from a N-M range, naming exactly the steps it holds — D12 (step-list-grants)', async () => {
+  it('mints `steps N-M` from a N-M range, naming exactly the steps it holds — D91 (step-list-grants)', async () => {
     expect(grantFromPrompt('/build 1-3')).toBe('steps 1-3')
     expect(grantFromPrompt('/build 4-4')).toBe('steps 4')
   })
@@ -372,7 +372,7 @@ const raw = (c: Captured): string => JSON.stringify(c.payload)
 
 /** Record a pause card as the ending printed in the current turn. */
 function recordCard(dir: string): void {
-  writeRelay(dir, { tier: 'decision', render: 'card', command: 'plumbbob handoff --full', text: '**Now**: Step 2 of 3 - Second\n\n' })
+  writeRelay(dir, { tier: 'decision', render: 'card', command: 'plumbbob handoff --full', text: '**Now**: **Step 2** - Second\n\n' })
 }
 
 describe('a background notice is not a human turn — D90 (notice-not-turn)', () => {

@@ -85,8 +85,8 @@ spent        88 min · 3 turns · 63s gate · green first run
 
 | **Verdict** | ● Plumb |
 | --- | --- |
-| Now | Step 2 of 3 - feat(login): wire the limiter into POST /login |
-| Next Up | Step 3 of 3 - feat(config): make the limit configurable via env (model: **Sonnet**, details: [intent.md:41](.plumbbob/builds/rate-limit/intent.md#L41)) |
+| Now | **Step 2** on Sonnet - feat(login): wire the limiter into POST /login |
+| Next Up | **Step 3** on Sonnet - feat(config): make the limit configurable via env (details: [intent.md:41](.plumbbob/builds/rate-limit/intent.md#L41)) |
 
 **Recommendation**: Approve it. The gate is green, the seam held, and the one call the step made (misses count, successes do not reset) is what the plan already decided.
 
@@ -144,7 +144,7 @@ and that holds for a question, a discussion, and a change the human asked
 for alike:
 
 ```text
-**Next Up**: Back to Step 2 of 3 - feat(login): wire the limiter into POST /login
+**Next Up**: Back to **Step 2** on Sonnet - feat(login): wire the limiter into POST /login
 ```
 
 That is the driver pointer, the line a park already closes on, so every
@@ -197,7 +197,7 @@ count, then its title behind a plain hyphen, written the way Next Up writes
 the step to come:
 
 ```text
-| Now | Step 2 of 3 - feat(login): wire the limiter into POST /login |
+| Now | **Step 2** on Sonnet - feat(login): wire the limiter into POST /login |
 ```
 
 The step used to be named once on the block, in the Readout label, mid-block
@@ -217,7 +217,7 @@ under a re-sequenced build order too: a step keeps its number for life
 
 The row renders on every step pause at the decision tier (the build and
 verify pauses, and an auto halt on trouble), and the reminder a card already
-shown ends on names the same step, `Back to Step 2 of 3`. The plan pause has
+shown ends on names the same step, `Back to **Step 2**`. The plan pause has
 no step in flight and renders none; the boundary's lead line already names
 the step that landed.
 
@@ -427,9 +427,9 @@ human scans for in the one shape on the card that is not prose:
 ```text
 | **Verdict** | ● Plumb |
 | --- | --- |
-| Now | Step 2 of 3 - feat(login): wire the limiter into POST /login |
-| Next Up | Step 3 of 3 - feat(config): make the limit configurable via env (model: **Sonnet**, details: [intent.md:41](.plumbbob/builds/rate-limit/intent.md#L41)) |
-| Parked | 1 of 2 open |
+| Now | **Step 2** on Sonnet - feat(login): wire the limiter into POST /login |
+| Next Up | **Step 3** on Sonnet - feat(config): make the limit configurable via env (details: [intent.md:41](.plumbbob/builds/rate-limit/intent.md#L41)) |
+| Parked | **1** of 2 open: /plumbbob:harvest once this step lands |
 ```
 
 Its rows, in order, each only when it says something: the Verdict, Now,
@@ -509,26 +509,25 @@ and Next Up heads its table.
 
 ### The Next Up row
 
-The forward pointer: the step and the progress count, the title behind a
-plain hyphen, and a closing bracket carrying the plan's model recommendation
-when the step has one (advisory metadata,
-[D62 (model-recommendation)](decisions.md#d62)) and where to read the step in
-full. On a card and an orientation ending it is the state table's Next Up
-row; on a driver turn and a reminder it is the one labeled line the turn
-closes on:
+The forward pointer: the step bold, the model its plan line recommends
+(advisory metadata, [D62 (model-recommendation)](decisions.md#d62)), the
+title behind a plain hyphen, and a closing bracket saying where to read the
+step in full. On a card and an orientation ending it is the state table's
+Next Up row; on a driver turn and a reminder it is the one labeled line the
+turn closes on:
 
 ```text
-| Next Up | Step 3 of 3 - feat(config): make the limit configurable via env (model: **Sonnet**, details: [intent.md:41](.plumbbob/builds/rate-limit/intent.md#L41)) |
+| Next Up | **Step 3** on Sonnet - feat(config): make the limit configurable via env (details: [intent.md:41](.plumbbob/builds/rate-limit/intent.md#L41)) |
 
-| Next Up | Step 3 of 3 - feat(config): make the limit configurable via env (details: [intent.md:41](.plumbbob/builds/rate-limit/intent.md#L41)) |
+**Next Up**: **Step 3** on Sonnet - feat(config): make the limit configurable via env (details: [intent.md:41](.plumbbob/builds/rate-limit/intent.md#L41))
 
 | Next Up | Nothing planned - /plumbbob:step or /plumbbob:finish |
 
 | **Next Up** | Nothing planned - /plumbbob:plan |
 
-**Next Up**: Back to Step 2 of 3 - feat(login): wire the limiter into POST /login
+**Next Up**: Back to **Step 2** on Sonnet - feat(login): wire the limiter into POST /login
 
-**Next Up**: Back to Range 3 of 5's stop - review the card on a live boundary before the skills teach it
+**Next Up**: Back to **Range 3**'s stop - review the card on a live boundary before the skills teach it
 
 **Next Up**: Close the spike - /plumbbob:spike done, then back to Step 2
 ```
@@ -536,21 +535,35 @@ closes on:
 The `Back to` form is the pointer a park closes on, and the reminder a card
 already shown ends on; a stop card already shown ends on the same form,
 naming the range and its stop where a step's names its title
-([the stop card](#the-stop-card)). The progress count rides Next Up in every
-tier, because Next Up is the one fact present at the pause, at the boundary,
-and on a driver turn. It is dropped only where it would lie: a driver pointer
-back at a step the plan no longer holds says `Back to Step 9` and no count,
-and an open spike outranks the step it interrupted, so the move named is
-closing it and the step to come back to rides as a trailing clause. The
+([the stop card](#the-stop-card)). A driver pointer back at a step the plan
+no longer holds says `Back to **Step 9**` and nothing more, and an open spike
+outranks the step it interrupted, so the move named is closing it and the
+step to come back to rides as a trailing clause. The
 header row naming `/plumbbob:plan` is `plumbbob finish`'s own: finish clears
 the session the pointer would be read from, so it prints the table itself,
 its one row, and the only move left is a fresh plan.
 
-The model is the second bold token the row spends, because it is the one the
-human acts on (a `/model` call) before the next run. The rationale behind the
-recommendation lives on the dashboard, and the choice stays the human's. A
-title long enough to push the row past the width budget wraps in its cell;
-it is never truncated.
+**A model rides beside the step or range it is for.** The step number rides
+bold, and where the plan names a model for it, `on Sonnet` follows: Now and
+Next Up (`**Step 2** on Sonnet`), the `Back to` pointers, and the Range row
+for the range a run would walk (`**3** on Opus: /plumbbob:run (steps 6-9)`)
+([D115 (card-weights)](decisions.md#d115)). Each model sits next to the
+thing it is for, so a card naming the step in flight, the next step, and the
+next run never leaves the human asking which one a model means. The plan's
+count is gone from all of them: `of 3` beside both Now and Next Up read as
+one blur, and it said nothing the human decides on. A step or range with no
+`- model:` line, or one still holding the template's `<...>` fill-in, is its
+number alone. The Stop row (`**Range 2** landed`) and the stop's pointers
+carry no model, since that range is done, and the Parked row keeps its count
+(`**2** of 7 open`), since the total is what makes it a count of anything.
+
+The model is the one fact the human acts on (a `/model` call) before a step
+or a run, and it used to ride at the end of the Next Up cell, where a long
+title wrapped it out of sight, and then a Model row, which read as the next
+step's when it was the range's. The rationale behind the recommendation
+lives on the dashboard, and the choice stays the human's. A title long
+enough to push the Next Up row past the width budget wraps in its cell; it
+is never truncated.
 
 The `details:` clause is a link, and its text is the file's name and line,
 `intent.md:41`, where it used to be the full sidecar path in a code span
@@ -588,10 +601,10 @@ hold in their head, a row each and each only when there is something to hold
 ([D111 (state-table)](decisions.md#d111)):
 
 ```text
-| Next Up | Step 7 of 10 - feat(x): title (model: **Sonnet**, details: [intent.md:22](.plumbbob/builds/x/intent.md#L22)) |
-| Range | 3 of 5: /plumbbob:run (steps 7-9) |
+| Next Up | **Step 7** on Sonnet - feat(x): title (details: [intent.md:22](.plumbbob/builds/x/intent.md#L22)) |
+| Range | **3** on Opus: /plumbbob:run (steps 7-9) |
 | Order | 7, 8, 5, 10, 6 (and 2 more) |
-| Parked | 2 of 7 open |
+| Parked | **2** of 7 open: /plumbbob:harvest |
 | Questions | 1 open |
 ```
 
@@ -604,7 +617,11 @@ re-sequences the plan away from its numbering
 carries its sequence in the numbers. The Parked row is the open count against
 everything ever parked, whenever anything has been parked; it rides even
 under `Nothing planned`, where an unharvested list is the one reminder that
-matters. The Questions row counts the open questions the plan still carries,
+matters. While a park is open the row names the move that settles it,
+`/plumbbob:harvest`, so a human who never read the docs meets the verb where
+the count is; mid-step it reads `/plumbbob:harvest once this step lands`,
+since a harvest runs only between steps.
+ The Questions row counts the open questions the plan still carries,
 the count the dashboard prints beside the parks, while one is open. The
 first three rode one line indented beneath the pointer,
 `· range 3 of 5: … · order: … · parked 2 of 7 open`, three labeled fields in
@@ -696,9 +713,10 @@ At the plan pause the block keeps the shape with the moves that apply there
 ```text
 **Your Call**:
 
-- `looks good` → I mark the plan decided; /plumbbob:build starts Step 1
+- `looks good` → I mark the plan decided and commit it, so `.plumbbob/builds/rate-limit/` rides this branch into the PR; /plumbbob:build starts Step 1
 - `expand`, or any question → I show more of what is there; nothing changes
 - anything that reads as direction → I take it as what to sharpen; the plan is cheap to change now
+- `keep it local` → I run `plumbbob start --local`, so the plan commits record-only and the folder stays off the branch
 ```
 
 When the plan declares build ranges and the step the plan starts at sits in
@@ -707,6 +725,47 @@ what the human types next: `/plumbbob:run runs range 1 from Step 1`, or
 `runs range 3 from Step 8` after a mid-build refine, where the first undone
 step sits partway through a range. A step in no range, or in a flagged
 range, keeps the build.
+
+**The card says what approving publishes.** Until the plan commit lands,
+`looks good` names what that commit does with the build folder, read through
+the same probe `checkpoint --plan` stages by, so the promise and the commit
+cannot disagree ([D117 (publish-on-the-card)](decisions.md#d117)): a tracked
+folder rides the branch into the PR, and the `keep it local` row offers the
+way out, `plumbbob start --local` typed on the open session, which excludes
+`.plumbbob/` in that clone. Where git already ignores the folder (the repo's
+`.gitignore`, or a session kept local), the row says the commit lands
+record-only, `and commit it record-only (git ignores .plumbbob/ here, so the
+commit message carries the plan)`, and offers no way out, since there is
+nothing to keep back. Once the plan has landed, a refine's plan card says
+neither. The note used to be the plan skill's to say at the plan commit, and
+a model said it at the pause instead, after the card, which the relay check
+held, so the card printed twice.
+
+#### The open questions table
+
+While the plan carries an open question, the plan card tables them above
+its moves, one row each, and the Questions row leaves its state table, since
+the table says it ([D118 (questions-table)](decisions.md#d118)):
+
+```text
+**Open questions**: 2 open
+
+| Question | Why it matters | Lean |
+| --- | --- | --- |
+| [**Q1** (round-lines)](.plumbbob/builds/x/intent.md#L54): Do the Round N lines go in the reply or the folded block? | Otherwise two rounds of builder text run together | The reply |
+| [**Q3**](.plumbbob/builds/x/intent.md#L58): Should the state dir also move the matrix folder? | not given | no lean proposed |
+```
+
+The handle and slug link to the opener, where the expanded entry still
+holds what a cold reader needs, the stake in full and the lean's reasons.
+Each cell is the first sentence of its line (the opener's question, the
+`*plain:*` sub-line, the `*lean:*` sub-line), so a row stays one line and
+six questions fit on one screen; the skills ask for a first sentence that
+stands alone. A gap reads as one, as the lean table's do. The Your Call
+block gains `yes to all leans` (or `yes to all leans except Q3: …`), the
+reply that settled six questions in three words the day this shape was
+first tried, and `plumbbob status --questions` prints the same table alone,
+which refine relays after an attack in place of a prose walk-through.
 
 An auto halt on trouble renders the standard card; the Verdict's worst
 component is the halt reason. A clean halt renders no card at all: its step
@@ -842,7 +901,7 @@ A boundary turn, whole:
 
 | **Verdict** | ● Plumb |
 | --- | --- |
-| Next Up | Step 3 of 3 - feat(config): make the limit configurable via env (model: **Sonnet**, details: [intent.md:41](.plumbbob/builds/rate-limit/intent.md#L41)) |
+| Next Up | **Step 3** on Sonnet - feat(config): make the limit configurable via env (details: [intent.md:41](.plumbbob/builds/rate-limit/intent.md#L41)) |
 ```
 
 A driver turn, whole (a mid-step park):
@@ -850,7 +909,7 @@ A driver turn, whole (a mid-step park):
 ```text
 **Parked**: should /password-reset get the same throttle? (tangent)
 
-**Next Up**: Back to Step 2 of 3 - feat(login): wire the limiter into POST /login
+**Next Up**: Back to **Step 2** on Sonnet - feat(login): wire the limiter into POST /login
 ```
 
 **One command emits each of those, and the verb that made the transition is
@@ -880,7 +939,7 @@ notice), and the sentinel headers (`NO ACTIVE SESSION`, `NO ACTIVE BUILD`)
 stay exactly as they are.
 
 That exemption leaves two pointer vocabularies standing, and they stay that
-way. Every ending closes on `**Next Up**: Step 1 of 3 - <title>`, which states
+way. Every ending closes on `**Next Up**: **Step 1** - <title>`, which states
 a fact and leaves the move to the human. The dashboard closes on `next → build
 step 1 — /plumbbob:build`, which names the move in the imperative, because the
 dashboard is the one surface a human reads while deciding what to type next,
@@ -967,7 +1026,7 @@ Staged paths reach outside Step 16's seam ⚠ (test/integration/spike.test.ts, t
 
 | **Verdict** | ◐ A hair off (seam strayed) |
 | --- | --- |
-| Next Up | Step 17 of 18 - feat(ending): every transition prints its whole ending (model: **Opus**, details: [intent.md:512](.plumbbob/builds/presentation/intent.md#L512)) |
+| Next Up | **Step 17** on Opus - feat(ending): every transition prints its whole ending (details: [intent.md:512](.plumbbob/builds/presentation/intent.md#L512)) |
 ```
 
 Every one of these lines is rendered by one formatter in `src/lib/notice.ts`:
@@ -1125,7 +1184,7 @@ re-cut on a second lead beneath the order:
 
 **Build ranges**: range 2 of 3 re-cut (steps 10,4-6)
 
-**Next Up**: Step 10 of 10 - fix(parser): accept an empty header (details: [intent.md:24](.plumbbob/builds/x/intent.md#L24))
+**Next Up**: **Step 10** - fix(parser): accept an empty header (details: [intent.md:24](.plumbbob/builds/x/intent.md#L24))
 ```
 
 Two ranges or more read `ranges 2, 3 of 3 re-cut (range 2: steps 10,4-6,
@@ -1149,21 +1208,21 @@ names, numbered as the plan's item over the count of ranges, and the run
 that lands what is left of it from that step, the steps in a bracket:
 
 ```text
-| Next Up | Step 6 of 12 - feat(orient): read the ranges (model: **Opus**, details: [intent.md:30](.plumbbob/builds/x/intent.md#L30)) |
-| Range | 3 of 5: /plumbbob:run (steps 6-9) |
-| Parked | 2 of 7 open |
+| Next Up | **Step 6** on Opus - feat(orient): read the ranges (details: [intent.md:30](.plumbbob/builds/x/intent.md#L30)) |
+| Range | **3** on Opus: /plumbbob:run (steps 6-9) |
+| Parked | **2** of 7 open: /plumbbob:harvest |
 ```
 
 The row comes first beneath Next Up, ahead of the order and the parks,
 because it is the one that names what to type. Its forms:
 
 ```text
-| Range | 3 of 5: /plumbbob:run (steps 6-9) |
-| Range | 3 of 5: /plumbbob:run (steps 8-9) |
-| Range | 3 of 5: /plumbbob:run (step 9) |
-| Range | 4 of 5: /plumbbob:run (step 10 to its pause) |
-| Range | 3 of 5 lands with step 9 |
-| Range | 3 of 5 needs a re-cut (the build order puts step 11 inside it) |
+| Range | **3** on Opus: /plumbbob:run (steps 6-9) |
+| Range | **3** on Opus: /plumbbob:run (steps 8-9) |
+| Range | **3** on Opus: /plumbbob:run (step 9) |
+| Range | **4** on Fable: /plumbbob:run (step 10 to its pause) |
+| Range | **3** lands with step 9 |
+| Range | **3** needs a re-cut (the build order puts step 11 inside it) |
 | Range | no range names step 12 |
 ```
 
@@ -1176,7 +1235,8 @@ bracket says so. The fifth is the pause on a range's last step, below. The
 last two are the drift words above, in place of a run. A list range writes
 what is left in build order (`20,5-9`), so the first number in the bracket
 is where the run starts. The row's label says `Range`, so its fact opens on
-the count; the row was a segment of the note beneath Next Up,
+the range's number, bold, and the model its `- model:` line names; the row
+was a segment of the note beneath Next Up,
 `· range 3 of 5: /plumbbob:run (steps 6-9)`, until the note became rows
 ([D111 (state-table)](decisions.md#d111)).
 
@@ -1200,25 +1260,23 @@ there is that pause's `looks good`
 ([D95 (run-verb)](decisions.md#d95)): it lands the step on a green check
 and runs on through what is left of the range, and the grant the hook mints
 counts the step in flight as undone. So at step 6's pause, where Next Up
-names step 7, the row reads `3 of 5: /plumbbob:run (steps 6-9)`, and the
+names step 7, the row reads `**3** on Opus: /plumbbob:run (steps 6-9)`, and the
 Your Call block offers the run as a move
 ([the Your Call block](#the-your-call-block)). At the pause on a range's
 last step a run would land that step and end on the range's stop rather
 than start the next range, so the row names no run: it reads
-`3 of 5 lands with step 9`, and Next Up's step 10 waits for the boundary,
+`**3** lands with step 9`, and Next Up's step 10 waits for the boundary,
 where the Stop row and the next range's Range row render. A bare range's
 pause is the same case, since its run ends once its step lands.
 
-**While the Range row suggests a range, the bracket's bold model is the
-range's.** Next Up's bracket reads `model: **Opus**` from the `- model:`
-line of the range holding the step Next Up names, rather than the step's,
-and the Range row names no model of its own, because the bold token is the
-one the human acts on before the next run, the run is the range, and a
-range's first step is often not its hardest. At the pause on a range's last
-step that is the next range, the one the human picks a model for, while
-the Range row names the range that is finishing. A range with no model line
-leaves the step's in place, and the pointer at a step in no range, or in a
-flagged range, keeps the step's, as before.
+**The Range row names the range's model, and Next Up its step's.** While a
+run is suggested, the range's `- model:` line rides the Range row, the run
+the human picks a model for, since a range's first step is often not its
+hardest; Next Up keeps its own step's. At the pause on a range's last step
+the Range row names the range that is finishing and no model, since no run
+is offered, and Next Up names the next range's first step on its own model.
+This replaced a bracket on Next Up that bolded the range's model beside the
+step's title, which read as the step's.
 
 ### The Stop row
 
@@ -1230,12 +1288,12 @@ A boundary turn with it, whole:
 
 | **Verdict** | ● Plumb |
 | --- | --- |
-| Stop | Range 3 of 5 landed - review the card on a live boundary before the skills teach it (details: [intent.md:63](.plumbbob/builds/x/intent.md#L63)) |
-| Next Up | Step 10 of 12 - feat(docs): name the label (model: **Fable**, details: [intent.md:34](.plumbbob/builds/x/intent.md#L34)) |
-| Range | 4 of 5: /plumbbob:run (step 10 to its pause) |
+| Stop | **Range 3** landed - review the card on a live boundary before the skills teach it (details: [intent.md:63](.plumbbob/builds/x/intent.md#L63)) |
+| Next Up | **Step 10** on Fable - feat(docs): name the label (details: [intent.md:34](.plumbbob/builds/x/intent.md#L34)) |
+| Range | **4** on Fable: /plumbbob:run (step 10 to its pause) |
 ```
 
-The shape is one row labeled `Stop`: `Range N of M landed`, a plain hyphen,
+The shape is one row labeled `Stop`: `**Range N** landed`, a plain hyphen,
 the stop's text as the plan wrote it, and a bracket pointing at the item,
 where the `- note:` the card does not carry can be read. The label is `Stop`
 because it names the thing the plan wrote (`**stop:**` is the item's own
@@ -1481,6 +1539,28 @@ approved the halt reads the review in the same turn. A bare range earns no
 card, because its stop is its own pause and the recommendation there speaks
 to it.
 
+**After an approved halt, the card comes short.** When the step that
+completed the range halted at its pause and the human's `looks good` landed
+it, that step's card showed a moment ago, and most of a whole stop card
+would say it again ([D119 (short-stop-after-a-halt)](decisions.md#d119)).
+So the card prints short: the Harvested part while a park is open, Your
+Call, the state table with its Stop row, and the `more details` link, with
+no Summary, no Readout, and no recommendation. `show the stop` prints it
+whole. The checkpoint that lands the step reads the `PAUSE` stamp before it
+writes its own, and a stamp naming that step's pause becomes
+`landed 3 answered`, the mark `handoff --stop` reads. A run that lands its
+last step without a pause, a halt at an earlier step of the range, and a
+landing that answered no card all print the card whole. The detail file is
+written whole either way, since the stop's record reads it. The mark rides
+the stamp rather than the relay record, because the stamp is written on
+every host and names one build, so a range landed by hand after its last
+pause prints short the same way: the rule is that the human just read a
+card for the step, not that a run is in progress. Asked again in the turn
+it printed in, `handoff --stop` prints the same card again, short or
+whole, since the human has not read it yet; the reminder belongs to a
+later turn. That is the relay check's retry when a turn dropped the card,
+so a dropped short card comes back short.
+
 The card, whole, at the boundary where the running example's range 3 landed:
 
 ````markdown
@@ -1509,7 +1589,7 @@ diff         +412 -38 across 17 files
 spent        3h 12m · 1 red run
 ```
 
-**Harvested**: 3 of 8 parked ideas open
+**Harvested**: **3** of 8 parked ideas open
 
 | Park | What it is | Why it matters | Lean |
 | --- | --- | --- | --- |
@@ -1528,9 +1608,9 @@ Approving locks in each lean above; to change one, say so first (`make P6 a bloc
 
 | **Verdict** | ◐ A hair off (seam strayed) |
 | --- | --- |
-| Stop | Range 3 of 5 landed - review the card on a live boundary before the skills teach it (details: [intent.md:63](.plumbbob/builds/x/intent.md#L63)) |
-| Next Up | Step 10 of 12 - feat(docs): name the label (model: **Fable**, details: [intent.md:34](.plumbbob/builds/x/intent.md#L34)) |
-| Range | 4 of 5: /plumbbob:run (step 10 to its pause) |
+| Stop | **Range 3** landed - review the card on a live boundary before the skills teach it (details: [intent.md:63](.plumbbob/builds/x/intent.md#L63)) |
+| Next Up | **Step 10** on Fable - feat(docs): name the label (details: [intent.md:34](.plumbbob/builds/x/intent.md#L34)) |
+| Range | **4** on Fable: /plumbbob:run (step 10 to its pause) |
 
 **Recommendation**: Approve it, with P7 as the blocker it is. Step 8's stray is the label the Stop row needed, in a file the plan should have named, and the drift recover misses is the one step 10 builds on.
 
@@ -1584,7 +1664,7 @@ same stop is the model's reply, closed by the reminder naming the stop still
 waiting:
 
 ```text
-**Next Up**: Back to Range 3 of 5's stop - review the card on a live boundary before the skills teach it
+**Next Up**: Back to **Range 3**'s stop - review the card on a live boundary before the skills teach it
 ```
 
 The reminder prints whatever changed since: a lean the human changed, a
@@ -1688,7 +1768,7 @@ The part is a label, a lead that sizes the list, and the lean table, one row
 per open park in list order ([D112 (lean-table)](decisions.md#d112)):
 
 ```text
-**Harvested**: 3 of 8 parked ideas open
+**Harvested**: **3** of 8 parked ideas open
 
 | Park | What it is | Why it matters | Lean |
 | --- | --- | --- | --- |
@@ -1858,12 +1938,12 @@ and the state table, its Range row naming the next run, re-cut or not. No
 Verdict rides it, since nothing was measured, so Next Up heads the table:
 
 ```text
-**Stop**: Range 3 of 5 recorded (1 blocker, 2 tangents)
+**Stop**: **Range 3** recorded (1 blocker, 2 tangents)
 
-| **Next Up** | Step 10 of 12 - feat(docs): name the label (model: **Fable**, details: [intent.md:34](.plumbbob/builds/x/intent.md#L34)) |
+| **Next Up** | **Step 10** on Fable - feat(docs): name the label (details: [intent.md:34](.plumbbob/builds/x/intent.md#L34)) |
 | --- | --- |
-| Range | 4 of 5: /plumbbob:run (step 10 to its pause) |
-| Parked | 0 of 8 open |
+| Range | **4** on Fable: /plumbbob:run (step 10 to its pause) |
+| Parked | **0** of 8 open |
 ```
 
 The label is `Stop` again, because the artifact that landed is the stop's
@@ -2038,6 +2118,17 @@ Its headings are title case (`Detail`, `Step`, `Summary`, `Recommendation`),
 the same case the labels in the turn carry; handoff reads the Summary and
 recommendation headings case-insensitively, so a file written the older
 lowercase way still parses.
+
+**A link is written from where the file lives, and the record moves it.** A
+relative link in the detail file resolves from `.plumbbob/`, so a decision in
+the plan is `builds/<slug>/intent.md#d5` there. The build log that records
+the file sits one folder deeper, in `builds/<slug>/`, so the record re-aims
+every relative link at the same target from there (`intent.md#d5`), leaving
+a URL, a root-relative path, a bare `#anchor`, and anything inside code as
+written ([D116 (links-re-rooted)](decisions.md#d116)). The same text is read
+from two folders, and only the copy knows both; a link written for the log
+was broken in the file while the pause stood open, and one written for the
+file broke the log and the gate's `links` check with it.
 
 A range's detail, the stop card's wire, keeps the shape with the range in
 the step's place and one more section:

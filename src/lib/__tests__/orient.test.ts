@@ -18,6 +18,7 @@ import {
   parseConstraintCount,
   parseDetailStep,
   parseLastCheckpoint,
+  parseOpenQuestionRows,
   parseOpenQuestions,
   parseOrderedSteps,
   parseParked,
@@ -203,6 +204,40 @@ describe('orient parsers', () => {
     const steps = parseSteps(intent)
     expect(steps[0]?.model).toBe('sonnet — mechanical, fully specified')
     expect(steps[1]?.model).toBe(null)
+  })
+
+  it('parseOpenQuestionRows reads each open question with its line, its why, and its lean — D118 (questions-table)', () => {
+    const intent = [
+      '# Q',
+      '',
+      '## Open questions',
+      '',
+      '- <a id="q1"></a>**Q1 (round-lines)**: Where do the round lines go?, *resolve by:* decide | spike | ask',
+      '  - *plain:* Otherwise two rounds run together. More here.',
+      '  - *lean:* The reply.',
+      '- <a id="q2"></a>**Q2 (cli-critic)**: *resolved:* 2026-10-30, allow it',
+      '  - *plain:* a resolved question keeps its sub-lines',
+      '- Q3: Is a bare opener enough?',
+      '  - *plain:* It wraps',
+      '    onto a second line.',
+      '- <a id="q4"></a>**Q4 (slug-here)**: <the unresolved hole, framed as a question>, *resolve by:* decide',
+      '  - *lean:* <the answer>',
+      '',
+      '## Verdicts',
+      '',
+    ].join('\n')
+    expect(parseOpenQuestionRows(intent)).toEqual([
+      {
+        id: 'Q1',
+        slug: 'round-lines',
+        line: 5,
+        question: 'Where do the round lines go?',
+        why: 'Otherwise two rounds run together. More here.',
+        lean: 'The reply.',
+      },
+      { id: 'Q3', slug: null, line: 10, question: 'Is a bare opener enough?', why: 'It wraps onto a second line.', lean: null },
+    ])
+    expect(parseOpenQuestions(intent)).toBe(2) // the count reads the same rows
   })
 
   it('parseOpenQuestions counts only unresolved Q lines', () => {

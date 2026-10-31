@@ -129,7 +129,9 @@ Three lines:
   · *lean:* the model's proposed resolution: one answer to react to, not a menu
 
 The human reads *plain* to understand, then *lean* to approve or redirect: one
-pass, no round-trip.
+pass, no round-trip. The plan card tables the open questions a row each, and a cell
+shows only the first sentence of its line, so open the question, *plain*, and *lean*
+each on a sentence that stands alone: the question, why it matters, the answer.
 
 When a question resolves, swap *resolve by:* for *resolved:* <date, the call> ON THE
 OPENER LINE, e.g.

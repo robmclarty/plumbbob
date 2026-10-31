@@ -20,7 +20,7 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 | Verb | Synopsis | Effect |
 | ------ | ---------- | -------- |
 | `start` | `start <title> [--slug <name>] [--local] [--allow-dirty]` | scaffold `builds/<slug>/`, record baseline, open the session |
-| `status` | `status [--build <slug>] [--invoked "<args>"] [--run "<args>"]` | print the orientation dashboard (or `NO ACTIVE SESSION`) |
+| `status` | `status [--build <slug>] [--invoked "<args>"] [--run "<args>"] [--questions]` | print the orientation dashboard (or `NO ACTIVE SESSION`) |
 | `build` | `build [<n>] [--build <slug>]` | write step `n`'s seam + `STEP` (goes in-flight) |
 | `handoff` | `handoff [<n>] [--full] [--plan] [--driver] [--stop] [--harvest] [--build <slug>]` | print the turn's whole CLI-rendered ending by tier, or the one line for a card already shown |
 | `check` | `check [--bail] [--changed] [--all] [--only a,b] [--skip a,b] [--include a,b]` | run the heavy gate; no state change |
@@ -83,15 +83,20 @@ yours once it exists, so a re-start never touches it) and the untracked
 `STATE` sentinel (whose content is the active-build cursor, pointed at the new build, [**D28 (state-cursor)**](decisions.md#d28)) and narrows the
 repo's `info/exclude` to the control-plane patterns ([**D17 (two-planes)**](decisions.md#d17)/[**D26 (build-folders)**](decisions.md#d26)). `--local` opts out into
 the old fully untracked flat layout: everything under `.plumbbob/` excluded ([**D26 (build-folders)**](decisions.md#d26)).
+Typed on a session already open, `--local` needs no title and keeps that build untracked
+instead: it writes the same blanket `.plumbbob/` exclude, so the plan and finish commits land
+record-only, and refuses (exit 1) once the plan has landed, since the folder is in a commit by
+then ([**D117 (publish-on-the-card)**](decisions.md#d117)). This is the plan card's
+`keep it local` move.
 Refuses (exit 1) on an empty title, a slug that collides with an existing build, a non-git
-directory, a repo with no commits, an already-active session, or a dirty tree;
+directory, a repo with no commits, an already-active session (`--local` aside), or a dirty tree;
 `--allow-dirty` overrides the dirty-tree refusal and records the current `HEAD` as the
 baseline ([**D22 (clean-baseline)**](decisions.md#d22)).
 
 ### status
 
 ```text
-plumbbob status [--build <slug>] [--invoked "<args>"] [--run "<args>"]
+plumbbob status [--build <slug>] [--invoked "<args>"] [--run "<args>"] [--questions]
 ```
 
 Prints the orientation dashboard (title, the derived phase, the step list with the next
@@ -100,6 +105,12 @@ numbering, and the parked / open-question counts, where `parked 2 of 7 open` is 
 items against everything ever parked), then a
 single suggested next move ([**D8 (status-dashboard)**](decisions.md#d8) / [**D15 (one-next-move)**](decisions.md#d15)). Read-only; prints `NO ACTIVE SESSION` and
 exits 0 when there is no session.
+
+`--questions` prints the plan's open questions in place of the dashboard, as the one table
+the plan card carries ([**D118 (questions-table)**](decisions.md#d118)): a row per open
+question, its handle and slug linked to the opener in `intent.md`, then the question, why it
+matters, and the lean, each the first sentence of its line. With none open it prints
+`plumbbob: no open questions in this plan`.
 
 When the plan carries `## Build ranges` ([**D92 (build-ranges)**](decisions.md#d92)), the
 ranges are listed beneath the steps, in the step list's own grammar, each row the command
@@ -232,26 +243,28 @@ At a build pause it renders the turn entire, in this order:
   - `Verdict`, the header: the ladder rung, computed worst-of over the readout's rows plus
     the step's accrued stats, naming its worst component in a trailing parenthetical
     ([**D82 (readout-ladder)**](decisions.md#d82)).
-  - `Now`: the step in flight, its count out of the whole plan, and its title, written the
-    way Next Up writes the step to come, so the two rows agree under a re-sequenced build
-    order. A step the plan no longer holds is named by its number alone
+  - `Now`: the step in flight, bold, on the model its `- model:` line names, and its title,
+    written the way Next Up writes the step to come (`**Step 2** on Sonnet - <title>`,
+    [**D115 (card-weights)**](decisions.md#d115)). A step with no model line, or one the
+    plan no longer holds, is named by its number alone
     ([**D88 (current-step-shown)**](decisions.md#d88)).
-  - `Next Up`: the next undone step in build order, its progress count, and a bracket
-    carrying the step's `- model:` recommendation and where to read it in full. While the
-    Range row suggests a range, the bracket's bold model is the range's own `- model:`
-    rather than the step's ([**D98 (card-names-the-run)**](decisions.md#d98)). The
-    bracket's `details:` clause is a link whose text is the file's name and line, such as
-    `[intent.md:28](.plumbbob/builds/<slug>/intent.md#L28)`
-    ([**D107 (short-linked-paths)**](decisions.md#d107)).
-  - `Range`: the range holding that step and the run that lands what is left of it
-    (`2 of 2: /plumbbob:run (steps 2-3)`, when the plan declares build ranges). At the
-    pause on a range's last step it reads `1 of 2 lands with step 1` and names no run,
+  - `Next Up`: the next undone step in build order, on its own model, and a bracket saying
+    where to read it in full. The bracket's `details:` clause is a link whose text is the
+    file's name and line, such as `[intent.md:28](.plumbbob/builds/<slug>/intent.md#L28)`
+    ([**D107 (short-linked-paths)**](decisions.md#d107)). A model line still holding the
+    template's `<...>` fill-in names no model.
+  - `Range`: the range holding that step, on the range's own model, and the run that lands
+    what is left of it (`**2** on Opus: /plumbbob:run (steps 2-3)`, when the plan declares
+    build ranges, [**D98 (card-names-the-run)**](decisions.md#d98)). At the
+    pause on a range's last step it reads `**1** lands with step 1` and names no run,
     since a run typed there ends on that range's stop, and a range the plan has outgrown
-    reads `2 of 2 needs a re-cut (step 9 is not in the plan)`.
+    reads `**2** needs a re-cut (step 9 is not in the plan)`.
   - `Order`: the build order from that step on (`7, 8, 5`, only when `## Build order`
     departs from the numbering; five steps, then a count,
     [**D86 (build-order)**](decisions.md#d86)).
-  - `Parked`: the park count (`2 of 7 open`, whenever anything has been parked).
+  - `Parked`: the park count, whenever anything has been parked, and the move that settles
+    the parks while any is open (`**2** of 7 open: /plumbbob:harvest`, or
+    `/plumbbob:harvest once this step lands` while a step is in flight).
   - `Questions`: the open questions the plan still carries (`1 open`, while one is).
 - `**Recommendation**:` the model's own call, read from the detail file's
   `## Recommendation` section behind a CLI-prepended label.
@@ -269,13 +282,14 @@ pause, which is how `/plumbbob:verify` reaches the pause for a diff built outsid
 
 A card shows once ([**D110 (reply-after-the-card)**](decisions.md#d110)). The stamp in
 `PAUSE` records which card has shown, the step whose pause showed (`2`) or, after a
-checkpoint, the step whose boundary did (`landed 2`), and nothing about what the card said.
+checkpoint, the step whose boundary did (`landed 2`, or `landed 2 answered` when that
+landing answered step 2's own pause card), and nothing about what the card said.
 A later render of the same pause prints one line, the driver pointer back at the step,
 whatever changed since (a rewritten detail file, an edit, a gate run that moved the check
 row):
 
 ```text
-**Next Up**: Back to Step 2 of 3 - feat(login): wire the limiter into POST /login
+**Next Up**: Back to **Step 2** on Sonnet - feat(login): wire the limiter into POST /login
 ```
 
 A later render of a boundary already shown prints its forward pointer alone, the labeled
@@ -297,7 +311,12 @@ in the skills keeps them from drifting out of sync with `status`, which renders 
 next-step detail. `--stop` renders the stop card that closes a run's range
 ([the stop card](presentation.md#the-stop-card)), for the range the last landing completed and
 from that range's detail file, once per stop under a `STOP` stamp of its own, with
-`--stop --full` to bring it back. Refuses (exit 1) with no session, with two of `--plan`,
+`--stop --full` to bring it back. After a landing that answered its own pause card
+(`landed <n> answered`), it prints the card short: the Harvested part, Your Call, the state
+table, and the link, since that step's Summary, Readout, and recommendation just showed
+([**D119 (short-stop-after-a-halt)**](decisions.md#d119)). In the turn the card printed in, a second
+`--stop` prints it again in the same form, the retry the relay check asks for; the reminder
+is a later turn's. Refuses (exit 1) with no session, with two of `--plan`,
 `--driver`, `--stop`, and `--harvest` together, with `--stop` while a step is in flight,
 when no range that lands its steps just landed, or when the detail file is another
 range's, and with `--harvest` when the detail file is not a harvest's or no park is open.
@@ -351,12 +370,15 @@ commits any pending work (or records the existing `HEAD` if the tree is already 
 CLI-owned Conventional subject `<type>(<scope>): <description>` (scope from the build slug, type
 from the step title; author prefix honored, else `feat`), appends `step <n> <sha>` to `checkpoints`,
 flips the step to `[x]`, and clears `SEAM`/`STEP`, dropping the dashboard back to the
-`DESIGN` boundary, and stamps `PAUSE` with the boundary it prints (`landed <n>`), so a
-later `handoff` there ends on its pointer. It also appends the step's entry to the
+`DESIGN` boundary, and stamps `PAUSE` with the boundary it prints (`landed <n>`, with
+`answered` after it when the step's own pause card had shown), so a later `handoff` there
+ends on its pointer. It also appends the step's entry to the
 build-log's `## Log`: the dated line, and beneath it the pause as the human approved it
 (the Summary and the highlights the card leaves in the detail file, the Readout, the
 Verdict as a line, the recommendation, and the full story behind each highlight), read
-from `.plumbbob/detail.md`, which it then truncates ([**D81 (detail-file)**](decisions.md#d81));
+from `.plumbbob/detail.md`, which it then truncates ([**D81 (detail-file)**](decisions.md#d81)),
+each relative link in it re-aimed from `.plumbbob/` at the build folder the log lives in
+([**D116 (links-re-rooted)**](decisions.md#d116));
 the lead line's bracket carries a `details:` pointer at that entry. A detail file whose
 header names a different step is a leftover from a step that already landed, so it is
 cleared without being recorded. `-m <msg>` overrides
@@ -376,7 +398,7 @@ undone step lands, however it landed, and never for a bare range, whose stop is 
 pause ([**D93 (range-on-the-card)**](decisions.md#d93)):
 
 ```text
-| Stop | Range 2 of 2 landed - try six logins yourself, then `/plumbbob:finish` (details: [intent.md:42](.plumbbob/builds/rate-limit/intent.md#L42)) |
+| Stop | **Range 2** landed - try six logins yourself, then `/plumbbob:finish` (details: [intent.md:42](.plumbbob/builds/rate-limit/intent.md#L42)) |
 ```
 
 When the range was landed by a run (the `RUN` mark names it), that boundary is not the
@@ -450,7 +472,7 @@ clears the detail file and the `STOP` stamp, commits nothing, and ends on its ow
 then the state table headed by Next Up:
 
 ```text
-**Stop**: Range 2 of 2 recorded (1 tangent)
+**Stop**: **Range 2** recorded (1 tangent)
 **Recorded**: 2 parked ideas (2 tangents)
 ```
 

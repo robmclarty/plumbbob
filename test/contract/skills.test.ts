@@ -241,6 +241,11 @@ describe('plan — the whole-goal move: scaffold + frame, no code', () => {
     expect(body).toMatch(/start --local/)
   })
 
+  it('leaves the publish note to the card and ends the plan pause on it — D117 (publish-on-the-card)', () => {
+    expect(body).toMatch(/You compose neither note, before the\s+card or after it/)
+    expect(body).toMatch(/The turn is your framed plan, then that block, and nothing after it/)
+  })
+
   it('surfaces the plan-time gate warning while the human is still deciding (research/07 2a)', () => {
     expect(body).toMatch(/gate sees no code checks/i)
     expect(body).toMatch(/"check": "npm test"/)
@@ -401,7 +406,7 @@ describe('build — a run hands its range section a range the plan names — D96
     expect(section).toMatch(/\/plumbbob:run/)
     expect(section).toMatch(/walked the same way/i)
     // The early-stop note names the run the card's Range row prints, not the old explicit command.
-    expect(section).toContain('`| Range | 3 of 5: /plumbbob:run (steps 8-9) |`')
+    expect(section).toContain('`| Range | **3** on Opus: /plumbbob:run (steps 8-9) |`')
   })
 
   it("names the stop card in its note on harvesting at a range's stop — D100 (stop-card)", () => {
@@ -492,6 +497,9 @@ describe('run — a range of the plan, walked by the build skill — D95 (run-ve
     // The checkpoint's block gives way to the card, even after a halt approved at the range's last step.
     expect(body).toMatch(/relay none of it, and end\s+the run on the stop card/)
     expect(body).toMatch(/the run ends on the stop card\s+too/)
+    // After an approved halt the card prints short, and the detail file is still written whole (D119 (short-stop-after-a-halt)).
+    expect(section).toMatch(/After a halt the human approved, the card comes short/)
+    expect(section).toMatch(/Write the range's detail file all the same, in full/)
     expect(body).toContain('`../harvest/SKILL.md`')
   })
 

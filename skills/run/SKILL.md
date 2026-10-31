@@ -122,7 +122,7 @@ walk before it, since the checkpoint would refuse it. The halt list is the build
 red check, a self-review mismatch, a bound agent's `blocked` or `drift`, or a new decision
 ends at that step's pause card. `plumbbob build` names the top step as the top of the range
 you granted when it enters it. Once that step lands, its checkpoint prints the boundary
-with the Stop row (`| Stop | Range 3 of 5 landed - <its stop> |`); relay none of it, and end
+with the Stop row (`| Stop | **Range 3** landed - <its stop> |`); relay none of it, and end
 the run on the stop card, below, in the same turn.
 
 **A bare range.** `grant: none, as a bare range builds to its pause`: build the range's one
@@ -207,6 +207,15 @@ it, and record nothing in this turn: `plumbbob harvest` refuses in the turn the 
 because the human has not read it yet. If the turn is held with a reason saying the stop card
 is still owed, do exactly what the reason says.
 
+*After a halt the human approved, the card comes short.* When the step that completed the
+range halted at its pause and `looks good` landed it, the human read that step's Summary,
+Readout, and recommendation a moment ago, so `plumbbob handoff --stop` prints only the
+Harvested table, the moves, the state table with its Stop row, and the link
+([D119 (short-stop-after-a-halt)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d119)).
+Write the range's detail file all the same, in full: the stop's record reads it, and
+`show the stop` prints the card whole from it. Paste the short card exactly as it printed;
+never add back the parts it left out.
+
 ## 6. The reply at a stop
 
 The card's proposals are settled in one reply
@@ -231,7 +240,8 @@ and the Your Call block names the replies. Read the human's message as one of th
 - **A question**, or `expand 2`, is answered from the detail file, the range's commits, or
   the Log, never from recall; then run `plumbbob handoff --stop` and paste the one-line
   reminder it prints beneath your answer. Only `show the stop`, or any wording of it, takes
-  `plumbbob handoff --stop --full`, and never to read the card for yourself.
+  `plumbbob handoff --stop --full`, which prints the card whole after a short one too, and
+  never to read the card for yourself.
 - **`/plumbbob:run`** typed at the card confirms everything the way `looks good` does, and
   runs the next range. Record first: fold the blockers and run `plumbbob harvest`, then read
   `plumbbob status --run "<the same argument>"` again. When its grant line says

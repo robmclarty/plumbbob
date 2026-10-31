@@ -175,9 +175,9 @@ In Claude Code, inside any git repo with a clean tree:
 
    | **Verdict** | ● Plumb |
    | --- | --- |
-   | Now | Step 1 of 3 - feat(limiter): add a token-bucket limiter |
-   | Next Up | Step 2 of 3 - feat(login): wire the limiter into POST /login (model: **Sonnet**, details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28)) |
-   | Range | 1 of 2 lands with step 1 |
+   | Now | **Step 1** on Opus - feat(limiter): add a token-bucket limiter |
+   | Next Up | **Step 2** on Sonnet - feat(login): wire the limiter into POST /login (details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28)) |
+   | Range | **1** lands with step 1 |
 
    **Recommendation**: Approve it, refilling on read. The gate is green and the seam held, and a bucket that refills when it is read needs no timer for the route to clean up.
 
@@ -200,8 +200,8 @@ In Claude Code, inside any git repo with a clean tree:
 
    | **Verdict** | ● Plumb |
    | --- | --- |
-   | Next Up | Step 2 of 3 - feat(login): wire the limiter into POST /login (model: **Sonnet**, details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28)) |
-   | Range | 2 of 2: /plumbbob:run (steps 2-3) |
+   | Next Up | **Step 2** on Sonnet - feat(login): wire the limiter into POST /login (details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28)) |
+   | Range | **2** on Sonnet: /plumbbob:run (steps 2-3) |
    ```
 
    ![The boundary, drawn: a bench mark freshly cut into the newest course of a stone wall, older marks below, and the red line raised one course over stones not yet laid](site/media/checkpoint-boundary.svg)

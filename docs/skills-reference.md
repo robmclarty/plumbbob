@@ -93,7 +93,7 @@ Builds one range of the plan: what is left of the range holding the next step, o
 3 for `/plumbbob:run 3`, by the item number `## Build ranges` gives it
 ([D95 (run-verb)](decisions.md#d95)). The step numbers are the plan's to know, so you never
 type them: the card names the run in the Range row beneath Next Up with the steps it will
-land (`| Range | 2 of 2: /plumbbob:run (steps 2-3) |`), and the turn hook mints the run's grant from
+land (`| Range | **2** on Sonnet: /plumbbob:run (steps 2-3) |`), and the turn hook mints the run's grant from
 the plan as you type it ([D96 (plan-names-the-grant)](decisions.md#d96)). The skill opens on
 the run header `plumbbob status --run` prints (the range, what is left of it, where the run
 ends, its stop, and that grant), then walks the steps the way a typed range is walked,
@@ -255,7 +255,9 @@ code actually does, it proposes the edits that bring it back, before/after, writ
 on your approval, a step it adds placed through `plumbbob order`, which files it into a build
 range, and a range the order cannot settle re-cut by hand; `/plumbbob:refine ranges` re-cuts
 the whole section on request. Where `/plumbbob:step`
-sharpens one step, refine works the whole plan.
+sharpens one step, refine works the whole plan. An attack ends on the open questions as
+one table (`plumbbob status --questions`), each row the question, why it matters, and the
+lean, so one reply (`yes to all leans`, or `yes to all leans except Q3: …`) settles them.
 The plan pause's cold read is refine's tip: it surfaces the worst hole and names refine
 for the rest, so the full attack stays optional and arrives when the read says it would
 pay. Refine is where the real adversary looks; the cold read is an estimate.

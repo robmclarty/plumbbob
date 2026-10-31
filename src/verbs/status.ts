@@ -9,7 +9,7 @@
 // dashboard, and names the waiting card again beneath the run's grant.
 
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { PLAN_COMMIT_MARKER, commitsSince, findRepoRoot } from '../lib/git.ts'
 import {
   SLOTS,
@@ -35,12 +35,14 @@ import {
   formatRunDashboard,
   lastLedgerSha,
   orient,
+  parseOpenQuestionRows,
   parseRequestedStep,
   resolveRunArgs,
   type OrientInput,
 } from '../lib/orient.ts'
 import { normalizeStepList } from '../lib/steplist.ts'
-import { waitingCard, type WaitingCard } from './handoff.ts'
+import { blocks, notice } from '../lib/notice.ts'
+import { questionsPart, waitingCard, type WaitingCard } from './handoff.ts'
 
 /**
  * Read a file as utf8, or '' when it is missing or unreadable.
@@ -96,7 +98,8 @@ function grantText(grant: Grant | null): string | null {
  * With `--run "<raw args>"` (how the `/plumbbob:run` skill passes its own),
  * the dashboard prints beneath a header naming the run the text resolves to
  * and the grant the turn hook minted, or carries the refusal in its pointer
- * when the run names nothing it can walk.
+ * when the run names nothing it can walk. With `--questions` it prints the
+ * plan's open questions as the plan card tables them, and nothing else.
  */
 export function status(cwd: string, args: ReadonlyArray<string> = []): number {
   const root = findRepoRoot(cwd)
@@ -118,6 +121,13 @@ export function status(cwd: string, args: ReadonlyArray<string> = []): number {
       )
       return 0
     }
+  }
+  if (rest.includes('--questions')) {
+    // The open questions alone, as the plan card tables them: the view a skill
+    // relays when the human asks what is still open (D118 (questions-table)).
+    const part = questionsPart(parseOpenQuestionRows(readOr(intentPath(root, slug))), relative(root, intentPath(root, slug)))
+    process.stdout.write(part === null ? notice({ fact: 'no open questions in this plan' }) : blocks([part]))
+    return 0
   }
   const inFlightRaw = readOr(stepPath(root, slug)).trim()
   // Out-of-band commits (ones that landed outside the checkpoints ledger) are

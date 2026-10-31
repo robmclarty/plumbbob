@@ -186,7 +186,9 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    of its own, one command to a line, which handoff keeps line for line. A slash command
    or a path stays in backticks in the sentence. `checkpoint` records this file beneath the step's dated
    line in the build-log's `## Log` and then truncates it, so the detail lands in the
-   tracked ledger rather than piling up on disk.
+   tracked ledger rather than piling up on disk. Write a relative link from `.plumbbob/`, where
+   the file lives (`builds/<slug>/intent.md#d5`); the record re-aims it at the build folder.
+   A decision cited by its slug in plain text (`D5 (no-link-no-reconnect)`) needs no link at all.
 
    **A bare range's pause is its stop.** When the injected dashboard's ranges block lists
    this step as a bare range (`/plumbbob:build 5`, its row marked `▸`), the plan reserved a
@@ -238,7 +240,7 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    **Then hand off with the next model.** `plumbbob checkpoint` prints the whole boundary
    ending itself: `**Checkpoint**: Step N complete (<sha>)`, any advisory (a staged path
    outside the seam is the common one), and the state table: the Verdict the step earned,
-   the Stop row when this landing completes a range (`| Stop | Range 3 of 5 landed - <its
+   the Stop row when this landing completes a range (`| Stop | **Range 3** landed - <its
    stop> |`, the reason the build stops here), Next Up, and the rows beneath it. Relay that
    block whole, the table with the rest (the relay check holds a boundary that dropped a
    row), run no second command, and write nothing around it. A later turn at this boundary
@@ -371,9 +373,13 @@ out, or the next step in build order is one the range does not name),
 - **A step inside the range won't build** (its seam won't parse): `plumbbob build <n>` fails
   exactly as it always does; surface it and stop, the same as a red check. Do not skip past
   the gap.
-- **The range starts above the next undone step**: you are jumping over earlier planned work;
-  note that you are skipping the steps before it, then proceed (the same latitude as a
-  single-number jump like `/plumbbob:build 4`).
+- **The range starts above the next undone step** (the order reads `6, 4, 5` under
+  `/plumbbob:build 4-5`): the first step enters as a single-number jump like `/plumbbob:build 4`
+  would, with the skipped step noted. Once it lands, the next undone step in build order is
+  the one you jumped, which the range does not name, so the halt above fires there, and
+  `plumbbob build` names step 4 as the last undone step in the range, its detail naming step 6
+  as the step the walk halts before. The range that walks the whole stretch names the jumped
+  step too (`/plumbbob:build 6,4-5`).
 - **The build order puts a step the range does not name inside it** (the order reads
   `1, 4, 2, 3` under `/plumbbob:build 1-3`): the halt above fires before step 4, and
   `plumbbob build` names step 1 as the last undone step in the range. The range that walks
@@ -388,7 +394,7 @@ out, or the next step in build order is one the range does not name),
 - **After an early stop, settle the step, then rerun what is left.** A halt on trouble
   inside a range ends at that step's pause, and the grant ends with the turn. Once the
   human approves and the step lands, the state table's Range row names the run that lands
-  what is left of the range (`| Range | 3 of 5: /plumbbob:run (steps 8-9) |`), and that is
+  what is left of the range (`| Range | **3** on Opus: /plumbbob:run (steps 8-9) |`), and that is
   what the human types to carry on; `/plumbbob:build 8-9` lands the same steps by hand.
 
 ## The hard contracts

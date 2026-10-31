@@ -242,6 +242,35 @@ describe('generated markdown lints clean under a consumer-strict gate', () => {
     expect(await lintFindings(dir, [buildLogPath(dir)])).toEqual([])
   })
 
+  it('the plan card with its open questions: the three-column table, a pipe in a lean included — D118 (questions-table)', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Ask first', '--slug', 'ask-first']))
+    writeFileSync(
+      intentPath(dir),
+      [
+        '# Ask first',
+        '',
+        '## Steps',
+        '',
+        '1. [ ] First — **done when:** a works.',
+        '   - seam: `src/a.ts`',
+        '',
+        '## Open questions',
+        '',
+        '- <a id="q1"></a>**Q1 (pipe-or-not)**: Does `a | b` read as one command?, *resolve by:* decide',
+        '  - *plain:* A pipe in a cell must not split its row.',
+        '  - *lean:* Yes, `a | b` is one.',
+        '',
+      ].join('\n'),
+    )
+    const card = join(dir, 'card.md')
+    // The plan sits above the card's rule, and the card's trailing blank line is
+    // the turn's own, so the file gets a heading in place of one and ends on a newline.
+    const printed = captureIo(() => handoff(dir, ['--plan'])).stdout
+    writeFileSync(card, `${printed.replace(/^\n---\n\n/, '# The plan\n\n').trimEnd()}\n`)
+    expect(await lintFindings(dir, [card])).toEqual([])
+  })
+
   it('the finish report: Checkpoints and a Stats table', async () => {
     const dir = makeTempRepo()
     await captureIoAsync(() => start(dir, ['Stats table', '--slug', 'stats-table']))

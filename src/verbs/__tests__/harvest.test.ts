@@ -131,7 +131,7 @@ describe("harvest — a stop's record — D104 (harvest-records)", () => {
     const entry = after.slice(after.indexOf(`- ${date} — range 2 of 3's stop recorded — review the parser before the card reads it`))
     expect(entry).toContain('\n\n  **Summary**: The parser reads the plan, and the card reads the parser.')
     expect(entry).toContain('  **Verdict**: ● Plumb')
-    expect(entry).toContain('  **Harvested**: 3 of 3 parked ideas open')
+    expect(entry).toContain('  **Harvested**: **3** of 3 parked ideas open')
     expect(entry).toContain('  | Park | What it is | Why it matters | Lean |')
     expect(entry).toContain('  | P1 | one idea | not given | tangent: the card renders it |')
     expect(entry).toContain('  | P2 | another (tangent) | not given | no lean proposed |')
@@ -142,12 +142,12 @@ describe("harvest — a stop's record — D104 (harvest-records)", () => {
     expect(existsSync(stopPath(dir))).toBe(false)
     expect(stdout).toBe(
       [
-        '**Stop**: Range 2 of 3 recorded (1 blocker, 1 tangent)',
+        '**Stop**: **Range 2** recorded (1 blocker, 1 tangent)',
         '',
-        '| **Next Up** | Step 4 of 4 - Fourth (details: [intent.md:11](.plumbbob/builds/harvest-test/intent.md#L11)) |',
+        '| **Next Up** | **Step 4** - Fourth (details: [intent.md:11](.plumbbob/builds/harvest-test/intent.md#L11)) |',
         '| --- | --- |',
-        '| Range | 3 of 3: /plumbbob:run (step 4 to its pause) |',
-        '| Parked | 1 of 3 open |',
+        '| Range | **3**: /plumbbob:run (step 4 to its pause) |',
+        '| Parked | **1** of 3 open: /plumbbob:harvest |',
         '',
         '',
       ].join('\n'),
@@ -163,7 +163,7 @@ describe("harvest — a stop's record — D104 (harvest-records)", () => {
     writeFileSync(turnPath(dir), '5\n')
     const { code, stdout } = captureIo(() => harvest(dir, []))
     expect(code).toBe(0)
-    expect(stdout.startsWith('**Stop**: Range 2 of 3 recorded (nothing parked)\n\n| **Next Up** |')).toBe(true)
+    expect(stdout.startsWith('**Stop**: **Range 2** recorded (nothing parked)\n\n| **Next Up** |')).toBe(true)
     expect(log(dir)).toContain("range 2 of 3's stop recorded")
     expect(log(dir)).toContain('- (none yet)') // no Harvest lines to write
   })
@@ -200,7 +200,7 @@ describe("harvest — the stop's latch — D103 (stop-latched)", () => {
     writeFileSync(detailPath(rewritten), RANGE_DETAIL.replace('P3 → blocker', 'P3 → tangent'))
     const { code, stdout } = captureIo(() => harvest(rewritten, []))
     expect(code).toBe(0)
-    expect(stdout.startsWith('**Stop**: Range 2 of 3 recorded (2 tangents)')).toBe(true)
+    expect(stdout.startsWith('**Stop**: **Range 2** recorded (2 tangents)')).toBe(true)
   })
 
   it('refuses a range whose landed step was cleared by hand since, as open again', async () => {
@@ -229,7 +229,7 @@ describe("harvest — the stop's latch — D103 (stop-latched)", () => {
     writeFileSync(intentPath(dir), `${withStep5}4. \`/plumbbob:build 5\`, **stop:** at step 5's pause, approve the fix\n`)
     const { code, stdout } = captureIo(() => harvest(dir, []))
     expect(code).toBe(0)
-    expect(stdout.startsWith('**Stop**: Range 2 of 4 recorded (1 blocker, 1 tangent)')).toBe(true)
+    expect(stdout.startsWith('**Stop**: **Range 2** recorded (1 blocker, 1 tangent)')).toBe(true)
     expect(log(dir)).toContain("range 2 of 4's stop recorded")
     expect(existsSync(detailPath(dir))).toBe(false)
     expect(existsSync(stopPath(dir))).toBe(false)
@@ -258,7 +258,7 @@ describe('harvest — the proposals it settles', () => {
     const dir = await atStop({ card: false, detail: HARVEST_DETAIL })
     const { code, stdout } = captureIo(() => harvest(dir, []))
     expect(code).toBe(0)
-    expect(stdout.startsWith('**Recorded**: 2 parked ideas (2 tangents)\n\n| **Next Up** | Step 4 of 4')).toBe(true)
+    expect(stdout.startsWith('**Recorded**: 2 parked ideas (2 tangents)\n\n| **Next Up** | **Step 4**')).toBe(true)
     expect(stdout).not.toContain('**Harvested**')
     const after = log(dir)
     expect(after).toContain('- [x] one idea\n- [x] another (tangent)\n- [ ] a third')

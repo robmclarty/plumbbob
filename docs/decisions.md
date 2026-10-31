@@ -1040,7 +1040,12 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   `src/lib/steplist.ts`, holds the grammar, and the hook, the latch, `build`, and the dashboard all read
   it, so no two of them can read one set of keystrokes two ways. A `range M` grant, the form a hook from
   before this rule mints, still lands with its ceiling, so a session whose installed plugin predates the
-  change keeps its ranges. Amends [**D65 (human-typed-grants)**](#d65), whose `GRANT` gains the
+  change keeps its ranges. (Revised 2026-10-30, closing GitHub issue #9: the range-top notice of
+  [**D85 (range-top-lands)**](#d85) reads the next step as the first undone step in build order other
+  than the one entered, not the first after its position, so a range typed above an earlier undone step
+  halts after its first step, as the walk in the `build` skill already said while its bullet on that
+  case read the other way; the notice's detail names the step the walk halts before. Rob's call.)
+  Amends [**D65 (human-typed-grants)**](#d65), whose `GRANT` gains the
   `steps` form, and [**D85 (range-top-lands)**](#d85). Promoted from the 2026-10-17 build-ranges build,
   merging its locals `step-list-grants` and `list-reading`. *Tagged in* the `build` skill,
   `docs/cli-reference.md`, and `docs/state-and-git.md`.
@@ -1231,9 +1236,11 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   Up names, the run the human picks a model for. A flagged range, a step no range names, and a plan
   without ranges render exactly as they did. Amends [**D93 (range-on-the-card)**](#d93), whose segment
   and pointer name the run. (Revised 2026-10-26 by [**D111 (state-table)**](#d111): the run rides the Range row,
-  `3 of 5: /plumbbob:run (steps 6-9)`.) Promoted from the 2026-10-17 runs-and-the-stop-card build, merging its
-  local
-  `card-names-the-run`. *Tagged in* `docs/presentation.md`.
+  `3 of 5: /plumbbob:run (steps 6-9)`.) (Revised 2026-10-30 by [**D115 (card-weights)**](#d115): the range's
+  model rides the Range row beside the range's number, `**3** on Opus: /plumbbob:run (steps 6-9)`, and Next Up
+  carries its own step's.) Promoted
+  from the 2026-10-17 runs-and-the-stop-card build, merging its local `card-names-the-run`. *Tagged in*
+  `docs/presentation.md`.
 
 - <a id="d99"></a>**D99 (one-loop): The run skill carries only what is the run's own and reads the build
   skill beside it for the per-step loop.** `skills/run/SKILL.md` holds resolving the run, its refusals,
@@ -1510,9 +1517,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   whose every part outside the fence was a labeled line, [**D88 (current-step-shown)**](#d88), whose Now line opened
   the card, and [**D84 (one-liner-register)**](#d84), whose every ending closed on its Next Up line; folds the note
   of [**D86 (build-order)**](#d86), the range segment of [**D93 (range-on-the-card)**](#d93) and
-  [**D98 (card-names-the-run)**](#d98), and the label of [**D108 (order-label)**](#d108) into rows. *Tagged in*
-  `notice.ts`, `handoff.ts`, `checkpoint.ts`, `harvest.ts`, `finish.ts`, `relay.ts`,
-  `test/evals/helpers/anatomy.ts`, and `docs/presentation.md`.
+  [**D98 (card-names-the-run)**](#d98), and the label of [**D108 (order-label)**](#d108) into rows. (Revised
+  2026-10-30 by [**D115 (card-weights)**](#d115): each step and range names its own model beside its number, and
+  no row counts against the plan's total.) *Tagged in* `notice.ts`, `handoff.ts`, `checkpoint.ts`, `harvest.ts`, `finish.ts`,
+  `relay.ts`, `test/evals/helpers/anatomy.ts`, and `docs/presentation.md`.
 
 - <a id="d112"></a>**D112 (lean-table): Parks presented with leans render as a four-column table: the park's handle
   and a short title, its text, why it matters, and the lean.** The handle and the text are the CLI's, read from the
@@ -1552,6 +1560,90 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   2026-10-27). Revises the presentation spec's zero-code-blocks rule, which allowed only the readout fence and the
   inline diff. *Tagged in* `orient.ts`, the eval anatomy reader, the `build`, `verify`, `plan`, and `run` skills,
   and `docs/presentation.md`.
+
+- <a id="d115"></a>**D115 (card-weights): A card names each step and range by its number in bold and the model its
+  plan line names for it, with no count; and the Parked row names the move that settles the parks.** Now and Next
+  Up read `**Step 2** on Sonnet - <title>`, as do the `Back to` pointers, and the Range row names the range a run
+  would walk on its own model, `**3** on Opus: /plumbbob:run (steps 6-9)`; Next Up carries its step's model, never
+  the range's ([**D98 (card-names-the-run)**](#d98)). A step or range with no `- model:` line, or one still holding
+  the template's `<...>` fill-in, is its number alone, and so is a range the card names but offers no run for
+  (`**3** lands with step 9`). The Stop row reads `**Range 2** landed`, the stop's pointer `Back to **Range 2**'s
+  stop`, and the stop card's run move `run range 3 on Opus to its stop`. The Parked row and the Harvested lead keep
+  their total with the open count bold (`**2** of 7 open`), and while a park is open the Parked row ends on
+  `/plumbbob:harvest`, or on `/plumbbob:harvest once this step lands` while a step is in flight, since a harvest
+  runs only between steps. *because* two counts side by side (`Step 2 of 3`, then `Step 3 of 3`) read as one blur
+  and said nothing the human decides on; the model rode at the end of the Next Up cell, where a long title wrapped
+  it out of sight and it read as gone, and a Model row beneath Next Up left it unclear whether the model was for
+  the step in flight, the next step, or the range, which it was while a run was suggested; and a park count with
+  no move beside it taught nothing to a human who had not read the docs (Rob, 2026-10-30, who chose the model
+  beside each step and range over a row of its own). Revises [**D111 (state-table)**](#d111), whose Next Up row
+  carried the model in its bracket, and [**D86 (build-order)**](#d86)'s park count. *Tagged in* `handoff.ts`,
+  `harvest.ts`, `orient.ts`, the eval anatomy reader, and `docs/presentation.md`.
+
+- <a id="d116"></a>**D116 (links-re-rooted): The record re-aims the detail file's relative links at the build
+  folder.** When `checkpoint` (a step's record, and the plan's) or `plumbbob harvest` (a stop's) copies
+  `.plumbbob/detail.md` into `builds/<slug>/build-log.md`, every relative link in prose is resolved from
+  `.plumbbob/` and written again from the build folder, its fragment kept, so `builds/<slug>/intent.md#d5` lands as
+  `intent.md#d5`. A URL, a `mailto:`, a root-relative path, a bare `#anchor`, and a link inside a fence or a code
+  span stay as written, and under `--local`, where both files sit in `.plumbbob/`, nothing moves. *because* the
+  same text is read from two folders: a link written right for the detail file broke once copied a folder deeper,
+  the gate's `links` slot went red on the log, and the next checkpoint refused until the log was hand-edited
+  (GitHub issue #7, seen on 0.12.1); a link written for the log would have been broken in the file while the pause
+  stood open, and only the copy step knows both folders. The build skill also says to write a link from
+  `.plumbbob/`, and that a decision cited by its slug in plain text needs none. *Tagged in* `links.ts`,
+  `handoff.ts`, `checkpoint.ts`, the `build` skill, and `docs/presentation.md`.
+
+- <a id="d117"></a>**D117 (publish-on-the-card): Until the plan commit lands, the plan card says what approving
+  publishes, and offers the way out as a move.** The `looks good` row reads `I mark the plan decided and commit it, so
+  .plumbbob/builds/<slug>/ rides this branch into the PR`, or `commit it record-only (git ignores .plumbbob/ here, so
+  the commit message carries the plan)` where git ignores the folder, through the same `git check-ignore` probe
+  `checkpoint --plan` stages by; a tracked folder adds a `keep it local` row, and a plan already committed says
+  neither. `plumbbob start --local` typed on an open session whose plan has not landed is that move: it writes the
+  blanket `.plumbbob/` exclude a `--local` start writes, so the plan and finish commits land record-only, and refuses
+  once the plan has landed. The plan skill says the turn ends on the card, the sentence the build skill already
+  had. *because* the note lived under the plan skill's commit step and a model said it at the pause, after the
+  card; the relay check held the turn and the card printed a second time (GitHub issue #10, 2026-10-28). Moves are
+  relayed, never composed, so the card carries the note once, where the decision is made. The skill's way out,
+  "restart with `plumbbob start --local`", had never worked on an open session, which `start` refused. *Tagged in*
+  `handoff.ts`, `start.ts`, `sidecar.ts`, the `plan` skill, and `docs/presentation.md`.
+
+- <a id="d118"></a>**D118 (questions-table): Open questions reach the chat as one table, a row per question: the
+  handle and slug linked to the opener, the question, why it matters, and the lean.** The plan card prints it above
+  its moves while the plan carries an open question, with a `yes to all leans` move (or `yes to all leans except Q3:
+  <their answer>`) that resolves each on its opener line, and drops the Questions row the table already says;
+  `plumbbob status --questions` prints the table alone, which the refine and status skills relay where they used to
+  list the questions in prose. The CLI reads the rows by the rules the count reads by
+  ([**D76 (resolved-on-opener)**](#d76), [**D77 (placeholder-uncounted)**](#d77)), takes why it matters from the
+  `*plain:*` sub-line and the lean from the `*lean:*` one, and clips each cell to its line's first sentence, so the
+  skills and the template ask for a first sentence that stands alone; a gap reads as one, `not given` and `no lean
+  proposed`, as the lean table's do ([**D112 (lean-table)**](#d112)). The expanded entry in `intent.md` stays what
+  a cold reader needs. *because* six questions in their three-line form came to two dozen lines of reading, while
+  the same six as one table were settled in one reply, `yes to all leans` (a volley planning session, 2026-10-16;
+  GitHub issue #8). Rob chose three columns with why it matters as its own, the column he reads before the
+  question, and the question linked to its entry rather than a fourth column for the slug (2026-10-30). The cells
+  are the CLI's, clipped from the file, so the table is relayed, never composed. *Tagged in* `orient.ts`,
+  `handoff.ts`, `status.ts`, the `plan`, `refine`, and `status` skills, `templates/intent.md`, the eval anatomy
+  reader, and `docs/presentation.md`.
+
+- <a id="d119"></a>**D119 (short-stop-after-a-halt): A stop card that follows a landing which answered its own
+  pause card prints short.** When the step that completed a range halted at its pause and `looks good` landed it,
+  `checkpoint` writes `landed <n> answered` to `PAUSE`, read before it overwrites the stamp, and
+  `plumbbob handoff --stop` then prints the Harvested part, Your Call, the state table with its Stop row, and the
+  `more details` link, with no Summary, Readout, or recommendation; `--stop --full` (`show the stop`) prints the
+  card whole, and the detail file is written whole either way, since the stop's record reads it. A run that lands
+  its last step without a pause, a halt at an earlier step of the range, and any other landing print the card
+  whole. *because* the human who approved the halt read that step's Summary, Readout, and recommendation a minute
+  before, and the full card that followed repeated most of it, its stop the same question the pause had just
+  asked ("why did you print the entire handoff card again?", GitHub issue #11, 2026-10-28). The mark rides the
+  `PAUSE` stamp, which every host writes and which names one build, not the relay record, which only the hook
+  writes and which is session-wide, so a range landed by hand after its last pause prints short the same way: the
+  rule is that the human just read a card for the step, not that a run is in progress. In the turn a stop card
+  printed in, before the human has read it, a second `handoff --stop` prints it again in the same form rather
+  than the reminder, and the relay check's retry runs that `--stop`, so a turn that dropped the short card
+  gets the short card back and not the whole one (a card shown whole on request still reprints with
+  `--stop --full`). Revises [**D100 (stop-card)**](#d100)'s one shape, extends the `PAUSE` stamp of
+  [**D110 (reply-after-the-card)**](#d110), and narrows its reminder to a later turn. *Tagged in* `sidecar.ts`, `checkpoint.ts`, `handoff.ts`, the `run`
+  skill, the eval anatomy reader, and `docs/presentation.md`.
 
 ### Superseded
 

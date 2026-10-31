@@ -155,7 +155,7 @@ describe('spike reports — D70 (spike-reports)', () => {
           detail: [join(relative(dir, buildFolder(dir)), 'spike-01-auth-store.md')],
           remedy: 'record Findings and the Verdict there, which is what closes a spike step',
         }),
-        pointer: '**Next Up**: Back to Step 3',
+        pointer: '**Next Up**: Back to **Step 3**',
       }),
     )
     expect(reportBody(dir, 'spike-01-auth-store.md')).toContain('**Via:** step 3')

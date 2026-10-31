@@ -53,8 +53,9 @@ const WARN = '⚠'
 const LOCK_IN = /^Approving locks in each lean above\b/
 // The reminder's pointer: the driver form of Next Up, aimed back at the step
 // still waiting, which a pause already shown ends on instead of its card, or
-// at the range whose stop card is still waiting.
-const BACK_POINTER = /^Back to (?:Step \d+|Range \d+ of \d+'s stop)/
+// at the range whose stop card is still waiting. The step or range rides bold
+// (D115 (card-weights)), and the reader takes the plain form an older card printed too.
+const BACK_POINTER = /^Back to (?:\*{0,2}Step \d+\*{0,2}|\*{0,2}Range \d+\*{0,2}(?: of \d+)?'s stop)/
 
 export type Anatomy = {
   readonly labels: ReadonlyArray<string> // every bold label, in order
@@ -76,19 +77,23 @@ export type Anatomy = {
 // card already shown (D110 (reply-after-the-card)), which ends on the one line
 // that points back at it, `boundary` is the orientation tier's landed step,
 // and `stop` is the decision tier at a stop, the card that closes a run's range
-// (D100 (stop-card)). The Verdict, Now, Stop, and Next Up parts are rows of the
+// (D100 (stop-card)), and `stop-short` the same card printed after a halt the
+// human approved, which leaves out the Summary, the Readout, and the
+// recommendation the pause card just showed (D119 (short-stop-after-a-halt)).
+// The Verdict, Now, Stop, and Next Up parts are rows of the
 // state table at a card's foot, each labeled by its first cell, so they read in
 // order as the labeled lines did; the Range, Order, Parked, and Questions rows
 // render only when they say something, and no tier owes them.
-export type Tier = 'decision' | 'plan' | 'reminder' | 'boundary' | 'driver' | 'stop'
+export type Tier = 'decision' | 'plan' | 'reminder' | 'boundary' | 'driver' | 'stop' | 'stop-short'
 
 const TIER_PARTS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
   decision: ['Summary', 'Readout', 'Your Call', 'Verdict', 'Now', 'Next Up', 'Recommendation'],
-  plan: ['Your Call', 'Next Up', 'Recommendation'],
+  plan: ['Open questions', 'Your Call', 'Next Up', 'Recommendation'],
   reminder: ['Next Up'],
   boundary: ['Verdict', 'Stop', 'Next Up'],
   driver: ['Next Up'],
   stop: ['Summary', 'Readout', 'Harvested', 'Your Call', 'Verdict', 'Stop', 'Next Up', 'Recommendation'],
+  'stop-short': ['Harvested', 'Your Call', 'Verdict', 'Stop', 'Next Up'],
 }
 
 // The parts a tier may carry without owing them. The Stop row rides only the
@@ -96,10 +101,13 @@ const TIER_PARTS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
 // and one with it still has to stand it between the Verdict and Next Up. The
 // Harvested part rides a stop card only while a park is open (D100 (stop-card),
 // labeled by D106 (leans-harvested)), and the Stop row there names the range
-// the card reviews, which it always owes.
+// the card reviews, which it always owes. The plan pause tables its open
+// questions above its moves only while the plan carries one (D118 (questions-table)).
 const OPTIONAL_PARTS: Readonly<Partial<Record<Tier, ReadonlyArray<string>>>> = {
+  plan: ['Open questions'],
   boundary: ['Stop'],
   stop: ['Harvested'],
+  'stop-short': ['Harvested'],
 }
 
 // What each tier must NOT render. The Your Call block belongs only where a
@@ -113,6 +121,7 @@ const TIER_FORBIDS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
   boundary: ['Now', 'Your Call', 'Readout', 'Recommendation'],
   driver: ['Now', 'Your Call', 'Verdict', 'Readout', 'Recommendation'],
   stop: ['Now'],
+  'stop-short': ['Now', 'Summary', 'Readout', 'Recommendation'],
 }
 
 // The row the spec makes load-bearing: the gate verdict's one home, which
@@ -277,7 +286,9 @@ function stateRow(line: string): { readonly label: string; readonly value: strin
 function splitMidLineLabels(lines: ReadonlyArray<string>): ReadonlyArray<string> {
   const out: string[] = []
   for (const line of lines) {
-    const at = line.search(/\*\*[^*]+\*\*:/)
+    // A table row is a row, never a label run into prose: the Range row's
+    // `**3**: /plumbbob:run …` bolds its range number ahead of a colon.
+    const at = TABLE_ROW.test(line.trim()) ? -1 : line.search(/\*\*[^*]+\*\*:/)
     if (at > 0) {
       out.push(line.slice(0, at))
       out.push(line.slice(at))

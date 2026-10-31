@@ -77,7 +77,7 @@ describe('evaluateLatch — the five-row matrix, first hit wins', () => {
     expect(evaluateLatch({ ...LATCHED, grant, step: null, turn: 3 }).allow).toBe(true)
   })
 
-  it('row 3: a step-list grant lands each step it names, and refuses any other by name — D12 (step-list-grants)', () => {
+  it('row 3: a step-list grant lands each step it names, and refuses any other by name — D91 (step-list-grants)', () => {
     const grant = { kind: 'steps', steps: [{ from: 20, to: 20 }, { from: 5, to: 9 }] } as const
     for (const step of [5, 7, 9, 20]) expect(evaluateLatch({ ...LATCHED, grant, step }).allow).toBe(true)
     for (const step of [1, 4, 10, 19, 21]) {

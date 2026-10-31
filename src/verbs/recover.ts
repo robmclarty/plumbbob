@@ -22,7 +22,6 @@ import { findRepoRoot } from '../lib/git.ts'
 import { parseBuildOrder, parseBuildRanges, parseOrderedSteps, parseSteps, rangeStanding } from '../lib/orient.ts'
 import {
   activeBuild,
-  checkpointsPath,
   clearHandoff,
   clearTick,
   grantPath,
@@ -31,6 +30,7 @@ import {
   intentPath,
   inSpike,
   listBuilds,
+  planCommitted,
   readTurn,
   setActiveBuild,
   setGrant,
@@ -304,7 +304,7 @@ function leftoverFindings(root: string, slug: string, stepInFlight: boolean): Re
   // pause, and cleared by the checkpoint that lands either one. At the boundary
   // with the plan already committed, neither pause is open, so a TICK left here
   // is measuring a span that closed.
-  const planLanded = readOr(checkpointsPath(root, slug)).split('\n').some((l) => l.startsWith('plan '))
+  const planLanded = planCommitted(root, slug)
   if (!stepInFlight && planLanded && existsSync(tickPath(root, slug))) {
     findings.push({
       name: 'latch tick',

@@ -97,7 +97,7 @@ const VERBS: ReadonlyArray<Verb> = [
   {
     name: 'status',
     description: 'print the orientation dashboard, or NO ACTIVE SESSION',
-    synopsis: ['status [--build <slug>] [--invoked "<args>"] [--run "<args>"]'],
+    synopsis: ['status [--build <slug>] [--invoked "<args>"] [--run "<args>"] [--questions]'],
     flags: [
       BUILD_FLAG,
       {
@@ -110,6 +110,7 @@ const VERBS: ReadonlyArray<Verb> = [
         value: '"<args>"',
         gloss: 'the raw /plumbbob:run invocation; prints the run it names above the dashboard, or the refusal as its pointer',
       },
+      { name: '--questions', gloss: "print the plan's open questions as one table (question, why it matters, lean) in place of the dashboard" },
     ],
     notes: 'Read-only; always exits 0. With no cursor it lists the available builds.',
   },

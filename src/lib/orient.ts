@@ -180,8 +180,10 @@ export function parseSteps(intent: string): Step[] {
     const block = lines.slice(s.idx, blockEnd).join('\n')
     const dw = /\*\*done when:\*\*\s*(.+)/i.exec(block)
     const doneWhen = dw ? (dw[1] ?? '').trim() : null
+    // A model line still opening on the template's `<...>` fill-in recommends
+    // nothing, so it reads as no line at all rather than as a model named `<smallest`.
     const md = /^\s*-\s*model:\s*(.+)$/im.exec(block)
-    const model = md ? (md[1] ?? '').trim() : null
+    const model = md && !/^<[^<>]+>/.test((md[1] ?? '').trim()) ? (md[1] ?? '').trim() : null
     return { n: s.n, done: s.done, title: s.title, planned: /done when/i.test(block), doneWhen, model, line: offset + s.idx + 1 }
   })
 }
@@ -1477,11 +1479,71 @@ export function markStepDone(intent: string, n: number): string {
  * report zero rather than one.
  */
 export function parseOpenQuestions(intent: string): number {
-  const opener = /^-\s+(?:<a id="[^"]*"><\/a>\s*)?\*{0,2}Q\d+(?: \([^)]+\))?\*{0,2}:\s*(.*)$/
-  return sectionLines(intent, '## Open questions').lines.filter((l) => {
-    const body = opener.exec(l.trim())?.[1]
-    return body !== undefined && !/\bresolved\b/i.test(l) && !/^<[^>]*>/.test(body)
-  }).length
+  return parseOpenQuestionRows(intent).length
+}
+
+/**
+ * One open question as the table shows it: its handle and slug, the line its
+ * opener sits on, the question, and the first lines of its `*plain:*` and
+ * `*lean:*` sub-lines, null where the question has none.
+ */
+export type OpenQuestion = {
+  readonly id: string
+  readonly slug: string | null
+  readonly line: number
+  readonly question: string
+  readonly why: string | null
+  readonly lean: string | null
+}
+
+// An open question's opener: the handle, an optional anchor and slug, then
+// the body after the colon (D76 (resolved-on-opener)).
+const QUESTION_OPENER = /^-\s+(?:<a id="[^"]*"><\/a>\s*)?\*{0,2}(Q\d+)(?: \(([^)]+)\))?\*{0,2}:\s*(.*)$/
+// A sub-line beneath an opener: `- *plain:* …` or `- *lean:* …`.
+const QUESTION_FIELD = /^-\s+\*(plain|lean):\*\s*(.*)$/
+
+/**
+ * The open questions, each with what the table shows, in the order the plan
+ * lists them. The rules `parseOpenQuestions` counts by decide which openers
+ * are open: a `resolved` marker on the opener line closes it, and a body still
+ * opening on its `<...>` fill-in is scaffold. The `*plain:*` sub-line is why
+ * the question matters, the `*lean:*` sub-line the proposed answer, each with
+ * any lines it wraps onto (D118 (questions-table)).
+ */
+export function parseOpenQuestionRows(intent: string): OpenQuestion[] {
+  const { offset, lines } = sectionLines(intent, '## Open questions')
+  const rows: Array<{ id: string; slug: string | null; line: number; question: string; why: string | null; lean: string | null }> = []
+  let current: (typeof rows)[number] | null = null
+  let field: 'why' | 'lean' | null = null
+  lines.forEach((raw, i) => {
+    const text = raw.trim()
+    const opener = QUESTION_OPENER.exec(text)
+    if (opener !== null) {
+      const body = opener[3] ?? ''
+      const open = !/\bresolved\b/i.test(raw) && !/^<[^>]*>/.test(body)
+      current = open ? { id: opener[1] ?? '', slug: opener[2] ?? null, line: offset + i + 1, question: questionText(body), why: null, lean: null } : null
+      if (current !== null) rows.push(current)
+      field = null
+      return
+    }
+    const sub = QUESTION_FIELD.exec(text)
+    if (current !== null && sub !== null) {
+      field = sub[1] === 'plain' ? 'why' : 'lean'
+      current[field] = (sub[2] ?? '').trim()
+      return
+    }
+    if (current !== null && field !== null && text.length > 0 && /^\s/.test(raw) && !text.startsWith('-')) {
+      current[field] = `${current[field] ?? ''} ${text}`.trim()
+      return
+    }
+    field = null
+  })
+  return rows
+}
+
+/** An opener's question: its body without the trailing `*resolve by:*` tag. */
+function questionText(body: string): string {
+  return body.replace(/,?\s*\*resolve by:\*.*$/i, '').trim()
 }
 
 /** The park list's counts: the items still open, and every item ever parked. */
@@ -2619,16 +2681,16 @@ function proseBlocks(text: string): string[] {
 }
 
 /** A fence's marker character and how many of it opened the fence. */
-type Fence = { readonly char: string; readonly length: number }
+export type Fence = { readonly char: string; readonly length: number }
 
 /** The fence a line opens: three or more backticks or tildes, indented three spaces at most. Null when it opens none. */
-function fenceOpening(line: string): Fence | null {
+export function fenceOpening(line: string): Fence | null {
   const marker = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1]
   return marker === undefined ? null : { char: marker.charAt(0), length: marker.length }
 }
 
 /** Whether a line closes an open fence: the same character, at least as many of it, and nothing after. */
-function closesFence(line: string, fence: Fence): boolean {
+export function closesFence(line: string, fence: Fence): boolean {
   const marker = /^ {0,3}(`{3,}|~{3,})\s*$/.exec(line)?.[1]
   return marker !== undefined && marker.startsWith(fence.char) && marker.length >= fence.length
 }

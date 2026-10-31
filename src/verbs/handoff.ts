@@ -59,13 +59,17 @@ import {
 import { blocks, cell, notice, printEnding, type StateRow, stateTable } from '../lib/notice.ts'
 import { hasStep } from '../lib/steplist.ts'
 import { isArtifactPath, parseStepSeam } from '../lib/intent.ts'
+import { rerootLinks } from '../lib/links.ts'
 import {
+  buildFolder,
+  buildFolderIgnored,
   buildLogPath,
   checkpointsPath,
   detailPath,
   hasSession,
   inSpike,
   intentPath,
+  planCommitted,
   type Relay,
   readPause,
   readStats,
@@ -73,6 +77,7 @@ import {
   readTurn,
   resolveBuild,
   seamPath,
+  sidecarDir,
   stepPath,
   tickPath,
   writePause,
@@ -83,6 +88,8 @@ import {
   type BuildRange,
   type CheckSummary,
   type Ladder,
+  type OpenQuestion,
+  type ParkTotals,
   type RecapRow,
   type DetailSection,
   type RangeMeasure,
@@ -102,6 +109,7 @@ import {
   parseBuildRanges,
   parseConstraintCount,
   parseLastCheckpoint,
+  parseOpenQuestionRows,
   parseOpenQuestions,
   parseOrderedSteps,
   parseParkTotals,
@@ -200,10 +208,14 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     // decision turn still ends on the model's recommendation when it wrote one.
     const first = steps.find((s) => !s.done)
     const detail = settleDetail(root, rawDetail)
+    // The open questions ride above the moves as their own table, which says
+    // what the Questions row would count, so the row stays off this card.
+    const questions = questionsPart(parseOpenQuestionRows(intent), where)
     const plan = [
       SEAM_RULE,
-      planCallBlock(first, cardRun(intent, null)),
-      stateTable(stateRows({ intent, buildLog, verdict: null, now: null, stop: null, nextUp: first, exclude: null, where })),
+      questions ?? '',
+      planCallBlock(first, cardRun(intent, null), planPublish(root, slug), questions !== null),
+      stateTable(stateRows({ intent, buildLog, verdict: null, now: null, stop: null, nextUp: first, exclude: null, where, questions: false })),
     ]
     const command = reprintCommand('--plan', undefined, named)
     return emit(root, { tier: 'decision', render: 'plan', command }, cardFoot(plan, detail, detailWhere))
@@ -251,7 +263,7 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
       // The boundary the human already read: the reply above this line is what
       // they asked for, and the block would push it off the screen. Driver
       // tier, since nothing is pending to hold the turn for.
-      return emit(root, { tier: 'driver', render: 'pointer' }, [pointerLine(intent, nextUp, current, where)])
+      return emit(root, { tier: 'driver', render: 'pointer' }, [pointerLine(nextUp, where)])
     }
     // The boundary: the orientation-tier ending, the state table headed by the
     // Verdict, with the Stop row where a range just landed, and no decision
@@ -405,10 +417,10 @@ function landedRange(intent: string, steps: ReadonlyArray<Step>, step: number | 
  * The Stop row's fact: why the build stops at this boundary. The range over
  * the count, a plain hyphen, the stop as the plan wrote it, and a bracket
  * pointing at the item, where its note can be read. The stop card's state
- * table carries the same row.
+ * table carries the same row, the range bold (D115 (card-weights)).
  */
 function stopValue(landed: LandedRange, where: string): string {
-  return `Range ${landed.range.item} of ${landed.count} landed - ${landed.range.stop} (${detailsLink(where, landed.range.line)})`
+  return `**Range ${landed.range.item}** landed - ${landed.range.stop} (${detailsLink(where, landed.range.line)})`
 }
 
 /**
@@ -438,10 +450,19 @@ export function detailsLink(path: string, line: number | null): string {
  * step in flight, with no range just landed, and with a detail file written
  * for anything but that range, since a card with none of the model's review
  * on it would ask the human to approve nothing. It shows once per stop: while
- * the STOP stamp names the range, a later render is the one-line reminder,
- * whatever changed since (a lean the human changed, a park, a gate run), and
- * `--full` prints the card again. Every card it prints rewrites the stamp with
- * the turn it printed in, which is the turn `plumbbob harvest` waits past.
+ * the STOP stamp names the range, a render in a later turn is the one-line
+ * reminder, whatever changed since (a lean the human changed, a park, a gate
+ * run), and `--full` prints the card again. A render in the turn the card
+ * printed in prints it again in the same form, since the human has not read
+ * it yet: that is the retry the relay check asks for when a turn dropped it.
+ * Every card it prints rewrites the stamp with the turn it printed in, which
+ * is the turn `plumbbob harvest` waits past.
+ *
+ * When the landing that completed the range answered that step's own pause
+ * card, already shown, the human read that step's Summary, Readout, and
+ * recommendation a moment ago, so the card prints short: the Harvested part,
+ * Your Call, the state table with its Stop row, and the link, and `--full`
+ * prints it whole (D119 (short-stop-after-a-halt)).
  */
 function stopCard(root: string, slug: string | null, named: string | null, full: boolean): number {
   const intent = readOr(intentPath(root, slug))
@@ -451,7 +472,7 @@ function stopCard(root: string, slug: string | null, named: string | null, full:
     process.stderr.write(landed)
     return 1
   }
-  const { range, count, step } = landed
+  const { range, step } = landed
   const detail = settleDetail(root, readOr(detailPath(root)))
   if (parseDetailRange(detail) !== range.item) {
     process.stderr.write(
@@ -464,22 +485,26 @@ function stopCard(root: string, slug: string | null, named: string | null, full:
     return 1
   }
   const stamp = readStop(root, slug)
-  if (!full && stamp !== null && stamp.range === range.item) {
+  const turn = readTurn(root)
+  const printedThisTurn = turn !== null && stamp?.turn === turn
+  if (!full && stamp !== null && stamp.range === range.item && !printedThisTurn) {
     // The stop the human already read: the reply above this line is what they
     // asked for, and the card would push it off the screen.
     const command = reprintCommand('--stop', undefined, named)
     return emit(root, { tier: 'decision', render: 'stop-reminder', command }, [
-      `**Next Up**: Back to Range ${range.item} of ${count}'s stop - ${range.stop}`,
+      `**Next Up**: Back to **Range ${range.item}**'s stop - ${range.stop}`,
     ])
   }
-  writeStop(root, slug, { range: range.item, turn: readTurn(root) })
+  writeStop(root, slug, { range: range.item, turn })
   const where = relative(root, intentPath(root, slug))
   const review = stopReview(root, slug, intent, range, detail)
   const parks = parkList(readOr(buildLogPath(root, slug)))
   const proposals = harvestProposals(detail)
   const nextUp = steps.find((s) => !s.done && s.n !== step)
-  const parts: string[] = [summaryBlock(parseSummary(detail))]
-  if (review.readout.length > 0) {
+  const shown = readPause(root, slug)
+  const short = !full && shown?.kind === 'landed' && shown.step === step && shown.answered === true
+  const parts: string[] = short ? [] : [summaryBlock(parseSummary(detail))]
+  if (!short && review.readout.length > 0) {
     parts.push([READOUT_LABEL, '', ...fence('text', review.readout)].join('\n'))
   }
   parts.push(
@@ -499,8 +524,15 @@ function stopCard(root: string, slug: string | null, named: string | null, full:
       }),
     ),
   )
-  const command = reprintCommand('--stop --full', undefined, named)
-  return emit(root, { tier: 'decision', render: 'stop', command }, cardFoot(parts, detail, relative(root, detailPath(root))))
+  // A retry in this turn reprints the card as it printed: `--stop` rebuilds a
+  // short card from the PAUSE stamp the landing left, and a card shown whole
+  // on request comes back whole (D119 (short-stop-after-a-halt)).
+  const command = reprintCommand(full ? '--stop --full' : '--stop', undefined, named)
+  const detailWhere = relative(root, detailPath(root))
+  // The short card keeps the link, one line that repeats nothing, and leaves
+  // the recommendation the pause card just gave.
+  const foot = short ? [...parts, `[more details](${detailWhere})`] : cardFoot(parts, detail, detailWhere)
+  return emit(root, { tier: 'decision', render: 'stop', command }, foot)
 }
 
 /**
@@ -736,7 +768,7 @@ function harvestPart(parks: ReadonlyArray<Park>, proposals: ReadonlyArray<Propos
     const lean = proposal === undefined ? 'no lean proposed' : proposal.reason.length === 0 ? proposal.kind : `${proposal.kind}: ${proposal.reason}`
     return `| ${cell(name)} | ${cell(park.text)} | ${cell(why)} | ${cell(lean)} |`
   })
-  const lead = `**Harvested**: ${open.length} of ${parks.length} parked idea${parks.length === 1 ? '' : 's'} open`
+  const lead = `**Harvested**: **${open.length}** of ${parks.length} parked idea${parks.length === 1 ? '' : 's'} open`
   return [lead, '', LEAN_TABLE_HEAD, '| --- | --- | --- | --- |', ...rows].join('\n')
 }
 
@@ -828,7 +860,7 @@ function stopCallBlock(example: string | null, intent: string): string {
   if (follow === 'finish') {
     moves.push(callLine('`/plumbbob:finish`', `I record ${what} the same way, then write the report and close the build`))
   } else if (follow !== null) {
-    moves.push(callLine('`/plumbbob:run`', `I record ${what} the same way, then run range ${follow.range.item} of ${follow.count} to its stop`))
+    moves.push(callLine('`/plumbbob:run`', `I record ${what} the same way, then run range ${follow.range.item}${onModel(follow.range.model)} to its stop`))
   }
   moves.push(
     callLine('anything that reads as direction', `I change the ${parked ? 'lean' : 'review'} and say what moved; nothing is recorded until you approve`),
@@ -867,7 +899,8 @@ function leanExample(parks: ReadonlyArray<Park>, proposals: ReadonlyArray<Propos
  * part shows each class the human confirmed. Null when the detail file
  * reviews no range the plan declares.
  */
-export function stopRecord(root: string, slug: string | null, detail: string, buildLog: string): string | null {
+export function stopRecord(root: string, slug: string | null, written: string, buildLog: string): string | null {
+  const detail = recordText(root, slug, written)
   const intent = readOr(intentPath(root, slug))
   const item = parseDetailRange(detail)
   const range = parseBuildRanges(intent).ranges.find((r) => r.item === item)
@@ -907,7 +940,8 @@ export function stopRecord(root: string, slug: string | null, detail: string, bu
  * than a requirement. Null when the detail file carries nothing to record, so a
  * hand-built step with no detail gets the bare dated line it always did.
  */
-export function stepRecord(root: string, slug: string | null, step: number, detail: string): string | null {
+export function stepRecord(root: string, slug: string | null, step: number, written: string): string | null {
+  const detail = recordText(root, slug, written)
   const summary = parseSummary(detail)
   const recommendation = parseRecommendation(detail)
   const sections = parseSections(detail)
@@ -942,13 +976,25 @@ export function stepRecord(root: string, slug: string | null, step: number, deta
  * findings behind it. Nothing is measured at the plan pause, so no Readout and
  * no Verdict ride here. Null when the detail file carries neither.
  */
-export function planRecord(detail: string): string | null {
+export function planRecord(root: string, slug: string | null, written: string): string | null {
+  const detail = recordText(root, slug, written)
   const recommendation = parseRecommendation(detail)
   const sections = parseSections(detail)
   if (recommendation === null && sections.length === 0) {
     return null
   }
   return [...withRecommendation([], recommendation), ...sectionBlocks(sections)].join('\n\n')
+}
+
+/**
+ * The detail file's text as the build log reads it: every relative link
+ * re-aimed from `.plumbbob/`, where `detail.md` lives, to the build folder the
+ * log lives in, so a link that worked while the pause was open still works in
+ * the record (D116 (links-re-rooted)). Under `--local` the two are one folder
+ * and the text comes back as written.
+ */
+function recordText(root: string, slug: string | null, written: string): string {
+  return rerootLinks(written, sidecarDir(root), buildFolder(root, slug))
 }
 
 /**
@@ -992,7 +1038,7 @@ export function driverPointer(root: string, slug: string | null): string {
   // work already recorded.
   const landed = parseLastCheckpoint(readOr(checkpointsPath(root, slug)))?.n ?? null
   const forward = steps.find((s) => !s.done && s.n !== (inFlight ?? landed))
-  return driver ?? nextUpLine(forward, steps.length, relative(root, intentPath(root, slug)))
+  return driver ?? nextUpLine(forward, relative(root, intentPath(root, slug)))
 }
 
 /**
@@ -1109,21 +1155,31 @@ function summaryBlock(summary: Summary | null): string {
 const READOUT_LABEL = '**Readout**:'
 
 /**
- * A step named the way every pointer names it: the number, the count out of
- * the whole plan, and the title behind a plain hyphen.
+ * A step named the way every pointer names it: the number in bold, the model
+ * its `- model:` line recommends, and the title behind a plain hyphen
+ * (`**Step 2** on Opus - <title>`).
  *
- * The count is the plan's own, step number over total, so the Now line and
- * Next Up agree under a re-sequenced build order. It is dropped only where it
- * would lie: a step the plan no longer holds is its number alone, since
- * "Step 9 of 3" would be worse than no count.
+ * The model rides the step it is for, so a card naming two steps and a range
+ * never leaves the human asking which one a model belongs to
+ * (D115 (card-weights)). A step with no recommendation, and a step the plan
+ * no longer holds, are their number alone.
  */
 function stepPhrase(n: number, steps: ReadonlyArray<Step>): string {
   const step = steps.find((s) => s.n === n)
   if (step === undefined) {
-    return `Step ${n}`
+    return `**Step ${n}**`
   }
   const title = step.title.length > 0 ? ` - ${step.title}` : ''
-  return `Step ${n} of ${steps.length}${title}`
+  return `**Step ${n}**${onModel(step.model)}${title}`
+}
+
+/**
+ * The clause naming the model a step or a range is for, ` on Sonnet`, read
+ * from its `- model:` line, or '' where none is written.
+ */
+function onModel(model: string | null): string {
+  const token = modelToken(model)
+  return token === null ? '' : ` on ${capitalize(token)}`
 }
 
 /**
@@ -1293,24 +1349,110 @@ function callLine(move: string, outcome: string): string {
  * When that step sits in a range the run can walk, `looks good` names the run
  * instead, since the run is what the human types next; a step in no range, or
  * in a flagged one, keeps the build.
+ *
+ * Until the plan commit lands, `looks good` also says what that commit
+ * publishes, and a tracked folder adds the way out, `keep it local`, so the
+ * note rides the card where the decision is made and no model composes it
+ * (D117 (publish-on-the-card)).
  */
-function planCallBlock(first: Step | undefined, run: Run): string {
+function planCallBlock(first: Step | undefined, run: Run, publish: Publish, questions: boolean): string {
   const build = first === undefined ? '' : `; /plumbbob:build starts Step ${first.n}`
   const starts = run.ok ? `; /plumbbob:run runs range ${run.range.item} from Step ${run.left[0]}` : build
-  return [
-    '**Your Call**:',
-    '',
-    callLine('`looks good`', `I mark the plan decided${starts}`),
+  const commits =
+    publish === null
+      ? ''
+      : publish.kind === 'tracked'
+        ? ` and commit it, so \`${publish.folder}\` rides this branch into the PR`
+        : ' and commit it record-only (git ignores `.plumbbob/` here, so the commit message carries the plan)'
+  const rows = [
+    callLine('`looks good`', `I mark the plan decided${commits}${starts}`),
+    ...(questions
+      ? [
+          callLine(
+            '`yes to all leans`, or `yes to all leans except Q3: <your answer>`',
+            'I resolve each question on its opener line, record the decision it settles, and show this card again',
+          ),
+        ]
+      : []),
     callLine('`expand`, or any question', 'I show more of what is there; nothing changes'),
     callLine('anything that reads as direction', 'I take it as what to sharpen; the plan is cheap to change now'),
-  ].join('\n')
+  ]
+  if (publish?.kind === 'tracked') {
+    rows.push(callLine('`keep it local`', 'I run `plumbbob start --local`, so the plan commits record-only and the folder stays off the branch'))
+  }
+  return ['**Your Call**:', '', ...rows].join('\n')
+}
+
+/**
+ * The open questions as one table, a row per question: the handle and slug
+ * linked to the opener in `intent.md`, the question, why it matters, and the
+ * lean, each clipped to its first sentence so a row stays one line and the
+ * whole set fits on a screen (D118 (questions-table)). The expanded entry in
+ * `intent.md` stays what a cold reader needs; this is the chat-side view of
+ * it. A gap reads as one, the way the lean table's do: `not given` with no
+ * why, `no lean proposed` with no lean. Null with no question open.
+ *
+ * ```text
+ * **Open questions**: 1 open
+ *
+ * | Question | Why it matters | Lean |
+ * | --- | --- | --- |
+ * | [**Q1** (round-lines)](…/intent.md#L54): Where do the round lines go? | Two rounds run together | The reply |
+ * ```
+ */
+export function questionsPart(rows: ReadonlyArray<OpenQuestion>, where: string): string | null {
+  if (rows.length === 0) {
+    return null
+  }
+  const body = rows.map((q) => {
+    const handle = q.slug === null ? `**${q.id}**` : `**${q.id}** (${q.slug})`
+    const question = `[${handle}](${where}#L${q.line}): ${firstSentence(q.question)}`
+    const why = q.why === null || q.why.length === 0 ? 'not given' : firstSentence(q.why)
+    const lean = q.lean === null || q.lean.length === 0 ? 'no lean proposed' : firstSentence(q.lean)
+    return `| ${cell(question)} | ${cell(why)} | ${cell(lean)} |`
+  })
+  return [`**Open questions**: ${rows.length} open`, '', QUESTIONS_TABLE_HEAD, '| --- | --- | --- |', ...body].join('\n')
+}
+
+// The questions table's header row, the same on the plan card and under
+// `status --questions`.
+const QUESTIONS_TABLE_HEAD = '| Question | Why it matters | Lean |'
+
+/**
+ * A field's first sentence, without its closing period: a cell reads as a
+ * phrase, and a question keeps its question mark. The whole text when no
+ * sentence ends inside it.
+ */
+function firstSentence(text: string): string {
+  const sentence = /^(.+?[.?!])(?=\s|$)/.exec(text.trim())?.[1] ?? text.trim()
+  return sentence.replace(/\.$/, '')
+}
+
+/**
+ * What approving the plan publishes, while its commit has not landed: the
+ * tracked build folder, which rides the branch into the PR, or a record-only
+ * commit where git ignores the folder. Null once the plan is committed, when
+ * there is nothing left to say.
+ */
+type Publish = { readonly kind: 'tracked'; readonly folder: string } | { readonly kind: 'record-only' } | null
+
+/**
+ * Read what the plan commit will publish through the same probe `checkpoint
+ * --plan` stages by, so the card's promise and the commit cannot disagree
+ * (D117 (publish-on-the-card)).
+ */
+function planPublish(root: string, slug: string | null): Publish {
+  if (planCommitted(root, slug)) {
+    return null
+  }
+  return buildFolderIgnored(root, slug) ? { kind: 'record-only' } : { kind: 'tracked', folder: `${relative(root, buildFolder(root, slug))}/` }
 }
 
 /**
  * The driver turn's pointer: back to the step still in flight, since a park or
- * a spike interrupts a step without ending it. No model clause rides here; the
- * step is already being built, so the `/model` call is behind us. Null when no
- * step is open, which is the caller's cue to fall back to the forward pointer.
+ * a spike interrupts a step without ending it, named as the Now row names it.
+ * Null when no step is open, which is the caller's cue to fall back to the
+ * forward pointer.
  */
 function driverNextUpLine(steps: ReadonlyArray<Step>, inFlight: number | null): string | null {
   return inFlight === null ? null : `**Next Up**: Back to ${stepPhrase(inFlight, steps)}`
@@ -1344,6 +1486,7 @@ type StateInput = {
   readonly nextUp: Step | undefined
   readonly exclude: number | null // the step the turn is about, so Next Up and the order skip it
   readonly where: string // the intent file, for Next Up's `details:` link
+  readonly questions?: false // the plan card, whose questions table says what the row would count
 }
 
 /**
@@ -1360,7 +1503,7 @@ type StateInput = {
  */
 function stateRows(input: StateInput): StateRow[] {
   const steps = parseOrderedSteps(input.intent)
-  const range = rangeSegment(input.intent, steps, input.nextUp, input.exclude)
+  const range = rangeSegment(input.intent, steps, input.exclude)
   const order = buildOrderPhrase(remainingOrder(parseSteps(input.intent), parseBuildOrder(input.intent), input.exclude), ORDER_CAP)
   const parks = parseParkTotals(input.buildLog)
   const questions = parseOpenQuestions(input.intent)
@@ -1368,63 +1511,66 @@ function stateRows(input: StateInput): StateRow[] {
     input.verdict === null ? null : { label: 'Verdict', value: input.verdict },
     input.now === null ? null : { label: 'Now', value: input.now },
     input.stop === null ? null : { label: 'Stop', value: input.stop },
-    { label: 'Next Up', value: pointerText(input.nextUp, steps.length, input.where, range.model ?? input.nextUp?.model ?? null) },
-    range.segment.length === 0 ? null : { label: 'Range', value: range.segment },
+    { label: 'Next Up', value: pointerText(input.nextUp, input.where) },
+    range.length === 0 ? null : { label: 'Range', value: range },
     order.length === 0 ? null : { label: 'Order', value: order },
-    parks.total === 0 ? null : { label: 'Parked', value: `${parks.open} of ${parks.total} open` },
-    questions === 0 ? null : { label: 'Questions', value: `${questions} open` },
+    parks.total === 0 ? null : { label: 'Parked', value: parkedValue(parks, input.now !== null) },
+    questions === 0 || input.questions === false ? null : { label: 'Questions', value: `${questions} open` },
   ]
   return rows.filter((r): r is StateRow => r !== null)
 }
 
 /**
- * The bare forward pointer, the one line a boundary already shown ends on:
- * the Next Up line the driver tier keeps, with the range's model in its
- * bracket while the next run is a range, as the table's Next Up row has it.
+ * The Parked row's fact: the parks still open, bold, over every park ever
+ * made, and while any is open the move that settles them, so a human who never
+ * read the docs learns the verb where the count is (D115 (card-weights)).
+ * Mid-step the move waits for the step to land, since a harvest runs only
+ * between steps.
  */
-function pointerLine(intent: string, nextUp: Step | undefined, exclude: number | null, where: string): string {
-  const steps = parseOrderedSteps(intent)
-  const range = rangeSegment(intent, steps, nextUp, exclude)
-  return nextUpLine(nextUp, steps.length, where, range.model ?? nextUp?.model ?? null)
+function parkedValue(parks: ParkTotals, midStep: boolean): string {
+  const count = `**${parks.open}** of ${parks.total} open`
+  if (parks.open === 0) {
+    return count
+  }
+  return midStep ? `${count}: /plumbbob:harvest once this step lands` : `${count}: /plumbbob:harvest`
 }
 
 /**
- * The Range row's fact, and the model the pointer's bracket bolds while it
- * suggests a range: the run `/plumbbob:run` typed now would walk,
- * `3 of 5: /plumbbob:run (steps 6-9)`, with the model of the range holding
- * the step Next Up names; the re-cut words for a flagged range; the words for
- * a step no range names; or '' for a plan without ranges. The row's label
- * says `Range`, so the fact opens on the range's count.
+ * The bare forward pointer, the one line a boundary already shown ends on:
+ * the Next Up line the driver tier keeps, written as the table's Next Up row
+ * writes it.
+ */
+function pointerLine(nextUp: Step | undefined, where: string): string {
+  return nextUpLine(nextUp, where)
+}
+
+/**
+ * The Range row's fact: the run `/plumbbob:run` typed now would walk,
+ * `**3** on Opus: /plumbbob:run (steps 6-9)`, the range's number bold and the
+ * model its `- model:` line names beside it, so the model reads as the
+ * range's and not the step's (D115 (card-weights)); the re-cut words for a
+ * flagged range; the words for a step no range names; or '' for a plan
+ * without ranges. The row's label says `Range`, so the fact opens on the
+ * range's number.
  *
  * The bracket is the grant the hook would mint. At a step pause that is the
  * range holding the step in flight, its bracket opening on that step, since a
  * run typed there lands it first; at the pause on a range's last step, where
- * a run ends on that range's stop, the segment names no run
- * (`range 3 of 5 lands with step 9`). The model is read with the step the turn
- * is about landed, so at that last-step pause it is the next range's, the one
- * the human picks a model for. A flagged range, and a range with no
- * `- model:` line, leave the step's model in the bracket.
+ * a run ends on that range's stop, the segment names no run and no model
+ * (`**3** lands with step 9`).
  */
-function rangeSegment(
-  intent: string,
-  steps: ReadonlyArray<Step>,
-  nextUp: Step | undefined,
-  exclude: number | null,
-): { readonly segment: string; readonly model: string | null } {
-  const landed = steps.map((s) => (s.n === exclude ? { ...s, done: true } : s))
-  const { holding, command } = rangeStanding(parseBuildRanges(intent), landed, nextUp?.n ?? null)
-  const model = holding !== null && command !== null ? holding.model : null
+function rangeSegment(intent: string, steps: ReadonlyArray<Step>, exclude: number | null): string {
   const paused = steps.some((s) => s.n === exclude && !s.done) ? exclude : null
   const run = cardRun(intent, paused)
   if (run.ok) {
-    const name = `${run.range.item} of ${run.count}`
+    const name = `**${run.range.item}**`
     const lands = paused !== null && run.left.length === 1
-    return { segment: lands ? `${name} lands with step ${paused}` : `${name}: /plumbbob:run (${runBracket(run)})`, model }
+    return lands ? `${name} lands with step ${paused}` : `${name}${onModel(run.range.model)}: /plumbbob:run (${runBracket(run)})`
   }
   if (run.kind === 'uncovered') {
-    return { segment: run.words, model }
+    return run.words
   }
-  return { segment: run.kind === 'flagged' ? `${run.item} of ${run.count} needs a re-cut (${run.words})` : '', model }
+  return run.kind === 'flagged' ? `**${run.item}** needs a re-cut (${run.words})` : ''
 }
 
 /**
@@ -1438,34 +1584,30 @@ function cardRun(intent: string, paused: number | null): Run {
 }
 
 /**
- * The forward pointer's fact: the next undone step with the progress count,
- * its title, and a closing bracket carrying its advisory `- model:`
- * recommendation and where to read the step in full. No next step ⇒ the
+ * The forward pointer's fact: the next undone step, the model it is for, its
+ * title, and a closing bracket saying where to read it in full
+ * (`**Step 3** on Sonnet - <title> (details: …)`). No next step ⇒ the
  * finish/step nudge instead.
  *
- * The model is the second bold token the line spends, because it is the one
- * the human acts on (a `/model` call) before the next run; the path is the
- * short link every `details:` bracket carries (`detailsLink`). The state
- * table's Next Up row carries it; `nextUpLine` labels it for the one line a
- * driver turn ends on.
+ * The model rides the step it is for, the one the human acts on (a `/model`
+ * call) before building it (D115 (card-weights)); the path is the short link
+ * every `details:` bracket carries (`detailsLink`). The state table's Next Up
+ * row carries it; `nextUpLine` labels it for the one line a driver turn ends on.
  */
-function pointerText(nextUp: Step | undefined, total: number, where: string, model = nextUp?.model ?? null): string {
+function pointerText(nextUp: Step | undefined, where: string): string {
   if (nextUp === undefined) {
     return 'Nothing planned - /plumbbob:step or /plumbbob:finish'
   }
   const title = nextUp.title.length > 0 ? ` - ${nextUp.title}` : ''
-  const token = modelToken(model)
-  const bracket = token === null ? [] : [`model: **${capitalize(token)}**`]
-  bracket.push(detailsLink(where, nextUp.line))
-  return `Step ${nextUp.n} of ${total}${title} (${bracket.join(', ')})`
+  return `**Step ${nextUp.n}**${onModel(nextUp.model)}${title} (${detailsLink(where, nextUp.line)})`
 }
 
 /**
  * The forward pointer as one labeled line: the driver tier's pointer, and the
  * line a boundary already shown ends on.
  */
-function nextUpLine(nextUp: Step | undefined, total: number, where: string, model = nextUp?.model ?? null): string {
-  return `**Next Up**: ${pointerText(nextUp, total, where, model)}`
+function nextUpLine(nextUp: Step | undefined, where: string): string {
+  return `**Next Up**: ${pointerText(nextUp, where)}`
 }
 
 /**
@@ -1482,7 +1624,7 @@ function modelToken(model: string | null): string | null {
 
 /**
  * Capitalize a token's first letter for the card's title-case furniture
- * (`(model: Sonnet)`); the rest rides through unchanged.
+ * (`on Sonnet`); the rest rides through unchanged.
  */
 function capitalize(s: string): string {
   return s.length === 0 ? s : `${s[0]?.toUpperCase()}${s.slice(1)}`
