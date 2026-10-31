@@ -605,7 +605,7 @@ hold in their head, a row each and each only when there is something to hold
 | Range | **3** on Opus: /plumbbob:run (steps 7-9) |
 | Order | 7, 8, 5, 10, 6 (and 2 more) |
 | Parked | **2** of 7 open: /plumbbob:harvest |
-| Questions | 1 open |
+| Questions | **1** to answer · 2 deferred |
 ```
 
 The Range row names the range holding the step and the run that lands what
@@ -621,8 +621,11 @@ matters. While a park is open the row names the move that settles it,
 `/plumbbob:harvest`, so a human who never read the docs meets the verb where
 the count is; mid-step it reads `/plumbbob:harvest once this step lands`,
 since a harvest runs only between steps.
- The Questions row counts the open questions the plan still carries,
-the count the dashboard prints beside the parks, while one is open. The
+The Questions row counts the open questions the plan still carries, while
+one is open, split by who acts on them: the ones that wait on the human,
+bold, and the ones deferred until the work answers them, either half alone
+when the other is zero; the dashboard prints the same split beside the parks
+([D120 (deferred-questions)](decisions.md#d120)). The
 first three rode one line indented beneath the pointer,
 `· range 3 of 5: … · order: … · parked 2 of 7 open`, three labeled fields in
 a line whose indent was all that kept it inside the part
@@ -748,12 +751,14 @@ its moves, one row each, and the Questions row leaves its state table, since
 the table says it ([D118 (questions-table)](decisions.md#d118)):
 
 ```text
-**Open questions**: 2 open
+**Open questions**: **2** to answer · 1 deferred
 
 | Question | Why it matters | Lean |
 | --- | --- | --- |
 | [**Q1** (round-lines)](.plumbbob/builds/x/intent.md#L54): Do the Round N lines go in the reply or the folded block? | Otherwise two rounds of builder text run together | The reply |
 | [**Q3**](.plumbbob/builds/x/intent.md#L58): Should the state dir also move the matrix folder? | not given | no lean proposed |
+
+**Deferred**: [**Q4** (latency-budget)](.plumbbob/builds/x/intent.md#L61) until step 4's latency numbers
 ```
 
 The handle and slug link to the opener, where the expanded entry still
@@ -766,6 +771,20 @@ block gains `yes to all leans` (or `yes to all leans except Q3: …`), the
 reply that settled six questions in three words the day this shape was
 first tried, and `plumbbob status --questions` prints the same table alone,
 which refine relays after an attack in place of a prose walk-through.
+
+**The table holds only the questions that wait on the human.** A question
+the human chose to leave to the work carries
+`*deferred:* <date>, until <what settles it>` on its opener in place of
+`*resolve by:*`, and it rides one `**Deferred**:` line beneath the table,
+linked to its opener with what will settle it ([D120 (deferred-questions)](decisions.md#d120)). It is
+still open, so the lead counts it, but it is not a call the human makes now,
+so `yes to all leans` never reaches it. The block gains
+`defer Q3 until <what settles it>`, which writes the marker, beside the
+leans move, and both ride only while a question waits on the human; with
+every open question deferred, the line stands alone and the card offers no
+lean to take. A bare count used to say how many were open and not who acts:
+a human who had chosen to wait and see on two of three still read `3 open`
+as three calls owed.
 
 An auto halt on trouble renders the standard card; the Verdict's worst
 component is the halt reason. A clean halt renders no card at all: its step

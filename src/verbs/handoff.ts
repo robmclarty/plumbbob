@@ -90,6 +90,7 @@ import {
   type Ladder,
   type OpenQuestion,
   type ParkTotals,
+  type QuestionTotals,
   type RecapRow,
   type DetailSection,
   type RangeMeasure,
@@ -110,7 +111,6 @@ import {
   parseConstraintCount,
   parseLastCheckpoint,
   parseOpenQuestionRows,
-  parseOpenQuestions,
   parseOrderedSteps,
   parseParkTotals,
   parseRecap,
@@ -118,6 +118,7 @@ import {
   parseSections,
   parseSteps,
   parseSummary,
+  questionTotals,
   rangeLanded,
   rangeSpan,
   rangeStanding,
@@ -209,12 +210,15 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     const first = steps.find((s) => !s.done)
     const detail = settleDetail(root, rawDetail)
     // The open questions ride above the moves as their own table, which says
-    // what the Questions row would count, so the row stays off this card.
-    const questions = questionsPart(parseOpenQuestionRows(intent), where)
+    // what the Questions row would count, so the row stays off this card. The
+    // moves that settle them ride only while one waits on the human: a
+    // question deferred to the work is no call to make now.
+    const openRows = parseOpenQuestionRows(intent)
+    const questions = questionsPart(openRows, where)
     const plan = [
       SEAM_RULE,
       questions ?? '',
-      planCallBlock(first, cardRun(intent, null), planPublish(root, slug), questions !== null),
+      planCallBlock(first, cardRun(intent, null), planPublish(root, slug), questionTotals(openRows).toAnswer > 0),
       stateTable(stateRows({ intent, buildLog, verdict: null, now: null, stop: null, nextUp: first, exclude: null, where, questions: false })),
     ]
     const command = reprintCommand('--plan', undefined, named)
@@ -1354,8 +1358,13 @@ function callLine(move: string, outcome: string): string {
  * publishes, and a tracked folder adds the way out, `keep it local`, so the
  * note rides the card where the decision is made and no model composes it
  * (D117 (publish-on-the-card)).
+ *
+ * While a question waits on the human, two moves settle it: `yes to all leans`
+ * takes the table's leans, and `defer Q3 until …` leaves one to the work. A
+ * plan whose open questions are all deferred offers neither, since nothing
+ * there is a call to make now (D120 (deferred-questions)).
  */
-function planCallBlock(first: Step | undefined, run: Run, publish: Publish, questions: boolean): string {
+function planCallBlock(first: Step | undefined, run: Run, publish: Publish, toAnswer: boolean): string {
   const build = first === undefined ? '' : `; /plumbbob:build starts Step ${first.n}`
   const starts = run.ok ? `; /plumbbob:run runs range ${run.range.item} from Step ${run.left[0]}` : build
   const commits =
@@ -1366,12 +1375,13 @@ function planCallBlock(first: Step | undefined, run: Run, publish: Publish, ques
         : ' and commit it record-only (git ignores `.plumbbob/` here, so the commit message carries the plan)'
   const rows = [
     callLine('`looks good`', `I mark the plan decided${commits}${starts}`),
-    ...(questions
+    ...(toAnswer
       ? [
           callLine(
             '`yes to all leans`, or `yes to all leans except Q3: <your answer>`',
-            'I resolve each question on its opener line, record the decision it settles, and show this card again',
+            'I resolve each question in the table on its opener line, record the decision it settles, and show this card again',
           ),
+          callLine('`defer Q3 until <what settles it>`', 'I mark Q3 deferred on its opener line, with what will settle it, and show this card again'),
         ]
       : []),
     callLine('`expand`, or any question', 'I show more of what is there; nothing changes'),
@@ -1392,26 +1402,45 @@ function planCallBlock(first: Step | undefined, run: Run, publish: Publish, ques
  * it. A gap reads as one, the way the lean table's do: `not given` with no
  * why, `no lean proposed` with no lean. Null with no question open.
  *
+ * The table holds only the questions that wait on the human. A question
+ * deferred to the work rides one `**Deferred**:` line beneath it, linked to
+ * its opener with what will settle it, and with every open question deferred
+ * that line stands alone (D120 (deferred-questions)).
+ *
  * ```text
- * **Open questions**: 1 open
+ * **Open questions**: **1** to answer · 1 deferred
  *
  * | Question | Why it matters | Lean |
  * | --- | --- | --- |
  * | [**Q1** (round-lines)](…/intent.md#L54): Where do the round lines go? | Two rounds run together | The reply |
+ *
+ * **Deferred**: [**Q2** (latency-budget)](…/intent.md#L58) until step 4's latency numbers
  * ```
  */
 export function questionsPart(rows: ReadonlyArray<OpenQuestion>, where: string): string | null {
   if (rows.length === 0) {
     return null
   }
-  const body = rows.map((q) => {
-    const handle = q.slug === null ? `**${q.id}**` : `**${q.id}** (${q.slug})`
-    const question = `[${handle}](${where}#L${q.line}): ${firstSentence(q.question)}`
+  const toAnswer = rows.filter((q) => q.deferred === null)
+  const deferred = rows.filter((q) => q.deferred !== null)
+  const body = toAnswer.map((q) => {
+    const question = `[${questionHandle(q)}](${where}#L${q.line}): ${firstSentence(q.question)}`
     const why = q.why === null || q.why.length === 0 ? 'not given' : firstSentence(q.why)
     const lean = q.lean === null || q.lean.length === 0 ? 'no lean proposed' : firstSentence(q.lean)
     return `| ${cell(question)} | ${cell(why)} | ${cell(lean)} |`
   })
-  return [`**Open questions**: ${rows.length} open`, '', QUESTIONS_TABLE_HEAD, '| --- | --- | --- |', ...body].join('\n')
+  const table =
+    toAnswer.length === 0
+      ? []
+      : [`**Open questions**: ${questionsValue(questionTotals(rows))}`, '', QUESTIONS_TABLE_HEAD, '| --- | --- | --- |', ...body]
+  const settles = (q: OpenQuestion): string => (q.deferred === null || q.deferred.length === 0 ? 'until (not given)' : firstSentence(q.deferred))
+  const line = deferred.length === 0 ? [] : [`**Deferred**: ${deferred.map((q) => `[${questionHandle(q)}](${where}#L${q.line}) ${settles(q)}`).join(' · ')}`]
+  return [table.join('\n'), ...line].filter((part) => part.length > 0).join('\n\n')
+}
+
+/** A question's handle as the table and the Deferred line show it: the id bold, then its slug. */
+function questionHandle(q: OpenQuestion): string {
+  return q.slug === null ? `**${q.id}**` : `**${q.id}** (${q.slug})`
 }
 
 // The questions table's header row, the same on the plan card and under
@@ -1494,8 +1523,9 @@ type StateInput = {
  * something: the Verdict, the step in flight, the Stop, Next Up, the range the
  * next run walks, the build order where `## Build order` re-sequences the
  * plan, the parks once anything has been parked, and the open questions the
- * plan still carries. The first row present becomes the header, which is the
- * Verdict wherever one was measured (D111 (state-table)).
+ * plan still carries, split by who acts on them. The first row present
+ * becomes the header, which is the Verdict wherever one was measured
+ * (D111 (state-table)).
  *
  * The Range, Order, and Parked rows are the segments the note beneath Next Up
  * used to carry on one indented line; as rows each one has a label of its own,
@@ -1506,7 +1536,7 @@ function stateRows(input: StateInput): StateRow[] {
   const range = rangeSegment(input.intent, steps, input.exclude)
   const order = buildOrderPhrase(remainingOrder(parseSteps(input.intent), parseBuildOrder(input.intent), input.exclude), ORDER_CAP)
   const parks = parseParkTotals(input.buildLog)
-  const questions = parseOpenQuestions(input.intent)
+  const questions = questionTotals(parseOpenQuestionRows(input.intent))
   const rows: Array<StateRow | null> = [
     input.verdict === null ? null : { label: 'Verdict', value: input.verdict },
     input.now === null ? null : { label: 'Now', value: input.now },
@@ -1515,9 +1545,22 @@ function stateRows(input: StateInput): StateRow[] {
     range.length === 0 ? null : { label: 'Range', value: range },
     order.length === 0 ? null : { label: 'Order', value: order },
     parks.total === 0 ? null : { label: 'Parked', value: parkedValue(parks, input.now !== null) },
-    questions === 0 || input.questions === false ? null : { label: 'Questions', value: `${questions} open` },
+    questions.toAnswer + questions.deferred === 0 || input.questions === false ? null : { label: 'Questions', value: questionsValue(questions) },
   ]
   return rows.filter((r): r is StateRow => r !== null)
+}
+
+/**
+ * The Questions row's fact, split by who acts: the questions that wait on the
+ * human, bold, as the Parked row bolds what the human acts on, then the ones
+ * deferred to the work (`**1** to answer · 2 deferred`), either half alone when
+ * the other is zero (D120 (deferred-questions)). The caller drops the row at
+ * zero.
+ */
+function questionsValue(totals: QuestionTotals): string {
+  return [...(totals.toAnswer > 0 ? [`**${totals.toAnswer}** to answer`] : []), ...(totals.deferred > 0 ? [`${totals.deferred} deferred`] : [])].join(
+    ' · ',
+  )
 }
 
 /**

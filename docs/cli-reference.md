@@ -109,8 +109,11 @@ exits 0 when there is no session.
 `--questions` prints the plan's open questions in place of the dashboard, as the one table
 the plan card carries ([**D118 (questions-table)**](decisions.md#d118)): a row per open
 question, its handle and slug linked to the opener in `intent.md`, then the question, why it
-matters, and the lean, each the first sentence of its line. With none open it prints
-`plumbbob: no open questions in this plan`.
+matters, and the lean, each the first sentence of its line. The table holds the questions
+that wait on the human; one deferred to the work rides a `**Deferred**:` line beneath it,
+linked to its opener with what will settle it, and that line stands alone when every open
+question is deferred ([**D120 (deferred-questions)**](decisions.md#d120)). With none open
+it prints `plumbbob: no open questions in this plan`.
 
 When the plan carries `## Build ranges` ([**D92 (build-ranges)**](decisions.md#d92)), the
 ranges are listed beneath the steps, in the step list's own grammar, each row the command
@@ -265,7 +268,10 @@ At a build pause it renders the turn entire, in this order:
   - `Parked`: the park count, whenever anything has been parked, and the move that settles
     the parks while any is open (`**2** of 7 open: /plumbbob:harvest`, or
     `/plumbbob:harvest once this step lands` while a step is in flight).
-  - `Questions`: the open questions the plan still carries (`1 open`, while one is).
+  - `Questions`: the open questions the plan still carries, while one is, split by who acts:
+    the ones that wait on the human bold, then the ones deferred to the work
+    (`**1** to answer · 2 deferred`, or either half alone,
+    [**D120 (deferred-questions)**](decisions.md#d120)).
 - `**Recommendation**:` the model's own call, read from the detail file's
   `## Recommendation` section behind a CLI-prepended label.
 - `[more details](.plumbbob/detail.md)`: the card's last line and its one link to the

@@ -528,7 +528,7 @@ describe('handoff', () => {
       [
         '---',
         '',
-        '**Open questions**: 2 open',
+        '**Open questions**: **2** to answer',
         '',
         '| Question | Why it matters | Lean |',
         '| --- | --- | --- |',
@@ -539,16 +539,81 @@ describe('handoff', () => {
       ].join('\n'),
     )
     expect(stdout).toContain(
-      '- `yes to all leans`, or `yes to all leans except Q3: <your answer>` → I resolve each question on its opener line, record the decision it settles, and show this card again\n',
+      '- `yes to all leans`, or `yes to all leans except Q3: <your answer>` → I resolve each question in the table on its opener line, record the decision it settles, and show this card again\n',
     )
     expect(stdout).not.toContain('| Questions |') // the table says it
     // A step pause still counts them in its row, and a plan with none tables nothing.
     writeFileSync(stepPath(dir), '1\n')
-    expect(captureIo(() => handoff(dir, [])).stdout).toContain(stateRow('Questions', '2 open'))
+    expect(captureIo(() => handoff(dir, [])).stdout).toContain(stateRow('Questions', '**2** to answer'))
     const none = await started(INTENT.replace('1. [x] First', '1. [ ] First'))
     const plain = captureIo(() => handoff(none, ['--plan'])).stdout
     expect(plain).not.toContain('Open questions')
     expect(plain).not.toContain('yes to all leans')
+  })
+
+  it('lists a deferred question beneath the table, out of the leans\' reach, and counts it apart in the row — D120 (deferred-questions)', async () => {
+    const questions = [
+      '',
+      '## Open questions',
+      '',
+      '- <a id="q1"></a>**Q1 (round-lines)**: Where do the round lines go?, *resolve by:* decide',
+      '  - *plain:* Otherwise two rounds run together.',
+      '  - *lean:* The reply.',
+      "- <a id=\"q2\"></a>**Q2 (latency-budget)**: What latency budget do we hold?, *deferred:* 2026-10-31, until step 4's latency numbers. Then we pick.",
+      '',
+    ].join('\n')
+    const dir = await started(INTENT.replace('1. [x] First', '1. [ ] First') + questions)
+    const { stdout } = captureIo(() => handoff(dir, ['--plan']))
+    const where = relative(dir, intentPath(dir))
+    expect(stdout).toContain(
+      [
+        '---',
+        '',
+        '**Open questions**: **1** to answer · 1 deferred',
+        '',
+        '| Question | Why it matters | Lean |',
+        '| --- | --- | --- |',
+        `| [**Q1** (round-lines)](${where}#L20): Where do the round lines go? | Otherwise two rounds run together | The reply |`,
+        '',
+        `**Deferred**: [**Q2** (latency-budget)](${where}#L23) until step 4's latency numbers`,
+        '',
+        '**Your Call**:',
+      ].join('\n'),
+    )
+    expect(stdout).toContain('- `yes to all leans`, or `yes to all leans except Q3: <your answer>` → I resolve each question in the table')
+    expect(stdout).toContain(
+      '- `defer Q3 until <what settles it>` → I mark Q3 deferred on its opener line, with what will settle it, and show this card again\n',
+    )
+    writeFileSync(stepPath(dir), '1\n')
+    expect(captureIo(() => handoff(dir, [])).stdout).toContain(stateRow('Questions', '**1** to answer · 1 deferred'))
+  })
+
+  it('prints the Deferred line alone, with no table and no move to settle it, when every open question is deferred — D120 (deferred-questions)', async () => {
+    const questions = [
+      '',
+      '## Open questions',
+      '',
+      "- <a id=\"q1\"></a>**Q1 (latency-budget)**: What latency budget do we hold?, *deferred:* 2026-10-31, until step 4's latency numbers",
+      '- Q2: How wide is the window?, *deferred:*',
+      '',
+    ].join('\n')
+    const dir = await started(INTENT.replace('1. [x] First', '1. [ ] First') + questions)
+    const { stdout } = captureIo(() => handoff(dir, ['--plan']))
+    const where = relative(dir, intentPath(dir))
+    expect(stdout).toContain(
+      [
+        '---',
+        '',
+        `**Deferred**: [**Q1** (latency-budget)](${where}#L20) until step 4's latency numbers · [**Q2**](${where}#L21) until (not given)`,
+        '',
+        '**Your Call**:',
+      ].join('\n'),
+    )
+    expect(stdout).not.toContain('Open questions')
+    expect(stdout).not.toContain('yes to all leans')
+    expect(stdout).not.toContain('defer Q3')
+    writeFileSync(stepPath(dir), '1\n')
+    expect(captureIo(() => handoff(dir, [])).stdout).toContain(stateRow('Questions', '2 deferred'))
   })
 
   it('says what approving publishes while the plan is uncommitted, and offers to keep it local — D117 (publish-on-the-card)', async () => {

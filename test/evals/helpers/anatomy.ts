@@ -88,7 +88,7 @@ export type Tier = 'decision' | 'plan' | 'reminder' | 'boundary' | 'driver' | 's
 
 const TIER_PARTS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
   decision: ['Summary', 'Readout', 'Your Call', 'Verdict', 'Now', 'Next Up', 'Recommendation'],
-  plan: ['Open questions', 'Your Call', 'Next Up', 'Recommendation'],
+  plan: ['Open questions', 'Deferred', 'Your Call', 'Next Up', 'Recommendation'],
   reminder: ['Next Up'],
   boundary: ['Verdict', 'Stop', 'Next Up'],
   driver: ['Next Up'],
@@ -102,9 +102,11 @@ const TIER_PARTS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
 // Harvested part rides a stop card only while a park is open (D100 (stop-card),
 // labeled by D106 (leans-harvested)), and the Stop row there names the range
 // the card reviews, which it always owes. The plan pause tables its open
-// questions above its moves only while the plan carries one (D118 (questions-table)).
+// questions above its moves only while the plan carries one (D118 (questions-table)),
+// and a question deferred to the work rides a Deferred line beneath that table
+// (D120 (deferred-questions)).
 const OPTIONAL_PARTS: Readonly<Partial<Record<Tier, ReadonlyArray<string>>>> = {
-  plan: ['Open questions'],
+  plan: ['Open questions', 'Deferred'],
   boundary: ['Stop'],
   stop: ['Harvested'],
   'stop-short': ['Harvested'],

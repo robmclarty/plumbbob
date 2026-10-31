@@ -575,8 +575,11 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   "unresolved", so an opener that said "still unresolved after the spike" read as settled and left the
   dashboard silently, which is the one failure mode a count exists to prevent. Word boundaries cost nothing
   here: of the 31 resolved openers in this repo's build history, 16 wear `*resolved:*`, 10 a bare
-  `resolved <date>`, 4 a trailing `resolved)`, and 1 a `resolved with...`, and all 31 still match. Promoted
-  from the 2026-07-18 intent-legibility build (local `resolved-on-opener`). *Tagged in* `templates/intent.md`.
+  `resolved <date>`, 4 a trailing `resolved)`, and 1 a `resolved with...`, and all 31 still match. (Extended
+  2026-10-31 by [**D120 (deferred-questions)**](#d120): a `*deferred:*` marker on the same opener line keeps the
+  question open and counts it apart from the ones that wait on the human, and the whole-word read skips the
+  marker's until-clause.) Promoted from the 2026-07-18 intent-legibility build (local `resolved-on-opener`).
+  *Tagged in* `templates/intent.md`.
 
 - <a id="d77"></a>**D77 (placeholder-uncounted): The scaffolded question in a fresh intent counts as zero, by a
   rule and not by accident.** Every new build starts from a template carrying one placeholder question, and a
@@ -1577,8 +1580,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   the step in flight, the next step, or the range, which it was while a run was suggested; and a park count with
   no move beside it taught nothing to a human who had not read the docs (Rob, 2026-10-30, who chose the model
   beside each step and range over a row of its own). Revises [**D111 (state-table)**](#d111), whose Next Up row
-  carried the model in its bracket, and [**D86 (build-order)**](#d86)'s park count. *Tagged in* `handoff.ts`,
-  `harvest.ts`, `orient.ts`, the eval anatomy reader, and `docs/presentation.md`.
+  carried the model in its bracket, and [**D86 (build-order)**](#d86)'s park count. (Extended 2026-10-31 by
+  [**D120 (deferred-questions)**](#d120): the Questions row bolds the count that waits on the human the same way,
+  `**1** to answer · 2 deferred`.) *Tagged in* `handoff.ts`, `harvest.ts`, `orient.ts`, the eval anatomy reader,
+  and `docs/presentation.md`.
 
 - <a id="d116"></a>**D116 (links-re-rooted): The record re-aims the detail file's relative links at the build
   folder.** When `checkpoint` (a step's record, and the plan's) or `plumbbob harvest` (a stop's) copies
@@ -1621,9 +1626,12 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   the same six as one table were settled in one reply, `yes to all leans` (a volley planning session, 2026-10-16;
   GitHub issue #8). Rob chose three columns with why it matters as its own, the column he reads before the
   question, and the question linked to its entry rather than a fourth column for the slug (2026-10-30). The cells
-  are the CLI's, clipped from the file, so the table is relayed, never composed. *Tagged in* `orient.ts`,
-  `handoff.ts`, `status.ts`, the `plan`, `refine`, and `status` skills, `templates/intent.md`, the eval anatomy
-  reader, and `docs/presentation.md`.
+  are the CLI's, clipped from the file, so the table is relayed, never composed. (Revised 2026-10-31 by
+  [**D120 (deferred-questions)**](#d120): the table lists only the questions that wait on the human, under the
+  lead `**Open questions**: **2** to answer · 1 deferred`, and a deferred question rides a `**Deferred**:` line
+  beneath it, out of reach of `yes to all leans`.) *Tagged in* `orient.ts`, `handoff.ts`, `status.ts`, the
+  `plan`, `refine`, and `status` skills, `templates/intent.md`, the eval anatomy reader, and
+  `docs/presentation.md`.
 
 - <a id="d119"></a>**D119 (short-stop-after-a-halt): A stop card that follows a landing which answered its own
   pause card prints short.** When the step that completed a range halted at its pause and `looks good` landed it,
@@ -1644,6 +1652,30 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   `--stop --full`). Revises [**D100 (stop-card)**](#d100)'s one shape, extends the `PAUSE` stamp of
   [**D110 (reply-after-the-card)**](#d110), and narrows its reminder to a later turn. *Tagged in* `sidecar.ts`, `checkpoint.ts`, `handoff.ts`, the `run`
   skill, the eval anatomy reader, and `docs/presentation.md`.
+
+- <a id="d120"></a>**D120 (deferred-questions): A question the human leaves to the work is marked deferred on its
+  opener line, stays open, and every count says it apart from the questions that wait on the human.** Keeping the
+  question and swapping *resolve by:* for `*deferred:* <date>, until <what settles it>` on the opener, the line
+  *resolved:* lands on ([**D76 (resolved-on-opener)**](#d76)), defers it. It still counts as open, since nothing
+  has been decided, and a later *resolved:* closes it as before. The Questions row reads
+  `**1** to answer · 2 deferred`, the count that waits on the human bold, as [**D115 (card-weights)**](#d115)
+  bolds what the human acts on, and either half alone when the other is zero; the dashboard reads
+  `open questions 1 to answer, 2 deferred`.
+  The plan card's table lists only the questions to answer, so `yes to all leans` settles only those, and the
+  deferred ones ride one `**Deferred**:` line beneath it, each linked to its opener with what settles it;
+  `plumbbob status --questions` prints the same, and with every open question deferred the line stands alone and
+  the card offers no leans to take. A `defer Q3 until <what settles it>` move writes the marker. The marker is the
+  literal italic `*deferred:*`, never the bare word, since a question can say "deferred" in its own text and a
+  park is a deferred tangent; a "resolved" inside the until-clause does not close the question either. Bringing a
+  deferred question back on its own when the step it waits on lands is not in this pass: it needs the marker to
+  name a step in a form the CLI reads. *because* a bare count said how many questions were open and not who acts
+  on them: a human who had chosen to wait and see on two of three still read `3 open` as three calls owed, and
+  had to open the file to learn which were safe to leave (Rob, 2026-10-31). A new *resolve by:* value such as
+  `observe` would have said how a question closes, not that the human chose to wait, nor until what. Extends
+  [**D76 (resolved-on-opener)**](#d76) and [**D115 (card-weights)**](#d115), and revises
+  [**D118 (questions-table)**](#d118)'s lead and the reach of its move. *Tagged in* `orient.ts`, `handoff.ts`,
+  `status.ts`, the `plan`, `refine`, and `status` skills, `templates/intent.md`, the eval anatomy reader, and
+  `docs/presentation.md`.
 
 ### Superseded
 

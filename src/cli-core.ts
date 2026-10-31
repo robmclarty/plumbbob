@@ -110,7 +110,7 @@ const VERBS: ReadonlyArray<Verb> = [
         value: '"<args>"',
         gloss: 'the raw /plumbbob:run invocation; prints the run it names above the dashboard, or the refusal as its pointer',
       },
-      { name: '--questions', gloss: "print the plan's open questions as one table (question, why it matters, lean) in place of the dashboard" },
+      { name: '--questions', gloss: "print the plan's open questions as one table (question, why it matters, lean), the deferred ones on a line beneath, in place of the dashboard" },
     ],
     notes: 'Read-only; always exits 0. With no cursor it lists the available builds.',
   },

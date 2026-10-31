@@ -99,7 +99,9 @@ function grantText(grant: Grant | null): string | null {
  * the dashboard prints beneath a header naming the run the text resolves to
  * and the grant the turn hook minted, or carries the refusal in its pointer
  * when the run names nothing it can walk. With `--questions` it prints the
- * plan's open questions as the plan card tables them, and nothing else.
+ * plan's open questions as the plan card tables them, and nothing else: the
+ * ones that wait on the human in the table, and the ones deferred to the work
+ * on a line beneath it.
  */
 export function status(cwd: string, args: ReadonlyArray<string> = []): number {
   const root = findRepoRoot(cwd)
@@ -124,7 +126,8 @@ export function status(cwd: string, args: ReadonlyArray<string> = []): number {
   }
   if (rest.includes('--questions')) {
     // The open questions alone, as the plan card tables them: the view a skill
-    // relays when the human asks what is still open (D118 (questions-table)).
+    // relays when the human asks what is still open (D118 (questions-table)),
+    // with the deferred ones on their own line (D120 (deferred-questions)).
     const part = questionsPart(parseOpenQuestionRows(readOr(intentPath(root, slug))), relative(root, intentPath(root, slug)))
     process.stdout.write(part === null ? notice({ fact: 'no open questions in this plan' }) : blocks([part]))
     return 0

@@ -27,6 +27,8 @@ import {
   parseRequestedStep,
   parseSteps,
   parseTitle,
+  questionsPhrase,
+  questionTotals,
   rangeSpan,
   rangeStanding,
   rangeStart,
@@ -234,10 +236,73 @@ describe('orient parsers', () => {
         question: 'Where do the round lines go?',
         why: 'Otherwise two rounds run together. More here.',
         lean: 'The reply.',
+        deferred: null,
       },
-      { id: 'Q3', slug: null, line: 10, question: 'Is a bare opener enough?', why: 'It wraps onto a second line.', lean: null },
+      { id: 'Q3', slug: null, line: 10, question: 'Is a bare opener enough?', why: 'It wraps onto a second line.', lean: null, deferred: null },
     ])
     expect(parseOpenQuestions(intent)).toBe(2) // the count reads the same rows
+  })
+
+  it('parseOpenQuestionRows reads a *deferred:* opener as open and keeps what settles it, its date stripped — D120 (deferred-questions)', () => {
+    const intent = [
+      '## Open questions',
+      '',
+      '- <a id="q1"></a>**Q1 (to-answer)**: Which cache?, *resolve by:* decide',
+      '- <a id="q2"></a>**Q2 (latency-budget)**: What latency budget do we hold?, *deferred:* 2026-10-31, until step 4\'s latency numbers',
+      '- Q3: Is the retry worth it?, *deferred:* until the first week of traffic',
+      '- Q4: How wide is the window?, *deferred:*',
+      '- Q5: Do we shard?, *deferred:* 2026-10-31 until the load test',
+      '- Q6: Was it worth the wait?, *deferred:* 2026-10-01, until step 2, *resolved:* 2026-10-30, yes',
+      '- Q7: Which region first?, *deferred:* 2026-10-31, until the pricing question is resolved',
+      '',
+    ].join('\n')
+    const rows = parseOpenQuestionRows(intent)
+    expect(rows.map((q) => [q.id, q.question, q.deferred])).toEqual([
+      ['Q1', 'Which cache?', null],
+      ['Q2', 'What latency budget do we hold?', "until step 4's latency numbers"],
+      ['Q3', 'Is the retry worth it?', 'until the first week of traffic'],
+      ['Q4', 'How wide is the window?', ''],
+      ['Q5', 'Do we shard?', 'until the load test'],
+      // Q6 resolved after its deferral; Q7's "resolved" is its until-clause's own word.
+      ['Q7', 'Which region first?', 'until the pricing question is resolved'],
+    ])
+    expect(parseOpenQuestions(intent)).toBe(6) // a deferred question is still open
+    expect(questionTotals(rows)).toEqual({ toAnswer: 1, deferred: 5 })
+  })
+
+  it('parseOpenQuestionRows keeps the question clean of a *deferred:* tail left beside a *resolve by:* — D120 (deferred-questions)', () => {
+    const intent = [
+      '## Open questions',
+      '',
+      '- Q1: Which cache?, *resolve by:* decide, *deferred:* 2026-10-31, until the spike',
+      '- Q2: Which store?, *deferred:* 2026-10-31, until the spike, *resolve by:* spike',
+      '',
+    ].join('\n')
+    expect(parseOpenQuestionRows(intent).map((q) => [q.question, q.deferred])).toEqual([
+      ['Which cache?', 'until the spike'],
+      ['Which store?', 'until the spike'],
+    ])
+  })
+
+  it('parseOpenQuestionRows defers on the literal marker only: the word in a question, or a marker on a sub-line, changes nothing — D120 (deferred-questions)', () => {
+    const intent = [
+      '## Open questions',
+      '',
+      '- Q1: Should deferred tangents count?, *resolve by:* decide',
+      '  - *plain:* *deferred:* on a sub-line is talk, not a marker.',
+      '- Q2: <the unresolved hole, framed as a question>, *deferred:* until never',
+      '',
+    ].join('\n')
+    const rows = parseOpenQuestionRows(intent)
+    expect(rows.map((q) => [q.id, q.deferred])).toEqual([['Q1', null]]) // Q2 is unfilled scaffold
+    expect(questionTotals(rows)).toEqual({ toAnswer: 1, deferred: 0 })
+  })
+
+  it('questionsPhrase says who acts on the open questions: to answer, deferred, both, or 0 — D120 (deferred-questions)', () => {
+    expect(questionsPhrase({ toAnswer: 1, deferred: 2 })).toBe('open questions 1 to answer, 2 deferred')
+    expect(questionsPhrase({ toAnswer: 2, deferred: 0 })).toBe('open questions 2 to answer')
+    expect(questionsPhrase({ toAnswer: 0, deferred: 2 })).toBe('open questions 2 deferred')
+    expect(questionsPhrase({ toAnswer: 0, deferred: 0 })).toBe('open questions 0')
   })
 
   it('parseOpenQuestions counts only unresolved Q lines', () => {
@@ -549,7 +614,7 @@ describe('formatOrientation', () => {
     expect(out).toContain('← next')
     expect(out).toContain('1/3 done')
     expect(out).toContain('step 1 · abc1234')
-    expect(out).toContain('parked 2 of 2 open · open questions 2')
+    expect(out).toContain('parked 2 of 2 open · open questions 2 to answer')
     expect(out).toContain('next →')
   })
 
@@ -576,7 +641,7 @@ describe('formatOrientation', () => {
         '    3  Third step',
         '',
         'last checkpoint  step 1 · abc1234',
-        'parked 2 of 2 open · open questions 2',
+        'parked 2 of 2 open · open questions 2 to answer',
         '',
         'next → build step 2 — `/plumbbob:build` (or `/plumbbob:step` to revise it first)',
       ].join('\n')
@@ -783,7 +848,7 @@ describe('formatOrientation with an explicitly requested step', () => {
         '  ▸ 3  Third step   ← requested',
         '',
         'last checkpoint  step 1 · abc1234',
-        'parked 2 of 2 open · open questions 2',
+        'parked 2 of 2 open · open questions 2 to answer',
         '',
         'next → build step 3 — explicitly requested (skips 1 undone step; still unplanned: `/plumbbob:step` it first)',
       ].join('\n'),
@@ -1087,7 +1152,7 @@ describe('the build order', () => {
         '',
         'last checkpoint  step 1 · abc1234',
         'build order  3, 2',
-        'parked 2 of 2 open · open questions 2',
+        'parked 2 of 2 open · open questions 2 to answer',
         '',
         'next → plan step 3 — `/plumbbob:step`',
       ].join('\n'),
@@ -1284,7 +1349,7 @@ describe('the park counts', () => {
     const o = orient({ ...base, buildLog })
     expect(o.parked).toBe(1)
     expect(o.parkedTotal).toBe(2)
-    expect(formatOrientation(o)).toContain('parked 1 of 2 open · open questions 2')
+    expect(formatOrientation(o)).toContain('parked 1 of 2 open · open questions 2 to answer')
   })
 })
 

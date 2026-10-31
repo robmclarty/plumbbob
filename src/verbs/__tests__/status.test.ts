@@ -109,7 +109,7 @@ describe('status --questions — D118 (questions-table)', () => {
     expect(code).toBe(0)
     expect(stdout).toBe(
       [
-        '**Open questions**: 1 open',
+        '**Open questions**: **1** to answer',
         '',
         '| Question | Why it matters | Lean |',
         '| --- | --- | --- |',
@@ -125,6 +125,31 @@ describe('status --questions — D118 (questions-table)', () => {
     const dir = makeTempRepo()
     await captureIoAsync(() => start(dir, ['Ask first', '--slug', 'ask-first']))
     expect(captureIo(() => status(dir, ['--questions'])).stdout).toBe('plumbbob: no open questions in this plan\n')
+  })
+
+  it('prints the Deferred line beneath the table, and alone when every open question is deferred — D120 (deferred-questions)', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Ask first', '--slug', 'ask-first']))
+    const intent = join(buildDir(dir, 'ask-first'), 'intent.md')
+    const deferred = '- <a id="q2"></a>**Q2 (budget)**: How fast?, *deferred:* 2026-10-31, until step 4\n'
+    writeFileSync(intent, `# Ask first\n\n## Open questions\n\n- <a id="q1"></a>**Q1 (slug)**: Which one?, *resolve by:* decide\n${deferred}`)
+    expect(captureIo(() => status(dir, ['--questions'])).stdout).toBe(
+      [
+        '**Open questions**: **1** to answer · 1 deferred',
+        '',
+        '| Question | Why it matters | Lean |',
+        '| --- | --- | --- |',
+        '| [**Q1** (slug)](.plumbbob/builds/ask-first/intent.md#L5): Which one? | not given | no lean proposed |',
+        '',
+        '**Deferred**: [**Q2** (budget)](.plumbbob/builds/ask-first/intent.md#L6) until step 4',
+        '',
+        '',
+      ].join('\n'),
+    )
+    writeFileSync(intent, `# Ask first\n\n## Open questions\n\n${deferred}`)
+    expect(captureIo(() => status(dir, ['--questions'])).stdout).toBe(
+      '**Deferred**: [**Q2** (budget)](.plumbbob/builds/ask-first/intent.md#L5) until step 4\n\n',
+    )
   })
 })
 

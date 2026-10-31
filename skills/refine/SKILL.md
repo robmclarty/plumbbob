@@ -43,8 +43,14 @@ is fine; refining is always available.
   the first sentence of its line, so write each line to stand on that sentence. Then
   invite per-question answers; the human can settle any of them right there in one
   message (`yes to all leans`, or `yes to all leans except Q3: <their answer>`), no
-  doc-flipping, no extra round-trip per hole. Never retype the table as a list of your
-  own ([D118 (questions-table)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d118)).
+  doc-flipping, no extra round-trip per hole. A resolved question gets
+  `*resolved:* <date>, <the answer>` in place of its `*resolve by:*` on the opener line. The human
+  can also leave one to the work (`defer Q3 until <what settles it>`): keep the question
+  and swap its `*resolve by:*` for `*deferred:* <date>, until <what settles it>` on the
+  opener line, and the table moves it to a `Deferred` line beneath, still open
+  ([D120 (deferred-questions)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d120)).
+  Never retype the table as a list of your own
+  ([D118 (questions-table)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d118)).
 - **Repair (re-sync to reality).** When the plan has drifted (a Decision was overtaken
   by what you built, a Constraint changed, a Step no longer matches the seam, or a
   **step's title no longer describes what the diff actually does**), propose the edits

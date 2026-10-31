@@ -84,6 +84,15 @@ The argument only seeds how you get there.
    `yes to all leans` move (or `yes to all leans except Q3: <their answer>`) settles them
    in one reply: on each opener line swap `*resolve by:*` for `*resolved:* <date>, <the
    answer>`, add the Decision the answer settles, and run `plumbbob handoff --plan` again.
+   A question the human would rather let the work answer is deferred, not resolved: on
+   `defer Q3 until <what settles it>`, keep the question and swap its `*resolve by:*` for
+   `*deferred:* <date>, until <what settles it>` on the opener line, then run
+   `plumbbob handoff --plan` again. It stays open, the card lists it on a `Deferred` line
+   beneath the table, out of reach of `yes to all leans`, and the Questions row counts it
+   apart (`**1** to answer · 2 deferred`); once the work answers it, swap the marker for
+   `*resolved:*` as above
+   ([D120 (deferred-questions)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d120)).
+   Deferring is the human's call, never yours: a lean you are unsure of is still a lean.
 4. **Author the Steps.** Write the **full build plan** under `## Steps` (each step a
    small, verifiable increment) in the exact format the parser reads:
 

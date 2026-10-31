@@ -970,6 +970,25 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
     expect(endingRenders(a, 'plan')).toBe(true)
   })
 
+  it('files the plan pause\'s Deferred line as a part of its own, between the table and the moves, never a stray — D120 (deferred-questions)', () => {
+    const repo = pausedFixture()
+    const intent = join(repo, '.plumbbob', 'builds', EVAL_SLUG, 'intent.md')
+    const questions = [
+      '',
+      '## Open questions',
+      '',
+      '- <a id="q1"></a>**Q1 (comma)**: Does the greeting keep its comma?, *resolve by:* decide',
+      '  - *lean:* Yes.',
+      '- <a id="q2"></a>**Q2 (locale)**: Which locales come next?, *deferred:* 2026-10-31, until step 2 lands',
+      '',
+    ].join('\n')
+    writeFileSync(intent, readFileSync(intent, 'utf8') + questions)
+    const a = readAnatomy(tailAfterRule(runCli(repo, ['handoff', '--plan']).stdout))
+    expect(a.labels).toEqual(['Open questions', 'Deferred', 'Your Call', 'Next Up', 'Recommendation'])
+    expect(a.strays).toEqual([])
+    expect(endingRenders(a, 'plan')).toBe(true)
+  })
+
   it('catches a turn that says more after the relay, and one that nests the fence', () => {
     const { stdout } = runCli(pausedFixture(), ['handoff'])
     const chatty = `${stdout}\nLet me know if you want me to proceed with step 2!`

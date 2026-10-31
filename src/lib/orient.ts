@@ -42,7 +42,9 @@ export type Orientation = {
   // Every item ever parked, harvested ones included: the denominator behind
   // `parked 2 of 7 open`, so a harvest shows as the gap between the two.
   readonly parkedTotal: number
-  readonly openQuestions: number
+  // The open questions split by who acts on them: the ones that wait on the
+  // human, and the ones deferred to the work (D120 (deferred-questions)).
+  readonly questions: QuestionTotals
   readonly next: string
   // The first undone step in build order (null with none left): the step the
   // `← next` marker and the detail rows follow when nothing is requested.
@@ -1476,7 +1478,8 @@ export function markStepDone(intent: string, n: number): string {
  * substring read that as resolved and dropped a live hole off the dashboard. And an
  * opener whose body has not been filled in yet, still opening on its `<...>`
  * fill-in, is scaffold rather than a question, which is what makes a fresh build
- * report zero rather than one.
+ * report zero rather than one. A question deferred to the work still counts:
+ * nothing has been decided (D120 (deferred-questions)).
  */
 export function parseOpenQuestions(intent: string): number {
   return parseOpenQuestionRows(intent).length
@@ -1485,7 +1488,9 @@ export function parseOpenQuestions(intent: string): number {
 /**
  * One open question as the table shows it: its handle and slug, the line its
  * opener sits on, the question, and the first lines of its `*plain:*` and
- * `*lean:*` sub-lines, null where the question has none.
+ * `*lean:*` sub-lines, null where the question has none. `deferred` is what
+ * the opener's `*deferred:*` marker says will settle it, its date stripped and
+ * empty when it names nothing; null for a question that waits on the human.
  */
 export type OpenQuestion = {
   readonly id: string
@@ -1494,6 +1499,7 @@ export type OpenQuestion = {
   readonly question: string
   readonly why: string | null
   readonly lean: string | null
+  readonly deferred: string | null
 }
 
 // An open question's opener: the handle, an optional anchor and slug, then
@@ -1509,10 +1515,15 @@ const QUESTION_FIELD = /^-\s+\*(plain|lean):\*\s*(.*)$/
  * opening on its `<...>` fill-in is scaffold. The `*plain:*` sub-line is why
  * the question matters, the `*lean:*` sub-line the proposed answer, each with
  * any lines it wraps onto (D118 (questions-table)).
+ *
+ * A `*deferred:*` marker on the opener keeps the question open and records what
+ * will settle it. Its until-clause is the human's own words, so a "resolved"
+ * inside it does not close the question; only the literal `*resolved:*` marker
+ * does, wherever it sits on the line (D120 (deferred-questions)).
  */
 export function parseOpenQuestionRows(intent: string): OpenQuestion[] {
   const { offset, lines } = sectionLines(intent, '## Open questions')
-  const rows: Array<{ id: string; slug: string | null; line: number; question: string; why: string | null; lean: string | null }> = []
+  const rows: Array<{ id: string; slug: string | null; line: number; question: string; why: string | null; lean: string | null; deferred: string | null }> = []
   let current: (typeof rows)[number] | null = null
   let field: 'why' | 'lean' | null = null
   lines.forEach((raw, i) => {
@@ -1520,8 +1531,10 @@ export function parseOpenQuestionRows(intent: string): OpenQuestion[] {
     const opener = QUESTION_OPENER.exec(text)
     if (opener !== null) {
       const body = opener[3] ?? ''
-      const open = !/\bresolved\b/i.test(raw) && !/^<[^>]*>/.test(body)
-      current = open ? { id: opener[1] ?? '', slug: opener[2] ?? null, line: offset + i + 1, question: questionText(body), why: null, lean: null } : null
+      const open = !resolvedOpener(raw) && !/^<[^>]*>/.test(body)
+      current = open
+        ? { id: opener[1] ?? '', slug: opener[2] ?? null, line: offset + i + 1, question: questionText(body), why: null, lean: null, deferred: deferredText(body) }
+        : null
       if (current !== null) rows.push(current)
       field = null
       return
@@ -1541,9 +1554,66 @@ export function parseOpenQuestionRows(intent: string): OpenQuestion[] {
   return rows
 }
 
-/** An opener's question: its body without the trailing `*resolve by:*` tag. */
+// The marker a question deferred to the work carries on its opener line.
+const DEFERRED_MARKER = /\*deferred:\*/i
+
+/**
+ * Whether an opener line closes its question: "resolved" as a whole word
+ * anywhere before a `*deferred:*` marker (D76 (resolved-on-opener)), or the
+ * literal `*resolved:*` marker anywhere on the line. The until-clause after a
+ * deferral is free text, so a bare "resolved" there leaves the question open.
+ */
+function resolvedOpener(raw: string): boolean {
+  const deferredAt = raw.search(DEFERRED_MARKER)
+  const head = deferredAt === -1 ? raw : raw.slice(0, deferredAt)
+  return /\bresolved\b/i.test(head) || /\*resolved:\*/i.test(raw)
+}
+
+/** An opener's question: its body without the trailing `*resolve by:*` or `*deferred:*` tag. */
 function questionText(body: string): string {
-  return body.replace(/,?\s*\*resolve by:\*.*$/i, '').trim()
+  return body.replace(/,?\s*\*(?:resolve by|deferred):\*.*$/i, '').trim()
+}
+
+/**
+ * What a deferred opener says will settle it: the text after its `*deferred:*`
+ * marker, without the leading date or a `*resolve by:*` tag left beside it,
+ * and empty for a bare marker. Null when the opener carries no marker.
+ */
+function deferredText(body: string): string | null {
+  const at = body.search(DEFERRED_MARKER)
+  if (at === -1) {
+    return null
+  }
+  return body
+    .slice(at)
+    .replace(DEFERRED_MARKER, '')
+    .replace(/,?\s*\*resolve by:\*.*$/i, '')
+    .trim()
+    .replace(/^\d{4}-\d{2}-\d{2},?\s*/, '')
+    .trim()
+}
+
+/** The open questions split by who acts: the ones that wait on the human, and the ones deferred to the work. */
+export type QuestionTotals = { readonly toAnswer: number; readonly deferred: number }
+
+/** Split open question rows by who acts on them (D120 (deferred-questions)). */
+export function questionTotals(rows: ReadonlyArray<OpenQuestion>): QuestionTotals {
+  const deferred = rows.filter((q) => q.deferred !== null).length
+  return { toAnswer: rows.length - deferred, deferred }
+}
+
+/**
+ * The dashboard's question count, split the way the card's Questions row
+ * splits it: `open questions 1 to answer, 2 deferred`, either half alone when
+ * the other is zero, and `open questions 0` with none open. A comma joins the
+ * halves because ` · ` already separates the line's fields.
+ */
+export function questionsPhrase(totals: QuestionTotals): string {
+  const halves = [
+    ...(totals.toAnswer > 0 ? [`${totals.toAnswer} to answer`] : []),
+    ...(totals.deferred > 0 ? [`${totals.deferred} deferred`] : []),
+  ]
+  return `open questions ${halves.length === 0 ? '0' : halves.join(', ')}`
 }
 
 /** The park list's counts: the items still open, and every item ever parked. */
@@ -1766,7 +1836,7 @@ export function orient(input: OrientInput): Orientation {
     lastCheckpoint: parseLastCheckpoint(input.checkpoints),
     parked: parks.open,
     parkedTotal: parks.total,
-    openQuestions: parseOpenQuestions(input.intent),
+    questions: questionTotals(parseOpenQuestionRows(input.intent)),
     next:
       (idle ? ranges.waitingMove : null) ??
       (atBoundary ? ranges.move : null) ??
@@ -2884,7 +2954,7 @@ export function formatOrientation(o: Orientation): string {
     cpLine,
     ...receipts,
     ...orderRow,
-    `${parkedPhrase({ open: o.parked, total: o.parkedTotal })} · open questions ${o.openQuestions}`,
+    `${parkedPhrase({ open: o.parked, total: o.parkedTotal })} · ${questionsPhrase(o.questions)}`,
     '',
     `next → ${o.next}`,
   ].join('\n')

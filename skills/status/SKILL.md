@@ -40,6 +40,9 @@ annotate it.
    it. You relay the block with the rest; a `⚠` row is `/plumbbob:refine`'s to fix.
 4. If it reads `NO ACTIVE SESSION`, tell the human to `/plumbbob:plan` to frame a goal.
 5. If the human asks what is still open, run `plumbbob status --questions` and relay its
-   table whole: one row per open question, linked to its entry in `intent.md`, with why it
-   matters and the lean. Never list the questions in your own words
+   output whole: a table row per question that waits on the human, linked to its entry in
+   `intent.md`, with why it matters and the lean, and a `Deferred` line beneath it naming
+   the questions left to the work and what settles each
+   ([D120 (deferred-questions)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d120)).
+   Never list the questions in your own words
    ([D118 (questions-table)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d118)).

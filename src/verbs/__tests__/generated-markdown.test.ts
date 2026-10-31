@@ -242,7 +242,7 @@ describe('generated markdown lints clean under a consumer-strict gate', () => {
     expect(await lintFindings(dir, [buildLogPath(dir)])).toEqual([])
   })
 
-  it('the plan card with its open questions: the three-column table, a pipe in a lean included — D118 (questions-table)', async () => {
+  it('the plan card with its open questions: the three-column table, a pipe in a lean included, and a Deferred line — D118 (questions-table), D120 (deferred-questions)', async () => {
     const dir = makeTempRepo()
     await captureIoAsync(() => start(dir, ['Ask first', '--slug', 'ask-first']))
     writeFileSync(
@@ -260,6 +260,7 @@ describe('generated markdown lints clean under a consumer-strict gate', () => {
         '- <a id="q1"></a>**Q1 (pipe-or-not)**: Does `a | b` read as one command?, *resolve by:* decide',
         '  - *plain:* A pipe in a cell must not split its row.',
         '  - *lean:* Yes, `a | b` is one.',
+        '- <a id="q2"></a>**Q2 (cache-ttl)**: How long is `a | b` cached?, *deferred:* 2026-10-31, until the first week of traffic',
         '',
       ].join('\n'),
     )

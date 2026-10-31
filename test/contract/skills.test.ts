@@ -835,3 +835,24 @@ describe('a new step never joins a landed range — D92 (build-ranges)', () => {
     expect(finish).toMatch(/leave the detail file as it is, fold nothing again, and run `plumbbob harvest` once more/)
   })
 })
+
+describe('a question left to the work is deferred on its opener, not resolved — D120 (deferred-questions)', () => {
+  /** A skill's body with its line breaks folded to spaces. */
+  const flat = (dir: string): string => parseSkill(dir).body.replace(/\s+/g, ' ')
+
+  it('plan teaches the defer move and the marker beside the resolved swap, and keeps the call the human\'s', () => {
+    expect(flat('plan')).toContain(
+      'on `defer Q3 until <what settles it>`, keep the question and swap its `*resolve by:*` for `*deferred:* <date>, until <what settles it>` on the opener line',
+    )
+    expect(flat('plan')).toContain('Deferring is the human\'s call, never yours')
+  })
+
+  it('refine invites a defer beside the per-question answers and says what it writes', () => {
+    expect(flat('refine')).toContain('`defer Q3 until <what settles it>`')
+    expect(flat('refine')).toContain('swap its `*resolve by:*` for `*deferred:* <date>, until <what settles it>` on the opener line')
+  })
+
+  it('status relays the Deferred line beneath the questions table', () => {
+    expect(flat('status')).toMatch(/a `Deferred` line beneath it naming the questions left to the work and what settles each/)
+  })
+})

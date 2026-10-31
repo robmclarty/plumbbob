@@ -257,7 +257,8 @@ range, and a range the order cannot settle re-cut by hand; `/plumbbob:refine ran
 the whole section on request. Where `/plumbbob:step`
 sharpens one step, refine works the whole plan. An attack ends on the open questions as
 one table (`plumbbob status --questions`), each row the question, why it matters, and the
-lean, so one reply (`yes to all leans`, or `yes to all leans except Q3: …`) settles them.
+lean, so one reply (`yes to all leans`, or `yes to all leans except Q3: …`) settles them,
+and `defer Q3 until …` leaves one to the work, listed beneath the table.
 The plan pause's cold read is refine's tip: it surfaces the worst hole and names refine
 for the rest, so the full attack stays optional and arrives when the read says it would
 pay. Refine is where the real adversary looks; the cold read is an estimate.

@@ -18,7 +18,9 @@ word up without reading the others first. Each entry points at the page that own
   the diff against it.
 - **Open question** (`Q1 (slug)`): a hole you could not settle on paper, expanded in
   place (a *plain* and a *lean* sub-line) so a human can answer it cold, never guessed
-  into a Decision.
+  into a Decision. One the human leaves to the work is *deferred*: it carries a
+  `*deferred:*` marker naming what will settle it, stays open, and is counted apart from
+  the ones that wait on the human.
 - **Step**: one small, verifiable increment, carrying a done-when and a seam. Its title
   is the commit subject it lands as. → [`techniques.md`](techniques.md#steps-as-small-verifiable-increments)
 - **Done-when**: the step's finish line, ideally a test or check result, that the verify
