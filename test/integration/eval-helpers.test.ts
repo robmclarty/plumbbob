@@ -312,6 +312,23 @@ describe('eval fixtures (seeded plan, deterministic gates)', () => {
     expect(parkLines(plain.repo)).toEqual([])
   })
 
+  it('lands the steps it is given before the measured turn, each through the CLI', () => {
+    const { repo, buildDir } = makeEvalFixture({
+      steps: TWO_STEPS,
+      gate: 'green',
+      landed: [{ step: 1, files: { 'src/greet.js': 'export function greet(name) {\n  return `Hello, ${name}!`\n}\n' } }],
+    })
+    // Step 1 sits on the ledger after the plan, its box ticked and its file committed;
+    // step 2 is next, with nothing in flight, so the measured turn starts at it.
+    expect(checkpointLines(repo).map((l) => l.kind === 'step' ? `step ${l.step}` : l.kind)).toEqual(['baseline', 'plan', 'step 1'])
+    expect(readFileSync(join(buildDir, 'intent.md'), 'utf8')).toMatch(/^1\. \[x\] /m)
+    // The checkpoint's own ledger writes ride the next commit, as they do after any landing;
+    // nothing outside the build folder is left dirty.
+    const dirty = execFileSync('git', ['-C', repo, 'status', '--porcelain'], { encoding: 'utf8' }).split('\n').filter((l) => l.length > 0)
+    expect(dirty.every((l) => l.slice(3).startsWith(`.plumbbob/builds/${EVAL_SLUG}/`))).toBe(true)
+    expect(existsSync(join(buildDir, 'STEP'))).toBe(false)
+  })
+
   it('arms the RUN mark beside the grant on a latched sweep, and nothing on baseline', () => {
     const { repo } = makeEvalFixture({ steps: STEPS, gate: 'green' })
     armRun(repo, 'baseline', 1)

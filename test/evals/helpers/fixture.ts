@@ -34,6 +34,12 @@ export type RangeSpec = {
 // the STEP marker), whatever the model wrote — the --auto halt fixture.
 export type Gate = 'green' | 'always-red' | 'red-during-step-2'
 
+// A step the fixture lands before the measured turn, and the files that land it.
+export type LandedStep = {
+  readonly step: number
+  readonly files: Readonly<Record<string, string>>
+}
+
 export type EvalFixture = {
   readonly repo: string
   readonly buildDir: string
@@ -50,6 +56,12 @@ export type EvalFixture = {
 // walks to. `parks` captures each line through `plumbbob park` before the
 // scaffold commit, so the measured turn walks into parks already on record,
 // in exactly the shape the CLI writes them.
+//
+// `landed` lands steps before the measured turn, each through the CLI: `build`,
+// the files it names written as given, then `checkpoint`, after the plan
+// commit, so the turn walks into a build already partway through a range. The
+// turn ledger is still absent, so the latch stays dormant here as it does for
+// the plan commit.
 export function makeEvalFixture(options: {
   readonly steps: ReadonlyArray<StepSpec>
   readonly gate: Gate
@@ -58,6 +70,7 @@ export function makeEvalFixture(options: {
   readonly intent?: 'seeded' | 'template'
   readonly ranges?: ReadonlyArray<RangeSpec>
   readonly parks?: ReadonlyArray<string>
+  readonly landed?: ReadonlyArray<LandedStep>
 }): EvalFixture {
   const title = options.title ?? 'Eval fixture'
   const seeded = (options.intent ?? 'seeded') === 'seeded'
@@ -77,6 +90,11 @@ export function makeEvalFixture(options: {
   git(repo, ['add', '-A'])
   git(repo, ['commit', '-q', '-m', 'fixture: gate + scaffold'])
   if (seeded) runCli(repo, ['checkpoint', '--plan'])
+  for (const step of options.landed ?? []) {
+    runCli(repo, ['build', String(step.step)])
+    for (const [path, content] of Object.entries(step.files)) writeFileSync(join(repo, path), content)
+    runCli(repo, ['checkpoint', String(step.step)])
+  }
 
   options.seedDiff?.(repo)
   return { repo, buildDir }

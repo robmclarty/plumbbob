@@ -51,7 +51,7 @@ export const C11_RANGES: ReadonlyArray<RangeSpec> = [
 // lean the card can carry; which one the model proposes is its call.
 export const C11_PARK = 'greet() could take a locale, for greetings in other languages'
 
-const CLASSES = ['blocker', 'tangent', 'pivot']
+export const CLASSES = ['blocker', 'tangent', 'pivot']
 
 export const c11: Contract = {
   id: 'c11',
@@ -115,11 +115,11 @@ export const c11: Contract = {
   },
 }
 
-type StopStamp = { readonly range: number }
+export type StopStamp = { readonly range: number }
 
 // The STOP stamp `handoff --stop` writes as the card prints: the range and the
 // TURN it printed in.
-function readStopStamp(buildDir: string): StopStamp | null {
+export function readStopStamp(buildDir: string): StopStamp | null {
   try {
     const m = /^(\d+) \S+/.exec(readFileSync(join(buildDir, 'STOP'), 'utf8').trim())
     return m === null ? null : { range: Number(m[1]) }
@@ -128,17 +128,17 @@ function readStopStamp(buildDir: string): StopStamp | null {
   }
 }
 
-function detailHeader(detail: string): string {
+export function detailHeader(detail: string): string {
   return detail.trimStart().split('\n', 1)[0] || 'no detail file'
 }
 
-function isRangeDetail(detail: string, range: number): boolean {
+export function isRangeDetail(detail: string, range: number): boolean {
   return new RegExp(`^#\\s+Detail\\s*·\\s*Range\\s+${range}\\b`).test(detailHeader(detail))
 }
 
 // The class the detail's `## Harvest` section proposes for one park handle
 // (`- P1 → tangent: <reason>`), or null when no line names it.
-function proposedClass(detail: string, handle: number): string | null {
+export function proposedClass(detail: string, handle: number): string | null {
   const lines = section(detail, 'Harvest').split('\n')
   for (const line of lines) {
     const m = new RegExp(`^-\\s+P${handle}\\s*(?:→|->)\\s*([\\w-]+)`, 'i').exec(line.trim())
@@ -160,7 +160,7 @@ function section(text: string, heading: string): string {
 // The header lines of `.plumbbob/RELAY`, the ending the CLI printed last, as
 // `key value` pairs; empty when no ending was recorded (a sweep without the
 // turn ledger records none).
-function relayHeader(repo: string): ReadonlyMap<string, string> {
+export function relayHeader(repo: string): ReadonlyMap<string, string> {
   const fields = new Map<string, string>()
   const raw = fileContent(repo, join('.plumbbob', 'RELAY'))
   const split = raw.indexOf('\n\n')
