@@ -8,7 +8,9 @@
 // Each hold is also judged against the anatomy probes the receipt already
 // reports: whether the text before the hold carried the ending whole. A hold on
 // an ending that was already whole is a false hold, and a false hold is what
-// would reopen D89 (block-once).
+// would reopen D89 (block-once). A hold over a reply written above a tool call
+// is the one exception: its ending was whole, and the hold asks for the reply,
+// so it is counted apart (D121 (reply-after-the-tools)).
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -24,7 +26,13 @@ export type RelayHold = {
   // Whether the session's text before the hold already carried that ending
   // whole, by the anatomy probes.
   readonly whole: boolean
+  // Whether the hold asked for a reply written above a tool call, rather than
+  // for an ending the turn dropped.
+  readonly buried: boolean
 }
+
+// The words relay.ts writes into a hold over a reply written above a tool call.
+const BURIED = 'the reply stood above a tool call'
 
 // What the relay check's reasons open with: every hold this reader counts is
 // plumbbob's own, never another Stop hook's context. A run's boundary that
@@ -72,7 +80,7 @@ export function holdsIn(jsonl: string): ReadonlyArray<RelayHold> {
     const reason = holdReason(entry)
     if (reason === null) continue
     const tier = tierOf(reason)
-    holds.push({ reason, tier, whole: tier !== null && alreadyWhole(texts.join('\n\n'), tier) })
+    holds.push({ reason, tier, whole: tier !== null && alreadyWhole(texts.join('\n\n'), tier), buried: reason.includes(BURIED) })
   }
   return holds
 }

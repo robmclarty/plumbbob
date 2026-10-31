@@ -88,7 +88,8 @@ type LedgerRun = {
   readonly error?: string
   // Absent on every ledger written before the relay check shipped.
   readonly turns?: ReadonlyArray<{
-    readonly relayHolds?: ReadonlyArray<{ readonly tier: string | null; readonly whole: boolean }>
+    // `buried` is absent on every ledger written before D121 (reply-after-the-tools).
+    readonly relayHolds?: ReadonlyArray<{ readonly tier: string | null; readonly whole: boolean; readonly buried?: boolean }>
   }>
 }
 
@@ -225,7 +226,12 @@ export function renderReport(date: string): string {
     '  across that line, and no receipt before it measured c12. From 2026-10-27',
     '  a request to see the card (`show the pause`) gets a nudge of its own, to',
     '  paste the `--full` output as the whole turn, so c10\'s show-turn rate is',
-    '  not comparable across that line either.',
+    '  not comparable across that line either. From 2026-10-31 the reply turn',
+    '  also reads whether the reply came after the turn\'s last tool call',
+    '  ([D121 (reply-after-the-tools)](../decisions.md#d121)), from the order of',
+    '  its text and tool calls. The sweep runs headless rather than in a client',
+    '  that folds text, so the probe reads the order the model chose, not what a',
+    '  human saw, and no receipt before it measured the order.',
     ...(relayed
       ? [
           '- `no-relay` and `latched` ran at one commit and differ in one hook: the',
@@ -245,8 +251,9 @@ export function renderReport(date: string): string {
 export function renderHolds(arms: ReadonlyArray<Arm>): string[] {
   const measured = arms.filter((a) => a.runs.some((r) => r.turns?.some((t) => t.relayHolds !== undefined) === true))
   if (measured.length === 0) return []
-  const heldIn = (a: Arm): ReadonlyArray<{ run: LedgerRun; tier: string | null; whole: boolean }> =>
+  const heldIn = (a: Arm): ReadonlyArray<{ run: LedgerRun; tier: string | null; whole: boolean; buried?: boolean }> =>
     a.runs.flatMap((run) => (run.turns ?? []).flatMap((t) => (t.relayHolds ?? []).map((h) => ({ run, ...h }))))
+  const buried = measured.some((a) => heldIn(a).some((h) => h.buried === true))
   const lines = [
     '## Relay holds',
     '',
@@ -257,12 +264,19 @@ export function renderHolds(arms: ReadonlyArray<Arm>): string[] {
     'read the parts an ending owes and their order, while the check compares the',
     'relay with the block line for line, so a relay that moved or restyled one line',
     'inside a part reads as whole here and is still held.',
+    ...(buried
+      ? [
+          'A hold over a reply written above a tool call',
+          '([D121 (reply-after-the-tools)](../decisions.md#d121)) is counted apart: its',
+          'ending was whole, and the hold asked for the reply, not the ending.',
+        ]
+      : []),
     '',
     '| arm | holds | on an ending already whole |',
     '| --- | ----- | -------------------------- |',
     ...measured.map((a) => {
       const holds = heldIn(a)
-      return `| ${a.sweep} | ${holds.length} | ${holds.filter((h) => h.whole).length} |`
+      return `| ${a.sweep} | ${holds.length} | ${holds.filter((h) => h.whole && h.buried !== true).length} |`
     }),
     '',
   ]
@@ -270,7 +284,9 @@ export function renderHolds(arms: ReadonlyArray<Arm>): string[] {
     heldIn(a).map(
       (h) =>
         `- ${h.run.contract} run ${h.run.run} (${a.sweep}): held over ${HELD_ENDING[h.tier ?? ''] ?? 'an ending'} ` +
-        `${h.whole ? 'the turn had already carried whole' : 'the turn had not carried whole'}`,
+        (h.buried === true
+          ? 'the turn had carried whole, with the reply above a tool call'
+          : `${h.whole ? 'the turn had already carried whole' : 'the turn had not carried whole'}`),
     ),
   )
   return listed.length === 0 ? lines : [...lines, ...listed, '']

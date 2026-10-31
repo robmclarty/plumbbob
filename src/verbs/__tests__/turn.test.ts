@@ -529,29 +529,31 @@ describe('turnContext — the nudge, D64 (approval-latch) amended: guidance, not
     )
   })
 
-  it('states both halves of answer-then-park: a tangent alone ends on the block, a question beside it is answered first', async () => {
+  it('states both halves of park-then-answer: a tangent alone ends on the block, a question beside it is answered after the capture — D121 (reply-after-the-tools)', async () => {
     const dir = await startedSession()
     writeFileSync(stepPath(dir), '2\n')
     const context = nudgeOf(dir)
     // Only a tangent: the park's block is the whole turn, the rule df9b393 set.
     expect(context).toContain('relay the block it prints whole, with nothing written around it, since that block is the whole turn')
-    // A tangent beside a question: the answer first, the block after it, nothing after the block.
-    expect(context).toContain('a message that also asks something: answer the question first')
-    expect(context).toContain("then relay the park's block after the answer and write nothing after it")
+    // A tangent beside a question: the capture first, then the answer, then the block, and no tool call after the answer.
+    expect(context).toContain('a message that also asks something: run `plumbbob park` first, then answer the question')
+    expect(context).toContain("then end the turn on the park's block, typed as it printed, with no tool call after the answer")
     // The block already ends on the pointer back at the step, so no second ending follows it.
     expect(context).toContain('run no `plumbbob handoff` after it')
   })
 
-  it('reads a message at a pause whose card has shown as the reply, answered in the model\'s words, with no card — D110 (reply-after-the-card)', async () => {
+  it('reads a message at a pause whose card has shown as the reply, answered after every tool call, with no card — D110 (reply-after-the-card), D121 (reply-after-the-tools)', async () => {
     const dir = await startedSession()
     writeFileSync(stepPath(dir), '2\n')
     writeFileSync(pausePath(dir), '2\n') // step 2's card has shown
     const context = nudgeOf(dir)
     expect(context).toContain("step 2's card has shown, and this message is the human's reply to it")
     expect(context).toContain('An approval lands the step: run `plumbbob checkpoint 2`')
-    expect(context).toContain('Anything else is answered in your own words')
-    expect(context).toContain('write `.plumbbob/detail.md` again so the record matches what lands')
-    expect(context).toContain('Print no card for it: run `plumbbob handoff` and end the turn on the one line it prints')
+    expect(context).toContain('Anything else is answered in your own words, after every tool call and with none after it')
+    expect(context).toContain('write `.plumbbob/detail.md` again when a change moves what the card said, so the record matches what lands')
+    expect(context).toContain('run `plumbbob handoff` last among them, keeping the one line it prints')
+    expect(context).toContain('Then write your answer and end the turn on that line, typed as it printed, with no tool call after your answer')
+    expect(context).toContain('Print no card for it.')
     expect(context).toContain(
       'Only when the human asks to see the card again, run `plumbbob handoff --full` and paste its output exactly as it printed, as the whole turn',
     )
@@ -569,7 +571,7 @@ describe('turnContext — the nudge, D64 (approval-latch) amended: guidance, not
     }
   })
 
-  it("reads a message at a stop card waiting for its reply the same way, with handoff's --stop", async () => {
+  it("reads a message at a stop card waiting for its reply the same way, with handoff's --stop — D121 (reply-after-the-tools)", async () => {
     const dir = await startedSession()
     writeFileSync(intentPath(dir), STOPPING)
     writeFileSync(stopPath(dir), '1 3\n') // range 1's card printed in turn 3
@@ -578,7 +580,8 @@ describe('turnContext — the nudge, D64 (approval-latch) amended: guidance, not
     expect(context).toContain("range 1 of 2's stop card has shown, and this message is the human's reply to it")
     expect(context).toContain('then run `plumbbob harvest` and relay its ending')
     expect(context).toContain("(a lean is its line under the detail file's `## Harvest`)")
-    expect(context).toContain('run `plumbbob handoff --stop` and end the turn on the one line it prints')
+    expect(context).toContain('run `plumbbob handoff --stop` last among them, keeping the one line it prints')
+    expect(context).toContain('Then write your answer and end the turn on that line, typed as it printed, with no tool call after your answer')
     expect(context).toContain(
       'Only when the human asks to see the card again, run `plumbbob handoff --stop --full` and paste its output exactly as it printed, as the whole turn',
     )

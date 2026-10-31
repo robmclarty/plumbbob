@@ -23,6 +23,12 @@
 
 import { info, type Check } from './assert.ts'
 
+// One part of a turn, in the order the client rendered it: a stretch of the
+// model's text, or a tool call. The joined text cannot say where a reply sat
+// against the turn's tool calls; these can, which is what a client that folds
+// text written before a tool call turns on (D121 (reply-after-the-tools)).
+export type TurnPart = { readonly kind: 'text'; readonly text: string } | { readonly kind: 'tool'; readonly name: string }
+
 // A labeled line: one bold token, a colon, then text that wraps. Every part of
 // an ending outside the readout fence and the state table is one of these.
 const LABEL = /^\*\*([^*]+)\*\*:/
@@ -388,9 +394,9 @@ export function endingRenders(a: Anatomy, tier: Tier): boolean {
 // whether it paused in the right shape is a separate measurement, so folding
 // the second into the first would make one rate answer two questions and break
 // comparability with every receipt already written.
-export function anatomyChecks(text: string, tier: Tier): ReadonlyArray<Check> {
+export function anatomyChecks(text: string, tier: Tier, parts?: ReadonlyArray<TurnPart>): ReadonlyArray<Check> {
   const a = readAnatomy(tier === 'plan' ? tailAfterRule(text) : text)
-  if (tier === 'reminder') return reminderChecks(a)
+  if (tier === 'reminder') return reminderChecks(a, parts)
   const checks: Check[] = [
     info(`anatomy: ${tier} ending renders whole`, endingRenders(a, tier), shapeDetail(a, tier)),
   ]
@@ -423,13 +429,35 @@ export function anatomyChecks(text: string, tier: Tier): ReadonlyArray<Check> {
 // the relay" rate every receipt before it measured over first renders alone.
 // The answer stands above the line by design; what the probes read is that the
 // turn ends on the reminder, that no part of the card rode anywhere in it, and
-// that nothing followed the line.
-function reminderChecks(a: Anatomy): ReadonlyArray<Check> {
+// that nothing followed the line. Given the turn's parts, it also reads where
+// the reply sat: after the turn's last tool call, where every client shows it.
+function reminderChecks(a: Anatomy, parts: ReadonlyArray<TurnPart> | undefined): ReadonlyArray<Check> {
   const card = cardParts(a)
   const clean = a.endsOn === 'Next Up' && !a.nestedFence
+  const order = parts === undefined ? [] : [replyAfterTools(parts)]
   return [
     info('anatomy: reminder ending renders whole', endingRenders(a, 'reminder'), shapeDetail(a, 'reminder')),
     info('anatomy: no card on a pause already shown', card.length === 0, card.join(', ')),
     info('anatomy: nothing after the reminder', clean, clean ? '' : (a.strays.at(-1) ?? '')),
+    ...order.map((o) => info('anatomy: the reply follows the last tool call', o.pass, o.detail)),
   ]
+}
+
+// Whether the reply stood after the turn's last tool call: the text written
+// after it carries words above its last labeled line, the reminder. A turn with
+// no tool call passes, since its reply has nothing to sit behind.
+function replyAfterTools(parts: ReadonlyArray<TurnPart>): { readonly pass: boolean; readonly detail: string } {
+  const lastTool = parts.findLastIndex((p) => p.kind === 'tool')
+  if (lastTool === -1) return { pass: true, detail: 'no tool call in the turn' }
+  const after = parts
+    .slice(lastTool + 1)
+    .flatMap((p) => (p.kind === 'text' ? [p.text] : []))
+    .join('\n')
+    .split('\n')
+  if (after.every((l) => l.trim().length === 0)) return { pass: false, detail: 'no text after the last tool call' }
+  const line = after.findLastIndex((l) => LABEL.test(l.trim()))
+  const above = line === -1 ? after : after.slice(0, line)
+  return above.some((l) => l.trim().length > 0)
+    ? { pass: true, detail: '' }
+    : { pass: false, detail: 'the text after the last tool call is the line alone' }
 }

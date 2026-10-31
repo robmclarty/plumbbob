@@ -215,7 +215,7 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    one, the write-versus-relay line of
    [D78 (em-dash-ban)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d78).
 
-   *Then answer the reply in your own words.* The card shows once
+   *Then answer the reply in your own words, after every tool call.* The card shows once
    ([D110 (reply-after-the-card)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d110)):
    every later turn at this pause is your reply, closed by one line. A message that
    **asks** ("expand 2", "what does that mean?", "why did the seam row flag that?") is an
@@ -224,11 +224,16 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    make the change, run the check, and say what moved and what the check found; when the
    change moves what the card said (a judgment row, the Summary, the recommendation), write
    the detail file again so the record matches what lands. Nothing lands until the human
-   says `looks good`. Either way, then run `plumbbob handoff` and paste its output beneath
-   your reply, whole and verbatim: at a pause whose card has shown it prints one line,
-   `**Next Up**: Back to Step <N> of <M> - <title>`, whatever changed since, so your reply
-   stays on screen. The turn is your reply, then that line, and nothing after it. The CLI
-   picks the form, never you: paste whichever one it prints, and never retype the card.
+   says `looks good`. Either way, every tool call comes before your reply and none after
+   it ([D121 (reply-after-the-tools)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d121)):
+   read, edit, run the check, write the detail file, and run `plumbbob handoff` last among
+   them. At a pause whose card has shown it prints one line,
+   `**Next Up**: Back to **Step N** on <Model> - <title>`, whatever changed since. Keep
+   that line, then write your reply, and end the turn on the line, whole and verbatim. The
+   turn is your tool calls, then your reply, then that line, and nothing after it: a
+   client that folds text written before a tool call (Zed, through the agent bridge) shows
+   the line and hides a reply written above the call. The CLI picks the form, never you:
+   paste whichever one it prints, and never retype the card.
 
    The card comes back one way: the human asks to see it (`show the pause`, or any wording
    of it). Then run `plumbbob handoff --full` and paste its output whole, with nothing
@@ -244,8 +249,9 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    stop> |`, the reason the build stops here), Next Up, and the rows beneath it. Relay that
    block whole, the table with the rest (the relay check holds a boundary that dropped a
    row), run no second command, and write nothing around it. A later turn at this boundary
-   is your reply; a `plumbbob handoff` there prints Next Up's one line, since the boundary
-   has shown. It is the
+   is your reply, in the same order as at a pause: a `plumbbob handoff` there prints Next
+   Up's one line, since the boundary has shown, so run it last among your tool calls, then
+   write your reply and end on that line, with no tool call after it. It is the
    orientation tier (no Your Call block, no recommendation), and its Next Up points at the
    next undone step carrying that step's `- model:` recommendation (the plan's
    smallest-model-that-fits call) so the human knows which `/model` to select before

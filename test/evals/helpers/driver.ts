@@ -12,6 +12,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { create_engine, type Engine, type GenerateResult } from 'fascicle'
+import { type TurnPart } from './anatomy.ts'
 import { type RelayHold, sessionHolds } from './holds.ts'
 import { REPO_ROOT, resolvePluginDir, type Sweep } from './plugin.ts'
 
@@ -61,6 +62,10 @@ export type TurnResult = {
   // it. The anatomy readers take the tail for that reason (informational probes
   // only, C1).
   readonly content: string
+  // The same turn as parts in the order the client rendered them: each text
+  // stretch and each tool call (D121 (reply-after-the-tools)). Absent on a
+  // stubbed turn, where the order probe is not read.
+  readonly parts?: ReadonlyArray<TurnPart>
   readonly finishReason: string
   readonly costUsd: number | null // fascicle's estimate; 0/null under OAuth-trivial turns
   readonly inputTokens: number
@@ -183,6 +188,7 @@ function toTurnResult(prompt: string, result: GenerateResult<string>, durationMs
   return {
     prompt,
     content: String(result.content),
+    parts: turnParts(result.steps),
     finishReason: String(result.finish_reason),
     costUsd: result.cost?.total_usd ?? null,
     inputTokens: result.usage.input_tokens,
@@ -191,6 +197,20 @@ function toTurnResult(prompt: string, result: GenerateResult<string>, durationMs
     sessionId,
     relayHolds: sessionHolds(sessionId),
   }
+}
+
+// A turn's parts in the order the client rendered them, read from fascicle's
+// steps. The claude_cli adapter closes a step at each tool result, and within a
+// step the text an assistant message carried comes before its tool calls, so a
+// step's text, then its calls, is the order they stood on screen. The adapter
+// files every content part that is not text as a tool call, a `thinking` block
+// among them, with no name; those are not tool calls, and one read as a call
+// after the reply failed the order probe on a turn whose reply came last.
+export function turnParts(steps: GenerateResult<string>['steps']): ReadonlyArray<TurnPart> {
+  return steps.flatMap((step) => [
+    ...(step.text.trim().length > 0 ? [{ kind: 'text' as const, text: step.text }] : []),
+    ...step.tool_calls.flatMap((call) => (typeof call.name === 'string' && call.name.length > 0 ? [{ kind: 'tool' as const, name: call.name }] : [])),
+  ])
 }
 
 function readCount(raw: string | undefined, fallback: number): number {

@@ -12,7 +12,9 @@
 // it has is the turn hook's pause nudge and the CLI. That is the session the
 // bug lived in, where the hook's park line filed feedback as a tangent and a
 // stale stamp sent the reply back as the whole card. The reminder probes share
-// their names with c10's, since both read a turn at a pause already shown.
+// their names with c10's, since both read a turn at a pause already shown,
+// the order probe among them: whether the reply followed the turn's last tool
+// call (D121 (reply-after-the-tools)).
 
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -57,7 +59,7 @@ export const c12: Contract = {
         check('no unledgered commits', unledgeredCommits(repo, t0.headSha).length === 0),
         // Two tiers in one contract: the first render, and the reply at a pause already shown.
         ...anatomyChecks(turn1.content, 'decision'),
-        ...anatomyChecks(turn2.content, 'reminder'),
+        ...anatomyChecks(turn2.content, 'reminder', turn2.parts),
       ],
     }
   },

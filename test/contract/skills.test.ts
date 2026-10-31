@@ -503,7 +503,7 @@ describe('run — a range of the plan, walked by the build skill — D95 (run-ve
     expect(body).toContain('`../harvest/SKILL.md`')
   })
 
-  it('settles the card in one reply: looks good records it, a change and a question each end on the reminder — D102 (settle-in-one-reply), D110 (reply-after-the-card)', () => {
+  it('settles the card in one reply: looks good records it, a change and a question each end on the reminder — D102 (settle-in-one-reply), D110 (reply-after-the-card), D121 (reply-after-the-tools)', () => {
     const section = body.slice(body.indexOf('## 6. The reply at a stop'), body.indexOf('## The hard contracts'))
     const flat = section.replace(/\s+/g, ' ')
     expect(flat).toMatch(/\*\*`looks good`\*\* confirms the review and locks in every lean as proposed/)
@@ -511,8 +511,11 @@ describe('run — a range of the plan, walked by the build skill — D95 (run-ve
     // A change names the park the way the card's lock-in line does (D105 (park-handles)).
     expect(section).toContain('`make P7 a tangent`')
     expect(section).not.toMatch(/park \d+ is a/)
-    // A change is the model's reply, closed on the reminder; the card comes back only on request.
-    expect(flat).toMatch(/\*\*A change\*\*.*say in your own words what moved, then run `plumbbob handoff --stop` and paste the one-line reminder/)
+    // A change is the model's reply, written after the tool calls and closed on the reminder; the card comes back only on request.
+    expect(flat).toMatch(
+      /\*\*A change\*\*.*run `plumbbob handoff --stop` last among your tool calls and keep the one-line reminder it prints, then say in your own words what moved and end the turn on that line, with no tool call after your reply/,
+    )
+    expect(flat).toMatch(/\*\*A question\*\*.*run `plumbbob handoff --stop` first, then write the answer, and end the turn on the one-line reminder it printed, with no tool call after the answer/)
     expect(flat).toMatch(/The card does not come back for a change/)
     expect(section).toMatch(/\*\*A question\*\*[\s\S]*one-line\s+reminder/)
     expect(section).toContain('plumbbob handoff --stop --full')
@@ -854,5 +857,28 @@ describe('a question left to the work is deferred on its opener, not resolved �
 
   it('status relays the Deferred line beneath the questions table', () => {
     expect(flat('status')).toMatch(/a `Deferred` line beneath it naming the questions left to the work and what settles each/)
+  })
+})
+
+describe('a reply at a card already shown comes after every tool call, none after it — D121 (reply-after-the-tools)', () => {
+  /** A skill's body with its line breaks folded to spaces. */
+  const flat = (dir: string): string => parseSkill(dir).body.replace(/\s+/g, ' ')
+
+  for (const [dir, command] of [
+    ['build', 'plumbbob handoff'],
+    ['verify', 'plumbbob handoff <n>'],
+  ] as const) {
+    it(`${dir} runs \`${command}\` last among the tool calls, then writes the reply and ends on the line`, () => {
+      expect(flat(dir)).toContain('every tool call comes before your reply and none after it')
+      expect(flat(dir)).toContain(`run \`${command}\` last among them`)
+      expect(flat(dir)).toContain('`**Next Up**: Back to **Step N** on <Model> - <title>`')
+      expect(flat(dir)).toContain('The turn is your tool calls, then your reply, then that line, and nothing after it')
+      expect(flat(dir)).not.toMatch(/Back to Step <N> of <M>/) // the count left the line in D115 (card-weights)
+    })
+  }
+
+  it('park captures first when a question rides beside the tangent, and answers after the capture', () => {
+    expect(flat('park')).toContain('run `plumbbob park` first, then answer the question, then end the turn on the park\'s block')
+    expect(flat('park')).toContain('with no tool call after the answer')
   })
 })

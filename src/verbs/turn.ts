@@ -19,7 +19,10 @@
 // is in context) still knows it: mid-step, a tangent is parked, not chased;
 // at a pause or a stop whose card has shown, the message is the human's reply,
 // answered in the model's own words and closed on the one line `handoff`
-// prints, never on the card again (D110 (reply-after-the-card)). Guidance
+// prints, never on the card again (D110 (reply-after-the-card)). Every tool
+// call comes before that answer and none after it, since a client that folds
+// text written ahead of a tool call would show the line and hide the answer
+// (D121 (reply-after-the-tools)). Guidance
 // only: it blocks nothing. It ALWAYS exits 0 and any failure degrades to no
 // output, so neither the tick nor the emit can ever wedge prompting.
 
@@ -75,8 +78,9 @@ export function turn(cwd: string, _args: ReadonlyArray<string>): number {
  * Three beats, read off the control files. A step whose pause card has shown
  * (STEP, and PAUSE naming that step's pause) is waiting for the human's call,
  * so the message is the reply to it: answered or acted on in the model's own
- * words, and closed on the one line `handoff` prints rather than the card
- * again (D110 (reply-after-the-card)). A step in flight with no card yet is
+ * words after every tool call, and closed on the one line `handoff` prints
+ * rather than the card again (D110 (reply-after-the-card),
+ * D121 (reply-after-the-tools)). A step in flight with no card yet is
  * mid-build, where a tangent is a park and not an edit. A stop card waiting
  * for its reply is the pause's beat at a stop. At a pause or a stop, a
  * `prompt` asking to see the card (`show the pause`, the phrase the card's
@@ -145,21 +149,26 @@ function parkNudge(step: number): string {
     `plumbbob: step ${step} is in flight — a new idea or tangent is a park, not an edit: ` +
     `capture it with \`plumbbob park "<one line>"\` and relay the block it prints whole, ` +
     `with nothing written around it, since that block is the whole turn. ` +
-    `The one exception is a message that also asks something: answer the question first, ` +
-    `then relay the park's block after the answer and write nothing after it. ` +
+    `The one exception is a message that also asks something: run \`plumbbob park\` first, then answer the question, ` +
+    `then end the turn on the park's block, typed as it printed, with no tool call after the answer. ` +
     `The block's pointer back at the step closes the turn either way, so run no \`plumbbob handoff\` after it. ` +
     `The step stays open and lands when you run \`plumbbob checkpoint ${step}\` after approval.`
   )
 }
 
-/** The nudge at a pause whose card has shown: the message is the reply, and the card is not printed again. */
+/**
+ * The nudge at a pause whose card has shown: the message is the reply, every
+ * tool call comes before it, and the card is not printed again.
+ */
 function pauseNudge(step: number): string {
   return (
     `plumbbob: step ${step}'s card has shown, and this message is the human's reply to it. ` +
     `An approval lands the step: run \`plumbbob checkpoint ${step}\` and relay its ending. ` +
-    `Anything else is answered in your own words: answer the question, or make the change it asks for, ` +
-    `and when a change moves what the card said, write \`.plumbbob/detail.md\` again so the record matches what lands. ` +
-    `Print no card for it: run \`plumbbob handoff\` and end the turn on the one line it prints, with nothing after it. ` +
+    `Anything else is answered in your own words, after every tool call and with none after it: ` +
+    `first read what you need and make the change it asks for, ` +
+    `write \`.plumbbob/detail.md\` again when a change moves what the card said, so the record matches what lands, ` +
+    `and run \`plumbbob handoff\` last among them, keeping the one line it prints. ` +
+    REPLY_LAST +
     `Only when the human asks to see the card again, run \`plumbbob handoff --full\` and paste its output exactly as it printed, as the whole turn. ` +
     `A tangent the human hands you is still a park: \`plumbbob park "<one line>"\`.`
   )
@@ -170,12 +179,22 @@ function stopNudge(range: number, count: number): string {
   return (
     `plumbbob: range ${range} of ${count}'s stop card has shown, and this message is the human's reply to it. ` +
     `An approval records the stop: fold each confirmed blocker into the plan, then run \`plumbbob harvest\` and relay its ending. ` +
-    `Anything else is answered in your own words: answer the question, or make the change it asks for ` +
-    `(a lean is its line under the detail file's \`## Harvest\`). ` +
-    `Print no card for it: run \`plumbbob handoff --stop\` and end the turn on the one line it prints, with nothing after it. ` +
+    `Anything else is answered in your own words, after every tool call and with none after it: ` +
+    `first read what you need and make the change it asks for (a lean is its line under the detail file's \`## Harvest\`), ` +
+    `and run \`plumbbob handoff --stop\` last among them, keeping the one line it prints. ` +
+    REPLY_LAST +
     `Only when the human asks to see the card again, run \`plumbbob handoff --stop --full\` and paste its output exactly as it printed, as the whole turn.`
   )
 }
+
+// How a reply at a card already shown ends, the same at a pause and a stop: the
+// answer after the last tool call, then the line, because a client that folds
+// text written before a tool call shows the line and hides the answer
+// (D121 (reply-after-the-tools)).
+const REPLY_LAST =
+  `Then write your answer and end the turn on that line, typed as it printed, with no tool call after your answer: ` +
+  `a client that folds text written before a tool call would hide the answer and show the line alone. ` +
+  `Print no card for it. `
 
 /**
  * The in-flight step number, or null when no STEP marker is present.

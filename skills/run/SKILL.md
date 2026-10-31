@@ -233,13 +233,16 @@ and the Your Call block names the replies. Read the human's message as one of th
 - **A change** (`make P7 a tangent`, or a change to the review) is direction, and the turn
   that makes it is your reply
   ([D110 (reply-after-the-card)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d110)).
-  Rewrite the detail file's line or section, say in your own words what moved, then run
-  `plumbbob handoff --stop` and paste the one-line reminder it prints beneath your reply.
+  Rewrite the detail file's line or section, run `plumbbob handoff --stop` last among your
+  tool calls and keep the one-line reminder it prints, then say in your own words what
+  moved and end the turn on that line, with no tool call after your reply
+  ([D121 (reply-after-the-tools)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d121)).
   The card does not come back for a change; nothing is recorded until `looks good`, which
   records every lean as the detail file then reads.
 - **A question**, or `expand 2`, is answered from the detail file, the range's commits, or
-  the Log, never from recall; then run `plumbbob handoff --stop` and paste the one-line
-  reminder it prints beneath your answer. Only `show the stop`, or any wording of it, takes
+  the Log, never from recall: read what you need and run `plumbbob handoff --stop` first,
+  then write the answer, and end the turn on the one-line reminder it printed, with no tool
+  call after the answer. Only `show the stop`, or any wording of it, takes
   `plumbbob handoff --stop --full`, which prints the card whole after a short one too, and
   never to read the card for yourself.
 - **`/plumbbob:run`** typed at the card confirms everything the way `looks good` does, and

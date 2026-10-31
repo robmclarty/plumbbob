@@ -14,6 +14,10 @@
 // carry names of their own, so the shared decision and "nothing after the
 // relay" rates still read first renders alone and stay comparable with every
 // receipt before this contract existed; turn 1 joins them as an ordinary pause.
+// Turn 2 also reads whether the answer followed the turn's last tool call,
+// from the order of its text and tool calls (D121 (reply-after-the-tools)). The
+// sweep runs headless, not in a client that folds text, so the probe measures
+// the order the model chose, not what a human saw.
 
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
@@ -65,7 +69,7 @@ export const c10: Contract = {
         // Three tiers in one contract: the first render, a pause already shown,
         // and the card brought back on request.
         ...anatomyChecks(turn1.content, 'decision'),
-        ...anatomyChecks(turn2.content, 'reminder'),
+        ...anatomyChecks(turn2.content, 'reminder', turn2.parts),
         info('anatomy: the pause comes back whole on request', endingRenders(shown, 'decision'), shapeDetail(shown, 'decision')),
       ],
     }

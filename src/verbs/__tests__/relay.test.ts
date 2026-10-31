@@ -590,6 +590,82 @@ describe('relay — a run owes its stop card — D103 (stop-latched)', () => {
   })
 })
 
+describe('relay — a reply above a tool call is held once — D121 (reply-after-the-tools)', () => {
+  const LINE = '**Next Up**: Back to **Step 2** - Second'
+
+  /** Step 2's reminder, printed in the reply's turn, after the card printed in an earlier one. */
+  function reminderTurn(dir: string): string {
+    printed(dir)
+    writeFileSync(turnPath(dir), '5\n') // the human asked a question
+    return printed(dir)
+  }
+
+  it('holds a turn that ended on the reminder alone when the reply stood above a tool call, naming no command', async () => {
+    const dir = await paused()
+    const reminder = reminderTurn(dir)
+    const path = transcript(dir, ['The limiter runs first because a miss has to count.'])
+    expect(held(relayCheck(dir, stop(dir, { last: reminder, transcript: path })))).toBe(
+      'plumbbob: the turn ended on the pause reminder it printed, but the reply stood above a tool call, where a client can fold it out of sight. ' +
+        `Write the reply again, in your own words, with no tool call after it, and end the turn on the same line, typed as it printed: ${LINE}`,
+    )
+    expect(readRelay(dir)?.held).toBe(5)
+    // Held once: the retry ends whatever it holds.
+    expect(held(relayCheck(dir, stop(dir, { last: reminder, transcript: path, active: true })))).toBeNull()
+  })
+
+  it('lets a reply written above the line in the final message end the turn, whatever came before the tool calls', async () => {
+    const dir = await paused()
+    const reminder = reminderTurn(dir)
+    const path = transcript(dir, ['Let me check the diff.'])
+    expect(held(relayCheck(dir, stop(dir, { last: `It runs first.\n\n${reminder}`, transcript: path })))).toBeNull()
+  })
+
+  it('holds nothing when the turn carried no words before the line, the printed line itself aside', async () => {
+    const dir = await paused()
+    const reminder = reminderTurn(dir)
+    expect(held(relayCheck(dir, stop(dir, { last: reminder, transcript: transcript(dir, []) })))).toBeNull()
+    // The final message can already be on disk when Stop fires; it is not words above a tool call.
+    expect(held(relayCheck(dir, stop(dir, { last: reminder, transcript: transcript(dir, [reminder]) })))).toBeNull()
+    expect(readRelay(dir)?.held).toBeUndefined()
+  })
+
+  it('holds nothing when the transcript cannot be read or scoped', async () => {
+    const dir = await paused()
+    const reminder = reminderTurn(dir)
+    const garbled = join(dir, 'garbled.jsonl')
+    writeFileSync(garbled, 'not json\n')
+    for (const path of [null, undefined, garbled]) {
+      expect(held(relayCheck(dir, stop(dir, { last: reminder, transcript: path })))).toBeNull()
+    }
+    expect(readRelay(dir)?.held).toBeUndefined()
+  })
+
+  it('holds a stop reminder the same way, ending on its line', async () => {
+    const dir = await paused()
+    const reminder = "**Next Up**: Back to **Range 2**'s stop - review the parser\n\n"
+    writeRelay(dir, { tier: 'decision', render: 'stop-reminder', command: 'plumbbob handoff --stop', text: reminder })
+    const reason = held(relayCheck(dir, stop(dir, { last: reminder, transcript: transcript(dir, ['It parses first.']) })))
+    expect(reason).toContain('the stop reminder it printed, but the reply stood above a tool call')
+    expect(reason?.endsWith(`typed as it printed: ${reminder.trim()}`)).toBe(true)
+  })
+
+  it('never reads a card this way: a card printed in the turn is no reply', async () => {
+    const dir = await paused()
+    const card = printed(dir)
+    expect(held(relayCheck(dir, stop(dir, { last: card, transcript: transcript(dir, ['Step 2 is built.']) })))).toBeNull()
+  })
+
+  it('holds once per turn even when the retry ran handoff again', async () => {
+    const dir = await paused()
+    const reminder = reminderTurn(dir)
+    const path = transcript(dir, ['It runs first.'])
+    expect(held(relayCheck(dir, stop(dir, { last: reminder, transcript: path })))).not.toBeNull()
+    expect(printed(dir)).toBe(reminder) // the retry ran the command anyway
+    expect(readRelay(dir)?.held).toBe(5)
+    expect(held(relayCheck(dir, stop(dir, { last: reminder, transcript: path })))).toBeNull()
+  })
+})
+
 describe('relay — the hook', () => {
   it('exits 0 with no output on a payload it cannot read', async () => {
     const dir = await paused()

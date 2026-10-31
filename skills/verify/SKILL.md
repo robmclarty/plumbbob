@@ -146,7 +146,7 @@ this skill verifies it the same way: **it reads the diff, not the author**
    one, the write-versus-relay line of
    [D78 (em-dash-ban)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d78).
 
-   *Then answer the reply in your own words.* The card shows once
+   *Then answer the reply in your own words, after every tool call.* The card shows once
    ([D110 (reply-after-the-card)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d110)):
    every later turn at this pause is your reply, closed by one line. A message that
    **asks** ("expand 2", "what does that mean?", "why did the seam row flag that?") is an
@@ -154,12 +154,17 @@ this skill verifies it the same way: **it reads the diff, not the author**
    `## Log` for an older step, never from recall. A message that **directs** is needs-work:
    make the change, run the check, and say what moved and what the check found; when the
    change moves what the card said, write the detail file again so the record matches what
-   lands. Nothing lands until the human says `looks good`. Either way, then run
-   `plumbbob handoff <n>` and paste its output beneath your reply, whole and verbatim: at a
-   pause whose card has shown it prints one line,
-   `**Next Up**: Back to Step <N> of <M> - <title>`, whatever changed since, so your reply
-   stays on screen. The turn is your reply, then that line, and nothing after it. The CLI
-   picks the form, never you: paste whichever one it prints, and never retype the card.
+   lands. Nothing lands until the human says `looks good`. Either way, every tool call
+   comes before your reply and none after it
+   ([D121 (reply-after-the-tools)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d121)):
+   read, edit, run the check, write the detail file, and run `plumbbob handoff <n>` last
+   among them. At a pause whose card has shown it prints one line,
+   `**Next Up**: Back to **Step N** on <Model> - <title>`, whatever changed since. Keep
+   that line, then write your reply, and end the turn on the line, whole and verbatim. The
+   turn is your tool calls, then your reply, then that line, and nothing after it: a
+   client that folds text written before a tool call (Zed, through the agent bridge) shows
+   the line and hides a reply written above the call. The CLI picks the form, never you:
+   paste whichever one it prints, and never retype the card.
 
    The card comes back one way: the human asks to see it (`show the pause`, or any wording
    of it). Then run `plumbbob handoff <n> --full` and paste its output whole, with nothing

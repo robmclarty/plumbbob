@@ -983,7 +983,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   decision tier, with `plumbbob handoff --stop --full` as its reprint.) (Revised 2026-10-26 by [**D110
   (reply-after-the-card)**](#d110): a reminder's retry prints the reminder again, whatever changed since the
   card; and by [**D111 (state-table)**](#d111): the check reads each state-table row as a part and compares the
-  Verdict as the header row's fact.) Promoted from the
+  Verdict as the header row's fact.) (Revised 2026-10-31 by [**D121 (reply-after-the-tools)**](#d121): a
+  reminder carried whole as the final message, with the reply written above a tool call earlier in the turn, is
+  held once too, by a reason that asks for the reply again under no command; it is a second reason, not a relay
+  miss, and the receipt counts it apart from the holds on an ending already whole.) Promoted from the
   2026-10-08 said-once-said-whole build, where Q1 (relay-check-tier) settled the tier and the spike
   settled the mechanics, merging its local `block-once`. *Evidence in*
   `.plumbbob/builds/2026-10-08-said-once-said-whole/spike-01-stop-hook.md` and
@@ -1499,8 +1502,11 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   (Revised 2026-10-27: a message asking to see the card, the `show the pause` the card teaches, gets a nudge of
   its own, to run `--full` and paste what it prints exactly as it printed, as the whole turn, *because* the
   2026-10-27 eval found fresh sessions running `--full` on that request and retyping the card behind a line of
-  their own in three runs of five, each held by the relay check.) *Tagged in* `handoff.ts`, `turn.ts`,
-  `harvest.ts`, `sidecar.ts`, the `build`, `verify`, `run`, and `step` skills, and `docs/presentation.md`.
+  their own in three runs of five, each held by the relay check.) (Revised 2026-10-31 by
+  [**D121 (reply-after-the-tools)**](#d121): the reply comes after the turn's last tool call, with
+  `plumbbob handoff` run first and its line kept, so a client that folds text written before a tool call still
+  shows the reply; the pointer still closes it.) *Tagged in* `handoff.ts`, `turn.ts`, `harvest.ts`,
+  `sidecar.ts`, the `build`, `verify`, `run`, and `step` skills, and `docs/presentation.md`.
 
 - <a id="d111"></a>**D111 (state-table): The state a card or an orientation ending closes on rides one two-column
   table, headed by the Verdict wherever one was measured.** The rows, in order and each only when it says
@@ -1676,6 +1682,33 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   [**D118 (questions-table)**](#d118)'s lead and the reach of its move. *Tagged in* `orient.ts`, `handoff.ts`,
   `status.ts`, the `plan`, `refine`, and `status` skills, `templates/intent.md`, the eval anatomy reader, and
   `docs/presentation.md`.
+
+- <a id="d121"></a>**D121 (reply-after-the-tools): At a card already shown, every tool call comes before the reply
+  and none after it: the model runs `plumbbob handoff` last among its tool calls, keeps the one line it prints,
+  then writes its reply and ends the turn on that line.** The rule holds at a pause, at a stop, and at a park
+  beside a question, where `plumbbob park` runs first and the answer stands above its block. The line still
+  closes the turn, typed as the CLI printed it, so the CLI still picks its form
+  ([**D80 (cli-renders-model-relays)**](#d80)) and the relay check still reads the ending whole. The turn hook's
+  pause, stop, and park nudges say the order, as do the `build`, `verify`, `run`, and `park` skills. The relay
+  check holds the one shape it can see, once ([**D89 (block-once)**](#d89)): a final message that is a reminder
+  alone, no words above its label, while the turn's earlier messages carried words (the printed line itself
+  aside, since the transcript can already hold the final message), is a reply written above a tool call. Its
+  reason asks for the reply again and ends on the line to type, naming no command, since a retry that ran one
+  would bury the reply the same way. A transcript the check cannot read, and a turn with no earlier words, hold
+  nothing; a boundary's pointer and a park's block are driver endings the check never reads, and keep the order
+  in prose alone. The eval's reminder anatomy gains an info probe, `the reply follows the last tool call`, read
+  from the order of a turn's text and tool-call parts, and the receipt counts these holds apart from the holds on
+  an ending already whole. *because* Zed, through the Claude agent ACP bridge, folds text written before a tool
+  call once the call follows it, so a reply written first and closed by a `handoff` run after it reached the
+  human as the Next Up line alone, three turns running at one pause, each costing an "I'm missing your last
+  response" (GitHub issue #12, 2026-10-31). The text after the turn's last tool call is the one place every
+  client shows, and the order is the model's to choose where the fold is not. The issue's other way out, the
+  hook injecting the line for the model to type with no command at all, was not taken: the relay record would
+  need a second writer, and the line is the CLI's to render once the turn's work has moved the plan. Rob asked
+  that the human receive what they need to decide the next move (2026-10-31), and the reply is that. Revises
+  [**D110 (reply-after-the-card)**](#d110), whose reply ran the command after its words, and extends
+  [**D89 (block-once)**](#d89) with a second reason that is not a relay miss. *Tagged in* `turn.ts`, `relay.ts`,
+  the `build`, `verify`, `run`, and `park` skills, the eval anatomy reader, and `docs/presentation.md`.
 
 ### Superseded
 

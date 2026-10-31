@@ -29,6 +29,14 @@
 // stop card is a miss however whole the boundary was, since the card is the
 // run's ending, and its reason names `plumbbob handoff --stop` as the retry.
 //
+// A reminder can close the turn and still leave the human without the reply.
+// When the reply was written before a tool call and the final message is the
+// reminder alone, a client that folds text written ahead of a tool call shows
+// the line and nothing else (GitHub issue #12). That shape is held once too,
+// by a reason that asks for the reply again and ends on the line to type. It
+// names no command, since a retry that ran one would bury the reply the same
+// way (D121 (reply-after-the-tools)).
+//
 // The final message comes from the payload's `last_assistant_message`, never
 // from the transcript, which does not yet hold that message when Stop fires;
 // the transcript supplies only the turn's earlier messages, which an
@@ -77,11 +85,54 @@ export function relayCheck(cwd: string, raw: string): string | null {
   // relayed: the card is the run's ending, and `handoff --stop` overwrites
   // this record once it prints.
   const carried = record.owes !== undefined ? false : carriedEnding(record, payload.last_assistant_message, payload)
+  if (carried === false) return hold(root, record, reason(record))
+  // The reminder closed the turn, but the reply stood above a tool call.
+  if (carried === true && buriedReply(record, payload.last_assistant_message, payload)) return hold(root, record, buriedReason(record))
   // Whole, or not this check's to judge: let the turn end.
-  if (carried !== false) return null
+  return null
+}
+
+/**
+ * Stamp the once in `RELAY` and emit the hold with its reason, or nothing when
+ * the stamp cannot land.
+ */
+function hold(root: string, record: RelayRecord, text: string): string | null {
   // A hold that cannot be counted could repeat, so it is no hold at all.
   if (!holdRelay(root, record)) return null
-  return `${JSON.stringify({ hookSpecificOutput: { hookEventName: 'Stop', additionalContext: reason(record) } })}\n`
+  return `${JSON.stringify({ hookSpecificOutput: { hookEventName: 'Stop', additionalContext: text } })}\n`
+}
+
+// The renders a reply at a card already shown closes on: the one line that
+// points back at the pause or the stop.
+const REMINDERS: ReadonlySet<string> = new Set(['reminder', 'stop-reminder'])
+
+/**
+ * Whether a reminder that closed the turn left the reply above a tool call:
+ * the final message is the reminder alone, with no words above its label,
+ * while the turn's earlier messages carried words. The printed line itself is
+ * not counted as words, since the transcript can already hold the final
+ * message when Stop fires. A transcript the check cannot read or scope is no
+ * evidence, and neither is a turn whose earlier messages said nothing.
+ */
+function buriedReply(record: RelayRecord, last: string, payload: StopPayload): boolean {
+  if (!REMINDERS.has(record.render) || leadOf(last).trim().length > 0) return false
+  const earlier = turnText(payload)
+  if (earlier === null) return false
+  return earlier.split(record.text.trim()).join('').trim().length > 0
+}
+
+/**
+ * The one-line reason for a reply buried above a tool call: what happened, and
+ * the line to end on, with no command to run, since a retry that ran one would
+ * leave the reply above a tool call again.
+ */
+function buriedReason(record: RelayRecord): string {
+  return (
+    `plumbbob: the turn ended on the ${DECISION_NAMES[record.render] ?? 'pause reminder'} it printed, ` +
+    'but the reply stood above a tool call, where a client can fold it out of sight. ' +
+    'Write the reply again, in your own words, with no tool call after it, ' +
+    `and end the turn on the same line, typed as it printed: ${record.text.trim()}`
+  )
 }
 
 /** The Stop payload fields the check reads, every one optional on the wire. */
@@ -208,7 +259,27 @@ type Part = { readonly label: string; readonly lines: ReadonlyArray<string> }
  * runs to the next. Text before the first label is not part of any.
  */
 function partsOf(text: string): ReadonlyArray<Part> {
+  return readEnding(text).parts
+}
+
+/** The text above an ending's first labeled part: the words a reply wrote above the line it closes on. */
+function leadOf(text: string): string {
+  return readEnding(text).lead.join('\n')
+}
+
+/**
+ * One walk over a stretch of text: the lines before its first labeled part,
+ * and the parts themselves, each run to the next, with a fence read as one
+ * stretch so a label inside it opens nothing.
+ */
+function readEnding(text: string): { readonly lead: ReadonlyArray<string>; readonly parts: ReadonlyArray<Part> } {
+  const lead: string[] = []
   const parts: Array<{ label: string; lines: string[] }> = []
+  const keep = (line: string): void => {
+    const last = parts.at(-1)
+    if (last === undefined) lead.push(line)
+    else last.lines.push(line)
+  }
   let rail: string | null = null
   for (const line of text.split('\n')) {
     const fence = /^\s*(`{3,})/.exec(line)?.[1]
@@ -216,17 +287,17 @@ function partsOf(text: string): ReadonlyArray<Part> {
       rail = fence
     } else if (rail !== null && fence !== undefined && fence.length >= rail.length && line.trim() === fence) {
       rail = null
-      parts.at(-1)?.lines.push(line)
+      keep(line)
       continue
     }
     const label = rail === null ? labelOf(line) : undefined
     if (label !== undefined) {
       parts.push({ label, lines: [line] })
     } else {
-      parts.at(-1)?.lines.push(line)
+      keep(line)
     }
   }
-  return parts
+  return { lead, parts }
 }
 
 /**

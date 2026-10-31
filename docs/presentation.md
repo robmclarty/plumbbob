@@ -161,6 +161,21 @@ where the model's prose stands above the CLI's line, and the line still
 closes it: the positional rule holds, because the CLI's line is still the
 last text.
 
+**The reply comes after the turn's last tool call.** Every tool call comes
+first, with `plumbbob handoff` last among them, then the reply, then the
+line it printed, and no tool call after the reply
+([D121 (reply-after-the-tools)](decisions.md#d121)). The text after a
+turn's last tool call is the one place every client shows. Zed, through the
+Claude agent bridge, folds text written before a tool call once the call
+follows it, and a reply written first and closed by a `handoff` run after
+it reached the human as the line alone, three turns running at one pause
+(GitHub issue #12). The model keeps the line from the command's output and
+types it under the reply, so the CLI still chose its form. The relay check
+reads the one shape it can see: a final message that is the line alone,
+while the turn's earlier messages carried words, is held once, and the
+retry writes the reply with no command after it
+([D89 (block-once)](decisions.md#d89)).
+
 The CLI chooses the form, never the model. `plumbbob handoff` keeps a stamp
 that says which card has shown, `PAUSE` holding the step whose pause showed
 or, after a checkpoint, the step whose boundary did, and nothing about what
@@ -667,9 +682,10 @@ the block says how the card comes back, so the reminder never has to.
 
 A message that directs is the fix, and the turn that makes it is a reply
 like any other ([D110 (reply-after-the-card)](decisions.md#d110)): the model
-makes the change, says what moved and what the check found, writes the
-detail file again when the change moved what the card said, and ends on the
-reminder. It does not print the card again. The human who wants the card's
+makes the change, runs the check, writes the detail file again when the
+change moved what the card said, and runs `plumbbob handoff` last, then says
+what moved and what the check found and ends on the reminder, with no tool
+call after its words. It does not print the card again. The human who wants the card's
 view of the change asks for it with `show the pause`, and `looks good` lands
 it as it stands, the checkpoint refusing on red as always.
 
@@ -1863,8 +1879,9 @@ Approving locks in each lean above; to change one, say so first (`make P6 a bloc
 `intent.md` by the harvest skill's rules first, then records the stop
 through `plumbbob harvest`, and relays its ending. A reply that changes a
 lean is direction (`make P7 a tangent`), and the handle is how it names one:
-the model rewrites the detail file's line, says which lean moved, and ends
-on the reminder `plumbbob handoff --stop` prints, since the card has shown
+the model rewrites the detail file's line, runs `plumbbob handoff --stop`,
+says which lean moved, and ends on the reminder it printed, since the card
+has shown, with no tool call after its words
 ([D110 (reply-after-the-card)](decisions.md#d110)). `show the stop` brings
 the card back with the lean as it will be recorded, and `looks good`
 records every lean as the detail file now reads. Nothing lands until
@@ -1874,7 +1891,7 @@ bare range of its own when it brings a call; never into the range that just
 landed, whose call the card is making, since the step would reopen it. A new
 range takes the next free item number, and no item is renumbered, because
 the stamp, the detail file's header, and the record all find the landed
-range by its number. A question is answered and closed on the reminder. The block names no `revert` move: the range's
+range by its number. A question is answered after the turn's tool calls and closed on the reminder. The block names no `revert` move: the range's
 work is in its commits, the tree is clean, and a step the review finds wrong
 is `/plumbbob:revert`'s own call at the boundary the record returns to.
 

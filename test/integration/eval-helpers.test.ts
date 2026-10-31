@@ -7,6 +7,7 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import type { GenerateResult } from 'fascicle'
 import { afterAll, describe, expect, it } from 'vitest'
 import { cleanupFixtures, runCli } from '../helpers/fixture-repo.ts'
 import { c2 } from '../evals/contracts/c2-red.eval.ts'
@@ -15,7 +16,7 @@ import { c10 } from '../evals/contracts/c10-question.eval.ts'
 import { c12 } from '../evals/contracts/c12-feedback.eval.ts'
 import { C11_PARK, C11_RANGES, c11 } from '../evals/contracts/c11-run.eval.ts'
 import { THREE_STEPS, TWO_STEPS } from '../evals/contracts/contract.ts'
-import { armRun, readLedger, type EvalSession, type TurnResult } from '../evals/helpers/driver.ts'
+import { armRun, readLedger, turnParts, type EvalSession, type TurnResult } from '../evals/helpers/driver.ts'
 import {
   bareRefs,
   bulletLabel,
@@ -45,6 +46,7 @@ import {
   tailAfterRule,
   tierParts,
   transitionLabel,
+  type TurnPart,
 } from '../evals/helpers/anatomy.ts'
 import { EVAL_SLUG, makeEvalFixture, seedFlawedGreeting } from '../evals/helpers/fixture.ts'
 import { holdsIn } from '../evals/helpers/holds.ts'
@@ -159,7 +161,7 @@ describe('relay holds (read from a session transcript, judged by the anatomy pro
   it('counts a hold over a paraphrase as a true hold, judged on the text before it', () => {
     const { stdout: card } = runCli(pausedFixtureForHolds(), ['handoff'])
     const holds = holdsIn(transcript([{ text: 'Step 1 is built and green. Approve?' }, { context: CARD_REASON }, { text: card }]))
-    expect(holds).toEqual([{ reason: CARD_REASON, tier: 'decision', whole: false }])
+    expect(holds).toEqual([{ reason: CARD_REASON, tier: 'decision', whole: false, buried: false }])
   })
 
   it('flags a hold over a card the turn had already relayed whole as a false hold', () => {
@@ -223,6 +225,32 @@ describe('relay holds (read from a session transcript, judged by the anatomy pro
       '- c7 run 3 (latched): held over a stop card the turn had not carried whole',
     )
     expect(renderHolds([{ sweep: 'latched', ran: '', runs: [run('latched', 1)] }])).toEqual([])
+  })
+
+  it('reads a hold over a reply above a tool call as its own kind, and counts it apart from the false holds — D121 (reply-after-the-tools)', () => {
+    const line = '**Next Up**: Back to **Step 1** - Create the greeting module\n\n'
+    const buried =
+      'plumbbob: the turn ended on the pause reminder it printed, but the reply stood above a tool call, where a client can fold it out of sight. ' +
+      `Write the reply again, in your own words, with no tool call after it, and end the turn on the same line, typed as it printed: ${line.trim()}`
+    const holds = holdsIn(transcript([{ text: 'It exports greet.' }, { text: line }, { context: buried }, { text: `It exports greet.\n\n${line}` }]))
+    expect(holds.map((h) => [h.tier, h.whole, h.buried])).toEqual([['reminder', true, true]])
+    const run = (relayHolds: ReadonlyArray<{ tier: string | null; whole: boolean; buried?: boolean }>) => ({
+      contract: 'c10',
+      title: 'question',
+      run: 1,
+      sweep: 'latched',
+      outcome: 'pass',
+      model: 'opus',
+      checks: [],
+      costUsd: 0,
+      durationMs: 0,
+      infraRetries: 0,
+      turns: [{ relayHolds }],
+    })
+    const lines = renderHolds([{ sweep: 'latched', ran: '', runs: [run([{ tier: 'reminder', whole: true, buried: true }])] }])
+    expect(lines).toContain('| latched | 1 | 0 |')
+    expect(lines).toContain('- c10 run 1 (latched): held over a pause reminder the turn had carried whole, with the reply above a tool call')
+    expect(lines.join('\n')).toContain('([D121 (reply-after-the-tools)](../decisions.md#d121)) is counted apart')
   })
 })
 
@@ -854,6 +882,39 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
     expect(shapeDetail(forward, 'reminder')).toMatch(/^not the reminder: \*\*Step 2\*\* - Add the farewell module/)
   })
 
+  it('reads whether the reply followed the turn\'s last tool call, from its parts — D121 (reply-after-the-tools)', () => {
+    const line = '**Next Up**: Back to **Step 1** - Create the greeting module\n\n'
+    const answer = 'src/greet.js is the new file, and it exports greet(name).'
+    const order = (parts: ReadonlyArray<TurnPart>) =>
+      anatomyChecks(`${answer}\n\n${line}`, 'reminder', parts).find((c) => c.name === 'anatomy: the reply follows the last tool call')
+    // The tool calls first, then the reply and the line: what every client shows.
+    expect(order([{ kind: 'tool', name: 'Bash' }, { kind: 'text', text: `${answer}\n\n${line}` }])?.pass).toBe(true)
+    // The reply above the handoff call, the line alone after it: issue #12's shape.
+    const buried = order([{ kind: 'text', text: answer }, { kind: 'tool', name: 'Bash' }, { kind: 'text', text: line }])
+    expect([buried?.pass, buried?.detail]).toEqual([false, 'the text after the last tool call is the line alone'])
+    expect(order([{ kind: 'text', text: answer }, { kind: 'tool', name: 'Bash' }])?.detail).toBe('no text after the last tool call')
+    expect(order([{ kind: 'text', text: `${answer}\n\n${line}` }])).toMatchObject({ pass: true, detail: 'no tool call in the turn' })
+    // A reply that carries a label of its own still stands above the line.
+    expect(order([{ kind: 'tool', name: 'Bash' }, { kind: 'text', text: `**Short answer**: yes.\n\n${line}` }])?.pass).toBe(true)
+    // Without parts, the reminder tier reads as it always did: three probes.
+    expect(anatomyChecks(`${answer}\n\n${line}`, 'reminder')).toHaveLength(3)
+  })
+
+  it('reads a turn\'s parts off fascicle\'s steps, skipping the nameless records a thinking block leaves — D121 (reply-after-the-tools)', () => {
+    const usage = { input_tokens: 0, output_tokens: 0 }
+    const call = (name: unknown) => ({ id: 't', name, input: {}, duration_ms: 0, started_at: 0 }) as unknown as GenerateResult<string>['steps'][number]['tool_calls'][number]
+    // The shape c12 run 1 left on 2026-10-31: the handoff call, then a step whose
+    // thinking block the adapter filed as a nameless call beside the reply.
+    const steps = [
+      { index: 0, text: '', tool_calls: [call('Bash')], usage, finish_reason: 'tool_calls' as const },
+      { index: 1, text: 'It exports DEFAULT_NAME.\n\n**Next Up**: Back to **Step 1** - x', tool_calls: [call(undefined)], usage, finish_reason: 'stop' as const },
+    ]
+    expect(turnParts(steps)).toEqual([
+      { kind: 'tool', name: 'Bash' },
+      { kind: 'text', text: 'It exports DEFAULT_NAME.\n\n**Next Up**: Back to **Step 1** - x' },
+    ])
+  })
+
   it('reads contract 10 end to end off the live renderer: a pause, a question, the pause again', async () => {
     // A stub session standing in for the model: each turn does what the build
     // skill asks and hands back what the CLI printed, so the contract's reading
@@ -879,7 +940,9 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
       turn: async (prompt) => {
         const content = turns[n]?.() ?? ''
         n += 1
-        return { prompt, content, finishReason: 'stop', costUsd: 0, inputTokens: 0, outputTokens: 0, durationMs: 1, sessionId: null }
+        // The model's tool calls, then its reply: the order the pause nudge asks for.
+        const parts = [{ kind: 'tool' as const, name: 'Bash' }, { kind: 'text' as const, text: content }]
+        return { prompt, content, parts, finishReason: 'stop', costUsd: 0, inputTokens: 0, outputTokens: 0, durationMs: 1, sessionId: null }
       },
     }
     const { deriveOutcome } = await import('../evals/run.ts')
@@ -895,6 +958,7 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
       'anatomy: reminder ending renders whole',
       'anatomy: no card on a pause already shown',
       'anatomy: nothing after the reminder',
+      'anatomy: the reply follows the last tool call',
       'anatomy: the pause comes back whole on request',
     ])
   })
@@ -931,7 +995,9 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
       turn: async (prompt) => {
         const content = turns[n]?.() ?? ''
         n += 1
-        return { prompt, content, finishReason: 'stop', costUsd: 0, inputTokens: 0, outputTokens: 0, durationMs: 1, sessionId: null }
+        // The model's tool calls, then its reply: the order the pause nudge asks for.
+        const parts = [{ kind: 'tool' as const, name: 'Bash' }, { kind: 'text' as const, text: content }]
+        return { prompt, content, parts, finishReason: 'stop', costUsd: 0, inputTokens: 0, outputTokens: 0, durationMs: 1, sessionId: null }
       },
     }
     const { deriveOutcome } = await import('../evals/run.ts')
