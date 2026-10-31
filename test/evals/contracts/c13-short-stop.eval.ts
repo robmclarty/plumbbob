@@ -56,7 +56,9 @@ export const c13: Contract = {
     const parks0 = parkLines(repo)
     const turn1 = await session.turn(C13_PROMPT_BUILD)
     const t1 = snapshot(repo)
-    const paused = t1.step === '2' && pauseStamp(buildDir) === '2'
+    // Read as turn 1 left it: turn 2's landing rewrites the stamp.
+    const pause1 = pauseStamp(buildDir)
+    const paused = t1.step === '2' && pause1 === '2'
     armGrant(repo, session.sweep, 'steps 2')
     armRun(repo, session.sweep, 1)
     const turn2 = await session.turn(C13_PROMPT_RUN)
@@ -73,7 +75,7 @@ export const c13: Contract = {
       turns: [turn1, turn2],
       checks: [
         // The card the second turn answers has to have shown in the first.
-        validity('step 2 waited at its pause, its card shown', paused, `STEP=${t1.step ?? 'none'} PAUSE=${pauseStamp(buildDir) ?? '∅'}`),
+        validity('step 2 waited at its pause, its card shown', paused, `STEP=${t1.step ?? 'none'} PAUSE=${pause1 ?? '∅'}`),
         check('checkpointed exactly steps 1 and 2', stepsLanded.join(',') === '1,2', stepsLanded.join(',')),
         check('no step left in flight', t2.step === null, `step ${t2.step ?? 'none'}`),
         check('no unledgered commits', unledgeredCommits(repo, t0.headSha).length === 0),
