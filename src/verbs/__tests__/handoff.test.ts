@@ -532,8 +532,8 @@ describe('handoff', () => {
         '',
         '| Question | Why it matters | Lean |',
         '| --- | --- | --- |',
-        `| [**Q1** (round-lines)](${where}#L20): Where do the round lines go? | Otherwise two rounds run together | The reply |`,
-        `| [**Q2**](${where}#L23): Is a bare opener enough? | not given | no lean proposed |`,
+        `| **Q1**: [Where do the round lines go?](${where}#L20) | Otherwise two rounds run together | The reply |`,
+        `| **Q2**: [Is a bare opener enough?](${where}#L23) | not given | no lean proposed |`,
         '',
         '**Your Call**:',
       ].join('\n'),
@@ -551,7 +551,32 @@ describe('handoff', () => {
     expect(plain).not.toContain('yes to all leans')
   })
 
-  it('lists a deferred question beneath the table, out of the leans\' reach, and counts it apart in the row — D120 (deferred-questions)', async () => {
+  it('names each question by its handle, outside the link, and cuts a long one to twelve words, a code span whole and a comma dropped — D124 (brief-questions)', async () => {
+    const questions = [
+      '',
+      '## Open questions',
+      '',
+      '- <a id="q1"></a>**Q1 (echo-the-move)**: When the human replies with bare approval, should the card quote `yes to all leans` back to them?, *resolve by:* decide',
+      '  - *plain:* A quoted move reads as the record.',
+      '  - *lean:* Quote it.',
+      '- Q2: Should the stop card name the range it landed and its steps, or only its parks?',
+      '- Q3: Does a twelve word question like this one stay whole in here?',
+      '- Q4: Does [D4 (default-waves)](#d4) still hold once the cut lands?',
+      '',
+    ].join('\n')
+    const dir = await started(INTENT.replace('1. [x] First', '1. [ ] First') + questions)
+    const { stdout } = captureIo(() => handoff(dir, ['--plan']))
+    const where = relative(dir, intentPath(dir))
+    expect(stdout).toContain(
+      `| **Q1**: [When the human replies with bare approval, should the card quote \`yes to all leans\`…](${where}#L20) | A quoted move reads as the record | Quote it |`,
+    )
+    expect(stdout).toContain(`| **Q2**: [Should the stop card name the range it landed and its steps…](${where}#L23) | not given | no lean proposed |`)
+    expect(stdout).toContain(`| **Q3**: [Does a twelve word question like this one stay whole in here?](${where}#L24) |`)
+    // A link inside the question keeps its label alone, since the question is itself a link.
+    expect(stdout).toContain(`| **Q4**: [Does D4 (default-waves) still hold once the cut lands?](${where}#L25) |`)
+  })
+
+  it('lists a deferred question in its own table beneath, out of the leans\' reach, and counts it apart in the row — D120 (deferred-questions)', async () => {
     const questions = [
       '',
       '## Open questions',
@@ -573,9 +598,13 @@ describe('handoff', () => {
         '',
         '| Question | Why it matters | Lean |',
         '| --- | --- | --- |',
-        `| [**Q1** (round-lines)](${where}#L20): Where do the round lines go? | Otherwise two rounds run together | The reply |`,
+        `| **Q1**: [Where do the round lines go?](${where}#L20) | Otherwise two rounds run together | The reply |`,
         '',
-        `**Deferred**: [**Q2** (latency-budget)](${where}#L23) until step 4's latency numbers`,
+        '**Deferred**: 1 left to the work',
+        '',
+        '| Deferred | Why it matters | Until |',
+        '| --- | --- | --- |',
+        `| **Q2**: [What latency budget do we hold?](${where}#L23) | not given | step 4's latency numbers |`,
         '',
         '**Your Call**:',
       ].join('\n'),
@@ -588,7 +617,7 @@ describe('handoff', () => {
     expect(captureIo(() => handoff(dir, [])).stdout).toContain(stateRow('Questions', '**1** to answer · 1 deferred'))
   })
 
-  it('prints the Deferred line alone, with no table and no move to settle it, when every open question is deferred — D120 (deferred-questions)', async () => {
+  it('prints the Deferred table alone, with no questions table and no move to settle it, when every open question is deferred — D120 (deferred-questions)', async () => {
     const questions = [
       '',
       '## Open questions',
@@ -604,7 +633,12 @@ describe('handoff', () => {
       [
         '---',
         '',
-        `**Deferred**: [**Q1** (latency-budget)](${where}#L20) until step 4's latency numbers · [**Q2**](${where}#L21) until (not given)`,
+        '**Deferred**: 2 left to the work',
+        '',
+        '| Deferred | Why it matters | Until |',
+        '| --- | --- | --- |',
+        `| **Q1**: [What latency budget do we hold?](${where}#L20) | not given | step 4's latency numbers |`,
+        `| **Q2**: [How wide is the window?](${where}#L21) | not given | not given |`,
         '',
         '**Your Call**:',
       ].join('\n'),
@@ -1836,6 +1870,7 @@ async function stopped(intent = STOPPED, detail = RANGE_DETAIL): Promise<{ dir: 
 /** The stop card range 2 of STOPPED renders, whole. */
 function stopCardOf(dir: string, shas: ReadonlyArray<string>): string {
   const intent = relative(dir, intentPath(dir))
+  const log = relative(dir, buildLogPath(dir))
   return [
     '**Summary**: The parser reads the plan, and the card reads the parser.',
     '',
@@ -1857,10 +1892,10 @@ function stopCardOf(dir: string, shas: ReadonlyArray<string>): string {
     '',
     '**Harvested**: **2** of 3 parked ideas open',
     '',
-    '| Park | What it is | Why it matters | Lean |',
-    '| --- | --- | --- | --- |',
-    '| P1 · card renders | one idea | the dashboard prints the link raw | tangent: the card renders it |',
-    '| P2 | another | not given | blocker: step 4 builds on it |',
+    '| Park | Why it matters | Lean |',
+    '| --- | --- | --- |',
+    `| **P1**: [card renders](${log}#L5) | the dashboard prints the link raw | tangent: the card renders it |`,
+    `| **P2**: [another](${log}#L6) | not given | blocker: step 4 builds on it |`,
     '',
     '**Your Call**:',
     '',
@@ -1950,7 +1985,7 @@ describe("handoff --stop — the stop card that closes a run's range", () => {
     writeFileSync(detailPath(dir), RANGE_DETAIL.replace('P1 → tangent: the card renders it', 'P1 → blocker: step 4 reads it'))
     expect(render(dir, ['--stop']).stdout).toBe(STOP_REMINDER)
     const { stdout } = render(dir, ['--stop', '--full'])
-    expect(stdout).toContain('| P1 · card renders | one idea | the dashboard prints the link raw | blocker: step 4 reads it |')
+    expect(stdout).toContain(`| **P1**: [card renders](${relative(dir, buildLogPath(dir))}#L5) | the dashboard prints the link raw | blocker: step 4 reads it |`)
     // The example is the first open park recast as the class its lean is not (D106 (leans-harvested)).
     expect(stdout).toContain('Approving locks in each lean above; to change one, say so first (`make P1 a tangent`).')
   })
@@ -2030,12 +2065,13 @@ describe("handoff --stop — the stop card that closes a run's range", () => {
     )
   })
 
-  it('reads a park the detail left out as `no lean proposed`, and a lean with no reason as its class alone', async () => {
+  it('reads a park the detail left out as `no lean proposed`, named by its own text, and a lean with no reason as its class alone', async () => {
     const detail = RANGE_DETAIL.replace('- P1 → tangent: the card renders it\n', '').replace('P2 → blocker: step 4 builds on it', 'P2 → pivot')
     const { dir } = await stopped(STOPPED, detail)
     const { stdout } = render(dir, ['--stop'])
-    expect(stdout).toContain('| P1 | one idea | not given | no lean proposed |')
-    expect(stdout).toContain('| P2 | another | not given | pivot |\n')
+    const log = relative(dir, buildLogPath(dir))
+    expect(stdout).toContain(`| **P1**: [one idea](${log}#L5) | not given | no lean proposed |`)
+    expect(stdout).toContain(`| **P2**: [another](${log}#L6) | not given | pivot |\n`)
     // A park with no lean recasts as a blocker, the change the card could take.
     expect(stdout).toContain('(`make P1 a blocker`)')
   })
@@ -2119,15 +2155,16 @@ describe("handoff --harvest — a boundary harvest's leans", () => {
     writeFileSync(detailPath(dir), HARVEST_DETAIL)
     atTurn(dir, 3)
     const { code, stdout } = render(dir, ['--harvest'])
+    const log = relative(dir, buildLogPath(dir))
     expect(code).toBe(0)
     expect(stdout).toBe(
       [
         '**Harvested**: **2** of 3 parked ideas open',
         '',
-        '| Park | What it is | Why it matters | Lean |',
-        '| --- | --- | --- | --- |',
-        '| P1 · one | one idea | it can wait | tangent: later |',
-        '| P2 | another | not given | blocker: step 3 reads it |',
+        '| Park | Why it matters | Lean |',
+        '| --- | --- | --- |',
+        `| **P1**: [one](${log}#L5) | it can wait | tangent: later |`,
+        `| **P2**: [another](${log}#L6) | not given | blocker: step 3 reads it |`,
         '',
         '**Your Call**:',
         '',
@@ -2170,10 +2207,14 @@ describe("handoff — the stop's record and its readers", () => {
     const card = stopCardOf(dir, shas)
     // The record keeps the highlights the card leaves in the detail file.
     expect(record.startsWith('**Summary**: The parser reads the plan, and the card reads the parser.\n\n1. Step 2 parses')).toBe(true)
-    // The Readout and the Harvested part read exactly as the card showed them,
-    // with the Verdict between them as a line, since the record keeps no table.
+    // The Readout and the Harvested part read as the card showed them, with the
+    // Verdict between them as a line, since the record keeps no table. Each park
+    // links to the list's heading, since a line number in the log would drift.
     const readout = card.slice(card.indexOf('**Readout**'), card.indexOf('\n\n**Harvested**'))
-    const harvested = card.slice(card.indexOf('**Harvested**'), card.indexOf('\n\n**Your Call**'))
+    const harvested = card
+      .slice(card.indexOf('**Harvested**'), card.indexOf('\n\n**Your Call**'))
+      .replaceAll(`${relative(dir, buildLogPath(dir))}#L5`, '#park-list')
+      .replaceAll(`${relative(dir, buildLogPath(dir))}#L6`, '#park-list')
     expect(record).toContain(
       `${readout}\n\n**Verdict**: ● Plumb\n\n${harvested}\n\n**Recommendation**: Approve it. Both steps held their seams.\n\n**1.** Step 2 parses the section.\n\nThe parser's story.`,
     )
@@ -2186,11 +2227,11 @@ describe("handoff — the stop's record and its readers", () => {
   it('numbers every park ever parked, harvested ones included, so a handle never moves', () => {
     const log = '# Build log\n\n## Park list\n\n> how to park\n- [x] first\n- [ ] second (tangent)\n  - [ ] indented, and counted as the note counts it\n- [X] third\n- [ ] fourth\n\n## Harvest\n\n- [ ] not a park either\n'
     expect(parkList(log)).toEqual([
-      { handle: 1, open: false, text: 'first' },
-      { handle: 2, open: true, text: 'second (tangent)' },
-      { handle: 3, open: true, text: 'indented, and counted as the note counts it' },
-      { handle: 4, open: false, text: 'third' },
-      { handle: 5, open: true, text: 'fourth' },
+      { handle: 1, line: 6, open: false, text: 'first' },
+      { handle: 2, line: 7, open: true, text: 'second (tangent)' },
+      { handle: 3, line: 8, open: true, text: 'indented, and counted as the note counts it' },
+      { handle: 4, line: 9, open: false, text: 'third' },
+      { handle: 5, line: 10, open: true, text: 'fourth' },
     ])
     expect(parkList('# Build log\n')).toEqual([])
   })
@@ -2227,11 +2268,13 @@ describe("handoff — the stop's record and its readers", () => {
     expect(harvestProposals('# Detail · Range 2 · x\n')).toEqual([])
   })
 
-  it('escapes a pipe in a park, so its row keeps its four cells', async () => {
-    const { dir } = await stopped()
+  it('escapes a pipe in a park, so its row keeps its three cells', async () => {
+    const { dir } = await stopped(STOPPED, RANGE_DETAIL.replace('  - title: card renders\n', ''))
     writeFileSync(buildLogPath(dir), PARKS.replace('- [ ] one idea', '- [ ] test isFile()||isFIFO() first'))
     const { stdout } = render(dir, ['--stop'])
-    expect(stdout).toContain('| P1 · card renders | test isFile()\\|\\|isFIFO() first | the dashboard prints the link raw | tangent: the card renders it |')
+    expect(stdout).toContain(
+      `| **P1**: [test isFile()\\|\\|isFIFO() first](${relative(dir, buildLogPath(dir))}#L5) | the dashboard prints the link raw | tangent: the card renders it |`,
+    )
   })
 
   it("reads the range a detail reviews off its header, and nothing off a step's or a harvest's", () => {

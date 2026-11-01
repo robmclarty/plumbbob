@@ -40,7 +40,9 @@ is fine; refining is always available.
 
   Then show the human what is open: run `plumbbob status --questions` and paste its
   table whole, one row per open question with why it matters and your lean, each cell
-  the first sentence of its line, so write each line to stand on that sentence. Then
+  the first sentence of its line, so write each line to stand on that sentence, and keep
+  the question about as long as the other two, since the table cuts it at twelve words
+  ([D124 (brief-questions)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d124)). Then
   invite per-question answers; the human can settle any of them right there in one
   message (`yes to all leans`, or `yes to all leans except Q3: <their answer>`), no
   doc-flipping, no extra round-trip per hole. A resolved question gets
@@ -48,7 +50,7 @@ is fine; refining is always available.
   can also leave one to the work (`defer Q3 until <what settles it>`): run
   `plumbbob defer Q3 "<what settles it>"`, which keeps the question and swaps its
   `*resolve by:*` for `*deferred:* <date>, until <what settles it>` on the opener line,
-  and the table moves it to a `Deferred` line beneath, still open
+  and the card moves it to the `Deferred` table beneath, still open
   ([D120 (deferred-questions)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d120)).
   A question the table still shows that the human has already set aside (parked, settled
   as a tangent, or kept open as a log) is drift: propose deferring it, until what the

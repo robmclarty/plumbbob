@@ -774,14 +774,19 @@ the table says it ([D118 (questions-table)](decisions.md#d118)):
 
 | Question | Why it matters | Lean |
 | --- | --- | --- |
-| [**Q1** (round-lines)](.plumbbob/builds/x/intent.md#L54): Do the Round N lines go in the reply or the folded block? | Otherwise two rounds of builder text run together | The reply |
-| [**Q3**](.plumbbob/builds/x/intent.md#L58): Should the state dir also move the matrix folder? | not given | no lean proposed |
+| **Q1**: [Do the Round N lines go in the reply or the folded block?](.plumbbob/builds/x/intent.md#L54) | Otherwise two rounds of builder text run together | The reply |
+| **Q3**: [Should the state dir also move the matrix folder?](.plumbbob/builds/x/intent.md#L58) | not given | no lean proposed |
 
-**Deferred**: [**Q4** (latency-budget)](.plumbbob/builds/x/intent.md#L61) until step 4's latency numbers
+**Deferred**: 1 left to the work
+
+| Deferred | Why it matters | Until |
+| --- | --- | --- |
+| **Q4**: [What latency budget do we hold?](.plumbbob/builds/x/intent.md#L61) | It sets the request timeout | step 4's latency numbers |
 ```
 
-The handle and slug link to the opener, where the expanded entry still
-holds what a cold reader needs, the stake in full and the lean's reasons.
+The question links to its opener, its handle in bold before the link, and
+the expanded entry there still holds what a cold reader needs, the stake in
+full and the lean's reasons.
 Each cell is the first sentence of its line (the opener's question, the
 `*plain:*` sub-line, the `*lean:*` sub-line), so a row stays one line and
 six questions fit on one screen; the skills ask for a first sentence that
@@ -791,11 +796,27 @@ reply that settled six questions in three words the day this shape was
 first tried, and `plumbbob status --questions` prints the same table alone,
 which refine relays after an attack in place of a prose walk-through.
 
+**The question cell is a glance, not the entry.** A first sentence written
+for a cold reader can run long, and beside a why and a lean of a
+line each it wraps into a tall column down the row. The cell cuts the
+question at twelve words, with an ellipsis where the cut falls, and the
+question's link to its entry carries the rest; a code span counts as one
+word, so the cut never breaks the row's markdown. The why and the lean stay whole,
+since the lean is what `yes to all leans` approves
+([D124 (brief-questions)](decisions.md#d124)). The skills ask for a question
+about as long as the other two, so the cut rarely shows. The same table
+answers a plain ask: a message that names the open questions (`what are the
+open questions?`) gets a turn-hook nudge to run `plumbbob status --questions`
+and paste the table, since every skill that tables them is the human's to
+invoke.
+
 **The table holds only the questions that wait on the human.** A question
 the human chose to leave to the work carries
 `*deferred:* <date>, until <what settles it>` on its opener in place of
-`*resolve by:*`, and it rides one `**Deferred**:` line beneath the table,
-linked to its opener with what will settle it ([D120 (deferred-questions)](decisions.md#d120)). It is
+`*resolve by:*`, and it rides a second table beneath the first, under a
+`**Deferred**:` lead, in the same shape with what will settle it in place of
+the lean ([D120 (deferred-questions)](decisions.md#d120),
+[D124 (brief-questions)](decisions.md#d124)). It is
 still open, so the lead counts it, but it is not a call the human makes now,
 so `yes to all leans` never reaches it. The block gains
 `defer Q3 until <what settles it>`, which runs `plumbbob defer` to write the
@@ -1643,11 +1664,11 @@ spent        3h 12m · 1 red run
 
 **Harvested**: **3** of 8 parked ideas open
 
-| Park | What it is | Why it matters | Lean |
-| --- | --- | --- | --- |
-| P6 · note on the card | the Stop row could carry the range's note too | the note says what to watch for at the stop | tangent: the bracket already points at the item, where the note is |
-| P7 · second drift | recover reports a range naming a step the plan lacks, but not two ranges naming one step | step 10's done-when assumes recover flags both drifts | blocker: a step before 10 teaches recover the second one |
-| P8 · raw link | a stop's markdown link prints raw on the dashboard | the dashboard is read in a fence, where the link stays text | tangent: cosmetic, and the card renders it |
+| Park | Why it matters | Lean |
+| --- | --- | --- |
+| **P6**: [note on the card](.plumbbob/builds/x/build-log.md#L31) | the note says what to watch for at the stop | tangent: the bracket already points at the item, where the note is |
+| **P7**: [second drift](.plumbbob/builds/x/build-log.md#L32) | step 10's done-when assumes recover flags both drifts | blocker: a step before 10 teaches recover the second one |
+| **P8**: [raw link](.plumbbob/builds/x/build-log.md#L33) | the dashboard is read in a fence, where the link stays text | tangent: cosmetic, and the card renders it |
 
 **Your Call**:
 
@@ -1683,8 +1704,8 @@ Its parts, in order, and what each one is:
   ([the range readout](#the-range-readout)), the files the range's commits
   changed listed beneath its `diff` row.
 - **The Harvested part** lists every open park as a row of the lean table:
-  its handle and title, its text, why it matters, and the lean the model
-  proposes ([the Harvested part](#the-harvested-part)). A stop with no park
+  its handle and its title linked to the park's line, why it matters, and
+  the lean the model proposes ([the Harvested part](#the-harvested-part)). A stop with no park
   open renders the card without it ([D100 (stop-card)](decisions.md#d100)):
   the review is the stop's point, the plain block left it nothing to read,
   and the one reply the card then costs is the run the human was going to
@@ -1822,20 +1843,23 @@ per open park in list order ([D112 (lean-table)](decisions.md#d112)):
 ```text
 **Harvested**: **3** of 8 parked ideas open
 
-| Park | What it is | Why it matters | Lean |
-| --- | --- | --- | --- |
-| P6 · note on the card | the Stop row could carry the range's note too | the note says what to watch for at the stop | tangent: the bracket already points at the item, where the note is |
-| P7 · second drift | recover reports a range naming a step the plan lacks, but not two ranges naming one step | step 10's done-when assumes recover flags both drifts | blocker: a step before 10 teaches recover the second one |
-| P8 · raw link | a stop's markdown link prints raw on the dashboard | the dashboard is read in a fence, where the link stays text | tangent: cosmetic, and the card renders it |
+| Park | Why it matters | Lean |
+| --- | --- | --- |
+| **P6**: [note on the card](.plumbbob/builds/x/build-log.md#L31) | the note says what to watch for at the stop | tangent: the bracket already points at the item, where the note is |
+| **P7**: [second drift](.plumbbob/builds/x/build-log.md#L32) | step 10's done-when assumes recover flags both drifts | blocker: a step before 10 teaches recover the second one |
+| **P8**: [raw link](.plumbbob/builds/x/build-log.md#L33) | the dashboard is read in a fence, where the link stays text | tangent: cosmetic, and the card renders it |
 ```
 
-A row is the park's handle and the short title the model gives it, the
-park's text as the list holds it, why it matters, and the lean: the class
-the model proposes, a colon, and its reason in one clause. The handle and the
-text are the CLI's, read from the list, so the card can never misquote a
-park; the title, the why, and the lean are the model's, written into the
-detail file's `## Harvest` section as a proposal line with two field lines
-indented beneath it, and handoff joins them into the row:
+A row is the park's handle in bold, then the short title the model gives
+it, linked to the park's line in the build log, then why it matters and the
+lean: the class the model proposes, a colon, and its reason in one clause.
+The handle and the link are the CLI's, read from the list, so a row always
+points at the park it names. The park's own words are one click away rather
+than a column of their own, which keeps the row a glance, the way the open
+questions table reads ([D125 (linked-park-names)](decisions.md#d125)). The
+title, the why, and the lean are the model's, written into the detail
+file's `## Harvest` section as a proposal line with two field lines indented
+beneath it, and handoff joins them into the row:
 
 ```markdown
 - P6 → tangent: the bracket already points at the item, where the note is
@@ -1857,11 +1881,16 @@ The classes are the harvest skill's three, `blocker`, `tangent`, and
 `pivot`, and the default for anything uncertain is `tangent`, as the skill
 has always said. A gap reads as one: a park the section leaves out renders
 `no lean proposed` in the Lean column, and the record leaves that park open;
-a proposal with no field lines renders the handle alone and `not given` for
-the why, which is also how a detail written before the table still reads. A
-tag a park's line carries (`(tangent)` from `plumbbob park`) is the parker's
-own guess and stays in the text; the Lean column is the proposal. A pipe in
-a park's text is escaped, so its row keeps its four cells.
+a proposal with no field lines names the park by its own text, cut at
+twelve words, with `not given` for the why, which is also how a detail
+written before the table still reads. A tag a park's line carries
+(`(tangent)` from `plumbbob park`) is the parker's own guess and stays in the
+text; the Lean column is the proposal. A pipe in a name is escaped, so its
+row keeps its three cells. The stop's record, written into the build log
+itself, links each park to the `## Park list` heading instead of its line:
+the step mirror above the list grows as steps are added, so a line number
+there would drift, and the handle already names the park's place in the
+list.
 
 ### The reply at a stop
 

@@ -137,7 +137,7 @@ describe('generated markdown lints clean under a consumer-strict gate', () => {
     expect(await lintFindings(dir, [buildLogPath(dir)])).toEqual([])
   })
 
-  it("a stop's record: the lean table nested under the range's Log line, a pipe in a park included — D112 (lean-table)", async () => {
+  it("a stop's record: the lean table nested under the range's Log line, a pipe in a park included — D112 (lean-table), D125 (linked-park-names)", async () => {
     const dir = makeTempRepo()
     await captureIoAsync(() => start(dir, ['Record the stop', '--slug', 'record-the-stop']))
     writeFileSync(
@@ -183,7 +183,6 @@ describe('generated markdown lints clean under a consumer-strict gate', () => {
         '## Harvest',
         '',
         '- P1 → tangent: it can wait',
-        '  - title: pipe check',
         '  - why: the check reads both kinds of file',
         '- P2 → blocker: the next range reads it',
         '',
@@ -198,7 +197,8 @@ describe('generated markdown lints clean under a consumer-strict gate', () => {
     writeFileSync(turnPath(dir), '5\n')
     expect(captureIo(() => harvest(dir, [])).code).toBe(0)
     const log = readFileSync(buildLogPath(dir), 'utf8')
-    expect(log).toContain('  | P1 · pipe check | test isFile()\\|\\|isFIFO() first (tangent) | the check reads both kinds of file | tangent: it can wait |')
+    // With no title, the park's own text names it, linked to the list's heading, which the lint below resolves.
+    expect(log).toContain('  | **P1**: [test isFile()\\|\\|isFIFO() first (tangent)](#park-list) | the check reads both kinds of file | tangent: it can wait |')
     expect(await lintFindings(dir, [buildLogPath(dir)])).toEqual([])
   })
 

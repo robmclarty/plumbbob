@@ -34,7 +34,7 @@ export type TurnPart = { readonly kind: 'text'; readonly text: string } | { read
 const LABEL = /^\*\*([^*]+)\*\*:/
 // A markdown table row. A row of two cells is a state-table row, a part of its
 // own labeled by its first cell (D111 (state-table)); any other row, the
-// delimiter or the lean table's four cells (D112 (lean-table)), belongs to the
+// delimiter or the lean table's three cells (D112 (lean-table)), belongs to the
 // part above it.
 const TABLE_ROW = /^\|.*\|$/
 // The table's delimiter row, which labels nothing.

@@ -514,7 +514,7 @@ function stopCard(root: string, slug: string | null, named: string | null, full:
     parts.push([READOUT_LABEL, '', ...fence('text', review.readout)].join('\n'))
   }
   parts.push(
-    harvestPart(parks, proposals) ?? '',
+    harvestPart(parks, proposals, parkLine(root, slug)) ?? '',
     stopCallBlock(leanExample(parks, proposals), intent),
     stateTable(
       stateRows({
@@ -624,8 +624,11 @@ function rangeMeasure(root: string, slug: string | null, intent: string, range: 
   })
 }
 
-/** One line of the park list: its handle, whether it is still open, and its text as the list holds it. */
-export type Park = { readonly handle: number; readonly open: boolean; readonly text: string }
+/**
+ * One line of the park list: its handle, the line it sits on in the build
+ * log, whether it is still open, and its text as the list holds it.
+ */
+export type Park = { readonly handle: number; readonly line: number; readonly open: boolean; readonly text: string }
 
 /**
  * The park list under `build-log.md`'s `## Park list`, each line with its
@@ -634,9 +637,9 @@ export type Park = { readonly handle: number; readonly open: boolean; readonly t
  *
  * A line is never deleted from the list, only flipped, so the handle is
  * stable for the life of the build, and it counts the same lines the note's
- * `parked 3 of 8 open` does. The stop card prints the handle and the text
- * from here, and `plumbbob harvest` matches a proposal to its park by the
- * handle alone.
+ * `parked 3 of 8 open` does. The stop card prints the handle and links the
+ * line from here, and `plumbbob harvest` matches a proposal to its park by
+ * the handle alone.
  */
 export function parkList(buildLog: string): Park[] {
   const lines = buildLog.split('\n')
@@ -645,9 +648,9 @@ export function parkList(buildLog: string): Park[] {
     return []
   }
   const end = lines.findIndex((l, i) => i > start && l.startsWith('## '))
-  return lines.slice(start + 1, end === -1 ? lines.length : end).flatMap((line) => {
+  return lines.slice(start + 1, end === -1 ? lines.length : end).flatMap((line, i) => {
     const m = /^-\s+\[([ xX])\]\s+(\S.*)$/.exec(line.trim())
-    return m === null ? [] : [{ open: m[1] === ' ', text: (m[2] ?? '').trim() }]
+    return m === null ? [] : [{ line: start + i + 2, open: m[1] === ' ', text: (m[2] ?? '').trim() }]
   }).map((park, i) => ({ handle: i + 1, ...park }))
 }
 
@@ -751,36 +754,48 @@ export function waitingCard(root: string, slug: string | null, intent: string): 
 /**
  * The Harvested part: a lead that sizes the list, then the lean table, one row
  * per open park in list order (D112 (lean-table)). The first column is the
- * park's `P6` handle with the short title the detail file gives it, the second
- * the park's text exactly as the list holds it, so the card can never
- * misquote a park, the third why it matters, and the fourth the lean:
- * `tangent: <the reason>`. A park the detail left out reads
- * `no lean proposed`, and a missing why reads `not given`, so a silent
- * omission is one on the card. Null with no park open, which renders the card
- * without the part.
+ * park's `P6` handle in bold, then the short title the detail file gives it,
+ * linked to the park's line, so the park's own words are one click away and
+ * the row stays a glance; the second is why it matters, and the third the
+ * lean: `tangent: <the reason>` (D125 (linked-park-names)). A park the detail
+ * gave no title is named by its own text, cut to the word budget; one it left
+ * out reads `no lean proposed`, and a missing why reads `not given`, so a
+ * silent omission is one on the card. Null with no park open, which renders
+ * the card without the part.
  *
- * The handle rides its own cell, never a list number, because the number the
+ * The handle leads the cell, never a list number, because the number the
  * human reads has to be the one the record matches (D105 (park-handles)).
  */
-function harvestPart(parks: ReadonlyArray<Park>, proposals: ReadonlyArray<Proposal>): string | null {
+function harvestPart(parks: ReadonlyArray<Park>, proposals: ReadonlyArray<Proposal>, link: (park: Park) => string): string | null {
   const open = parks.filter((p) => p.open)
   if (open.length === 0) {
     return null
   }
   const rows = open.map((park) => {
     const proposal = proposals.find((p) => p.handle === park.handle)
-    const name = proposal === undefined || proposal.title.length === 0 ? `P${park.handle}` : `P${park.handle} · ${proposal.title}`
+    const title = proposal === undefined || proposal.title.length === 0 ? brief(unlinked(park.text)) : unlinked(proposal.title)
     const why = proposal === undefined || proposal.why.length === 0 ? 'not given' : proposal.why
     const lean = proposal === undefined ? 'no lean proposed' : proposal.reason.length === 0 ? proposal.kind : `${proposal.kind}: ${proposal.reason}`
-    return `| ${cell(name)} | ${cell(park.text)} | ${cell(why)} | ${cell(lean)} |`
+    return `| ${cell(`**P${park.handle}**: [${title}](${link(park)})`)} | ${cell(why)} | ${cell(lean)} |`
   })
   const lead = `**Harvested**: **${open.length}** of ${parks.length} parked idea${parks.length === 1 ? '' : 's'} open`
-  return [lead, '', LEAN_TABLE_HEAD, '| --- | --- | --- | --- |', ...rows].join('\n')
+  return [lead, '', LEAN_TABLE_HEAD, '| --- | --- | --- |', ...rows].join('\n')
 }
 
 // The lean table's header row, the same on the stop card, a boundary
 // harvest's render, and the stop's record.
-const LEAN_TABLE_HEAD = '| Park | What it is | Why it matters | Lean |'
+const LEAN_TABLE_HEAD = '| Park | Why it matters | Lean |'
+
+/** A card's link to a park: its line in the build log, from the session root. */
+function parkLine(root: string, slug: string | null): (park: Park) => string {
+  const log = relative(root, buildLogPath(root, slug))
+  return (park) => `${log}#L${park.line}`
+}
+
+// The record's link to a park: the list's heading in the same file. A line
+// number there would drift as the step mirror above the list grows, and the
+// handle already names the park's place in the list.
+const RECORD_PARK_LINK = '#park-list'
 
 /**
  * A boundary harvest's leans (`plumbbob handoff --harvest`): the Harvested
@@ -804,7 +819,7 @@ function harvestCard(root: string, slug: string | null): number {
   }
   const parks = parkList(readOr(buildLogPath(root, slug)))
   const proposals = harvestProposals(detail)
-  const part = harvestPart(parks, proposals)
+  const part = harvestPart(parks, proposals, parkLine(root, slug))
   if (part === null) {
     process.stderr.write(notice({ fact: 'no harvest to render', detail: ['no park is open'], remedy: 'plumbbob park "<one line>" captures one' }))
     return 1
@@ -923,7 +938,7 @@ export function stopRecord(root: string, slug: string | null, written: string, b
     parts.push([READOUT_LABEL, '', ...fence('text', review.readout)].join('\n'))
   }
   parts.push(verdictLine(review.verdict))
-  const harvest = harvestPart(parkList(buildLog), harvestProposals(detail))
+  const harvest = harvestPart(parkList(buildLog), harvestProposals(detail), () => RECORD_PARK_LINK)
   if (harvest !== null) {
     parts.push(harvest)
   }
@@ -1396,27 +1411,35 @@ function planCallBlock(first: Step | undefined, run: Run, publish: Publish, toAn
 }
 
 /**
- * The open questions as one table, a row per question: the handle and slug
- * linked to the opener in `intent.md`, the question, why it matters, and the
- * lean, each clipped to its first sentence so a row stays one line and the
- * whole set fits on a screen (D118 (questions-table)). The expanded entry in
- * `intent.md` stays what a cold reader needs; this is the chat-side view of
- * it. A gap reads as one, the way the lean table's do: `not given` with no
- * why, `no lean proposed` with no lean. Null with no question open.
+ * The open questions as one table, a row per question: the handle in bold,
+ * then the question linked to its opener in `intent.md`, why it matters, and
+ * the lean, each clipped to its first sentence so a row stays one line and the
+ * whole set fits on a screen (D118 (questions-table)). The question is cut
+ * again to a word budget, so it reads about as long as the why and the lean
+ * beside it rather than standing a column of wrapped text down the row
+ * (D124 (brief-questions)). The expanded entry in `intent.md` stays what a
+ * cold reader needs; this is the chat-side view of it. A gap reads as one,
+ * the way the lean table's do: `not given` with no why, `no lean proposed`
+ * with no lean. Null with no question open.
  *
- * The table holds only the questions that wait on the human. A question
- * deferred to the work rides one `**Deferred**:` line beneath it, linked to
- * its opener with what will settle it, and with every open question deferred
- * that line stands alone (D120 (deferred-questions)).
+ * The table holds only the questions that wait on the human. The questions
+ * deferred to the work ride a second table beneath it, in the same shape, with
+ * what will settle each in place of the lean, and with every open question
+ * deferred that table stands alone (D120 (deferred-questions),
+ * D124 (brief-questions)).
  *
  * ```text
  * **Open questions**: **1** to answer · 1 deferred
  *
  * | Question | Why it matters | Lean |
  * | --- | --- | --- |
- * | [**Q1** (round-lines)](…/intent.md#L54): Where do the round lines go? | Two rounds run together | The reply |
+ * | **Q1**: [Where do the round lines go?](…/intent.md#L54) | Two rounds run together | The reply |
  *
- * **Deferred**: [**Q2** (latency-budget)](…/intent.md#L58) until step 4's latency numbers
+ * **Deferred**: 1 left to the work
+ *
+ * | Deferred | Why it matters | Until |
+ * | --- | --- | --- |
+ * | **Q2**: [What latency budget do we hold?](…/intent.md#L58) | It sets the timeout | step 4's latency numbers |
  * ```
  */
 export function questionsPart(rows: ReadonlyArray<OpenQuestion>, where: string): string | null {
@@ -1425,24 +1448,31 @@ export function questionsPart(rows: ReadonlyArray<OpenQuestion>, where: string):
   }
   const toAnswer = rows.filter((q) => q.deferred === null)
   const deferred = rows.filter((q) => q.deferred !== null)
-  const body = toAnswer.map((q) => {
-    const question = `[${questionHandle(q)}](${where}#L${q.line}): ${firstSentence(q.question)}`
+  const row = (q: OpenQuestion, last: string): string => {
+    const question = `**${q.id}**: [${questionName(q)}](${where}#L${q.line})`
     const why = q.why === null || q.why.length === 0 ? 'not given' : firstSentence(q.why)
-    const lean = q.lean === null || q.lean.length === 0 ? 'no lean proposed' : firstSentence(q.lean)
-    return `| ${cell(question)} | ${cell(why)} | ${cell(lean)} |`
-  })
+    return `| ${cell(question)} | ${cell(why)} | ${cell(last)} |`
+  }
+  const leanOf = (q: OpenQuestion): string => (q.lean === null || q.lean.length === 0 ? 'no lean proposed' : firstSentence(q.lean))
+  const untilOf = (q: OpenQuestion): string => firstSentence((q.deferred ?? '').replace(/^until\s+/i, '')) || 'not given'
   const table =
     toAnswer.length === 0
       ? []
-      : [`**Open questions**: ${questionsValue(questionTotals(rows))}`, '', QUESTIONS_TABLE_HEAD, '| --- | --- | --- |', ...body]
-  const settles = (q: OpenQuestion): string => (q.deferred === null || q.deferred.length === 0 ? 'until (not given)' : firstSentence(q.deferred))
-  const line = deferred.length === 0 ? [] : [`**Deferred**: ${deferred.map((q) => `[${questionHandle(q)}](${where}#L${q.line}) ${settles(q)}`).join(' · ')}`]
-  return [table.join('\n'), ...line].filter((part) => part.length > 0).join('\n\n')
+      : [`**Open questions**: ${questionsValue(questionTotals(rows))}`, '', QUESTIONS_TABLE_HEAD, '| --- | --- | --- |', ...toAnswer.map((q) => row(q, leanOf(q)))]
+  const waiting =
+    deferred.length === 0
+      ? []
+      : [`**Deferred**: ${deferred.length} left to the work`, '', DEFERRED_TABLE_HEAD, '| --- | --- | --- |', ...deferred.map((q) => row(q, untilOf(q)))]
+  return [table, waiting].filter((part) => part.length > 0).map((part) => part.join('\n')).join('\n\n')
 }
 
-/** A question's handle as the table and the Deferred line show it: the id bold, then its slug. */
-function questionHandle(q: OpenQuestion): string {
-  return q.slug === null ? `**${q.id}**` : `**${q.id}** (${q.slug})`
+// The deferred questions' table: the questions table's shape, with what will
+// settle each question where the lean would be.
+const DEFERRED_TABLE_HEAD = '| Deferred | Why it matters | Until |'
+
+/** A question as its link shows it: the first sentence, cut to the word budget, or `not given` for an opener with none. */
+function questionName(q: OpenQuestion): string {
+  return q.question.length === 0 ? 'not given' : brief(firstSentence(unlinked(q.question)))
 }
 
 // The questions table's header row, the same on the plan card and under
@@ -1457,6 +1487,36 @@ const QUESTIONS_TABLE_HEAD = '| Question | Why it matters | Lean |'
 function firstSentence(text: string): string {
   const sentence = /^(.+?[.?!])(?=\s|$)/.exec(text.trim())?.[1] ?? text.trim()
   return sentence.replace(/\.$/, '')
+}
+
+// A table name's word budget: about as long as a why and a lean run, so the
+// table reads as a review, and the link the name rides carries the rest.
+const BRIEF_WORDS = 12
+
+// A word as the budget counts it: a run of plain characters, with a code span
+// inside it kept whole.
+const BUDGET_WORD = /(?:`[^`]*`|[^\s`]|`)+/g
+
+/**
+ * A name cut to the table's word budget, an ellipsis where the cut falls and
+ * any comma before it dropped. A code span counts as one word and is never cut
+ * through, since half of one would break the row's markdown. The text as
+ * written when it fits.
+ */
+function brief(text: string): string {
+  const words = text.match(BUDGET_WORD) ?? []
+  if (words.length <= BRIEF_WORDS) {
+    return text
+  }
+  return `${words.slice(0, BRIEF_WORDS).join(' ').replace(/[,;:]$/, '')}…`
+}
+
+/**
+ * A name's text with each link in it reduced to its label: the name is itself
+ * the link to its entry, and a link nested inside another's label breaks both.
+ */
+function unlinked(text: string): string {
+  return text.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
 }
 
 /**

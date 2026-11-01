@@ -132,6 +132,8 @@ The human reads *plain* to understand, then *lean* to approve or redirect: one
 pass, no round-trip. The plan card tables the open questions a row each, and a cell
 shows only the first sentence of its line, so open the question, *plain*, and *lean*
 each on a sentence that stands alone: the question, why it matters, the answer.
+Keep the question about as long as the other two; the cell cuts it at twelve
+words, and the question links to its entry for the rest.
 
 When a question resolves, swap *resolve by:* for *resolved:* <date, the call> ON THE
 OPENER LINE, e.g.
@@ -155,8 +157,8 @@ the opener reads
 
   **Q4 (latency-budget)**: What latency budget do we hold?, *deferred:* 2026-10-31, until step 4's latency numbers
 
-It stays open and still counts, but the card lists it on a line beneath the table
-rather than in it, so `yes to all leans` leaves it alone. Once the work answers it,
+It stays open and still counts, but the card lists it in a Deferred table beneath
+the questions table rather than in it, so `yes to all leans` leaves it alone. Once the work answers it,
 swap the marker for *resolved:* as above
 ([D120 (deferred-questions)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d120)).
 A question parked, settled as a tangent, or kept open as the running log of something

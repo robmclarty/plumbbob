@@ -313,7 +313,7 @@ function labelOf(line: string): string | undefined {
 /**
  * A state-table row's label and fact, or null for any other line: a table row
  * of two cells, its label with the bold stripped. The delimiter row and the
- * lean table's four-cell rows are no state row, so they stay inside the part
+ * lean table's three-cell rows are no state row, so they stay inside the part
  * above them.
  */
 function stateRowOf(line: string): { readonly label: string; readonly value: string } | null {

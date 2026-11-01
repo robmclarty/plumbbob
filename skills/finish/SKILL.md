@@ -44,10 +44,12 @@ record.
    - `## Parked & harvested`: what was captured and how each was classified, as the
      table the stop card's leans use, with the settled class where the card had the lean
      ([D112 (lean-table)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d112)):
-     `| Park | What it is | Why it matters | Settled |`, one row per park, its handle and a
-     short title, the park's text as the Park list holds it, why it matters (the why the
-     stop's record kept, or your own clause for a park harvested before the table), and
-     the class it settled as with its reason.
+     `| Park | Why it matters | Settled |`, one row per park: its handle in bold and a short
+     title linked to the park's line in `build-log.md`, beside the report
+     (`**P6**: [note on the card](build-log.md#L31)`), why it matters (the why the stop's
+     record kept, or your own clause for a park harvested before the table), and the class
+     it settled as with its reason
+     ([D125 (linked-park-names)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d125)).
    - `## Final status`: done or partial, and what is left.
    - `## Deferred tangents`: the harvested items that become future work.
    Stop there. `plumbbob finish` appends `## Checkpoints` (the baseline and step SHAs) and

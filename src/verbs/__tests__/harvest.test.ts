@@ -132,9 +132,9 @@ describe("harvest — a stop's record — D104 (harvest-records)", () => {
     expect(entry).toContain('\n\n  **Summary**: The parser reads the plan, and the card reads the parser.')
     expect(entry).toContain('  **Verdict**: ● Plumb')
     expect(entry).toContain('  **Harvested**: **3** of 3 parked ideas open')
-    expect(entry).toContain('  | Park | What it is | Why it matters | Lean |')
-    expect(entry).toContain('  | P1 | one idea | not given | tangent: the card renders it |')
-    expect(entry).toContain('  | P2 | another (tangent) | not given | no lean proposed |')
+    expect(entry).toContain('  | Park | Why it matters | Lean |')
+    expect(entry).toContain('  | **P1**: [one idea](#park-list) | not given | tangent: the card renders it |')
+    expect(entry).toContain('  | **P2**: [another (tangent)](#park-list) | not given | no lean proposed |')
     expect(entry).toContain("  **1.** Step 2 parses the section.\n\n  The parser's story.")
     // Nothing committed; the detail file and the stamp are spent.
     expect(git(dir, ['rev-parse', 'HEAD'])).toBe(head)

@@ -877,8 +877,8 @@ describe('a question left to the work is deferred on its opener, not resolved â€
     expect(flat('build')).toMatch(/An open question the human sets aside to wait on other work is deferred, not parked/)
   })
 
-  it('status relays the Deferred line beneath the questions table', () => {
-    expect(flat('status')).toMatch(/a `Deferred` line beneath it naming the questions left to the work and what settles each/)
+  it('status relays the Deferred table beneath the questions table â€” D124 (brief-questions)', () => {
+    expect(flat('status')).toMatch(/a `Deferred` table beneath it listing the questions left to the work and what settles each/)
   })
 })
 

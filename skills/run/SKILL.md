@@ -188,9 +188,10 @@ file, and the human's reply all name it `P3`
 Propose one class per park by the harvest skill's rules, `tangent` for anything uncertain,
 with the reason in one clause, and beneath it two indented lines: a title of two to five
 words that names the park, and why it matters in one clause. The card prints each park as a
-row of the lean table: its handle and your title, the park's text as the list holds it, your
-why, and the lean (`tangent: <the reason>`)
-([D112 (lean-table)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d112)),
+row of the lean table: its handle and your title linked to the park's line in the build log,
+your why, and the lean (`tangent: <the reason>`)
+([D112 (lean-table)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d112),
+[D125 (linked-park-names)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d125)),
 so write the class, the reason, the title, and the why alone and leave the table to handoff.
 A park you leave out reads `no lean proposed` on the card and stays open, and a missing why
 reads `not given`. The section vanishes when no park is open, and so does the card's Harvested part

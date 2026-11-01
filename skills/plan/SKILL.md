@@ -80,6 +80,9 @@ The argument only seeds how you get there.
    of its line, so write each to stand on that sentence: the opener asks one question in
    one sentence, `*plain:*` opens on why it matters, and `*lean:*` opens on the answer
    ([D118 (questions-table)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d118)).
+   Keep the question about as long as the why and the lean: the table is a review, and it
+   cuts a question at twelve words, leaving the rest to its link to the entry
+   ([D124 (brief-questions)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d124)).
    The rest of each line is for the cold reader of `intent.md`. The card's
    `yes to all leans` move (or `yes to all leans except Q3: <their answer>`) settles them
    in one reply: on each opener line swap `*resolve by:*` for `*resolved:* <date>, <the
@@ -88,8 +91,8 @@ The argument only seeds how you get there.
    `defer Q3 until <what settles it>`, run `plumbbob defer Q3 "<what settles it>"`, which
    keeps the question and swaps its `*resolve by:*` for
    `*deferred:* <date>, until <what settles it>` on the opener line, then run
-   `plumbbob handoff --plan` again. It stays open, the card lists it on a `Deferred` line
-   beneath the table, out of reach of `yes to all leans`, and the Questions row counts it
+   `plumbbob handoff --plan` again. It stays open, the card lists it in a `Deferred` table
+   beneath the questions table, out of reach of `yes to all leans`, and the Questions row counts it
    apart (`**1** to answer · 2 deferred`); once the work answers it, swap the marker for
    `*resolved:*` as above
    ([D120 (deferred-questions)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d120)).

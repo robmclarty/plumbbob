@@ -102,8 +102,9 @@ export const c11: Contract = {
         // The relay check holds a run's boundary that still owes its card,
         // once (D100 (stop-card)); a pass with a hold landed the card on the retry.
         info('the stop card landed without a hold', !relay.has('held'), relay.has('held') ? `held on TURN ${relay.get('held')}` : ''),
-        // The lean table's row for P1, its class opening the last cell (D112 (lean-table)).
-        info('the turn carried P1’s lean', /^\| P1\b[^|]*\|[^|]*\|[^|]*\| (?:blocker|tangent|pivot)\b/m.test(turn.content)),
+        // The lean table's row for P1, its class opening the last cell (D112 (lean-table),
+        // D125 (linked-park-names)).
+        info('the turn carried P1’s lean', /^\| \*\*P1\*\*:[^|]*\|[^|]*\| (?:blocker|tangent|pivot)\b/m.test(turn.content)),
         info(
           'latch ledger after the turn',
           readLedger(repo, 'TURN') !== null, // the turn hook ticked, not a headless timing miss

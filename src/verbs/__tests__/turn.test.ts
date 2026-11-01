@@ -624,6 +624,27 @@ describe('turnContext — the nudge, D64 (approval-latch) amended: guidance, not
     )
   })
 
+  it('answers a request for the open questions with the table, alone at the boundary and after the beat mid-build — D124 (brief-questions)', async () => {
+    const dir = await startedSession()
+    const nudge =
+      "plumbbob: to list the plan's open questions, run `plumbbob status --questions` and paste the table it prints whole, as it printed: " +
+      'a row per question, linked to its entry in `intent.md`, with why it matters and the lean. ' +
+      'Never list the questions in your own words.'
+    for (const prompt of ['what are the open questions?', 'Any unresolved questions left?', 'list the questions', 'show me all questions']) {
+      expect(nudgeOf(dir, prompt), prompt).toBe(nudge)
+    }
+    // A message that asks for nothing of the kind gets no nudge at the boundary.
+    expect(turnContext(dir, 'any questions before we start?')).toBeNull()
+    // At a pause the reply nudge keeps its rules, and the questions nudge follows it.
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(pausePath(dir), '2\n')
+    const paused = nudgeOf(dir, 'what are the open questions?')
+    expect(paused).toContain("step 2's card has shown")
+    expect(paused.endsWith(` ${nudge}`)).toBe(true)
+    // A request to see the card is the whole turn, so it takes no second nudge.
+    expect(nudgeOf(dir, 'show the pause and the open questions')).not.toContain('status --questions')
+  })
+
   it('goes quiet again once the step checkpoints (STEP marker gone)', async () => {
     const dir = await startedSession()
     writeFileSync(stepPath(dir), '2\n')

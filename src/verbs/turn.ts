@@ -93,7 +93,7 @@ export function turn(cwd: string, _args: ReadonlyArray<string>): number {
 export function turnContext(cwd: string, prompt = ''): string | null {
   const root = findSessionRoot(cwd)
   if (root === null) return null
-  const text = nudgeText(root, SHOW_REQUEST.test(prompt))
+  const text = nudgeText(root, SHOW_REQUEST.test(prompt), QUESTIONS_REQUEST.test(prompt))
   return text === null ? null : `${JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: text } })}\n`
 }
 
@@ -104,12 +104,40 @@ export function turnContext(cwd: string, prompt = ''): string | null {
 // 2026-10-27 eval, because nothing in its context said how to relay it.
 const SHOW_REQUEST = /\bshow\s+(?:me\s+)?the\s+(?:pause|stop|card)\b/i
 
+// A message asking for the plan's open questions: `what are the open
+// questions?`, `list the questions`. Every skill that tables them is the
+// human's to invoke, so a bare ask would reach a model with nothing in its
+// context naming the table, free to write the questions out a paragraph each.
+const QUESTIONS_REQUEST =
+  /\b(?:open|outstanding|unresolved|unanswered|remaining|pending)\s+questions\b|\b(?:show|list|print)\s+(?:me\s+)?(?:the\s+|all\s+|any\s+)?questions\b/i
+
 /**
- * The nudge's words for the beat the session is on, or null when it is on
- * none: no step in flight and no stop card waiting. `showing` is a message
- * that asks to see the card, which at a pause or a stop takes the show nudge.
+ * The nudge's words for the turn: the beat the session is on, with the
+ * questions nudge after it when the message asks for the open questions, or
+ * null when there is neither. A request to see the card keeps its nudge alone,
+ * since the card is then the whole turn.
  */
-function nudgeText(root: string, showing: boolean): string | null {
+function nudgeText(root: string, showing: boolean, asking: boolean): string | null {
+  const beat = beatText(root, showing)
+  if (!asking || showing) {
+    return beat
+  }
+  return beat === null ? QUESTIONS_NUDGE : `${beat} ${QUESTIONS_NUDGE}`
+}
+
+// What a request for the open questions gets: the table the plan card carries,
+// relayed as it printed and never retyped (D124 (brief-questions)).
+const QUESTIONS_NUDGE =
+  `plumbbob: to list the plan's open questions, run \`plumbbob status --questions\` and paste the table it prints whole, as it printed: ` +
+  `a row per question, linked to its entry in \`intent.md\`, with why it matters and the lean. ` +
+  `Never list the questions in your own words.`
+
+/**
+ * The beat the session is on, or null when it is on none: no step in flight
+ * and no stop card waiting. `showing` is a message that asks to see the card,
+ * which at a pause or a stop takes the show nudge.
+ */
+function beatText(root: string, showing: boolean): string | null {
   const step = inFlightStep(root)
   if (step !== null) {
     const shown = readPause(root)

@@ -70,10 +70,11 @@ the call on each one theirs. The detail file you write first is the proposal; re
   ([D105 (park-handles)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d105)).
   Then run `plumbbob handoff --harvest` and paste its output whole, verbatim, and end the
   turn there: it prints the lean table, one row per open park with its handle and your
-  title, the park's text as the list holds it, your why, and your lean, then the moves that
-  settle it
-  ([D112 (lean-table)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d112)).
-  Write nothing before or after it; the park's text is the CLI's to quote, never yours.
+  title linked to the park's line in the build log, your why, and your lean, then the moves
+  that settle it
+  ([D112 (lean-table)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d112),
+  [D125 (linked-park-names)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d125)).
+  Write nothing before or after it; the table is the CLI's to print, never yours.
 - A reply that changes a proposal (`make P7 a tangent`) is the human's call and your
   reply: rewrite that line, say in your own words which lean moved, and end the turn
   without printing the table again; the human who wants to see it asks, and

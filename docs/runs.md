@@ -196,10 +196,10 @@ spent        39 min · green first run at every landing
 
 **Harvested**: **2** of 2 parked ideas open
 
-| Park | What it is | Why it matters | Lean |
-| --- | --- | --- | --- |
-| P1 · missing request id | should a request that arrives with no id get one generated? (tangent) | a line with no id cannot be traced to its request | tangent: an id is still logged when the client sends one, so the line stays parseable without it |
-| P2 · buffered lines | the logger could buffer lines and flush them on exit (tangent) | a write per request costs a syscall under load | tangent: a buffer is a performance call this goal does not make, and D1 (json-lines) writes each line as it happens |
+| Park | Why it matters | Lean |
+| --- | --- | --- |
+| **P1**: [missing request id](.plumbbob/builds/2026-07-14-add-structured-request-logging/build-log.md#L30) | a line with no id cannot be traced to its request | tangent: an id is still logged when the client sends one, so the line stays parseable without it |
+| **P2**: [buffered lines](.plumbbob/builds/2026-07-14-add-structured-request-logging/build-log.md#L31) | a write per request costs a syscall under load | tangent: a buffer is a performance call this goal does not make, and D1 (json-lines) writes each line as it happens |
 
 **Your Call**:
 
@@ -230,9 +230,10 @@ files they changed; `spent` runs from the first step's start to the last step's 
 Under **Harvested**, each open park is a row of the lean table under a handle, `P` and its
 place in the park list counting the harvested lines too, so `P1` is the first line ever
 parked and stays `P1` for the life of the build
-([D105 (park-handles)](decisions.md#d105)). The park's text is the CLI's, read from the
-list; the title, why it matters, and the lean are the model's, the lean `tangent` whenever
-it is unsure ([D112 (lean-table)](decisions.md#d112)). The plan's stop rides the state
+([D105 (park-handles)](decisions.md#d105)). The handle and the link to the park's line are
+the CLI's, read from the list; the title, why it matters, and the lean are the model's, the
+lean `tangent` whenever it is unsure ([D112 (lean-table)](decisions.md#d112),
+[D125 (linked-park-names)](decisions.md#d125)). The plan's stop rides the state
 table at the card's foot, under the Verdict.
 
 ## One reply settles the card

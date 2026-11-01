@@ -109,11 +109,12 @@ exits 0 when there is no session.
 
 `--questions` prints the plan's open questions in place of the dashboard, as the one table
 the plan card carries ([**D118 (questions-table)**](decisions.md#d118)): a row per open
-question, its handle and slug linked to the opener in `intent.md`, then the question, why it
-matters, and the lean, each the first sentence of its line. The table holds the questions
-that wait on the human; one deferred to the work rides a `**Deferred**:` line beneath it,
-linked to its opener with what will settle it, and that line stands alone when every open
-question is deferred ([**D120 (deferred-questions)**](decisions.md#d120)). With none open
+question: its handle in bold, then the question linked to its opener in `intent.md`, why it
+matters, and the lean, each the first sentence of its line, the question cut again at twelve
+words ([**D124 (brief-questions)**](decisions.md#d124)). The table holds the questions
+that wait on the human; one deferred to the work rides a second table beneath it, under a
+`**Deferred**:` lead, with what will settle it in place of the lean, and that table stands
+alone when every open question is deferred ([**D120 (deferred-questions)**](decisions.md#d120)). With none open
 it prints `plumbbob: no open questions in this plan`.
 
 When the plan carries `## Build ranges` ([**D92 (build-ranges)**](decisions.md#d92)), the
@@ -677,6 +678,11 @@ completes the range knows a run landed it ([**D103 (stop-latched)**](decisions.m
 Only the namespaced verb mints, since a bare `/run` reaches Claude Code's own skill; a bare
 range, a run that refuses, a span or a list of ranges (`/plumbbob:run 2-4`), and a plan the
 hook cannot read all mint nothing.
+
+A typed prompt that names the open questions (`what are the open questions?`, `list the
+questions`) gets a nudge to run `plumbbob status --questions` and paste its table whole,
+after the nudge for the beat the session is on, or alone at the boundary
+([**D124 (brief-questions)**](decisions.md#d124)).
 
 A background job's notice is not a turn ([**D90 (notice-not-turn)**](decisions.md#d90)). The
 harness sends a finished shell job, a Monitor event, or a subagent's report through the same

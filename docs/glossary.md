@@ -141,7 +141,8 @@ are its parts.
   lean, a change is answered and closed on the reminder, and `/plumbbob:run` records it
   and runs the next range. → [`presentation.md`](presentation.md#the-stop-card)
 - **Lean table**: the table parks with leans ride in, on the stop card and a harvest's
-  render: the park's handle and a short title, its text, why it matters, and the lean.
+  render: the park's handle and a short title linked to its line in the build log, why it
+  matters, and the lean.
   → [`decisions.md`](decisions.md#d112)
 - **Handle** (`P3`): a park's name on the stop card, in the detail file, and in your
   reply (`make P3 a blocker`): `P` and the park's place in the list, harvested lines

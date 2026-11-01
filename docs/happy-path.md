@@ -426,9 +426,9 @@ spent        31 min · green first run at every landing
 
 **Harvested**: **1** of 1 parked idea open
 
-| Park | What it is | Why it matters | Lean |
-| --- | --- | --- | --- |
-| P1 · reset throttle | should /password-reset get the same throttle? (tangent) | it is the next brute-force target once login is closed | tangent: a separate route and a separate decision, not a blocker for this goal |
+| Park | Why it matters | Lean |
+| --- | --- | --- |
+| **P1**: [reset throttle](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md#L29) | it is the next brute-force target once login is closed | tangent: a separate route and a separate decision, not a blocker for this goal |
 
 **Your Call**:
 
@@ -515,9 +515,9 @@ different number.
   the account system already enforces.
 
 ## Parked & harvested
-| Park | What it is | Why it matters | Settled |
-| --- | --- | --- | --- |
-| P1 · reset throttle | should /password-reset get the same throttle? | it is the next brute-force target once login is closed | tangent: a separate route and decision, deferred |
+| Park | Why it matters | Settled |
+| --- | --- | --- |
+| **P1**: [reset throttle](build-log.md#L29) | it is the next brute-force target once login is closed | tangent: a separate route and decision, deferred |
 
 ## Final status
 Done. All three steps checkpointed and green.

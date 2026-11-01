@@ -113,7 +113,7 @@ describe('status --questions — D118 (questions-table)', () => {
         '',
         '| Question | Why it matters | Lean |',
         '| --- | --- | --- |',
-        '| [**Q1** (slug)](.plumbbob/builds/ask-first/intent.md#L5): Which one? | It matters | The first |',
+        '| **Q1**: [Which one?](.plumbbob/builds/ask-first/intent.md#L5) | It matters | The first |',
         '',
         '',
       ].join('\n'),
@@ -127,7 +127,7 @@ describe('status --questions — D118 (questions-table)', () => {
     expect(captureIo(() => status(dir, ['--questions'])).stdout).toBe('plumbbob: no open questions in this plan\n')
   })
 
-  it('prints the Deferred line beneath the table, and alone when every open question is deferred — D120 (deferred-questions)', async () => {
+  it('prints the Deferred table beneath the questions table, and alone when every open question is deferred — D120 (deferred-questions)', async () => {
     const dir = makeTempRepo()
     await captureIoAsync(() => start(dir, ['Ask first', '--slug', 'ask-first']))
     const intent = join(buildDir(dir, 'ask-first'), 'intent.md')
@@ -139,16 +139,20 @@ describe('status --questions — D118 (questions-table)', () => {
         '',
         '| Question | Why it matters | Lean |',
         '| --- | --- | --- |',
-        '| [**Q1** (slug)](.plumbbob/builds/ask-first/intent.md#L5): Which one? | not given | no lean proposed |',
+        '| **Q1**: [Which one?](.plumbbob/builds/ask-first/intent.md#L5) | not given | no lean proposed |',
         '',
-        '**Deferred**: [**Q2** (budget)](.plumbbob/builds/ask-first/intent.md#L6) until step 4',
+        '**Deferred**: 1 left to the work',
+        '',
+        '| Deferred | Why it matters | Until |',
+        '| --- | --- | --- |',
+        '| **Q2**: [How fast?](.plumbbob/builds/ask-first/intent.md#L6) | not given | step 4 |',
         '',
         '',
       ].join('\n'),
     )
     writeFileSync(intent, `# Ask first\n\n## Open questions\n\n${deferred}`)
     expect(captureIo(() => status(dir, ['--questions'])).stdout).toBe(
-      '**Deferred**: [**Q2** (budget)](.plumbbob/builds/ask-first/intent.md#L5) until step 4\n\n',
+      '**Deferred**: 1 left to the work\n\n| Deferred | Why it matters | Until |\n| --- | --- | --- |\n| **Q2**: [How fast?](.plumbbob/builds/ask-first/intent.md#L5) | not given | step 4 |\n\n',
     )
   })
 })

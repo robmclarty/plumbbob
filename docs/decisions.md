@@ -1752,6 +1752,43 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   move, which now runs the verb. *Tagged in* `defer.ts`, `park.ts`, `harvest.ts`, `orient.ts`, the `plan`, `refine`,
   `build`, `run`, `harvest`, and `park` skills, `templates/intent.md`, and `docs/cli-reference.md`.
 
+- <a id="d124"></a>**D124 (brief-questions): The questions table cuts a question to twelve words, and a message that
+  asks for the open questions gets the table.** The question cell is cut after its first sentence again, at twelve
+  words, with an ellipsis where the cut falls; a code span counts as one word and is never cut through, and the
+  question is itself the link to its entry, with its handle in bold before it
+  (`**Q4**: [Is twelve words the right cut?](…/intent.md#L61)`) and any link inside it reduced to its label. The why
+  and the lean keep their first sentence uncut, since the lean is what `yes to all leans` approves. The turn hook
+  reads a message that names the open questions (`what are the open questions?`, `list the questions`) and adds a
+  nudge to run `plumbbob status --questions` and paste its table whole, after the beat's own nudge at a pause or a
+  stop, and alone at the boundary. *because* the table is a review, not the entry: a first sentence written for a cold
+  reader can run long enough to wrap into a tall column beside a why and a lean of a line each, and every skill that
+  tables the questions is the human's to invoke, so a plain ask in chat reached no rule that named the table (Rob,
+  2026-11-01: "whenever open questions are listed, or requested by the user, they should be printed like the parked
+  items"). The skills and the template ask for an opener about as long as the why and the lean, so the cut is a
+  backstop. Revises [**D118 (questions-table)**](#d118)'s first-sentence cell and its linked handle, whose slug the
+  question now stands in for (Rob, the same day: "include that in the name, outside the link"). The deferred questions
+  leave their `**Deferred**:` line for a table of their own beneath, `| Deferred | Why it matters | Until |`, in the
+  same shape with what will settle each in place of the lean, under the lead `**Deferred**: 2 left to the work` (Rob,
+  the same day: "put the deferred list in its own table to match"); the Questions row's count is unchanged. *Tagged
+  in* `handoff.ts`, `turn.ts`, the `plan` and `refine` skills, `templates/intent.md`, `docs/presentation.md`, and
+  `docs/cli-reference.md`.
+
+- <a id="d125"></a>**D125 (linked-park-names): The lean table names a park by its handle and a linked title, and drops
+  its text column.** A row reads `| **P6**: [note on the card](…/build-log.md#L31) | <why it matters> | <lean> |`: the
+  handle in bold, then the title the detail file gives the park, linked to the park's line in the build log, so the
+  park's own words are one click away. A park the detail gave no title is named by its own text, cut at twelve words
+  as a question is ([**D124 (brief-questions)**](#d124)). The stop's record links each park to the `#park-list`
+  heading instead, since it is written into the build log itself, where the step mirror above the list grows as steps
+  are added and a line number would drift; the handle already names the park's place in the list
+  ([**D105 (park-handles)**](#d105)). The finish report's table takes the same shape with its Settled column, each
+  title linked to its line in `build-log.md` beside it. *because* the open questions table read better with the
+  question as a linked name and no column of full text, and the park table was the same review in a longer shape (Rob,
+  2026-11-01: "update the parked tables to match too"). The park's text column was there so the card could never
+  misquote a park ([**D112 (lean-table)**](#d112)); the link now does that job, since the CLI writes it from the list
+  and the handle in front of it is the one the record matches. Revises [**D112 (lean-table)**](#d112)'s four columns.
+  *Tagged in* `handoff.ts`, the `harvest`, `run`, and `finish` skills, the relay check and the eval anatomy reader,
+  `docs/presentation.md`, `docs/runs.md`, `docs/happy-path.md`, and `docs/glossary.md`.
+
 ### Superseded
 
 - <a id="d20"></a>**D20 (local-archive): The archive was local-only markdown.** Wrapping wrote a plain-markdown archive
