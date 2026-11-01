@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.9] - 2026-11-01
+
+- **Added:** a message that asks for the open questions (`what are the open questions?`,
+  `list the questions`) gets a turn-hook nudge to run `plumbbob status --questions` and paste
+  its table whole, since every skill that tables them is the human's to invoke and a plain
+  ask in chat reached no rule that named the table. D124 (brief-questions) records it.
+- **Changed:** open questions, deferred questions, and parks now read as one kind of table,
+  each row named by its handle in bold and a brief name linked to its entry:
+  `**Q4**: [Is twelve words the right cut?](…/intent.md#L61)`. The question cell is the
+  question itself, cut at twelve words with the link carrying the rest; deferred questions
+  leave their run-on line for a table of their own, `| Deferred | Why it matters | Until |`.
+  The park lean table drops its "What it is" column, its title linked to the park's line in
+  `build-log.md`, and the finish report's table takes the same shape. The stop's record links
+  each park to the `#park-list` heading, since a line number there would drift as steps are
+  added. D124 (brief-questions) and D125 (linked-park-names) record it.
+
 ## [0.13.8] - 2026-10-31
 
 - **Added:** `plumbbob defer Q3 "<what settles it>"` leaves an open question to the work. It
