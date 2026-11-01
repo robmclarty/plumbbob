@@ -929,7 +929,7 @@ describe('checkpoint — the Range and Stop rows in the boundary table', () => {
     const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['--plan']))
     expect(code).toBe(0)
     expect(stdout).toContain(
-      '| **Next Up** | **Step 1** - First (details: [intent.md:5](.plumbbob/builds/checkpoint-test/intent.md#L5)) |\n| --- | --- |\n| Range | **1**: /plumbbob:run (step 1 to its pause) |\n',
+      '| **Next Up** | **Step 1** - First (details: [intent.md:5](.plumbbob/builds/checkpoint-test/intent.md#L5)) |\n| --- | --- |\n|  | **Range 1**: /plumbbob:run (step 1 to its pause) |\n',
     )
   })
 
@@ -962,7 +962,7 @@ describe('checkpoint — the Range and Stop rows in the boundary table', () => {
     const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['1']))
     expect(code).toBe(0)
     expect(stdout).toContain(
-      '| Next Up | **Step 2** on Sonnet - Second (details: [intent.md:7](.plumbbob/builds/checkpoint-test/intent.md#L7)) |\n| Range | **2** on Opus: /plumbbob:run (steps 2-3) |\n',
+      '| Next Up | **Step 2** on Sonnet - Second (details: [intent.md:7](.plumbbob/builds/checkpoint-test/intent.md#L7)) |\n|  | **Range 2** on Opus: /plumbbob:run (steps 2-3) |\n',
     )
   })
 
@@ -971,7 +971,7 @@ describe('checkpoint — the Range and Stop rows in the boundary table', () => {
     writeFileSync(intentPath(dir), RANGED.replace('1. [ ]', '1. [x]'))
     const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['2']))
     expect(code).toBe(0)
-    expect(stdout).toContain('\n| Range | **2** on Opus: /plumbbob:run (step 3) |\n')
+    expect(stdout).toContain('\n|  | **Range 2** on Opus: /plumbbob:run (step 3) |\n')
   })
 
   it("records a run's landing that completes the range it marked as owing the stop card — D103 (stop-latched)", async () => {

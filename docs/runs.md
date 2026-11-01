@@ -118,8 +118,8 @@ stops on the step's pause card, whose recommendation speaks to the stop: here, t
 field names. The card itself is the one [`happy-path.md`](happy-path.md#3-run-the-first-range-plumbbobrun)
 shows whole.
 
-Say `looks good` and the step lands. The boundary's Range row names the next run and the
-steps it will land:
+Say `looks good` and the step lands. The range line beneath the boundary's Next Up names the
+next run and the steps it will land:
 
 ```text
 **Checkpoint**: Step 1 complete (8cae4b906, details: [build-log.md:67](.plumbbob/builds/2026-07-14-add-structured-request-logging/build-log.md#L67))
@@ -127,7 +127,7 @@ steps it will land:
 | **Verdict** | ● Plumb |
 | --- | --- |
 | Next Up | **Step 2** on Sonnet - feat(log): redact secret fields by name (details: [intent.md:27](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L27)) |
-| Range | **2** on Sonnet: /plumbbob:run (steps 2-3) |
+|  | **Range 2** on Sonnet: /plumbbob:run (steps 2-3) |
 ```
 
 The bold model is range 2's own, since the run is the range, and the range's first step is
@@ -214,7 +214,7 @@ Approving locks in each lean above; to change one, say so first (`make P1 a bloc
 | --- | --- |
 | Stop | **Range 2** landed - read one real request's line before the timing and the docs build on it (details: [intent.md:48](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L48)) |
 | Next Up | **Step 4** on Sonnet - feat(http): log how long each request took (details: [intent.md:33](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L33)) |
-| Range | **3** on Sonnet: /plumbbob:run (steps 4-5) |
+|  | **Range 3** on Sonnet: /plumbbob:run (steps 4-5) |
 
 **Recommendation**: Approve it, then curl one request and read its line before the timing builds on it. The gate was green at both landings and both parks are future work.
 
@@ -311,7 +311,7 @@ checkpoint:
 
 | **Next Up** | **Step 6** on Sonnet - feat(http): generate a request id when the client sends none (details: [intent.md:40](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L40)) |
 | --- | --- |
-| Range | **3** on Sonnet: /plumbbob:run (steps 6,4-5) |
+|  | **Range 3** on Sonnet: /plumbbob:run (steps 6,4-5) |
 | Order | 6, 4, 5 |
 | Parked | **0** of 2 open |
 ```
@@ -327,7 +327,7 @@ run  range 3 of 3 · steps 6,4-5 · ends at step 5's boundary
 ```
 
 A run that walked `steps 4-5` would halt before step 6, the very step its own harvest added.
-So the turn ends on the record instead, whose Range row already names the re-cut run, and you type
+So the turn ends on the record instead, whose range line already names the re-cut run, and you type
 it. When the record changes nothing the run would walk, `/plumbbob:run` at the card records
 and walks in the same turn.
 
@@ -389,7 +389,7 @@ printed, as the whole ending of the turn:
 | --- | --- |
 | Stop | **Range 2** landed - read one real request's line before the timing and the docs build on it (details: [intent.md:48](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L48)) |
 | Next Up | **Step 4** on Sonnet - feat(http): log how long each request took (details: [intent.md:33](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L33)) |
-| Range | **3** on Sonnet: /plumbbob:run (steps 4-5) |
+|  | **Range 3** on Sonnet: /plumbbob:run (steps 4-5) |
 | Parked | **2** of 2 open: /plumbbob:harvest |
 ```
 
@@ -405,7 +405,7 @@ says what it recorded and nothing about a range:
 
 | **Next Up** | **Step 6** on Sonnet - feat(http): generate a request id when the client sends none (details: [intent.md:39](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L39)) |
 | --- | --- |
-| Range | **3** on Sonnet: /plumbbob:run (steps 6,4-5) |
+|  | **Range 3** on Sonnet: /plumbbob:run (steps 6,4-5) |
 | Order | 6, 4, 5 |
 | Parked | **0** of 2 open |
 ```
@@ -415,7 +415,7 @@ grants steps 4 and 5 and never step 6, so the step the harvest added cannot land
 does the range reach step 5: step 4 enters as a jump over step 6, and once it lands, step 6 is
 next in the build order and the range does not name it, so the walk halts there, and
 `plumbbob build` has already named step 4 as the last undone step in the range. The range that
-walks the whole stretch is `/plumbbob:build 6,4-5`, which is what the card's Range row names
+walks the whole stretch is `/plumbbob:build 6,4-5`, which is what the card's range line names
 for the run.
 
 Side by side, what the run changes:
@@ -529,8 +529,8 @@ or a decision the plan did not make. Each ends at that step's pause card, the st
 and the grant ends with the turn. Say `looks good` once the step is right and it lands; when
 that landing completes the range, the stop card follows in the same turn, since the run's
 mark outlives the pause. It comes short, since you read that step's card a moment ago: the
-leans, the moves, and the state table, and `show the stop` brings the rest. Otherwise the Range row names the run for what is left
-(`| Range | **2** on Sonnet: /plumbbob:run (step 3) |`), and you type it.
+leans, the moves, and the state table, and `show the stop` brings the rest. Otherwise the range line beneath Next Up names the run for what is left
+(`|  | **Range 2** on Sonnet: /plumbbob:run (step 3) |`), and you type it.
 
 ## What a run never does
 

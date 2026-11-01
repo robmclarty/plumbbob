@@ -448,7 +448,8 @@ human scans for in the one shape on the card that is not prose:
 ```
 
 Its rows, in order, each only when it says something: the Verdict, Now,
-Stop, Next Up, Range, Order, Parked, and Questions. The first row present is
+Stop, Next Up and the range line beneath it, Order, Parked, and Questions.
+The first row present is
 the header, its label bold, so the Verdict heads the table wherever one was
 measured, and Next Up heads it where nothing was (the plan pause, a stop's
 record, finish, a fresh session). A pipe in any cell is escaped, so a title
@@ -560,8 +561,8 @@ its one row, and the only move left is a fresh plan.
 
 **A model rides beside the step or range it is for.** The step number rides
 bold, and where the plan names a model for it, `on Sonnet` follows: Now and
-Next Up (`**Step 2** on Sonnet`), the `Back to` pointers, and the Range row
-for the range a run would walk (`**3** on Opus: /plumbbob:run (steps 6-9)`)
+Next Up (`**Step 2** on Sonnet`), the `Back to` pointers, and the range line
+for the range a run would walk (`**Range 3** on Opus: /plumbbob:run (steps 6-9)`)
 ([D115 (card-weights)](decisions.md#d115)). Each model sits next to the
 thing it is for, so a card naming the step in flight, the next step, and the
 next run never leaves the human asking which one a model means. The plan's
@@ -617,14 +618,16 @@ hold in their head, a row each and each only when there is something to hold
 
 ```text
 | Next Up | **Step 7** on Sonnet - feat(x): title (details: [intent.md:22](.plumbbob/builds/x/intent.md#L22)) |
-| Range | **3** on Opus: /plumbbob:run (steps 7-9) |
+|  | **Range 3** on Opus: /plumbbob:run (steps 7-9) |
 | Order | 7, 8, 5, 10, 6 (and 2 more) |
 | Parked | **2** of 7 open: /plumbbob:harvest |
 | Questions | **1** to answer · 2 deferred |
 ```
 
-The Range row names the range holding the step and the run that lands what
-is left of it; its forms are under [the build ranges](#the-build-ranges). The
+The first of them is Next Up's own second line, its label cell left blank:
+the range holding the step and the run that lands what is left of it, so
+Next Up names the next step and the next range together; its forms are
+under [the range line](#the-range-line-beneath-next-up). The
 Order row is the remaining sequence from the step the pointer names, five
 steps and then a count, and it renders only when `## Build order`
 re-sequences the plan away from its numbering
@@ -721,8 +724,8 @@ range because the outcome is two beats where `looks good` is one. The row
 renders only where the run does more than `looks good`: inside a bare range
 the run ends once its step lands, and so does one typed at the pause on a
 range's last step, so at those pauses the block keeps its four moves and
-the Range row says the range lands with the step
-([the Range row](#the-range-row-beneath-next-up)). The stop card
+the range line names the next range, whose run opens once the step lands
+([the range line](#the-range-line-beneath-next-up)). The stop card
 that closes a run's range carries a block of its own, with the record in
 place of the checkpoint ([the reply at a stop](#the-reply-at-a-stop)).
 
@@ -1236,29 +1239,31 @@ No range names step 11 ⚠
 An order that changes no range adds neither part, so the ending reads as it
 always has.
 
-### The Range row beneath Next Up
+### The range line beneath Next Up
 
-The first row beneath Next Up names the range holding the step Next Up
-names, numbered as the plan's item over the count of ranges, and the run
-that lands what is left of it from that step, the steps in a bracket:
+The line beneath Next Up names the range holding the step Next Up names, by
+the plan's item number, and the run that lands what is left of it from that
+step, the steps in a bracket. It is Next Up's own second line, a row whose
+label cell is blank, so the pointer names the next step and the next range
+together ([D122 (next-range-under-next-up)](decisions.md#d122)):
 
 ```text
 | Next Up | **Step 6** on Opus - feat(orient): read the ranges (details: [intent.md:30](.plumbbob/builds/x/intent.md#L30)) |
-| Range | **3** on Opus: /plumbbob:run (steps 6-9) |
+|  | **Range 3** on Opus: /plumbbob:run (steps 6-9) |
 | Parked | **2** of 7 open: /plumbbob:harvest |
 ```
 
-The row comes first beneath Next Up, ahead of the order and the parks,
+The line comes first beneath Next Up, ahead of the order and the parks,
 because it is the one that names what to type. Its forms:
 
 ```text
-| Range | **3** on Opus: /plumbbob:run (steps 6-9) |
-| Range | **3** on Opus: /plumbbob:run (steps 8-9) |
-| Range | **3** on Opus: /plumbbob:run (step 9) |
-| Range | **4** on Fable: /plumbbob:run (step 10 to its pause) |
-| Range | **3** lands with step 9 |
-| Range | **3** needs a re-cut (the build order puts step 11 inside it) |
-| Range | no range names step 12 |
+|  | **Range 3** on Opus: /plumbbob:run (steps 6-9) |
+|  | **Range 3** on Opus: /plumbbob:run (steps 8-9) |
+|  | **Range 3** on Opus: /plumbbob:run (step 9) |
+|  | **Range 4** on Fable: /plumbbob:run (step 10 to its pause) |
+|  | **Range 4** on Fable: /plumbbob:run once step 9 lands |
+|  | **Range 3** needs a re-cut (the build order puts step 11 inside it) |
+|  | no range names step 12 |
 ```
 
 The first is a range not yet started. The second and third are what is left
@@ -1269,11 +1274,18 @@ The fourth is a bare range, whose run builds its step to the pause, and the
 bracket says so. The fifth is the pause on a range's last step, below. The
 last two are the drift words above, in place of a run. A list range writes
 what is left in build order (`20,5-9`), so the first number in the bracket
-is where the run starts. The row's label says `Range`, so its fact opens on
-the range's number, bold, and the model its `- model:` line names; the row
-was a segment of the note beneath Next Up,
+is where the run starts. No label says `Range`, so the fact opens on the
+range's name, bold, and the model its `- model:` line names.
+
+The line was a labeled row, `| Range | **3** on Opus: /plumbbob:run (steps 6-9) |`,
+until 2026-10-31, and before that a segment of the note beneath Next Up,
 `· range 3 of 5: /plumbbob:run (steps 6-9)`, until the note became rows
-([D111 (state-table)](decisions.md#d111)).
+([D111 (state-table)](decisions.md#d111)). The label said which range and
+never when. At a boundary the row named the range to come, and at the pause
+on a range's last step it named the range finishing (`**3** lands with step 9`),
+so a human reading `Range` beneath Now and Next Up could not tell the range
+the build was in from the next one. Beneath Next Up it is the next range at
+every site.
 
 The verb is the same at every site, so the bracket is what changes, and it
 is written as the grant the hook will mint
@@ -1286,32 +1298,36 @@ the run because the run is what the human types now, and the steps because
 they are what it will land
 ([D98 (card-names-the-run)](decisions.md#d98)).
 
-The row renders at every site the table does: the plan pause and the plan
-commit, where Next Up names step 1 and the row names range 1 whole; a step
+The line renders at every site the table does: the plan pause and the plan
+commit, where Next Up names step 1 and the line names range 1 whole; a step
 pause; and a boundary. The driver pointer and the `Back to` reminder carry no
-rows, as before. At a step pause the row names the range holding the step in
-flight, and the bracket opens on that step, because `/plumbbob:run` typed
+rows, as before. At a step pause the line names the range holding the step
+in flight, and the bracket opens on that step, because `/plumbbob:run` typed
 there is that pause's `looks good`
 ([D95 (run-verb)](decisions.md#d95)): it lands the step on a green check
 and runs on through what is left of the range, and the grant the hook mints
 counts the step in flight as undone. So at step 6's pause, where Next Up
-names step 7, the row reads `**3** on Opus: /plumbbob:run (steps 6-9)`, and the
-Your Call block offers the run as a move
+names step 7, the line reads `**Range 3** on Opus: /plumbbob:run (steps 6-9)`,
+and the Your Call block offers the run as a move
 ([the Your Call block](#the-your-call-block)). At the pause on a range's
 last step a run would land that step and end on the range's stop rather
-than start the next range, so the row names no run: it reads
-`**3** lands with step 9`, and Next Up's step 10 waits for the boundary,
-where the Stop row and the next range's Range row render. A bare range's
-pause is the same case, since its run ends once its step lands.
+than start the next range, so the line names the range holding Next Up's
+step and when its run opens, `**Range 4** on Fable: /plumbbob:run once step 9 lands`,
+read from the plan as the boundary will read it once step 9 is ticked. The
+bracket waits for that boundary, where the line names range 4's run in full.
+The `once` clause is the Parked row's mid-step wording
+(`/plumbbob:harvest once this step lands`), for the same reason: the move is
+real, and it is not yet the one to type. A bare range's pause is the same
+case, since its run ends once its step lands.
 
-**The Range row names the range's model, and Next Up its step's.** While a
-run is suggested, the range's `- model:` line rides the Range row, the run
+**The range line names the range's model, and Next Up its step's.** While a
+run is suggested, the range's `- model:` line rides the range line, the run
 the human picks a model for, since a range's first step is often not its
 hardest; Next Up keeps its own step's. At the pause on a range's last step
-the Range row names the range that is finishing and no model, since no run
-is offered, and Next Up names the next range's first step on its own model.
-This replaced a bracket on Next Up that bolded the range's model beside the
-step's title, which read as the step's.
+both lines name the range to come: Next Up its first step on that step's
+model, and the range line the range's own, the model for the run the human
+types once the step lands. This replaced a bracket on Next Up that bolded
+the range's model beside the step's title, which read as the step's.
 
 ### The Stop row
 
@@ -1325,7 +1341,7 @@ A boundary turn with it, whole:
 | --- | --- |
 | Stop | **Range 3** landed - review the card on a live boundary before the skills teach it (details: [intent.md:63](.plumbbob/builds/x/intent.md#L63)) |
 | Next Up | **Step 10** on Fable - feat(docs): name the label (details: [intent.md:34](.plumbbob/builds/x/intent.md#L34)) |
-| Range | **4** on Fable: /plumbbob:run (step 10 to its pause) |
+|  | **Range 4** on Fable: /plumbbob:run (step 10 to its pause) |
 ```
 
 The shape is one row labeled `Stop`: `**Range N** landed`, a plain hyphen,
@@ -1383,7 +1399,7 @@ the stops ahead are what the human steers by, and a landed range folds to its
 row, because its call was made. The block is the reference surface, so no
 stop is cut to a count. The dashboard's pointer names the run when the next
 step sits in a range, `run range 3 of 5`, with the verb and the bracket the
-card's Range row carries: `(steps 8-9)` once two of its steps have landed,
+card's range line carries: `(steps 8-9)` once two of its steps have landed,
 `(step 10 to its pause)` for a bare range. With the step in flight, or an
 explicit request, the pointer reads as it does today; `--run` is the one
 request that keeps it, below.
@@ -1645,7 +1661,7 @@ Approving locks in each lean above; to change one, say so first (`make P6 a bloc
 | --- | --- |
 | Stop | **Range 3** landed - review the card on a live boundary before the skills teach it (details: [intent.md:63](.plumbbob/builds/x/intent.md#L63)) |
 | Next Up | **Step 10** on Fable - feat(docs): name the label (details: [intent.md:34](.plumbbob/builds/x/intent.md#L34)) |
-| Range | **4** on Fable: /plumbbob:run (step 10 to its pause) |
+|  | **Range 4** on Fable: /plumbbob:run (step 10 to its pause) |
 
 **Recommendation**: Approve it, with P7 as the blocker it is. Step 8's stray is the label the Stop row needed, in a file the plan should have named, and the drift recover misses is the one step 10 builds on.
 
@@ -1681,10 +1697,10 @@ Its parts, in order, and what each one is:
   wrote it, and the bracket pointing at the item, which used to open the
   card as its lead and moved into the table the way the Now line did
   ([D111 (state-table)](decisions.md#d111)); Next Up, naming the next
-  range's first step; and the Range row, naming that range's run, as the
-  boundary's would. The Parked row does not ride here, because the
+  range's first step, with the range line beneath it naming that range's
+  run, as the boundary's would. The Parked row does not ride here, because the
   Harvested lead above carries the count. On the plan's last range the
-  pointer reads `Nothing planned`, and no Range row follows it. The card has
+  pointer reads `Nothing planned`, and no range line follows it. The card has
   no Now row, since no step is in flight, and no `Checkpoint` lead, since the
   range's checkpoints are the readout's first row.
 - **The recommendation** is the move on the review and the proposals
@@ -1921,7 +1937,7 @@ through `plumbbob harvest`, before it writes the report, so the last range's
 review and its parks reach the Log and the report, where a finish that
 skipped them would leave the parks open on the one stop every ranged build
 has. When the next range is flagged, or no range names the next step, the
-row does not render, because the run would refuse, and the Range row
+row does not render, because the run would refuse, and the range line
 carries the drift words. A stop with no park open keeps the four moves
 with the record in their clauses and no line beneath the label, since no
 lean is there to lock in: `looks good` records the review, `/plumbbob:run`
@@ -1970,7 +1986,8 @@ commit would need a fourth kind of ledger line that `recover`, `revert`,
 learn, while the Log already carries the review into the PR.
 
 The record's ending is the orientation tier's: the lead line, any advisory,
-and the state table, its Range row naming the next run, re-cut or not. No
+and the state table, the range line beneath its Next Up naming the next
+run, re-cut or not. No
 Verdict rides it, since nothing was measured, so Next Up heads the table:
 
 ```text
@@ -1978,7 +1995,7 @@ Verdict rides it, since nothing was measured, so Next Up heads the table:
 
 | **Next Up** | **Step 10** on Fable - feat(docs): name the label (details: [intent.md:34](.plumbbob/builds/x/intent.md#L34)) |
 | --- | --- |
-| Range | **4** on Fable: /plumbbob:run (step 10 to its pause) |
+|  | **Range 4** on Fable: /plumbbob:run (step 10 to its pause) |
 | Parked | **0** of 8 open |
 ```
 

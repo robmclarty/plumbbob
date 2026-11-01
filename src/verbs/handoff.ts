@@ -104,6 +104,7 @@ import {
   diffRowValue,
   foldVerdict,
   lastLedgerSha,
+  markStepDone,
   measureRange,
   normalizeDetailHeadings,
   parseBuildOrder,
@@ -131,6 +132,7 @@ import {
   stopFollowUp,
   summaryCheckRow,
   type Run,
+  type RunRange,
 } from '../lib/orient.ts'
 
 // The inline-diff threshold (docs/presentation.md): at 20 changed lines or
@@ -1527,9 +1529,11 @@ type StateInput = {
  * becomes the header, which is the Verdict wherever one was measured
  * (D111 (state-table)).
  *
- * The Range, Order, and Parked rows are the segments the note beneath Next Up
- * used to carry on one indented line; as rows each one has a label of its own,
- * the way the human scans for it.
+ * The Order and Parked rows are segments the note beneath Next Up used to
+ * carry on one indented line; as rows each one has a label of its own, the way
+ * the human scans for it. The range is Next Up's second line, a row with a
+ * blank label, so it reads as the next range beside the next step rather than
+ * as the range the build is in (D122 (next-range-under-next-up)).
  */
 function stateRows(input: StateInput): StateRow[] {
   const steps = parseOrderedSteps(input.intent)
@@ -1542,7 +1546,7 @@ function stateRows(input: StateInput): StateRow[] {
     input.now === null ? null : { label: 'Now', value: input.now },
     input.stop === null ? null : { label: 'Stop', value: input.stop },
     { label: 'Next Up', value: pointerText(input.nextUp, input.where) },
-    range.length === 0 ? null : { label: 'Range', value: range },
+    range.length === 0 ? null : { label: '', value: range },
     order.length === 0 ? null : { label: 'Order', value: order },
     parks.total === 0 ? null : { label: 'Parked', value: parkedValue(parks, input.now !== null) },
     questions.toAnswer + questions.deferred === 0 || input.questions === false ? null : { label: 'Questions', value: questionsValue(questions) },
@@ -1588,32 +1592,53 @@ function pointerLine(nextUp: Step | undefined, where: string): string {
 }
 
 /**
- * The Range row's fact: the run `/plumbbob:run` typed now would walk,
- * `**3** on Opus: /plumbbob:run (steps 6-9)`, the range's number bold and the
+ * Next Up's range line: the range the next run walks,
+ * `**Range 3** on Opus: /plumbbob:run (steps 6-9)`, its name bold and the
  * model its `- model:` line names beside it, so the model reads as the
  * range's and not the step's (D115 (card-weights)); the re-cut words for a
  * flagged range; the words for a step no range names; or '' for a plan
- * without ranges. The row's label says `Range`, so the fact opens on the
- * range's number.
+ * without ranges. The row has no label of its own, so the fact opens on the
+ * range's name (D122 (next-range-under-next-up)).
  *
  * The bracket is the grant the hook would mint. At a step pause that is the
  * range holding the step in flight, its bracket opening on that step, since a
- * run typed there lands it first; at the pause on a range's last step, where
- * a run ends on that range's stop, the segment names no run and no model
- * (`**3** lands with step 9`).
+ * run typed there lands it first. At the pause on a range's last step, or a
+ * bare range's, a run lands only that step and ends on its range's stop, so
+ * the line names the range the step after it opens instead
+ * (`**Range 4** on Fable: /plumbbob:run once step 9 lands`).
  */
 function rangeSegment(intent: string, steps: ReadonlyArray<Step>, exclude: number | null): string {
   const paused = steps.some((s) => s.n === exclude && !s.done) ? exclude : null
   const run = cardRun(intent, paused)
+  if (run.ok && paused !== null && run.left.length === 1) {
+    return afterLanding(intent, paused)
+  }
+  return runSegment(run, (r) => `(${runBracket(r)})`)
+}
+
+/**
+ * The range line at the pause that finishes a range: the run the boundary will
+ * name once the step in flight lands, read from the plan with that step
+ * ticked, and opening once it does. '' when no step is left after it.
+ */
+function afterLanding(intent: string, paused: number): string {
+  const next = cardRun(markStepDone(intent, paused), null)
+  return runSegment(next, () => `once step ${paused} lands`)
+}
+
+/**
+ * A run as the range line names it: the range's name, its model, and the run
+ * with `when` closing it; or, where the run would refuse, the words for a step
+ * no range names or a flagged range's re-cut, and '' for any other refusal.
+ */
+function runSegment(run: Run, when: (run: RunRange) => string): string {
   if (run.ok) {
-    const name = `**${run.range.item}**`
-    const lands = paused !== null && run.left.length === 1
-    return lands ? `${name} lands with step ${paused}` : `${name}${onModel(run.range.model)}: /plumbbob:run (${runBracket(run)})`
+    return `**Range ${run.range.item}**${onModel(run.range.model)}: /plumbbob:run ${when(run)}`
   }
   if (run.kind === 'uncovered') {
     return run.words
   }
-  return run.kind === 'flagged' ? `**${run.item}** needs a re-cut (${run.words})` : ''
+  return run.kind === 'flagged' ? `**Range ${run.item}** needs a re-cut (${run.words})` : ''
 }
 
 /**

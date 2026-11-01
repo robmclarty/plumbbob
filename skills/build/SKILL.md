@@ -202,8 +202,8 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    Readout fence (its measured `check`, `seam`, `diff`, and `spent` rows folded with your
    three, the changed files listed beneath `diff`), a `diff` fence when the change is 20
    lines or fewer, Your Call, the state table (the Verdict folded worst-of from the same
-   rows, the Now row naming the step in flight, Next Up, and the Range, Order, and Parked
-   rows when they apply), your recommendation, and the `more details` link last. Run it
+   rows, the Now row naming the step in flight, Next Up with the next range on its second
+   line, and the Order and Parked rows when they apply), your recommendation, and the `more details` link last. Run it
    once: a second run at the same pause prints the one-line reminder instead of the card,
    so if that line comes back where the card belongs (you ran handoff earlier in this
    turn), run `plumbbob handoff --full` and paste that. The gate verdict's one home is that `check`
@@ -399,8 +399,8 @@ out, or the next step in build order is one the range does not name),
   `Parked` row, `2 of 7 open`), the move is `/plumbbob:harvest`, then the run the card names.
 - **After an early stop, settle the step, then rerun what is left.** A halt on trouble
   inside a range ends at that step's pause, and the grant ends with the turn. Once the
-  human approves and the step lands, the state table's Range row names the run that lands
-  what is left of the range (`| Range | **3** on Opus: /plumbbob:run (steps 8-9) |`), and that is
+  human approves and the step lands, the range line beneath Next Up names the run that lands
+  what is left of the range (`|  | **Range 3** on Opus: /plumbbob:run (steps 8-9) |`), and that is
   what the human types to carry on; `/plumbbob:build 8-9` lands the same steps by hand.
 
 ## The hard contracts

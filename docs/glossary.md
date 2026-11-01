@@ -121,8 +121,8 @@ are its parts.
   collapses to a count; red names one offender.
 - **State table**: the two-column table a card and an orientation ending close on, the
   facts you scan for set apart from the prose: the **Verdict** as its header, then
-  **Now**, **Stop**, **Next Up**, and the Range, Order, Parked, and Questions rows, each
-  only when it has something to say. → [`presentation.md`](presentation.md#the-footer-card)
+  **Now**, **Stop**, **Next Up** with the range line beneath it, and the Order, Parked,
+  and Questions rows, each only when it has something to say. → [`presentation.md`](presentation.md#the-footer-card)
 - **Verdict**: the state table's header, a four-rung ladder worst-of over the readout:
   `● Plumb`, `◐ A hair off` (green, with advisories on the way), `○ Out of plumb` (fix
   the work), `✗ Not standing` (fix the plan).

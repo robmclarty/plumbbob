@@ -177,7 +177,7 @@ In Claude Code, inside any git repo with a clean tree:
    | --- | --- |
    | Now | **Step 1** on Opus - feat(limiter): add a token-bucket limiter |
    | Next Up | **Step 2** on Sonnet - feat(login): wire the limiter into POST /login (details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28)) |
-   | Range | **1** lands with step 1 |
+   |  | **Range 2** on Sonnet: /plumbbob:run once step 1 lands |
 
    **Recommendation**: Approve it, refilling on read. The gate is green and the seam held, and a bucket that refills when it is read needs no timer for the route to clean up.
 
@@ -192,7 +192,7 @@ In Claude Code, inside any git repo with a clean tree:
    `.plumbbob/settings.json`, for example `"check": "npm test"`; in a repo where
    checkride finds no tools at all, `start` says so up front and names that key.)
 3. **Reply.** Say `looks good` and it commits the step as a checkpoint, marks it done,
-   and returns to the boundary, where the Range row beneath Next Up names the run to type
+   and returns to the boundary, where the range line beneath Next Up names the run to type
    next and the steps it will land:
 
    ```text
@@ -201,7 +201,7 @@ In Claude Code, inside any git repo with a clean tree:
    | **Verdict** | ● Plumb |
    | --- | --- |
    | Next Up | **Step 2** on Sonnet - feat(login): wire the limiter into POST /login (details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28)) |
-   | Range | **2** on Sonnet: /plumbbob:run (steps 2-3) |
+   |  | **Range 2** on Sonnet: /plumbbob:run (steps 2-3) |
    ```
 
    ![The boundary, drawn: a bench mark freshly cut into the newest course of a stone wall, older marks below, and the red line raised one course over stones not yet laid](site/media/checkpoint-boundary.svg)

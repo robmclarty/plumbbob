@@ -256,12 +256,15 @@ At a build pause it renders the turn entire, in this order:
     file's name and line, such as `[intent.md:28](.plumbbob/builds/<slug>/intent.md#L28)`
     ([**D107 (short-linked-paths)**](decisions.md#d107)). A model line still holding the
     template's `<...>` fill-in names no model.
-  - `Range`: the range holding that step, on the range's own model, and the run that lands
-    what is left of it (`**2** on Opus: /plumbbob:run (steps 2-3)`, when the plan declares
-    build ranges, [**D98 (card-names-the-run)**](decisions.md#d98)). At the
-    pause on a range's last step it reads `**1** lands with step 1` and names no run,
-    since a run typed there ends on that range's stop, and a range the plan has outgrown
-    reads `**2** needs a re-cut (step 9 is not in the plan)`.
+  - the range line, Next Up's second line in a row with a blank label: the range holding
+    that step, on the range's own model, and the run that lands what is left of it
+    (`**Range 2** on Opus: /plumbbob:run (steps 2-3)`, when the plan declares build ranges,
+    [**D98 (card-names-the-run)**](decisions.md#d98),
+    [**D122 (next-range-under-next-up)**](decisions.md#d122)). At the pause on a range's
+    last step it names the next range and when its run opens
+    (`**Range 2** on Opus: /plumbbob:run once step 1 lands`), since a run typed there ends
+    on the finishing range's stop, and a range the plan has outgrown reads
+    `**Range 2** needs a re-cut (step 9 is not in the plan)`.
   - `Order`: the build order from that step on (`7, 8, 5`, only when `## Build order`
     departs from the numbering; five steps, then a count,
     [**D86 (build-order)**](decisions.md#d86)).

@@ -1270,12 +1270,12 @@ function rangedWith(done: ReadonlyArray<number>, intent = RANGED): string {
   return done.reduce((text, n) => text.replace(`${n}. [ ]`, `${n}. [x]`), intent)
 }
 
-describe('handoff — the Range row beneath Next Up', () => {
+describe('handoff — the range line beneath Next Up', () => {
   it('names range 1 whole at the plan pause, each model beside the step or range it is for, and looks good names the run — D98 (card-names-the-run)', async () => {
     const dir = await started(RANGED)
     const { stdout } = captureIo(() => handoff(dir, ['--plan']))
     expect(stdout).toContain(
-      `${stateHead('Next Up', `**Step 1** on Sonnet - First (details: ${rangedPointer(dir, 1)})`)}\n| --- | --- |\n${stateRow('Range', '**1** on Opus: /plumbbob:run (step 1 to its pause)')}\n`,
+      `${stateHead('Next Up', `**Step 1** on Sonnet - First (details: ${rangedPointer(dir, 1)})`)}\n| --- | --- |\n${stateRow('', '**Range 1** on Opus: /plumbbob:run (step 1 to its pause)')}\n`,
     )
     expect(stdout).toContain(`- \`looks good\` → I mark the plan decided${publishes(dir)}; /plumbbob:run runs range 1 from Step 1\n`)
   })
@@ -1296,7 +1296,7 @@ describe('handoff — the Range row beneath Next Up', () => {
     writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
     const { stdout } = captureIo(() => handoff(dir, []))
     expect(stdout).toContain(
-      `${stateRow('Now', '**Step 2** on Sonnet - Second')}\n${stateRow('Next Up', `**Step 3** on Haiku - Third (details: ${rangedPointer(dir, 3)})`)}\n${stateRow('Range', '**2** on Fable: /plumbbob:run (steps 2-3)')}\n`,
+      `${stateRow('Now', '**Step 2** on Sonnet - Second')}\n${stateRow('Next Up', `**Step 3** on Haiku - Third (details: ${rangedPointer(dir, 3)})`)}\n${stateRow('', '**Range 2** on Fable: /plumbbob:run (steps 2-3)')}\n`,
     )
     expect(stdout).toContain(
       [
@@ -1312,18 +1312,18 @@ describe('handoff — the Range row beneath Next Up', () => {
     writeFileSync(stepPath(dir), '2\n')
     writeCheckSummary(dir, false, [{ name: 'test', ok: false }])
     const { stdout } = captureIo(() => handoff(dir, []))
-    expect(stdout).toContain(`\n${stateRow('Range', '**2** on Fable: /plumbbob:run (steps 2-3)')}\n`)
+    expect(stdout).toContain(`\n${stateRow('', '**Range 2** on Fable: /plumbbob:run (steps 2-3)')}\n`)
     expect(stdout).not.toContain('`/plumbbob:run` →')
   })
 
-  it("names no run at the pause on a range's last step, or a bare range's, and keeps the four moves", async () => {
+  it("names the next range's run once the step lands at the pause on a range's last step, or a bare range's, and keeps the four moves — D122 (next-range-under-next-up)", async () => {
     const last = await started(rangedWith([1, 2]))
     writeFileSync(stepPath(last), '3\n')
     writeCheckSummary(last, true, [{ name: 'test', ok: true }])
     const atLast = captureIo(() => handoff(last, [])).stdout
-    // Next Up is the next range's step, on its own model; the Range row names the range landing now, and no model.
+    // Next Up is the next range's step, on its own model; the line beneath names that range, on its model, and when its run opens.
     expect(atLast).toContain(
-      `${stateRow('Next Up', `**Step 4** on Sonnet - Fourth (details: ${rangedPointer(last, 4)})`)}\n${stateRow('Range', '**2** lands with step 3')}\n`,
+      `${stateRow('Next Up', `**Step 4** on Sonnet - Fourth (details: ${rangedPointer(last, 4)})`)}\n${stateRow('', '**Range 3**: /plumbbob:run once step 3 lands')}\n`,
     )
     expect(atLast).not.toContain('`/plumbbob:run` →')
     const bare = await started(RANGED)
@@ -1331,7 +1331,7 @@ describe('handoff — the Range row beneath Next Up', () => {
     writeCheckSummary(bare, true, [{ name: 'test', ok: true }])
     const atBare = captureIo(() => handoff(bare, [])).stdout
     expect(atBare).toContain(
-      `${stateRow('Next Up', `**Step 2** on Sonnet - Second (details: ${rangedPointer(bare, 2)})`)}\n${stateRow('Range', '**1** lands with step 1')}\n`,
+      `${stateRow('Next Up', `**Step 2** on Sonnet - Second (details: ${rangedPointer(bare, 2)})`)}\n${stateRow('', '**Range 2** on Fable: /plumbbob:run once step 1 lands')}\n`,
     )
     expect(atBare).not.toContain('`/plumbbob:run` →')
   })
@@ -1344,7 +1344,7 @@ describe('handoff — the Range row beneath Next Up', () => {
     expect(stdout).toContain(
       [
         stateRow('Next Up', `**Step 2** on Sonnet - Second (details: ${rangedPointer(dir, 2)})`),
-        stateRow('Range', '**2** on Fable: /plumbbob:run (steps 2-3)'),
+        stateRow('', '**Range 2** on Fable: /plumbbob:run (steps 2-3)'),
         stateRow('Parked', '**2** of 3 open: /plumbbob:harvest'),
       ].join('\n'),
     )
@@ -1355,7 +1355,7 @@ describe('handoff — the Range row beneath Next Up', () => {
     writeFileSync(checkpointsPath(dir), 'step 3 abc1234\n')
     const { stdout } = captureIo(() => handoff(dir, []))
     expect(stdout).toContain(
-      `${stateRow('Next Up', `**Step 4** on Sonnet - Fourth (details: ${rangedPointer(dir, 4)})`)}\n${stateRow('Range', '**3**: /plumbbob:run (step 4 to its pause)')}\n`,
+      `${stateRow('Next Up', `**Step 4** on Sonnet - Fourth (details: ${rangedPointer(dir, 4)})`)}\n${stateRow('', '**Range 3**: /plumbbob:run (step 4 to its pause)')}\n`,
     )
   })
 
@@ -1365,7 +1365,7 @@ describe('handoff — the Range row beneath Next Up', () => {
     writeFileSync(checkpointsPath(dir), 'step 1 abc1234\n')
     const { stdout } = captureIo(() => handoff(dir, []))
     expect(stdout).toContain(
-      `${stateRow('Next Up', `**Step 2** on Sonnet - Second (details: ${rangedPointer(dir, 2)})`)}\n${stateRow('Range', '**2** needs a re-cut (step 3 is also in range 3)')}\n`,
+      `${stateRow('Next Up', `**Step 2** on Sonnet - Second (details: ${rangedPointer(dir, 2)})`)}\n${stateRow('', '**Range 2** needs a re-cut (step 3 is also in range 3)')}\n`,
     )
   })
 
@@ -1375,7 +1375,7 @@ describe('handoff — the Range row beneath Next Up', () => {
     writeFileSync(checkpointsPath(dir), 'step 3 abc1234\n')
     const { stdout } = captureIo(() => handoff(dir, []))
     expect(stdout).toContain(
-      `${stateRow('Next Up', `**Step 4** on Sonnet - Fourth (details: ${rangedPointer(dir, 4)})`)}\n${stateRow('Range', 'no range names step 4')}\n`,
+      `${stateRow('Next Up', `**Step 4** on Sonnet - Fourth (details: ${rangedPointer(dir, 4)})`)}\n${stateRow('', 'no range names step 4')}\n`,
     )
   })
 
@@ -1394,7 +1394,7 @@ describe('handoff — the Range row beneath Next Up', () => {
     expect(stdout).toContain(
       `${stateRow('Next Up', `**Step 2** on Sonnet - Second (details: ${rangedPointer(plain, 2)})`)}`,
     )
-    expect(stdout).not.toContain('| Range |')
+    expect(stdout).not.toContain('|  |')
   })
 })
 
@@ -1875,7 +1875,7 @@ function stopCardOf(dir: string, shas: ReadonlyArray<string>): string {
     '| --- | --- |',
     `| Stop | **Range 2** landed - review the parser before the card reads it (details: [intent.md:18](${intent}#L18)) |`,
     `| Next Up | **Step 4** on Sonnet - Fourth (details: [intent.md:11](${intent}#L11)) |`,
-    '| Range | **3**: /plumbbob:run (step 4 to its pause) |',
+    '|  | **Range 3**: /plumbbob:run (step 4 to its pause) |',
     '',
     '**Recommendation**: Approve it. Both steps held their seams.',
     '',

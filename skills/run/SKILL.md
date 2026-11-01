@@ -250,7 +250,7 @@ and the Your Call block names the replies. Read the human's message as one of th
   `plumbbob status --run "<the same argument>"` again. When its grant line says
   `unlike the run`, the record re-cut the range the run would walk (a blocker added or moved a
   step in it), and the grant the hook minted before the record no longer covers it: relay
-  the record's ending whole and end the turn there, where its Range row names the re-cut run
+  the record's ending whole and end the turn there, where the range line beneath its Next Up names the re-cut run
   for the human to type
   ([D102 (settle-in-one-reply)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d102)).
   Otherwise relay the record's ending and walk the run from section 4.

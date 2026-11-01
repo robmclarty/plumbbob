@@ -405,8 +405,8 @@ describe('build — a run hands its range section a range the plan names — D96
     const section = body.slice(body.indexOf('### A step range'), body.indexOf('## The hard contracts'))
     expect(section).toMatch(/\/plumbbob:run/)
     expect(section).toMatch(/walked the same way/i)
-    // The early-stop note names the run the card's Range row prints, not the old explicit command.
-    expect(section).toContain('`| Range | **3** on Opus: /plumbbob:run (steps 8-9) |`')
+    // The early-stop note names the run the card's range line prints, not the old explicit command.
+    expect(section).toContain('`|  | **Range 3** on Opus: /plumbbob:run (steps 8-9) |`')
   })
 
   it("names the stop card in its note on harvesting at a range's stop — D100 (stop-card)", () => {

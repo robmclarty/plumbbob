@@ -180,7 +180,7 @@ The argument only seeds how you get there.
 
    **The card names the run, not the item.** The item's command is the range's
    definition: the form the parser reads, and the kind of stop it makes. The card names
-   `/plumbbob:run` in the Range row beneath Next Up for the range holding the next step,
+   `/plumbbob:run` on the range line beneath Next Up for the range holding the next step,
    with the steps it will land beside it, and `/plumbbob:run 3` runs range 3 by its item number
    ([D95 (run-verb)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d95)).
    A range grants nothing until the human types the run that names it, and then the turn
@@ -244,7 +244,7 @@ The argument only seeds how you get there.
      refusal.)
    - **The plan commit prints its own close.** `plumbbob checkpoint --plan` emits the
      whole boundary ending: `**Plan**: committed (<sha>)`, any advisory, and the state
-     table headed by the pointer at the step the build starts on, its Range row naming the
+     table headed by the pointer at the step the build starts on, the range line beneath it naming the
      run that lands that step's range when the plan declares ranges. Relay that block whole and run no second command; the
      plan-pause card above is the one place `handoff` is still called, because no verb has
      run yet there.

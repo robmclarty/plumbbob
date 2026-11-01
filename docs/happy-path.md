@@ -118,7 +118,7 @@ rest, and the card closes on one link to the read itself:
 
 | **Next Up** | **Step 1** on Opus - feat(limiter): add a token-bucket limiter (details: [intent.md:25](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L25)) |
 | --- | --- |
-| Range | **1** on Opus: /plumbbob:run (step 1 to its pause) |
+|  | **Range 1** on Opus: /plumbbob:run (step 1 to its pause) |
 
 **Recommendation**: Approve it. Every step carries a done-when a test can measure, the seams name files that exist, and each Decision states its because.
 
@@ -136,7 +136,7 @@ prints its own close:
 
 | **Next Up** | **Step 1** on Opus - feat(limiter): add a token-bucket limiter (details: [intent.md:25](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L25)) |
 | --- | --- |
-| Range | **1** on Opus: /plumbbob:run (step 1 to its pause) |
+|  | **Range 1** on Opus: /plumbbob:run (step 1 to its pause) |
 ```
 
 > **Plan as far as you can see clearly.** Later steps may be fuzzier than the first;
@@ -267,7 +267,7 @@ spent        22 min · 2 turns · 41s gate · green first run
 | --- | --- |
 | Now | **Step 1** on Opus - feat(limiter): add a token-bucket limiter |
 | Next Up | **Step 2** on Sonnet - feat(login): wire the limiter into POST /login (details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28)) |
-| Range | **1** lands with step 1 |
+|  | **Range 2** on Sonnet: /plumbbob:run once step 1 lands |
 
 **Recommendation**: Approve it, refilling on read. The gate is green and the seam held, and a bucket that refills when it is read needs no timer for the route to clean up.
 
@@ -283,8 +283,8 @@ the Verdict, which heads the state table, is the worst of them all. Only the Sum
 the three judgment rows, and the recommendation are the agent's, and they reach the turn
 through the detail file rather than the chat. The rest of the agent's story (the numbered
 sections behind the Summary) stays in that file, one `more details` link away. The
-recommendation speaks to the call the plan reserved here, and the Range row says range 1
-ends with this step.
+recommendation speaks to the call the plan reserved here, and the range line beneath
+Next Up says range 2's run opens once this step lands.
 
 The four moves are the ones you actually make. `expand 2` (or any question at all) opens
 the matching section of the detail file and changes nothing. The answer closes on one
@@ -369,7 +369,7 @@ itself, as one block, so what the agent relays is one command's output:
 | **Verdict** | ● Plumb |
 | --- | --- |
 | Next Up | **Step 2** on Sonnet - feat(login): wire the limiter into POST /login (details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28)) |
-| Range | **2** on Sonnet: /plumbbob:run (steps 2-3) |
+|  | **Range 2** on Sonnet: /plumbbob:run (steps 2-3) |
 | Parked | **1** of 1 open: /plumbbob:harvest |
 ```
 
@@ -384,7 +384,7 @@ window: a fresh window inherits the session's model rather than the plan's sugge
 the row names the `/model` to select before the next run, the range's own when a run
 comes next. Guidance, never a gate.
 
-The Range row beneath it names the run to type, and the steps it will land. **Fire
+The range line beneath it names the run to type, and the steps it will land. **Fire
 `/plumbbob:run` again**: *re-firing it is the clock tick*. The hook mints `steps 2-3` from
 the plan as you type, and the header says so:
 

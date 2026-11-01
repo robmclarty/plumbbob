@@ -146,7 +146,7 @@ describe("harvest — a stop's record — D104 (harvest-records)", () => {
         '',
         '| **Next Up** | **Step 4** - Fourth (details: [intent.md:11](.plumbbob/builds/harvest-test/intent.md#L11)) |',
         '| --- | --- |',
-        '| Range | **3**: /plumbbob:run (step 4 to its pause) |',
+        '|  | **Range 3**: /plumbbob:run (step 4 to its pause) |',
         '| Parked | **1** of 3 open: /plumbbob:harvest |',
         '',
         '',

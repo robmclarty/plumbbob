@@ -1528,7 +1528,8 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   of [**D86 (build-order)**](#d86), the range segment of [**D93 (range-on-the-card)**](#d93) and
   [**D98 (card-names-the-run)**](#d98), and the label of [**D108 (order-label)**](#d108) into rows. (Revised
   2026-10-30 by [**D115 (card-weights)**](#d115): each step and range names its own model beside its number, and
-  no row counts against the plan's total.) *Tagged in* `notice.ts`, `handoff.ts`, `checkpoint.ts`, `harvest.ts`, `finish.ts`,
+  no row counts against the plan's total.) (Revised 2026-10-31 by [**D122 (next-range-under-next-up)**](#d122):
+  the Range row became Next Up's second line, a row with a blank label.) *Tagged in* `notice.ts`, `handoff.ts`, `checkpoint.ts`, `harvest.ts`, `finish.ts`,
   `relay.ts`, `test/evals/helpers/anatomy.ts`, and `docs/presentation.md`.
 
 - <a id="d112"></a>**D112 (lean-table): Parks presented with leans render as a four-column table: the park's handle
@@ -1588,8 +1589,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   beside each step and range over a row of its own). Revises [**D111 (state-table)**](#d111), whose Next Up row
   carried the model in its bracket, and [**D86 (build-order)**](#d86)'s park count. (Extended 2026-10-31 by
   [**D120 (deferred-questions)**](#d120): the Questions row bolds the count that waits on the human the same way,
-  `**1** to answer · 2 deferred`.) *Tagged in* `handoff.ts`, `harvest.ts`, `orient.ts`, the eval anatomy reader,
-  and `docs/presentation.md`.
+  `**1** to answer · 2 deferred`.) (Revised 2026-10-31 by [**D122 (next-range-under-next-up)**](#d122): the range
+  opens on its name beneath Next Up, `**Range 3** on Opus`, and at the pause on a range's last step names the next
+  range and when its run opens, `once step 9 lands`, where it read `**3** lands with step 9`.) *Tagged in*
+  `handoff.ts`, `harvest.ts`, `orient.ts`, the eval anatomy reader, and `docs/presentation.md`.
 
 - <a id="d116"></a>**D116 (links-re-rooted): The record re-aims the detail file's relative links at the build
   folder.** When `checkpoint` (a step's record, and the plan's) or `plumbbob harvest` (a stop's) copies
@@ -1709,6 +1712,24 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   [**D110 (reply-after-the-card)**](#d110), whose reply ran the command after its words, and extends
   [**D89 (block-once)**](#d89) with a second reason that is not a relay miss. *Tagged in* `turn.ts`, `relay.ts`,
   the `build`, `verify`, `run`, and `park` skills, the eval anatomy reader, and `docs/presentation.md`.
+
+- <a id="d122"></a>**D122 (next-range-under-next-up): The next range rides Next Up's second line, a table row with a
+  blank label, and it is the next range at every site.** The line reads
+  `|  | **Range 3** on Opus: /plumbbob:run (steps 6-9) |`, its fact opening on the range's name now that no label says
+  `Range`; a flagged range reads `**Range 3** needs a re-cut (<words>)`, and a step no range names keeps its words.
+  Everywhere but one pause the line names what the Range row named: the run the next `/plumbbob:run` walks, its
+  bracket the grant the hook would mint. At the pause on a range's last step, or a bare range's, a run lands only that
+  step and ends on its range's stop, so the line names the range holding Next Up's step, read from the plan with the
+  paused step ticked, and when its run opens: `**Range 4** on Fable: /plumbbob:run once step 9 lands`, where it read
+  `**3** lands with step 9`. With no step after it, the line drops out. The eval's anatomy reader reads a row with a
+  blank label as the row above it carried on, so the line adds no part. *because* the Range row's label said which
+  range and never when: at a boundary it named the range to come, and at the last step's pause the range finishing, so
+  a human reading it beneath Now and Next Up could not tell the range the build was in from the next one (Rob,
+  2026-10-31, who asked for Next Up to name the next step and the next range together, and picked the next range and
+  its `once` clause at the last step's pause over no line there and over the finishing range's words). Revises [**D111
+  (state-table)**](#d111)'s Range row and [**D115 (card-weights)**](#d115)'s form for a range the card names but
+  offers no run for. *Tagged in* `handoff.ts`, the eval anatomy reader, `docs/presentation.md`, and
+  `docs/cli-reference.md`.
 
 ### Superseded
 

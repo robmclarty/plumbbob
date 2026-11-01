@@ -88,8 +88,10 @@ export type Anatomy = {
 // recommendation the pause card just showed (D119 (short-stop-after-a-halt)).
 // The Verdict, Now, Stop, and Next Up parts are rows of the
 // state table at a card's foot, each labeled by its first cell, so they read in
-// order as the labeled lines did; the Range, Order, Parked, and Questions rows
-// render only when they say something, and no tier owes them.
+// order as the labeled lines did; the Order, Parked, and Questions rows render
+// only when they say something, and no tier owes them. The next range rides a
+// row with a blank label beneath Next Up, which reads as Next Up's second line
+// (D122 (next-range-under-next-up)), so it adds no label of its own.
 export type Tier = 'decision' | 'plan' | 'reminder' | 'boundary' | 'driver' | 'stop' | 'stop-short'
 
 const TIER_PARTS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
@@ -209,7 +211,8 @@ export function readAnatomy(text: string): Anatomy {
 
     if (TABLE_ROW.test(line.trim())) {
       const state = stateRow(line.trim())
-      if (state !== null) {
+      // A blank label continues the row above it, as the range line does Next Up's.
+      if (state !== null && state.label !== '') {
         current = state.label
         labels.push(current)
         if (current === 'Next Up') pointer = state.value
@@ -294,8 +297,8 @@ function stateRow(line: string): { readonly label: string; readonly value: strin
 function splitMidLineLabels(lines: ReadonlyArray<string>): ReadonlyArray<string> {
   const out: string[] = []
   for (const line of lines) {
-    // A table row is a row, never a label run into prose: the Range row's
-    // `**3**: /plumbbob:run …` bolds its range number ahead of a colon.
+    // A table row is a row, never a label run into prose: the range line's
+    // `**Range 3**: /plumbbob:run …` bolds its range ahead of a colon.
     const at = TABLE_ROW.test(line.trim()) ? -1 : line.search(/\*\*[^*]+\*\*:/)
     if (at > 0) {
       out.push(line.slice(0, at))

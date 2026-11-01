@@ -92,8 +92,8 @@ have drifted. Most steps need nothing; skip straight to `/plumbbob:run` (or
 Builds one range of the plan: what is left of the range holding the next step, or of range
 3 for `/plumbbob:run 3`, by the item number `## Build ranges` gives it
 ([D95 (run-verb)](decisions.md#d95)). The step numbers are the plan's to know, so you never
-type them: the card names the run in the Range row beneath Next Up with the steps it will
-land (`| Range | **2** on Sonnet: /plumbbob:run (steps 2-3) |`), and the turn hook mints the run's grant from
+type them: the card names the run on the range line beneath Next Up with the steps it will
+land (`|  | **Range 2** on Sonnet: /plumbbob:run (steps 2-3) |`), and the turn hook mints the run's grant from
 the plan as you type it ([D96 (plan-names-the-grant)](decisions.md#d96)). The skill opens on
 the run header `plumbbob status --run` prints (the range, what is left of it, where the run
 ends, its stop, and that grant), then walks the steps the way a typed range is walked,
@@ -129,7 +129,7 @@ lands steps 1 through 3, then ends on step 3's checkpoint block. A range may als
 steps (`20,5-9`): it lands exactly the steps it names, walked in build order from its first
 undone one, and halts before any step it does not name
 ([D91 (step-list-grants)](decisions.md#d91)). When the plan carries build ranges, the card
-names the run to type in the Range row beneath Next Up, and [`/plumbbob:run`](#run) is the
+names the run to type on the range line beneath Next Up, and [`/plumbbob:run`](#run) is the
 move that walks one; `/plumbbob:build` stays the granular one. A range landed by a typed
 `/plumbbob:build 2-3` ends on the boundary where its last step lands, whose state table
 carries a `Stop` row saying why the build stops there, relayed with the rest of the

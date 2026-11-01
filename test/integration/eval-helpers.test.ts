@@ -1172,7 +1172,7 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
       '| --- | --- |',
       '| Stop | **Range 3** landed - review the card (details: [intent.md:63](x/intent.md#L63)) |',
       '| Next Up | **Step 10** - Tenth (details: [intent.md:34](x/intent.md#L34)) |',
-      '| Range | **4**: /plumbbob:run (step 10 to its pause) |',
+      '|  | **Range 4**: /plumbbob:run (step 10 to its pause) |',
       '',
       '**Recommendation**: Approve it.',
       '',
@@ -1180,7 +1180,7 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
       '',
     ].join('\n')
     const a = readAnatomy(card)
-    expect(a.labels).toEqual(['Summary', 'Readout', 'Harvested', 'Your Call', 'Verdict', 'Stop', 'Next Up', 'Range', 'Recommendation'])
+    expect(a.labels).toEqual(['Summary', 'Readout', 'Harvested', 'Your Call', 'Verdict', 'Stop', 'Next Up', 'Recommendation'])
     // The lean table's rows belong to the Harvested part, and the lock-in line
     // beneath the Your Call label belongs to it (D106 (leans-harvested)),
     // while any other flush line there is still the stray it always was.
@@ -1287,19 +1287,19 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
 })
 
 describe('turn-anatomy readers — the rows beneath Next Up', () => {
-  it('reads the Range, Order, and Parked rows as parts of the table that no tier owes — D111 (state-table)', () => {
+  it('reads the range line, Order, and Parked rows as parts of the table that no tier owes — D111 (state-table), D122 (next-range-under-next-up)', () => {
     const table = [
       '| **Verdict** | ● Plumb |',
       '| --- | --- |',
       '| Next Up | **Step 7** - Seventh (details: [intent.md:22](x/intent.md#L22)) |',
-      '| Range | **3**: /plumbbob:run (steps 7-9) |',
+      '|  | **Range 3**: /plumbbob:run (steps 7-9) |',
       '| Order | 7, 8, 5, 10, 6 (and 2 more) |',
       '| Parked | **2** of 7 open: /plumbbob:harvest |',
       '',
     ].join('\n')
     const a = readAnatomy(table)
     expect(a.strays).toEqual([])
-    expect(a.labels).toEqual(['Verdict', 'Next Up', 'Range', 'Order', 'Parked'])
+    expect(a.labels).toEqual(['Verdict', 'Next Up', 'Order', 'Parked'])
     expect(a.pointer).toBe('**Step 7** - Seventh (details: [intent.md:22](x/intent.md#L22))')
     expect(a.endsOn).toBe('Parked')
     expect(endingRenders(a, 'boundary')).toBe(true)
