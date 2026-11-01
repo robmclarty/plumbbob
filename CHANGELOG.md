@@ -5,6 +5,26 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.8] - 2026-10-31
+
+- **Added:** `plumbbob defer Q3 "<what settles it>"` leaves an open question to the work. It
+  writes `*deferred:* <date>, until <what settles it>` on the question's opener in place of
+  its `*resolve by:*` tag, prints the deferral and the pointer, and refuses a handle the open
+  questions lack or a question already resolved. The plan, refine, build, run, harvest, and
+  park skills run it whenever the human sets a question aside, a question kept open as the
+  running log of something the build tunes included, and a question handed over mid-step is
+  deferred rather than parked. D123 (defer-records) records it.
+- **Changed:** Next Up's second line names the next range, `**Range 3** on Opus:
+  /plumbbob:run (steps 6-9)`, in place of the Range row, whose label said which range and
+  never when. At the pause on a range's last step the line names the range to come and when
+  its run opens (`**Range 4** on Fable: /plumbbob:run once step 9 lands`), and with no step
+  after it the line drops out. D122 (next-range-under-next-up) records it.
+- **Fixed:** a question parked, or settled as a tangent at a harvest or a stop, kept counting
+  as a question to answer, so the card read `**2** to answer` though the human had already set
+  both aside. `plumbbob park` and `plumbbob harvest` now add an advisory when a park or a
+  confirmed tangent names a question still to answer, with the `plumbbob defer` command
+  beneath it.
+
 ## [0.13.7] - 2026-10-31
 
 - **Added:** open questions reach the chat as one table, a row per question with the question,
