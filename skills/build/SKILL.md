@@ -3,7 +3,7 @@ name: build
 description: "The default engine: read the next planned step from intent, implement it (its done-when, seam, Decisions, Constraints), then verify it through to the approval pause. Swappable: build by hand/vibed/another harness and run /plumbbob:verify instead. `--auto` self-approves and chains to done; a step range like `1-3`, or a list like `20,5-9`, self-approves exactly the steps it names, in build order, then stops."
 argument-hint: "[step-number | step-range | step-list] [--auto]"
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob park:*), Bash(plumbbob agent:*), Bash(plumbbob spike:*), Bash(git diff:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob park:*), Bash(plumbbob defer:*), Bash(plumbbob agent:*), Bash(plumbbob spike:*), Bash(git diff:*)
 ---
 
 # PlumbBob: build a step (the default engine)
@@ -66,7 +66,13 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    capture it by running `plumbbob park "<one tidy line>"`: **saying "let's defer
    that" writes nothing; only the park line in the build log is a capture.** When the
    *human* hands you the tangent mid-build, their message **is** the approval to park
-   it; capture it right away, say what you parked, and stay on the step. If you
+   it; capture it right away, say what you parked, and stay on the step. An open question
+   the human sets aside to wait on other work is deferred, not parked: run
+   `plumbbob defer Q3 "<what settles it>"`, because the card counts questions by the
+   marker on each opener and never by the park list
+   ([D123 (defer-records)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d123)).
+   When `plumbbob park` warns that a question it names still counts as one to answer,
+   defer it if the human said the work will settle it, and leave it to them otherwise. If you
    genuinely cannot finish without touching more than the seam, that is scope drift:
    surface it to the human rather than sprawling.
    - **Bound agents can shape the build.** If `plumbbob status` shows a

@@ -4,7 +4,7 @@ description: "Compose one tidy tagged park line, get the human's OK in-turn, the
 argument-hint: "[idea]"
 disable-model-invocation: true
 model: haiku
-allowed-tools: Bash(plumbbob status:*), Bash(plumbbob park:*)
+allowed-tools: Bash(plumbbob status:*), Bash(plumbbob park:*), Bash(plumbbob defer:*)
 ---
 
 # PlumbBob: park an idea (capture, don't chase)
@@ -58,11 +58,25 @@ Then:
    writing it above the capture, or stacking a second ending under the block are the ways
    this goes wrong.
 
+## A question set aside is deferred, not parked
+
+When the idea is an open question from the plan that the human wants picked up later,
+once other work lands (`leave Q3 until the latency numbers are in`), run
+`plumbbob defer Q3 "<what settles it>"` in place of the park. The question's own opener
+is where it waits, and the card counts it apart from the questions to answer; a park line
+beside it would leave the card counting it as a call still owed
+([D123 (defer-records)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d123)).
+`plumbbob defer` prints the same kind of block, `**Deferred**: Q3 (<slug>) until <what
+settles it>` and the pointer, and you relay it the same way. When `plumbbob park` warns that
+a question it names still counts as one to answer, relay the block as printed; whether to
+defer it is the human's call.
+
 ## The one hard contract
 
 The capture itself is the **dumb CLI**, never an edit. This skill carries **no Edit and
-no Write tool** on purpose: you may not append to `build-log.md` yourself. Compose, get
-approval, then shell `plumbbob park`; that is the only write path. If approval
+no Write tool** on purpose: you may not append to `build-log.md` yourself, nor mark a
+question in `intent.md`. Compose, get approval, then shell `plumbbob park`, or
+`plumbbob defer` for a question set aside; those are the only write paths. If approval
 never comes, capture nothing. (When the human's **own message** states the idea, a
 tangent they raise mid-build, that message **is** the approval: capture it directly
 with `plumbbob park`, don't ask again. Deferring in words without the CLI line captures

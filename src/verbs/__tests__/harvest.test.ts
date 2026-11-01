@@ -270,6 +270,19 @@ describe('harvest — the proposals it settles', () => {
     expect(log(legacy)).toContain('- [x] one idea\n- [x] another (tangent)\n- [ ] a third')
   })
 
+  it('warns of a question a tangent sets aside that still counts as to answer, and not one a blocker names — D123 (defer-records)', async () => {
+    const detail = '# Detail · Harvest\n\n## Harvest\n\n- P1 → tangent: Q1 waits on step 4\n- P3 → blocker: Q2 folds into step 4\n'
+    const dir = await atStop({ card: false, detail })
+    const questions = '\n## Open questions\n\n- <a id="q1"></a>**Q1 (label)**: Which label?, *resolve by:* decide\n- <a id="q2"></a>**Q2 (shape)**: Which shape?, *resolve by:* decide\n'
+    writeFileSync(intentPath(dir), `${INTENT}${questions}`)
+    const { code, stdout } = captureIo(() => harvest(dir, []))
+    expect(code).toBe(0)
+    expect(stdout).toContain(
+      '**Recorded**: 2 parked ideas (1 blocker, 1 tangent)\n\nQ1 (label) still counts as a question to answer ⚠\n  → plumbbob defer Q1 "<what settles it>", if the work will settle it\n',
+    )
+    expect(stdout).not.toContain('Q2 (shape)')
+  })
+
   it('refuses a harvest that settles no open park', async () => {
     const dir = await atStop({ card: false, detail: '# Detail · Harvest\n\n## Harvest\n' })
     expect(captureIo(() => harvest(dir, [])).stderr).toBe(

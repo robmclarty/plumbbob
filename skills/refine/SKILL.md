@@ -3,7 +3,7 @@ name: refine
 description: "Keep intent.md true: attack the plan for holes (append as Open questions) and refine or repair the Frame, Decisions, Constraints, Steps, and build ranges to match reality (`ranges` re-cuts the whole section). Usable at any point; you propose, the human approves."
 argument-hint: "[focus | ranges]"
 disable-model-invocation: true
-allowed-tools: Read, Edit, Bash(plumbbob status:*), Bash(plumbbob order:*)
+allowed-tools: Read, Edit, Bash(plumbbob status:*), Bash(plumbbob order:*), Bash(plumbbob defer:*)
 ---
 
 # PlumbBob: refine the plan
@@ -45,10 +45,15 @@ is fine; refining is always available.
   message (`yes to all leans`, or `yes to all leans except Q3: <their answer>`), no
   doc-flipping, no extra round-trip per hole. A resolved question gets
   `*resolved:* <date>, <the answer>` in place of its `*resolve by:*` on the opener line. The human
-  can also leave one to the work (`defer Q3 until <what settles it>`): keep the question
-  and swap its `*resolve by:*` for `*deferred:* <date>, until <what settles it>` on the
-  opener line, and the table moves it to a `Deferred` line beneath, still open
+  can also leave one to the work (`defer Q3 until <what settles it>`): run
+  `plumbbob defer Q3 "<what settles it>"`, which keeps the question and swaps its
+  `*resolve by:*` for `*deferred:* <date>, until <what settles it>` on the opener line,
+  and the table moves it to a `Deferred` line beneath, still open
   ([D120 (deferred-questions)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d120)).
+  A question the table still shows that the human has already set aside (parked, settled
+  as a tangent, or kept open as a log) is drift: propose deferring it, until what the
+  build says it waits on, rather than asking it again
+  ([D123 (defer-records)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d123)).
   Never retype the table as a list of your own
   ([D118 (questions-table)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d118)).
 - **Repair (re-sync to reality).** When the plan has drifted (a Decision was overtaken

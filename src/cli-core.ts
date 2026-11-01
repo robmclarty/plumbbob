@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url'
 import { start } from './verbs/start.ts'
 import { status } from './verbs/status.ts'
 import { park } from './verbs/park.ts'
+import { defer } from './verbs/defer.ts'
 import { harvest } from './verbs/harvest.ts'
 import { order } from './verbs/order.ts'
 import { build } from './verbs/build.ts'
@@ -191,6 +192,17 @@ const VERBS: ReadonlyArray<Verb> = [
     args: [{ name: '<text>', gloss: 'the note to park (free text; quote it)' }],
     tolerateUnknownFlags: true,
     notes: 'Refuses (exit 1) with no session, empty text, or no `## Park list` section.',
+  },
+  {
+    name: 'defer',
+    description: 'leave an open question to the work, until what will settle it',
+    synopsis: ['defer <Qn> "<what settles it>"'],
+    args: [
+      { name: '<Qn>', gloss: 'the open question, by its handle (Q3)' },
+      { name: '<what settles it>', gloss: 'the work the question waits on (free text; quote it)' },
+    ],
+    notes:
+      "Writes `*deferred:* <date>, until <what settles it>` on the question's opener in intent.md, in place of its `*resolve by:*` tag or an earlier deferral, so every count reads it apart from the questions to answer. Refuses (exit 1) with no session, no handle, no until-clause, a handle the open questions lack, or a question already resolved.",
   },
   {
     name: 'order',
@@ -425,6 +437,8 @@ async function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>):
       return status(cwd, rest)
     case 'park':
       return park(cwd, rest)
+    case 'defer':
+      return defer(cwd, rest)
     case 'order':
       return order(cwd, rest)
     case 'harvest':

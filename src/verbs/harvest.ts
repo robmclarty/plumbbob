@@ -26,7 +26,7 @@ import { findRepoRoot } from '../lib/git.ts'
 import { ending, notice, printEnding, transition } from '../lib/notice.ts'
 import { appendHarvest, appendToSection, flipParks, harvestLines, logEntry, type SettledPark, stopLogLine } from '../lib/buildlog.ts'
 import { checkStopLatch } from '../lib/latch.ts'
-import { parseBuildRanges, parseDetailStep, parseLastCheckpoint, parseOrderedSteps, stepShas } from '../lib/orient.ts'
+import { parseBuildRanges, parseDetailStep, parseLastCheckpoint, parseOpenQuestionRows, parseOrderedSteps, stepShas } from '../lib/orient.ts'
 import {
   activeBuild,
   buildLogPath,
@@ -49,6 +49,7 @@ import {
   type Proposal,
   stopRecord,
 } from './handoff.ts'
+import { setAsideAdvisories } from './defer.ts'
 
 // The three classes a park settles as, in the order the ending counts them.
 const CLASSES = ['blocker', 'tangent', 'pivot'] as const
@@ -131,10 +132,21 @@ export function harvest(cwd: string, _args: ReadonlyArray<string>): number {
     stop === null
       ? transition({ label: 'Recorded', fact: `${settled.length} parked idea${settled.length === 1 ? '' : 's'}`, detail: [counted] })
       : transition({ label: 'Stop', fact: `**Range ${stop.item}** recorded`, detail: [counted] })
+  // A tangent naming a question that still waits on the human has set it
+  // aside without deferring it, and the card would go on counting it as a
+  // call owed (D123 (defer-records)).
+  const tangents = settled
+    .filter((p) => p.kind === 'tangent')
+    .map((p) => `${p.text} ${p.reason}`)
+    .join(' ')
   printEnding(root, {
     tier: 'orientation',
     render: 'harvest',
-    text: ending({ lead, state: boundaryEnding(root, slug, null).state }),
+    text: ending({
+      lead,
+      advisories: setAsideAdvisories(tangents, parseOpenQuestionRows(intent)),
+      state: boundaryEnding(root, slug, null).state,
+    }),
   })
   return 0
 }

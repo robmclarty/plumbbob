@@ -28,6 +28,7 @@ pure function that writes to stdout/stderr and returns an exit code; the only
 | `revert` | `revert [--to <n>] [--build <slug>]` | `git reset --hard` to a checkpoint SHA |
 | `abandon` | `abandon [--build <slug>]` | drop the in-flight step, keep its work in the tree |
 | `park` | `park <text>` | append a line to the park list |
+| `defer` | `defer <Qn> <what settles it>` | leave an open question to the work, until what will settle it |
 | `harvest` | `harvest` | record a harvest from the detail file, and at a run's stop the range's review |
 | `order` | `order <steps>` \| `order --reset` | set the build order: the undone steps in the sequence to build them |
 | `spike` | `spike <slug> [opt…] [--build <slug>]` \| `spike report <slug>` \| `spike done` | throwaway worktree experiment |
@@ -331,7 +332,7 @@ when no range that lands its steps just landed, or when the detail file is anoth
 range's, and with `--harvest` when the detail file is not a harvest's or no park is open.
 
 Every transition verb prints its own ending through this same code, so `checkpoint`,
-`park`, `harvest`, `order`, `revert`, `abandon`, `spike`, `use`, and `finish` each emit the
+`park`, `defer`, `harvest`, `order`, `revert`, `abandon`, `spike`, `use`, and `finish` each emit the
 state table (the Verdict where one is measured, and the pointer) or a driver's one pointer
 line for themselves, and a skill relays one command's output rather
 than two. `handoff` stays the way to render an ending where no verb ran: a build pause, a
@@ -463,6 +464,32 @@ Appends `<text>` as a raw line under `## Park list` in `build-log.md` and prints
 tag at the tail, is the `/plumbbob:park` skill's job. Refuses (exit 1) with no session, empty text, or no
 `## Park list` section.
 
+A park that names an open question still to answer (`Q3`) gains an advisory beneath its lead,
+`Q3 (latency-budget) still counts as a question to answer ⚠`, with
+`plumbbob defer Q3 "<what settles it>"` beneath it: the park list never moves the card's
+Questions count, so a question set aside by a park alone still reads as a call owed
+([**D123 (defer-records)**](decisions.md#d123)).
+
+### defer
+
+```text
+plumbbob defer <Qn> "<what settles it>"
+```
+
+Leaves an open question to the work. On the question's opener in `intent.md` it writes
+`*deferred:* <date>, until <what settles it>` in place of the `*resolve by:*` tag, or of an
+earlier deferral, or at the end of a line that has neither, and prints
+`**Deferred**: Q3 (latency-budget) until step 4's latency numbers` and the pointer
+([**D123 (defer-records)**](decisions.md#d123)). The question stays open, and every count
+reads it apart from the ones to answer: the Questions row's `**1** to answer · 2 deferred`,
+the dashboard's `open questions 1 to answer, 2 deferred`, and the plan card's `**Deferred**:`
+line ([**D120 (deferred-questions)**](decisions.md#d120)). A leading "until" in the text is
+dropped, since the marker writes its own, and a clause on several lines folds onto the
+opener, the one line the parser reads. Deferring is the human's call; the plan, refine,
+build, harvest, and park skills run the verb when the human sets a question aside. Refuses
+(exit 1) with no session, no handle, no until-clause, a handle the open questions lack, or
+a question already resolved.
+
 ### harvest
 
 ```text
@@ -491,7 +518,9 @@ printed, a range no stop card showed, a range open again, and a range a step joi
 it landed. A detail file a reply rewrote since the card printed (a lean the human changed)
 records as it now reads ([**D110 (reply-after-the-card)**](decisions.md#d110)). It also refuses a proposal naming a park the list lacks
 (`P9 is not in the list; 3 parked`) or a class other than blocker, tangent, or pivot, and a
-detail file that is no range's or harvest's.
+detail file that is no range's or harvest's. A confirmed tangent whose park or reason names
+an open question still to answer gains the same advisory as a park
+([**D123 (defer-records)**](decisions.md#d123)).
 
 ### order
 

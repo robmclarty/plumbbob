@@ -3,7 +3,7 @@ name: plan
 description: "Frame a fresh goal and author the whole plan (Frame, Decisions, Constraints, all Steps, and the build ranges) before any code. Three input modes: no arg interviews you; a file path (or @-mention) absorbs a spec; any other text expands your inline intent."
 argument-hint: "[spec-path | intent]"
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob handoff:*), Bash(plumbbob start:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent list:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob handoff:*), Bash(plumbbob start:*), Bash(plumbbob checkpoint:*), Bash(plumbbob defer:*), Bash(plumbbob agent list:*)
 ---
 
 # PlumbBob: plan a goal (the whole-goal move)
@@ -85,13 +85,18 @@ The argument only seeds how you get there.
    in one reply: on each opener line swap `*resolve by:*` for `*resolved:* <date>, <the
    answer>`, add the Decision the answer settles, and run `plumbbob handoff --plan` again.
    A question the human would rather let the work answer is deferred, not resolved: on
-   `defer Q3 until <what settles it>`, keep the question and swap its `*resolve by:*` for
+   `defer Q3 until <what settles it>`, run `plumbbob defer Q3 "<what settles it>"`, which
+   keeps the question and swaps its `*resolve by:*` for
    `*deferred:* <date>, until <what settles it>` on the opener line, then run
    `plumbbob handoff --plan` again. It stays open, the card lists it on a `Deferred` line
    beneath the table, out of reach of `yes to all leans`, and the Questions row counts it
    apart (`**1** to answer · 2 deferred`); once the work answers it, swap the marker for
    `*resolved:*` as above
    ([D120 (deferred-questions)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d120)).
+   A question the human keeps open on purpose, as the running log of something the build
+   tunes, is deferred the same way, until the work it logs; left on `*resolve by:*`, the
+   card counts it as a call still owed
+   ([D123 (defer-records)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d123)).
    Deferring is the human's call, never yours: a lean you are unsure of is still a lean.
 4. **Author the Steps.** Write the **full build plan** under `## Steps` (each step a
    small, verifiable increment) in the exact format the parser reads:

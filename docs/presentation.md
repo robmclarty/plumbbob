@@ -798,7 +798,8 @@ the human chose to leave to the work carries
 linked to its opener with what will settle it ([D120 (deferred-questions)](decisions.md#d120)). It is
 still open, so the lead counts it, but it is not a call the human makes now,
 so `yes to all leans` never reaches it. The block gains
-`defer Q3 until <what settles it>`, which writes the marker, beside the
+`defer Q3 until <what settles it>`, which runs `plumbbob defer` to write the
+marker ([D123 (defer-records)](decisions.md#d123)), beside the
 leans move, and both ride only while a question waits on the human; with
 every open question deferred, the line stands alone and the card offers no
 lean to take. A bare count used to say how many were open and not who acts:

@@ -3,7 +3,7 @@ name: run
 description: "Run what is left of the range holding the next step, or of range N: the plan's `## Build ranges` names the steps, the turn hook mints their grant from the plan, and the run walks them the way a typed range is walked, then ends on the stop card, the range's review with every open park proposed, which one reply settles. A bare range builds its one step to its pause. Reads the build skill beside it for the per-step loop."
 argument-hint: "[range-number]"
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob park:*), Bash(plumbbob agent:*), Bash(plumbbob spike:*), Bash(git diff:*), Bash(plumbbob harvest:*), Bash(plumbbob order:*), Bash(git log:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob park:*), Bash(plumbbob defer:*), Bash(plumbbob agent:*), Bash(plumbbob spike:*), Bash(git diff:*), Bash(plumbbob harvest:*), Bash(plumbbob order:*), Bash(git log:*)
 ---
 
 # PlumbBob: run a range
@@ -223,8 +223,9 @@ The card's proposals are settled in one reply
 and the Your Call block names the replies. Read the human's message as one of them:
 
 - **`looks good`** confirms the review and locks in every lean as proposed, as the line
-  beneath the card's Your Call label says. Fold each confirmed blocker into `intent.md` by
-  the harvest skill's rules first, then run `plumbbob harvest`, which flips the parks,
+  beneath the card's Your Call label says. Fold each confirmed blocker into `intent.md`, and
+  defer each open question a confirmed tangent sets aside, by the harvest skill's rules
+  first, then run `plumbbob harvest`, which flips the parks,
   writes the Harvest lines, and writes the range's review beneath a dated line in the Log.
   A blocker that becomes a step goes into a range still to come, or a bare range of its
   own, never into the range this card reviews: that range has landed, its call is the one

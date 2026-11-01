@@ -149,8 +149,9 @@ build reports zero open questions
 fill it in and it counts.
 
 When the human would rather let the work answer a question, it is deferred, not
-resolved: keep the question and swap *resolve by:* for *deferred:* <date>, until
-<what settles it> ON THE OPENER LINE, so the opener reads
+resolved: `plumbbob defer Q4 "<what settles it>"` keeps the question and swaps
+*resolve by:* for *deferred:* <date>, until <what settles it> ON THE OPENER LINE, so
+the opener reads
 
   **Q4 (latency-budget)**: What latency budget do we hold?, *deferred:* 2026-10-31, until step 4's latency numbers
 
@@ -158,6 +159,10 @@ It stays open and still counts, but the card lists it on a line beneath the tabl
 rather than in it, so `yes to all leans` leaves it alone. Once the work answers it,
 swap the marker for *resolved:* as above
 ([D120 (deferred-questions)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d120)).
+A question parked, settled as a tangent, or kept open as the running log of something
+the build tunes waits on the work too, so it is deferred the same way; left on
+*resolve by:*, the card counts it as a call still owed
+([D123 (defer-records)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d123)).
 
 Size to the work: a tiny build's single, obvious question may stay one bare line;
 the *plain:*/*lean:* pair earns its keep only when a human decision genuinely waits

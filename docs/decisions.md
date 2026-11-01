@@ -1682,7 +1682,9 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   had to open the file to learn which were safe to leave (Rob, 2026-10-31). A new *resolve by:* value such as
   `observe` would have said how a question closes, not that the human chose to wait, nor until what. Extends
   [**D76 (resolved-on-opener)**](#d76) and [**D115 (card-weights)**](#d115), and revises
-  [**D118 (questions-table)**](#d118)'s lead and the reach of its move. *Tagged in* `orient.ts`, `handoff.ts`,
+  [**D118 (questions-table)**](#d118)'s lead and the reach of its move. (Revised 2026-10-31 by
+  [**D123 (defer-records)**](#d123): `plumbbob defer` writes the marker, from any move that sets a question aside.)
+  *Tagged in* `orient.ts`, `handoff.ts`,
   `status.ts`, the `plan`, `refine`, and `status` skills, `templates/intent.md`, the eval anatomy reader, and
   `docs/presentation.md`.
 
@@ -1730,6 +1732,25 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   (state-table)**](#d111)'s Range row and [**D115 (card-weights)**](#d115)'s form for a range the card names but
   offers no run for. *Tagged in* `handoff.ts`, the eval anatomy reader, `docs/presentation.md`, and
   `docs/cli-reference.md`.
+
+- <a id="d123"></a>**D123 (defer-records): `plumbbob defer Q3 "<what settles it>"` writes the deferral, and a park or
+  a tangent that names a question still to answer says so.** The verb swaps the opener's *resolve by:* (or an earlier
+  deferral) for `*deferred:* <date>, until <what settles it>`, the marker [**D120 (deferred-questions)**](#d120)
+  counts by, and refuses a handle the open questions lack or a question already resolved. Deferring stays the human's
+  call; the skill decides and the CLI records, as [**D104 (harvest-records)**](#d104) has it for a harvest. Every move
+  that sets a question aside writes it: the plan card's and refine's `defer Q3 until …`, a question the human hands
+  over mid-step to wait on other work (deferred in place of a park), a tangent confirmed at a harvest or a stop that
+  sets one aside, and a question kept open on purpose as the running log of something the build tunes. `plumbbob park`
+  and `plumbbob harvest` read the text they record for a handle (`Q3`) still to answer, a tangent's reason included,
+  and add an advisory beneath the lead, `Q3 (latency-budget) still counts as a question to answer ⚠`, with the
+  command beneath it. A blocker that names a question gets none, since folding it settles the question. *because*
+  the marker was a hand edit taught at the plan card alone, so a question parked or harvested as a tangent to wait on
+  other work kept its *resolve by:*, and the card went on reading `**2** to answer` though the human had already
+  answered by setting both aside; "to answer" has to mean the human has not yet replied (Rob, 2026-10-31, on a
+  build whose two such questions had been kept open as logs since before the marker existed). The parser stays literal:
+  nothing guesses a deferral from a *resolve by:* clause's wording. Revises [**D120 (deferred-questions)**](#d120)'s
+  move, which now runs the verb. *Tagged in* `defer.ts`, `park.ts`, `harvest.ts`, `orient.ts`, the `plan`, `refine`,
+  `build`, `run`, `harvest`, and `park` skills, `templates/intent.md`, and `docs/cli-reference.md`.
 
 ### Superseded
 

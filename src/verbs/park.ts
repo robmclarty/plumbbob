@@ -8,12 +8,14 @@
 // Capture is not a state transition, so it runs in any context (terminal or
 // in-session).
 
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
-import { activeBuild, hasSession, buildLogPath } from '../lib/sidecar.ts'
+import { activeBuild, hasSession, buildLogPath, intentPath } from '../lib/sidecar.ts'
 import { appendToSection } from '../lib/buildlog.ts'
 import { ending, notice, printEnding, transition } from '../lib/notice.ts'
+import { parseOpenQuestionRows } from '../lib/orient.ts'
 import { driverPointer } from './handoff.ts'
+import { setAsideAdvisories } from './defer.ts'
 
 /**
  * Append the given text as one unchecked `- [ ]` line to the build-log's Park list.
@@ -49,12 +51,20 @@ export function park(cwd: string, args: ReadonlyArray<string>): number {
     return 1
   }
   writeFileSync(path, updated)
+  const intent = intentPath(root)
+  const questions = parseOpenQuestionRows(existsSync(intent) ? readFileSync(intent, 'utf8') : '')
   // A park interrupts a step without ending it, so the ending is the capture
-  // and the pointer back at what was interrupted.
+  // and the pointer back at what was interrupted. A park naming a question
+  // that still waits on the human says so, since the park list never moves
+  // the card's count (D123 (defer-records)).
   printEnding(root, {
     tier: 'driver',
     render: 'park',
-    text: ending({ lead: transition({ label: 'Parked', fact: text }), pointer: driverPointer(root, activeBuild(root)) }),
+    text: ending({
+      lead: transition({ label: 'Parked', fact: text }),
+      advisories: setAsideAdvisories(text, questions),
+      pointer: driverPointer(root, activeBuild(root)),
+    }),
   })
   return 0
 }

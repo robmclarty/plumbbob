@@ -877,6 +877,7 @@ const RELAY_RENDERS = [
   'checkpoint',
   'plan-commit',
   'park',
+  'defer',
   'revert',
   'abandon',
   'spike-open',

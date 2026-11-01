@@ -1593,6 +1593,41 @@ function deferredText(body: string): string | null {
     .trim()
 }
 
+/** What deferring a question came to: the intent with its opener rewritten, or why it could not be. */
+export type Deferral =
+  | { readonly kind: 'deferred'; readonly intent: string; readonly question: OpenQuestion }
+  | { readonly kind: 'resolved' }
+  | { readonly kind: 'missing'; readonly open: ReadonlyArray<string> }
+
+/**
+ * Defer an open question to the work: on its opener line, `*deferred:* <date>,
+ * until <what settles it>` takes the place of its `*resolve by:*` tag, or of
+ * an earlier `*deferred:*` marker, or joins the end of a line that has
+ * neither. The until-clause is folded onto one line, since the parser reads
+ * the opener line alone (D120 (deferred-questions)).
+ *
+ * `resolved` names an opener the plan closed, `missing` one the plan lacks or
+ * has not filled in, with the handles still open beside it.
+ */
+export function deferQuestion(intent: string, id: string, date: string, until: string): Deferral {
+  const rows = parseOpenQuestionRows(intent)
+  const row = rows.find((q) => q.id === id)
+  if (row === undefined) {
+    const closed = sectionLines(intent, '## Open questions').lines.some((raw) => {
+      const opener = QUESTION_OPENER.exec(raw.trim())
+      return opener?.[1] === id && resolvedOpener(raw)
+    })
+    return closed ? { kind: 'resolved' } : { kind: 'missing', open: rows.map((q) => q.id) }
+  }
+  const lines = intent.split('\n')
+  const raw = lines[row.line - 1] ?? ''
+  const marker = `*deferred:* ${date}, until ${until.replace(/\s*\n\s*/g, ' ').trim()}`
+  const tag = raw.search(/\*(?:resolve by|deferred):\*/i)
+  lines[row.line - 1] = tag === -1 ? `${raw.trimEnd()}, ${marker}` : `${raw.slice(0, tag).trimEnd()} ${marker}`
+  const updated = lines.join('\n')
+  return { kind: 'deferred', intent: updated, question: parseOpenQuestionRows(updated).find((q) => q.id === id) ?? row }
+}
+
 /** The open questions split by who acts: the ones that wait on the human, and the ones deferred to the work. */
 export type QuestionTotals = { readonly toAnswer: number; readonly deferred: number }
 
@@ -1600,6 +1635,17 @@ export type QuestionTotals = { readonly toAnswer: number; readonly deferred: num
 export function questionTotals(rows: ReadonlyArray<OpenQuestion>): QuestionTotals {
   const deferred = rows.filter((q) => q.deferred !== null).length
   return { toAnswer: rows.length - deferred, deferred }
+}
+
+/**
+ * The open questions still waiting on the human that a line of text names by
+ * handle (`Q3`), in the order the plan lists them. A park or a tangent naming
+ * one has set it aside without deferring it, so the count still reads it as a
+ * call owed.
+ */
+export function questionsToAnswerNamed(text: string, rows: ReadonlyArray<OpenQuestion>): OpenQuestion[] {
+  const named = new Set(text.match(/\bQ\d+\b/g) ?? [])
+  return rows.filter((q) => q.deferred === null && named.has(q.id))
 }
 
 /**

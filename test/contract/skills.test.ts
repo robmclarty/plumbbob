@@ -507,7 +507,7 @@ describe('run — a range of the plan, walked by the build skill — D95 (run-ve
     const section = body.slice(body.indexOf('## 6. The reply at a stop'), body.indexOf('## The hard contracts'))
     const flat = section.replace(/\s+/g, ' ')
     expect(flat).toMatch(/\*\*`looks good`\*\* confirms the review and locks in every lean as proposed/)
-    expect(flat).toMatch(/Fold each confirmed blocker into `intent.md` by the harvest skill's rules first, then run `plumbbob harvest`/)
+    expect(flat).toMatch(/Fold each confirmed blocker into `intent.md`, and defer each open question a confirmed tangent sets aside, by the harvest skill's rules first, then run `plumbbob harvest`/)
     // A change names the park the way the card's lock-in line does (D105 (park-handles)).
     expect(section).toContain('`make P7 a tangent`')
     expect(section).not.toMatch(/park \d+ is a/)
@@ -665,6 +665,12 @@ describe('park — capture via the dumb CLI, never an edit', () => {
     expect(body).toContain('plumbbob park')
   })
 
+  it('defers a question set aside rather than parking it — D123 (defer-records)', () => {
+    expect(data['allowed-tools']).toContain('Bash(plumbbob defer:*)')
+    expect(body).toContain('## A question set aside is deferred, not parked')
+    expect(body).toContain('`plumbbob defer Q3 "<what settles it>"` in place of the park')
+  })
+
   it('requires in-turn human approval before the append', () => {
     expect(body).toMatch(/approv/i)
     expect(body).toMatch(/only after/i)
@@ -702,6 +708,12 @@ describe('harvest — propose, the human confirms', () => {
     expect(body).toMatch(/one reply/)
     expect(body).toMatch(/confirm/i)
     expect(body).toMatch(/only after/i)
+  })
+
+  it('defers a question a confirmed tangent sets aside, before the record — D123 (defer-records)', () => {
+    expect(data['allowed-tools']).toContain('Bash(plumbbob defer:*)')
+    expect(body).toMatch(/A confirmed \*\*tangent\*\* that sets an open question aside/)
+    expect(body).toMatch(/defer each question a confirmed tangent\s+sets aside, before you run `plumbbob harvest`/)
   })
 
   it('records through plumbbob harvest from a `# Detail · Harvest` file — D104 (harvest-records)', () => {
@@ -845,14 +857,24 @@ describe('a question left to the work is deferred on its opener, not resolved �
 
   it('plan teaches the defer move and the marker beside the resolved swap, and keeps the call the human\'s', () => {
     expect(flat('plan')).toContain(
-      'on `defer Q3 until <what settles it>`, keep the question and swap its `*resolve by:*` for `*deferred:* <date>, until <what settles it>` on the opener line',
+      'on `defer Q3 until <what settles it>`, run `plumbbob defer Q3 "<what settles it>"`, which keeps the question and swaps its `*resolve by:*` for `*deferred:* <date>, until <what settles it>` on the opener line',
     )
     expect(flat('plan')).toContain('Deferring is the human\'s call, never yours')
   })
 
   it('refine invites a defer beside the per-question answers and says what it writes', () => {
     expect(flat('refine')).toContain('`defer Q3 until <what settles it>`')
-    expect(flat('refine')).toContain('swap its `*resolve by:*` for `*deferred:* <date>, until <what settles it>` on the opener line')
+    expect(flat('refine')).toContain('swaps its `*resolve by:*` for `*deferred:* <date>, until <what settles it>` on the opener line')
+  })
+
+  it('every skill that can set a question aside runs plumbbob defer to write the marker — D123 (defer-records)', () => {
+    for (const dir of ['plan', 'refine', 'build', 'run', 'harvest', 'park']) {
+      expect(parseSkill(dir).data['allowed-tools']).toContain('Bash(plumbbob defer:*)')
+      // The run skill defers by the harvest skill's rules, which it reads at the stop.
+      if (dir !== 'run') expect(flat(dir)).toContain('plumbbob defer Q3 "<what settles it>"')
+    }
+    expect(flat('plan')).toMatch(/keeps open on purpose, as the running log of something the build tunes, is deferred the same way/)
+    expect(flat('build')).toMatch(/An open question the human sets aside to wait on other work is deferred, not parked/)
   })
 
   it('status relays the Deferred line beneath the questions table', () => {

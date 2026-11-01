@@ -2,7 +2,7 @@
 name: harvest
 description: "Triage the park list at a step boundary: propose one class (blocker/tangent/pivot) for every open parked item at once, and once the human settles them in one reply, fold a confirmed blocker into intent and record the rest with plumbbob harvest. A run's stop card carries its own harvest."
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob order:*), Bash(plumbbob handoff:*), Bash(plumbbob harvest:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob order:*), Bash(plumbbob defer:*), Bash(plumbbob handoff:*), Bash(plumbbob harvest:*)
 ---
 
 # PlumbBob: harvest the park list
@@ -107,7 +107,16 @@ the call on each one theirs. The detail file you write first is the proposal; re
   The verb's ending names each range it re-cut, and an advisory names any it left for
   you; re-cut that one in the same confirmed edit, and `plumbbob status` afterward carries
   a `⚠` row for any range still broken.
-- Fold a confirmed blocker into `intent.md` before you run `plumbbob harvest`, so the
-  record and the plan agree when it lands.
+- A confirmed **tangent** that sets an open question aside (its park names `Q3`, and the
+  question waits on work still to come) defers that question as well: run
+  `plumbbob defer Q3 "<what settles it>"`. Say so in the proposal's reason
+  (`tangent: Q3 waits on step 9's numbers`), so the human's confirmation covers the
+  deferral. The park list never moves the Questions count, so a tangent alone leaves the
+  card reading a call still owed, and the record's ending warns of any question a tangent
+  names that still counts as one to answer
+  ([D123 (defer-records)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d123)).
+- Fold a confirmed blocker into `intent.md`, and defer each question a confirmed tangent
+  sets aside, before you run `plumbbob harvest`, so the record and the plan agree when it
+  lands.
 - Never reclassify or resolve an item the human hasn't confirmed, and default every
   uncertain item to **tangent**, never to blocker.
