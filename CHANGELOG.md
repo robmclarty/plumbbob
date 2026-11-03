@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.10] - 2026-11-02
+
+- **Fixed:** the relay check now reads a turn from the last prompt the human typed when the
+  host sends no `prompt_id`. Claude Code 2.1.163 keeps a `Stop` hook's hold but sends no id, so
+  on that host a reply buried above a tool call was never read and the D121
+  (reply-after-the-tools) hold stayed silent. Zed's agent bridge carries a Claude Code of its
+  own, so a bridge can sit in that range while the terminal is current. A payload with an id
+  reads as before.
+- **Added:** a troubleshooting entry for a reply at a pause that shows only its Next Up line
+  (GitHub issue #13): the plugin version that fixed it, how to update a marketplace install
+  that has stopped updating, and the host versions the hold needs, which the relay reference
+  names too.
+
 ## [0.13.9] - 2026-11-01
 
 - **Added:** a message that asks for the open questions (`what are the open questions?`,
