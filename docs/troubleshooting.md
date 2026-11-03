@@ -157,6 +157,30 @@ itself broke (exit 2) before it could, or no check has run in this repo yet. **F
 the gate if it broke (below), or run `plumbbob check`; the next `handoff` measures the row
 from it.
 
+### A reply at a pause shows only its `Next Up` line
+
+**Cause.** Some clients fold text written before a tool call once the call follows it
+(Zed does, through the Claude agent bridge), so a reply written first and closed by a
+`plumbbob handoff` run after it reaches the human as the line alone (in GitHub
+issues #12 and #13). Since 0.13.7 the turn hook asks for every tool call before the reply, and the relay
+check holds a turn whose reply stood above one ([**D121 (reply-after-the-tools)**](decisions.md#d121)).
+An older plugin still asks for the reply first. The hold also needs the Claude Code the host
+runs to send it what it reads: 2.1.163 is the first to keep a `Stop` hook's
+`additionalContext`, and a host that sends no `prompt_id` is read from the last prompt
+typed. Zed's agent bridge carries a Claude Code of its own, so an old bridge can be several
+releases behind the terminal's.
+**Fix.** Run `plumbbob --version` in the session; below 0.13.7, update the plugin:
+
+```sh
+claude plugin marketplace update robmclarty
+claude plugin update plumbbob@robmclarty
+```
+
+Claude Code leaves auto-update off for a marketplace you add yourself, so turn it on for
+`robmclarty` under `/plugin`'s Marketplaces tab, or the next release stalls the same way.
+In Zed, keep `agent_servers.claude-acp` at `"type": "registry"`, which tracks the current
+bridge.
+
 ### `checkpoint` (or `verify`) refuses because the check is red
 
 **Cause.** The heavy gate failed; the tick refuses to checkpoint on red ([**D16 (check-plus-self-review)**](decisions.md#d16)). **Fix.**

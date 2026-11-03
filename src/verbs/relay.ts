@@ -40,12 +40,15 @@
 // The final message comes from the payload's `last_assistant_message`, never
 // from the transcript, which does not yet hold that message when Stop fires;
 // the transcript supplies only the turn's earlier messages, which an
-// orientation ending can sit in. It ALWAYS exits 0, and anything it cannot read
+// orientation ending can sit in, read from the prompt the payload's
+// `prompt_id` names, or from the last one typed on a host that sends no id
+// (GitHub issue #13). It ALWAYS exits 0, and anything it cannot read
 // (a payload without the field, a transcript it cannot scope) degrades to no
 // output: a broken check must never wedge a turn's end.
 
 import { readFileSync } from 'node:fs'
 import { findSessionRoot, holdRelay, readRelay, readTurn, type RelayRecord } from '../lib/sidecar.ts'
+import { isNotice } from './turn.ts'
 
 /**
  * The hook entry point: read the Stop payload, and hold the turn open once when
@@ -376,7 +379,7 @@ const ORIENTATION_VERBS: Readonly<Record<string, string>> = {
 
 /**
  * The text of the turn's messages already on disk: every assistant text part
- * after the human prompt the payload's `prompt_id` names.
+ * after the human prompt that opened the turn.
  *
  * Null when the transcript cannot be read or that prompt is not in it: a turn
  * the check cannot scope is a turn it does not judge. A line that does not
@@ -384,7 +387,7 @@ const ORIENTATION_VERBS: Readonly<Record<string, string>> = {
  * message, which the payload carries already.
  */
 function turnText(payload: StopPayload): string | null {
-  if (typeof payload.transcript_path !== 'string' || typeof payload.prompt_id !== 'string') return null
+  if (typeof payload.transcript_path !== 'string') return null
   let lines: ReadonlyArray<string>
   try {
     lines = readFileSync(payload.transcript_path, 'utf8').split('\n')
@@ -392,7 +395,7 @@ function turnText(payload: StopPayload): string | null {
     return null
   }
   const entries = lines.map(parseEntry).filter((e): e is TranscriptEntry => e !== null)
-  const start = entries.findIndex((e) => e.type === 'user' && e.promptId === payload.prompt_id && e.isMeta !== true)
+  const start = turnStart(entries, payload.prompt_id)
   if (start === -1) return null
   return entries
     .slice(start + 1)
@@ -403,6 +406,37 @@ function turnText(payload: StopPayload): string | null {
     })
     .flatMap((part) => (part?.type === 'text' && typeof part.text === 'string' ? [part.text] : []))
     .join('\n')
+}
+
+/**
+ * Where the turn opens in the transcript, or -1 when it cannot tell: the
+ * prompt the payload's `prompt_id` names, else the last prompt the human
+ * typed. A host can hold a turn open and still send no id (Claude Code 2.1.163
+ * does both), and without the fallback a reply buried above a tool call there
+ * would never be read.
+ */
+function turnStart(entries: ReadonlyArray<TranscriptEntry>, promptId: unknown): number {
+  if (typeof promptId === 'string') {
+    return entries.findIndex((e) => e.type === 'user' && e.promptId === promptId && e.isMeta !== true)
+  }
+  return entries.findLastIndex(isTypedPrompt)
+}
+
+/**
+ * Whether a transcript entry is a prompt the human typed: a user entry that is
+ * no meta line, carries no tool's result, and does not open on the frame of a
+ * background notice. A hook's feedback is filed as an attachment, so it is
+ * never one.
+ */
+function isTypedPrompt(entry: TranscriptEntry): boolean {
+  if (entry.type !== 'user' || entry.isMeta === true) return false
+  const content = entry.message?.content
+  if (typeof content === 'string') return !isNotice(content)
+  if (!Array.isArray(content)) return false
+  const parts = content as ReadonlyArray<ContentPart | null>
+  if (parts.some((p) => p?.type === 'tool_result')) return false
+  const first = parts.find((p) => p?.type === 'text')?.text
+  return typeof first !== 'string' || !isNotice(first)
 }
 
 /** One part of a message's content, as loose as the JSONL that carries it. */

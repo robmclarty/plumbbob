@@ -90,15 +90,15 @@ function recordBoundary(dir: string): string {
   return text
 }
 
-type Payload = { last?: string; active?: boolean; transcript?: string | null }
+type Payload = { last?: string; active?: boolean; transcript?: string | null; unnamed?: boolean }
 
-/** A Stop payload for the session, the way the harness sends it on stdin. */
+/** A Stop payload for the session, the way the harness sends it on stdin (`unnamed`: a host that sends no prompt id). */
 function stop(dir: string, p: Payload): string {
   return JSON.stringify({
     session_id: 'session-1',
     transcript_path: p.transcript === null ? undefined : (p.transcript ?? join(dir, 'missing.jsonl')),
     cwd: dir,
-    prompt_id: PROMPT_ID,
+    prompt_id: p.unnamed === true ? undefined : PROMPT_ID,
     hook_event_name: 'Stop',
     stop_hook_active: p.active ?? false,
     ...(p.last === undefined ? {} : { last_assistant_message: p.last }),
@@ -244,6 +244,16 @@ describe('relay — an orientation ending has to appear in the turn', () => {
     const lines = readFileSync(path, 'utf8').replace('earlier text', block.replace(/\n/g, '\\n'))
     writeFileSync(path, lines)
     expect(held(relayCheck(dir, stop(dir, { last: 'Step 2 is in.', transcript: path })))).not.toBeNull()
+  })
+
+  it('scopes the turn from the last prompt typed when the host sends no prompt id', async () => {
+    const dir = await paused()
+    const block = recordBoundary(dir)
+    expect(held(relayCheck(dir, stop(dir, { last: 'Anything else?', transcript: transcript(dir, [block]), unnamed: true })))).toBeNull()
+    // A block from the turn before the last typed prompt still does not count.
+    const path = transcript(dir, ['Landing it now.'])
+    writeFileSync(path, readFileSync(path, 'utf8').replace('earlier text', block.replace(/\n/g, '\\n')))
+    expect(held(relayCheck(dir, stop(dir, { last: 'Step 2 is in.', transcript: path, unnamed: true })))).not.toBeNull()
   })
 
   it('judges nothing when the transcript cannot be read and the final message lacks the block', async () => {
@@ -638,6 +648,24 @@ describe('relay — a reply above a tool call is held once — D121 (reply-after
       expect(held(relayCheck(dir, stop(dir, { last: reminder, transcript: path })))).toBeNull()
     }
     expect(readRelay(dir)?.held).toBeUndefined()
+  })
+
+  it('holds a buried reply from a host that sends no prompt id, reading the turn from the last prompt typed', async () => {
+    const dir = await paused()
+    const reminder = reminderTurn(dir)
+    const path = transcript(dir, ['The limiter runs first because a miss has to count.'])
+    expect(held(relayCheck(dir, stop(dir, { last: reminder, transcript: path, unnamed: true })))).toContain(
+      'but the reply stood above a tool call',
+    )
+  })
+
+  it('reads past a background notice folded into the turn when the host sends no prompt id', async () => {
+    const dir = await paused()
+    const reminder = reminderTurn(dir)
+    const path = transcript(dir, ['The limiter runs first because a miss has to count.'])
+    const folded = { type: 'user', message: { role: 'user', content: '<task-notification>\n<status>completed</status>\n</task-notification>' } }
+    writeFileSync(path, `${readFileSync(path, 'utf8')}${JSON.stringify(folded)}\n`)
+    expect(held(relayCheck(dir, stop(dir, { last: reminder, transcript: path, unnamed: true })))).not.toBeNull()
   })
 
   it('holds a stop reminder the same way, ending on its line', async () => {

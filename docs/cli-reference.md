@@ -731,7 +731,10 @@ boundary, the block to paste as it printed. It counts that once
 in `RELAY` by the turn it held, never by `stop_hook_active`, which another hook's block sets
 too, and it never sends `continue: false`, which would cancel that hook's block. It reads the
 final message from the payload's `last_assistant_message` and only the turn's earlier messages
-from the transcript. It runs only inside a live session, always exits 0, and never refuses an
+from the transcript, from the prompt the payload's `prompt_id` names, or from the last prompt
+typed when the host sends no id. A host before Claude Code 2.1.47 sends no final message, and
+one before 2.1.163 drops a `Stop` hook's `additionalContext`, so on either the check holds
+nothing. It runs only inside a live session, always exits 0, and never refuses an
 unrecognized flag; anything it cannot read means no output, since a hook that failed would wedge
 every turn's end in the session.
 
