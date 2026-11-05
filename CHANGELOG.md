@@ -5,6 +5,44 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] - 2026-11-04
+
+- **Added:** the repo's own intent now rides a root `keyframes.md` checked by the gate's
+  `intent` slot (`keyframes check --strict`, under a second). It keeps C1 to C7 and nine
+  decisions at the numbers and slugs `docs/decisions.md` gives them, and every `held-by`
+  pointer resolves to a real rule id, test title, or eval contract. A pointer resolves; it is
+  never enforced, and `docs/keyframes-split-trial.md` says what this replaced. The refs
+  scanner skips the file, since keyframes' item grammar writes every tag bare, and D74
+  (glossed-citations) records the carve-out.
+- **Added:** a course, `docs/learn/`: a map and eleven lessons on one running example, sift,
+  a list that forgets, from the spec through the plan card, a bare range, a span, a surprise
+  the plan never covered parked and harvested into a new step, the re-cut range, a spike and
+  a revert, the record read back, the loop typed by hand with no skill, and where PlumbBob
+  sits among the tools around it.
+- **Added:** the live-demo playbook, `workshop/`: the run of show, every prompt, the
+  destination spec, the target plan as a paste-in fallback, and a rehearsal file with the
+  traps, the reset and snapshot procedures, and the dry-run assertions.
+- **Added:** `docs/cli-only.md` drives one build with verbs alone, the latch's five rows
+  included; `docs/why.md` holds who it is for, the five edges, the receipts, and the name;
+  three essays on attention, staying plumb, and managing agents, drafted for a human pen and
+  marked so; `docs/README.md` indexes every page; `docs/evals/README.md` lists the receipts
+  newest first.
+- **Changed:** the README is cut to about 1,250 words: two epigraphs, the pitch with the
+  thesis that the plan is managed over the build rather than only written before it, the
+  loop in one picture, install, a five-line first session, four skills, seven docs. The
+  skeptic's entries moved to `docs/faq.md`, which also gains an agents entry and the
+  CLI-by-hand pointer.
+- **Changed:** every doc, the site, SECURITY, CONTRIBUTING, and the example folder now agree
+  with 0.13.x: sixteen skills, four hooks, `--auto` halting at each bare range's pause,
+  `order` re-cutting the ranges, no count on Now and Next Up, the three-column lean table,
+  the 2026-10-31 receipts as the latest, `/status` as the flat name, and the CLI as a
+  first-class path by hand. `checkpoint --help` names the latch refusal, the settings ladder
+  comment names every key, and the site's docs page reads `location.hash` so its links land
+  on their sections.
+- **Fixed:** `docs/presentation.md` contradicted itself on the Now row's count after D115
+  (card-weights) dropped it; the example build's report and build-log carried the retired
+  four-column park table; `package.json`'s description said fifteen skills.
+
 ## [0.13.10] - 2026-11-02
 
 - **Fixed:** the relay check now reads a turn from the last prompt the human typed when the
