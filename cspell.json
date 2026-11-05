@@ -1,7 +1,11 @@
 {
   "version": "0.2",
   "language": "en,en-GB",
-  "files": ["src/**/*.ts", "scripts/**/*.ts", "**/*.md"],
+  "files": [
+    "src/**/*.ts",
+    "scripts/**/*.ts",
+    "**/*.md"
+  ],
   "ignorePaths": [
     "**/node_modules/**",
     "**/dist/**",
@@ -16,6 +20,7 @@
     "docs/voice/**"
   ],
   "words": [
+    "atis",
     "backticked",
     "baselined",
     "buildlog",
@@ -61,6 +66,7 @@
     "reroot",
     "ridgeline",
     "robmclarty",
+    "runciter",
     "sandboxing",
     "scopeless",
     "settingsrev",
@@ -112,6 +118,34 @@
         "Shumailov",
         "Sutskever",
         "Willison"
+      ]
+    },
+    {
+      "filename": "README.md",
+      "words": [
+        "Publilius",
+        "Syrus"
+      ]
+    },
+    {
+      "filename": "docs/staying-plumb.md",
+      "words": [
+        "plumbline",
+        "seest"
+      ]
+    },
+    {
+      "filename": "docs/balancing-attention.md",
+      "words": [
+        "Automatica",
+        "Lisanne",
+        "automatable"
+      ]
+    },
+    {
+      "filename": "workshop/rehearsal.md",
+      "words": [
+        "siftlist"
       ]
     }
   ]
