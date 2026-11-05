@@ -88,8 +88,15 @@ jobs:
       # Frozen install reproduces the hoisted layout (pnpm-workspace.yaml sets
       # nodeLinker: hoisted) so node_modules/checkride is a real directory - a
       # bundleDependency needs that to pack into the tarball.
+      #
+      # Copy, never hard-link, out of the store. pnpm on Linux hard-links by
+      # default, so two byte-identical files inside one package share an inode
+      # (checkride 0.20.0 ships two copies of a rust main.rs template). npm pack
+      # writes the second as a tar hard-link entry, and the registry rejects
+      # the whole tarball with E415 "Hard link is not allowed", which sank
+      # v0.14.1 after its approval. A copy gives each file its own inode.
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --package-import-method=copy
 
       # The full gate (checkride: types, lint, struct, dead, tests, docs, links).
       # A release must be green.
@@ -109,6 +116,10 @@ jobs:
       # packing: it's a dev-only pin the published tarball never needs, and the
       # repo's strict pnpm guard stays intact for contributors. node (not
       # `npm pkg`) does the edit so it can't trip the same guard.
+      #
+      # The last check refuses a tarball holding a hard-link entry. The
+      # registry only says so at publish, after the approval gate; here the
+      # build fails first and names the file.
       - name: Pack
         id: pack
         run: |
@@ -118,6 +129,11 @@ jobs:
           tarball="$name-$version.tgz"
           npm pack
           test -f "$tarball"
+          listing="$(tar -tvzf "$tarball")"
+          if printf '%s\n' "$listing" | grep -E '^h'; then
+            echo "::error::$tarball holds hard-link entries (listed above); the npm registry rejects them"
+            exit 1
+          fi
           echo "tarball=$tarball" >> "$GITHUB_OUTPUT"
 
       - name: Upload tarball
