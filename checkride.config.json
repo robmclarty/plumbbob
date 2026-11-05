@@ -17,6 +17,13 @@
       "description": "Citation scanner — flags a bare, mislinked, or unglossed D#/C# tag",
       "order": 1
     },
+    "intent": {
+      "command": "pnpm",
+      "args": ["exec", "keyframes", "check", "--strict"],
+      "description": "keyframes.md (the root intent plan), checked strictly: structure, citations, every held-by pointer and Map path resolves",
+      "note": "@robmclarty/keyframes 0.3.0 pinned exact as a devDependency; its prototype closed 2026-11-02, so the pin is the version. Read-only and under a second, so the per-turn gate keeps it. A resolved pointer is not an enforced one: the rules and tests it names run in their own slots, and the evals run only under pnpm eval:*. Named intent so the summary row reads as what it checks; the description names the file so it is never confused with a build's intent.md.",
+      "order": 1
+    },
 
     "types": { "use": "tsc", "order": 2 },
     "docs": { "use": "markdownlint-cli2", "order": 2 },

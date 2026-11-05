@@ -203,10 +203,11 @@ describe('scanRepo — walks the surfaces and honors the skip list', () => {
     writeFileSync(join(dir, 'test', 'scratch.test.ts'), "it('D1: bare', () => {})\n")
     writeFileSync(join(dir, 'CHANGELOG.md'), 'D1 bare, but CHANGELOG.md is out of scope.\n')
     writeFileSync(join(dir, 'examples', 'intent.md'), '- D1 (some-fictional-decision): a demo build\'s own local numbering.\n')
+    writeFileSync(join(dir, 'keyframes.md'), '- **C1 (functional-only)**: bare by format, but keyframes.md is out of scope.\n')
     return dir
   }
 
-  it('scans docs/**/*.md, src/**/*.ts, and scripts/**/*.ts, skipping the rest (including examples/, D6 (records-stay))', () => {
+  it('scans docs/**/*.md, src/**/*.ts, and scripts/**/*.ts, skipping the rest (including examples/ and keyframes.md, D6 (records-stay))', () => {
     const dir = makeTree()
     const { violations, filesScanned } = scanRepo(dir)
     expect(filesScanned).toBe(4) // docs/decisions.md, docs/example.md, src/example.ts, scripts/tool.ts

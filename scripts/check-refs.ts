@@ -46,7 +46,9 @@ const TAG_RE = /\b([DC]\d+)\b/g
 // not prose browsed cold. `examples/` carries its own self-contained demo
 // intent.md/spec.md content with fictional, build-local D#/C# numbering (the same
 // category `.plumbbob/builds/*/` is exempt for), and not one of the surfaces the rule
-// covers.
+// covers. The root `keyframes.md` is the fourth carve-out: it mirrors
+// docs/decisions.md's numbers and slugs in keyframes' own item grammar, and the
+// gate's `intent` slot (`keyframes check`) reads it, not this scanner.
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'coverage', 'research', 'test', '__tests__', 'examples'])
 
 /**
@@ -194,6 +196,7 @@ function* walkFiles(root: string, dir: string): Generator<string> {
     }
     if (!entry.isFile()) continue
     if (entry.name === 'CHANGELOG.md') continue
+    if (entry.name === 'keyframes.md') continue
     if (entry.name.endsWith('.test.ts')) continue
     const rel = relative(root, full)
     if (rel.endsWith('.md')) {
@@ -207,8 +210,8 @@ function* walkFiles(root: string, dir: string): Generator<string> {
 /**
  * Walks `root` for every markdown file and every src/ and scripts/ TypeScript file,
  * checking each D#/C# citation against docs/decisions.md's canonical map. `.plumbbob/`,
- * `research/`, `CHANGELOG.md`, and every test file are out of scope: the carve-outs
- * D74 (glossed-citations) names.
+ * `research/`, `CHANGELOG.md`, the root `keyframes.md`, and every test file are out of
+ * scope: the carve-outs D74 (glossed-citations) names.
  */
 export function scanRepo(root: string): ScanResult {
   const decisionsPath = join(root, 'docs', 'decisions.md')

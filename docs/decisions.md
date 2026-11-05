@@ -541,7 +541,9 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   left to review. Promoted from the 2026-07-31 citations build, merging its locals `slug-in-parens`,
   `slug-is-the-gloss`, `absolute-urls-off-repo`, `terminal-gloss-only`, `consistency-is-a-rule`,
   `code-spans-are-mentions`, `tags-stay-in-test-titles`, and `records-stay`: one rule with one scanner
-  reads better as one number than as eight. *Tagged in* `scripts/check-refs.ts`, `checkride.config.json`,
+  reads better as one number than as eight. A fourth carve-out joined on 2026-11-04: the root `keyframes.md`,
+  whose items mirror this page's numbers and slugs in keyframes' own grammar and are checked by the
+  gate's `intent` slot, not by this scanner. *Tagged in* `scripts/check-refs.ts`, `checkride.config.json`,
   `CONTRIBUTING.md`, `docs/cli-reference.md`.
 
 - <a id="d75"></a>**D75 (two-gates): Two gates, deliberately different: a fast one per turn on the code, the full

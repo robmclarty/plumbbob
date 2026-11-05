@@ -1,7 +1,7 @@
 {
   "name": "plumbbob",
   "version": "0.13.10",
-  "description": "Attention-first build process: 15 skills + a CLI that keep you the decider — guidance on the work, a latch on the record.",
+  "description": "Attention-first build process: 16 skills, four hooks, and a CLI that keep you the decider. Guidance on the work, a latch on the record.",
   "keywords": [
     "claude-code",
     "claude",
@@ -54,6 +54,7 @@
   },
   "devDependencies": {
     "@ast-grep/cli": "0.45.1",
+    "@robmclarty/keyframes": "0.3.0",
     "@stryker-mutator/api": "9.6.1",
     "@stryker-mutator/core": "9.6.1",
     "@stryker-mutator/vitest-runner": "9.6.1",
