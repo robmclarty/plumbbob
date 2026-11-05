@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 470" width="880" height="470" role="img" aria-labelledby="t d">
+  <title id="t">storyboard: twenty questions, then a draft</title>
+  <desc id="d">storyboard asks three rounds of questions, intake first and broad, then the frame lens, then the intent lens, each narrower than the last. From the answers it drafts keyframes.md and plays it back a chunk at a time while a person corrects it. Accepting writes the file only if keyframes check --strict passes. The spec, design, and map outputs are still to come. On the line of hand-offs, storyboard is the first hop: a conversation becomes a plan file.</desc>
+  <defs><marker id="ah-soft" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8B84A8"/></marker><marker id="ah-ink" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#5C5677"/></marker><marker id="ah-gold" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#C1922E"/></marker><marker id="ah-lav" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8A6BE8"/></marker><marker id="ah-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#C43B5B"/></marker><marker id="ah-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2F8A5B"/></marker></defs>
+  <rect x="0.75" y="0.75" width="878.5" height="468.5" rx="14" fill="#F4F2F9" stroke="#DED9EE" stroke-width="1.5"/>
+  <text x="36" y="50" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="26" font-weight="800" fill="#181231" text-anchor="start">storyboard</text>
+  <text x="36" y="78" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#5C5677" text-anchor="start">Twenty questions, broad first and then narrow, until it knows enough to draft.</text>
+  <rect x="72" y="112" width="320" height="48" rx="10" fill="#ECE6FB" stroke="#8A6BE8" stroke-width="1.5"/>
+  <text x="232" y="133" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="700" fill="#181231" text-anchor="middle">intake</text>
+  <text x="232" y="150" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#5C5677" text-anchor="middle">three open questions</text>
+  <line x1="232" y1="162" x2="232" y2="172" stroke="#8A6BE8" stroke-width="1.6" marker-end="url(#ah-lav)"/>
+  <rect x="107" y="174" width="250" height="48" rx="10" fill="#FFFFFF" stroke="#8A6BE8" stroke-width="1.5"/>
+  <text x="232" y="195" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="700" fill="#181231" text-anchor="middle">frame lens</text>
+  <text x="232" y="212" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#5C5677" text-anchor="middle">narrower questions</text>
+  <line x1="232" y1="224" x2="232" y2="234" stroke="#8A6BE8" stroke-width="1.6" marker-end="url(#ah-lav)"/>
+  <rect x="142" y="236" width="180" height="48" rx="10" fill="#FFFFFF" stroke="#8A6BE8" stroke-width="1.5"/>
+  <text x="232" y="257" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="700" fill="#181231" text-anchor="middle">intent lens</text>
+  <text x="232" y="274" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#5C5677" text-anchor="middle">narrower still</text>
+  <text x="36" y="132" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#8B84A8" text-anchor="start" font-style="italic">broad</text>
+  <line x1="46" y1="140" x2="46" y2="268" stroke="#8B84A8" stroke-width="1.6" stroke-dasharray="3 3" marker-end="url(#ah-soft)"/>
+  <text x="36" y="286" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#8B84A8" text-anchor="start" font-style="italic">narrow</text>
+  <text x="232" y="316" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#5C5677" text-anchor="middle">each question chosen to cut the most uncertainty</text>
+  <line x1="324" y1="252" x2="424" y2="212" stroke="#8A6BE8" stroke-width="1.6" marker-end="url(#ah-lav)"/>
+  <text x="384" y="258" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#5A32C8" text-anchor="start">drafts</text>
+  <rect x="430" y="112" width="160" height="196" rx="8" fill="#FFFFFF" stroke="#C4BBDB" stroke-width="1.5"/>
+  <text x="446" y="138" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" font-weight="700" fill="#181231" text-anchor="start">keyframes.md</text>
+  <rect x="446" y="154" width="128" height="28" rx="5" fill="#ECEAF1" stroke="#DED9EE" stroke-width="1"/>
+  <text x="456" y="172" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#5C5677" text-anchor="start">chunk 1</text>
+  <rect x="446" y="190" width="128" height="28" rx="5" fill="#F7EDD5" stroke="#C1922E" stroke-width="1"/>
+  <text x="456" y="208" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#B07F1E" text-anchor="start">chunk, corrected</text>
+  <rect x="446" y="226" width="128" height="28" rx="5" fill="#ECEAF1" stroke="#DED9EE" stroke-width="1"/>
+  <text x="456" y="244" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#5C5677" text-anchor="start">chunk 3</text>
+  <rect x="446" y="262" width="128" height="28" rx="5" fill="#ECEAF1" stroke="#DED9EE" stroke-width="1"/>
+  <text x="456" y="280" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#5C5677" text-anchor="start">chunk 4</text>
+  <text x="510" y="326" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#5C5677" text-anchor="middle">played back a chunk at a time</text>
+  <g fill="#C1922E"><circle cx="640" cy="137" r="7"/><path d="M628 160 a12 12 0 0 1 24 0 z"/></g>
+  <text x="662" y="140" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="700" fill="#181231" text-anchor="start">a person corrects it</text>
+  <text x="662" y="157" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#5C5677" text-anchor="start">nothing is signed blind</text>
+  <line x1="626" y1="160" x2="598" y2="184" stroke="#C1922E" stroke-width="1.6" marker-end="url(#ah-gold)"/>
+  <rect x="610" y="210" width="234" height="78" rx="10" fill="#DEF1E5" stroke="#2F8A5B" stroke-width="1.5"/>
+  <text x="626" y="233" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="700" fill="#2F8A5B" text-anchor="start">accept writes the file</text>
+  <text x="626" y="252" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#5C5677" text-anchor="start">only if it passes</text>
+  <text x="626" y="272" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11.5" font-weight="400" fill="#181231" text-anchor="start">keyframes check --strict</text>
+  <line x1="594" y1="250" x2="606" y2="250" stroke="#2F8A5B" stroke-width="1.6" marker-end="url(#ah-green)"/>
+  <rect x="610" y="302" width="234" height="34" rx="8" fill="none" stroke="#C4BBDB" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <text x="727" y="323" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#8B84A8" text-anchor="middle" font-style="italic">still to come: spec.md, design, a map</text>
+  <text x="36" y="346" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#8B84A8" text-anchor="start">runs on a local model through Ollama, with the claude CLI</text>
+  <line x1="36" y1="366" x2="844" y2="366" stroke="#DED9EE" stroke-width="1"/>
+  <text x="36" y="384" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="700" fill="#8B84A8" text-anchor="start" letter-spacing="1.2">WHERE IT SITS ON THE LINE</text>
+  <rect x="36" y="396" width="112" height="26" rx="6" fill="#F7EDD5" stroke="#C1922E" stroke-width="1.8"/>
+  <text x="92" y="413" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11" font-weight="700" fill="#181231" text-anchor="middle">conversation</text>
+  <line x1="151" y1="409" x2="172.2" y2="409" stroke="#C1922E" stroke-width="2.4" marker-end="url(#ah-gold)"/>
+  <text x="163.1" y="444" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#B07F1E" text-anchor="middle">storyboard</text>
+  <rect x="175.2" y="396" width="112" height="26" rx="6" fill="#F7EDD5" stroke="#C1922E" stroke-width="1.8"/>
+  <text x="231.2" y="413" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11" font-weight="700" fill="#181231" text-anchor="middle">plan file</text>
+  <line x1="290.2" y1="409" x2="311.4" y2="409" stroke="#8B84A8" stroke-width="1.3" marker-end="url(#ah-soft)"/>
+  <text x="302.3" y="444" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#8B84A8" text-anchor="middle">keyframes</text>
+  <rect x="314.4" y="396" width="112" height="26" rx="6" fill="#FFFFFF" stroke="#DED9EE" stroke-width="1.2"/>
+  <text x="370.4" y="413" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11" font-weight="400" fill="#5C5677" text-anchor="middle">checked plan</text>
+  <line x1="429.4" y1="409" x2="450.59999999999997" y2="409" stroke="#8B84A8" stroke-width="1.3" marker-end="url(#ah-soft)"/>
+  <text x="441.5" y="444" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#8B84A8" text-anchor="middle">plumbbob</text>
+  <rect x="453.59999999999997" y="396" width="112" height="26" rx="6" fill="#FFFFFF" stroke="#DED9EE" stroke-width="1.2"/>
+  <text x="509.59999999999997" y="413" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11" font-weight="400" fill="#5C5677" text-anchor="middle">code</text>
+  <line x1="568.5999999999999" y1="409" x2="589.8" y2="409" stroke="#8B84A8" stroke-width="1.3" marker-end="url(#ah-soft)"/>
+  <text x="580.6999999999999" y="444" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#8B84A8" text-anchor="middle">checkride</text>
+  <rect x="592.8" y="396" width="112" height="26" rx="6" fill="#FFFFFF" stroke="#DED9EE" stroke-width="1.2"/>
+  <text x="648.8" y="413" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11" font-weight="400" fill="#5C5677" text-anchor="middle">gated change</text>
+  <line x1="707.8" y1="409" x2="729" y2="409" stroke="#8B84A8" stroke-width="1.3" marker-end="url(#ah-soft)"/>
+  <text x="719.9" y="444" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#8B84A8" text-anchor="middle">atis</text>
+  <rect x="732" y="396" width="112" height="26" rx="6" fill="#FFFFFF" stroke="#DED9EE" stroke-width="1.2"/>
+  <text x="788" y="413" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11" font-weight="400" fill="#5C5677" text-anchor="middle">weather map</text>
+</svg>

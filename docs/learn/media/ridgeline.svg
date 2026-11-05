@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 470" width="880" height="470" role="img" aria-labelledby="t d">
+  <title id="t">ridgeline: settled work, run without you</title>
+  <desc id="d">ridgeline runs a pipeline of agents. You answer the shaper, which writes shape.md; three specialists draft and a synthesizer merges spec.md; three planners propose and a synthesizer writes numbered phase files. Directions, design, research, and refine are optional stages between them. Each phase is built, checkpointed in git, and reviewed, and a failed review retries it. Below, two tracks of twelve steps compare the two tools: in plumbbob you decide at every step; in ridgeline you decide once, up front. On the line, ridgeline can take plumbbob's hop when the work is settled.</desc>
+  <defs><marker id="ah-soft" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8B84A8"/></marker><marker id="ah-ink" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#5C5677"/></marker><marker id="ah-gold" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#C1922E"/></marker><marker id="ah-lav" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8A6BE8"/></marker><marker id="ah-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#C43B5B"/></marker><marker id="ah-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2F8A5B"/></marker></defs>
+  <rect x="0.75" y="0.75" width="878.5" height="468.5" rx="14" fill="#F4F2F9" stroke="#DED9EE" stroke-width="1.5"/>
+  <text x="36" y="50" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="26" font-weight="800" fill="#181231" text-anchor="start">ridgeline</text>
+  <text x="36" y="78" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#5C5677" text-anchor="start">Large, settled work, run without you, through a phased pipeline of agents.</text>
+  <g fill="#C1922E"><circle cx="52" cy="143" r="7"/><path d="M40 166 a12 12 0 0 1 24 0 z"/></g>
+  <text x="52" y="186" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#B07F1E" text-anchor="middle">you</text>
+  <rect x="86" y="120" width="132" height="68" rx="9" fill="#F7EDD5" stroke="#C1922E" stroke-width="1.5"/>
+  <text x="152" y="143" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="700" fill="#181231" text-anchor="middle">shape</text>
+  <text x="152" y="161" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#5C5677" text-anchor="middle">asks, then writes</text>
+  <text x="152" y="177" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11" font-weight="400" fill="#181231" text-anchor="middle">shape.md</text>
+  <line x1="220" y1="154" x2="234" y2="154" stroke="#8B84A8" stroke-width="1.6" marker-end="url(#ah-soft)"/>
+  <rect x="238" y="120" width="132" height="68" rx="9" fill="#FFFFFF" stroke="#C4BBDB" stroke-width="1.5"/>
+  <text x="304" y="143" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="700" fill="#181231" text-anchor="middle">specify</text>
+  <text x="304" y="161" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#5C5677" text-anchor="middle">3 specialists, then</text>
+  <text x="304" y="177" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11" font-weight="400" fill="#181231" text-anchor="middle">spec.md</text>
+  <line x1="372" y1="154" x2="386" y2="154" stroke="#8B84A8" stroke-width="1.6" marker-end="url(#ah-soft)"/>
+  <rect x="390" y="120" width="132" height="68" rx="9" fill="#FFFFFF" stroke="#C4BBDB" stroke-width="1.5"/>
+  <text x="456" y="143" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="700" fill="#181231" text-anchor="middle">plan</text>
+  <text x="456" y="161" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#5C5677" text-anchor="middle">3 planners, then</text>
+  <text x="456" y="177" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11" font-weight="400" fill="#181231" text-anchor="middle">phase files</text>
+  <line x1="68" y1="154" x2="82" y2="154" stroke="#C1922E" stroke-width="1.6" marker-end="url(#ah-gold)"/>
+  <line x1="228" y1="158" x2="228" y2="204" stroke="#C4BBDB" stroke-width="1.3" stroke-dasharray="3 3"/>
+  <rect x="154" y="206" width="72" height="24" rx="12" fill="#F4F2F9" stroke="#C4BBDB" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="190" y="222" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="400" fill="#8B84A8" text-anchor="middle">directions</text>
+  <rect x="230" y="206" width="72" height="24" rx="12" fill="#F4F2F9" stroke="#C4BBDB" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="266" y="222" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="400" fill="#8B84A8" text-anchor="middle">design</text>
+  <line x1="380" y1="158" x2="380" y2="204" stroke="#C4BBDB" stroke-width="1.3" stroke-dasharray="3 3"/>
+  <rect x="306" y="206" width="72" height="24" rx="12" fill="#F4F2F9" stroke="#C4BBDB" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="342" y="222" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="400" fill="#8B84A8" text-anchor="middle">research</text>
+  <rect x="382" y="206" width="72" height="24" rx="12" fill="#F4F2F9" stroke="#C4BBDB" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="418" y="222" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10.5" font-weight="400" fill="#8B84A8" text-anchor="middle">refine</text>
+  <text x="304" y="252" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#8B84A8" text-anchor="middle" font-style="italic">optional stages, where they fall in the order</text>
+  <line x1="524" y1="154" x2="552" y2="154" stroke="#8B84A8" stroke-width="1.6" marker-end="url(#ah-soft)"/>
+  <rect x="558" y="112" width="286" height="42" rx="8" fill="#ECE6FB" stroke="#8A6BE8" stroke-width="1.5"/>
+  <text x="572" y="138" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="700" fill="#5A32C8" text-anchor="start">phase 1</text>
+  <text x="640" y="138" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#181231" text-anchor="start">build · checkpoint · review</text>
+  <text x="828" y="140" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" font-weight="700" fill="#5A32C8" text-anchor="middle">↻</text>
+  <rect x="558" y="162" width="286" height="42" rx="8" fill="#ECE6FB" stroke="#8A6BE8" stroke-width="1.5"/>
+  <text x="572" y="188" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="700" fill="#5A32C8" text-anchor="start">phase 2</text>
+  <text x="640" y="188" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#181231" text-anchor="start">build · checkpoint · review</text>
+  <text x="828" y="190" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" font-weight="700" fill="#5A32C8" text-anchor="middle">↻</text>
+  <rect x="558" y="212" width="286" height="42" rx="8" fill="#ECE6FB" stroke="#8A6BE8" stroke-width="1.5"/>
+  <text x="572" y="238" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="700" fill="#5A32C8" text-anchor="start">phase 3</text>
+  <text x="640" y="238" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#181231" text-anchor="start">build · checkpoint · review</text>
+  <text x="828" y="240" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" font-weight="700" fill="#5A32C8" text-anchor="middle">↻</text>
+  <text x="838" y="274" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#5C5677" text-anchor="end" font-style="italic">a failed review retries the phase</text>
+  <text x="36" y="302" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="700" fill="#181231" text-anchor="start">plumbbob</text>
+  <text x="36" y="318" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#5C5677" text-anchor="start">you decide at every step</text>
+  <line x1="230" y1="298" x2="844" y2="298" stroke="#C4BBDB" stroke-width="2"/>
+  <circle cx="246" cy="298" r="7" fill="#C1922E"/>
+  <circle cx="299" cy="298" r="7" fill="#C1922E"/>
+  <circle cx="352" cy="298" r="7" fill="#C1922E"/>
+  <circle cx="405" cy="298" r="7" fill="#C1922E"/>
+  <circle cx="458" cy="298" r="7" fill="#C1922E"/>
+  <circle cx="511" cy="298" r="7" fill="#C1922E"/>
+  <circle cx="564" cy="298" r="7" fill="#C1922E"/>
+  <circle cx="617" cy="298" r="7" fill="#C1922E"/>
+  <circle cx="670" cy="298" r="7" fill="#C1922E"/>
+  <circle cx="723" cy="298" r="7" fill="#C1922E"/>
+  <circle cx="776" cy="298" r="7" fill="#C1922E"/>
+  <circle cx="829" cy="298" r="7" fill="#C1922E"/>
+  <text x="36" y="338" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="700" fill="#181231" text-anchor="start">ridgeline</text>
+  <text x="36" y="354" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="400" fill="#5C5677" text-anchor="start">you decide once, up front</text>
+  <line x1="230" y1="334" x2="844" y2="334" stroke="#C4BBDB" stroke-width="2"/>
+  <circle cx="246" cy="334" r="7" fill="#C1922E"/>
+  <circle cx="299" cy="334" r="5" fill="#8A6BE8"/>
+  <circle cx="352" cy="334" r="5" fill="#8A6BE8"/>
+  <circle cx="405" cy="334" r="5" fill="#8A6BE8"/>
+  <circle cx="458" cy="334" r="5" fill="#8A6BE8"/>
+  <circle cx="511" cy="334" r="5" fill="#8A6BE8"/>
+  <circle cx="564" cy="334" r="5" fill="#8A6BE8"/>
+  <circle cx="617" cy="334" r="5" fill="#8A6BE8"/>
+  <circle cx="670" cy="334" r="5" fill="#8A6BE8"/>
+  <circle cx="723" cy="334" r="5" fill="#8A6BE8"/>
+  <circle cx="776" cy="334" r="5" fill="#8A6BE8"/>
+  <circle cx="829" cy="334" r="5" fill="#8A6BE8"/>
+  <line x1="36" y1="366" x2="844" y2="366" stroke="#DED9EE" stroke-width="1"/>
+  <text x="36" y="384" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="10" font-weight="700" fill="#8B84A8" text-anchor="start" letter-spacing="1.2">WHERE IT SITS ON THE LINE</text>
+  <text x="844" y="384" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#5C5677" text-anchor="end" font-style="italic">the layer above: plumbbob's hop, run without you</text>
+  <rect x="36" y="396" width="112" height="26" rx="6" fill="#FFFFFF" stroke="#DED9EE" stroke-width="1.2"/>
+  <text x="92" y="413" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11" font-weight="400" fill="#5C5677" text-anchor="middle">conversation</text>
+  <line x1="151" y1="409" x2="172.2" y2="409" stroke="#8B84A8" stroke-width="1.3" marker-end="url(#ah-soft)"/>
+  <text x="163.1" y="444" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#8B84A8" text-anchor="middle">storyboard</text>
+  <rect x="175.2" y="396" width="112" height="26" rx="6" fill="#FFFFFF" stroke="#DED9EE" stroke-width="1.2"/>
+  <text x="231.2" y="413" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11" font-weight="400" fill="#5C5677" text-anchor="middle">plan file</text>
+  <line x1="290.2" y1="409" x2="311.4" y2="409" stroke="#8B84A8" stroke-width="1.3" marker-end="url(#ah-soft)"/>
+  <text x="302.3" y="444" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#8B84A8" text-anchor="middle">keyframes</text>
+  <rect x="314.4" y="396" width="112" height="26" rx="6" fill="#ECE6FB" stroke="#8A6BE8" stroke-width="1.8"/>
+  <text x="370.4" y="413" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11" font-weight="700" fill="#181231" text-anchor="middle">checked plan</text>
+  <line x1="429.4" y1="409" x2="450.59999999999997" y2="409" stroke="#8A6BE8" stroke-width="2.4" marker-end="url(#ah-lav)"/>
+  <text x="441.5" y="444" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="700" fill="#5A32C8" text-anchor="middle">plumbbob</text>
+  <rect x="453.59999999999997" y="396" width="112" height="26" rx="6" fill="#ECE6FB" stroke="#8A6BE8" stroke-width="1.8"/>
+  <text x="509.59999999999997" y="413" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11" font-weight="700" fill="#181231" text-anchor="middle">code</text>
+  <line x1="568.5999999999999" y1="409" x2="589.8" y2="409" stroke="#8B84A8" stroke-width="1.3" marker-end="url(#ah-soft)"/>
+  <text x="580.6999999999999" y="444" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#8B84A8" text-anchor="middle">checkride</text>
+  <rect x="592.8" y="396" width="112" height="26" rx="6" fill="#FFFFFF" stroke="#DED9EE" stroke-width="1.2"/>
+  <text x="648.8" y="413" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11" font-weight="400" fill="#5C5677" text-anchor="middle">gated change</text>
+  <line x1="707.8" y1="409" x2="729" y2="409" stroke="#8B84A8" stroke-width="1.3" marker-end="url(#ah-soft)"/>
+  <text x="719.9" y="444" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#8B84A8" text-anchor="middle">atis</text>
+  <rect x="732" y="396" width="112" height="26" rx="6" fill="#FFFFFF" stroke="#DED9EE" stroke-width="1.2"/>
+  <text x="788" y="413" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="11" font-weight="400" fill="#5C5677" text-anchor="middle">weather map</text>
+</svg>

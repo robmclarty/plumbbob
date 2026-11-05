@@ -22,12 +22,12 @@ every "With Your Agent" prompt in the course does.
 mkdir -p ~/learn/sift
 cd ~/learn/sift
 git init -b main
-pnpm dlx checkride@0.19.3 init --shape flat --name sift
+pnpm dlx checkride@0.20.0 init --shape flat --name sift
 ```
 
 `git init -b main` names the branch up front; without `-b`, git prints its hint
 about the default branch instead. The last line runs checkride, the gate the pause
-will measure, pinned to 0.19.3 because pnpm's `minimumReleaseAge` setting can hold
+will measure, pinned to 0.20.0 because pnpm's `minimumReleaseAge` setting can hold
 a fresh release back for a day or two, and a pin says what you got. It prints three
 lines:
 
