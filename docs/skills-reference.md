@@ -33,10 +33,10 @@ Three ground rules apply to all of them:
 | [`/plumbbob:status`](#status) | none | orient: where you are, the next step, the next move |
 | [`/plumbbob:harvest`](#harvest) | none | triage parked ideas at a boundary (blocker / tangent / pivot); a run's stop card carries its own |
 | [`/plumbbob:finish`](#finish) | none | write the report, make the final commit, clear for a fresh goal |
-| [`/plumbbob:refine`](#refine) | `[focus]` | attack the plan for holes, or repair a drifted one |
+| [`/plumbbob:refine`](#refine) | `[focus \| ranges]` | attack the plan for holes, or repair a drifted one; `ranges` re-cuts the whole section |
 | [`/plumbbob:revert`](#revert) | `[--to <step>]` | rewind: `git reset --hard` to a recorded checkpoint |
 | [`/plumbbob:abandon`](#abandon) | none | drop the in-flight step, keep its work in the tree; the step stays planned |
-| [`/plumbbob:spike`](#spike) | `<slug> \| done` | throwaway worktree experiment for a fork the plan can't settle |
+| [`/plumbbob:spike`](#spike) | `<slug> \| report <slug> \| done` | throwaway worktree experiment for a fork the plan can't settle; `report` scaffolds the report alone, for a planned spike step |
 | [`/plumbbob:recover`](#recover) | `[--fix]` | reconcile the session's own state when the dashboard looks wrong |
 | [`/plumbbob:doctor`](#doctor) | none | check the install from inside a session |
 
@@ -46,27 +46,37 @@ Three ground rules apply to all of them:
 
 Frames a fresh goal and authors the **complete** plan before any code. It disambiguates
 its input itself: no argument runs an interview, a file path (or an `@`-mention) absorbs
-an out-of-band spec, any other text is expanded as inline intent. Under the hood it runs `plumbbob start`
-(recording the baseline), fills the build's `intent.md` (Frame, Decisions, Constraints,
-and **all** Steps, each with a done-when, a seam, and (where the signal is clear) an
-advisory `model:` recommendation naming the smallest model that can carry the step), and
-the **build ranges**: where the build stops for a human call, one item per range, with the
-command that defines it, the call that ends it, and the model to run it on
+an out-of-band spec, any other text is expanded as inline intent. Under the hood it runs
+`plumbbob start` (recording the baseline), fills the build's `intent.md` (Frame, Decisions,
+Constraints, and **all** Steps, each with a done-when, a seam, and (where the signal is
+clear) an advisory `model:` recommendation naming the smallest model that can carry the
+step), and the **build ranges**: where the build stops for a human call, one item per
+range, with the command that defines it, the call that ends it, and the model to run it on
 ([D92 (build-ranges)](decisions.md#d92)). A range ends where a call is due (a decision the
 plan leaves open, a review before later steps build on what landed, or a thing only you
 can do) and nowhere else, so a small plan may carry one range or none. A plan with ranges
 is driven with [`/plumbbob:run`](#run), one range at a time; one without, with
-`/plumbbob:build`, one step at a time. Then it
-commits the plan on its own
+`/plumbbob:build`, one step at a time. A hole the plan cannot settle goes to
+`## Open questions`, never guessed into a Decision; the plan card tables them, a row per
+question with why it matters and the lean, so one reply (`yes to all leans`) settles the
+lot, and a question you would rather let the work answer is deferred instead
+(`defer Q3 until …`, recorded by `plumbbob defer`), listed in its own table beneath and
+counted apart ([D118 (questions-table)](decisions.md#d118),
+[D120 (deferred-questions)](decisions.md#d120)). Then it commits the plan on its own
 (`plumbbob checkpoint --plan`), so the first step's diff stays clean. It writes intent
 only, never source. If the build will lean on user-authored agents it also offers to
 author `harness.json` beside `intent.md`: the per-step [slot bindings](#the-harness-slots)
-reviewed at the same plan pause. At that pause it gives the framed plan a cold read (one
-adversarial pass under refine's lens, surfacing without appending) and writes the result
-into `.plumbbob/detail.md` as the recommendation `plumbbob handoff --plan` prints last:
-`Approve it`, or `Sharpen <the worst hole> first`, naming `/plumbbob:refine` when the read
-found more than one. Reach for it whenever there is no active session and a goal worth
-more than a one-liner.
+reviewed at the same plan pause.
+
+At that pause it gives the framed plan a cold read (one adversarial pass under refine's
+lens, surfacing without appending) and writes the result into `.plumbbob/detail.md` as the
+recommendation `plumbbob handoff --plan` prints last: `Approve it`, or `Sharpen <the worst
+hole> first`, naming `/plumbbob:refine` when the read found more than one. The card also
+says what approving publishes: the tracked build folder rides the branch into the PR, and
+a `keep it local` row runs `plumbbob start --local` on the open session, so the plan and
+finish commits land record-only and the folder never rides
+([D117 (publish-on-the-card)](decisions.md#d117)). Reach for it whenever there is no
+active session and a goal worth more than a one-liner.
 
 > **Passing a spec:** a plain path is the surest form (`/plumbbob:plan specs/foo.md`). An
 > `@`-mention works too, but only with leading text (`/plumbbob:plan absorb @specs/foo.md`):
@@ -124,7 +134,8 @@ the `before`-slot ones for context, delegates the diff to a `build`-slot agent i
 bound, and fires an agent mid-build when a manifest's `when` prose calls for it. `--auto`
 lets the agent self-approve and chain step after step until the plan is done, halting the
 moment a check goes red, the self-review finds a mismatch, or a bound agent returns
-`blocked`/`drift`. A step range like `1-3` is a bounded `--auto`: it self-approves and
+`blocked`/`drift`, and at each bare range's pause, a call the plan reserves for you
+([D94 (auto-and-stops)](decisions.md#d94)). A step range like `1-3` is a bounded `--auto`: it self-approves and
 lands steps 1 through 3, then ends on step 3's checkpoint block. A range may also list its
 steps (`20,5-9`): it lands exactly the steps it names, walked in build order from its first
 undone one, and halts before any step it does not name
@@ -136,8 +147,9 @@ carries a `Stop` row saying why the build stops there, relayed with the rest of 
 checkpoint's block; a bare range's pause is its stop, so the recommendation there speaks to the plan's
 call. At a pause (the default
 path, or a halt on a red check or a mismatch) it writes its judgment into `.plumbbob/detail.md`,
-runs `plumbbob handoff`, and pastes the block; you reply with one of the four moves the
-block names (`looks good`, `expand`, a direction, `revert`), and on `looks good` the
+runs `plumbbob handoff`, and pastes the block; you reply with one of the moves the block
+names: `looks good`, `expand`, a direction, `revert`, and a fifth inside a range that lands
+its steps with more still ahead, `/plumbbob:run`, which rides second. On `looks good` the
 checkpoint prints the boundary block for it to relay. An `expand`, or a direction, is
 answered in the model's own words above one line pointing back at the step, since a card
 shows once and every later turn at it is a reply
@@ -166,7 +178,12 @@ Captures a mid-build "ooh, what if" without chasing it. Give it the idea inline 
 bare to use the one you just raised; it composes a single tidy, tagged line, shows it for
 a quick OK, then appends it via `plumbbob park`, never by editing the file itself, and
 relays the verb's two lines: the capture, and the pointer back at the step in flight. The
-step stays protected; the list gets triaged later by `/plumbbob:harvest`.
+step stays protected; the list gets triaged later by `/plumbbob:harvest`. A question from
+the plan is deferred, not parked: `leave Q3 until the latency numbers are in` has the skill
+run `plumbbob defer` in place of the park, so the card counts it apart from the calls still
+owed; a park that names a question still open draws the verb's advisory, which names
+`plumbbob defer` as the remedy, and whether to defer it is your call
+([D123 (defer-records)](decisions.md#d123)).
 
 ### order
 
@@ -189,7 +206,8 @@ same verb when they add a step, so you rarely need to fire this yourself.
 The orientation move: a thin trigger for `plumbbob status`. Prints the dashboard (title,
 phase, the step list with the next step's done-when, seam, and advisory model
 recommendation, last checkpoint, the build order when it departs from the numbering,
-the build ranges when the plan has them, `parked 2 of 7 open`, and the open-question count)
+the build ranges when the plan has them, `parked 2 of 7 open`, and the open questions
+counted apart, `open questions 1 to answer, 2 deferred`)
 and names the single next move, which is the run when the next step sits in a range. The model line is the plan's suggestion of the smallest model that can carry
 the next step: switch before building, or ignore it; guidance, never a gate. Read-only;
 fire it any time you lose the thread.
@@ -225,8 +243,8 @@ build folder stays put and rides the branch into the PR.
 
 ## The harness slots
 
-Four of the loop skills know about **user-authored agents**: any executable that speaks
-plumbbob's subprocess envelope (the contract for authors is `docs/agents.md`). A build
+Five of the loop skills know about **user-authored agents**: any executable that speaks
+plumbbob's subprocess envelope (the contract for authors is [`agents.md`](agents.md)). A build
 opts in by carrying a `harness.json`
 beside its `intent.md`, binding agents to a step's three lifecycle slots:
 
@@ -238,11 +256,12 @@ beside its `intent.md`, binding agents to a step's three lifecycle slots:
 both keep the file **bindings + prose only, never a conditional** ([C3 (bindings-not-logic)](decisions.md#c3)). The file says
 *which* agent; *when* to fire one mid-build is judgment the host model makes by reading
 each manifest's `when` prose and a step's `note`. `/plumbbob:build` runs the `before`/`build`
-slots and `/plumbbob:verify` runs `after`; either surfaces a non-`done` envelope by its status:
+slots, `/plumbbob:verify` runs `after`, and `/plumbbob:run` drives both across a range; each
+surfaces a non-`done` envelope by its status:
 `blocked` (the agent couldn't finish: surface its notes, unblock, re-run) or `drift` (the
 plan no longer matches reality: repair it with `/plumbbob:refine` first). No agent can advance
 the loop: checkride gates and the human is the clock, by construction. The full contract
-for authors lives in `docs/agents.md`; `plumbbob status` lists a build's bindings.
+for authors lives in [`agents.md`](agents.md); `plumbbob status` lists a build's bindings.
 
 ## The power moves
 
@@ -286,8 +305,12 @@ as `checkpoint`.
 
 For a genuine fork the plan can't settle on paper: `/plumbbob:spike <slug>` opens a throwaway
 sibling worktree and branch per option (`spike/<slug>-a`, `-b` by default) outside the
-repo; `/plumbbob:spike done` tears them all down. The deliverable is the **verdict** recorded
-back in `intent.md`, not the spike code.
+repo; `/plumbbob:spike done` tears them all down. Either way a spike leaves a durable
+report: opening one scaffolds `spike-NN-<slug>.md` in the build folder from
+`templates/spike-report.md`, and `/plumbbob:spike report <slug>` scaffolds the report alone,
+with no worktrees, for a planned step titled `spike: …`, where the increment is the
+experiment. The deliverable is the **verdict**: the report's Findings and Verdict, which
+close a spike step, and the call recorded back in `intent.md`, never the spike code.
 
 ### recover
 
@@ -312,7 +335,7 @@ destructive by design).
 ### doctor
 
 Diagnoses the install from inside a session (a thin trigger for `plumbbob doctor`): is the
-plugin linked, are the skills and hook present, is there a marketplace/skills-dir
+plugin linked, are the skills and all four hooks present, is there a marketplace/skills-dir
 collision, does the repo carry a legacy sidecar, and how the check gate will resolve. On a
 **marketplace** install this is the only way to reach `doctor` (the CLI is on PATH only
 inside a session).

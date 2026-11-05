@@ -29,21 +29,24 @@ same, so you rarely need `pnpm build`: only when you want to exercise the publis
 
 `pnpm check` is the one gate, and it must be green before a change lands. It is
 [checkride](https://www.npmjs.com/package/checkride) ([**D32 (checkride-gate)**](docs/decisions.md#d32); our sibling package, and
-plumbbob's one runtime dependency), which runs the tools this repo configures, in order:
+plumbbob's one runtime dependency), which runs the tools this repo configures in waves,
+each slot's `order` in `checkride.config.json`: the quick reads first, the type and prose
+pass second, the build third, and `test` alone, since vitest saturates every core:
 
-| Slot | Tool | What it guards |
-| ------ | ------ | ---------------- |
-| `types` | `tsc --build` | types |
-| `lint` | `oxlint` | correctness lint |
-| `struct` | `ast-grep scan` | the structural constraints (see below) |
-| `dead` | `fallow` | dead code, unused exports/deps, cycles, complexity |
-| `test` | `vitest` | the test suite |
-| `docs` | `markdownlint-cli2` | the docs |
-| `links` | built-in | relative markdown links resolve |
-| `refs` | `scripts/check-refs.ts` | every `D#` / `C#` citation is linked and glossed (see below) |
-| `prose` | `vale` | the voice: no em-dashes, no minted dialect, no generated-prose fingerprints, anchored to `docs/voice/` |
-| `spell` | `cspell` | spelling, against the project lexicon in `cspell.json` |
-| `build` | `tsc -p tsconfig.build.json` | the publish artifact still emits |
+| Wave | Slot | Tool | What it guards |
+| --- | --- | --- | --- |
+| 1 | `lint` | `oxlint` | correctness lint |
+| 1 | `struct` | `ast-grep scan` | the structural constraints (see below) |
+| 1 | `dead` | `fallow` | dead code, unused exports/deps, cycles, complexity |
+| 1 | `links` | built-in | relative markdown links resolve |
+| 1 | `refs` | `scripts/check-refs.ts` | every `D#` / `C#` citation is linked and glossed (see below) |
+| 1 | `intent` | `keyframes check --strict` | `keyframes.md`, the root intent plan: its structure, citations, and every pointer it holds resolve |
+| 2 | `types` | `tsc --build` | types |
+| 2 | `docs` | `markdownlint-cli2` | the docs |
+| 2 | `prose` | `vale` | the voice: no em-dashes, no minted dialect, no generated-prose fingerprints, anchored to `docs/voice/` |
+| 2 | `spell` | `cspell` | spelling, against the project lexicon in `cspell.json` |
+| 3 | `build` | `tsc -p tsconfig.build.json` | the publish artifact still emits |
+| alone | `test` | `vitest` | the test suite |
 
 Raw tool output lands in `.check/` (`summary.json` is the index). Narrow the loop while
 iterating: `pnpm check --bail`, `pnpm check --only types,lint`. An opt-in `mutation` slot
@@ -83,10 +86,12 @@ automatically. Full key in [`docs/decisions.md`](docs/decisions.md); the load-be
   token (`push`, `rebase`, `--amend`, …) appears as a string literal, and `resetHard`
   imports only in `revert.ts`.
 
-`rules/` also enforces three architectural invariants: `no-process-exit` (only the bin
+`rules/` also enforces four architectural invariants: `no-process-exit` (only the bin
 entry exits, so verbs stay testable), `no-console` (write through `process.stdout` /
-`process.stderr`), and `centralize-subprocess` (spawn only in `lib/git.ts`, `lib/check.ts`,
-`lib/agents.ts`, `verbs/spike.ts`); plus decision-level tripwires: the agent path can't
+`process.stderr`), `centralize-subprocess` (spawn only in `lib/git.ts`, `lib/check.ts`,
+`lib/agents.ts`, `verbs/spike.ts`), and `function-doc-comment` (every top-level function
+in `src/` carries a `/** */` doc comment, at error severity, so a new function without
+one fails the gate); plus decision-level tripwires: the agent path can't
 import loop-advancing verbs ([C6 (no-advance-verb)](docs/decisions.md#c6)) or sync spawns ([D60 (async-spawn)](docs/decisions.md#d60)), excludes never touch
 `.gitignore` ([D33 (info-exclude)](docs/decisions.md#d33)), and no `CLAUDECODE` session-sniffing guard can return ([D13 (no-edit-guards)](docs/decisions.md#d13)).
 If the gate rejects an edit for one of these, that is by design.
@@ -105,13 +110,19 @@ not reach, are [**D74 (glossed-citations)**](docs/decisions.md#d74).
 The layout encodes intent; match it when you add tests:
 
 - **Unit tests** sit in a `__tests__/` folder **next to the module they cover** (for example
-  `src/lib/__tests__/git.test.ts`). Verbs are pure `(cwd, args) => number` functions, so
-  they unit-test in-process.
+  `src/lib/__tests__/git.test.ts`). Verbs are plain `(cwd, args)` functions that return
+  an exit code and never call `process.exit`, so they unit-test in-process; five of them
+  (`agent`, `check`, `checkpoint`, `doctor`, `start`) spawn, so they are async and return
+  a `Promise<number>`.
 - **Multi-module tests** live under `test/` in labeled folders: `test/integration/` (tests
-  that spawn the real CLI), `test/e2e/` (full-session lifecycles), and `test/contract/`
-  (static checks like the SKILL.md frontmatter contract).
+  that spawn the real CLI), `test/e2e/` (full-session lifecycles), `test/contract/`
+  (static checks like the SKILL.md frontmatter contract), and `test/evals/` (the eval
+  tier: contracts driven against a live Claude Code by `pnpm eval:baseline`,
+  `pnpm eval:latched`, and `pnpm eval:report`, never by the gate; the receipts land in
+  `docs/evals/`).
 - **Shared helpers** go in `test/helpers/` (`fixture-repo.ts` for subprocess tests,
-  `temp-repo.ts` and `capture-io.ts` for in-process ones).
+  `temp-repo.ts` and `capture-io.ts` for in-process ones, `run-hook.ts` to feed a hook a
+  synthetic harness event, and `socket-stdin.ts` to hand the CLI a socket as stdin).
 
 `vitest` discovers both `src/**/*.test.ts` and `test/**/*.test.ts`. The build excludes
 `src/**/__tests__/**`, so colocated tests never ship in `dist/`. Add or update tests with
@@ -124,7 +135,8 @@ Docs are hand-written markdown under `docs/` (plus this file and the `README`).
 `markdownlint-cli2` enforces structure; line length is intentionally unrestricted, so wrap prose
 naturally. If you change a verb's behavior or output, update
 [`docs/cli-reference.md`](docs/cli-reference.md), and check whether
-[`docs/happy-path.md`](docs/happy-path.md) shows the affected output. The shape of a turn
+[`docs/happy-path.md`](docs/happy-path.md) or [`docs/runs.md`](docs/runs.md) shows the
+affected output. The shape of a turn
 (what prints, in what order, owned by whom) is specified in
 [`docs/presentation.md`](docs/presentation.md); a change to the shape is a change to that
 file first, and the verbs, the skills, and the happy path follow it. Before writing prose,
@@ -140,8 +152,9 @@ slot enforces the mechanical half. Screenshots and recordings live under
 - **TIL lines (optional).** This repo records genuine lessons as a `TIL:` line in the
   commit body; use one when a change taught you something non-obvious, skip it otherwise.
 - **Releases.** Versioning follows semver with a Keep a Changelog `CHANGELOG.md`; the
-  in-repo `/version` skill bumps `package.json` and adds the changelog entry. Don't bump the
-  version in a feature PR: that's a separate release step.
+  in-repo `/version` skill bumps `package.json`, adds the changelog entry, then tags and
+  pushes, which triggers the npm publish and the GitHub Release. Don't bump the version
+  in a feature PR: that's a separate release step.
 
 ## Submitting a change
 

@@ -8,10 +8,10 @@ plumbbob doctor
 ```
 
 `doctor` is read-only and understands **both install paths**. It checks that the skills-dir
-link resolves to a package carrying the manifest, the skills, and the hook; it also accepts a
-**marketplace-only** install as a passing state, flags a double-install **collision** when
-both are present, and prints the exact `→ fix` for anything broken. Run it first whenever a
-`/plumbbob:*` skill misbehaves.
+link resolves to a package carrying the manifest, the skills, and `hooks/hooks.json` with its
+four events; it also accepts a **marketplace-only** install as a passing state, flags a
+double-install **collision** when both are present, and prints the exact `→ fix` for anything
+broken. Run it first whenever a `/plumbbob:*` skill misbehaves.
 
 **Where to run it.** A terminal `plumbbob doctor` works only for the **global / skills-dir**
 install (`npm i -g plumbbob`). A **marketplace** plugin puts the CLI on PATH *only inside a
@@ -22,23 +22,27 @@ reach: check the `/plugin` UI and `/reload-plugins`.
 
 ## Install and linking
 
-### A `/plumbbob:*` skill opens with an empty dashboard
+### A `/plumbbob:*` skill opens with an empty dashboard: a dangling cursor, not a missing link
 
-**Cause.** No plugin linked, so Claude Code loaded no skills: the most common silent
-failure. **Fix.** Run `plumbbob doctor`; if it reports "not linked," either install the
-[`agent-tools`](https://github.com/robmclarty/agent-tools) marketplace plugin
-(`/plugin install plumbbob@robmclarty`) or run `plumbbob init`, then restart Claude Code
-(or `/reload-plugins`).
+**Cause.** A skill that opens at all was loaded, so the link is sound. The dashboard is
+empty because the active-build cursor in `.plumbbob/STATE` names a build folder that is
+gone. **Fix.** `plumbbob recover`, under
+[Sessions and state](#status-shows-an-empty-dashboard-for-a-build-you-know-you-wrote). When
+no `/plumbbob:*` skill opens at all, read the next entry.
 
 ### The skills do not appear at all after installing
 
-**Cause.** Claude Code only scans `~/.claude/skills/` at startup. **Fix.** Run
-`plumbbob init`, then **restart Claude Code or run `/reload-plugins`**; the link is live
-but the plugin list is cached until a reload.
+**Cause.** No plugin is linked, or Claude Code has not rescanned `~/.claude/skills/` since
+the link was made: it reads the folder at startup. **Fix.** Run `plumbbob doctor`; if it
+reports "not linked," install the [`agent-tools`](https://github.com/robmclarty/agent-tools)
+marketplace plugin (`/plugin install plumbbob@robmclarty`) or run `plumbbob init`. Then
+**restart Claude Code or run `/reload-plugins`**; the link is live but the plugin list is
+cached until a reload.
 
-### A skill prints "plumbbob CLI not found"
+### A skill prints "plumbbob CLI not on PATH in this session"
 
-**Cause.** The skills shell a bare `plumbbob`, so the CLI must be on your `PATH`. **Fix.**
+**Cause.** The skills shell a bare `plumbbob`, so the CLI must be on your `PATH`; the notice
+itself names the fix for each install path. **Fix.**
 The **marketplace plugin** puts `plumbbob` (and `pb`) on PATH via its `bin/` shims whenever
 the plugin is enabled; confirm it is installed and enabled. For the **skills-dir/global**
 install, `npm i -g plumbbob` (it also installs a `pb` shorthand), then `plumbbob init`.
@@ -48,7 +52,7 @@ Confirm with `which plumbbob`.
 
 **Cause.** A marketplace plumbbob plugin already provides the skills and the CLI, so linking
 the skills-dir plugin too would register a *second* plugin named `plumbbob`; the two fight
-over the `/plumbbob:*` namespace and skills can drop to flat names like `/plumbbob:status`. **Fix.**
+over the `/plumbbob:*` namespace and skills can drop to flat names like `/status`. **Fix.**
 Keep one. Stay on the marketplace plugin (it needs no `init`), or remove it
 (`/plugin uninstall plumbbob@robmclarty`) and re-run `plumbbob init`. `--force` overrides
 the guard if you truly want both. `plumbbob doctor` reports the same collision when both are
@@ -143,9 +147,17 @@ the range's review: answer the card instead (`looks good`, or `make P3 a tangent
 entered and the checkpoint attempted in the same turn, which is exactly what a model does
 when it builds a step and tries to land it without stopping; the refusal *is* the pause.
 **Fix.** Nothing to fix. Read the pause block, reply (`looks good`, a question, or a
-direction), and the checkpoint lands on that next turn. Driving the CLI by hand from a
-terminal with no turn hook wired, the ledger is dormant and the latch stands down;
-`plumbbob doctor` prints which state it is in.
+direction), and the checkpoint lands on that next turn.
+
+By hand the latch reads differently. The skills shell out to the CLI, so in the loop you
+rarely type it. It is a first-class path on its own: every verb runs from a terminal, and a
+few (`use`, `handoff`, `defer`, `check`, `agent`) have no skill of their own.
+[`cli-only.md`](cli-only.md) drives one build that way. Until the turn hook has ever ticked
+`TURN` in a repo, the ledger is dormant and the latch stands down. Once it has, `build`
+stamps `TICK`, and a terminal `checkpoint` with piped stdin refuses until a prompt ticks
+`TURN` again; one typed at a TTY passes, since a human at the keyboard is their own
+approval, and `plumbbob turn` records a human turn by hand. `plumbbob doctor` prints which
+state the ledger is in.
 
 ### The pause shows no `check` row and no `looks good` move
 
@@ -162,14 +174,15 @@ from it.
 **Cause.** Some clients fold text written before a tool call once the call follows it
 (Zed does, through the Claude agent bridge), so a reply written first and closed by a
 `plumbbob handoff` run after it reaches the human as the line alone (in GitHub
-issues #12 and #13). Since 0.13.7 the turn hook asks for every tool call before the reply, and the relay
-check holds a turn whose reply stood above one ([**D121 (reply-after-the-tools)**](decisions.md#d121)).
-An older plugin still asks for the reply first. The hold also needs the Claude Code the host
-runs to send it what it reads: 2.1.163 is the first to keep a `Stop` hook's
-`additionalContext`, and a host that sends no `prompt_id` is read from the last prompt
-typed. Zed's agent bridge carries a Claude Code of its own, so an old bridge can be several
-releases behind the terminal's.
-**Fix.** Run `plumbbob --version` in the session; below 0.13.7, update the plugin:
+issues #12 and #13). Since 0.13.7 the turn hook asks for every tool call before the reply,
+and the relay check holds a turn whose reply stood above one
+([**D121 (reply-after-the-tools)**](decisions.md#d121)); since 0.13.10 it reads the turn from
+the last prompt typed when the host sends no `prompt_id`. An older plugin still asks for the
+reply first, or holds nothing on such a host. The hold also needs the Claude Code the host
+runs to keep it: 2.1.163 is the first to keep a `Stop` hook's `additionalContext`, and it
+sends no `prompt_id`. Zed's agent bridge carries a Claude Code of its own, so an old bridge
+can be several releases behind the terminal's.
+**Fix.** Run `plumbbob --version` in the session; below 0.13.10, update the plugin:
 
 ```sh
 claude plugin marketplace update robmclarty
@@ -206,10 +219,11 @@ key is while you are still planning.
 `checkride.config.json` ([**D32 (checkride-gate)**](decisions.md#d32)). This is a harness failure, not a code failure; both
 block. **Fix.** Repair the config (or set a `"check"` override) and re-run.
 
-### The heavy check runs the wrong command (or fails in a non-pnpm repo)
+### The heavy check runs the wrong command
 
 **Cause.** A `"check"` key in the settings ladder overrides checkride and is spawned
-verbatim ([**D24 (configurable-check)**](decisions.md#d24)). **Fix.** Set the `"check"` key in `.plumbbob/settings.json` to your
+verbatim ([**D24 (configurable-check)**](decisions.md#d24)); `start` seeds `settings.json` as
+`{}`, so with no key the gate is checkride. **Fix.** Set the `"check"` key in `.plumbbob/settings.json` to your
 command (for example `"check": "npm test"`), remove it to gate through checkride, or override it
 per-worktree in `settings.local.json` ([**D27 (settings-ladder)**](decisions.md#d27)). The command is run in the repo root via
 a shell.
@@ -271,8 +285,8 @@ the parenthetical names the rule that held it. **Fix.** By the parenthetical:
 | The parenthetical | What happened | The fix |
 | --- | --- | --- |
 | `its card printed this turn` | the model tried to record the card it had just shown | end the turn on the card; your reply records it |
-| `no stop card showed its detail` | the detail file changed since the card rendered, or no card rendered | `plumbbob handoff --stop`, then end the turn on the card |
-| `step 9 is open again` | a step of the range landed and was later cleared | land it, then `plumbbob handoff --stop` |
+| `no stop card showed it` | the detail file changed since the card rendered, or no card rendered | `plumbbob handoff --stop`, then end the turn on the card |
+| `step 9 is open again` | a step of the range landed and was later cleared | land it, then `plumbbob handoff --stop --full` |
 | `step 13 joined it after it landed` | a confirmed blocker was folded into the range the card reviews | move the step to a range still to come, or a bare range of its own, leave the detail file alone, and run `plumbbob harvest` again |
 | `P9 is not in the list` | a proposal names a park the list lacks, or a class other than blocker, tangent, or pivot | fix the Harvest proposals in `.plumbbob/detail.md` |
 
@@ -291,7 +305,21 @@ range out of step with the order, writing the order again with `plumbbob order` 
 the order settles. A run refuses a flagged range until the row is gone, and `plumbbob order`
 names each range it left for you beneath its ending.
 
-## The post-edit hook (light feedback)
+## The hooks
+
+### A raw `git commit` asks for permission while a step is in flight
+
+**Cause.** The PreToolUse hook (`hooks/pre-bash-commit.sh`) watches Bash for a `git commit`
+while a step is in flight and turns it into a permission question whose reason reads
+`plumbbob: a step is in flight — checkpoint owns the landing. Approve only if you asked for this commit.`
+It asks and never denies: the human decides, and the commit stays yours
+([**D66 (oob-commits-surfaced)**](decisions.md#d66)). `checkpoint`'s own commit never passes
+through hooks, so landing a step never trips it, and with no `STEP` marker it is silent.
+**Fix.** Nothing is broken. Decline unless you asked for the commit, and land the step
+through `/plumbbob:verify` (or `plumbbob checkpoint`), which commits under the latch. A commit
+you did approve lands outside the ledger, and `status` notes it in one neutral line, never
+undone. A command that only mentions the words (a grep, an echoed sentence, a `--body`
+heredoc) is stripped before matching, so the question seldom comes when no commit is meant.
 
 ### No light feedback appears after edits
 

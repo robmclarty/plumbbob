@@ -8,8 +8,11 @@
 // overlay can never wedge the tool. Functional and procedural, node builtins only.
 //
 // Known keys: `check` (string: the command for the heavy verify gate, a project
-// default in settings.json) and `auto` (boolean: a personal preference, so it
-// belongs in settings.local.json). `auto` is NOT a checkpoint grant: the approval
+// default in settings.json), `auto` (boolean: a personal preference, so it
+// belongs in settings.local.json), `agents` (slot bindings the agent verb reads),
+// `agentTimeout` (seconds; 0 turns it off), and `agentConfig` (a record keyed by
+// agent name, handed to that agent inside its envelope; a local overlay replaces
+// the whole entry). `auto` is NOT a checkpoint grant: the approval
 // latch never reads it to allow a land (a model can write this file, and a grant
 // it can forge is no grant) only to name it at the pause when set; self-approval
 // comes solely from the human's literal `/build --auto` or a typed step range.

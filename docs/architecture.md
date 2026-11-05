@@ -10,7 +10,7 @@
 PlumbBob splits judgment from mechanics from state, and the boundary between the
 layers is the product:
 
-```
+```text
   plumbbob skills        judgment — compose, propose, pause; the model reads and writes
        │                 prose, and every convergence waits for the human
        ▼  (shell out)
@@ -32,7 +32,8 @@ between them is never hidden: the sidecar is the whole memory.
   (enforced by `rules/no-process-exit.yml`), so everything below it is importable by
   tests.
 - `cli-core.ts`: verb routing and the help table.
-- `verbs/`: one file per verb, each a pure `(cwd, args) → exit code` function.
+- `verbs/`: one file per verb, each a `(cwd, args) → exit code` function; five of them
+  (`agent`, `check`, `checkpoint`, `doctor`, `start`) are async and return a promise of the code.
 - `lib/`: the shared mechanics: `git.ts` (additive-only git, [C5 (additive-git)](decisions.md#c5)), `sidecar.ts` (paths,
   planes, excludes, the detail file), `intent.ts` (step/seam parsing), `orient.ts` (the dashboard, the build
   order and the build ranges, and the run a prompt names, [D95 (run-verb)](decisions.md#d95)),
@@ -43,7 +44,8 @@ between them is never hidden: the sidecar is the whole memory.
   order an ending stacks in), `commitmsg.ts` and `commitbody.ts` (Conventional subjects, [D68 (conventional-subjects)](decisions.md#d68),
   and the `--body` reader), `buildlog.ts` and `buildlogsync.ts` (the ledger and its CLI-owned mirror), `agents.ts`
   (the doorway), `plugins.ts` (install detection), `templates.ts` (the scaffold templates `start` and
-  `spike` stamp).
+  `spike` stamp), `links.ts` (the one place a detail file's relative links are re-aimed when its text
+  is copied into the build log, [D116 (links-re-rooted)](decisions.md#d116)).
 
 Structural invariants are machine-enforced by the ast-grep rules in `rules/`:
 functional/procedural only ([C1 (functional-only)](decisions.md#c1)), node builtins plus the dependency allowlist ([C2 (few-deliberate-deps)](decisions.md#c2)),
@@ -63,7 +65,7 @@ ledger, the state table's Verdict and pointers), folds the two into one block, a
 skill pastes that block as the whole turn. The highlights stay in the file, one link away
 from the card. A card shows once: a later turn at it is the model's reply, closed by one
 line ([D110 (reply-after-the-card)](decisions.md#d110)). A transition verb
-(`checkpoint`, `park`, `harvest`, `order`, `revert`, `abandon`, `spike`, `use`, `finish`)
+(`checkpoint`, `park`, `harvest`, `order`, `defer`, `revert`, `abandon`, `spike`, `use`, `finish`)
 prints its own ending the same way, through the one formatter in `lib/notice.ts`, so a
 boundary or a driver turn is one command's output and cannot disagree with itself. A run's
 stop card is the decision turn for a whole range: `handoff --stop` renders it from the
@@ -76,12 +78,14 @@ the PR.
 ## The two planes ([D17 (two-planes)](decisions.md#d17)/[D26 (build-folders)](decisions.md#d26))
 
 The sidecar splits by lifetime. The **artifact plane** is tracked (`settings.json`
-and each `builds/<slug>/` folder (intent, build-log, checkpoints, report)), so a
-build's record rides its branch into the PR. The **control plane** is per-worktree
-ephemera, excluded via the shared gitdir's `info/exclude` ([D33 (info-exclude)](decisions.md#d33)), never `.gitignore`:
+and each `builds/<slug>/` folder: intent, build-log, checkpoints, report, `stats.json`,
+`harness.json`, and any `spike-NN-<slug>.md` report), so a build's record rides its branch
+into the PR. The **control plane** is per-worktree ephemera, excluded via the shared
+gitdir's `info/exclude` ([D33 (info-exclude)](decisions.md#d33)), never `.gitignore`:
 `STATE` (its content is the active-build cursor, [D28 (state-cursor)](decisions.md#d28)), `settings.local.json` (the personal overlay),
-the latch's `TURN` and `GRANT` files, the in-flight step's `detail.md`, and each build's `STEP`/`SEAM`/`SPIKE`/`TICK`
-markers and `handoff.json` ledger. Phase is **derived, not stored**:
+the latch's `TURN` and `GRANT` files, the run's `RUN` and `PROMPT`, the relay's `RELAY`, the
+in-flight step's `detail.md`, each build's `STEP`/`SEAM`/`SPIKE`/`TICK`/`PAUSE`/`STOP` markers
+and `handoff.json` ledger, and the gate's `.check/` output. Phase is **derived, not stored**:
 SPIKE marker ⇒ SPIKE, STEP present ⇒ BUILD, otherwise DESIGN.
 
 ## The check gate ([D32 (checkride-gate)](decisions.md#d32))
@@ -96,8 +100,11 @@ gate on the code: a `git commit` ask-hook that turns a raw commit into a permiss
 question while a step is in flight ([D66 (oob-commits-surfaced)](decisions.md#d66)), the
 `UserPromptSubmit` hook that ticks the turn ledger the latch reads, and the `Stop` relay
 check. That last one is the only hook that holds a turn open, and what it holds is the
-ending: a turn that printed a pause or a boundary and did not carry it gets one retry
-([D89 (block-once)](decisions.md#d89)).
+ending: a decision ending (a pause card or its reminder, the plan card, a stop card) that did
+not close the turn, or an orientation ending (a checkpoint's boundary, the plan commit, a
+stop's record, `finish`) that appeared nowhere in it, gets one retry
+([D89 (block-once)](decisions.md#d89)); a reply written before a tool call and buried under
+the reminder is held once the same way ([D121 (reply-after-the-tools)](decisions.md#d121)).
 
 ## Distribution
 
@@ -118,8 +125,11 @@ an agent informs the pause, and the human still ticks it. The contract is
 
 ## In progress *(research)*
 
-- **Multi-host**: `plumbbob init --host codex|cursor|zed` placing the same skills
-  where other agents look; the npm package as the agent-neutral carrier
+- **Multi-host**: the same skills placed where other agents look, Cursor first through its
+  own global plugin system rather than an `init` flag (`init` takes only `--uninstall` and
+  `--force`; the analysis is `research/09-cursor-host.md`, a working note outside the tracked
+  tree); the npm package
+  as the agent-neutral carrier
   ([`research/02-model-agnostic-standalone.md`](../research/02-model-agnostic-standalone.md)).
 - **The reasoning seam**: how skills reach a frontier model from non-Claude hosts;
   evaluated and settled in

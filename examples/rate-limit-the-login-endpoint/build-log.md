@@ -142,9 +142,9 @@ folder, so it rides the branch into the PR.)*
 
   **Harvested**: 1 of 1 parked idea open
 
-  | Park | What it is | Why it matters | Lean |
-  | --- | --- | --- | --- |
-  | P1 · reset throttle | should /password-reset get the same throttle? (tangent) | it is the next brute-force target once login is closed | tangent: a separate route and a separate decision, not a blocker for this goal |
+  | Park | Why it matters | Lean |
+  | --- | --- | --- |
+  | **P1**: [reset throttle](build-log.md#L36) | it is the next brute-force target once login is closed | tangent: a separate route and a separate decision, not a blocker for this goal |
 
   **Recommendation**: Approve it, then try six logins yourself before you finish. The gate was green at both landings, and the one park is future work, not this goal's.
 

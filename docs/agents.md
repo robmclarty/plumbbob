@@ -6,7 +6,8 @@ session, or from another harness entirely. This page is the contract for that la
 the **doorway** a user-authored agent speaks to plug into the loop. An agent here is
 **anything executable** that speaks one versioned JSON envelope: a program on disk, a
 manifest that names it, and a plan artifact that binds it to a step. The contract needs no
-SDK and no particular language: a twelve-line bash script is a complete agent.
+SDK and no particular language: a 34-line POSIX `sh` script and an 8-line manifest are a
+complete agent.
 
 The rest of the docs are for driving PlumbBob. This one is for *extending* it. If you only
 want to run the loop, you never need this page; the [skills](skills-reference.md)
@@ -23,8 +24,9 @@ you wonder why the contract refuses something, it's one of these:
    that could advance the loop would be autonomy wearing the loop's costume. This is the
    litmus for every field the envelope will ever grow.
 2. **The CLI owns every side effect** ([**D44 (cli-side-effects)**](decisions.md#d44)). An agent *returns* concerns; PlumbBob
-   *applies* them: `parked[]` lands through the park verb, never by the agent writing
-   `.plumbbob/` itself. The sidecar keeps a single writer.
+   *applies* them: `parked[]` lands as lines the verb itself appends to the build log's
+   `## Park list`, untagged, never by the agent writing `.plumbbob/`. The sidecar keeps a
+   single writer.
 3. **Review is advisory; checkride gates; the human advances** ([**D45 (advisory-review)**](decisions.md#d45)). An
    `after`-slot agent *informs* the verify pause. No code path lets it fail a step: a
    gate that an agent can trip is the lock returning in autonomy's costume.
@@ -66,7 +68,7 @@ picture of the step you're running against:
 {
   "contract": 1,                       // the contract major version (see "Versioning")
   "mode": "before",                    // the slot you're running in: before | build | after
-  "build": { "slug": "2026-07-02-rate-limit-login", "title": "Rate-limit the login endpoint" },
+  "build": { "slug": "2026-07-03-rate-limit-the-login-endpoint", "title": "Rate-limit the login endpoint" },
   "step": {
     "n": 3,
     "title": "Make the limit configurable via env",
@@ -76,7 +78,7 @@ picture of the step you're running against:
   "decisions":   ["D1 (token-bucket): token bucket over sliding window — because …", "…"],  // verbatim intent bullets
   "constraints": ["C1 (no-new-deps): no new runtime deps — because …", "…"],
   "context":     ["<before-slot agent output threaded in as prose>", "…"],   // inline — D59 (inline-context)
-  "settings":    { "auto": false, "agentTimeout": 0 }              // plumbbob's own — never a provider key — D53 (agents-own-keys)
+  "settings":    { "auto": false, "agentTimeout": 0, "agent": {} } // plumbbob's own, plus this agent's agentConfig block — never a provider key — D53 (agents-own-keys)
 }
 ```
 
@@ -90,9 +92,11 @@ Notes that matter to an author:
   the ruling.
 - `context[]` carries the output of `before`-slot agents, threaded in inline ([**D59 (inline-context)**](decisions.md#d59)): how
   a `build` agent sees what a `before` agent surfaced.
-- `settings` is *plumbbob's* relevant configuration only. Provider keys, model choice, and
-  sandboxing are **your** agent's business ([**D53 (agents-own-keys)**](decisions.md#d53)): its env, its config; PlumbBob never
-  touches a key.
+- `settings` is *plumbbob's* relevant configuration, plus one block that is yours: `settings.agent`
+  carries this agent's `agentConfig.<name>` entry from the settings ladder (`{}` when none is set;
+  the personal overlay replaces the project entry whole, with no deep merge). Provider keys,
+  model choice, and sandboxing are still **your** agent's business ([**D53 (agents-own-keys)**](decisions.md#d53)): its env, its
+  config; PlumbBob never touches a key.
 
 ### Output: the envelope (stdout)
 
@@ -104,7 +108,7 @@ A single JSON object. Two fields are required; the rest default to empty:
   "status": "done",                    // required — done | blocked | drift
   "summary": "Read RATE_LIMIT_MAX; default 5; added the default test.",  // required, non-empty
   "body": "…longer prose for the human at the pause…",   // optional
-  "parked": ["the 429 body should be JSON, not text"],   // optional — lands via the park verb
+  "parked": ["the 429 body should be JSON, not text"],   // optional — appended to the build log's Park list
   "notes": "needs FOO in the env to run the integration test"  // optional
 }
 ```
@@ -124,7 +128,8 @@ a default build reaches, and the steps after it wait for the human's next run: a
 can stop a range, never carry one past its trouble.
 
 `parked[]` is how an agent captures a mid-run "ooh, what if" without acting on it: each
-string becomes a park line the CLI lands through the park verb ([**D44 (cli-side-effects)**](decisions.md#d44)). Unknown fields are
+string becomes a `- [ ]` line the CLI appends to `build-log.md`'s `## Park list`, untagged; a build
+log with no Park list warns once rather than losing the line ([**D44 (cli-side-effects)**](decisions.md#d44)). Unknown fields are
 tolerated and dropped ([**C7 (minimal-envelope)**](decisions.md#c7), see Versioning); a malformed `parked` (non-strings,
 blanks) is refused rather than silently dropped, because losing a parked concern is quiet
 data loss.
@@ -204,7 +209,7 @@ middle of the work" ([**D43 (three-slots)**](decisions.md#d43)). That's judgment
 `when`, a step's `note`) by the host model, not by config.
 
 ```jsonc
-// builds/2026-07-02-rate-limit-login/harness.json
+// builds/2026-07-03-rate-limit-the-login-endpoint/harness.json
 {
   "contract": 1,
   "defaults": { "after": ["reviewer"] },          // bind to every step
@@ -239,7 +244,7 @@ plumbbob agent run reviewer --agent ./r      # --agent points at an explicit dir
 ```
 
 `agent run` composes the `StepContext`, spawns the command, streams its stderr live, captures
-and validates the envelope on stdout, lands any `parked[]` through the park verb, and records
+and validates the envelope on stdout, appends any `parked[]` to the build log's Park list, and records
 the envelope in the step's **handoff ledger** (`builds/<slug>/handoff.json`: untracked,
 step-scoped, cleared when the step checkpoints, [**D47 (handoff-ledger)**](decisions.md#d47)) so a later `agent run` or a
 context-compacted session can thread earlier envelopes back into `context[]`. It re-emits the
@@ -332,7 +337,7 @@ plumbbob agent list                       # → echo-reviewer (project) [after] 
 plumbbob agent run echo-reviewer --step 1 # runs it against step 1, streams its prose, prints the envelope
 ```
 
-It's a bash script and a four-line manifest: the whole contract, with nothing to install.
+It's a 34-line POSIX `sh` script and an 8-line manifest: the whole contract, with nothing to install.
 
 The step up ships beside it under
 [`examples/agents/ollama-reviewer/`](../examples/agents/ollama-reviewer/): the same
@@ -350,7 +355,7 @@ carries the full provider matrix.
 ## See also
 
 - [`skills-reference.md`](skills-reference.md#the-harness-slots): how `/plumbbob:plan`, `/plumbbob:step`,
-  `/plumbbob:build`, and `/plumbbob:verify` drive the slots for you.
+  `/plumbbob:build`, `/plumbbob:run`, and `/plumbbob:verify` drive the slots for you.
 - [`cli-reference.md`](cli-reference.md#agent): `agent list` / `agent run`, the `agentTimeout`
   setting, and the sidecar layout.
 - [`decisions.md`](decisions.md): the `D#` / `C#` design-decision key the tags above cite.

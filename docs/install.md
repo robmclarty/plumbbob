@@ -62,43 +62,39 @@ the latch is live out of the box, no manual step. Confirm it in the session with
 
 ## npm global + `init`
 
-The npm package ships the CLI, the skills, and the hook; `plumbbob init` links them
-into Claude Code as an in-place plugin:
+The npm package ships the CLI, the skills, four hooks (two shell scripts, two CLI
+verbs), and the templates; `plumbbob init` links them into Claude Code as an in-place
+plugin:
 
 ```sh
 npm i -g plumbbob      # the CLI (also a `pb` shorthand)
 plumbbob init          # link it into Claude Code; --uninstall to undo
 ```
 
+The same install serves a plain terminal: every verb runs there without Claude Code,
+and [`cli-only.md`](cli-only.md) drives one build that way.
+
 `init` symlinks the package into `~/.claude/skills/plumbbob`, where Claude Code loads
-it as a plugin; the hooks auto-register from `hooks.json` (the post-edit lint, the
-`git commit` ask-hook, the `UserPromptSubmit` turn-ledger hook behind the approval
-latch, and the `Stop` relay check). Because it's a symlink, a later `npm i -g plumbbob@latest` stays live with no
-re-link. If a
-marketplace plumbbob is already installed, `plumbbob init` refuses rather than create
-the collision (`--force` overrides), and `plumbbob doctor` flags a double-install.
+it as a plugin, and the same four hooks register from `hooks.json` as on the
+marketplace route above. Nothing else under `~` is touched and `settings.json` is left
+alone. Because it's a symlink, a later `npm i -g plumbbob@latest` stays live with no
+re-link. If a marketplace plumbbob is already installed, `plumbbob init` refuses rather
+than create the collision (`--force` overrides), and `plumbbob doctor` flags a
+double-install.
 
 ## Namespacing
 
 Either way, Claude Code namespaces the skills under the `plumbbob` plugin, so the
 commands are `/plumbbob:plan`, `/plumbbob:status`, and the rest. **The bare form
-(`/plan`) reaches the skill only where nothing else owns that name (`plan`, `status`,
-`verify`, and `doctor` are Claude Code built-ins, which win), so these docs write the
-full form.**
-Nothing else under `~` is touched and `settings.json` is left alone; restart Claude
-Code (or `/reload-plugins`) to activate.
+(`/plan`) reaches the skill only where nothing else owns that name. Five of the sixteen
+share one with a Claude Code built-in (`plan`, `run`, `status`, `verify`, `doctor`),
+and the built-in wins, so these docs write the full `/plumbbob:<name>` form.**
 
 ## Sessions are per-project
 
 Install scope is not session scope: you install the tool once, but each goal lives in
 its own repo: `plumbbob start "<goal>"` writes a `.plumbbob/` sidecar there,
 independent of the one global link.
-
-## Other agents (roadmap)
-
-The npm package is the agent-neutral carrier; a future `plumbbob init --host
-codex|cursor|zed` will place the same skills where those tools look. Claude Code is
-the first, first-class target.
 
 ## Verify
 
@@ -113,5 +109,6 @@ that the skills-dir link resolves to the plugin manifest, the skills, and the ho
 (flagging a double-install collision), and prints the exact fix for anything broken.
 The terminal command above is for the **global / skills-dir** install; a
 **marketplace** plugin puts the CLI on PATH only *inside a Claude Code session*, so
-run **`/plumbbob:doctor`** there instead. Run it first if a `/plumbbob:*` skill ever opens
-with an empty dashboard; [`troubleshooting.md`](troubleshooting.md) covers the rest.
+run **`/plumbbob:doctor`** there instead. Run it first if a skill ever opens with
+`plumbbob CLI not on PATH in this session`; [`troubleshooting.md`](troubleshooting.md)
+covers the rest.

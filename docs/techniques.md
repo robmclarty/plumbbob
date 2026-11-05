@@ -6,15 +6,19 @@ it solves, and the file, command, or state that carries it. It is the middle lay
 three docs:
 
 - [`attention-first-development.md`](attention-first-development.md) (the **why**):
-  attention is the scarce resource, and the principles that follow from protecting it.
+  attention is the scarce resource, and the principles that follow from protecting it;
+  [`why.md`](why.md) is the case for it, the edges that hold the line and the measure
+  of what the latch bought.
 - **This page** (the **what and how**): each named technique, on its own.
 - [`happy-path.md`](happy-path.md) (the **worked example**): every technique in one
   end-to-end cycle.
 
-You drive everything from your editor with `/plumbbob:*` skills; each shells out to a small
-`plumbbob` CLI you never type by hand. New here? Install from the
-[README](../README.md), read [`happy-path.md`](happy-path.md) for the narrative, and keep
-this page open to look up any piece by name.
+You drive everything from your editor with `/plumbbob:*` skills. The skills shell out to
+the CLI, so in the loop you rarely type it. It is a first-class path on its own: every verb
+runs from a terminal, and a few (`use`, `handoff`, `defer`, `check`, `agent`) have no
+skill of their own. [`cli-only.md`](cli-only.md) drives one build that way. New here?
+Install from the [README](../README.md), read [`happy-path.md`](happy-path.md) for the
+narrative, and keep this page open to look up any piece by name.
 
 ## The one law
 
@@ -61,10 +65,18 @@ structured to force that order:
 - **Constraints**: the hard rules the build must honor (`C1 (no-new-deps): no new dependencies`),
   slugged and referenced the same way. `verify` and `refine` read the diff against these.
 - **Open questions**: holes you could *not* settle on paper. They are never guessed into a
-  Decision; an unresolved fork becomes a spike instead. A real one expands in place: an
-  opener plus a `*plain:*` sub-line (a cold-reader explanation, stakes included) and a
-  `*lean:*` sub-line (the model's proposed resolution), so you can answer it without a
-  round-trip back to the chat, and it self-collapses to one line once resolved.
+  Decision; the opener says how it resolves (`*resolve by:*` decide, spike, or ask), and
+  an unresolved fork becomes a spike instead. A real one expands in place: an opener plus
+  a `*plain:*` sub-line (a cold-reader explanation, stakes included) and a `*lean:*`
+  sub-line (the model's proposed resolution), so you can answer it without a round-trip
+  back to the chat, and it self-collapses to one line once resolved. The plan card tables
+  them, a row per question (the question linked to its entry, why it matters, the lean),
+  and one reply, `yes to all leans`, settles the lot
+  ([D118 (questions-table)](decisions.md#d118)). A question the work will answer is
+  deferred rather than guessed: `plumbbob defer Q3 "<what settles it>"` marks the opener
+  `*deferred:*`, and the question stays open but counts apart from the ones that wait on
+  you ([D120 (deferred-questions)](decisions.md#d120),
+  [D123 (defer-records)](decisions.md#d123)).
 
 The shape underneath is one rule: **compress what's settled, expand what's pending.**
 Decisions and Constraints stay terse because they are re-injected into every step: those
@@ -80,7 +92,7 @@ Under `## Steps`, the plan is a numbered list where **every step carries two thi
 **done-when** and a **seam**.
 
 ```markdown
-1. [ ] feat(limiter): add a token-bucket limiter — **done when:** `test/limiter.test.ts` passes
+1. [ ] feat(limiter): add a token-bucket limiter, **done when:** `test/limiter.test.ts` passes
    - seam: `src/limiter.ts`, `test/limiter.test.ts`
 ```
 
@@ -172,7 +184,8 @@ fix, answered with what moved and closed on the same line, and nothing lands unt
 
 > **Unattended option: `--auto`.** `/plumbbob:build --auto` lets the agent self-review and
 > approve in your place, then chain to the next step until done. It halts the moment the
-> check goes red or the self-review finds a mismatch. A step range like `/plumbbob:build 1-3`
+> check goes red or the self-review finds a mismatch, and at each bare range's pause, a call
+> the plan reserves for you ([D94 (auto-and-stops)](decisions.md#d94)). A step range like `/plumbbob:build 1-3`
 > is a bounded `--auto`: it self-approves through step 3, then stops, and a run (below) is
 > the same walk over a range the plan cut. These are the only paths that checkpoint without
 > a human pause, and only because you asked for it by name.
@@ -200,7 +213,10 @@ command's form says which kind: a bare `1` builds the step to its pause, so the 
 made before it lands, and a span lands every step it names and stops at the boundary after
 the last. `/plumbbob:plan` cuts the ranges with the steps, and `/plumbbob:step`,
 `/plumbbob:refine`, and `/plumbbob:harvest` keep them true as the plan changes
-([D92 (build-ranges)](decisions.md#d92)).
+([D92 (build-ranges)](decisions.md#d92)). `plumbbob order` re-cuts them to follow the
+build order it writes, so a step moved by `/plumbbob:order` lands in the range that now
+holds its neighbours; only a drift no order can settle is flagged, with
+`/plumbbob:refine ranges` as the move ([D109 (ranges-follow-the-order)](decisions.md#d109)).
 
 **You type the run; the plan names the steps.** `/plumbbob:run` runs what is left of the
 range holding the next step, and `/plumbbob:run 2` runs range 2 by its item number, so the
@@ -286,12 +302,16 @@ that. `/plumbbob:spike <slug>` creates a sibling git worktree and branch per opt
 in isolation while the main tree stays put; `/plumbbob:spike done` removes every spike
 worktree and branch and returns you to DESIGN. The point is not the code you write in there;
 it is the **verdict**: which option won and why, recorded back in `intent.md` before you
-build for real.
+build for real. Every spike also leaves a durable receipt: `spike-NN-<slug>.md` in the
+build folder, scaffolded from `templates/spike-report.md` the moment the worktrees open,
+so the findings accrue while the experiment is live and outlive the teardown. A planned
+step that *is* the experiment (one titled `spike: …`) gets the same receipt without the
+worktrees from `/plumbbob:spike report <slug>` (the verb is `plumbbob spike report <slug>`).
 
 ## Refine: keep intent true
 
-`intent.md` is only useful while it is honest. `/plumbbob:refine` keeps it that way, in two
-modes:
+`intent.md` is only useful while it is honest. `/plumbbob:refine` keeps it that way, in three
+modes (`[focus | ranges]`):
 
 - **Attack**: give the Frame and Decisions a cold, adversarial read and surface holes:
   ambiguities, unhandled edge cases, hidden assumptions, collisions with existing code.
@@ -299,6 +319,9 @@ modes:
   your convergence, not the model's.
 - **Repair**: when the plan has drifted from what the code actually does, propose the edits
   that bring it back in line, shown before/after and written only on your approval.
+- **Ranges** (`/plumbbob:refine ranges`): re-cut the whole `## Build ranges` section
+  against the plan as it stands, by the rule `/plumbbob:plan` cuts it with, for the drifts
+  `plumbbob order` cannot settle. A landed range stays as written, since its call was made.
 
 Where `/plumbbob:step` sharpens the *next step*, `refine` works the *whole plan*. Reach for
 it right after planning to stress-test a fresh frame, or mid-build when a blocker rewrites
@@ -318,9 +341,12 @@ on disk:
 
 The phase **gates nothing.** It is computed by `/plumbbob:status` to tell you where you
 are and what to do next; it is a position on a map, not a locked door. `.plumbbob/STATE`
-itself is just the session sentinel: its presence means a session is live. `status` is the
-move you fire any time you are unsure: it prints the dashboard (the intent, the step list,
-the parked and open-question counts) and names the single next move.
+itself is the session sentinel and the active-build cursor in one: its presence means a
+session is live, and its content names the build every verb acts on (`plumbbob use` moves
+it). `status` is the move you fire any time you are unsure: it prints the dashboard (the
+title and phase, the step list, the ranges block, the last checkpoint, the build order when
+it departs from the numbering, and the park and question counts, the questions split into
+the ones to answer and the ones deferred) and names the single next move.
 
 ## Two tiers of checks
 
@@ -332,11 +358,14 @@ The checks come in two tiers with different jobs:
   the light tier *serves the model*. It is gated on an active build: a repo with an empty or
   absent `.plumbbob/STATE` (no active-build cursor) behaves like plain Claude Code.
 - **Heavy** (the full project check): checkride ([D32 (checkride-gate)](decisions.md#d32); in this repo: tsc, oxlint,
-  ast-grep, fallow, vitest, markdownlint-cli2, vale, cspell, a citation scanner, and the
-  built-in link check), overridable per repo via the
+  ast-grep, fallow, vitest, markdownlint-cli2, vale, cspell, a citation scanner, the
+  built-in link check, the keyframes check of the root `keyframes.md`, and the publish build
+  that emits `dist/`), overridable per repo via the
   `"check"` key in `.plumbbob/settings.json`. It is **not** a hook; it runs *inside* the verify tick, which
   refuses to checkpoint while it is red. The hard gate lives on the deliberate boundary, not
-  on every keystroke.
+  on every keystroke. The per-turn gate behind the Stop hook runs the same checks minus
+  vitest (`gate.skip: ["test"]` in `checkride.config.json`, since the suite is about 53 of
+  the full check's 56 seconds); `pnpm check` and the checkpoint still run it.
 
 ## Calibration: size the process to the work
 
@@ -356,10 +385,11 @@ When the goal is done, `/plumbbob:finish` ends the build. It writes a `report.md
 default** (what shipped, the decisions and why, what was parked and how it was classified,
 the final status, and the deferred tangents that become future work), but there is **no
 refuse-without-report gate**; guidance offers the artifact, it does not wall the exit. Then
-`plumbbob finish` appends the checkpoint SHAs to the report, makes the final commit (subject
-`chore(<scope>): finish`), and clears the control state. It writes **no separate archive
-copy**: the build's `builds/<slug>/` folder is tracked, so it merges into `main` with the
-branch and rides into the PR (the local-only `.plumbbob/archive/` retired).
+`plumbbob finish` appends a `## Checkpoints` list of the SHAs and a `## Stats` table (a row
+per step: red checks, drift warnings, reverts, wall-clock) to the report, makes the final
+commit (subject `chore(<scope>): finish`), and clears the control state. It writes **no
+separate archive copy**: the build's `builds/<slug>/` folder is tracked, so it merges into
+`main` with the branch and rides into the PR.
 
 ## Where each technique lives
 
@@ -370,9 +400,11 @@ every move and `/plumbbob:status` always names the next one.
 | Technique | Skill | CLI verb | Artifact / state |
 | ----------- | ------- | ---------- | ------------------ |
 | Frame and plan the goal | `/plumbbob:plan` | `plumbbob start` | `intent.md`, session opened |
-| Sharpen the next step | `/plumbbob:step` | none (edits markdown) | `intent.md` `## Steps` |
+| Sharpen the next step | `/plumbbob:step` | `plumbbob order` when the new step must land before an existing one | `intent.md` `## Steps` |
 | Stress-test or repair the plan | `/plumbbob:refine` | none (edits markdown) | `intent.md` |
-| Say where the build stops | `/plumbbob:plan` (kept true by step, refine, harvest) | none (edits markdown) | `intent.md` `## Build ranges` |
+| Say where the build stops | `/plumbbob:plan` (kept true by step, refine, harvest, order) | `plumbbob order` (re-cuts `## Build ranges` to follow `## Build order`) | `intent.md` `## Build ranges` |
+| Set the build order | `/plumbbob:order` | `plumbbob order` | `intent.md` `## Build order`, `## Build ranges` |
+| Leave a question to the work | a `defer Q3 until …` reply at the plan card or refine | `plumbbob defer` | `intent.md` `## Open questions` |
 | Run a range | `/plumbbob:run` | `plumbbob status --run`, the turn hook | `GRANT`, `RUN` |
 | Review a landed range | `/plumbbob:run` | `plumbbob handoff --stop`, `plumbbob harvest` | `.plumbbob/detail.md`, `build-log.md` Log and Harvest |
 | Build a step | `/plumbbob:build` | `plumbbob build` | `SEAM`, `STEP` (in-flight) |

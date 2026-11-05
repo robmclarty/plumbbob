@@ -22,11 +22,11 @@ policy, and overridable by env.
 - **D2 (five-per-minute)**: 5 attempts / 60s / IP, because it matches the lockout policy
   the account system already enforces, so the two throttles tell one story.
 
-## Parked and harvested
+## Parked & harvested
 
-| Park | What it is | Why it matters | Settled |
-| --- | --- | --- | --- |
-| P1 · reset throttle | should /password-reset get the same throttle? | it is the next brute-force target once login is closed | tangent, deferred at range 2's stop: a separate route and a separate decision |
+| Park | Why it matters | Settled |
+| --- | --- | --- |
+| **P1**: [reset throttle](build-log.md#L36) | it is the next brute-force target once login is closed | tangent, deferred at range 2's stop: a separate route and a separate decision |
 
 ## Final status
 

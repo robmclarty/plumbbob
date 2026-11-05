@@ -130,8 +130,10 @@ next run and the steps it will land:
 |  | **Range 2** on Sonnet: /plumbbob:run (steps 2-3) |
 ```
 
-The bold model is range 2's own, since the run is the range, and the range's first step is
-not always its hardest ([D93 (range-on-the-card)](decisions.md#d93)).
+Next Up names the step's own model, and the range line beneath it names the range's, since
+the run is the range and its first step is not always its hardest
+([D115 (card-weights)](decisions.md#d115),
+[D122 (next-range-under-next-up)](decisions.md#d122)).
 
 ## Range 2: a span lands its steps and ends on the stop card
 
@@ -187,10 +189,10 @@ decisions    2 of 2 honored
 constraints  1 of 1 honored
 seam         held: 2 of 2 steps, no strays
 diff         +4 -0 across 4 files
-             - src/http/request-log.ts +1 -0
-             - src/log/logger.ts +1 -0
-             - src/log/redact.ts +1 -0
-             - test/request-log.test.ts +1 -0
+             - src/middleware.ts +1 -0
+             - src/redact.ts +1 -0
+             - test/middleware.test.ts +1 -0
+             - test/redact.test.ts +1 -0
 spent        39 min · green first run at every landing
 ```
 
@@ -206,7 +208,7 @@ spent        39 min · green first run at every landing
 Approving locks in each lean above; to change one, say so first (`make P1 a blocker`).
 
 - `looks good` → I record the review and every lean as proposed, folding a blocker into the plan; back to the boundary
-- `/plumbbob:run` → I record them the same way, then run range 3 of 3 to its stop
+- `/plumbbob:run` → I record them the same way, then run range 3 on Sonnet to its stop
 - anything that reads as direction → I change the lean and say what moved; nothing is recorded until you approve
 - `expand`, or any question → I show more of what is there; nothing changes, and `show the stop` brings all of this back
 
@@ -258,8 +260,8 @@ back with the lean as it will be recorded, and the example in Your Call flips to
 change you could still make:
 
 ```text
-| P1 · missing request id | should a request that arrives with no id get one generated? (tangent) | a line with no id cannot be traced to its request | blocker: a line with a null id cannot be traced, and step 5 would document a field that is often empty |
-| P2 · buffered lines | the logger could buffer lines and flush them on exit (tangent) | a write per request costs a syscall under load | tangent: a buffer is a performance call this goal does not make, and D1 (json-lines) writes each line as it happens |
+| **P1**: [missing request id](.plumbbob/builds/2026-07-14-add-structured-request-logging/build-log.md#L30) | a line with no id cannot be traced to its request | blocker: a line with a null id cannot be traced, and step 5 would document a field that is often empty |
+| **P2**: [buffered lines](.plumbbob/builds/2026-07-14-add-structured-request-logging/build-log.md#L31) | a write per request costs a syscall under load | tangent: a buffer is a performance call this goal does not make, and D1 (json-lines) writes each line as it happens |
 
 Approving locks in each lean above; to change one, say so first (`make P1 a tangent`).
 ```
@@ -404,7 +406,7 @@ says what it recorded and nothing about a range:
 ```text
 **Recorded**: 2 parked ideas (1 blocker, 1 tangent)
 
-| **Next Up** | **Step 6** on Sonnet - feat(http): generate a request id when the client sends none (details: [intent.md:39](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L39)) |
+| **Next Up** | **Step 6** on Sonnet - feat(http): generate a request id when the client sends none (details: [intent.md:40](.plumbbob/builds/2026-07-14-add-structured-request-logging/intent.md#L40)) |
 | --- | --- |
 |  | **Range 3** on Sonnet: /plumbbob:run (steps 6,4-5) |
 | Order | 6, 4, 5 |

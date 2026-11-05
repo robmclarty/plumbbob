@@ -165,7 +165,8 @@ const VERBS: ReadonlyArray<Verb> = [
       { name: '-m', value: '<msg>', gloss: 'override the CLI-owned Conventional subject' },
       { name: '--body', gloss: 'read the commit body from stdin (heredoc)' },
     ],
-    notes: 'Refuses (exit 1) with no session, no resolvable step, or a red check.',
+    notes:
+      'Refuses (exit 1) with no session, no resolvable step, a bad --body, a red check, or no human turn since the step began (the approval latch, D64 (approval-latch)); exit 2 when the gate itself broke.',
   },
   {
     name: 'revert',

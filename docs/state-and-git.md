@@ -1,8 +1,8 @@
 # State files and git
 
 PlumbBob keeps a handful of small files under `.plumbbob/` that are deliberately never
-committed, and it keeps them out of your commits by appending about a dozen lines to one local
-git file. This page is the full account: what those files hold, why they have to exist,
+committed, and it keeps them out of your commits by appending 16 lines to one local git
+file. This page is the full account: what those files hold, why they have to exist,
 exactly what gets written inside `.git`, and the honest answers to the objections that
 follow, including "why are you touching my git at all?"
 
@@ -12,7 +12,7 @@ has the tree. This page is the *why*.
 ## The short version
 
 - PlumbBob writes exactly one file inside `.git`: **`info/exclude`**, git's own
-  per-clone ignore list. It appends about a dozen lines, once.
+  per-clone ignore list. It appends 16 lines, once.
 - It **never** writes your `.gitignore`; that file is tracked, and nothing
   PlumbBob-specific belongs in a file your whole team commits.
 - That is the only file it writes *directly* inside `.git`. Everything else it does to git
@@ -21,8 +21,10 @@ has the tree. This page is the *why*.
   `.git/config`, hook, or remote.
 - The write is append-only and idempotent: it adds only the patterns that are missing,
   never duplicates, reorders, or deletes a line it didn't write.
-- To undo it: delete those lines. Nothing breaks; the control files simply start showing
-  up as untracked in `git status`.
+- To undo it: delete those lines. Nothing breaks; the control files show up as untracked
+  in `git status` until the next `checkpoint` or `finish` re-applies the block on its way
+  into `git add -A`. Under `--local` the line that matters is the blanket `.plumbbob/`:
+  delete it and that same `add -A` sweeps the build record into your next commit.
 
 Audit any of this yourself:
 
@@ -43,7 +45,8 @@ The sidecar splits by **lifetime**, not by importance ([D17 (two-planes)](decisi
 the sidecar has a tracked artifact plane and an excluded control plane):
 
 - The **artifact plane** is *tracked on purpose*. `intent.md`, `build-log.md`,
-  `checkpoints`, `report.md` (the decisions and the record) ride the branch into the PR,
+  `checkpoints`, `report.md`, `stats.json`, `harness.json`, and each spike's
+  `spike-NN-<slug>.md` (the decisions and the record) ride the branch into the PR,
   because "what did we decide, and why" is exactly the thing that normally evaporates.
 - The **control plane** is what this page is about: facts about *your working copy at this
   instant*. Which step is mid-flight. How many times you've pressed enter. These are true
@@ -59,16 +62,16 @@ branch.
 | --- | --- | --- | --- |
 | `.plumbbob/STATE` | Session sentinel (its *presence* means a session is live), and its content is the active-build cursor ([D28 (state-cursor)](decisions.md#d28): the cursor lives in STATE, not settings) | `start` | `finish` |
 | `.plumbbob/TURN` | Monotonic count of human turns in this repo. A background job's notice reaches the same hook and is not a turn, so it never ticks ([D90 (notice-not-turn)](decisions.md#d90)) | the `UserPromptSubmit` hook | never (it's a counter) |
-| `.plumbbob/GRANT` | A one-turn self-approval, minted only when *you* typed `/build --auto` (`auto`), a step range (`steps 5-9,20`, exactly the steps it names; [D91 (step-list-grants)](decisions.md#d91)), or `/plumbbob:run` (the steps its range has left, read from the plan as you typed it; [D96 (plan-names-the-grant)](decisions.md#d96)) | the same hook | your next prompt (a notice leaves it) |
+| `.plumbbob/GRANT` | A one-turn self-approval, minted only when *you* typed `/plumbbob:build --auto` (`auto`), a step range (`steps 5-9,20`, exactly the steps it names; [D91 (step-list-grants)](decisions.md#d91)), or `/plumbbob:run` (the steps its range has left, read from the plan as you typed it; [D96 (plan-names-the-grant)](decisions.md#d96)) | the same hook | your next prompt (a notice leaves it) |
 | `.plumbbob/RUN` | The range a run you typed is landing, so the checkpoint that completes it owes the stop card ([D103 (stop-latched)](decisions.md#d103)); the latch never reads it | the same hook | your next prompt, unless a step of that range waits at its pause (a notice leaves it) |
 | `.plumbbob/PROMPT` | The id of the last prompt the hook saw, typed or not, so a notice folded into a running turn is told from one that starts its own ([D90 (notice-not-turn)](decisions.md#d90)) | the same hook | the next prompt overwrites it |
 | `.plumbbob/settings.local.json` | Your personal settings overlay (for example a per-worktree `"check"` command) | you, by hand | you |
 | `.plumbbob/detail.md` | The in-flight step's full detail, written by the model before each pause, or a landed range's at its stop; `handoff` renders the turn from it ([D81 (detail-file)](decisions.md#d81)) | the model | `checkpoint`, which records a step's in the build log's Log first (unless its header names another step), or `plumbbob harvest`, which records a range's |
-| `.plumbbob/RELAY` | The ending the CLI printed last: its tier, its render, the command that reprints a pause, the `TURN` it printed in, and the text itself, so the `Stop` check can tell whether the turn closed on it ([D89 (block-once)](decisions.md#d89)), and, once the check has held a turn open over it, that `TURN` too, so it holds at most once a turn. Written only while `TURN` keeps a count | `handoff` and every verb that prints an ending; the hold, `relay` | never; the next ending overwrites it |
+| `.plumbbob/RELAY` | The ending the CLI printed last: its tier, its render, the command that reprints a pause, the `TURN` it printed in, and the text itself, so the `Stop` check can tell whether the turn closed on it ([D89 (block-once)](decisions.md#d89)), and, once the check has held a turn open over it, that `TURN` too, so it holds at most once a turn. Written only while `TURN` keeps a count | `handoff` and every verb that prints an ending; the hold, `relay` | the next ending overwrites it; the turn hook clears it when a notice starts a turn of its own |
 | `builds/<slug>/STEP` | The step number in flight; its presence *is* the BUILD phase | `build` | `checkpoint` / `revert` / `abandon` |
 | `builds/<slug>/SEAM` | The step's declared paths, one per line (awareness, not a lock) | `build` | `checkpoint` / `revert` / `abandon` |
-| `builds/<slug>/SPIKE` | Marker: a spike fork is open | `spike` | `spike done` |
-| `builds/<slug>/TICK` | The `TURN` value at the moment the step was entered | `build` | `checkpoint` / `abandon` |
+| `builds/<slug>/SPIKE` | Marker: a spike fork is open | `spike` | `spike done` / `finish` |
+| `builds/<slug>/TICK` | The `TURN` value at the moment the step was entered, or the session opened, so the plan commit waits for a human turn too | `build`, and `start` for the plan commit | `checkpoint` / `abandon` |
 | `builds/<slug>/PAUSE` | Which card has shown: the step whose pause card showed (`2`) or, after a checkpoint, the step whose boundary did (`landed 2`, `landed 2 answered` when that landing answered step 2's pause card, which shortens the stop card after it), so a repeat prints its one line whatever changed since ([D110 (reply-after-the-card)](decisions.md#d110)) | `handoff`, `checkpoint` | `revert` / `abandon` |
 | `builds/<slug>/STOP` | The range whose stop card has shown and the `TURN` it printed in, so a repeat prints the reminder and `plumbbob harvest` records only a range a card showed, a turn later ([D103 (stop-latched)](decisions.md#d103), [D110 (reply-after-the-card)](decisions.md#d110)) | `handoff --stop` | `plumbbob harvest` |
 | `builds/<slug>/handoff.json` | Ledger of agent runs for this step, so a later call can thread earlier results ([D47 (handoff-ledger)](decisions.md#d47)) | `agent run` | `checkpoint` / `abandon` |
@@ -102,8 +105,8 @@ Git reads ignore patterns from three places, in this order of specificity:
 
 PlumbBob uses the middle one ([D33 (info-exclude)](decisions.md#d33); excludes are personal machinery,
 never the repo's tracked ignore file). The rule is enforced in the codebase, not just
-documented: `rules/no-gitignore.yml` fails the build if the string `.gitignore` so much as
-appears in `src/`.
+documented: `rules/no-gitignore.yml` fails the build if a string literal under `src/` so
+much as names `.gitignore` (a comment may; the tests are exempt).
 
 Here is the complete block it appends:
 
@@ -160,9 +163,14 @@ line: `doctor --migrate`, dropping the legacy blanket `.plumbbob/` exclude from 
 flat-layout repo so the build folders can become trackable, and it only ever removes its
 own line.
 
-And it's trivially reversible. Delete the block and the only consequence is a noisier
-`git status`. Nothing in PlumbBob reads `info/exclude` to decide how to behave; the excludes
-are a courtesy to your `git status`, not a load-bearing part of the tool.
+And it's reversible. Delete the block and the consequence is a noisier `git status`, until
+the next `checkpoint` or `finish` puts it back. PlumbBob reads `info/exclude` for two
+decisions, both small. `refreshExcludes` looks for the blanket `.plumbbob/` line, to tell a
+`--local` layout from a tracked one before it re-applies the narrow patterns, and
+`checkpoint --plan` probes whether git ignores the build folder, because an ignored folder
+lands its plan commit record-only. The narrow patterns are a courtesy to your `git status`;
+the blanket line carries weight, since `keep it local`
+([D117 (publish-on-the-card)](decisions.md#d117)) rests on nothing else.
 
 ### "Why not just put it in `.gitignore`?"
 
@@ -196,15 +204,17 @@ Four reasons, in rough order of how much they hurt:
    else, silently, with the tool cheerfully reporting the wrong step.
 2. **Its neighbours are tracked on purpose.** `intent.md` and `build-log.md` sit in the same
    folder and are *meant* to be committed. Splitting the sidecar across two filesystems to
-   relocate four marker files would complicate every path in the tool to save you ten lines
+   relocate 15 control files would complicate every path in the tool to save you 16 lines
    in one local file.
 3. **It has to be inspectable and disposable.** `cat .plumbbob/builds/*/STEP` answers "where
    was I?" without a tool. `rm -rf .plumbbob` is a complete, obvious uninstall. A home
    directory cache is the opposite: invisible, accumulating state for repos you deleted
    months ago, and impossible to reason about from inside the project.
-4. **The hooks read them with a grep.** `SEAM` is a plain list of paths precisely so a shell
-   hook can check it without parsing markdown or resolving which repo maps to which
-   home directory folder.
+4. **The shell hooks read them without a parser.** `pre-bash-commit.sh` reads `STATE` and
+   `STEP`, and `post-edit.sh` reads `STATE`: a `head -n1` and a file test, with no
+   markdown to parse and no table that maps a repo to a home directory folder. `SEAM` is a
+   plain list of paths for the same reason, though its readers are `handoff` and
+   `checkpoint`, not a hook.
 
 The split isn't dogma, though; it's by lifetime, and it cuts both ways. Personal *agents*
 genuinely are per-user, and those **do** live in `~/.plumbbob/agents/`
@@ -214,16 +224,24 @@ worktree.
 ### "My team won't accept a tool folder in the repo at all."
 
 Use `plumbbob start --local`. The whole `.plumbbob/` directory is excluded with a single
-blanket line and the artifacts live flat at its root. The cost is real and worth stating:
-the build record dies with the worktree instead of riding into the PR, so nobody reviewing
-the change sees the intent behind it.
+blanket line and the artifacts live flat at its root. Typed while a session is already open
+and its plan not yet committed, the same command keeps the folder where it is, at
+`builds/<slug>/`, and adds only the blanket line: the `keep it local` move the plan card
+offers ([D117 (publish-on-the-card)](decisions.md#d117)). Once the plan has landed it
+refuses, since an exclude cannot take a folder back out of a commit. The cost is real and
+worth stating: the build record dies with the worktree instead of riding into the PR, so
+nobody reviewing the change sees the intent behind it.
 
 ### "What else does PlumbBob do to my git?"
 
-The complete list. It **reads** (`rev-parse`, `status`, `ls-files`, `diff --cached`,
-`rev-list`), it **stages** (`add -A`, or a single path for the plan commit), it **commits
-forward**, it creates and removes **worktrees** for spikes (`worktree add/remove/prune`),
-and `revert` runs **`reset --hard`**, only ever to a SHA it recorded in that build's own
+The complete list. It **reads** (`rev-parse`, `status`, `ls-files`, `rev-list`,
+`check-ignore`, `for-each-ref`, `worktree list`, `diff-tree`, and `diff` in three shapes:
+`--cached`, `--numstat` or a patch against `HEAD`, and `--no-index` against `/dev/null`
+for an untracked file), it **stages** (`add -A`, or a single path for the plan commit), it
+**commits forward**, it opens **worktrees and branches** for spikes (`worktree add -b
+spike/<slug>-<opt>`) and takes them down on `spike done` (`worktree remove`, `worktree
+prune`, and `branch -D` on every `spike/*` branch, the only branches it ever deletes), and
+`revert` runs **`reset --hard`**, only ever to a SHA it recorded in that build's own
 `checkpoints` file.
 
 It never rewrites pushed history: no `push`, no `rebase`, no `--amend`. That's

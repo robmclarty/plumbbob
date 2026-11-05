@@ -10,9 +10,10 @@ that say where it stops for you, then fire `/plumbbob:run` per range (each lands
 range names and stops where the plan reserved your call: at a step's pause, or on the stop
 card that reviews what landed and proposes a class for every parked idea), settle each stop
 in one reply, then `/plumbbob:finish` once.** `/plumbbob:build` is the same loop a step at a
-time, for a plan without ranges or a stretch you want to walk slowly. In the loop you never
-type the `plumbbob` CLI by hand; the skills shell out to it (only install, `plumbbob init`
-and `doctor`, is manual; even `plumbbob start` is run for you by `/plumbbob:plan`), and
+time, for a plan without ranges or a stretch you want to walk slowly. The skills shell out
+to the CLI, so in the loop you rarely type it. It is a first-class path on its own: every
+verb runs from a terminal, and a few (`use`, `handoff`, `defer`, `check`, `agent`) have
+no skill of their own. [`cli-only.md`](cli-only.md) drives one build that way. Either way,
 `/plumbbob:status` always names your next move. The run on its own (a longer plan, a
 blocker that re-cuts a range and moves the build order, and the same plan driven by hand
 beside it) is in [`runs.md`](runs.md).
@@ -77,7 +78,7 @@ seam**, and the build ranges last:
    - seam: `src/routes/login.ts`, `test/login.rate.test.ts`
    - model: sonnet (mechanical wiring, fully specified)
 3. [ ] feat(config): make the limit configurable via env, **done when:** `RATE_LIMIT_MAX` overrides the default in a test
-   - seam: `src/limiter.ts`, `src/config.ts`, `test/limiter.config.test.ts`
+   - seam: `src/limiter.ts`, `src/config.ts`, `test/limiter.config.test.ts`, `.env.example`, `test/config.test.ts`
 
 ## Build ranges
 
@@ -93,8 +94,8 @@ The build ranges say where the build stops for you, one item per range: the comm
 defines it, the call that ends it, and the model to run it on. A range ends where a call is
 due and nowhere else. A bare `1` builds step 1 to its pause, so the refill call is made
 there, before the step lands; a span lands every step it names and stops after the last,
-for a review of what landed. You never type these commands: the card names the run to type
-instead, and a range grants nothing until you type it.
+for a review of what landed. You need not type these commands: the card names the run to
+type instead, and a range grants nothing until you type it.
 
 The plan pause is a decision turn like the build pause. The skill presents the framed
 plan, gives it a cold read (one adversarial pass under `/plumbbob:refine`'s lens,
@@ -116,7 +117,7 @@ rest, and the card closes on one link to the read itself:
 - anything that reads as direction → I take it as what to sharpen; the plan is cheap to change now
 - `keep it local` → I run `plumbbob start --local`, so the plan commits record-only and the folder stays off the branch
 
-| **Next Up** | **Step 1** on Opus - feat(limiter): add a token-bucket limiter (details: [intent.md:25](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L25)) |
+| **Next Up** | **Step 1** on Opus - feat(limiter): add a token-bucket limiter (details: [intent.md:41](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L41)) |
 | --- | --- |
 |  | **Range 1** on Opus: /plumbbob:run (step 1 to its pause) |
 
@@ -127,14 +128,22 @@ rest, and the card closes on one link to the read itself:
 
 ![The plan pause under the framed plan](media/plan-pause.svg)
 
+This plan carries no open question, so the card shows none. A plan that does tables them
+above its moves, a row per question with its why and the model's lean, and the Your Call
+block gains `yes to all leans` and `defer Q1 until <what settles it>`, which runs
+`plumbbob defer` to leave that question to the work
+([D118 (questions-table)](decisions.md#d118), [D123 (defer-records)](decisions.md#d123)).
+The [turn anatomy](presentation.md#the-open-questions-table) shows the table, and
+`plumbbob status --questions` prints it alone.
+
 On `looks good` the skill commits the plan on its own (`plumbbob checkpoint --plan`), so
 the first step's diff stays clean and history reads baseline, plan, steps. The commit
 prints its own close:
 
 ```text
-**Plan**: committed (7d2e94fb0, details: [build-log.md:62](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md#L62))
+**Plan**: committed (7d2e94fb0, details: [build-log.md:67](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md#L67))
 
-| **Next Up** | **Step 1** on Opus - feat(limiter): add a token-bucket limiter (details: [intent.md:25](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L25)) |
+| **Next Up** | **Step 1** on Opus - feat(limiter): add a token-bucket limiter (details: [intent.md:41](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L41)) |
 | --- | --- |
 |  | **Range 1** on Opus: /plumbbob:run (step 1 to its pause) |
 ```
@@ -176,12 +185,13 @@ parked 0 · open questions 0
 next → run range 1 of 2 — `/plumbbob:run` (step 1 to its pause)
 ```
 
-![The dashboard with a step in flight](media/status-dashboard.svg)
+![The dashboard before the first run](media/status-dashboard.svg)
 
 Each range row is the command the plan wrote, `✓` once every step in it has landed and `▸`
 on the one holding the next step, with its stop beneath. A step `/plumbbob:step` or
-`/plumbbob:refine` adds goes into a range, and a range the plan has outgrown is flagged
-rather than rewritten.
+`/plumbbob:refine` adds goes into a range, and `plumbbob order` re-cuts the ranges to
+follow the order; only a drift no order can settle is flagged
+([D109 (ranges-follow-the-order)](decisions.md#d109)).
 
 ---
 
@@ -266,7 +276,7 @@ spent        22 min · 2 turns · 41s gate · green first run
 | **Verdict** | ● Plumb |
 | --- | --- |
 | Now | **Step 1** on Opus - feat(limiter): add a token-bucket limiter |
-| Next Up | **Step 2** on Sonnet - feat(login): wire the limiter into POST /login (details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28)) |
+| Next Up | **Step 2** on Sonnet - feat(login): wire the limiter into POST /login (details: [intent.md:44](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L44)) |
 |  | **Range 2** on Sonnet: /plumbbob:run once step 1 lands |
 
 **Recommendation**: Approve it, refilling on read. The gate is green and the seam held, and a bucket that refills when it is read needs no timer for the route to clean up.
@@ -364,11 +374,11 @@ no Your Call block, because no decision is pending. `plumbbob checkpoint` prints
 itself, as one block, so what the agent relays is one command's output:
 
 ```text
-**Checkpoint**: Step 1 complete (a1b2c3d4e, details: [build-log.md:70](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md#L70))
+**Checkpoint**: Step 1 complete (a1b2c3d4e, details: [build-log.md:75](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md#L75))
 
 | **Verdict** | ● Plumb |
 | --- | --- |
-| Next Up | **Step 2** on Sonnet - feat(login): wire the limiter into POST /login (details: [intent.md:28](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L28)) |
+| Next Up | **Step 2** on Sonnet - feat(login): wire the limiter into POST /login (details: [intent.md:44](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L44)) |
 |  | **Range 2** on Sonnet: /plumbbob:run (steps 2-3) |
 | Parked | **1** of 1 open: /plumbbob:harvest |
 ```
@@ -381,8 +391,9 @@ detail is a scroll, and the record rides the branch into the PR.
 
 That Next Up row is what carries the plan's model recommendation across a context
 window: a fresh window inherits the session's model rather than the plan's suggestion, so
-the row names the `/model` to select before the next run, the range's own when a run
-comes next. Guidance, never a gate.
+the row names the `/model` to select before the next run. Next Up names the step's own
+model; the range line beneath it names the range's
+([D115 (card-weights)](decisions.md#d115)). Guidance, never a gate.
 
 The range line beneath it names the run to type, and the steps it will land. **Fire
 `/plumbbob:run` again**: *re-firing it is the clock tick*. The hook mints `steps 2-3` from
@@ -428,7 +439,7 @@ spent        31 min · green first run at every landing
 
 | Park | Why it matters | Lean |
 | --- | --- | --- |
-| **P1**: [reset throttle](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md#L29) | it is the next brute-force target once login is closed | tangent: a separate route and a separate decision, not a blocker for this goal |
+| **P1**: [reset throttle](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md#L36) | it is the next brute-force target once login is closed | tangent: a separate route and a separate decision, not a blocker for this goal |
 
 **Your Call**:
 
@@ -441,7 +452,7 @@ Approving locks in each lean above; to change one, say so first (`make P1 a bloc
 
 | **Verdict** | ● Plumb |
 | --- | --- |
-| Stop | **Range 2** landed - try six logins yourself, then `/plumbbob:finish` (details: [intent.md:42](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L42)) |
+| Stop | **Range 2** landed - try six logins yourself, then `/plumbbob:finish` (details: [intent.md:58](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L58)) |
 | Next Up | Nothing planned - /plumbbob:step or /plumbbob:finish |
 
 **Recommendation**: Approve it, then try six logins yourself before you finish. The gate was green at both landings, and the one park is future work, not this goal's.
@@ -517,7 +528,7 @@ different number.
 ## Parked & harvested
 | Park | Why it matters | Settled |
 | --- | --- | --- |
-| **P1**: [reset throttle](build-log.md#L29) | it is the next brute-force target once login is closed | tangent: a separate route and decision, deferred |
+| **P1**: [reset throttle](build-log.md#L36) | it is the next brute-force target once login is closed | tangent: a separate route and decision, deferred |
 
 ## Final status
 Done. All three steps checkpointed and green.
@@ -528,13 +539,11 @@ Done. All three steps checkpointed and green.
 
 `plumbbob finish` appends `## Checkpoints` (the baseline and step SHAs) and `## Stats`
 (the per-step receipts) to that file itself, so the written half stops at the five
-sections above.
-
-Then `plumbbob finish` appends the checkpoint SHAs to the report, makes the final commit
-(subject `chore(rate-limit-the-login-endpoint): finish`, with a `plumbbob finish` body marker),
-and clears the control state (`STATE`, the cursor,
-the in-flight markers). It writes no separate archive copy: the tracked build folder *is*
-the record now, so it merges into `main` with the branch:
+sections above. Then it makes the final commit (subject
+`chore(rate-limit-the-login-endpoint): finish`, with a `plumbbob finish` body marker) and
+clears `STATE` (the session sentinel and cursor in one), `TICK`, the grant, and the
+in-flight markers. It writes no separate archive copy: the tracked build folder *is* the
+record now, so it merges into `main` with the branch:
 
 ```text
 **Session**: finished (f3e9a1b2c, .plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/ rides your branch into the PR)
@@ -595,21 +604,24 @@ does, but its turn ends on the last step's checkpoint block rather than a stop c
 block's `Stop` row says why the build stopped there:
 
 ```text
-**Checkpoint**: Step 3 complete (e5f6a7b8c, details: [build-log.md:107](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md#L107))
+**Checkpoint**: Step 3 complete (e5f6a7b8c, details: [build-log.md:114](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/build-log.md#L114))
 
 | **Verdict** | ● Plumb |
 | --- | --- |
-| Stop | **Range 2** landed - try six logins yourself, then `/plumbbob:finish` (details: [intent.md:42](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L42)) |
+| Stop | **Range 2** landed - try six logins yourself, then `/plumbbob:finish` (details: [intent.md:58](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L58)) |
 | Next Up | Nothing planned - /plumbbob:step or /plumbbob:finish |
+| Parked | **1** of 1 open: /plumbbob:harvest |
 ```
 
 > **Unattended option: `/plumbbob:build --auto`.** When you'd rather not approve each step
 > by hand, `/plumbbob:build --auto` lets the agent self-review and approve in your place,
-> then chain straight to the next step until the plan is done. It **halts** the moment
-> the check goes red or the self-review finds a mismatch, and hands back to you. A step
-> range like `/plumbbob:build 1-3` bounds this: it self-approves through step 3, then stops.
-> A list like `/plumbbob:build 20,5-9` lands exactly the steps it names, in build order.
-> The default (no flag) always waits at the pause.
+> then chain straight to the next step. It **halts** the moment the check goes red or the
+> self-review finds a mismatch, and at each bare range's pause, a call the plan reserves
+> for you ([D94 (auto-and-stops)](decisions.md#d94)); on this plan that is step 1's refill
+> call. Each halt hands back to you. A step range like `/plumbbob:build 1-3` bounds this:
+> it self-approves through step 3, then stops. A list like `/plumbbob:build 20,5-9` lands
+> exactly the steps it names, in build order. The default (no flag) always waits at the
+> pause.
 
 What the run adds over these moves (the plan holding the numbers, the stop card in place of
 the boundary, and the harvest folded into its reply) is set out side by side in

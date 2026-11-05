@@ -45,7 +45,7 @@ request → [ limiter (per-IP token bucket) ] → login handler
    - seam: `src/routes/login.ts`, `test/login.rate.test.ts`
    - model: sonnet (mechanical wiring, fully specified)
 3. [x] feat(config): make the limit configurable via env, **done when:** `RATE_LIMIT_MAX` overrides the default in a test
-   - seam: `src/limiter.ts`, `src/config.ts`, `test/limiter.config.test.ts`
+   - seam: `src/limiter.ts`, `src/config.ts`, `test/limiter.config.test.ts`, `.env.example`, `test/config.test.ts`
 
 ## Build order
 

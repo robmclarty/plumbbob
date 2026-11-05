@@ -149,7 +149,7 @@ for alike:
 
 That is the driver pointer, the line a park already closes on, so every
 reply at a pause ends on the same line. It names the step still waiting,
-with its count, and no move: the moves are on the card, one screen up, and a
+by its number, and no move: the moves are on the card, one screen up, and a
 lead line states its fact and leaves the move to the human
 ([D84 (one-liner-register)](decisions.md#d84)). The reply is what the rule
 protects: the answer, or what changed and what the check found, in the
@@ -208,8 +208,8 @@ of its own, with a reminder naming the stop still waiting and
 ## The Now row
 
 The step in flight is the state table's second row, beneath the Verdict: its
-count, then its title behind a plain hyphen, written the way Next Up writes
-the step to come:
+number and plan-line model, then its title behind a plain hyphen, written
+the way Next Up writes the step to come:
 
 ```text
 | Now | **Step 2** on Sonnet - feat(login): wire the limiter into POST /login |
@@ -225,10 +225,11 @@ the Verdict and Next Up ([D111 (state-table)](decisions.md#d111)). The label
 is `Now` because it pairs with `Next Up`: the two rows name what is on the
 bench and what comes after it, and a reader who has learned one reads the
 other. It states the fact and no move, the register every lead line keeps
-([D84 (one-liner-register)](decisions.md#d84)). The count is the plan's own,
-the step number over the total, the way Next Up counts, so the two rows agree
-under a re-sequenced build order too: a step keeps its number for life
-([D86 (build-order)](decisions.md#d86)).
+([D84 (one-liner-register)](decisions.md#d84)). The number is the plan's
+own, the way Next Up names it, so the two rows agree under a re-sequenced
+build order too: a step keeps its number for life
+([D86 (build-order)](decisions.md#d86)); the `of M` count went with
+[D115 (card-weights)](decisions.md#d115).
 
 The row renders on every step pause at the decision tier (the build and
 verify pauses, and an auto halt on trouble), and the reminder a card already
@@ -271,7 +272,7 @@ The readout is the step's instrument ([D82 (readout-ladder)](decisions.md#d82)):
 labeled rows inside one fence, assembled
 and emitted by `plumbbob handoff` under the bare label `**Readout**:`. Rows,
 not a retelling. The label used to carry the step's identity; the Now row
-carries it now, with its count, and a label that repeated it would put the
+carries it now, with its number and model, and a label that repeated it would put the
 step on the block twice ([D88 (current-step-shown)](decisions.md#d88)).
 
 Ownership splits by nature. If the CLI can measure a row, the CLI does, because
@@ -479,8 +480,8 @@ a labeled line, `**Verdict**: ● Plumb`, since the record is the archive and
 carries no table.
 
 No step segment rides here. The identity renders once per turn: the Now row
-names the step in flight with its count, Next Up names the step to come with
-its own, and the Verdict is left saying the one thing only it says. The card
+names the step in flight by its number and model, Next Up names the step to come
+with its own, and the Verdict is left saying the one thing only it says. The card
 used to render "Step 10 of 14" twice.
 
 The Verdict is computed, never composed: handoff folds the same assembled
@@ -1715,7 +1716,7 @@ Its parts, in order, and what each one is:
   ([the reply at a stop](#the-reply-at-a-stop)).
 - **The state table** is the Verdict, folded from the readout's rows
   worst-of with the range's accrued stats, the same fold a step's Verdict
-  runs; the Stop row, `Range N of M landed`, the stop's text as the plan
+  runs; the Stop row, `**Range N** landed`, the stop's text as the plan
   wrote it, and the bracket pointing at the item, which used to open the
   card as its lead and moved into the table the way the Now line did
   ([D111 (state-table)](decisions.md#d111)); Next Up, naming the next

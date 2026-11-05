@@ -20,8 +20,9 @@ This is one worked path through the general agent machinery; the contract behind
 
 ## One-time setup
 
-**1. Install the agent into a repo.** Copy the directory into the project tier and install
-its dependencies *inside the copy*; it's a standalone package:
+**1. Install the agent into a repo.** The agent needs Node 24 or newer (fascicle's floor, above
+PlumbBob's own 22.18). Copy the directory into the project tier and install its dependencies
+*inside the copy*; it's a standalone package:
 
 ```sh
 cd your-repo
@@ -67,8 +68,9 @@ in the build folder:
 { "contract": 1, "defaults": { "after": ["ollama-reviewer"] } }
 ```
 
-Now `/plumbbob:build` runs it at **every step's verify pause** without you asking; its review
-folds into self-review as advisory input (it informs, never gates). Use
+Now `/plumbbob:build` runs it at **every step's verify pause** without you asking, and
+`/plumbbob:run` drives the same after-slot agents at each landing inside a range; its review
+folds into the self-review as advisory input (it informs, never gates). Use
 `"steps": {"3": {"after": ["ollama-reviewer"]}}` instead of `defaults` to bind only specific
 steps. Normally you don't write this file by hand: `/plumbbob:plan` offers to author it at the
 plan pause.
@@ -82,9 +84,11 @@ In a scratch repo with the agent installed (steps 1–2), run:
 
 plan absorbs the spec into `intent.md` (a three-step wordwrap utility) and, per the
 spec's `## Harness` section, writes the `harness.json` binding for you. Approve the plan,
-then `/plumbbob:build`. At each verify pause you'll see the local model review the diff live:
-`now`-severity concerns appear in the envelope body for you to read at the pause, `later`
-ones land as park lines to harvest afterward.
+then `/plumbbob:run` (or `/plumbbob:build`, a step at a time). At each verify pause you'll see
+the local model review the diff live: its `now`-severity concerns fold into the self-review
+behind the card's `[more details]` link, since the card itself carries no body
+([D113 (short-card)](decisions.md#d113)), and `later` ones land as park lines to harvest
+afterward.
 
 ## The quickest sanity check
 

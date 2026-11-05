@@ -6,9 +6,10 @@ word up without reading the others first. Each entry points at the page that own
 
 ## The plan
 
-- **Intent** (`intent.md`): the file the deciding lands in before any code: the Frame,
-  the Decisions, the Constraints, the Steps, and the Open questions. The chat is the
-  hand; this is the head. → [`techniques.md`](techniques.md#externalize-the-plan-onto-two-durable-surfaces)
+- **Intent** (`intent.md`): the file the deciding lands in before any code: the Scope
+  line, the Frame, the Architecture sketch, the Decisions, the Constraints, the Steps,
+  the Build order and Build ranges, the Open questions, and the Verdicts. The chat is
+  the hand; this is the head. → [`techniques.md`](techniques.md#externalize-the-plan-onto-two-durable-surfaces)
 - **Frame**: the problem in plain words: what is wrong, the smallest thing that solves
   it, what done looks like, and what you are explicitly not doing.
 - **Decision** (`D1 (slug)`): a settled call, one line, with the *because* that
@@ -83,8 +84,9 @@ word up without reading the others first. Each entry points at the page that own
   on the record, never on edits. → [`decisions.md`](decisions.md#d64)
 - **Auto** (`--auto`, a range like `1-3` or `20,5-9`, or a run): the one self-approval,
   granted only by a prompt you typed; the agent then approves in your place and halts on red
-  or a mismatch. A range grants exactly the steps it names, and a run the steps its range
-  has left. → [`decisions.md`](decisions.md#d91)
+  or a mismatch, and at each bare range's pause, a call the plan reserves for you
+  ([D94 (auto-and-stops)](decisions.md#d94)). A range grants exactly the steps it names,
+  and a run the steps its range has left. → [`decisions.md`](decisions.md#d91)
 - **Grant** (`.plumbbob/GRANT`): the record of that self-approval, written by the turn
   hook from the prompt you typed and good for that one turn: `auto`, the steps a typed
   range names, or the steps a run's range has left, read from the plan at the keystroke.
@@ -127,9 +129,20 @@ are its parts.
 - **Verdict**: the state table's header, a four-rung ladder worst-of over the readout:
   `● Plumb`, `◐ A hair off` (green, with advisories on the way), `○ Out of plumb` (fix
   the work), `✗ Not standing` (fix the plan).
-- **Now**: the row naming the step in flight, its count, and its title.
-- **Next Up**: the forward pointer: the next step, its progress count, and its model
-  recommendation; a row of the state table, or the one line a driver turn ends on.
+- **Now**: the row naming the step in flight by bold number and plan-line model, then
+  its title.
+- **Next Up**: the forward pointer: the next step by bold number, with its own model
+  recommendation; a row of the state table, with the range line beneath it naming the
+  next range ([D122 (next-range-under-next-up)](decisions.md#d122)), or the one line a
+  driver turn ends on.
+- **Range line**: the row with a blank label beneath Next Up, naming the next range and
+  the run that walks it (`**Range 3** on Opus: /plumbbob:run (steps 6-9)`). It carries
+  the range's model where Next Up carries its step's, and drops out when no step
+  follows. → [`presentation.md`](presentation.md#the-range-line-beneath-next-up)
+- **Stop row**: the state table row on the boundary where a range's last step lands, and
+  on the stop card that reviews the range: `**Range 2** landed`, a plain hyphen, the
+  stop's text as the plan wrote it, and a `details:` link to the item.
+  → [`presentation.md`](presentation.md#the-stop-row)
 - **Your Call**: the four replies a human makes at a pause, each with its outcome:
   `looks good`, `expand` (or any question), a direction, `revert`.
 - **Recommendation**: the model's own call, the turn's last words: the move, then the
@@ -141,12 +154,17 @@ are its parts.
   lean, a change is answered and closed on the reminder, and `/plumbbob:run` records it
   and runs the next range. → [`presentation.md`](presentation.md#the-stop-card)
 - **Lean table**: the table parks with leans ride in, on the stop card and a harvest's
-  render: the park's handle and a short title linked to its line in the build log, why it
-  matters, and the lean.
+  render: the park's handle and a short title linked to its line in the build log
+  ([D125 (linked-park-names)](decisions.md#d125)), why it matters, and the lean.
   → [`decisions.md`](decisions.md#d112)
 - **Handle** (`P3`): a park's name on the stop card, in the detail file, and in your
   reply (`make P3 a blocker`): `P` and the park's place in the list, harvested lines
   counted, so it never changes for the life of the build. → [`decisions.md`](decisions.md#d105)
+- **Questions table**: the plan card's table of the questions still waiting on you, a
+  row per question (its bold handle and linked question, why it matters, the lean), with
+  a second table beneath it for the deferred ones; `yes to all leans` settles the
+  first, and `plumbbob status --questions` prints both alone.
+  → [`decisions.md`](decisions.md#d118)
 - **Expand** (`expand 2`): the question that opens one highlight's full story from the detail
   file, changing nothing. The answer closes on the **reminder**, one line pointing back at
   the step, because a card shows once and every later turn at it is a reply; `show the
@@ -154,21 +172,40 @@ are its parts.
 - **Detail file** (`.plumbbob/detail.md`): where the model writes its judgment before a
   pause; `handoff` renders the turn from it, and `checkpoint` records it beneath the
   step's line in the build log's Log. The file is the wire, and the ledger is the archive.
-- **Footer card**: the ending's last three parts (Verdict, Next Up, Your Call),
-  CLI-rendered and relayed verbatim.
-- **Tiers**: a *decision* turn (a pause, or a stop card) carries the whole block; an *orientation* turn
-  (status, a boundary, finish) carries the lead line, the Verdict, and Next Up; a
-  *driver* turn (park, spike, revert, use) carries the lead line and Next Up.
-- **Relay**: the skill pasting the CLI's block as the whole turn, writing nothing before
-  or after it.
+- **Footer card**: the ending's closing parts, CLI-rendered and relayed verbatim: Your
+  Call, then the state table (the Verdict, Now, Stop, and Next Up rows), then the
+  recommendation and the `more details` link
+  ([D111 (state-table)](decisions.md#d111)).
+- **Tiers**: a *decision* turn (the build or verify pause, the plan pause, an auto halt
+  on trouble, or a stop card) carries the whole block; an *orientation* turn (a boundary,
+  a stop's record, finish) carries the lead line and the state table, and `status` the
+  dashboard alone; a *driver* turn (park, order, spike, use, recover, revert, an agent
+  run) carries the lead line and Next Up.
+- **Relay**: the skill pasting the CLI's block as the whole turn when a card first shows.
+  At a card already shown the model's reply stands above the CLI's one-line reminder,
+  after the turn's last tool call ([D110 (reply-after-the-card)](decisions.md#d110),
+  [D121 (reply-after-the-tools)](decisions.md#d121)). The word also names the Stop-hook
+  verb, `plumbbob relay`, which runs the relay check.
+- **Turn hook**: the `UserPromptSubmit` hook, `plumbbob turn`, run on every prompt you
+  type: it ticks `.plumbbob/TURN` (a background job's notice never ticks it), mints the
+  grant a typed `--auto`, range, or run names, marks a run in `RUN`, and prints a
+  one-line nudge where one applies. The latch counts by its tick.
+  → [`state-and-git.md`](state-and-git.md)
+- **Relay check** (`.plumbbob/RELAY`): the Stop hook's comparison of the turn's text
+  against the ending the CLI last printed. A turn that dropped it is held open once,
+  with a one-line reason naming the command that reprints the ending, and the retry
+  ends whatever it holds. → [`decisions.md`](decisions.md#d89)
 
 ## The machinery
 
 - **Skill** (`/plumbbob:<verb>`): one of the sixteen slash commands you fire in Claude
   Code; every one is `disable-model-invocation`, so the model never fires one for you.
   → [`skills-reference.md`](skills-reference.md)
-- **Verb** (`plumbbob <verb>`): the CLI underneath, which the skills shell out to; you
-  never type it in normal use. → [`cli-reference.md`](cli-reference.md)
+- **Verb** (`plumbbob <verb>`): one command of the CLI underneath. The skills shell out
+  to the CLI, so in the loop you rarely type it. It is a first-class path on its own:
+  every verb runs from a terminal, and a few (`use`, `handoff`, `defer`, `check`,
+  `agent`) have no skill of their own. [`cli-only.md`](cli-only.md) drives one build
+  that way. → [`cli-reference.md`](cli-reference.md)
 - **Sidecar** (`.plumbbob/`): everything PlumbBob keeps in your repo: a tracked artifact
   plane (settings and the build folders) and an untracked control plane (the session
   sentinel, the in-flight markers, the latch's counters).

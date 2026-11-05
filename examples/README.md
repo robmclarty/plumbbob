@@ -41,10 +41,12 @@ lands in `main` — the record outlives the branch.
 
 ## What you will NOT find here
 
-The untracked control plane: no `STATE`, no `settings.local.json`, and no
-`STEP`/`SEAM`/`SPIKE` markers. Those are per-worktree ephemera — git-excluded while the
-session runs, cleared by `finish` — so a build folder on a branch always looks like
-this: five plain files anyone can read with no tooling.
+The untracked control plane, 15 entries in all ([`docs/state-and-git.md`](../docs/state-and-git.md)
+lists them): no `STATE`, no `settings.local.json`, no `TURN`/`GRANT`/`RUN`/`PROMPT`/`RELAY`,
+no `detail.md`, and no `STEP`/`SEAM`/`SPIKE`/`TICK`/`PAUSE`/`STOP` markers or `handoff.json`
+ledger. Those are per-worktree ephemera — git-excluded while the session runs, cleared by
+`finish` — so a build folder on a branch always looks like this: five plain files anyone
+can read with no tooling.
 
 ## The real thing
 
@@ -55,7 +57,9 @@ lives under [`.plumbbob/builds/`](../.plumbbob/builds/), messy parts included.
 ## A user-authored agent
 
 [`agents/`](agents/) holds a second kind of example: **user-authored agents** —
-executables that plug into the loop through PlumbBob's subprocess envelope. Two ship: the
-reference agent from [`docs/agents.md`](../docs/agents.md) (a bash script and a four-line
-manifest with nothing to install), and a fascicle-composed reviewer that drives a **local
-model via Ollama** — no API key, the diff never leaves your machine.
+executables that plug into the loop through PlumbBob's subprocess envelope. Three ship: the
+reference agent from [`docs/agents.md`](../docs/agents.md) (a POSIX `sh` script and an 8-line
+manifest with nothing to install), a fascicle-composed reviewer that drives a **local
+model via Ollama** — no API key, the diff never leaves your machine — and the same review
+with a **switchable provider** (`claude_cli` by default, `ollama` for local compute), chosen
+through the settings ladder.
