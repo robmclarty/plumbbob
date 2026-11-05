@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.2] - 2026-11-05
+
+- **Fixed:** the package reaches npm again. 0.14.1 got its tag and GitHub Release, but the
+  registry refused its tarball with E415, "Hard link is not allowed": checkride 0.20.0 ships
+  two byte-identical rust templates, pnpm on Linux hard-links both to one store file, and
+  `npm pack` writes the second as a hard-link entry. The publish build now installs with
+  `--package-import-method=copy`, so every file has its own inode, and the pack step refuses
+  any tarball holding a hard-link entry and names the file, so the run fails before the
+  approval gate rather than after it. 0.14.2 is the first npm release to carry 0.14.1's
+  changes, the bundled checkride 0.20.0 among them.
+- **Changed:** the course moves to checkride 0.20.0. Lesson 0 and lesson 10 pin
+  `checkride@0.20.0`, whose scaffold prints the same 32 files, nine checks, and tool versions
+  the lesson shows. Lesson 10 gains one diagram per tool, each ending on the same strip of
+  the line of hand-offs with that tool's hop lit, and its storyboard link points at GitHub,
+  since the npm package was never published.
+
 ## [0.14.1] - 2026-11-04
 
 - **Changed:** the bundled checkride moves from 0.12.5 to 0.20.0, so the check gate and
