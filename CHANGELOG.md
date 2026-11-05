@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.1] - 2026-11-04
+
+- **Changed:** the bundled checkride moves from 0.12.5 to 0.20.0, so the check gate and
+  `plumbbob doctor` run on its newer releases, language packs beyond TypeScript and targets
+  among them. A repo with no `package.json` now reads as no Node project, and doctor reports
+  its install row as n/a rather than a failure. The summary plumbbob writes under `.check/`
+  for a configured `check` command carries checkride's new `run` field, so it keeps the
+  shape checkride writes for its own runs.
+- **Changed:** the dev toolchain moves to TypeScript 7, vitest 5, Stryker 10.1.1, and fascicle
+  0.17.8, with oxlint, fallow, vale, cspell, markdownlint-cli2, and ast-grep at their latest.
+  Stryker runs under TypeScript 7 because `tsconfigFile` names a file that doesn't exist,
+  which skips the tsconfig rewrite the Go compiler has no API for, so the TypeScript 6 pin is
+  gone. The AGENTS.md stanza is regenerated from checkride 0.20.0.
+- **Fixed:** the eval driver's retry policy reads fascicle 0.17's errors. Its engine wraps
+  every abort in `aborted_error`, so the driver's wall-clock timeout would have scored as a
+  terminal `invalid` instead of a retry, and four `claude_cli_error` reasons it listed no
+  longer exist. The driver also hands the plugin dir and setting sources to fascicle's typed
+  `plugin_dirs` and `setting_sources` instead of `extra_args`.
+
 ## [0.14.0] - 2026-11-04
 
 - **Added:** the repo's own intent now rides a root `keyframes.md` checked by the gate's

@@ -1,6 +1,6 @@
 {
   "name": "plumbbob",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "description": "Attention-first build process: 16 skills, four hooks, and a CLI that keep you the decider. Guidance on the work, a latch on the record.",
   "keywords": [
     "claude-code",
