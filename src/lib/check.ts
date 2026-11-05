@@ -203,6 +203,7 @@ function writeOverrideSummary(root: string, command: string, exitCode: number, d
     ok,
     checks_run: 1,
     total_duration_ms: durationMs,
+    run: { partial: false },
     checks: [
       {
         name: command.length <= OVERRIDE_NAME_BUDGET ? command : `${command.slice(0, OVERRIDE_NAME_BUDGET - 1)}…`,

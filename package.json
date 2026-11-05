@@ -53,24 +53,24 @@
     }
   },
   "devDependencies": {
-    "@ast-grep/cli": "0.45.1",
+    "@ast-grep/cli": "0.51.1",
     "@robmclarty/keyframes": "0.3.0",
-    "@stryker-mutator/api": "9.6.1",
-    "@stryker-mutator/core": "9.6.1",
-    "@stryker-mutator/vitest-runner": "9.6.1",
-    "@types/node": "26.2.0",
-    "@vitest/coverage-v8": "4.1.10",
-    "@vvago/vale": "3.17.1",
-    "cspell": "10.0.1",
-    "fallow": "3.14.0",
-    "fascicle": "0.8.16",
-    "markdownlint-cli2": "0.23.2",
-    "oxlint": "1.78.0",
-    "typescript": "6.0.3",
-    "vitest": "4.1.10"
+    "@stryker-mutator/api": "10.1.1",
+    "@stryker-mutator/core": "10.1.1",
+    "@stryker-mutator/vitest-runner": "10.1.1",
+    "@types/node": "26.6.6",
+    "@vitest/coverage-v8": "5.1.0",
+    "@vvago/vale": "3.25.1",
+    "cspell": "10.4.0",
+    "fallow": "3.38.1",
+    "fascicle": "0.17.8",
+    "markdownlint-cli2": "0.24.0",
+    "oxlint": "1.90.0",
+    "typescript": "7.0.2",
+    "vitest": "5.1.0"
   },
   "dependencies": {
-    "checkride": "0.12.5"
+    "checkride": "0.20.0"
   },
   "bundleDependencies": [
     "checkride"

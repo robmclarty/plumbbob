@@ -1,28 +1,14 @@
-// TYPESCRIPT 7 IS BLOCKED HERE. Read this before trying the upgrade again.
+// TypeScript 7 runs here because of `tsconfigFile` below. TypeScript 7 is the Go
+// port and ships no JavaScript compiler API, and Stryker rewrites the tsconfig
+// chain in its sandbox through that API (`ts.parseConfigFileTextToJson`), so the
+// rewrite crashed the run a second in, before any test ran. Stryker skips the
+// rewrite when it can't find the file, and the vitest runner never reads a
+// tsconfig, so pointing it at a file that doesn't exist is the whole fix. It is
+// the one checkride documents in its docs/tools.md.
 //
-// TypeScript 7 is the Go port: the `typescript` package ships a native binary
-// plus a launcher, and `lib/` holds only tsc.js, getExePath.js and version.cjs.
-// The JS compiler API is gone, so `require('typescript').createProgram` is
-// undefined. Stryker's TSConfigPreprocessor calls `ts.parseConfigFileTextToJson`
-// through `await import('typescript')` to rewrite tsconfig paths for its sandbox,
-// and dies about a second in, before instrumentation, before any test runs:
-//
-//   TypeError: ts.parseConfigFileTextToJson is not a function
-//     at TSConfigPreprocessor.rewriteTSConfigFile
-//
-// Checked on 2026-08-12 against typescript 7.0.2 and @stryker-mutator/core 9.6.1
-// (the newest published). Nothing in this repo can fix it: the call is inside
-// Stryker, the import is dynamic so no static grep finds it, and the failure is
-// upstream of every knob here. It needs a Stryker release that stops using the
-// removed API. Re-test by bumping typescript and running `pnpm exec stryker run`;
-// if it still throws the line above, put the pin back.
-//
-// Nothing ELSE in the repo objects to TS 7. Verified the same day: `pnpm check`
-// green, emit semantically identical to TS 6 (byte-identical once quote style is
-// normalised, same file list), `erasableSyntaxOnly` and `noUncheckedIndexedAccess`
-// both still enforced, and no dependency or source file touches the compiler API
-// (lint is oxlint, not typescript-eslint; dev runs on Node type-stripping, not
-// ts-node). So the pin in package.json exists for this one reason and no other.
+// vitest 5 needs the 10.1.1 runner or later: 10.0.0 filtered tests by name with
+// vitest 4's separator, so every mutant ran zero tests and survived, with no
+// error to say why (stryker-js #6210).
 
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 const config = {
@@ -44,6 +30,11 @@ const config = {
   // reasonable time if the vitest 4 deadlock returns; the default 5 was never the
   // problem, but it was too tight to tell a slow run from a wedged one.
   dryRunTimeoutMinutes: 10,
+  // No such file, on purpose: see the note at the top.
+  tsconfigFile: 'tsconfig.stryker-skip.json',
+  // Only the mutated sources. Stryker 10's default scan also reaches
+  // site/index.html, fails to parse it, and warns on every run.
+  disableTypeChecks: 'src/**/*.ts',
   incremental: true,
   reporters: ['clear-text', 'progress', 'html', 'json'],
 }

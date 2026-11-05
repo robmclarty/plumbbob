@@ -17,7 +17,7 @@
 
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { claude_cli_error, provider_auth_error } from 'fascicle'
+import { aborted_error, claude_cli_error, provider_auth_error } from 'fascicle'
 import { cleanupFixtures } from '../helpers/fixture-repo.ts'
 import { CONTRACTS } from './contracts/index.ts'
 import type { Contract, ContractResult } from './contracts/contract.ts'
@@ -69,15 +69,27 @@ export function pluginLoadFailed(transcript: string): boolean {
 // wall-clock abort. Everything else — including `subprocess_exit`, which is
 // how a model that exhausts --max-turns comes back — is a terminal `invalid`:
 // rerunning a run that returned is p-hacking.
+//
+// Since fascicle 0.16 an auth failure is a `provider_auth_error`, not a
+// `claude_cli_error` reason. Its engine also wraps every abort in
+// `aborted_error` with the cause as `reason`, so our wall-clock
+// AbortSignal.timeout arrives there as a DOMException named TimeoutError, and an
+// engine disposed mid-turn as the string 'engine_disposed'. Both were checked
+// against fascicle 0.17.8 with a stub `claude` binary on 2026-11-04.
 export function isInfraError(error: unknown): boolean {
   if (error instanceof provider_auth_error) return true
   if (error instanceof claude_cli_error) {
-    return ['binary_not_found', 'auth_missing', 'auth_expired', 'api_key_missing', 'startup_timeout', 'stall_timeout', 'engine_disposed'].includes(
-      error.reason,
-    )
+    return ['binary_not_found', 'startup_timeout', 'stall_timeout'].includes(error.reason)
   }
-  // AbortSignal.timeout fires a DOMException named TimeoutError.
-  return error instanceof Error && error.name === 'TimeoutError'
+  if (error instanceof aborted_error) {
+    return error.reason === 'engine_disposed' || isTimeout(error.reason)
+  }
+  return isTimeout(error)
+}
+
+// Whether `value` is the DOMException an AbortSignal.timeout fires.
+function isTimeout(value: unknown): boolean {
+  return value instanceof Error && value.name === 'TimeoutError'
 }
 
 async function attempt(contract: Contract, sweep: Sweep, model: string, run: number, infraRetries: number): Promise<RunRecord> {

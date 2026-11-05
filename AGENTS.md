@@ -1,4 +1,4 @@
-<!-- checkride:begin hash=v10d8761710828dfc0 -->
+<!-- checkride:begin hash=v11553d53f492ebf1f -->
 
 ## Checkride: the definition of done
 
@@ -9,8 +9,13 @@ complete; any other exit code means it is not. Never claim a task is finished wh
 When it fails:
 
 1. Read `.check/summary.json` to see which check failed.
-2. Read that check's raw output (`.check/<slot>.json` or `.check/<slot>.stdout.txt`).
+2. Read that check's raw output: `.check/<slot>.json` or `.jsonl`, `.check/<slot>.stdout.txt`,
+   or `.check/<slot>.stderr.txt`, where a check refused before it ran says why. A
+   target's check writes under `.check/<target>/` instead.
 3. Fix the root cause, then re-run.
+
+`pnpm check --digest` prints a capped excerpt of what failed below its report,
+each section naming the raw file that holds the rest, so start from that.
 
 `pnpm exec checkride triage` runs this procedure in full and reads `.check/` for you
 (`/checkride:check` and `/checkride-check` are the same thing as a skill).
@@ -48,7 +53,7 @@ They are hand-written and human-owned: never edit, rewrite, or add to them, and
 never generate new ones. When your draft and an exemplar disagree about how a
 sentence should sound, the exemplar wins.
 
-Active checks in this repo: lint, struct, dead, links, refs, types, docs, spell, prose, build, test.
+Active checks in this repo: lint, struct, dead, links, refs, intent, types, docs, spell, prose, build, test.
 
 <!-- checkride:end -->
 

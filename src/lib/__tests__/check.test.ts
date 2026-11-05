@@ -224,6 +224,7 @@ describe('runCheck (checkride seam, mocked runChecks)', () => {
       ok: checks.every((c) => c.ok),
       checks_run: checks.filter((c) => c.skipped !== true).length, // skipped entries excluded, per the contract
       total_duration_ms: 0,
+      run: { partial: false },
       checks,
     }
   }

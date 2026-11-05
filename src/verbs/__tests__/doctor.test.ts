@@ -91,6 +91,14 @@ const gateEnv: GateEnv = {
   readEngines: () => ({}),
   platform: () => ({ os: process.platform, arch: process.arch }),
   packageManager: () => 'pnpm',
+  // checkride 0.15.0 asks mise for a `--pins` tool and asks the run's launcher
+  // under `--static-only` or for a mise, go, rust, or uv pin. These pnpm repos
+  // take neither path, so both probes are shape-only; the launcher throws so a
+  // test that ever reaches it fails loudly.
+  miseWhere: () => Promise.resolve({ ok: false, detail: 'no mise in these temp repos', untrusted: false }),
+  launch: () => {
+    throw new Error('doctor test env: the launcher is not reached in a pnpm repo')
+  },
 }
 
 // pluginChecks reads process.env.HOME, so pinning it to a throwaway home makes the
@@ -432,7 +440,12 @@ describe('doctor — the verb', () => {
   it("renders checkride's table for a bare repo: ○ empty slots, ✓ built-ins, ✗ counted failures", async () => {
     const home = makeTempDir()
     seedMarketplace(home, ['plumbbob@robmclarty'])
-    const { code, stdout } = await doctorWithHome(home, makeTempRepo(), [], gateEnv)
+    // Since checkride 0.15.0 a directory with no package.json is not a Node
+    // project, and its install row is n/a. A bare package.json with no lockfile
+    // keeps install a required failure, the one ✗ row this test reads.
+    const dir = makeTempRepo()
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'x', version: '1.0.0' }))
+    const { code, stdout } = await doctorWithHome(home, dir, [], gateEnv)
     expect(code).toBe(1)
     expect(stdout).toContain('\n\nplumbbob doctor — check gate — D32 (checkride-gate)\n')
     expect(stdout).toContain('  ✗ install\n      → ') // a required failure carries its hint on the arrow line
@@ -468,7 +481,7 @@ describe('doctor — the verb', () => {
     const { code, stdout } = await doctorWithHome(home, dir, [], gateEnv)
     expect(code).toBe(1)
     expect(stdout).toContain('  ✗ types ← tsc\n      → ') // no version suffix when nothing was found
-    expect(stdout).toContain('\n\nplumbbob: 2 problem(s)') // install + types
+    expect(stdout).toContain('\n\nplumbbob: 1 problem(s)') // types; no package.json, so install is n/a
   })
 })
 

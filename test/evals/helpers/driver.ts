@@ -3,11 +3,13 @@
 // TURN/GRANT/TICK ledger is per-worktree filesystem state, so a new session's
 // UserPromptSubmit tick is exactly a real human turn.
 //
-// fascicle 0.8.16 drops the typed `plugin_dirs`/`setting_sources` provider
-// config (`run_cli` builds argv with `provider_config: {}`), so every plugin
-// flag rides `extra_args`, which does flow. Drop the workaround when fascicle
-// threads the real config (parked in the build log) — the bug persists through
-// fascicle 0.9.6 (checked against the published tarball, 2026-07-18).
+// The plugin under test rides the engine's typed `plugin_dirs` and
+// `setting_sources`, which fascicle threads to argv since 0.16.0; up to 0.15 it
+// dropped both, and every plugin flag rode `extra_args`. `setting_sources` is
+// named though it matches fascicle's default, because the driver depends on it:
+// the user tier stays out, so a plugin enabled in the developer's own settings
+// can't shadow the one under test. Only the flags fascicle has no field for ride
+// `extra_args` now.
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -114,12 +116,18 @@ export async function openSession(options: {
   const { repo, sweep } = options
   const model = options.model ?? EVAL_MODEL
   const pluginDir = resolvePluginDir(sweep)
-  const pluginArgs = ['--plugin-dir', pluginDir, '--setting-sources', 'project,local']
   // The spawned CLI inherits this env; sessions run sequentially, so the
   // per-sweep prepend can safely live on process.env.
   process.env.PATH = `${join(pluginDir, 'bin')}:${BASE_PATH}`
   const engine: Engine = create_engine({
-    providers: { claude_cli: { default_cwd: repo, auth_mode: 'auto' } },
+    providers: {
+      claude_cli: {
+        default_cwd: repo,
+        auth_mode: 'auto',
+        plugin_dirs: [pluginDir],
+        setting_sources: ['project', 'local'],
+      },
+    },
   })
 
   const transcript: string[] = []
@@ -134,7 +142,6 @@ export async function openSession(options: {
       provider_options: {
         claude_cli: {
           extra_args: [
-            ...pluginArgs,
             '--permission-mode',
             'acceptEdits',
             '--allowedTools',

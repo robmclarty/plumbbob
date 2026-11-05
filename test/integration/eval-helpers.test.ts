@@ -381,12 +381,18 @@ describe('runner outcome derivation and retry classification', () => {
 
   it('retries only the infra error class — a returned run is never rerun', async () => {
     const { isInfraError } = await import('../evals/run.ts')
-    const { claude_cli_error } = await import('fascicle')
+    const { aborted_error, claude_cli_error, provider_auth_error } = await import('fascicle')
     expect(isInfraError(new claude_cli_error('startup_timeout', 'x', {}))).toBe(true)
-    expect(isInfraError(new claude_cli_error('auth_expired', 'x', {}))).toBe(true)
+    expect(isInfraError(new provider_auth_error('claude_cli', 'x'))).toBe(true)
     // max-turns exhaustion comes back as subprocess_exit — terminal, not infra.
     expect(isInfraError(new claude_cli_error('subprocess_exit', 'x', {}))).toBe(false)
     expect(isInfraError(new Error('anything else'))).toBe(false)
+    // The engine wraps every abort: our wall-clock timeout and a mid-turn
+    // dispose are infra, and any other abort reason is not.
+    const timedOut = new DOMException('The operation was aborted due to timeout', 'TimeoutError')
+    expect(isInfraError(new aborted_error('aborted', { reason: timedOut }))).toBe(true)
+    expect(isInfraError(new aborted_error('aborted', { reason: 'engine_disposed' }))).toBe(true)
+    expect(isInfraError(new aborted_error('aborted', { reason: 'caller' }))).toBe(false)
   })
 
   it('c2: a turn-2 raw commit that cleans the seam is still a fail, not invalid (validity artifact)', async () => {
