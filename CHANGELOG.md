@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.3] - 2026-11-06
+
+- **Added:** `/plumbbob:setup`, and the `plumbbob setup` verb under it, ready a repo that has
+  never used plumbbob for its first build. It adds only what is missing: the `.plumbbob/`
+  folder, a `settings.json` seeded as `{}`, and one `info/exclude` line for each of the 16
+  control files (`STATE`, `TURN`, `PROMPT`, `RELAY`, the in-flight markers inside each build,
+  and `.check/`). It opens no session and records no baseline, a clone kept local stays
+  local, and a second run adds nothing and says so. It refuses over a legacy flat sidecar,
+  since a settings file written first would make `doctor --migrate` drop the old config's
+  `check` line. D126 (setup-before-start) records it.
+- **Added:** `plumbbob doctor` reports whether the repo is set up for a first build: a `✓`
+  when it is, or a `○` warning for each gap (no `.plumbbob/` folder, no `settings.json`, a
+  control file git does not ignore, no commit for `start` to record). It asks git which files
+  it ignores, so a repo set up by hand in its own `.gitignore` reads as ready, and a gap never
+  counts as a problem or changes the exit code.
+- **Changed:** `plumbbob start` lets an untracked `.plumbbob/settings.json` stand beside a
+  clean baseline, since it is the file `start` would write next and the first step commit
+  carries it; without that, `/plumbbob:plan` would have refused right after a setup. Any
+  other untracked or changed file still refuses. D126 (setup-before-start) amends
+  D22 (clean-baseline).
+
 ## [0.14.2] - 2026-11-05
 
 - **Fixed:** the package reaches npm again. 0.14.1 got its tag and GitHub Release, but the
