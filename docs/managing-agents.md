@@ -39,7 +39,7 @@ other two, [C3 (bindings-not-logic)](decisions.md#c3) and
 parser, which reads bindings and notes and drops any field it does not know. A constraint
 the gate cannot read is a wish.
 
-Two lines sit where the crew cannot reach them. Every one of the 16 skills is
+Two lines sit where the crew cannot reach them. Every one of the 17 skills is
 `disable-model-invocation`, so the model never fires a move; you do. And a user-authored
 agent speaks an envelope with no verb to advance the loop
 ([C6 (no-advance-verb)](decisions.md#c6)): it can return concerns, never a checkpoint

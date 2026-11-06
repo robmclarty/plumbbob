@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
 import { doctor, inspectLegacy, migrateSidecar } from '../doctor.ts'
 import type { GateEnv } from '../doctor.ts'
-import { activeBuild, buildDir, intentPath, turnPath } from '../../lib/sidecar.ts'
+import { activeBuild, buildDir, excludeControl, intentPath, turnPath } from '../../lib/sidecar.ts'
 import { setLocalSetting, settingsPath } from '../../lib/settings.ts'
 import { gitPath, headSha } from '../../lib/git.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -694,6 +694,96 @@ describe('doctor — plugin link (HOME pinned)', () => {
     // header + the two-line ✗ + blank + summary + PATH note: outside a repo the
     // sidecar, gate, and latch sections must contribute zero lines, not empty headers.
     expect(stdout.trimEnd().split('\n')).toHaveLength(6)
+  })
+})
+
+// The repo-setup section: is this repo ready for a first build? Every gap is a
+// ○ warning, never a counted problem, so a marketplace home and the `check`
+// override keep the exit code on the section under test alone.
+describe('doctor — repo setup — D126 (setup-before-start)', () => {
+  it('names each gap in a fresh repo as a warning, and still exits 0', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = makeTempRepo()
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(0)
+    expect(stdout).toContain(
+      '\n\nplumbbob doctor — repo setup\n' +
+        '  ○ repo: no .plumbbob/ folder yet\n' +
+        '  ○ repo: 16 control files not ignored by git (.plumbbob/STATE, .plumbbob/settings.local.json, and 14 others)\n' +
+        '      → plumbbob setup (or /plumbbob:setup) adds what is missing; a setup by hand works too\n',
+    )
+    expect(stdout).not.toContain('✓ repo')
+  })
+
+  it('reads ready once every piece is in place', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    excludeControl(dir)
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(0)
+    expect(stdout).toContain('plumbbob doctor — repo setup\n  ✓ repo: ready for a first build\n')
+    expect(stdout).not.toContain('○ repo')
+  })
+
+  it('reads a repo that ignores the control files its own way as ready', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    writeFileSync(join(dir, '.gitignore'), '.plumbbob/*\n!.plumbbob/settings.json\n!.plumbbob/builds/\n.plumbbob/builds/*/*\n.check/\n')
+    const { stdout } = await doctorWithHome(home, dir)
+    expect(stdout).toContain('  ✓ repo: ready for a first build\n')
+  })
+
+  it('names a missing settings.json and the one control file left out', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = makeTempRepo()
+    excludeControl(dir)
+    const exclude = gitPath(dir, 'info/exclude')
+    writeFileSync(exclude, readFileSync(exclude, 'utf8').replace('.plumbbob/RELAY\n', ''))
+    mkdirSync(join(dir, '.plumbbob'), { recursive: true })
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(0)
+    expect(stdout).toContain('  ○ repo: no .plumbbob/settings.json yet (absent reads as all defaults)\n')
+    expect(stdout).toContain('  ○ repo: 1 control file not ignored by git (.plumbbob/RELAY)\n')
+  })
+
+  it('says a commitless repo has no baseline for start to record', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = makeTempRepo({ commit: false })
+    mkdirSync(join(dir, '.plumbbob'), { recursive: true })
+    writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true' }))
+    excludeControl(dir)
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(0)
+    expect(stdout).toContain(
+      '  ○ repo: no commits yet\n      → make an initial commit, so plumbbob start can record a baseline\n',
+    )
+    expect(stdout).not.toContain('✓ repo')
+  })
+
+  it('notes a sidecar ignored whole, where build folders stay untracked', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    writeFileSync(join(dir, '.git', 'info', 'exclude'), '.plumbbob/\n.check/\n')
+    const { stdout } = await doctorWithHome(home, dir)
+    expect(stdout).toContain('  ✓ repo: ready for a first build (.plumbbob/ is ignored whole, so build folders stay untracked)\n')
+  })
+
+  it('leaves a legacy sidecar to its own section', async () => {
+    const { stdout } = await captureIoAsync(() => doctor(legacyRepo(), []))
+    expect(stdout).toContain('legacy flat sidecar')
+    expect(stdout).not.toContain('repo setup')
+  })
+
+  it('judges the repo as --migrate leaves it', async () => {
+    const { stdout } = await captureIoAsync(() => doctor(legacyRepo(), ['--migrate']))
+    expect(stdout).toContain('migrated')
+    expect(stdout).toContain('plumbbob doctor — repo setup\n  ✓ repo: ready for a first build')
   })
 })
 

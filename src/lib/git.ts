@@ -75,6 +75,22 @@ export function isDirty(root: string): boolean {
 }
 
 /**
+ * Dirty the way `isDirty` reads it, except that the untracked files named in
+ * `untracked` (repo-relative) do not count.
+ *
+ * `start` uses it to let the settings scaffold `setup` wrote stand untracked
+ * beside a clean baseline, the same file `start` would write itself. Every
+ * untracked file is listed one by one, so an untracked folder holding the
+ * scaffold and anything else still reads as dirty.
+ */
+export function isDirtyBeyond(root: string, untracked: ReadonlyArray<string>): boolean {
+  const allowed = new Set(untracked.map((path) => `?? ${path}`))
+  return runGit(root, ['status', '--porcelain', '--untracked-files=all'])
+    .split('\n')
+    .some((line) => line.length > 0 && !allowed.has(line))
+}
+
+/**
  * The body line that marks a plan commit made by hand (a `chore(plan)`
  * harvest). A harvest lands between nearly every step, so counting it as
  * out-of-band would trip the advisory on routine housekeeping and stop meaning
@@ -374,6 +390,26 @@ export function isIgnored(root: string, path: string): boolean {
   } catch (error) {
     if ((error as { status?: number }).status === 1) {
       return false
+    }
+    throw error
+  }
+}
+
+/**
+ * Which of `paths` git ignores, from every source it reads (the repo's ignore
+ * files, info/exclude, the global excludes file), in one `git check-ignore`.
+ *
+ * The paths need not exist, so a pattern can be probed by a path it would
+ * match. Exit 1 means none of them is ignored; any other failure propagates,
+ * as `isIgnored` does.
+ */
+export function ignoredPaths(root: string, paths: ReadonlyArray<string>): ReadonlySet<string> {
+  if (paths.length === 0) return new Set()
+  try {
+    return new Set(runGit(root, ['check-ignore', '--', ...paths]).split('\n'))
+  } catch (error) {
+    if ((error as { status?: number }).status === 1) {
+      return new Set()
     }
     throw error
   }

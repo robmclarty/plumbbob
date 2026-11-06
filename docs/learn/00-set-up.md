@@ -115,7 +115,7 @@ trust the folder when asked, and type:
 /plumbbob:doctor
 ```
 
-The namespaced form matters: five of the sixteen skills share a name with a Claude
+The namespaced form matters: five of the seventeen skills share a name with a Claude
 Code built-in (`plan`, `run`, `status`, `verify`, `doctor`), and the built-in wins a
 bare `/doctor`. The report reads, roughly:
 

@@ -27,7 +27,7 @@ index links. Every other page answers one question, grouped in reading order. Th
 
 ## Reference
 
-- *What does each skill do?* → [skills-reference.md](skills-reference.md): all sixteen.
+- *What does each skill do?* → [skills-reference.md](skills-reference.md): all seventeen.
 - *What does the CLI underneath do?* → [cli-reference.md](cli-reference.md)
 - *How do I install it, exactly?* → [install.md](install.md)
 - *What are these untracked files, and why is it touching my `.git`?* → [state-and-git.md](state-and-git.md)

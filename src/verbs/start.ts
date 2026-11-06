@@ -4,11 +4,11 @@
 // clean baseline is the contract; `--allow-dirty` overrides), an existing
 // session, or a non-git directory.
 
-import { existsSync, writeFileSync, mkdirSync } from 'node:fs'
+import { writeFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { detectGate } from '../lib/check.ts'
 import { readTemplate, stampTemplate } from '../lib/templates.ts'
-import { findRepoRoot, hasCommit, headSha, isDirty } from '../lib/git.ts'
+import { findRepoRoot, hasCommit, headSha, isDirtyBeyond } from '../lib/git.ts'
 import {
   sidecarDir,
   buildDir,
@@ -26,7 +26,7 @@ import {
   setGrant,
   stampTick,
 } from '../lib/sidecar.ts'
-import { settingsPath } from '../lib/settings.ts'
+import { scaffoldSettings } from '../lib/settings.ts'
 import { advisory, ending, notice, printEnding, transition } from '../lib/notice.ts'
 
 /**
@@ -38,6 +38,9 @@ import { advisory, ending, notice, printEnding, transition } from '../lib/notice
  * that in prose where the templates need it.
  */
 const CHECK_ECHO = 'checkride (set a "check" key in .plumbbob/settings.json to override)'
+
+/** The settings scaffold, repo-relative, as `git status` names it untracked. */
+const SETTINGS_SCAFFOLD = '.plumbbob/settings.json'
 
 /**
  * Open a session: validate the repo, scaffold the build folder, record the
@@ -101,7 +104,10 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
     )
     return 1
   }
-  if (isDirty(root)) {
+  // The settings scaffold `setup` leaves untracked is the same file start
+  // would write next, so it does not dirty the baseline; the first step
+  // commit sweeps it in as it would have anyway.
+  if (isDirtyBeyond(root, [SETTINGS_SCAFFOLD])) {
     if (!allowDirty) {
       process.stderr.write(
         notice({
@@ -149,15 +155,9 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
   // settings.local.json, so that personal overlay stays purely human-owned.
   beginSession(root, local ? null : slug)
   // Scaffold the tracked settings.json ONLY when absent, and seed it EMPTY: the
-  // human owns this file once it exists (their `check` gate lives here), so a
-  // re-start must never touch it. Inject no opinions even on first create:
-  // absence of `check` already means checkride and absence of `auto` already
-  // means false (see settings.ts), so `{}` is exactly "all defaults". `auto` in
-  // particular is a personal preference that belongs in settings.local.json,
-  // never this tracked file.
-  if (!existsSync(settingsPath(root))) {
-    writeFileSync(settingsPath(root), `${JSON.stringify({}, null, 2)}\n`)
-  }
+  // human owns this file once it exists, so a re-start must never touch it
+  // (see scaffoldSettings).
+  scaffoldSettings(root)
 
   // `--local` keeps a fully untracked flat layout (the whole `.plumbbob/`
   // git-excluded); the default plants a tracked `builds/<slug>/` folder (the

@@ -20,7 +20,7 @@
 // (see sidecar.ts), which keeps this overlay a human-authored file rather than
 // tool-managed state.
 
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
 const DIRNAME = '.plumbbob' // the sidecar folder name at the repo root
@@ -30,6 +30,24 @@ const DIRNAME = '.plumbbob' // the sidecar folder name at the repo root
  */
 export function settingsPath(root: string): string {
   return join(root, DIRNAME, 'settings.json')
+}
+
+/**
+ * Write the tracked settings.json as an empty `{}` when it is absent, and say
+ * whether this call wrote it.
+ *
+ * The human owns this file once it exists (their `check` gate lives here), so
+ * an existing one is never touched. Seeded empty because absence already is
+ * the default: no `check` means checkride, no `auto` means false. `auto` in
+ * particular is a personal preference that belongs in settings.local.json,
+ * never this tracked file. `start` and `setup` both scaffold through here.
+ */
+export function scaffoldSettings(root: string): boolean {
+  const path = settingsPath(root)
+  if (existsSync(path)) return false
+  mkdirSync(dirname(path), { recursive: true })
+  writeFileSync(path, `${JSON.stringify({}, null, 2)}\n`)
+  return true
 }
 
 /**

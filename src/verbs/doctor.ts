@@ -1,4 +1,4 @@
-// `plumbbob doctor`: the health report, five sections under one verb.
+// `plumbbob doctor`: the health report, six sections under one verb.
 //
 // 1. The global plugin link (read-only). After `plumbbob init`, plumbbob lives as a
 //    symlink at ~/.claude/skills/plumbbob pointing at the installed package; Claude
@@ -19,15 +19,22 @@
 //    build folders, `config` becomes `settings.json`, and the whole move is STAGED but
 //    never committed: the human owns that commit.
 //
-// 3. Agent validation. Every resolvable user-authored agent gets its manifest and its
+// 3. Repo setup. Whether the repo is ready for a first build: the `.plumbbob/`
+//    folder, its settings.json, every control file ignored by git (by whatever
+//    rule: plumbbob's info/exclude lines or the repo's own), and a commit for
+//    `start` to record as the baseline. Each gap is a ○ warning naming
+//    `plumbbob setup`, never a failure, since a person may set the repo up by
+//    hand however they like.
+//
+// 4. Agent validation. Every resolvable user-authored agent gets its manifest and its
 //    `command` statically checked, so a broken agent surfaces here rather than mid-build.
 //
-// 4. The check gate. When a `check` setting overrides checkride (the default heavy
+// 5. The check gate. When a `check` setting overrides checkride (the default heavy
 //    check), doctor names the command; otherwise it runs checkride's own doctor and
 //    prints the slot/adapter table: "detected but tool missing" is the footgun this
 //    exists for.
 //
-// 5. The approval latch. Reports whether the harness's turn ledger is live (checkpoint
+// 6. The approval latch. Reports whether the harness's turn ledger is live (checkpoint
 //    can latch on a recorded human turn) or dormant (guidance only): dormant is a
 //    state, never a failure.
 //
@@ -42,8 +49,18 @@ import type { DoctorCheck } from 'checkride'
 import { type AgentListing, listAgents } from '../lib/agents.ts'
 import { gateDetectsTools } from '../lib/check.ts'
 import { marketplacePlumbbob } from '../lib/plugins.ts'
-import { findRepoRoot, gitPath, stagePath } from '../lib/git.ts'
-import { buildDir, excludeControl, listBuilds, readTurn, setActiveBuild, sidecarDir, slugify } from '../lib/sidecar.ts'
+import { findRepoRoot, gitPath, hasCommit, stagePath } from '../lib/git.ts'
+import {
+  buildDir,
+  buildFolderIgnored,
+  excludeControl,
+  listBuilds,
+  readTurn,
+  setActiveBuild,
+  sidecarDir,
+  slugify,
+  unignoredControl,
+} from '../lib/sidecar.ts'
 import { resolveBoolean, resolveString, settingsPath } from '../lib/settings.ts'
 
 /**
@@ -388,6 +405,56 @@ function sidecarReport(cwd: string, migrate: boolean): { readonly lines: string[
   return { lines, failed: 1 }
 }
 
+// --- repo setup ---
+
+/**
+ * The repo-setup section: is this repo ready for a first build?
+ *
+ * Every gap is a ○ warning and adds nothing to the problem count, since the
+ * person may have set the repo up by hand; the one remedy line names the verb
+ * that adds what is missing. Skipped outside a repo, and over a legacy flat
+ * sidecar, whose own section already names the move that comes first.
+ */
+function setupReport(cwd: string): { readonly lines: string[]; readonly failed: number } {
+  const root = findRepoRoot(cwd)
+  if (root === null || inspectLegacy(root) !== null) return { lines: [], failed: 0 }
+
+  const lines = ['', 'plumbbob doctor — repo setup']
+  const gaps: string[] = []
+  if (!existsSync(sidecarDir(root))) {
+    gaps.push('no .plumbbob/ folder yet')
+  } else if (!existsSync(settingsPath(root))) {
+    gaps.push('no .plumbbob/settings.json yet (absent reads as all defaults)')
+  }
+  const unignored = unignoredControl(root)
+  if (unignored.length > 0) {
+    const files = unignored.length === 1 ? 'control file' : 'control files'
+    gaps.push(`${unignored.length} ${files} not ignored by git (${named(unignored)})`)
+  }
+  for (const gap of gaps) lines.push(`  ○ repo: ${gap}`)
+  if (gaps.length > 0) {
+    lines.push('      → plumbbob setup (or /plumbbob:setup) adds what is missing; a setup by hand works too')
+  }
+
+  if (!hasCommit(root)) {
+    lines.push('  ○ repo: no commits yet', '      → make an initial commit, so plumbbob start can record a baseline')
+  } else if (gaps.length === 0) {
+    const whole = buildFolderIgnored(root, 'example') ? ' (.plumbbob/ is ignored whole, so build folders stay untracked)' : ''
+    lines.push(`  ✓ repo: ready for a first build${whole}`)
+  }
+  return { lines, failed: 0 }
+}
+
+/**
+ * A list short enough for one doctor line: every item when there are three or
+ * fewer, else the first two and a count of the rest.
+ */
+function named(items: ReadonlyArray<string>): string {
+  if (items.length <= 3) return items.join(', ')
+  const rest = items.length - 2
+  return `${items.slice(0, 2).join(', ')}, and ${rest} other${rest === 1 ? '' : 's'}`
+}
+
 // --- agent validation ---
 
 /**
@@ -599,7 +666,7 @@ function latchReport(cwd: string): { readonly lines: string[]; readonly failed: 
  * Run every doctor section, print the report, and return the exit code.
  *
  * Sections in order: plugin install, sidecar layout (migrating under `--migrate`),
- * agents, check gate, approval latch. Exit 1 when any section reported a problem, so
+ * repo setup, agents, check gate, approval latch. Exit 1 when any section reported a problem, so
  * scripts can gate on it; the closing lines cover the restart and the PATH story
  * either way. `env` injects a deterministic toolchain probe for tests (see GateEnv).
  */
@@ -613,6 +680,11 @@ export async function doctor(cwd: string, args: ReadonlyArray<string> = [], env?
   const sidecar = sidecarReport(cwd, args.includes('--migrate'))
   out.push(...sidecar.lines)
 
+  // Read after the sidecar section, so a `--migrate` that just moved a legacy
+  // layout is judged as it now stands.
+  const repo = setupReport(cwd)
+  out.push(...repo.lines)
+
   const agents = agentReport(cwd)
   out.push(...agents.lines)
 
@@ -622,7 +694,7 @@ export async function doctor(cwd: string, args: ReadonlyArray<string> = [], env?
   const latch = latchReport(cwd)
   out.push(...latch.lines)
 
-  const failed = checks.filter((c) => !c.ok).length + sidecar.failed + agents.failed + gate.failed + latch.failed
+  const failed = checks.filter((c) => !c.ok).length + sidecar.failed + repo.failed + agents.failed + gate.failed + latch.failed
   out.push('')
   out.push(
     failed === 0

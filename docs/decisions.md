@@ -134,7 +134,8 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
 - <a id="d18"></a>**D18 (spike-lifecycle): The spike lifecycle.** A genuine fork gets a throwaway worktree and branch per
   option, kept outside the repo, torn down by `spike done`. *Tagged in* `spike.ts`.
 - <a id="d22"></a>**D22 (clean-baseline): `start` refuses a dirty tree.** A clean baseline is required; `--allow-dirty`
-  overrides it and records the current HEAD as the baseline. *Tagged in* `start.ts`.
+  overrides it and records the current HEAD as the baseline. *Amended*: an untracked `.plumbbob/settings.json`, the
+  scaffold `setup` leaves, does not count as dirty ([**D126 (setup-before-start)**](#d126)). *Tagged in* `start.ts`.
 - <a id="d23"></a>**D23 (no-glob-seams): Seams are exact paths or `dir/` grants, never globs.** A seam token is matched as
   an exact path or a directory prefix; a glob is rejected. *Tagged in* `intent.ts`.
 - <a id="d24"></a>**D24 (configurable-check): The heavy check is configurable, defaulting to checkride.** *Amended*: the
@@ -1790,6 +1791,18 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   and the handle in front of it is the one the record matches. Revises [**D112 (lean-table)**](#d112)'s four columns.
   *Tagged in* `handoff.ts`, the `harvest`, `run`, and `finish` skills, the relay check and the eval anatomy reader,
   `docs/presentation.md`, `docs/runs.md`, `docs/happy-path.md`, and `docs/glossary.md`.
+
+- <a id="d126"></a>**D126 (setup-before-start): `plumbbob setup` readies a repo for its first build, adding only what is
+  missing.** It creates `.plumbbob/`, seeds `settings.json` as `{}` when there is none, and appends to
+  `info/exclude` each control-file line it lacks; it opens no session and records no baseline, which stay `start`'s.
+  A clone that keeps the sidecar local keeps it so, and a second run adds nothing and says so. `doctor` grows a repo
+  setup section that reads the same pieces back from git itself, so a repo that ignores the control files its own way
+  reads as ready, and each gap is a `○` warning, never a counted problem. `start` lets the untracked `settings.json`
+  scaffold stand beside a clean baseline, since it is the file `start` would write next; any other change still
+  refuses ([**D22 (clean-baseline)**](#d22)). *because* a repo should be ready for `/plumbbob:plan` before the first
+  plan exists, without a build to open it (Rob, 2026-11-06: "it should be additive only"), and a person who sets the
+  repo up by hand is not wrong ("users can manually setup their repo the way they want"). *Tagged in* `setup.ts`,
+  `doctor.ts`, `start.ts`, the `setup` and `doctor` skills, and `docs/cli-reference.md`.
 
 ### Superseded
 

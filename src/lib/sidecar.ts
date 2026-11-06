@@ -21,7 +21,7 @@
 
 import { existsSync, readdirSync, readFileSync, writeFileSync, appendFileSync, rmSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { gitPath, isIgnored } from './git.ts'
+import { gitPath, ignoredPaths, isIgnored } from './git.ts'
 
 const DIRNAME = '.plumbbob' // the sidecar folder name at the repo root
 
@@ -888,6 +888,7 @@ const RELAY_RENDERS = [
   'harvest',
   'finish',
   'start',
+  'setup',
 ] as const
 
 /** The tier an ending belongs to. */
@@ -1064,7 +1065,7 @@ export function findSessionRoot(cwd: string): string | null {
  * keeps the exclusion personal machinery, never something imposed on the repo's
  * own tracked ignore file.
  */
-function addExcludes(root: string, patterns: ReadonlyArray<string>): void {
+function addExcludes(root: string, patterns: ReadonlyArray<string>): ReadonlyArray<string> {
   const exclude = gitPath(root, 'info/exclude')
   mkdirSync(dirname(exclude), { recursive: true })
   let current = ''
@@ -1075,13 +1076,63 @@ function addExcludes(root: string, patterns: ReadonlyArray<string>): void {
   }
   const present = new Set(current.split('\n').map((line) => line.trim()))
   const missing = patterns.filter((pattern) => !present.has(pattern))
-  if (missing.length === 0) return
+  if (missing.length === 0) return missing
   const prefix = current.length > 0 && !current.endsWith('\n') ? '\n' : ''
   appendFileSync(exclude, `${prefix}${missing.join('\n')}\n`)
+  return missing
 }
 
 /**
- * Git-exclude the control plane while the artifact plane stays tracked.
+ * The control-plane patterns git must never track: one per per-worktree file
+ * plumbbob writes, in the order `excludeControl` appends them.
+ *
+ * `doctor` probes each one to say whether a repo is ready, so a control file
+ * added here is one the writer and the reader both learn at once.
+ */
+const CONTROL_EXCLUDES: ReadonlyArray<string> = [
+  `${DIRNAME}/STATE`,
+  `${DIRNAME}/settings.local.json`,
+  // The turn ledger and its one-turn grant: per-worktree control the model
+  // never writes, and never commits.
+  `${DIRNAME}/TURN`,
+  `${DIRNAME}/GRANT`,
+  // The range a typed run is landing, written beside the grant.
+  `${DIRNAME}/RUN`,
+  // The id of the last prompt the turn hook saw, which tells a notice folded
+  // into the running turn from one that starts its own.
+  `${DIRNAME}/PROMPT`,
+  // The in-flight step's detail file: flat per-session control the model
+  // overwrites before every pause. checkpoint records it in the build-log's
+  // Log and then clears it, so its archive is the tracked ledger, never this
+  // path; excluding it keeps stageAll from ever sweeping it into a step commit.
+  `${DIRNAME}/detail.md`,
+  // The ending the CLI printed last, for the Stop check: per-worktree
+  // control, rewritten by every ending, and never a step commit's to carry.
+  `${DIRNAME}/RELAY`,
+  `${DIRNAME}/builds/*/STEP`,
+  `${DIRNAME}/builds/*/SEAM`,
+  `${DIRNAME}/builds/*/SPIKE`,
+  // The entry stamp is in-flight control like STEP/SEAM: checkpoint's
+  // stageAll must never sweep it into a step commit.
+  `${DIRNAME}/builds/*/TICK`,
+  // The pause stamp is in-flight control too: which card has shown, so a
+  // later handoff prints its one line. It must never ride a step commit.
+  `${DIRNAME}/builds/*/PAUSE`,
+  // The stop stamp likewise: the range whose card has shown, and the turn it
+  // printed in, for the reminder and the record's latch.
+  `${DIRNAME}/builds/*/STOP`,
+  // The agent-run handoff ledger is step-scoped in-flight state, not a
+  // tracked artifact: it must never ride a step commit into the PR.
+  `${DIRNAME}/builds/*/handoff.json`,
+  // The checkride gate writes raw tool output to `.check/`; checkpoint's
+  // stageAll must never sweep it into a step commit.
+  '.check/',
+]
+
+/**
+ * Git-exclude the control plane while the artifact plane stays tracked, and
+ * return the patterns this call added (none when info/exclude already had them
+ * all).
  *
  * With `builds/<slug>/` tracked, only the per-worktree control files are
  * excluded: the session sentinel STATE (whose content is the active-build
@@ -1090,46 +1141,24 @@ function addExcludes(root: string, patterns: ReadonlyArray<string>): void {
  * and each build's intent/build-log/checkpoints/report) rides the branch into
  * the PR.
  */
-export function excludeControl(root: string): void {
-  addExcludes(root, [
-    `${DIRNAME}/STATE`,
-    `${DIRNAME}/settings.local.json`,
-    // The turn ledger and its one-turn grant: per-worktree control the model
-    // never writes, and never commits.
-    `${DIRNAME}/TURN`,
-    `${DIRNAME}/GRANT`,
-    // The range a typed run is landing, written beside the grant.
-    `${DIRNAME}/RUN`,
-    // The id of the last prompt the turn hook saw, which tells a notice folded
-    // into the running turn from one that starts its own.
-    `${DIRNAME}/PROMPT`,
-    // The in-flight step's detail file: flat per-session control the model
-    // overwrites before every pause. checkpoint records it in the build-log's
-    // Log and then clears it, so its archive is the tracked ledger, never this
-    // path; excluding it keeps stageAll from ever sweeping it into a step commit.
-    `${DIRNAME}/detail.md`,
-    // The ending the CLI printed last, for the Stop check: per-worktree
-    // control, rewritten by every ending, and never a step commit's to carry.
-    `${DIRNAME}/RELAY`,
-    `${DIRNAME}/builds/*/STEP`,
-    `${DIRNAME}/builds/*/SEAM`,
-    `${DIRNAME}/builds/*/SPIKE`,
-    // The entry stamp is in-flight control like STEP/SEAM: checkpoint's
-    // stageAll must never sweep it into a step commit.
-    `${DIRNAME}/builds/*/TICK`,
-    // The pause stamp is in-flight control too: which card has shown, so a
-    // later handoff prints its one line. It must never ride a step commit.
-    `${DIRNAME}/builds/*/PAUSE`,
-    // The stop stamp likewise: the range whose card has shown, and the turn it
-    // printed in, for the reminder and the record's latch.
-    `${DIRNAME}/builds/*/STOP`,
-    // The agent-run handoff ledger is step-scoped in-flight state, not a
-    // tracked artifact: it must never ride a step commit into the PR.
-    `${DIRNAME}/builds/*/handoff.json`,
-    // The checkride gate writes raw tool output to `.check/`; checkpoint's
-    // stageAll must never sweep it into a step commit.
-    '.check/',
-  ])
+export function excludeControl(root: string): ReadonlyArray<string> {
+  return addExcludes(root, CONTROL_EXCLUDES)
+}
+
+/**
+ * The control-plane patterns git does not ignore yet, in `CONTROL_EXCLUDES`
+ * order.
+ *
+ * Read from git itself rather than from info/exclude, so a repo that ignores
+ * the control files its own way (a `.gitignore` line, a global excludes file)
+ * reads as covered. A build-scoped pattern is probed through a placeholder
+ * build folder, and a directory pattern through a file inside it, since the
+ * paths need not exist for git to answer.
+ */
+export function unignoredControl(root: string): ReadonlyArray<string> {
+  const probe = (pattern: string): string => pattern.replace('/*/', '/example/').replace(/\/$/, '/example')
+  const ignored = ignoredPaths(root, CONTROL_EXCLUDES.map(probe))
+  return CONTROL_EXCLUDES.filter((pattern) => !ignored.has(probe(pattern)))
 }
 
 /**
@@ -1174,6 +1203,14 @@ function hasExclude(root: string, pattern: string): boolean {
  * layout would untrack the whole artifact plane.
  */
 export function refreshExcludes(root: string): void {
-  if (hasExclude(root, `${DIRNAME}/`)) return
+  if (sidecarExcluded(root)) return
   excludeControl(root)
+}
+
+/**
+ * Whether this clone keeps the whole sidecar untracked: info/exclude carries
+ * the blanket `.plumbbob/` line a `start --local` writes.
+ */
+export function sidecarExcluded(root: string): boolean {
+  return hasExclude(root, `${DIRNAME}/`)
 }

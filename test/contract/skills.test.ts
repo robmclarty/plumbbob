@@ -789,6 +789,32 @@ describe('doctor — a headless-safe thin driver for `plumbbob doctor`', () => {
   })
 })
 
+describe('setup — a thin driver for `plumbbob setup` — D126 (setup-before-start)', () => {
+  const { data, body } = parseSkill('setup')
+
+  it('names itself, disables model invocation, and pins haiku (pure mechanism)', () => {
+    expect(data.name).toBe('setup')
+    expect(data['disable-model-invocation']).toBe('true')
+    expect(data.model).toBe('haiku')
+  })
+
+  it('grants exactly its verb, and no Edit/Write', () => {
+    expect(data['allowed-tools']).toBe('Bash(plumbbob setup:*)')
+    expect(body).toContain('Run `plumbbob setup` via Bash')
+  })
+
+  it('defers to the CLI: relays verbatim, never retries a refusal', () => {
+    expect(body).toMatch(/verbatim/i)
+    expect(body).toMatch(/never retry/i)
+  })
+
+  it('states the additive contract and leaves the session to plan', () => {
+    expect(body).toMatch(/additive/i)
+    expect(body).toMatch(/opens no session/i)
+    expect(body).toContain('/plumbbob:plan')
+  })
+})
+
 // plumbbob-report and plumbbob-docs were folded into /plumbbob:finish — D9 (finish-no-gate) — and removed.
 // plumbbob-interrogate was renamed /plumbbob:refine and broadened (attack + repair);
 // report/docs do not survive.

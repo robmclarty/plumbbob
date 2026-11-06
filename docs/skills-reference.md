@@ -1,6 +1,6 @@
 # Skills reference
 
-The sixteen skills are the surface you actually drive; the CLI underneath
+The seventeen skills are the surface you actually drive; the CLI underneath
 ([`cli-reference.md`](cli-reference.md)) is what they shell out to. This page is the
 reference for that surface: what each skill is for, what it takes, what it reads and
 writes, and when to reach for it.
@@ -38,7 +38,8 @@ Three ground rules apply to all of them:
 | [`/plumbbob:abandon`](#abandon) | none | drop the in-flight step, keep its work in the tree; the step stays planned |
 | [`/plumbbob:spike`](#spike) | `<slug> \| report <slug> \| done` | throwaway worktree experiment for a fork the plan can't settle; `report` scaffolds the report alone, for a planned spike step |
 | [`/plumbbob:recover`](#recover) | `[--fix]` | reconcile the session's own state when the dashboard looks wrong |
-| [`/plumbbob:doctor`](#doctor) | none | check the install from inside a session |
+| [`/plumbbob:setup`](#setup) | none | ready a repo for its first build: `.plumbbob/`, `settings.json`, the control-file excludes |
+| [`/plumbbob:doctor`](#doctor) | none | check the install, and whether this repo is set up, from inside a session |
 
 ## The loop skills
 
@@ -332,11 +333,22 @@ destructive by design).
 
 ## Install
 
+### setup
+
+Readies a repo that has never used plumbbob for its first `/plumbbob:plan` (a thin driver
+for `plumbbob setup`). It adds only what is missing: the `.plumbbob/` folder, a
+`settings.json` seeded as `{}`, and the `info/exclude` lines that keep the control files
+(`STATE`, `TURN`, `PROMPT`, `RELAY`, and the rest) out of git. An existing folder, settings
+file, or exclude line is left as it is, so a second run adds nothing and says so. It opens
+no session; `/plumbbob:plan` does that ([D126 (setup-before-start)](decisions.md#d126)).
+
 ### doctor
 
 Diagnoses the install from inside a session (a thin trigger for `plumbbob doctor`): is the
 plugin linked, are the skills and all four hooks present, is there a marketplace/skills-dir
-collision, does the repo carry a legacy sidecar, and how the check gate will resolve. On a
+collision, does the repo carry a legacy sidecar, is the repo set up for a first build, and
+how the check gate will resolve. A repo-setup gap is a `○` warning, never a failure, since
+a repo set up by hand can be as ready as one `/plumbbob:setup` touched. On a
 **marketplace** install this is the only way to reach `doctor` (the CLI is on PATH only
 inside a session).
 

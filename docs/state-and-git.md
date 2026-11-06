@@ -12,7 +12,8 @@ has the tree. This page is the *why*.
 ## The short version
 
 - PlumbBob writes exactly one file inside `.git`: **`info/exclude`**, git's own
-  per-clone ignore list. It appends 16 lines, once.
+  per-clone ignore list. It appends 16 lines, once: at `plumbbob setup`
+  (`/plumbbob:setup`) if you run it, else at the first `start`.
 - It **never** writes your `.gitignore`; that file is tracked, and nothing
   PlumbBob-specific belongs in a file your whole team commits.
 - That is the only file it writes *directly* inside `.git`. Everything else it does to git

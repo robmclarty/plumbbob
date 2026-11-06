@@ -31,6 +31,15 @@ there before `/plumbbob:plan` can open one:
   the plan can then recommend a smaller one per step, and `/plumbbob:status` shows the
   recommendation before each build.
 
+**`/plumbbob:setup`** readies a repo that has never used plumbbob before the first
+plan, and adds only what is missing: the `.plumbbob/` folder, a `settings.json` seeded as
+`{}`, and the `info/exclude` lines that keep the control files (`STATE`, `TURN`, `PROMPT`,
+`RELAY`, and the rest) out of git. It is optional, since `/plumbbob:plan` writes the same
+pieces when it opens the first build; what it buys is a repo set up, and readable as set
+up, before any build exists. A repo set up by hand works as well, and `doctor` reads it the
+same way: it asks git which control files it ignores, and warns about each gap without
+failing.
+
 The words the loop uses (steps, seams, the pause, the latch) are one line each in
 [`glossary.md`](glossary.md).
 
@@ -86,7 +95,7 @@ double-install.
 
 Either way, Claude Code namespaces the skills under the `plumbbob` plugin, so the
 commands are `/plumbbob:plan`, `/plumbbob:status`, and the rest. **The bare form
-(`/plan`) reaches the skill only where nothing else owns that name. Five of the sixteen
+(`/plan`) reaches the skill only where nothing else owns that name. Five of the seventeen
 share one with a Claude Code built-in (`plan`, `run`, `status`, `verify`, `doctor`),
 and the built-in wins, so these docs write the full `/plumbbob:<name>` form.**
 

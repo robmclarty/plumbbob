@@ -1,6 +1,6 @@
 ---
 name: doctor
-description: "Diagnose the plugin install from inside a session: is plumbbob linked, are the skills and hooks present, is there a collision. A thin trigger for `plumbbob doctor`. Matters most for a marketplace install, where the CLI is on PATH only inside Claude Code."
+description: "Diagnose the plugin install from inside a session: is plumbbob linked, are the skills and hooks present, is there a collision, is this repo set up for a first build. A thin trigger for `plumbbob doctor`. Matters most for a marketplace install, where the CLI is on PATH only inside Claude Code."
 disable-model-invocation: true
 model: haiku
 allowed-tools: Bash(plumbbob doctor:*)
@@ -37,6 +37,10 @@ and if you are reading this, that is not your situation.
    If nothing rendered above (a few headless `-p` sessions skip the injection), just run
    `plumbbob doctor` yourself (it is in your tools) and surface that.
 2. If all checks passed, say so; if a skill still misbehaves, the fix is a restart, not a re-run.
+   A `○` line is a warning, never a failed check. The repo setup section's `○` lines name
+   what a first build still lacks (the `.plumbbob/` folder, its `settings.json`, a control
+   file git does not ignore, a first commit); `/plumbbob:setup` adds the first three, and
+   the human fires it. A repo set up by hand can leave a warning standing.
 3. If a check failed, apply its named `→ fix`, then restart Claude Code (or `/reload-plugins`).
 4. If the report is empty or shows `command not found`, the CLI is not on PATH: for a
    skills-dir / global install run `npm i -g plumbbob && plumbbob init`; for a marketplace

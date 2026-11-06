@@ -18,7 +18,7 @@
 >
 > *Publilius Syrus, first century BC, in D. Lyman's 1856 translation*
 
-PlumbBob is a Claude Code plugin (sixteen skills, twenty-one CLI verbs, four hooks) that runs
+PlumbBob is a Claude Code plugin (seventeen skills, twenty-two CLI verbs, four hooks) that runs
 LLM-assisted coding as a loop you control. You and the model settle the plan in a file
 *before* any code, down to where the build will stop for you; then the model builds it
 one small step at a time, each checked and committed on its own, and **stops where the
@@ -158,7 +158,7 @@ Each doc answers one question, in rough reading order for a new user:
 - *Why this tool, and what can a prompt not replicate?* → [`docs/why.md`](docs/why.md)
 - *Should I, can I, why not just…?* → [`docs/faq.md`](docs/faq.md)
 - *What do the words mean?* → [`docs/glossary.md`](docs/glossary.md)
-- *What does each skill do?* → [`docs/skills-reference.md`](docs/skills-reference.md): all sixteen.
+- *What does each skill do?* → [`docs/skills-reference.md`](docs/skills-reference.md): all seventeen.
 - *Show me the artifacts it leaves behind.* → [`examples/`](examples/): a finished build folder, file by file.
 
 The philosophy is [`docs/attention-first-development.md`](docs/attention-first-development.md).

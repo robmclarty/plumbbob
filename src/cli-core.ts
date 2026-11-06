@@ -13,6 +13,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { start } from './verbs/start.ts'
+import { setup } from './verbs/setup.ts'
 import { status } from './verbs/status.ts'
 import { park } from './verbs/park.ts'
 import { defer } from './verbs/defer.ts'
@@ -83,6 +84,13 @@ const BUILD_FLAG: Flag = {
  * a synopsis has to be readable by the validator, not just printable.
  */
 const VERBS: ReadonlyArray<Verb> = [
+  {
+    name: 'setup',
+    description: 'ready a repo for its first build: .plumbbob/, settings.json, the control-file excludes',
+    synopsis: ['setup'],
+    notes:
+      'Additive and idempotent: it writes only what is missing, opens no session, and records no baseline. Refuses (exit 1) outside a git repo or over a legacy flat sidecar.',
+  },
   {
     name: 'start',
     description: 'scaffold .plumbbob/; open the session; record the baseline commit',
@@ -432,6 +440,8 @@ export function readVersion(): string {
  */
 async function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>): Promise<number> {
   switch (verb) {
+    case 'setup':
+      return setup(cwd)
     case 'start':
       return start(cwd, rest)
     case 'status':

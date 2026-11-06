@@ -20,6 +20,7 @@ calls `process.exit`, which the bin entry alone owns (`rules/no-process-exit.yml
 
 | Verb | Synopsis | Effect |
 | ------ | ---------- | -------- |
+| `setup` | `setup` | ready a repo for its first build: `.plumbbob/`, `settings.json`, the control-file excludes |
 | `start` | `start <title> [--slug <name>] [--local] [--allow-dirty]` | scaffold `builds/<slug>/`, record baseline, open the session |
 | `status` | `status [--build <slug>] [--invoked "<args>"] [--run "<args>"] [--questions]` | print the orientation dashboard (or `NO ACTIVE SESSION`) |
 | `build` | `build [<n>] [--build <slug>]` | write step `n`'s seam + `STEP` (goes in-flight) |
@@ -71,6 +72,25 @@ stack in.
 
 ## Session verbs
 
+### setup
+
+```text
+plumbbob setup
+```
+
+Readies a repo that has never used plumbbob for its first build, and adds only what is
+missing ([**D126 (setup-before-start)**](decisions.md#d126)): the `.plumbbob/` folder,
+a tracked `settings.json` seeded as `{}`, and one `info/exclude` line per control file
+(`STATE`, `TURN`, `PROMPT`, `RELAY`, the in-flight markers inside each build, and `.check/`),
+skipping any line already there. It opens no session and records no baseline; `start` does
+both. A folder or settings file already present is left as it is, a clone that keeps the
+sidecar local (the blanket `.plumbbob/` line) keeps it so, and a second run prints
+`**Setup**: already in place, nothing added`. Advisories name what it cannot fix: a repo with
+no commits yet, a control file git still sees (tracked already, or re-included by a pattern),
+or a repo whose own ignore rules cover `.plumbbob/` whole. Refuses (exit 1) outside a git
+repo, and over a legacy flat sidecar, which `doctor --migrate` moves first. Also available
+in-session as `/plumbbob:setup`.
+
 ### start
 
 ```text
@@ -98,7 +118,9 @@ then ([**D117 (publish-on-the-card)**](decisions.md#d117)). This is the plan car
 Refuses (exit 1) on an empty title, a slug that collides with an existing build, a non-git
 directory, a repo with no commits, an already-active session (`--local` aside), or a dirty tree;
 `--allow-dirty` overrides the dirty-tree refusal and records the current `HEAD` as the
-baseline ([**D22 (clean-baseline)**](decisions.md#d22)).
+baseline ([**D22 (clean-baseline)**](decisions.md#d22)). An untracked `settings.json`, the
+scaffold `setup` leaves, does not count as dirty: it is the file `start` would write next, and
+the first step commit carries it ([**D126 (setup-before-start)**](decisions.md#d126)).
 
 ### status
 
@@ -783,8 +805,8 @@ namespace (skills can drop to flat names like `/status`); `--force` overrides th
 plumbbob doctor [--migrate]
 ```
 
-Five sections under one verb: the plugin link, the sidecar layout, the user-authored
-agents, the check gate, and the approval latch.
+Six sections under one verb: the plugin link, the sidecar layout, the repo setup, the
+user-authored agents, the check gate, and the approval latch.
 
 **Plugin link** (read-only). Across both install paths it verifies the skills-dir link
 resolves to a package carrying the manifest, the skills, and `hooks/hooks.json` with its four
@@ -802,6 +824,13 @@ entries and the active session into tracked `builds/<slug>/` folders (the active
 the cursor; the rest are "done" simply by not being it), turns `config` into `settings.json`,
 narrows the excludes, and **stages** the whole move without committing: the commit is yours
 ([**D31 (doctor-migrate)**](decisions.md#d31)).
+
+**Repo setup** ([**D126 (setup-before-start)**](decisions.md#d126)). Says whether this repo is
+ready for a first build: `✓ repo: ready for a first build`, or one `○` line per gap (no
+`.plumbbob/` folder, no `settings.json`, a control file git does not ignore, no commit for
+`start` to record as the baseline). It asks git which control files it ignores, so a repo
+that ignores them its own way reads as ready. Each gap is a warning, never a counted problem;
+`plumbbob setup` adds the first three, and a setup by hand works as well.
 
 **Agents.** Every resolvable [user-authored agent](agents.md) gets its manifest and its
 `command` checked statically, so a broken agent surfaces here rather than mid-build; with no
@@ -881,7 +910,7 @@ stays git-excluded; a session is live iff `STATE` is present.
   PROMPT                   # untracked: the id of the last prompt the hook saw, so a notice folded into a running turn reads as one (D90 (notice-not-turn))
   RELAY                    # untracked — the ending the CLI printed last, with its tier and the TURN it printed in, for the Stop hook — D89 (block-once)
   detail.md                # untracked — the in-flight step's full detail: the wire handoff renders a turn from, recorded under the build-log's Log and truncated at checkpoint — D81 (detail-file); a landed range's at its stop, recorded by harvest
-  settings.json            # tracked   — project defaults: {} (or {"check": "…"}); start seeds it empty
+  settings.json            # tracked   — project defaults: {} (or {"check": "…"}); setup or start seeds it empty
   settings.local.json      # untracked — personal overlay only, e.g. a per-worktree {"check": "…"} (no cursor — that lives in STATE)
   agents/                  # tracked   — optional: user-authored agents, one dir per agent (D41 (agent-resolution); see agents.md)
     <name>/agent.json      #            — the manifest; personal agents live under ~/.plumbbob/agents/

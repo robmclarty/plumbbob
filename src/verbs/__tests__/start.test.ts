@@ -281,6 +281,27 @@ describe('start', () => {
     expect(hasSession(dir)).toBe(true)
   })
 
+  it('lets the untracked settings scaffold stand beside a clean baseline — D126 (setup-before-start)', async () => {
+    const dir = makeTempRepo()
+    mkdirSync(sidecarDir(dir), { recursive: true })
+    writeFileSync(join(sidecarDir(dir), 'settings.json'), '{\n  "check": "true"\n}\n')
+    const { code, stdout } = await captureIoAsync(() => start(dir, ['after setup']))
+    expect(code).toBe(0)
+    expect(stdout).not.toContain('dirty tree')
+    // start never rewrites the file it found.
+    expect(readFileSync(join(sidecarDir(dir), 'settings.json'), 'utf8')).toBe('{\n  "check": "true"\n}\n')
+  })
+
+  it('still refuses when anything beyond the settings scaffold is untracked', async () => {
+    const dir = makeTempRepo()
+    mkdirSync(sidecarDir(dir), { recursive: true })
+    writeFileSync(join(sidecarDir(dir), 'settings.json'), '{}\n')
+    writeFileSync(join(sidecarDir(dir), 'notes.md'), 'mine\n')
+    const { code, stderr } = await captureIoAsync(() => start(dir, ['after setup']))
+    expect(code).toBe(1)
+    expect(stderr).toContain('the working tree is dirty')
+  })
+
   it('refuses a second session', async () => {
     const dir = makeTempRepo()
     await captureIoAsync(() => start(dir, ['first']))

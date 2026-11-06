@@ -198,7 +198,7 @@ are its parts.
 
 ## The machinery
 
-- **Skill** (`/plumbbob:<verb>`): one of the sixteen slash commands you fire in Claude
+- **Skill** (`/plumbbob:<verb>`): one of the seventeen slash commands you fire in Claude
   Code; every one is `disable-model-invocation`, so the model never fires one for you.
   → [`skills-reference.md`](skills-reference.md)
 - **Verb** (`plumbbob <verb>`): one command of the CLI underneath. The skills shell out
