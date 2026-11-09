@@ -1,0 +1,773 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="One plan, run twice: a stagecoach where code holds the reins and each horse is one model call, beside a bareback rider whose horse picks its own route and its own helpers.">
+<link rel="canonical" href="https://robmclarty.github.io/plumbbob/reins.html">
+<script src="https://cdn.usefathom.com/script.js" data-site="NXYISAXY" defer></script>
+<title>Who holds the reins? Harnessed vs bareback orchestration</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #17130f; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas { display: block; }
+  #home { position: fixed; left: 12px; bottom: 30px; font: 600 12px system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif; color: #b8a98c; text-decoration: none; letter-spacing: .5px; }
+  #home:hover { color: #f4e9d2; }
+  .framed #home { display: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<a id="home" href="index.html">← PlumbBob</a>
+<a href="https://github.com/robmclarty/fascicle" style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0);">fascicle on GitHub</a>
+<script>if (window.self !== window.top) document.documentElement.className = 'framed';</script>
+<script>
+'use strict';
+/*
+  Two lanes, one world, one plan.
+    Lane A: a stagecoach. The harness and the driver are code. The horses are model calls.
+    Lane B: a bareback rider. The horse (the model) picks its own route and its own helpers.
+  Lane A is identical on every run. Lane B is generated from a seed and differs on every run.
+  Token figures are illustrative. They are not measurements.
+
+  Keys: space = pause, right arrow = next run, R = restart, N = new seed.
+  URL:  ?seed=11&run=2&t=14.5 freezes a single frame (handy for stills).
+*/
+const W = 1600, H = 900;
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const FONT = 'system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif';
+const TAU = Math.PI * 2;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const ease = t => t * t * (3 - 2 * t);
+
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function shade(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = i => {
+    const v = (n >> i) & 255;
+    return Math.round(clamp(amt < 0 ? v * (1 + amt) : v + (255 - v) * amt, 0, 255));
+  };
+  return `rgb(${ch(16)},${ch(8)},${ch(0)})`;
+}
+
+/* ---------- the shared world ---------- */
+const LANE_H = 390, LANE_A_Y = 62, LANE_B_Y = 460, SKY_H = 96;
+const START_X = 110, GOAL_X = 1330, STEPS = 5;
+const STOPS = Array.from({ length: STEPS + 1 }, (_, i) => START_X + i * (GOAL_X - START_X) / STEPS);
+const roadY = x => 250 + 22 * Math.sin((x - 80) / 215);
+const BUDGET = 100, METER_MAX = 300, PLANNED_COST = 85;
+const COL_A = '#17656e', COL_B = '#b4491f';
+
+const HORSES = [
+  { id: 'm1a', group: 'meadow1', home: { x: 205, y: 150 }, coat: '#8d8d8d' },
+  { id: 'm1b', group: 'meadow1', home: { x: 250, y: 174 }, coat: '#9a5a32' },
+  { id: 'm1c', group: 'meadow1', home: { x: 302, y: 152 }, coat: '#2e2a28' },
+  { id: 'c1',  group: 'corral',  home: { x: 484, y: 172 }, coat: '#a9a49b' },
+  { id: 'c2',  group: 'corral',  home: { x: 518, y: 177 }, coat: '#8f8a82' },
+  { id: 'm2a', group: 'meadow2', home: { x: 915, y: 340 }, coat: '#e4dccb' },
+  { id: 'm2b', group: 'meadow2', home: { x: 965, y: 364 }, coat: '#6b4a35' },
+  { id: 'm2c', group: 'meadow2', home: { x: 1012, y: 343 }, coat: '#c2a476' },
+];
+const DETOURS = [
+  { id: 'meadow1', kind: 'friends', seg: 0, x: 272, y: 206, dwell: 1.5,
+    think: 'I’ll ask some friends', nar: 'the model decides, on its own, to recruit some friends' },
+  { id: 'pond', kind: 'quest', seg: 1, x: 482, y: 320, dwell: 1.4,
+    think: 'while I’m here…', nar: 'side quest: “while I’m here…”' },
+  { id: 'tree', kind: 'quest', seg: 2, x: 748, y: 192, dwell: 1.4,
+    think: 'ooh, this looks related', nar: 'tangent: “ooh, this looks related”' },
+  { id: 'meadow2', kind: 'friends', seg: 3, x: 962, y: 314, dwell: 1.5,
+    think: 'more friends = faster?', nar: 'more friends join. Nobody planned for them' },
+  { id: 'barn', kind: 'quest', seg: 4, x: 1196, y: 190, dwell: 1.4,
+    think: 'this barn needs a refactor', nar: 'extra work: “this barn needs a refactor”' },
+];
+const SAY = ['back to the plan!', 'the objective is that way!', 'hey, the plan!', 'whoa. This way, please'];
+const TRAIL_COLS = ['#6a5acd', '#2e8b57', '#c0398b', '#1e7fbf', '#8a6d1a', '#555555', '#7a3fa0', '#3f7a70'];
+const GHOST_COLS = ['#7a4fb5', '#2f7f9a', '#9a7a1f', '#a0456a', '#4f8a4a', '#6f6f6f'];
+
+/* ---------- paths and timelines ---------- */
+function cr(p0, p1, p2, p3, t) {
+  const t2 = t * t, t3 = t2 * t;
+  const f = (a, b, c, d) => 0.5 * ((2 * b) + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+  return { x: f(p0.x, p1.x, p2.x, p3.x), y: f(p0.y, p1.y, p2.y, p3.y) };
+}
+function buildPath(keys) {
+  const pts = [{ x: keys[0].x, y: keys[0].y }], keyIdx = [0];
+  for (let i = 0; i < keys.length - 1; i++) {
+    const p0 = keys[Math.max(0, i - 1)], p1 = keys[i], p2 = keys[i + 1], p3 = keys[Math.min(keys.length - 1, i + 2)];
+    const n = Math.max(2, Math.ceil(Math.hypot(p2.x - p1.x, p2.y - p1.y) / 6));
+    for (let j = 1; j <= n; j++) pts.push(cr(p0, p1, p2, p3, j / n));
+    keyIdx.push(pts.length - 1);
+  }
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+  return { pts, cum, keyIdx, total: cum[cum.length - 1] };
+}
+function at(p, s) {
+  s = clamp(s, 0, p.total);
+  let lo = 0, hi = p.cum.length - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (p.cum[m] <= s) lo = m; else hi = m; }
+  const a = p.pts[lo], b = p.pts[hi], seg = (p.cum[hi] - p.cum[lo]) || 1, u = (s - p.cum[lo]) / seg;
+  return { x: lerp(a.x, b.x, u), y: lerp(a.y, b.y, u), i: lo };
+}
+function facing(p, s) {
+  const a = at(p, s - 10), b = at(p, s + 10);
+  return b.x - a.x >= -0.5 ? 1 : -1;
+}
+function buildTimeline(path, keys, speed, t0) {
+  const ev = []; let t = t0;
+  for (let i = 0; i < keys.length; i++) {
+    const s = path.cum[path.keyIdx[i]];
+    if (i > 0) {
+      const sp = path.cum[path.keyIdx[i - 1]], dt = Math.max(0.001, (s - sp) / speed);
+      ev.push({ kind: 'move', t0: t, t1: t + dt, s0: sp, s1: s, key: i }); t += dt;
+    }
+    keys[i].tArrive = t;
+    if (keys[i].dwell) { ev.push({ kind: 'dwell', t0: t, t1: t + keys[i].dwell, s0: s, s1: s, key: i }); t += keys[i].dwell; }
+    keys[i].tLeave = t;
+  }
+  return { ev, t0, tEnd: t };
+}
+function tlState(tl, path, t) {
+  if (t < tl.t0) return { s: 0, moving: false, before: true, e: null };
+  for (const e of tl.ev) {
+    if (t < e.t1) {
+      const u = (t - e.t0) / (e.t1 - e.t0);
+      return { s: e.kind === 'move' ? lerp(e.s0, e.s1, u) : e.s0, moving: e.kind === 'move', e };
+    }
+  }
+  return { s: path.total, moving: false, done: true, e: null };
+}
+
+/* ---------- lane A: the fixed plan ---------- */
+const A_PLAN = (() => {
+  const ev = []; let t = 0.9;
+  const cost = [13.1, 13.1, 19.6, 19.6, 19.6];   // 4 horses for steps 1-2, 6 for steps 3-5; sums to 85
+  for (let i = 1; i <= STEPS; i++) {
+    ev.push({ kind: 'move', step: i, t0: t, t1: t + 2.4, x0: STOPS[i - 1], x1: STOPS[i] }); t += 2.4;
+    const p = i === 2 ? 2.8 : 1.0;
+    ev.push({ kind: 'gate', step: i, t0: t, t1: t + p, x0: STOPS[i], x1: STOPS[i] }); t += p;
+  }
+  return { ev, tEnd: t, cost, tick: ev.filter(e => e.kind === 'gate').map(e => e.t0 + 0.6) };
+})();
+function stateA(t) {
+  const P = A_PLAN;
+  const st = { x: START_X, tok: 0, gates: 0, e: null, u: 0, tau: 0, moving: false, team: 4, hitch: 0, done: false };
+  for (let i = 0; i < STEPS; i++) if (t >= P.tick[i]) st.gates = i + 1;
+  for (const v of P.ev) {
+    if (t >= v.t1) { st.x = v.x1; if (v.kind === 'move') st.tok += P.cost[v.step - 1]; continue; }
+    if (t >= v.t0) {
+      st.e = v; st.tau = t - v.t0; st.u = st.tau / (v.t1 - v.t0);
+      if (v.kind === 'move') { st.x = lerp(v.x0, v.x1, ease(st.u)); st.tok += P.cost[v.step - 1] * ease(st.u); st.moving = true; }
+    }
+    break;
+  }
+  if (t >= P.tEnd) st.done = true;
+  const g2 = P.ev[3];                       // the gate after step 2: the planned relay
+  if (t >= g2.t0 + 2.1) { st.team = 6; st.hitch = 1; }
+  else if (t >= g2.t0 + 0.8) st.hitch = (t - g2.t0 - 0.8) / 1.3;
+  return st;
+}
+
+/* ---------- lane B: a new route every run ---------- */
+function genB(seed) {
+  const r = rng(seed * 7919 + 13);
+  const jit = n => (r() * 2 - 1) * n;
+  const cp = (x, y) => ({ x: clamp(x, 40, 1560), y: clamp(y, 142, 372), dwell: 0 });
+
+  let det = [];
+  const m1 = r() < 0.75, m2 = r() < 0.6;
+  if (m1 || !m2) det.push('meadow1');
+  if (m2) det.push('meadow2');
+  const extras = [];
+  if (r() < 0.5) extras.push('pond');
+  if (r() < 0.45) extras.push('tree');
+  if (r() < 0.35) extras.push('barn');
+  if (r() < 0.45) extras.push('dup');
+  if (!extras.length) extras.push(['pond', 'tree', 'dup'][Math.floor(r() * 3)]);
+  while (det.length + extras.length > 4) extras.splice(Math.floor(r() * extras.length), 1);
+  det = det.concat(extras);
+  const dupStop = 2 + Math.floor(r() * 3);
+
+  const keys = [];
+  const K = (x, y, o) => keys.push(Object.assign({ x, y, dwell: 0, ctx: 'road' }, o || {}));
+  const road = (x, o) => K(x, roadY(x) + jit(6), o);
+  K(START_X, roadY(START_X), { dwell: 0.9, ctx: 'start' });
+  for (let seg = 0; seg < STEPS; seg++) {
+    const x0 = STOPS[seg], x1 = STOPS[seg + 1];
+    const d = DETOURS.find(q => q.seg === seg && det.includes(q.id));
+    const mids = [x0 + (x1 - x0) / 3, x0 + 2 * (x1 - x0) / 3];
+    const say = SAY[Math.floor(r() * SAY.length)];
+    if (d) {
+      for (const m of mids) if (m < d.x - 75) road(m);
+      road(d.x - 60);
+      K(d.x + jit(8), d.y + jit(5), { dwell: d.dwell, ctx: 'at', d });
+      road(d.x + 55, { ctx: 'from', say });
+      for (const m of mids) if (m > d.x + 75) road(m, { ctx: 'from', say });
+    } else for (const m of mids) road(m);
+    if (seg < STEPS - 1) {
+      K(x1, roadY(x1), { dwell: 0.3, stop: seg + 1, ctx: d ? 'from' : 'road', say });
+      if (det.includes('dup') && dupStop === seg + 1) {
+        const dd = { kind: 'dup', think: `did step ${seg + 1} land? redo it`, nar: `doubling back: “did step ${seg + 1} land? redo it”` };
+        road(x1 - 81, { ctx: 'at', d: dd }); road(x1 - 163, { ctx: 'at', d: dd });
+        K(x0 + 10, roadY(x0) + 11, { dwell: 1.0, ctx: 'at', d: dd });
+        road(x0 + 81, { ctx: 'from', say }); road(x0 + 163, { ctx: 'from', say });
+        K(x1, roadY(x1) - 8, { dwell: 0.2, ctx: 'from', say });
+      }
+    }
+  }
+  const onTarget = r() < 0.5, rad = onTarget ? r() * 16 : 42 + r() * 45, ang = r() * TAU;
+  const gx = GOAL_X + Math.cos(ang) * rad * 1.3, gy = clamp(roadY(GOAL_X) + Math.sin(ang) * rad, 150, 368);
+  K(gx, gy, { stop: STEPS, goal: true, ctx: keys[keys.length - 1].ctx === 'from' ? 'from' : 'road', say: keys[keys.length - 1].say });
+
+  const path = buildPath(keys), tl = buildTimeline(path, keys, 118, 0);
+  const pmax = []; let mx = -1e9;
+  for (const p of path.pts) { mx = Math.max(mx, p.x); pmax.push(mx); }
+  const stopT = [];
+  for (const k of keys) if (k.stop && stopT[k.stop] === undefined) stopT[k.stop] = k.tArrive;
+  const R = { seed, keys, path, tl, pmax, stopT, friends: [], offTarget: !onTarget, miss: rad, arrive: { x: gx, y: gy },
+              tangents: keys.filter(k => k.ctx === 'at' && k.dwell > 0).map(k => k.tArrive) };
+
+  /* friends: the horse recruits them; each then does its own thing */
+  const corralFree = HORSES.filter(h => h.group === 'corral');
+  let ci = 0;
+  const addFriend = (h, fk, t0, label) => {
+    const p = buildPath(fk), ftl = buildTimeline(p, fk, 105, t0);
+    const f = { h, keys: fk, path: p, tl: ftl, t0, label, col: TRAIL_COLS[ci++ % TRAIL_COLS.length] };
+    R.friends.push(f); return f;
+  };
+  for (const k of keys.filter(q => q.ctx === 'at' && q.d && q.d.kind === 'friends')) {
+    const pool = HORSES.filter(h => h.group === k.d.id);
+    const n = 2 + (r() < 0.5 ? 1 : 0);
+    for (let j = 0; j < n; j++) {
+      const h = pool[j], seg = k.d.seg, fk = [{ x: h.home.x, y: h.home.y, dwell: 0 }];
+      const followFrom = x => {
+        const endX = GOAL_X + 60 - r() * 280; x += 70;
+        while (x < endX) { fk.push(cp(x, roadY(x) + jit(28))); x += 105 + jit(18); }
+        fk.push(cp(endX, roadY(endX) + jit(55)));
+      };
+      const roll = r();
+      let beh = roll < 0.3 ? 'follow' : roll < 0.58 ? 'dup' : roll < 0.85 ? 'quest' : 'recruit';
+      if (beh === 'recruit' && !corralFree.length) beh = 'follow';
+      let label, sub = null;
+      if (beh === 'follow') { label = 'helping (unasked)'; followFrom(h.home.x); }
+      else if (beh === 'dup') {
+        const n2 = Math.max(1, seg), xa = STOPS[n2 - 1], xb = STOPS[n2];
+        label = `redoing step ${n2}`;
+        let x = h.home.x - 30; fk.push(cp(x, roadY(x) + jit(8)));
+        for (x -= 100; x > xa + 40; x -= 100) fk.push(cp(x, roadY(x) + 10 + jit(8)));
+        fk.push(Object.assign(cp(xa + jit(10), roadY(xa) + 10), { dwell: 0.5 }));
+        for (x = xa + 100; x < xb - 40; x += 100) fk.push(cp(x, roadY(x) - 9 + jit(8)));
+        fk.push(cp(xb + jit(15), roadY(xb) - 9 + jit(10)));
+      } else if (beh === 'quest') {
+        const spots = [{ x: 505, y: 330 }, { x: 722, y: 194 }, { x: 1228, y: 194 }, { x: 1445, y: 335 },
+                       { x: 165, y: 338 }, { x: 1125, y: 350 }, { x: 860, y: 172 }]
+          .filter(s => Math.hypot(s.x - h.home.x, s.y - h.home.y) > 170);
+        const sp = spots[Math.floor(r() * spots.length)];
+        label = 'side quest';
+        const q = cp(sp.x + jit(12), sp.y + jit(8)); q.dwell = 1.5; fk.push(q);
+        const end = cp(GOAL_X + jit(150), roadY(GOAL_X) + jit(70));
+        fk.push(cp((q.x + end.x) / 2 + jit(60), (q.y + end.y) / 2 + jit(50)));
+        fk.push(end);
+      } else {
+        label = 'asking another friend';
+        sub = corralFree.shift();
+        const q = cp(sub.home.x + (sub.home.x < 501 ? -40 : 40) + jit(8), 204 + jit(5)); q.dwell = 1.0; fk.push(q);
+        followFrom(590);
+      }
+      const f = addFriend(h, fk, k.tArrive + 0.35 + j * 0.4, label);
+      if (sub) {
+        const sk = [{ x: sub.home.x, y: sub.home.y, dwell: 0 }];
+        const m = 3 + Math.floor(r() * 2);
+        for (let q = 0; q < m; q++) sk.push(cp(430 + r() * 720, 150 + r() * 215));
+        const qk = fk.find(q => q.dwell === 1.0);
+        addFriend(sub, sk, qk.tArrive + 0.4, 'friend of a friend');
+      }
+    }
+  }
+  R.tEnd = tl.tEnd;
+  R.chat = 0.55 + rng(seed * 31 + 7)() * 1.0;   // how much each unplanned helper costs varies run to run
+  return R;
+}
+function stateB(R, t) {
+  const st = tlState(R.tl, R.path, t), pos = at(R.path, st.s);
+  const prog = st.done ? 1 : clamp((R.pmax[pos.i] - START_X) / (GOAL_X - START_X), 0, 1);
+  const planned = PLANNED_COST * prog;
+  let extra = 0.05 * Math.max(0, st.s - prog * (GOAL_X - START_X)), helpers = 0;
+  const fs = R.friends.map(f => {
+    if (t < f.t0) return null;
+    const q = tlState(f.tl, f.path, t);
+    helpers++; extra += R.chat * (12 + 0.012 * q.s);
+    return q;
+  });
+  let steps = 0;
+  for (let i = 1; i <= STEPS; i++) if (R.stopT[i] !== undefined && t >= R.stopT[i]) steps = i;
+  const key = st.e ? R.keys[st.e.key] : null;
+  return { st, pos, planned, extra, total: planned + extra, helpers, fs, steps, key,
+           tangents: R.tangents.filter(x => t >= x).length, done: !!st.done };
+}
+
+/* ---------- drawing primitives ---------- */
+function rr(x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function text(s, x, y, o = {}) {
+  ctx.font = o.font || `14px ${FONT}`; ctx.fillStyle = o.fill || '#2a2118';
+  ctx.textAlign = o.align || 'left'; ctx.textBaseline = o.base || 'alphabetic';
+  ctx.fillText(s, x, y);
+}
+function bubble(x, y, s, o = {}) {
+  ctx.font = `${o.italic ? 'italic ' : ''}600 13px ${FONT}`;
+  const w = ctx.measureText(s).width + 20, h = 25;
+  const bx = clamp(x - w / 2, 14, W - w - 14), by = y - h - 12;
+  ctx.fillStyle = o.bg || '#fffdf6'; ctx.strokeStyle = o.stroke || '#4a3b2a'; ctx.lineWidth = 1.5;
+  rr(bx, by, w, h, o.thought ? 12 : 7); ctx.fill(); ctx.stroke();
+  if (o.thought) {
+    for (const [dx, dy, rad] of [[-3, -7, 3.2], [0, -1, 2]]) {
+      ctx.beginPath(); ctx.arc(x + dx, y + dy, rad, 0, TAU); ctx.fill(); ctx.stroke();
+    }
+  } else {
+    ctx.beginPath(); ctx.moveTo(x - 6, by + h - 1); ctx.lineTo(x, y - 2); ctx.lineTo(x + 6, by + h - 1);
+    ctx.fill(); ctx.stroke();
+    ctx.fillRect(x - 5, by + h - 3, 10, 3);
+  }
+  text(s, bx + 10, by + 17, { font: ctx.font, fill: o.fill || '#2a2118' });
+}
+function tag(x, y, s, col) {
+  ctx.font = `600 11px ${FONT}`;
+  const w = ctx.measureText(s).width + 10;
+  ctx.fillStyle = 'rgba(255,253,246,.86)'; rr(x - w / 2, y - 12, w, 16, 5); ctx.fill();
+  text(s, x, y, { font: ctx.font, fill: col || '#3a2e22', align: 'center' });
+}
+
+function neckAngles(hd) { return { a: lerp(-1.05, 0.75, hd), ah: lerp(0.45, 1.25, hd) }; }
+function horseMouth(x, y, s, dir, hd) {
+  const { a, ah } = neckAngles(hd);
+  return { x: x + dir * s * (15 + 24 * Math.cos(a) + 12 * Math.cos(ah)), y: y + s * (-42 + 24 * Math.sin(a) + 12 * Math.sin(ah)) };
+}
+function drawHorse(x, y, o = {}) {
+  const s = o.s || 0.85, dir = o.dir || 1, ph = o.phase || 0, mv = o.moving ? 1 : 0, hd = o.headDown || 0;
+  const coat = o.coat || '#7a4a2a', dark = shade(coat, -0.3), mane = o.mane || shade(coat, -0.55);
+  ctx.save(); ctx.translate(x, y); ctx.scale(dir * s, s);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.fillStyle = 'rgba(40,25,10,.17)'; ctx.beginPath(); ctx.ellipse(0, 1, 28, 5, 0, 0, TAU); ctx.fill();
+  const leg = (hx, off, col) => {
+    const th = mv * 0.55 * Math.sin(ph + off), bend = mv * 0.7 * Math.max(0, Math.sin(ph + off + 1.4));
+    const kx = hx + 15 * Math.sin(th), ky = -30 + 15 * Math.cos(th);
+    const fx = kx + 15 * Math.sin(th - bend), fy = ky + 15 * Math.cos(th - bend);
+    ctx.strokeStyle = col; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(hx, -33); ctx.lineTo(kx, ky); ctx.lineTo(fx, fy); ctx.stroke();
+    ctx.strokeStyle = '#2a1c12'; ctx.lineWidth = 5.5; ctx.beginPath(); ctx.moveTo(fx, fy - 1.5); ctx.lineTo(fx, fy); ctx.stroke();
+  };
+  leg(-18, Math.PI, dark); leg(14, 0, dark);
+  const sway = mv * 3 * Math.sin(ph);
+  ctx.strokeStyle = mane; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-26, -43);
+  ctx.quadraticCurveTo(-39, -38 + sway, -36 - mv * 5, -15 + sway); ctx.stroke();
+  ctx.fillStyle = coat;
+  for (const [ex, ey, rx, ry] of [[0, -37, 25, 12.5], [15, -39, 12, 12.5], [-15, -38, 13, 12.5]]) {
+    ctx.beginPath(); ctx.ellipse(ex, ey, rx, ry, 0, 0, TAU); ctx.fill();
+  }
+  leg(-14, 0, coat); leg(18, Math.PI, coat);
+  const { a, ah } = neckAngles(hd);
+  const Bx = 15, By = -42, Ex = Bx + 24 * Math.cos(a), Ey = By + 24 * Math.sin(a);
+  const Hx = Ex + 12 * Math.cos(ah), Hy = Ey + 12 * Math.sin(ah), nx = Math.sin(a), ny = -Math.cos(a);
+  ctx.strokeStyle = coat; ctx.lineWidth = 14; ctx.beginPath(); ctx.moveTo(Bx, By); ctx.lineTo(Ex, Ey); ctx.stroke();
+  ctx.fillStyle = coat; ctx.beginPath(); ctx.moveTo(Ex + nx * 3 - 3, Ey + ny * 3); ctx.lineTo(Ex + nx * 13 - 1, Ey + ny * 13 - 1); ctx.lineTo(Ex + nx * 4 + 4, Ey + ny * 4); ctx.fill();
+  ctx.lineWidth = 9.5; ctx.beginPath(); ctx.moveTo(Ex, Ey); ctx.lineTo(Hx, Hy); ctx.stroke();
+  ctx.fillStyle = shade(coat, -0.2); ctx.beginPath(); ctx.arc(Hx, Hy, 4.4, 0, TAU); ctx.fill();
+  ctx.strokeStyle = mane; ctx.lineWidth = 4.5; ctx.beginPath(); ctx.moveTo(Bx + nx * 6 - 2, By + ny * 6); ctx.lineTo(Ex + nx * 6, Ey + ny * 6); ctx.stroke();
+  ctx.fillStyle = '#1a1009'; ctx.beginPath(); ctx.arc(Ex + 3 * Math.cos(ah) + nx * 1.5, Ey + 3 * Math.sin(ah) + ny * 1.5, 1.4, 0, TAU); ctx.fill();
+  if (o.harness) {
+    ctx.strokeStyle = '#1f1a17'; ctx.lineWidth = 4.5; ctx.beginPath(); ctx.ellipse(12, -40, 5.5, 13, 0.25, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = '#e2b84b'; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.ellipse(12, -40, 5.5, 13, 0.25, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = '#1f1a17'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-3, -49.5); ctx.lineTo(-3, -25); ctx.stroke();
+    ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(13, -35); ctx.lineTo(-27, -33); ctx.stroke();
+    const px = Ex + 7 * Math.cos(ah), py = Ey + 7 * Math.sin(ah);
+    ctx.lineWidth = 1.7; ctx.beginPath(); ctx.moveTo(px - Math.sin(ah) * 5, py + Math.cos(ah) * 5); ctx.lineTo(px + Math.sin(ah) * 5, py - Math.cos(ah) * 5); ctx.stroke();
+  }
+  if (o.rider) {
+    const pt = o.rider.point || 0;
+    ctx.fillStyle = '#b98b4e'; ctx.strokeStyle = '#6f4d22'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(-11, -62, 7, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#3d4a63'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-2, -48); ctx.lineTo(4, -37); ctx.lineTo(3, -27); ctx.stroke();
+    ctx.strokeStyle = COL_B; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(-2, -50); ctx.lineTo(0, -68); ctx.stroke();
+    ctx.strokeStyle = '#e9b98a'; ctx.lineWidth = 3.6; ctx.beginPath(); ctx.moveTo(0, -66);
+    ctx.lineTo(lerp(10, 15, pt), lerp(-55, -74, pt)); ctx.stroke();
+    ctx.fillStyle = '#fffdf6'; ctx.strokeStyle = '#4a3b2a'; ctx.lineWidth = 1;
+    ctx.save(); ctx.translate(lerp(11, 17, pt), lerp(-56, -77, pt)); ctx.rotate(-0.3);
+    ctx.fillRect(-3, -5, 7, 9); ctx.strokeRect(-3, -5, 7, 9); ctx.restore();
+    ctx.fillStyle = '#e9b98a'; ctx.beginPath(); ctx.arc(1, -76, 6, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#3b2a1c'; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(-8, -79.5); ctx.lineTo(10, -79.5); ctx.stroke();
+    ctx.fillStyle = '#3b2a1c'; rr(-4, -88, 10, 8.5, 2); ctx.fill();
+  }
+  ctx.restore();
+}
+function wheel(x, y, r, dist, far) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(dist / r);
+  ctx.strokeStyle = far ? '#4f3d2e' : '#2b1d12'; ctx.lineWidth = 3.6; ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.stroke();
+  ctx.lineWidth = 1.7;
+  for (let i = 0; i < 8; i++) { const a = i * TAU / 8; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); ctx.stroke(); }
+  ctx.fillStyle = far ? '#a88b45' : '#e2b84b'; ctx.beginPath(); ctx.arc(0, 0, 3.6, 0, TAU); ctx.fill();
+  ctx.restore();
+}
+function drawCoach(cx, cy, dist, ang) {
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.fillStyle = 'rgba(40,25,10,.2)'; ctx.beginPath(); ctx.ellipse(-2, 2, 64, 7, 0, 0, TAU); ctx.fill();
+  wheel(-25, -23, 20, dist, true); wheel(35, -18, 15, dist, true);
+  ctx.fillStyle = '#5a3a22'; rr(-61, -60, 17, 26, 3); ctx.fill();
+  ctx.fillStyle = '#8f2d22'; ctx.strokeStyle = '#3b1510'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(-45, -82); ctx.lineTo(33, -82); ctx.lineTo(35, -48);
+  ctx.quadraticCurveTo(-4, -22, -47, -46); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#e2b84b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-45, -59); ctx.lineTo(34, -59); ctx.stroke();
+  ctx.fillStyle = '#f6e7c1'; ctx.strokeStyle = '#3b1510'; ctx.lineWidth = 1.4;
+  rr(-37, -78, 20, 15, 3); ctx.fill(); ctx.stroke(); rr(-12, -78, 18, 15, 3); ctx.fill(); ctx.stroke(); rr(11, -78, 18, 15, 3); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#3b2a1c'; ctx.fillRect(-48, -86, 85, 5);
+  ctx.fillStyle = '#b98b4e'; ctx.strokeStyle = '#6f4d22'; rr(-40, -100, 30, 14, 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#9c6f3a'; rr(-7, -97, 30, 11, 2); ctx.fill(); ctx.stroke();
+  text('LOAD', -25, -89.5, { font: `700 8px ${FONT}`, fill: '#4a2f12', align: 'center' });
+  ctx.fillStyle = '#5a3a22'; rr(33, -71, 24, 7, 2); ctx.fill();
+  ctx.strokeStyle = '#5a3a22'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(36, -66); ctx.lineTo(41, -46); ctx.lineTo(62, -42); ctx.stroke();
+  wheel(-30, -20, 20, dist, false); wheel(30, -15, 15, dist, false);
+  /* the driver: the human's plan, written as code */
+  ctx.strokeStyle = '#3d4a63'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(43, -72); ctx.lineTo(54, -62); ctx.lineTo(56, -47); ctx.stroke();
+  ctx.strokeStyle = COL_A; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(43, -73); ctx.lineTo(45, -92); ctx.stroke();
+  ctx.strokeStyle = '#e9b98a'; ctx.lineWidth = 3.6; ctx.beginPath(); ctx.moveTo(45, -90); ctx.lineTo(61, -82); ctx.stroke();
+  ctx.fillStyle = '#e9b98a'; ctx.beginPath(); ctx.arc(46, -100, 6, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#3b2a1c'; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.moveTo(37, -103.5); ctx.lineTo(56, -103.5); ctx.stroke();
+  ctx.fillStyle = '#3b2a1c'; rr(41, -112, 10, 8.5, 2); ctx.fill();
+  ctx.restore();
+}
+function gear(x, y, r, rot, col) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.fillStyle = col;
+  ctx.beginPath();
+  for (let i = 0; i < 16; i++) { const a = i * TAU / 16, rad = i % 2 ? r : r * 0.72; ctx.lineTo(Math.cos(a - 0.1) * rad, Math.sin(a - 0.1) * rad); ctx.lineTo(Math.cos(a + 0.1) * rad, Math.sin(a + 0.1) * rad); }
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#fffdf6'; ctx.beginPath(); ctx.arc(0, 0, r * 0.3, 0, TAU); ctx.fill();
+  ctx.restore();
+}
+
+/* ---------- the world, drawn once per lane ---------- */
+const TUFTS = (() => { const r = rng(5), a = []; while (a.length < 90) { const x = r() * W, y = SKY_H + 14 + r() * (LANE_H - SKY_H - 24); if (Math.abs(y - roadY(x)) > 27) a.push({ x, y, k: r() }); } return a; })();
+function roadLine(x0, x1, dy) {
+  ctx.beginPath();
+  for (let x = x0; x <= x1; x += 8) { const y = roadY(x) + dy; x === x0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+  ctx.lineTo(x1, roadY(x1) + dy);
+}
+function drawBackdrop() {
+  let g = ctx.createLinearGradient(0, 0, 0, SKY_H);
+  g.addColorStop(0, '#bcdcea'); g.addColorStop(1, '#f6ebd3'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, SKY_H + 2);
+  for (const [col, amp, f, off, base] of [['#dcc9a6', 16, 0.0061, 1, 78], ['#cfb68c', 11, 0.0105, 4, 88]]) {
+    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, SKY_H + 2);
+    for (let x = 0; x <= W; x += 16) ctx.lineTo(x, base - amp * (0.6 + 0.4 * Math.sin(x * f + off)) * (0.7 + 0.3 * Math.sin(x * f * 2.7 + off * 2)));
+    ctx.lineTo(W, SKY_H + 2); ctx.fill();
+  }
+  g = ctx.createLinearGradient(0, SKY_H, 0, LANE_H);
+  g.addColorStop(0, '#ecd8a8'); g.addColorStop(1, '#dbbd82'); ctx.fillStyle = g; ctx.fillRect(0, SKY_H, W, LANE_H - SKY_H);
+  ctx.strokeStyle = '#b9a467'; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
+  for (const t of TUFTS) { ctx.beginPath(); ctx.moveTo(t.x - 3, t.y); ctx.lineTo(t.x - 4, t.y - 5); ctx.moveTo(t.x, t.y); ctx.lineTo(t.x, t.y - 7); ctx.moveTo(t.x + 3, t.y); ctx.lineTo(t.x + 5, t.y - 5); ctx.stroke(); }
+  /* meadows, pond */
+  ctx.fillStyle = 'rgba(126,170,84,.5)';
+  ctx.beginPath(); ctx.ellipse(252, 166, 100, 34, 0, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(963, 352, 100, 28, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#86bcd2'; ctx.strokeStyle = '#5e9ab3'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(482, 347, 54, 16, 0, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(458, 344); ctx.lineTo(486, 344); ctx.moveTo(476, 351); ctx.lineTo(508, 351); ctx.stroke();
+  /* road */
+  ctx.lineCap = 'butt'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = '#b08a55'; ctx.lineWidth = 39; roadLine(-20, W + 20, 0); ctx.stroke();
+  ctx.strokeStyle = '#caa46d'; ctx.lineWidth = 35; roadLine(-20, W + 20, 0); ctx.stroke();
+  ctx.strokeStyle = 'rgba(160,122,70,.55)'; ctx.lineWidth = 1.5;
+  roadLine(-20, W + 20, -8); ctx.stroke(); roadLine(-20, W + 20, 8); ctx.stroke();
+  /* corral (back fence), tree, barn */
+  ctx.strokeStyle = '#7a5a36'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  for (const y of [144, 152]) { ctx.beginPath(); ctx.moveTo(458, y); ctx.lineTo(544, y); ctx.stroke(); }
+  for (const x of [458, 501, 544]) { ctx.beginPath(); ctx.moveTo(x, 138); ctx.lineTo(x, 158); ctx.stroke(); }
+  ctx.fillStyle = '#6b4a2c'; ctx.fillRect(731, 150, 9, 28);
+  ctx.fillStyle = '#5f8f3e'; for (const [x, y, rad] of [[718, 140, 19], [752, 140, 19], [735, 126, 26]]) { ctx.beginPath(); ctx.arc(x, y, rad, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#c0392b'; for (const [x, y] of [[722, 132], [740, 118], [752, 142], [731, 146], [712, 144]]) { ctx.beginPath(); ctx.arc(x, y, 3, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = '#a33b2c'; ctx.fillRect(1178, 130, 64, 44);
+  ctx.fillStyle = '#6e2a20'; ctx.beginPath(); ctx.moveTo(1171, 131); ctx.lineTo(1210, 106); ctx.lineTo(1249, 131); ctx.fill();
+  ctx.fillStyle = '#7c2c21'; ctx.fillRect(1199, 148, 22, 26);
+  ctx.strokeStyle = '#f3e6d0'; ctx.lineWidth = 1.6; ctx.strokeRect(1199, 148, 22, 26);
+  ctx.beginPath(); ctx.moveTo(1199, 148); ctx.lineTo(1221, 174); ctx.moveTo(1221, 148); ctx.lineTo(1199, 174); ctx.stroke();
+}
+function corralFront() {
+  ctx.strokeStyle = '#8a6740'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  for (const y of [176, 185]) { ctx.beginPath(); ctx.moveTo(454, y); ctx.lineTo(548, y); ctx.stroke(); }
+  for (const x of [454, 501, 548]) { ctx.beginPath(); ctx.moveTo(x, 169); ctx.lineTo(x, 191); ctx.stroke(); }
+  ctx.fillStyle = '#fffdf6'; ctx.strokeStyle = '#7a5a36'; ctx.lineWidth = 1.2; rr(480, 189, 42, 14, 3); ctx.fill(); ctx.stroke();
+  text('relay', 501, 200, { font: `700 10px ${FONT}`, fill: '#5a4326', align: 'center' });
+}
+function drawPosts(passed, col, popT, t) {
+  for (let i = 1; i < STEPS; i++) {
+    const x = STOPS[i], yb = roadY(x) - 19, on = i <= passed;
+    ctx.strokeStyle = '#6b4a2c'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x, yb); ctx.lineTo(x, yb - 84); ctx.stroke();
+    ctx.fillStyle = on ? col : '#f3ead6'; ctx.strokeStyle = '#4a3b2a'; ctx.lineWidth = 1.6;
+    rr(x - 21, yb - 104, 42, 24, 5); ctx.fill(); ctx.stroke();
+    text(on ? `${i} ✓` : `step ${i}`, x, yb - 87, { font: `700 ${on ? 14 : 11}px ${FONT}`, fill: on ? '#fff' : '#5a4a36', align: 'center' });
+    if (popT && on && t - popT[i - 1] < 0.6 && t >= popT[i - 1]) {
+      const u = (t - popT[i - 1]) / 0.6;
+      ctx.strokeStyle = col; ctx.globalAlpha = 1 - u; ctx.lineWidth = 3; rr(x - 21 - 14 * u, yb - 104 - 10 * u, 42 + 28 * u, 24 + 20 * u, 8); ctx.stroke(); ctx.globalAlpha = 1;
+    }
+  }
+  const sx = START_X - 62, sy = roadY(sx) - 19;
+  ctx.strokeStyle = '#6b4a2c'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx, sy - 38); ctx.stroke();
+  ctx.fillStyle = '#f3ead6'; ctx.strokeStyle = '#4a3b2a'; ctx.lineWidth = 1.6; rr(sx - 24, sy - 56, 48, 20, 5); ctx.fill(); ctx.stroke();
+  text('the plan', sx, sy - 42, { font: `700 10.5px ${FONT}`, fill: '#5a4a36', align: 'center' });
+}
+function drawGoal(reached, col) {
+  const x = GOAL_X, y = roadY(x);
+  ctx.lineWidth = 2.5;
+  for (const [rx, a] of [[46, 0.35], [30, 0.6], [14, 0.9]]) { ctx.strokeStyle = `rgba(178,40,40,${a})`; ctx.beginPath(); ctx.ellipse(x, y, rx, rx * 0.36, 0, 0, TAU); ctx.stroke(); }
+  const yb = y - 19;
+  ctx.strokeStyle = '#4a3b2a'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x, yb); ctx.lineTo(x, yb - 104); ctx.stroke();
+  ctx.fillStyle = reached ? col : '#c0392b'; ctx.strokeStyle = '#4a3b2a'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x, yb - 104); ctx.lineTo(x + 44, yb - 93); ctx.lineTo(x, yb - 80); ctx.closePath(); ctx.fill(); ctx.stroke();
+  text('objective', x + 6, yb - 110, { font: `700 12px ${FONT}`, fill: '#4a3b2a' });
+}
+function meter(x, y, w, planned, extra) {
+  const h = 16, k = w / METER_MAX, tot = planned + extra, over = tot > BUDGET + 0.5;
+  ctx.fillStyle = 'rgba(255,255,255,.6)'; rr(x - 14, y - 10, w + 28, 80, 10); ctx.fill();
+  ctx.fillStyle = '#e9e1cf'; rr(x, y, w, h, 4); ctx.fill();
+  ctx.save(); rr(x, y, w, h, 4); ctx.clip();
+  ctx.fillStyle = '#3f9a6b'; ctx.fillRect(x, y, Math.min(w, planned * k), h);
+  ctx.fillStyle = over ? '#d24a2c' : '#e39a2f'; ctx.fillRect(x + planned * k, y, Math.min(w - planned * k, extra * k), h);
+  ctx.restore();
+  ctx.strokeStyle = '#4a3b2a'; ctx.lineWidth = 1.2; rr(x, y, w, h, 4); ctx.stroke();
+  const bx = x + BUDGET * k;
+  ctx.strokeStyle = '#1e1a16'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(bx, y - 5); ctx.lineTo(bx, y + h + 5); ctx.stroke(); ctx.setLineDash([]);
+  text('budget', bx + 5, y + h + 15, { font: `600 11px ${FONT}`, fill: '#4a3b2a' });
+  const s = `tokens ${Math.round(tot)} / ${BUDGET}`;
+  text(s, x, y + h + 17, { font: `700 14px ${FONT}`, fill: over ? '#b3261e' : '#2a2118' });
+  if (over) { const sw = ctx.measureText(s).width; text(`  ${(tot / BUDGET).toFixed(1)}× budget`, x + sw + 160, y + h + 17, { font: `700 14px ${FONT}`, fill: '#b3261e' }); }
+}
+/* clickable words drawn on the canvas: filled each frame, read by the pointer handlers */
+let LINKS = [], hoverLink = null;
+function header(title, kicker, col, nar, chips, planned, extra, link) {
+  ctx.fillStyle = 'rgba(255,255,255,.5)'; rr(14, 8, 1040, 72, 10); ctx.fill();
+  ctx.font = `800 21px ${FONT}`; const tw = ctx.measureText(title).width;
+  text(title, 28, 35, { font: ctx.font, fill: col });
+  const kf = `500 14px ${FONT}`, kx = 28 + tw + 14;
+  const at = link ? kicker.indexOf(link.word) : -1;
+  if (at < 0) text(kicker, kx, 35, { font: kf, fill: '#5a4a36' });
+  else {
+    const pre = kicker.slice(0, at), post = kicker.slice(at + link.word.length);
+    ctx.font = kf; const px = kx + ctx.measureText(pre).width, ww = ctx.measureText(link.word).width;
+    const hot = hoverLink === link.url;
+    text(pre, kx, 35, { font: kf, fill: '#5a4a36' });
+    text(link.word, px, 35, { font: `700 14px ${FONT}`, fill: hot ? '#0e3f45' : col });
+    ctx.font = `700 14px ${FONT}`; const lw = ctx.measureText(link.word).width;
+    ctx.fillStyle = hot ? '#0e3f45' : col; ctx.fillRect(px, 38, lw, hot ? 2 : 1.25);
+    text(post, px + lw, 35, { font: kf, fill: '#5a4a36' });
+    LINKS.push({ url: link.url, x: px - 3, y: link.dy + 18, w: Math.max(ww, lw) + 6, h: 26 });
+  }
+  text(nar, 28, 64, { font: `italic 600 16px ${FONT}`, fill: '#2a2118' });
+  meter(1092, 18, 440, planned, extra);
+  text(chips, 1092, 80, { font: `600 12.5px ${FONT}`, fill: '#3a2e22' });
+}
+
+/* ---------- lane A ---------- */
+function drawLaneA(t, run) {
+  const st = stateA(t), cx = st.x, cy = roadY(cx), dist = cx - START_X;
+  ctx.save(); ctx.translate(0, LANE_A_Y); rr(8, 0, W - 16, LANE_H, 14); ctx.clip();
+  drawBackdrop();
+  if (run > 0) { ctx.strokeStyle = 'rgba(23,101,110,.28)'; ctx.lineWidth = 5; ctx.lineCap = 'round'; roadLine(START_X, GOAL_X, 0); ctx.stroke(); }
+  ctx.strokeStyle = 'rgba(23,101,110,.85)'; ctx.lineWidth = 3; ctx.lineCap = 'round'; roadLine(START_X, Math.max(START_X + 1, cx), 0); ctx.stroke();
+  drawPosts(Math.min(st.gates, STEPS - 1), COL_A, A_PLAN.tick, t);
+  drawGoal(st.gates >= STEPS, COL_A);
+  if (run > 0) tag(GOAL_X + 4, roadY(GOAL_X) + 62, `runs 1–${run}: same route, same spot`, COL_A);
+
+  const sprites = [];
+  for (const [i, h] of HORSES.entries()) {
+    if (h.group === 'corral') continue;
+    sprites.push({ y: h.home.y, fn: () => drawHorse(h.home.x, h.home.y, { coat: h.coat, dir: i % 2 ? -1 : 1, headDown: clamp(0.62 + 0.55 * Math.sin(t * 0.5 + i * 2.1), 0, 1) }) });
+  }
+  sprites.push({ y: 186, fn: corralFront });
+  /* the two planned helpers */
+  const helpers = HORSES.filter(h => h.group === 'corral');
+  const hx = STOPS[2], tgt = [{ x: hx + 162, y: roadY(hx + 162) + 5 }, { x: hx + 170, y: roadY(hx + 170) - 7 }];
+  if (st.team === 4) helpers.forEach((h, j) => {
+    const u = ease(clamp(st.hitch, 0, 1)), x = lerp(h.home.x, tgt[j].x, u), y = lerp(h.home.y, tgt[j].y, u);
+    sprites.push({ y, fn: () => drawHorse(x, y, { coat: h.coat, harness: true, moving: st.hitch > 0 && st.hitch < 1, phase: st.hitch * 22 + j }) });
+  });
+  /* coach and team */
+  sprites.push({ y: cy + 6, fn: () => {
+    const offs = st.team === 6 ? [62, 112, 162] : [62, 112], ph = dist * 0.115;
+    const ang = Math.atan2(roadY(cx + 30) - roadY(cx - 30), 60);
+    const frontX = cx + offs[offs.length - 1] + 12;
+    ctx.strokeStyle = '#3b2a1c'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(cx + 40, cy - 22);
+    for (let x = cx + 56; x <= frontX; x += 14) ctx.lineTo(x, roadY(x) - 27); ctx.stroke();
+    const coatOf = i => i < 2 ? '#7a4a2a' : '#a9a49b';
+    offs.forEach((o, i) => drawHorse(cx + o + 8, roadY(cx + o + 8) - 7, { coat: shade(coatOf(i), -0.18), harness: true, moving: st.moving, phase: ph + i * 0.7 + 1.1 }));
+    offs.forEach((o, i) => drawHorse(cx + o, roadY(cx + o) + 5, { coat: coatOf(i), harness: true, moving: st.moving, phase: ph + i * 0.7 }));
+    drawCoach(cx, cy, dist, ang);
+    const hand = { x: cx + 61 * Math.cos(ang) + 82 * Math.sin(ang), y: cy + 61 * Math.sin(ang) - 82 * Math.cos(ang) };
+    const mouths = offs.map(o => horseMouth(cx + o, roadY(cx + o) + 5, 0.85, 1, 0));
+    ctx.strokeStyle = '#2b1d12'; ctx.lineWidth = 1.3;
+    for (const m of mouths) { ctx.beginPath(); ctx.moveTo(hand.x, hand.y); ctx.quadraticCurveTo((hand.x + m.x) / 2, Math.max(hand.y, m.y) + 9, m.x, m.y); ctx.stroke(); }
+    const lead = { x: cx + offs[offs.length - 1] + 10, y: roadY(cx + offs[offs.length - 1]) - 29 }, hub = { x: cx + 40, y: cy - 22 };
+    if (st.e && st.e.kind === 'move') {
+      if (st.tau < 0.5) { const u = st.tau / 0.5; for (const m of mouths) dot(lerp(hand.x, m.x, u), lerp(hand.y, m.y, u) + 9 * Math.sin(u * Math.PI), '#35b6ff'); }
+      const rem = st.e.t1 - st.e.t0 - st.tau;
+      if (rem < 0.5) { const u = 1 - rem / 0.5; dot(lerp(lead.x, hub.x, u), lerp(lead.y, hub.y, u), '#ffcf3d'); dot(lerp(lead.x, hub.x, Math.max(0, u - 0.18)), lerp(lead.y, hub.y, Math.max(0, u - 0.18)), '#ffcf3d'); }
+      tag(cx + (offs[0] + offs[offs.length - 1]) / 2 + 10, cy - 76, `${st.team} model calls: pulling, nothing else`, '#5a3a1a');
+    } else if (!st.done) {
+      tag(cx + 168, cy - 114, 'code checks, code decides', COL_A);
+      gear(cx + 78, cy - 118, 10, t * 2.2, COL_A);
+    }
+  } });
+  sprites.sort((a, b) => a.y - b.y).forEach(s => s.fn());
+
+  let nar, e = st.e;
+  if (st.done) nar = `delivered, on the mark. Same route every run. ${PLANNED_COST} of ${BUDGET} tokens, as planned`;
+  else if (!e) nar = 'code reads the plan and picks step 1';
+  else if (e.kind === 'move') nar = e.step >= 3 ? `step ${e.step}: six pulling now, exactly as the plan said` : `step ${e.step}: the harness calls the model for one job`;
+  else if (e.step === 2 && st.tau > 0.8) nar = 'step 3 needs more pull, so the plan hitches two more. On purpose';
+  else nar = `gate ${e.step}: the output comes back to the harness. Code checks it, code picks the next step`;
+  const hp = st.team === 6 ? '2 of 2 planned' : '0 of 2 planned';
+  header('DETERMINISTIC CODE ORCHESTRATION', 'harnessed: a plumbbob plan, a fascicle flow', COL_A, nar,
+    `step ${Math.min(STEPS, st.gates + (st.done ? 0 : 1))}/${STEPS}  ·  gates passed ${st.gates}  ·  helpers ${hp}  ·  tangents 0`, st.tok, 0,
+    { word: 'fascicle', url: 'https://github.com/robmclarty/fascicle', dy: LANE_A_Y });
+  ctx.restore();
+  return st;
+}
+function dot(x, y, col) {
+  ctx.fillStyle = col; ctx.globalAlpha = 0.35; ctx.beginPath(); ctx.arc(x, y, 8, 0, TAU); ctx.fill();
+  ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(x, y, 4, 0, TAU); ctx.fill();
+}
+
+/* ---------- lane B ---------- */
+function strokePath(p, s) {
+  const q = at(p, s);
+  ctx.beginPath(); ctx.moveTo(p.pts[0].x, p.pts[0].y);
+  for (let i = 1; i <= q.i; i++) ctx.lineTo(p.pts[i].x, p.pts[i].y);
+  ctx.lineTo(q.x, q.y); ctx.stroke();
+}
+function drawLaneB(t, R, ghosts) {
+  const B = stateB(R, t);
+  ctx.save(); ctx.translate(0, LANE_B_Y); rr(8, 0, W - 16, LANE_H, 14); ctx.clip();
+  drawBackdrop();
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ghosts.forEach((g, i) => {
+    const c = GHOST_COLS[i % GHOST_COLS.length];
+    ctx.strokeStyle = c; ctx.globalAlpha = 0.3; ctx.lineWidth = 2.2; strokePath(g.path, g.path.total);
+    ctx.globalAlpha = 0.75; ctx.lineWidth = 2.4; const a = g.arrive;
+    ctx.beginPath(); ctx.moveTo(a.x - 5, a.y - 5); ctx.lineTo(a.x + 5, a.y + 5); ctx.moveTo(a.x + 5, a.y - 5); ctx.lineTo(a.x - 5, a.y + 5); ctx.stroke();
+    ctx.globalAlpha = 1;
+  });
+  R.friends.forEach((f, i) => {
+    const q = B.fs[i]; if (!q) return;
+    ctx.strokeStyle = f.col; ctx.globalAlpha = 0.6; ctx.lineWidth = 1.8; ctx.setLineDash([5, 5]); strokePath(f.path, q.s); ctx.setLineDash([]); ctx.globalAlpha = 1;
+  });
+  ctx.strokeStyle = 'rgba(180,73,31,.85)'; ctx.lineWidth = 3; strokePath(R.path, B.st.s);
+  drawPosts(Math.min(B.steps, STEPS - 1), '#d8892b', null, t);
+  drawGoal(B.done && !R.offTarget, '#d8892b');
+  if (ghosts.length) tag(GOAL_X + 4, 380, `faint lines and ✕ marks: runs 1–${ghosts.length}, each one different`, COL_B);
+
+  const sprites = [], recruited = new Map(R.friends.map((f, i) => [f.h.id, i]));
+  sprites.push({ y: 186, fn: corralFront });
+  for (const [i, h] of HORSES.entries()) {
+    const graze = clamp(0.62 + 0.55 * Math.sin(t * 0.5 + i * 2.1), 0, 1), fi = recruited.get(h.id);
+    const q = fi === undefined ? null : B.fs[fi];
+    if (!q) { sprites.push({ y: h.home.y, fn: () => drawHorse(h.home.x, h.home.y, { coat: h.coat, dir: i % 2 ? -1 : 1, headDown: graze }) }); continue; }
+    const f = R.friends[fi], p = at(f.path, q.s), dir = facing(f.path, q.s);
+    sprites.push({ y: p.y, fn: () => {
+      drawHorse(p.x, p.y, { coat: h.coat, dir, moving: q.moving, phase: q.s * 0.115 + fi, headDown: q.done ? graze : 0 });
+      if (!q.done) tag(p.x, p.y - 66, f.label, f.col);
+    } });
+  }
+  const p = B.pos, k = B.key, mdir = facing(R.path, B.st.s);
+  let lastLeft = -1e9, say = '';
+  R.keys.forEach((q, i) => { if (q.ctx === 'at' && q.dwell > 0 && q.tLeave <= t && q.tLeave > lastLeft) { lastLeft = q.tLeave; say = (R.keys[i + 1] || {}).say || SAY[0]; } });
+  const nudging = t - lastLeft < 1.9 && !(k && k.ctx === 'at');
+  sprites.push({ y: p.y + 0.5, fn: () => {
+    drawHorse(p.x, p.y, { coat: '#d9a441', mane: '#f4e6c2', dir: mdir, moving: B.st.moving, phase: B.st.s * 0.115, s: 0.9,
+      headDown: k && k.ctx === 'at' && !B.st.moving && k.d.kind === 'quest' ? 0.9 : 0, rider: { point: nudging ? 1 : (k && k.ctx === 'at' ? 0.6 : 0) } });
+  } });
+  sprites.sort((a, b) => a.y - b.y).forEach(s => s.fn());
+  if (k && k.ctx === 'at') bubble(p.x + mdir * 34, p.y - 62, k.d.think, { thought: true, italic: true });
+  if (nudging) bubble(p.x - mdir * 6, p.y - 84, say, { bg: '#fff3e6', stroke: COL_B, fill: '#7a2d10' });
+
+  let nar;
+  if (B.done) nar = `arrived${R.offTarget ? ', near enough' : ''}. A different route every run. ${Math.round(B.total)} of ${BUDGET} tokens${B.fs.some(q => q && !q.done) ? ', and the helpers are still going' : ''}`;
+  else if (!k || k.ctx === 'start') nar = 'no harness: the human points at the plan and hopes';
+  else if (k.ctx === 'at') nar = k.d.nar;
+  else if (nudging || k.ctx === 'from') nar = 'human: “back to the plan!” It listens. Mostly';
+  else nar = 'on the road for now. The model picks its own next move';
+  header('PROBABILISTIC MODEL ORCHESTRATION', 'bareback: the model spawns and manages its own sub-agents', COL_B, nar,
+    `step ${Math.min(STEPS, B.steps + (B.done ? 0 : 1))}/${STEPS}  ·  gates none  ·  helpers ${B.helpers}, none planned  ·  tangents ${B.tangents}`, B.planned, B.extra);
+  ctx.restore();
+  return B;
+}
+
+/* ---------- runs, loop, input ---------- */
+const qs = new URLSearchParams(location.search);
+let baseSeed = +(qs.get('seed') || 11), run = +(qs.get('run') || 0), T = +(qs.get('t') || 0);
+let paused = false; const frozen = qs.has('t');
+const cache = new Map();
+const getB = k => { const key = baseSeed + ':' + k; if (!cache.has(key)) cache.set(key, genB(baseSeed + k)); return cache.get(key); };
+let cur;
+function setRun(k) {
+  run = k; const R = getB(k), ghosts = [];
+  for (let j = Math.max(0, k - 6); j < k; j++) ghosts.push(getB(j));
+  cur = { R, ghosts, dur: Math.max(A_PLAN.tEnd, R.tEnd) + 5 };
+}
+function draw() {
+  ctx.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
+  ctx.fillStyle = '#17130f'; ctx.fillRect(0, 0, W, H);
+  LINKS = [];
+  text('Same plan. Same objective. Who holds the reins?', 24, 40, { font: `800 27px ${FONT}`, fill: '#f4e9d2' });
+  text(`run ${run + 1}`, W - 24, 40, { font: `800 22px ${FONT}`, fill: '#e2b84b', align: 'right' });
+  text('planned work, orchestrated two ways', W - 110, 39, { font: `500 15px ${FONT}`, fill: '#b8a98c', align: 'right' });
+  drawLaneA(T, run);
+  drawLaneB(T, cur.R, cur.ghosts);
+  const fy = 880;
+  text('horse = a model call   ·   harness, reins, driver = code   ·   posts = the plan’s steps and gates   ·   green = planned work, amber/red = everything else',
+    24, fy, { font: `500 13px ${FONT}`, fill: '#cdbf9f' });
+  text('token figures are illustrative   ·   space pause   ·   → next run   ·   R restart   ·   N new seed', W - 24, fy, { font: `500 12.5px ${FONT}`, fill: '#8f8370', align: 'right' });
+  if (paused) text('paused', W / 2, 40, { font: `700 16px ${FONT}`, fill: '#e2b84b', align: 'center' });
+}
+function resize() {
+  const dpr = window.devicePixelRatio || 1, k = Math.min(innerWidth / W, innerHeight / H);
+  cv.style.width = Math.floor(W * k) + 'px'; cv.style.height = Math.floor(H * k) + 'px';
+  cv.width = Math.round(W * k * dpr); cv.height = Math.round(H * k * dpr);
+  draw();
+}
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (!paused && !frozen) { T += dt; if (T > cur.dur) { setRun(run + 1); T = 0; } }
+  draw(); requestAnimationFrame(frame);
+}
+addEventListener('keydown', e => {
+  if (e.code === 'Space') { paused = !paused; e.preventDefault(); }
+  else if (e.code === 'ArrowRight') { setRun(run + 1); T = 0; }
+  else if (e.code === 'KeyR') { setRun(0); T = 0; }
+  else if (e.code === 'KeyN') { baseSeed = Math.floor(Math.random() * 1e6); cache.clear(); setRun(0); T = 0; }
+});
+function linkAt(e) {
+  const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) * W / r.width, y = (e.clientY - r.top) * H / r.height;
+  return LINKS.find(l => x >= l.x && x <= l.x + l.w && y >= l.y && y <= l.y + l.h) || null;
+}
+cv.addEventListener('mousemove', e => {
+  const l = linkAt(e); hoverLink = l ? l.url : null; cv.style.cursor = l ? 'pointer' : '';
+});
+cv.addEventListener('mouseleave', () => { hoverLink = null; cv.style.cursor = ''; });
+cv.addEventListener('click', e => { const l = linkAt(e); if (l) window.open(l.url, '_blank', 'noopener'); });
+addEventListener('resize', resize);
+setRun(run); resize(); requestAnimationFrame(frame);
+</script>
+</body>
+</html>
