@@ -111,7 +111,11 @@ The argument only seeds how you get there.
    ```
 
    Every step needs a **done-when** `/plumbbob:verify` can check and a **seam** (the exact
-   paths it touches). Later steps may be fuzzier than the first (that's fine); they get
+   paths it touches). When the card shows a `**Seams**:` part, it has read a seam the build
+   would refuse, or a path one edit from a file that exists: fix the seam in `intent.md`
+   and run `plumbbob handoff --plan` again, or, when the path is a new file on purpose, say
+   so in one line and leave it
+   ([D131 (seams-at-the-plan)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d131)). Later steps may be fuzzier than the first (that's fine); they get
    sharpened just-in-time when you reach them with `/plumbbob:step`. Keep each small enough to
    verify in one review pass. Number them in the sequence you expect to build them and
    leave `## Build order` alone: it is for later, when a refine appends a step that has to

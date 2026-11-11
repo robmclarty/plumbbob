@@ -856,6 +856,30 @@ lean to take. A bare count used to say how many were open and not who acts:
 a human who had chosen to wait and see on two of three still read `3 open`
 as three calls owed.
 
+#### The seams part
+
+**A seam is cheapest to fix on paper.** The plan card reads every undone
+step's seam before the human approves it, and names two things above the
+questions table, each line linked to its step
+([D131 (seams-at-the-plan)](decisions.md#d131)):
+
+```text
+**Seams**: 2 to look at
+
+- [Step 3](.plumbbob/builds/rate-limit/intent.md#L14) names `src/limited.ts`, which does not exist; `src/limiter.ts` does.
+- [Step 4](.plumbbob/builds/rate-limit/intent.md#L17) has no `seam:` line.
+```
+
+The first is a near miss: a path that names nothing, beside a file one edit
+away from it (a letter in, out, or changed, or two letters swapped) with the
+same extension. A name grown or cut at its end, `users.ts` beside `user.ts`,
+reads as a new file on purpose and draws no line, and neither does a new file
+with no near sibling, or one in a folder that does not exist yet. The second
+is the seam parse's own refusal, said at the plan rather than at the `build`
+that would have refused it, a range or a day later. Nothing here refuses the
+plan; the part renders only when it has a line to say, and a model that sees
+it fixes the seam in `intent.md` and shows the card again.
+
 An auto halt on trouble renders the standard card; the Verdict's worst
 component is the halt reason. A clean halt renders no card at all: its step
 has landed, and nothing is left for the human to decide.

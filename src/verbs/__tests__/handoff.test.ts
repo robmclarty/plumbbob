@@ -510,6 +510,34 @@ describe('handoff', () => {
     expect(stdout.endsWith('\n\n')).toBe(true)
   })
 
+  it('names a seam one edit away from a file that exists, and a seam the build would refuse, above the moves', async () => {
+    const plan = INTENT.replace('1. [x] First', '1. [ ] First')
+      .replace('`src/b.ts`', '`src/limter.ts`')
+      .replace('   - seam: `src/c.ts`\n', '')
+    const dir = await started(plan)
+    mkdirSync(join(dir, 'src'), { recursive: true })
+    writeFileSync(join(dir, 'src', 'limiter.ts'), 'export const cap = 5\n')
+    const { stdout } = captureIo(() => handoff(dir, ['--plan']))
+    const where = relative(dir, intentPath(dir))
+    expect(stdout).toContain(
+      [
+        '---',
+        '',
+        '**Seams**: 2 to look at',
+        '',
+        `- [Step 2](${where}#L7) names \`src/limter.ts\`, which does not exist; \`src/limiter.ts\` does.`,
+        `- [Step 3](${where}#L9) has no \`seam:\` line.`,
+        '',
+        '**Your Call**:',
+      ].join('\n'),
+    )
+  })
+
+  it('renders no Seams part when every seam names a file that exists or a new one', async () => {
+    const dir = await started(INTENT.replace('1. [x] First', '1. [ ] First'))
+    expect(captureIo(() => handoff(dir, ['--plan'])).stdout).not.toContain('**Seams**')
+  })
+
   it('tables the open questions above the moves, with the move that settles them, and no Questions row — D118 (questions-table)', async () => {
     const questions = [
       '',

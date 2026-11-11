@@ -44,7 +44,7 @@
 // an abandon, a spike closed at the boundary) finds nothing in flight and
 // points forward, with no Verdict either way, since nothing landed.
 
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, join, relative } from 'node:path'
 import {
   type NumstatEntry,
@@ -60,6 +60,7 @@ import { blocks, cell, notice, printEnding, type StateRow, stateTable } from '..
 import { hasStep } from '../lib/steplist.ts'
 import { isArtifactPath, parseStepSeam } from '../lib/intent.ts'
 import { rerootLinks } from '../lib/links.ts'
+import { type SeamFinding, seamFindings, type Tree } from '../lib/seamcheck.ts'
 import {
   buildFolder,
   buildFolderIgnored,
@@ -217,8 +218,10 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     // question deferred to the work is no call to make now.
     const openRows = parseOpenQuestionRows(intent)
     const questions = questionsPart(openRows, where)
+    const seams = seamsPart(seamFindings(intent, repoTree(root)), where)
     const plan = [
       SEAM_RULE,
+      seams ?? '',
       questions ?? '',
       planCallBlock(first, cardRun(intent, null), planPublish(root, slug), questionTotals(openRows).toAnswer > 0),
       stateTable(stateRows({ intent, buildLog, verdict: null, now: null, stop: null, nextUp: first, exclude: null, where, questions: false })),
@@ -1408,6 +1411,44 @@ function planCallBlock(first: Step | undefined, run: Run, publish: Publish, toAn
     rows.push(callLine('`keep it local`', 'I run `plumbbob start --local`, so the plan commits record-only and the folder stays off the branch'))
   }
   return ['**Your Call**:', '', ...rows].join('\n')
+}
+
+/**
+ * The seams the plan card names, one line per finding, or null when there is
+ * nothing to say: a seam the build would refuse, or a token one edit away from
+ * a file that exists.
+ *
+ * Each line links its step's opener, the way a question links its own, and
+ * nothing here refuses the plan; the human reads it at the one pause where a
+ * seam is still cheap to fix.
+ *
+ * ```text
+ * **Seams**: 2 to look at
+ *
+ * - [Step 3](…/intent.md#L14) names `src/limited.ts`, which does not exist; `src/limiter.ts` does.
+ * - [Step 4](…/intent.md#L17) has no `seam:` line.
+ * ```
+ */
+function seamsPart(findings: ReadonlyArray<SeamFinding>, where: string): string | null {
+  if (findings.length === 0) {
+    return null
+  }
+  const line = (f: SeamFinding): string => `- [Step ${f.step}](${where}#L${f.line})${f.words.startsWith("'") ? '' : ' '}${f.words}`
+  return [`**Seams**: ${findings.length} to look at`, '', ...findings.map(line)].join('\n')
+}
+
+/** The working tree as the seam check reads it: what exists under the repo root, and what a directory holds. */
+function repoTree(root: string): Tree {
+  return {
+    exists: (relPath) => existsSync(join(root, relPath)),
+    entries: (relDir) => {
+      try {
+        return readdirSync(join(root, relDir))
+      } catch {
+        return []
+      }
+    },
+  }
 }
 
 /**

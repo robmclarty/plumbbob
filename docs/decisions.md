@@ -1850,6 +1850,16 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   repo ([**D26 (build-folders)**](#d26)): a list in a chat is gone with the session. *Tagged in* the `build` and `run`
   skills, and `docs/presentation.md`.
 
+- <a id="d131"></a>**D131 (seams-at-the-plan): The plan card names a seam the build would refuse, and a seam token one
+  edit away from a file that exists.** `handoff --plan` reads every undone step's seam through the strict parse, and
+  checks each token that names nothing against its folder's entries: one edit apart (a character in, out, or changed,
+  or two neighbours swapped), the same extension, and not a stem grown or cut at its end. Each finding is a linked line
+  under `**Seams**:`, above the questions table, and the part renders only when it has one. A new file draws no line.
+  *because* a seam that will not parse was refused only when `build` entered its step, a range after the plan was
+  approved, and a typo was never refused at all: the step's first edit landed on a new file beside the one it meant.
+  Guidance, never a gate ([**D10 (pause-not-lock)**](#d10)). *Tagged in* `src/lib/seamcheck.ts`, the `handoff` verb,
+  the `plan` skill, and `docs/presentation.md`.
+
 ### Superseded
 
 - <a id="d20"></a>**D20 (local-archive): The archive was local-only markdown.** Wrapping wrote a plain-markdown archive
