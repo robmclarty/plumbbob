@@ -1860,6 +1860,14 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   Guidance, never a gate ([**D10 (pause-not-lock)**](#d10)). *Tagged in* `src/lib/seamcheck.ts`, the `handoff` verb,
   the `plan` skill, and `docs/presentation.md`.
 
+- <a id="d132"></a>**D132 (scenario-evals): An opt-in `scenarios` slot runs the eval contracts keyframes.md's Scenarios
+  point at.** `scripts/scenario-evals.ts` collects every `file:test/evals/contracts/…` pointer under `## Scenarios`,
+  builds `dist/`, and runs those contracts once each, latched, through `test/evals/run.ts --strict`, which exits 1 on
+  any run short of a pass. `pnpm check --include scenarios` runs it; the default run and the turn gate never do.
+  *because* the `intent` slot proves a pointer resolves, not that what it points at passes, and the Scenarios are the
+  behavior the plan says must keep working. Each run is a live model session, minutes long, so the slot is opt-in and runs alone.
+  *Tagged in* `checkride.config.json` and `scripts/scenario-evals.ts`.
+
 ### Superseded
 
 - <a id="d20"></a>**D20 (local-archive): The archive was local-only markdown.** Wrapping wrote a plain-markdown archive

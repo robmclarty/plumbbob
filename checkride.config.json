@@ -63,6 +63,16 @@
       "timeout": 600
     },
 
+    "scenarios": {
+      "command": "node",
+      "args": ["scripts/scenario-evals.ts"],
+      "optIn": true,
+      "order": "single",
+      "timeout": 3600,
+      "description": "The eval contracts keyframes.md's Scenarios point at, one latched run each (PLUMBBOB_SCENARIO_N for more)",
+      "note": "Opt-in, turned on 2026-11-11 from keyframes I2 (scenario-evals): `pnpm check --include scenarios`. The intent slot proves each Scenario's held-by pointer resolves; this slot runs the eval contracts those pointers name, so linked and passing sit side by side. Every run is a live model session through the claude CLI and minutes long, so the slot stays out of the default run and the turn gate, and runs alone. It builds dist/ first, since the evals load the plugin from there."
+    },
+
     "spell": {
       "use": "cspell",
       "description": "cspell over the owned prose and src/scripts code; project lexicon lives in cspell.json",

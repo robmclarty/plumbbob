@@ -2,7 +2,7 @@
 // is a pass RATE plus a cost ledger, and `pnpm test` must be structurally
 // unable to reach this. Sequential runs (deterministic, rate-limit-friendly).
 //
-//   node test/evals/run.ts --sweep latched [--contract c1] [--n 5] [--model opus] [--date KEY]
+//   node test/evals/run.ts --sweep latched [--contract c1[,c4]] [--n 5] [--model opus] [--date KEY] [--strict]
 //   node test/evals/run.ts --report [--date KEY]
 //
 // The date is the receipt's key, today's UTC date unless `--date` names another:
@@ -230,19 +230,22 @@ async function main(): Promise<number> {
   const sweepArg = flagValue(argv, '--sweep') ?? process.env.PLUMBBOB_EVAL_SWEEP
   if (sweepArg !== 'baseline' && sweepArg !== 'no-relay' && sweepArg !== 'latched') {
     process.stderr.write(
-      'usage: node test/evals/run.ts --sweep baseline|no-relay|latched [--contract cN] [--n N] [--model m] [--date KEY]\n' +
+      'usage: node test/evals/run.ts --sweep baseline|no-relay|latched [--contract cN[,cM]] [--n N] [--model m] [--date KEY] [--strict]\n' +
         '       node test/evals/run.ts --report [--date KEY]\n',
     )
     return 1
   }
   const sweep: Sweep = sweepArg
-  const only = flagValue(argv, '--contract')
+  // One id, or a comma-separated list (`c1,c4`): the scenarios slot runs every
+  // contract keyframes.md's Scenarios point at in one sweep.
+  const only = flagValue(argv, '--contract')?.split(',').map((id) => id.trim())
   const n = Number.parseInt(flagValue(argv, '--n') ?? String(EVAL_N), 10)
   const model = flagValue(argv, '--model') ?? EVAL_MODEL
   const date = flagValue(argv, '--date') ?? today()
-  const contracts = CONTRACTS.filter((c) => only === undefined || c.id === only)
-  if (contracts.length === 0) {
-    process.stderr.write(`no contract matches "${only}" — known: ${CONTRACTS.map((c) => c.id).join(', ')}\n`)
+  const contracts = CONTRACTS.filter((c) => only === undefined || only.includes(c.id))
+  const unknown = only?.filter((id) => !CONTRACTS.some((c) => c.id === id)) ?? []
+  if (contracts.length === 0 || unknown.length > 0) {
+    process.stderr.write(`no contract matches "${unknown.join(', ') || only?.join(', ')}" — known: ${CONTRACTS.map((c) => c.id).join(', ')}\n`)
     return 1
   }
 
@@ -277,7 +280,9 @@ async function main(): Promise<number> {
   } else {
     process.stdout.write('non-pass runs above — fixtures kept for inspection (temp dirs named plumbbob-*)\n')
   }
-  return 0
+  // A sweep reports a rate and exits 0; `--strict` (the scenarios slot) makes
+  // any run short of a pass a failed exit, so a check can read the verdict.
+  return argv.includes('--strict') && records.some((r) => r.outcome !== 'pass') ? 1 : 0
 }
 
 // Entry only when invoked directly — the runner's exports (deriveOutcome,

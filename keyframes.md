@@ -134,6 +134,9 @@ stays the log.
 - **D123 (defer-records)**: `plumbbob defer` marks a question deferred, with what will settle
   it, and keeps it counted as open.
   - because: an unknown named and set aside beats one quietly decided.
+- **D132 (scenario-evals)**: An opt-in `scenarios` slot runs the eval contracts the Scenarios
+  point at, so "linked" and "passing" sit side by side.
+  - because: the `intent` slot proves a pointer resolves, not that what it points at passes.
 
 ## Taste
 
@@ -158,5 +161,3 @@ stays the log.
 
 - **I1 (taste-as-rule)**: Hold [T3 (no-em-dash)] by its vale rule. Taste takes no `held-by:`,
   so that means a Constraint pointing at `.vale/styles/Repo/EmDash.yml`.
-- **I2 (scenario-evals)**: An opt-in checkride slot that runs the eval contracts the
-  Scenarios point at, so "linked" and "passing" sit side by side.
