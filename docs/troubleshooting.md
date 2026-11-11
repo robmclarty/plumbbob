@@ -194,6 +194,26 @@ Claude Code leaves auto-update off for a marketplace you add yourself, so turn i
 In Zed, keep `agent_servers.claude-acp` at `"type": "registry"`, which tracks the current
 bridge.
 
+### `/plumbbob:next` prints the dashboard and no choices
+
+**Cause.** The choices are drawn by the host's question control, and the host has none:
+a headless run, Cursor, or a Zed whose Claude agent bridge predates form questions (the
+bridge turns the question into a form only when the editor says it can draw one). The
+skill then relays `plumbbob status`, which names the same next move
+([**D128 (one-door)**](decisions.md#d128)). **Fix.** None is needed in a terminal Claude
+Code. In Zed, keep `agent_servers.claude-acp` at `"type": "registry"` so the bridge is
+current, and update Zed itself. The same cause leaves the open questions as a table to
+answer in a reply, and a run without its steps on the task list; both are the build
+working as it always has.
+
+### A choice in `/plumbbob:next` says to type something
+
+**Cause.** By design. A move that lands a step, records a stop card, starts a run,
+finishes the build, or discards work is made by a typed prompt alone, since the approval
+latch and a run's grant count typed prompts and nothing else
+([**D64 (approval-latch)**](decisions.md#d64)). **Fix.** Type what the choice names:
+`looks good`, `/plumbbob:run`, `/plumbbob:finish`.
+
 ### `checkpoint` (or `verify`) refuses because the check is red
 
 **Cause.** The heavy gate failed; the tick refuses to checkpoint on red ([**D16 (check-plus-self-review)**](decisions.md#d16)). **Fix.**

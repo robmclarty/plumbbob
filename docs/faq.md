@@ -161,11 +161,13 @@ own: every verb runs from a terminal, and a few (`use`, `handoff`, `defer`, `che
 way. The artifacts are plain markdown and ordinary git commits, so the method travels to
 any other host, driven by hand.
 
-## Seventeen skills: which ones do I actually use day to day?
+## Eighteen skills: which ones do I actually use day to day?
 
 Four: `/plumbbob:plan` once, `/plumbbob:run` per range, `/plumbbob:status` whenever you lose
 the thread, `/plumbbob:finish` once. A run stops where the plan says, at a step's pause or
-on the stop card that reviews what landed, and one reply settles either. `/plumbbob:park`
+on the stop card that reviews what landed, and one reply settles either. To remember
+none of them, fire `/plumbbob:next`: it asks what to do as a list of choices and makes
+the one you pick, and a move that lands work tells you what to type. `/plumbbob:park`
 joins the moment a stray idea shows up mid-step, and the next stop card proposes a class for
 it. The rest are situational: `/plumbbob:build` to take one step at a time (or for a plan
 without ranges), `/plumbbob:verify` for a diff you wrote yourself,
@@ -212,7 +214,7 @@ They are converging on it (plan modes, spec kits, native checkpoints), and that
 convergence is evidence *for* the premise. PlumbBob is deliberately thin against that
 future: the artifacts are plain markdown and ordinary git commits in your own repo, the
 CLI is lean (node builtins plus one deliberate dependency), and nothing locks you in. The
-investment is small (seventeen skills over a plain-markdown sidecar, learnable in an
+investment is small (eighteen skills over a plain-markdown sidecar, learnable in an
 afternoon), and what you are actually learning is the method: decisions before code, one
 verified step at a time, capture instead of chase. That transfers to whatever tool wins.
 If something better ships, you walk away with your archives and your habits intact.

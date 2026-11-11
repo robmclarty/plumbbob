@@ -38,6 +38,21 @@ is fine; refining is always available.
   may stay one bare line; the sub-lines earn their keep only when a human decision
   genuinely waits on it.)
 
+  **Ask by choice where the host can.** When your tools include `AskUserQuestion` and a
+  question waits on the human, ask before you write any text this turn, since a client
+  that folds text written before a tool call would hide it
+  ([D129 (ask-first)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d129)).
+  With two or more waiting, ask one question first, `<N> open questions, each with a
+  lean. How do you want to settle them?`, under the header `Questions`, with three
+  options: `Take every lean (Recommended)`, `Go through them`, and
+  `Leave them for the table`. With one waiting, ask it directly. Going through them, ask up
+  to four in one call: each question's text is its handle, the question, and its `*plain:*`
+  line, and its options are `Take the lean`, described by the lean verbatim, and
+  `Defer to the work`; the tool's free-text choice is the human's own answer. Record what
+  they chose the way a typed reply is recorded, below, then go on to the table, which
+  shows whatever still waits. With no such tool, or the question dismissed, skip all of
+  this: the table and a typed reply are the whole path, as they always were.
+
   Then show the human what is open: run `plumbbob status --questions` and paste its
   table whole, one row per open question with why it matters and your lean, each cell
   the first sentence of its line, so write each line to stand on that sentence, and keep

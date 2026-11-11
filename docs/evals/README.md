@@ -9,6 +9,7 @@ what it says is what was measured on that day, at that version.
 
 Newest first:
 
+- [2026-11-10-next.md](2026-11-10-next.md), plumbbob 0.14.3 with the uncommitted `/plumbbob:next` work: c14 (`/plumbbob:next` falls back to the dashboard with no question tool) beside c1, c4, c10, c11, c12, and c13, latched arm only, 5/5 each.
 - [2026-10-31-short-stop.md](2026-10-31-short-stop.md), plumbbob 0.13.6: c11 (a run ends on its stop card) and c13 (a short stop card after an approved halt), latched arm only, 5/5 each.
 - [2026-10-31-reply-order.md](2026-10-31-reply-order.md), 0.13.6: c10 (a question at the pause) and c12 (feedback at the pause), latched only, 5/5 each.
 - [2026-10-27-show.md](2026-10-27-show.md), 0.13.4: c10 alone, latched only, 5/5.

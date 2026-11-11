@@ -22,7 +22,7 @@ calls `process.exit`, which the bin entry alone owns (`rules/no-process-exit.yml
 | ------ | ---------- | -------- |
 | `setup` | `setup` | ready a repo for its first build: `.plumbbob/`, `settings.json`, the control-file excludes |
 | `start` | `start <title> [--slug <name>] [--local] [--allow-dirty]` | scaffold `builds/<slug>/`, record baseline, open the session |
-| `status` | `status [--build <slug>] [--invoked "<args>"] [--run "<args>"] [--questions]` | print the orientation dashboard (or `NO ACTIVE SESSION`) |
+| `status` | `status [--build <slug>] [--invoked "<args>"] [--run "<args>"] [--questions] [--json]` | print the orientation dashboard (or `NO ACTIVE SESSION`) |
 | `build` | `build [<n>] [--build <slug>]` | write step `n`'s seam + `STEP` (goes in-flight) |
 | `handoff` | `handoff [<n>] [--full] [--plan] [--driver] [--stop] [--harvest] [--build <slug>]` | print the turn's whole CLI-rendered ending by tier, or the one line for a card already shown |
 | `check` | `check [--bail] [--changed] [--all] [--only a,b] [--skip a,b] [--include a,b]` | run the heavy gate; no state change |
@@ -125,7 +125,7 @@ the first step commit carries it ([**D126 (setup-before-start)**](decisions.md#d
 ### status
 
 ```text
-plumbbob status [--build <slug>] [--invoked "<args>"] [--run "<args>"] [--questions]
+plumbbob status [--build <slug>] [--invoked "<args>"] [--run "<args>"] [--questions] [--json]
 ```
 
 Prints the orientation dashboard (title, the derived phase, the step list with the next
@@ -144,6 +144,36 @@ that wait on the human; one deferred to the work rides a second table beneath it
 `**Deferred**:` lead, with what will settle it in place of the lean, and that table stands
 alone when every open question is deferred ([**D120 (deferred-questions)**](decisions.md#d120)). With none open
 it prints `plumbbob: no open questions in this plan`.
+
+`--json` prints the state as one JSON object on one line, in place of the dashboard
+([**D127 (state-as-data)**](decisions.md#d127)). It is the form a surface with controls of
+its own reads: `/plumbbob:next` shows its moves as choices, and `build` and `run` mirror
+its tasks on the host's task list.
+
+```json
+{ "schema": "plumbbob.status/1",
+  "state": "boundary",
+  "moves": [
+    { "id": "run", "label": "Run range 2 of 2", "description": "Type `/plumbbob:run`: it builds steps 2-3, then stops for your review.",
+      "command": "/plumbbob:run", "typed": true, "primary": true },
+    { "id": "build", "label": "Build step 2 only", "description": "Builds step 2 and stops at its pause card; nothing lands until you approve.",
+      "command": "/plumbbob:build 2", "typed": false, "primary": false } ],
+  "tasks": [
+    { "step": 2, "subject": "Step 2 (1 of 2): feat(login): add the limiter", "status": "pending" },
+    { "step": 3, "subject": "Step 3 (2 of 2): feat(login): wire it into POST /login", "status": "pending" } ],
+  "questions": [
+    { "id": "Q1", "question": "Cache the parse?", "why": "It changes the seam.", "lean": "No, parse each time.", "deferred": null } ] }
+```
+
+`state` is one of `boundary`, `in-flight`, `paused`, `stop-waiting`, `spike`, `done`,
+`no-build`, and `no-session`. `moves` lists every move open from that state, the likeliest
+first, and the first is the one the dashboard's `next →` names; at a pause it is the
+approval the card asks for. A move whose `typed` is true can be made by a typed prompt
+alone (it lands a step, records a review, starts a run, closes the build, or discards
+work), and its `command` is what to type. `tasks` holds the steps of the range in play in
+build order, `pending`, `in_flight`, or `done`: the range `--run` names, else the one
+holding the step in flight or the next undone step, else the whole plan. `questions` holds
+every open question, a deferred one with what settles it in `deferred`.
 
 When the plan carries `## Build ranges` ([**D92 (build-ranges)**](decisions.md#d92)), the
 ranges are listed beneath the steps, in the step list's own grammar, each row the command

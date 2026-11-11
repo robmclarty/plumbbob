@@ -15,5 +15,6 @@ import { c10 } from './c10-question.eval.ts'
 import { c11 } from './c11-run.eval.ts'
 import { c12 } from './c12-feedback.eval.ts'
 import { c13 } from './c13-short-stop.eval.ts'
+import { c14 } from './c14-next.eval.ts'
 
-export const CONTRACTS: ReadonlyArray<Contract> = [c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13]
+export const CONTRACTS: ReadonlyArray<Contract> = [c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14]

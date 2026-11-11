@@ -47,6 +47,17 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    flight; the seam is awareness, not a lock). When it refuses with `no step entered` because
    a stop card is waiting for its reply, relay the refusal whole and end the turn: the card's
    reply is the human's, and no step is built until it records.
+   - **Mirror the steps on the host's task list.** When your tools include a task list
+     (`TaskCreate` and `TaskUpdate`, or `TodoWrite`), run `plumbbob status --json` once
+     the step is entered and read its `tasks`: the steps of the range in play, in build
+     order, each with a `subject` the CLI wrote and a `status`. Under a run, add
+     `--run "<the run's arguments>"` so the list is the run's range. Put one entry on the
+     list per task, its `subject` verbatim, and update an entry already there from an
+     earlier turn rather than adding it twice. An entry is in progress while its step is
+     in flight and complete once its checkpoint lands. Every task call comes before
+     `plumbbob handoff`, and none after the turn's closing text. The list is a mirror for
+     the eye: never read the build's state back from it, and with no such tool, skip it
+     ([D130 (step-mirror)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d130)).
    - **Spike-as-step.** If the step's title opens with `spike:` / `Spike:`, the increment
      *is* the experiment: resolving a fork the plan couldn't settle on paper. After
      entering it, run `plumbbob spike report "<slug>"` (the CLI scaffolds a

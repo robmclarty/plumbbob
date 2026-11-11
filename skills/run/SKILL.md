@@ -125,6 +125,13 @@ you granted when it enters it. Once that step lands, its checkpoint prints the b
 with the Stop row (`| Stop | **Range 3** landed - <its stop> |`); relay none of it, and end
 the run on the stop card, below, in the same turn.
 
+**The range rides the host's task list.** When your tools include a task list, mirror
+the run's range on it as the build skill's entering step says, reading the steps from
+`plumbbob status --run "<this run's arguments>" --json`: one entry per step, its
+`subject` verbatim, in progress while it is in flight and complete once it lands, so the
+human watches the range tick down. Every task call comes before `plumbbob handoff`
+([D130 (step-mirror)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d130)).
+
 **A bare range.** `grant: none, as a bare range builds to its pause`: build the range's one
 step to its pause exactly as the build skill's default path does for `/plumbbob:build <n>`:
 enter it, implement it, verify it, write the detail file, run `plumbbob handoff`, paste its

@@ -242,6 +242,23 @@ The argument only seeds how you get there.
      now, before any code. The revert move vanishes there on its own: nothing has landed
      to wind back. The turn is your framed plan, then that block, and nothing after it:
      anything you would add goes above the `---` rule the block opens on.
+   - **Open questions go first, as choices, where the host can.** When your tools
+     include `AskUserQuestion` and the plan holds a question that waits on the human, ask
+     before you write any text this turn: before the framed plan, and before
+     `plumbbob handoff --plan`
+     ([D129 (ask-first)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d129)).
+     With two or more waiting, ask one question first, `<N> open questions, each with a
+     lean. How do you want to settle them?`, under the header `Questions`, with three
+     options: `Take every lean (Recommended)`, `Go through them`, and
+     `Leave them for the card`. With one waiting, ask it directly. Going through them, ask
+     up to four in one call: each question's text is its handle, the question, and its
+     `*plain:*` line, and its options are `Take the lean`, described by the lean verbatim,
+     and `Defer to the work`; the tool's free-text choice is the human's own answer. A
+     lean taken or an answer given is resolved on the question's opener line, with the
+     Decision it settles; a deferral is `plumbbob defer`. The card then tables whatever
+     still waits, and the plan still lands only on a typed `looks good`. With no such
+     tool, or the question dismissed, skip all of this: the card's table and a typed reply
+     are the whole path, as they always were.
    - **The plan commit is latched too.** Once the turn ledger exists, `checkpoint
      --plan` refuses to land in the same turn `start` stamped it: present the plan,
      **end the turn**, and the human's approving message is the tick that lets it
@@ -331,6 +348,10 @@ Make it easy and non-intrusive:
 - **Propose, don't interrogate.** Offer concrete suggestions the human can **accept as-is
   without typing** ("done-when: the 6th request in 60s returns 429, good?"), while
   taking arbitrary detail when they want to give it, including pointers to other files.
+- **A fork with real alternatives can be a choice.** When the interview reaches a call
+  with two to four concrete answers, and your tools include `AskUserQuestion`, ask it
+  there, your suggestion first and marked `(Recommended)`, before any text in that turn.
+  The tool's free-text choice carries whatever detail they want to give.
 - **Let them double back.** They will revise as the picture sharpens; that's expected.
   They can also edit `intent.md` by hand at any time, or call `/plumbbob:refine` to repair it.
 

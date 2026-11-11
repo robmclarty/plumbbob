@@ -1,6 +1,6 @@
 # Skills reference
 
-The seventeen skills are the surface you actually drive; the CLI underneath
+The eighteen skills are the surface you actually drive; the CLI underneath
 ([`cli-reference.md`](cli-reference.md)) is what they shell out to. This page is the
 reference for that surface: what each skill is for, what it takes, what it reads and
 writes, and when to reach for it.
@@ -8,7 +8,8 @@ writes, and when to reach for it.
 Three ground rules apply to all of them:
 
 - **You fire every move.** Every skill is `disable-model-invocation`: the model never
-  invokes one on its own, and `/plumbbob:status` always names your next one.
+  invokes one on its own, and `/plumbbob:status` always names your next one. To pick it
+  from a list instead, fire `/plumbbob:next`.
 - **Namespaced.** Claude Code namespaces the skills under the plugin, so the command is
   `/plumbbob:plan` and these docs write it in full. The bare `/plan` also reaches a
   plugin skill *unless another command already owns that name*, and five of these
@@ -23,6 +24,7 @@ Three ground rules apply to all of them:
 
 | Skill <img alt="" width="110" height="1"> | Takes <img alt="" width="150" height="1"> | Does |
 | ------------------------------------ | -------------------------------------- | ------ |
+| [`/plumbbob:next`](#next) | none | ask what to do next as a list of choices, and make the one you pick |
 | [`/plumbbob:plan`](#plan) | `[spec-path \| intent]` | open the session and author the whole plan: Frame, Decisions, Constraints, all Steps, and the build ranges |
 | [`/plumbbob:step`](#step) | `[what-changed]` | revise/sharpen the next step (empty input auto-syncs it to reality) |
 | [`/plumbbob:run`](#run) | `[range-number]` | run what is left of the range holding the next step, or of range N, and end on its stop |
@@ -42,6 +44,27 @@ Three ground rules apply to all of them:
 | [`/plumbbob:doctor`](#doctor) | none | check the install, and whether this repo is set up, from inside a session |
 
 ## The loop skills
+
+### next
+
+The one command to remember ([D128 (one-door)](decisions.md#d128)). It reads the build's
+state as data (`plumbbob status --json`) and asks `What next?` through the host's own
+question control, with the moves open from where the build stands as the choices: build
+the next step, sharpen it, stress-test the plan, answer the open questions, park an idea.
+Each choice carries a sentence saying what it does. Pick one and the skill makes it, by
+reading that move's skill and following it to its own ending, so a step built from a
+choice still stops at its pause card.
+
+A move that lands work stays typed. Approving a step, recording a stop card, starting a
+run, finishing the build, and reverting or abandoning a step are each made by a typed
+prompt alone, because the latch and a run's grant count typed prompts and nothing else
+([D64 (approval-latch)](decisions.md#d64)). Those moves still appear as choices, and each
+says what to type: pick `Run range 2 of 3` and the reply is the line to type,
+`/plumbbob:run`.
+
+The choices need a host that draws them: Claude Code's terminal does, and so does Zed
+through the current Claude agent bridge. On a host that does not, `/plumbbob:next` prints
+the dashboard, as `/plumbbob:status` does.
 
 ### plan
 

@@ -930,3 +930,82 @@ describe('a reply at a card already shown comes after every tool call, none afte
     expect(flat('park')).toContain('with no tool call after the answer')
   })
 })
+
+describe('next — the one door: the moves as choices, typed moves left typed — D128 (one-door)', () => {
+  const { data, body } = parseSkill('next')
+  const flat = body.replace(/\s+/g, ' ')
+
+  it('names itself after its directory, human-fired, on the session model', () => {
+    expect(data.name).toBe('next')
+    expect(data['disable-model-invocation']).toBe('true')
+    expect(data.model).toBeUndefined()
+  })
+
+  it('opens with the state as data', () => {
+    expect(body).toContain('!`plumbbob status --json 2>/dev/null')
+    expect(data['allowed-tools']).toMatch(/Bash\(plumbbob status/)
+  })
+
+  it('grants no verb that lands, records, closes, or discards work — D64 (approval-latch)', () => {
+    for (const verb of ['checkpoint', 'harvest', 'finish', 'revert', 'abandon']) {
+      expect(data['allowed-tools']).not.toContain(`plumbbob ${verb}`)
+      expect(flat).toContain(`\`plumbbob ${verb}\``)
+    }
+    expect(flat).toContain('A choice never lands work')
+  })
+
+  it('asks before any text, and passes the moves through verbatim — D129 (ask-first), D127 (state-as-data)', () => {
+    expect(flat).toContain('call it as the first thing in the turn, with no sentence before it')
+    expect(flat).toContain("each option's label is the move's `label` and its description the move's `description`, both verbatim")
+    expect(flat).toContain('Never add, drop, reorder, or reword a move')
+  })
+
+  it('falls back to the dashboard on a host with no question tool', () => {
+    expect(flat).toContain('Do not try a second tool and do not ask in prose: run `plumbbob status` and relay its dashboard whole')
+  })
+
+  it('makes nothing for a typed move, and ends on the CLI line — D121 (reply-after-the-tools)', () => {
+    expect(flat).toContain('say what to type, and make nothing')
+    expect(flat).toContain('Every tool call comes before the sentence and none after it')
+  })
+
+  it('builds one step to its pause, never under a grant', () => {
+    expect(flat).toContain('Never pass `--auto`, a range, or a list')
+  })
+})
+
+describe('open questions are asked as choices before any text, the table still the fallback — D129 (ask-first)', () => {
+  const flat = (dir: string): string => parseSkill(dir).body.replace(/\s+/g, ' ')
+
+  for (const [dir, where] of [
+    ['plan', 'card'],
+    ['refine', 'table'],
+  ] as const) {
+    it(`${dir} asks first, keeps the one-reply settle, and falls back to the ${where}`, () => {
+      expect(flat(dir)).toContain('ask before you write any text this turn')
+      expect(flat(dir)).toContain(`\`Take every lean (Recommended)\`, \`Go through them\`, and \`Leave them for the ${where}\``)
+      expect(flat(dir)).toContain('`Take the lean`, described by the lean verbatim')
+      expect(flat(dir)).toContain('With no such tool, or the question dismissed, skip all of this')
+    })
+  }
+
+  it('plan still lands only on a typed approval', () => {
+    expect(flat('plan')).toContain('the plan still lands only on a typed `looks good`')
+  })
+})
+
+describe("the range rides the host's task list, a mirror the build never reads back — D130 (step-mirror)", () => {
+  const flat = (dir: string): string => parseSkill(dir).body.replace(/\s+/g, ' ')
+
+  it('build reads the tasks from the CLI and keeps every task call ahead of the handoff', () => {
+    expect(flat('build')).toContain('run `plumbbob status --json` once the step is entered and read its `tasks`')
+    expect(flat('build')).toContain('its `subject` verbatim')
+    expect(flat('build')).toContain('Every task call comes before `plumbbob handoff`, and none after the turn\'s closing text')
+    expect(flat('build')).toContain('never read the build\'s state back from it, and with no such tool, skip it')
+  })
+
+  it('run mirrors its own range', () => {
+    expect(flat('run')).toContain('`plumbbob status --run "<this run\'s arguments>" --json`')
+    expect(flat('run')).toContain('Every task call comes before `plumbbob handoff`')
+  })
+})

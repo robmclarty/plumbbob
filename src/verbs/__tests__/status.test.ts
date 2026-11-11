@@ -4,7 +4,7 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { status } from '../status.ts'
 import { handoff } from '../handoff.ts'
 import { start } from '../start.ts'
-import { buildDir, checkpointsPath, detailPath, grantPath, markSpike, sidecarDir, stepPath, stopPath } from '../../lib/sidecar.ts'
+import { buildDir, checkpointsPath, detailPath, grantPath, markSpike, pausePath, sidecarDir, stepPath, stopPath } from '../../lib/sidecar.ts'
 import { formatVerbHelp } from '../../cli-core.ts'
 import { commit, headSha, stageAll } from '../../lib/git.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -387,6 +387,132 @@ describe('status — --run prints the run a /plumbbob:run invocation names — D
 
   it('lists the flag in the verb table', () => {
     expect(formatVerbHelp('status')).toContain('--run "<args>"')
+  })
+})
+
+describe('status --json prints the state as data', () => {
+  const INTENT = [
+    '# Data',
+    '',
+    '## Steps',
+    '',
+    '1. [x] First — **done when:** ok',
+    '   - seam: `src/a.ts`',
+    '2. [ ] Second — **done when:** ok',
+    '   - seam: `src/b.ts`',
+    '3. [ ] Third — **done when:** ok',
+    '   - seam: `src/c.ts`',
+    '',
+    '## Build ranges',
+    '',
+    "1. `/plumbbob:build 1`, **stop:** at step 1's pause, approve the schema",
+    '2. `/plumbbob:build 2-3`, **stop:** review the parser',
+    '',
+    '## Open questions',
+    '',
+    '- <a id="q1"></a>**Q1 (cache)**: Cache the parse? *resolve by:* decide',
+    '  - *plain:* It changes the seam.',
+    '  - *lean:* No, parse each time.',
+    '',
+  ].join('\n')
+
+  type State = {
+    readonly schema: string
+    readonly state: string
+    readonly moves: ReadonlyArray<{ readonly id: string; readonly command: string; readonly typed: boolean; readonly primary: boolean }>
+    readonly tasks: ReadonlyArray<{ readonly step: number; readonly subject: string; readonly status: string }>
+    readonly questions: ReadonlyArray<Record<string, unknown>>
+  }
+
+  async function dataSession(): Promise<string> {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Data', '--slug', 'data']))
+    writeFileSync(join(buildDir(dir, 'data'), 'intent.md'), INTENT)
+    return dir
+  }
+
+  function read(dir: string, args: ReadonlyArray<string> = []): State {
+    const { code, stdout } = captureIo(() => status(dir, ['--json', ...args]))
+    expect(code).toBe(0)
+    expect(stdout.endsWith('\n')).toBe(true)
+    expect(stdout.trim().split('\n')).toHaveLength(1)
+    return JSON.parse(stdout) as State
+  }
+
+  it('names the one move with no session, and nothing else', () => {
+    expect(read(makeTempRepo())).toEqual({
+      schema: 'plumbbob.status/1',
+      state: 'no-session',
+      moves: [
+        {
+          id: 'plan',
+          label: 'Plan a build',
+          description: 'Frames the goal, the decisions and the steps as a plan you approve before anything is built.',
+          command: '/plumbbob:plan',
+          typed: false,
+          primary: true,
+        },
+      ],
+      tasks: [],
+      questions: [],
+    })
+  })
+
+  it('prints the moves, the range in play and the open questions at a boundary', async () => {
+    const state = read(await dataSession())
+    expect(state.schema).toBe('plumbbob.status/1')
+    expect(state.state).toBe('boundary')
+    expect(state.moves.map((m) => [m.id, m.command, m.typed, m.primary])).toEqual([
+      ['run', '/plumbbob:run', true, true],
+      ['build', '/plumbbob:build 2', false, false],
+      ['step', '/plumbbob:step', false, false],
+      ['refine', '/plumbbob:refine', false, false],
+      ['questions', 'what are the open questions?', false, false],
+      ['approve-plan', 'looks good', true, false],
+      ['park', '/plumbbob:park', false, false],
+    ])
+    expect(state.tasks).toEqual([
+      { step: 2, subject: 'Step 2 (1 of 2): Second', status: 'pending' },
+      { step: 3, subject: 'Step 3 (2 of 2): Third', status: 'pending' },
+    ])
+    expect(state.questions).toEqual([{ id: 'Q1', question: 'Cache the parse?', why: 'It changes the seam.', lean: 'No, parse each time.', deferred: null }])
+  })
+
+  it('reads a step in flight, and its pause once the card has shown', async () => {
+    const dir = await dataSession()
+    writeFileSync(stepPath(dir, 'data'), '2\n')
+    const building = read(dir)
+    expect(building.state).toBe('in-flight')
+    expect(building.moves[0]).toMatchObject({ id: 'verify', typed: false })
+    expect(building.tasks.map((t) => t.status)).toEqual(['in_flight', 'pending'])
+    writeFileSync(pausePath(dir, 'data'), '2\n')
+    const paused = read(dir)
+    expect(paused.state).toBe('paused')
+    expect(paused.moves[0]).toMatchObject({ id: 'approve', command: 'looks good', typed: true })
+  })
+
+  it('takes the steps from the range --run names', async () => {
+    const dir = await dataSession()
+    expect(read(dir, ['--run', '2']).tasks.map((t) => t.step)).toEqual([2, 3])
+    expect(read(dir, ['--run', '1']).tasks.map((t) => t.step)).toEqual([2, 3])
+  })
+
+  it('lists the builds as moves when the session has no cursor', async () => {
+    const dir = await dataSession()
+    mkdirSync(buildDir(dir, 'second'), { recursive: true })
+    writeFileSync(join(buildDir(dir, 'second'), 'intent.md'), '# Second\n')
+    writeFileSync(join(sidecarDir(dir), 'STATE'), '')
+    const state = read(dir)
+    expect(state.state).toBe('no-build')
+    expect(state.moves.map((m) => [m.id, m.command, m.typed, m.primary])).toEqual([
+      ['use-data', 'plumbbob use data', true, true],
+      ['use-second', 'plumbbob use second', true, false],
+      ['plan', '/plumbbob:plan', false, false],
+    ])
+  })
+
+  it('lists the flag in the verb table', () => {
+    expect(formatVerbHelp('status')).toContain('--json')
   })
 })
 

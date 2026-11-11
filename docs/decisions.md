@@ -1804,6 +1804,52 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   repo up by hand is not wrong ("users can manually setup their repo the way they want"). *Tagged in* `setup.ts`,
   `doctor.ts`, `start.ts`, the `setup` and `doctor` skills, and `docs/cli-reference.md`.
 
+- <a id="d127"></a>**D127 (state-as-data): `plumbbob status --json` prints the build's state as one JSON object: the
+  moves open from here, the steps of the range in play, and the open questions.** The object names its schema,
+  `plumbbob.status/1`, and its `state` (`boundary`, `in-flight`, `paused`, `stop-waiting`, `spike`, `done`,
+  `no-build`, `no-session`). Each move carries a `label` and a `description` the CLI wrote, the `command` that makes
+  it with no button to press, and `typed`: true for a move only a typed prompt can make, which is every move that
+  lands a step, records a review, starts a run, closes the build, or discards work. The first move is the one the
+  dashboard's pointer names, held by a test over every state, with one exception: at a pause the card on the table
+  asks for `looks good`, so that leads. Each task carries the `subject` to show, the step's number, its place in the
+  range, and its title. The flag writes nothing and replaces no ending the relay check judges. *because* a surface
+  with controls of its own (a host's question buttons, its task list, an editor's command menu) needs the moves as
+  data, and a list the model composed from the dashboard's prose would be a second renderer beside the first
+  ([**D80 (cli-renders-model-relays)**](#d80)); a picker that disagrees with the reminder is worse than no reminder
+  ([**D86 (build-order)**](#d86)). *Tagged in* `moves.ts`, `status.ts`, and `docs/cli-reference.md`.
+
+- <a id="d128"></a>**D128 (one-door): `/plumbbob:next` asks what to do next as a list of choices and makes the one
+  picked; a move that is typed stays typed.** The skill reads `status --json`, shows the first four moves through the
+  host's question tool, and on a pick whose `typed` is false reads that move's skill and follows it to its own
+  ending, so a step built from a choice still stops at its pause. On a pick whose `typed` is true it makes nothing:
+  it says what to type and ends on the CLI's line. Its tools leave out `checkpoint`, `harvest`, `finish`, `revert`
+  and `abandon`, and the turn hook is untouched, so a choice mints no grant and ticks no turn
+  ([**D64 (approval-latch)**](#d64), [**D65 (human-typed-grants)**](#d65)). On a host with no question tool it relays
+  the dashboard, as `/plumbbob:status` does. *because* seventeen skills asked a newcomer to remember which one came
+  next (Rob, 2026-11-10: "users don't need to remember anything, just make a choice"), and the moves that land work
+  are the ones the latch exists to keep in a person's hands, so those stay a keystroke. *Tagged in* the `next` skill
+  and `docs/skills-reference.md`.
+
+- <a id="d129"></a>**D129 (ask-first): A question put through the host's question tool is the first thing in its
+  turn, and the CLI's card or line is still the last.** `plan` and `refine` ask the open questions that wait on the
+  human before any text: one question that settles them all (`Take every lean`, `Go through them`, or leave them for
+  the table), then each in turn with its lean to take, a deferral, or the person's own answer. The answers are
+  recorded the way a typed reply's are, and the card tables whatever still waits; the plan still lands only on a
+  typed `looks good`. A host with no such tool gets the table and nothing else. *because* a client that folds text
+  written before a tool call would hide a card with a question beneath it
+  ([**D121 (reply-after-the-tools)**](#d121)), and the relay check holds a turn that does not close on its card
+  ([**D89 (block-once)**](#d89)), so the question can only lead; and six questions settled in one reply must not
+  become six clicks ([**D118 (questions-table)**](#d118)). *Tagged in* the `plan`, `refine` and `next` skills, and
+  `docs/presentation.md`.
+
+- <a id="d130"></a>**D130 (step-mirror): A build mirrors the steps of the range in play on the host's task list, and
+  never reads them back.** `build` and `run` read `tasks` from `status --json` and put one entry on the list per
+  step, its `subject` verbatim: in progress while the step is in flight, complete once its checkpoint lands. Every
+  task call comes before `plumbbob handoff`. A host with no task list shows nothing, and the build is the same.
+  *because* a person watching a range should see where it stands without asking, and the plan stays the file in the
+  repo ([**D26 (build-folders)**](#d26)): a list in a chat is gone with the session. *Tagged in* the `build` and `run`
+  skills, and `docs/presentation.md`.
+
 ### Superseded
 
 - <a id="d20"></a>**D20 (local-archive): The archive was local-only markdown.** Wrapping wrote a plain-markdown archive

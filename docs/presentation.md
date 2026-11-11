@@ -205,6 +205,34 @@ of its own, with a reminder naming the stop still waiting and
 `plumbbob handoff --stop --full` to bring it back
 ([the stop card](#the-stop-card)).
 
+### The host's own controls
+
+Two hosts draw more than text: Claude Code's terminal, and Zed through the Claude agent
+bridge, each have a question control with buttons and a task list that ticks. A turn may
+use both, and the positional rule decides where.
+
+**A question leads its turn.** A question put through the host's question tool is the
+first thing in the turn, with no text before it, and the CLI's card or line is still the
+last ([D129 (ask-first)](decisions.md#d129)). The fold that hides a reply written above a
+tool call would hide a card the same way, so a card can never sit above its own buttons.
+What the buttons say is the CLI's: `/plumbbob:next` shows the moves `plumbbob status
+--json` lists, each label and description verbatim
+([D127 (state-as-data)](decisions.md#d127), [D128 (one-door)](decisions.md#d128)). `plan`
+and `refine` ask the open questions this way before their card or table, and the card then
+tables whatever still waits.
+
+**A choice never stands in for a typed reply.** `looks good`, `/plumbbob:run`, and every
+other move that lands or discards work are typed, and a button for one says what to type.
+The Your Call block is unchanged, and it is still the whole of what a host without
+buttons shows.
+
+**The range rides the task list.** While a build runs, the steps of the range in play
+sit on the host's task list, each under the subject the CLI wrote,
+`Step 7 (2 of 4): <title>`, in progress while it is in flight and complete once it lands
+([D130 (step-mirror)](decisions.md#d130)). Every task call comes before `plumbbob
+handoff`, so the card is still the turn's last text. The list is a mirror: nothing reads
+the build's state from it, and a host without one loses nothing but the glance.
+
 ## The Now row
 
 The step in flight is the state table's second row, beneath the Verdict: its

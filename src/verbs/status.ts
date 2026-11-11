@@ -26,6 +26,7 @@ import {
   inSpike,
   intentPath,
   listBuilds,
+  readPause,
   resolveBuild,
   stepPath,
 } from '../lib/sidecar.ts'
@@ -38,8 +39,10 @@ import {
   parseOpenQuestionRows,
   parseRequestedStep,
   resolveRunArgs,
+  type OpenQuestion,
   type OrientInput,
 } from '../lib/orient.ts'
+import { buildState, movesFor, tasksFor, type Move, type Task } from '../lib/moves.ts'
 import { normalizeStepList } from '../lib/steplist.ts'
 import { blocks, notice } from '../lib/notice.ts'
 import { questionsPart, waitingCard, type WaitingCard } from './handoff.ts'
@@ -101,22 +104,30 @@ function grantText(grant: Grant | null): string | null {
  * when the run names nothing it can walk. With `--questions` it prints the
  * plan's open questions as the plan card tables them, and nothing else: the
  * ones that wait on the human in the table, and the ones deferred to the work
- * in a table of their own beneath it.
+ * in a table of their own beneath it. With `--json` it prints the state as
+ * data and nothing else: the moves a person can make from here, the steps of
+ * the range in play, and the open questions, for a surface with controls of
+ * its own (`--run` names the range the steps are read from).
  */
 export function status(cwd: string, args: ReadonlyArray<string> = []): number {
   const root = findRepoRoot(cwd)
-  if (root === null || !hasSession(root)) {
-    process.stdout.write('NO ACTIVE SESSION\n')
-    return 0
-  }
   const { raw: run, rest: afterRun } = takeRaw(args, '--run', '')
   const { raw: invoked, rest } = takeRaw(afterRun, '--invoked', null)
+  const json = rest.includes('--json')
+  if (root === null || !hasSession(root)) {
+    process.stdout.write(json ? stateJson('no-session', [PLAN_MOVE], [], []) : 'NO ACTIVE SESSION\n')
+    return 0
+  }
   // A session with builds but no resolvable cursor (finish cleared it, or the repo
   // holds several builds and none is active) has no single dashboard to show, so
   // list the builds and point at `use` instead of rendering a broken, empty one.
   const { build: slug } = resolveBuild(root, rest)
   if (slug === null) {
     const builds = listBuilds(root)
+    if (builds.length > 0 && json) {
+      process.stdout.write(stateJson('no-build', [...builds.map(useMove), { ...PLAN_MOVE, primary: false }], [], []))
+      return 0
+    }
     if (builds.length > 0) {
       process.stdout.write(
         `NO ACTIVE BUILD — pick one with \`plumbbob use <slug>\`:\n${builds.map((b) => `  ${b}`).join('\n')}\n`,
@@ -154,6 +165,13 @@ export function status(cwd: string, args: ReadonlyArray<string> = []): number {
     outOfBand: anchor === null ? 0 : commitsSince(root, anchor, PLAN_COMMIT_MARKER),
     waiting: card?.range ?? null,
   }
+  if (json) {
+    const paused = readPause(root, slug)
+    const cards = { orient: input, paused: paused?.kind === 'pause' ? paused.step : null, waiting: card }
+    const tasks = tasksFor(input, run === null ? null : resolveRunArgs(run, input))
+    process.stdout.write(stateJson(buildState(cards), movesFor(cards), tasks, parseOpenQuestionRows(intent)))
+    return 0
+  }
   const dashboard =
     run === null
       ? formatOrientation(orient(input))
@@ -161,6 +179,43 @@ export function status(cwd: string, args: ReadonlyArray<string> = []): number {
   const lines = [dashboard, ...harnessSection(root, slug)]
   process.stdout.write(`${lines.join('\n')}\n`)
   return 0
+}
+
+/** The schema `status --json` prints, named in the object so a reader can tell a later shape apart. */
+const STATE_SCHEMA = 'plumbbob.status/1'
+
+/** The one move with no session open: plan a build. */
+const PLAN_MOVE: Move = {
+  id: 'plan',
+  label: 'Plan a build',
+  description: 'Frames the goal, the decisions and the steps as a plan you approve before anything is built.',
+  command: '/plumbbob:plan',
+  typed: false,
+  primary: true,
+}
+
+/**
+ * The move that makes one of a session's builds the active one. Typed, since
+ * it is a terminal command and no skill's to run; the first leads the list.
+ */
+function useMove(slug: string, i: number): Move {
+  return {
+    id: `use-${slug}`,
+    label: `Work on ${slug}`,
+    description: `Run \`plumbbob use ${slug}\` in a terminal: it makes ${slug} the active build.`,
+    command: `plumbbob use ${slug}`,
+    typed: true,
+    primary: i === 0,
+  }
+}
+
+/**
+ * The state as one JSON object on one line: its schema, the state's name, the
+ * moves, the steps of the range in play, and the open questions.
+ */
+function stateJson(state: string, moves: ReadonlyArray<Move>, tasks: ReadonlyArray<Task>, questions: ReadonlyArray<OpenQuestion>): string {
+  const rows = questions.map(({ id, question, why, lean, deferred }) => ({ id, question, why, lean, deferred }))
+  return `${JSON.stringify({ schema: STATE_SCHEMA, state, moves, tasks, questions: rows })}\n`
 }
 
 /**

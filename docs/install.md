@@ -95,7 +95,7 @@ double-install.
 
 Either way, Claude Code namespaces the skills under the `plumbbob` plugin, so the
 commands are `/plumbbob:plan`, `/plumbbob:status`, and the rest. **The bare form
-(`/plan`) reaches the skill only where nothing else owns that name. Five of the seventeen
+(`/plan`) reaches the skill only where nothing else owns that name. Five of the eighteen
 share one with a Claude Code built-in (`plan`, `run`, `status`, `verify`, `doctor`),
 and the built-in wins, so these docs write the full `/plumbbob:<name>` form.**
 
