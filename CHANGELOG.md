@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2026-11-11
+
+- **Added:** the plan card reads every undone step's seam before the human approves it, and
+  names what it finds under `**Seams**:`, above the questions table, each line linked to its
+  step: a seam the build would refuse, said at the plan rather than at the `build` that
+  would have refused it, and a path one edit away from a file that exists, the typo that
+  used to land the step's first edit on a new file beside the one it meant. A new file draws
+  no line, and nothing refuses the plan. D131 (seams-at-the-plan) records it.
+- **Added:** an opt-in `scenarios` check slot runs the eval contracts `keyframes.md`'s
+  Scenarios point at, one latched run each, so "linked" and "passing" sit side by side.
+  `pnpm check --include scenarios` runs it; the default run and the turn gate never do. The
+  eval runner takes a comma-separated `--contract` list, and `--strict` exits 1 on any run
+  short of a pass. Its first run passed c1, c2, c4, c5, and c11, one run each. D132
+  (scenario-evals) records it, promoted from keyframes I2.
+
 ## [0.15.0] - 2026-11-10
 
 - **Added:** `/plumbbob:next`, the eighteenth skill, shows the moves open from the build's
