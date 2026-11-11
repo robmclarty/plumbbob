@@ -68,10 +68,11 @@ the same gate, and the check knows only that the plan no longer names it.
 code.** That is what the course did: lesson 2 wrote `intent.md` and committed it alone,
 lessons 3 and 4 landed steps only when you said so, lesson 5 met a surprise the plan never
 covered and folded it in without losing plumb, and lesson 8 read the whole history back
-from the build folder and `git log`. Beside it sits
+from the build folder and `git log`. Beside it sat
 [ridgeline](https://github.com/robmclarty/ridgeline), the layer above: where plumbbob keeps
-you in the driver's seat, ridgeline runs large, settled work without you, through a phased
-pipeline of agents; its last release was 0.12.14, on 2026-06-12.
+you in the driver's seat, ridgeline ran large, settled work without you, through a phased
+pipeline of agents. It is retired; its last release was 0.12.14, on 2026-06-12, and its idea
+lives on in runciter's scheduler, which is designed but not built yet.
 
 ![plumbbob's loop drawn around intent.md: build a step, the pause with the check and a readout, you type looks good, and a checkpoint commits the step with its why, while a surprise is parked as one line and harvested at the boundary into a Decision and a new step, and at finish the build folder rides the pull request](./media/plumbbob.svg)
 

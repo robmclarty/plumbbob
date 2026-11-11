@@ -18,9 +18,9 @@ session are in the [README](../README.md).
   always names the next one. A [glossary](glossary.md) covers the words it mints.
 
 Not for a typo, and not for a rewrite. A one-line fix needs no session, and a large,
-settled build wants an autonomous harness such as
-[Ridgeline](https://github.com/robmclarty/ridgeline). The loop earns its keep in between:
-a feature, a bug, a refactor.
+settled build wants an autonomous harness. [Ridgeline](https://github.com/robmclarty/ridgeline)
+was one, and is retired; its idea, a scheduler running a plan's steps without you, is being
+rebuilt in runciter. The loop earns its keep in between: a feature, a bug, a refactor.
 
 ## The one law
 
@@ -96,8 +96,8 @@ and the one the latch exists to answer,
 
 ## Where it sits
 
-PlumbBob is the layer below [Ridgeline](https://github.com/robmclarty/ridgeline) and
-above vibing;
+PlumbBob is the layer below full autonomy, which [Ridgeline](https://github.com/robmclarty/ridgeline)
+was until it retired, and above vibing;
 [`attention-first-development.md`](attention-first-development.md#where-it-sits-and-when-to-reach-for-it)
 sorts the three. This repository was built with it.
 
