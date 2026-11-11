@@ -5,6 +5,34 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] - 2026-11-10
+
+- **Added:** `/plumbbob:next`, the eighteenth skill, shows the moves open from the build's
+  state as choices through the host's question tool, so a newcomer picks a move instead of
+  recalling which skill comes next. An untyped pick runs by reading that move's skill. A move
+  that lands work, records a review, starts a run, closes the build, or discards work stays
+  typed, and its choice says what to type. D128 (one-door) records it.
+- **Added:** `plumbbob status --json` prints the build's state under the schema
+  `plumbbob.status/1`: the moves open from here (each marked `typed` when only a typed prompt
+  can make it), the steps of the range in play, and the open questions. The first move is
+  the one the dashboard's pointer names, and a test holds that over every state.
+  D127 (state-as-data) records it.
+- **Changed:** `plan` and `refine` ask the open questions as choices before their card or
+  table, starting with one question that settles them all. D129 (ask-first).
+- **Changed:** `build` and `run` mirror the range's steps on the host's task list.
+  D130 (step-mirror).
+- **Changed:** the latch, the turn hook, the relay check, and the hooks file are untouched: a
+  choice ticks no turn and mints no grant. A host with no question tool or task list gets the
+  dashboard and the table, as before. Eval contract c14 measures that fallback headless at
+  5/5, beside c1, c4, c10, c11, c12, and c13 at 5/5 each with no relay holds (receipt
+  `docs/evals/2026-11-10-next.md`). The buttons and the checklist have not yet been driven
+  live in a terminal or in Zed.
+- **Added:** the site posts "Who holds the reins?", an animation that runs one plan two ways:
+  a stagecoach where code holds the reins and each horse is one model call, beside a bareback
+  rider whose horse picks its own route and helpers. It lands as `site/reins.html`, embedded
+  under the landing page's Why section and linked from the Attention-first docs page and the
+  footer.
+
 ## [0.14.3] - 2026-11-06
 
 - **Added:** `/plumbbob:setup`, and the `plumbbob setup` verb under it, ready a repo that has
