@@ -61,6 +61,7 @@
     "@types/node": "26.6.6",
     "@vitest/coverage-v8": "5.1.0",
     "@vvago/vale": "3.25.1",
+    "ajv": "8.20.0",
     "cspell": "10.4.0",
     "fallow": "3.38.1",
     "fascicle": "0.17.8",

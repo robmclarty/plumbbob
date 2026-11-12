@@ -1,0 +1,41 @@
+{
+  "protocol": "runciter.plan/1",
+  "build": { "id": "2026-11-12-rate-limit-the-api", "title": "Rate-limit the API" },
+  "source": {
+    "path": ".plumbbob/builds/2026-11-12-rate-limit-the-api/intent.md",
+    "sha256": "9f2c4e1b7a3d5f6e8c0b1a2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f"
+  },
+  "contract_paths": ["packages/types/"],
+  "decisions": ["D1 (token-bucket): a token bucket over a sliding window, because bursts are expected"],
+  "constraints": ["C1 (no-new-deps): no new runtime dependencies, because the server ships as one binary"],
+  "steps": [
+    {
+      "id": "limit-types",
+      "title": "Add the RateLimit type to the shared types",
+      "range": "r1",
+      "seam": ["packages/types/src/rate-limit.ts", "packages/types/src/index.ts"],
+      "stop": "structural",
+      "effort": "high",
+      "done_when": "RateLimit { max, window_ms } is exported from @sandbox/types, with a unit test"
+    },
+    {
+      "id": "server-limiter",
+      "title": "Limit the login route",
+      "range": "r1",
+      "depends_on": ["limit-types"],
+      "seam": ["packages/server/src/limiter/", "packages/server/src/routes/login.ts"],
+      "done_when": "the sixth login in a minute from one address gets 429; a test covers it",
+      "context": ["The login route is the only one limited in this build."]
+    },
+    {
+      "id": "client-retry",
+      "title": "Back off on 429 in the client",
+      "range": "r1",
+      "depends_on": ["limit-types"],
+      "seam": ["packages/client/src/retry.ts", "packages/client/src/__tests__/retry.test.ts"],
+      "stop": "planned",
+      "effort": "medium",
+      "done_when": "a 429 is retried after Retry-After, at most three times; a test covers it"
+    }
+  ]
+}

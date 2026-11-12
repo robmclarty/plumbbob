@@ -36,6 +36,9 @@ importers:
       '@vvago/vale':
         specifier: 3.25.1
         version: 3.25.1
+      ajv:
+        specifier: 8.20.0
+        version: 8.20.0
       cspell:
         specifier: 10.4.0
         version: 10.4.0
