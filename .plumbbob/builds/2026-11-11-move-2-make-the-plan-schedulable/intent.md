@@ -75,7 +75,7 @@ plumbbob check / checkpoint gate ──▶ red when plan.json ≠ derivePlan(int
    - seam: `docs/plan-export.md`, `docs/decisions.md`
    - model: opus (the grammar every later step parses)
    - effort: high
-2. [ ] fix(intent): refuse the seam tokens runciter refuses, **done when:** `parseStepSeam` refuses a token holding `!` or a backslash, or with an empty, `.` or `..` segment, with a message naming the token and D23 (no-glob-seams), still strips a leading `./`, and every undone step's seam in every `intent.md` under `.plumbbob/builds/` still parses; tests in `src/lib/__tests__/intent.test.ts` cover each refusal
+2. [x] fix(intent): refuse the seam tokens runciter refuses, **done when:** `parseStepSeam` refuses a token holding `!` or a backslash, or with an empty, `.` or `..` segment, with a message naming the token and D23 (no-glob-seams), still strips a leading `./`, and every undone step's seam in every `intent.md` under `.plumbbob/builds/` still parses; tests in `src/lib/__tests__/intent.test.ts` cover each refusal
    - seam: `src/lib/intent.ts`, `src/lib/__tests__/intent.test.ts`
    - model: sonnet (mechanical, fully specified)
    - note: the refusals sit at `src/lib/intent.ts:114` to `:126`; runciter's `seam_entry_issue` is the reference for which tokens fail.

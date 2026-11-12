@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { matchesSeam, parseBuildScope, parseBuildTitle, parseStepMeta, parseStepSeam, scrapeBullets } from '../intent.ts'
+import { matchesSeam, parseBuildScope, parseBuildTitle, parseStepFields, parseStepMeta, parseStepSeam, scrapeBullets } from '../intent.ts'
 
 function intentWith(stepsBody: string): string {
   return `# Title\n\n## Frame\n\nstuff\n\n## Steps\n\n${stepsBody}\n\n## Open questions\n\n- none\n`
@@ -266,5 +266,94 @@ describe('matchesSeam', () => {
   it('rejects a path outside every token', () => {
     expect(matchesSeam('src/other.ts', tokens)).toBe(false)
     expect(matchesSeam('test/fixtures', tokens)).toBe(false) // the dir itself, no trailing slash
+  })
+})
+
+describe('parseStepFields', () => {
+  function stepWith(...subLines: string[]): string {
+    return intentWith(['1. [ ] One, **done when:** ok', '   - seam: `a.ts`', '2. [ ] Two, **done when:** ok', '   - seam: `b.ts`', ...subLines].join('\n'))
+  }
+
+  function findings(intent: string): ReadonlyArray<string> {
+    const r = parseStepFields(intent, 2)
+    return r.ok ? [] : r.findings
+  }
+
+  it('reads a step carrying none of the lines as all absent', () => {
+    const r = parseStepFields(stepWith('   - model: sonnet (mechanical)'), 2)
+    expect(r).toEqual({ ok: true, fields: { after: null, stop: null, effort: null, notes: [] } })
+  })
+
+  it('reads every value the three lines take, and the notes in order', () => {
+    const r = parseStepFields(
+      stepWith('   - after: 1, 3-4', '   - stop: structural', '   - effort: xhigh', '   - note: first `note`', '   - note: second'),
+      2,
+    )
+    expect(r).toEqual({
+      ok: true,
+      fields: { after: [{ from: 1, to: 1 }, { from: 3, to: 4 }], stop: 'structural', effort: 'xhigh', notes: ['first `note`', 'second'] },
+    })
+  })
+
+  it('reads `after: none` as waiting on nothing', () => {
+    const r = parseStepFields(stepWith('   - after: none'), 2)
+    expect(r.ok && r.fields.after).toBe('none')
+  })
+
+  it.each(['planned', 'structural'])('reads `stop: %s`', (value) => {
+    const r = parseStepFields(stepWith(`   - stop: ${value}`), 2)
+    expect(r.ok && r.fields.stop).toBe(value)
+  })
+
+  it.each(['low', 'medium', 'high', 'xhigh', 'max'])('reads `effort: %s`', (value) => {
+    const r = parseStepFields(stepWith(`   - effort: ${value}`), 2)
+    expect(r.ok && r.fields.effort).toBe(value)
+  })
+
+  it('joins a wrapped note line and drops a trailing HTML comment', () => {
+    const r = parseStepFields(stepWith('   - note: the refusals sit at', '     `src/lib/intent.ts:114` <!-- aside -->', '   - effort: low'), 2)
+    expect(r.ok && r.fields.notes).toEqual(['the refusals sit at `src/lib/intent.ts:114`'])
+    expect(r.ok && r.fields.effort).toBe('low')
+  })
+
+  it.each(['2-', '3-1', 'none, 3', 'two', '0', '1 2'])('refuses `after: %s`, naming the step', (value) => {
+    expect(findings(stepWith(`   - after: ${value}`))).toEqual([
+      `step 2's \`after:\` line reads \`${value}\`; it takes step numbers and spans, such as \`2, 4-5\`, or \`none\`.`,
+    ])
+  })
+
+  it('refuses a malformed stop line, naming the step', () => {
+    expect(findings(stepWith('   - stop: soon'))).toEqual(["step 2's `stop:` line reads `soon`; it takes `planned` or `structural`."])
+  })
+
+  it('refuses a malformed effort line, naming the step', () => {
+    expect(findings(stepWith('   - effort: hard'))).toEqual([
+      "step 2's `effort:` line reads `hard`; it takes `low`, `medium`, `high`, `xhigh` or `max`.",
+    ])
+  })
+
+  it('refuses an empty line, naming the step', () => {
+    expect(findings(stepWith('   - effort:'))).toEqual([
+      "step 2's `effort:` line is empty; it takes `low`, `medium`, `high`, `xhigh` or `max`.",
+    ])
+  })
+
+  it.each(['after: 1', 'stop: planned', 'effort: low'])('refuses a doubled `%s` line', (line) => {
+    const key = line.split(':')[0] ?? ''
+    expect(findings(stepWith(`   - ${line}`, `   - ${line}`))).toEqual([`step 2 has more than one \`${key}:\` line.`])
+  })
+
+  it('names every finding on the step at once', () => {
+    expect(findings(stepWith('   - after: x', '   - stop: soon'))).toHaveLength(2)
+  })
+
+  it('reads only its own step, never the next', () => {
+    const intent = intentWith(['1. [ ] One, **done when:** ok', '   - seam: `a.ts`', '2. [ ] Two, **done when:** ok', '   - effort: max'].join('\n'))
+    const r = parseStepFields(intent, 1)
+    expect(r.ok && r.fields.effort).toBeNull()
+  })
+
+  it('refuses a step the plan lacks', () => {
+    expect(parseStepFields(stepWith(), 9)).toEqual({ ok: false, findings: ['intent.md has no step 9 under "## Steps".'] })
   })
 })

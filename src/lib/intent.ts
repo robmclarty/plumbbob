@@ -8,7 +8,10 @@
 // guessing. The best-effort scrapers below
 // (title, done-when, decisions, constraints) feed an agent's context, not a
 // gate, so they never refuse; they return what they can and report the lines
-// they skipped.
+// they skipped. The step-field parse (a step's after, stop, effort and note
+// lines) is strict too, since those lines steer a scheduler.
+
+import { parseStepList, type StepList } from './steplist.ts'
 
 const GLOB_CHARS = /[*?[\]{}!]/
 
@@ -146,6 +149,120 @@ export function parseStepSeam(content: string, step: number): SeamParse {
 function hasBadSegment(token: string): boolean {
   const body = token.endsWith('/') ? token.slice(0, -1) : token
   return body.split('/').some((segment) => segment === '' || segment === '.' || segment === '..')
+}
+
+/** Where a step stops for a person, as its `- stop:` line names it. */
+export type StepStop = 'planned' | 'structural'
+
+/** The rung a step's builder starts on, as its `- effort:` line names it. */
+export type StepEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
+
+/**
+ * A step's scheduling lines: `after` is the list its `- after:` line names,
+ * `'none'` for a step that waits on nothing, or null when the line is absent;
+ * `stop` and `effort` are null when absent; `notes` are its `- note:` lines in order.
+ */
+export type StepFields = {
+  readonly after: StepList | 'none' | null
+  readonly stop: StepStop | null
+  readonly effort: StepEffort | null
+  readonly notes: ReadonlyArray<string>
+}
+
+/** A step's fields, or every finding that kept them from reading, each naming the step. */
+export type StepFieldsParse =
+  | { readonly ok: true; readonly fields: StepFields }
+  | { readonly ok: false; readonly findings: ReadonlyArray<string> }
+
+const STOPS: ReadonlyArray<StepStop> = ['planned', 'structural']
+const EFFORTS: ReadonlyArray<StepEffort> = ['low', 'medium', 'high', 'xhigh', 'max']
+
+const AFTER_TAKES = 'it takes step numbers and spans, such as `2, 4-5`, or `none`.'
+const STOP_TAKES = 'it takes `planned` or `structural`.'
+const EFFORT_TAKES = 'it takes `low`, `medium`, `high`, `xhigh` or `max`.'
+
+/**
+ * Parse step `n`'s `- after:`, `- stop:`, `- effort:` and `- note:` lines.
+ *
+ * Strict, as the seam parse is: each of the first three may appear once, and a
+ * value outside its grammar, an empty one, or a second line of a kind is a
+ * finding that names the step, never a guess. `after` reads through the same
+ * grammar a typed range does, with spaces after the commas allowed, and `none`
+ * stands alone. A note keeps its text verbatim, wrapped continuation lines
+ * joined with one space; a trailing HTML comment is no part of any value.
+ */
+export function parseStepFields(content: string, step: number): StepFieldsParse {
+  const slice = sliceStep(content, step)
+  if (!slice.ok) {
+    return { ok: false, findings: [slice.error] }
+  }
+  const lines = slice.itemLines.slice(1)
+  const values = { after: [] as string[], stop: [] as string[], effort: [] as string[] }
+  const notes: string[] = []
+  let inNote = false
+  for (const raw of lines) {
+    const line = (raw.split('<!--')[0] ?? '').trimEnd()
+    const sub = /^\s*-\s+([a-z-]+):(.*)$/.exec(line)
+    if (sub !== null) {
+      const key = sub[1] ?? ''
+      const value = (sub[2] ?? '').trim()
+      inNote = key === 'note'
+      if (inNote) {
+        notes.push(value)
+      } else if (key === 'after' || key === 'stop' || key === 'effort') {
+        values[key].push(value)
+      }
+      continue
+    }
+    if (/^\s*-\s/.test(line) || line.trim() === '') {
+      inNote = false
+      continue
+    }
+    if (inNote && notes.length > 0) {
+      notes[notes.length - 1] = `${notes.at(-1) ?? ''} ${line.trim()}`.trim()
+    }
+  }
+
+  const findings: string[] = []
+  const one = (key: 'after' | 'stop' | 'effort', takes: string): string | null => {
+    const found = values[key]
+    if (found.length > 1) {
+      findings.push(`step ${step} has more than one \`${key}:\` line.`)
+      return null
+    }
+    const value = found[0]
+    if (value === undefined) return null
+    if (value === '') {
+      findings.push(`step ${step}'s \`${key}:\` line is empty; ${takes}`)
+      return null
+    }
+    return value
+  }
+  const malformed = (key: string, value: string, takes: string): void => {
+    findings.push(`step ${step}'s \`${key}:\` line reads \`${value}\`; ${takes}`)
+  }
+
+  const afterText = one('after', AFTER_TAKES)
+  let after: StepList | 'none' | null = null
+  if (afterText === 'none') {
+    after = 'none'
+  } else if (afterText !== null) {
+    after = parseStepList(afterText.split(',').map((item) => item.trim()).join(','))
+    if (after === null) malformed('after', afterText, AFTER_TAKES)
+  }
+
+  const stopText = one('stop', STOP_TAKES)
+  const stop = STOPS.find((s) => s === stopText) ?? null
+  if (stopText !== null && stop === null) malformed('stop', stopText, STOP_TAKES)
+
+  const effortText = one('effort', EFFORT_TAKES)
+  const effort = EFFORTS.find((e) => e === effortText) ?? null
+  if (effortText !== null && effort === null) malformed('effort', effortText, EFFORT_TAKES)
+
+  if (findings.length > 0) {
+    return { ok: false, findings }
+  }
+  return { ok: true, fields: { after, stop, effort, notes } }
 }
 
 /**

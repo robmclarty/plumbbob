@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: move 2: make the plan schedulable
 
-**Current step:** 2 — fix(intent): refuse the seam tokens runciter refuses
+**Current step:** 3 — feat(intent): read a step's after, stop, and effort lines
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -24,7 +24,7 @@ line above. Only ONE step is in flight; a step is done only after a checkpoint:
 check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
 - ☑ 1. docs(plan): spec the step fields and the plan.json export
-- ☐ 2. fix(intent): refuse the seam tokens runciter refuses
+- ☑ 2. fix(intent): refuse the seam tokens runciter refuses
 - ☐ 3. feat(intent): read a step's after, stop, and effort lines
 - ☐ 4. feat(plan): derive runciter.plan/1 from intent.md
 - ☐ 5. feat(plan): check a plan's dependencies and seams before it exports
@@ -134,3 +134,5 @@ folder, so it rides the branch into the PR.)*
   **5.** One file outside the seam
 
   `cspell.json` gains `xhigh`, the effort rung the spell check didn't know. Steps 3 to 5 will put the same word into `src/`, so the lexicon was the place for it.
+
+- 2026-11-12 — step 2 checkpointed · 9483636f8 — fix(intent): refuse the seam tokens runciter refuses (1 drift, 7m)
