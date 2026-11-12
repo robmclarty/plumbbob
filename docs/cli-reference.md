@@ -33,6 +33,7 @@ calls `process.exit`, which the bin entry alone owns (`rules/no-process-exit.yml
 | `defer` | `defer <Qn> <what settles it>` | leave an open question to the work, until what will settle it |
 | `harvest` | `harvest` | record a harvest from the detail file, and at a run's stop the range's review |
 | `order` | `order <steps>` \| `order --reset` | set the build order: the undone steps in the sequence to build them |
+| `export` | `export [<slug>]` | write the build's plan as data: `plan.json` beside `intent.md`, in `runciter.plan/1` |
 | `spike` | `spike <slug> [opt…] [--build <slug>]` \| `spike report <slug>` \| `spike done` | throwaway worktree experiment |
 | `agent` | `agent list` \| `agent run <name> [--step N] [--mode …] [--agent <path>] [--build <slug>]` | list user-authored agents, or run one through the doorway |
 | `use` | `use <slug>` | re-point the active-build cursor and resume that build |
@@ -625,6 +626,25 @@ reads the same way. Refuses (exit 1) with no session, no numbers, a span that ru
 number the plan lacks (a span past the plan names its first missing step), a repeat, or a step
 already checkpointed. Composing a relative instruction ("7 and 8
 before 5") into the full sequence is the `/plumbbob:order` skill's job.
+
+### export
+
+```text
+plumbbob export [<slug>]
+```
+
+Writes a build's plan as data. It derives `runciter.plan/1`, the shape runciter's scheduler
+reads, from `intent.md`, runs the contract's three plan rules and plumbbob's four plan checks
+over it, and writes `.plumbbob/builds/<slug>/plan.json`, printing
+`**Exported**: .plumbbob/builds/<slug>/plan.json (8 steps, runciter.plan/1)`. With no slug it
+exports the active build; with one it exports that build folder, a finished one included
+([**D145 (export-verb)**](decisions.md#d145)). On any failure it prints each finding on its
+own line, then `plumbbob: export refused, 2 findings; plan.json not written.`, and exits 1
+with the file untouched ([**D143 (refuse-the-write)**](decisions.md#d143)). The first export
+opts a build in; one never exported has no `plan.json` and is untouched
+([**D149 (opt-in-by-presence)**](decisions.md#d149)). The grammar, the field mapping, and the
+words of every finding are in [the plan as data](plan-export.md). Refuses (exit 1) outside a
+repo, with no build to name, or a folder with no `intent.md`.
 
 ### spike
 

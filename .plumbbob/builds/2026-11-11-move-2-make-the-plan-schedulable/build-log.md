@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: move 2: make the plan schedulable
 
-**Current step:** 5 — feat(plan): check a plan's dependencies and seams before it exports
+**Current step:** 6 — feat(export): write plan.json beside intent.md
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -27,7 +27,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 2. fix(intent): refuse the seam tokens runciter refuses
 - ☑ 3. feat(intent): read a step's after, stop, and effort lines
 - ☑ 4. feat(plan): derive runciter.plan/1 from intent.md
-- ☐ 5. feat(plan): check a plan's dependencies and seams before it exports
+- ☑ 5. feat(plan): check a plan's dependencies and seams before it exports
 - ☐ 6. feat(export): write plan.json beside intent.md
 - ☐ 7. feat(check): keep plan.json current, and fail the check when it drifts
 - ☐ 8. docs(plan): teach the export where the plan is taught
@@ -138,3 +138,4 @@ folder, so it rides the branch into the PR.)*
 - 2026-11-12 — step 2 checkpointed · 9483636f8 — fix(intent): refuse the seam tokens runciter refuses (1 drift, 7m)
 - 2026-11-12 — step 3 checkpointed · 4898d4261 — feat(intent): read a step's after, stop, and effort lines (8m)
 - 2026-11-12 — step 4 checkpointed · 8680ae64c — feat(plan): derive runciter.plan/1 from intent.md (1 red, 24m)
+- 2026-11-12 — step 5 checkpointed · a72eb6104 — feat(plan): check a plan's dependencies and seams before it exports (6m)

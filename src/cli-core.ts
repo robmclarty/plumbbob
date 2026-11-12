@@ -19,6 +19,7 @@ import { park } from './verbs/park.ts'
 import { defer } from './verbs/defer.ts'
 import { harvest } from './verbs/harvest.ts'
 import { order } from './verbs/order.ts'
+import { exportPlan } from './verbs/export.ts'
 import { build } from './verbs/build.ts'
 import { handoff } from './verbs/handoff.ts'
 import { check } from './verbs/check.ts'
@@ -231,6 +232,14 @@ const VERBS: ReadonlyArray<Verb> = [
     flags: [{ name: '--reset', gloss: 'drop the line, so the plan reads in document order again' }],
     notes:
       'Writes the one numeric line under `## Build order` in intent.md, which status, build, checkpoint, and handoff all read. A span is spelled out on the line. Refuses (exit 1) with no session, no numbers, a span that runs backward, a number the plan lacks, a repeat, or a step already checkpointed.',
+  },
+  {
+    name: 'export',
+    description: "write the build's plan as data: plan.json beside intent.md, in runciter.plan/1",
+    synopsis: ['export [<slug>]'],
+    args: [{ name: '<slug>', gloss: 'the build folder to export (default: the active build); a finished build too' }],
+    notes:
+      "Derives `runciter.plan/1` from intent.md, runs the contract's three plan rules and plumbbob's four plan checks over it, and writes `.plumbbob/builds/<slug>/plan.json`. On any failure it prints each finding and the tally, writes nothing, and exits 1. Refuses (exit 1) outside a repo, with no build to name, or a folder with no intent.md. See docs/plan-export.md.",
   },
   {
     name: 'harvest',
@@ -456,6 +465,8 @@ async function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>):
       return defer(cwd, rest)
     case 'order':
       return order(cwd, rest)
+    case 'export':
+      return exportPlan(cwd, rest)
     case 'harvest':
       return harvest(cwd, rest)
     case 'build':
