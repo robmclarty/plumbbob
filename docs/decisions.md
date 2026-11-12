@@ -1965,6 +1965,12 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   exported build, and nowhere on the plan card yet.** *because* the card naming them belongs with the frontier card,
   which is later work. *Tagged in* `docs/plan-export.md`.
 
+- <a id="d152"></a>**D152 (no-forward-after): plumbbob's plan checks gain a fourth: no undone step's `after:` line
+  names a step that comes later in build order.** It prints ``step 3's `after:` names step 5, which builds after it;
+  move step 5 earlier with `plumbbob order`, or drop it from the line.`` *because* a scheduler would hold step 3 for
+  step 5 while plumbbob's own serial walk builds step 3 first, so the two would read the plan's order opposite ways.
+  Approved at step 1's pause of the move-2 build, 2026-11-11. *Tagged in* `docs/plan-export.md`.
+
 ### Superseded
 
 - <a id="d20"></a>**D20 (local-archive): The archive was local-only markdown.** Wrapping wrote a plain-markdown archive

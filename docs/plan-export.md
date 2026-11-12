@@ -205,7 +205,7 @@ plumbbob's check 1 read on the derived plan: a derived plan fails check 1 first,
 guards the derivation itself. A step whose `after:` names its own number is the shortest
 loop rule 3 catches (`step 3 → step 3`).
 
-### plumbbob's three checks
+### plumbbob's four checks
 
 These belong to the planner, not the contract, and they run over the plan with the working
 tree read in ([D151 (checks-at-export)](decisions.md#d151)):
@@ -215,6 +215,7 @@ tree read in ([D151 (checks-at-export)](decisions.md#d151)):
 | 1. every `after:` names a step | ``step 5's `after:` names step 9, which the plan lacks.`` |
 | 2. every undone step's seam path exists, or sits under a part that does | ``step 6's seam path `src/plan/export.ts` does not exist, nor does its folder `src/plan/`, and no part of keyframes.md's Map holds it.`` |
 | 3. no two steps in one range share a seam unless one reaches the other | ``steps 3 and 4, both in range 2, overlap at `src/lib/intent.ts`, and neither waits on the other; give one an `after:` line that reaches the other, or move one to another range.`` |
+| 4. no undone step's `after:` names a step that builds after it | ``step 3's `after:` names step 5, which builds after it; move step 5 earlier with `plumbbob order`, or drop it from the line.`` |
 
 **Check 2** passes a path that exists, a path whose folder exists (a new file is the
 ordinary case), and a path under an existing path that a part of the root `keyframes.md`'s
@@ -237,6 +238,13 @@ two steps as surely as a direct edge, and demanding the edge would fill plans wi
 redundant `after:` lines. Steps that no range names are not grouped, so the check reads only
 steps inside ranges. Under the serial default every step reaches every step before it, so
 check 3 can only fire once an `after:` line has opened the plan up.
+
+**Check 4** keeps the plan and plumbbob's own walk reading the order the same way
+([D152 (no-forward-after)](decisions.md#d152)). If step 3 waits on step 5 but the build
+order puts step 3 first, a scheduler holds step 3 until step 5 lands, while a range walked
+by plumbbob builds step 3 first, before step 5 exists. One of the two is wrong about the
+plan, and the fix is a person's: `plumbbob order` moves step 5 ahead, or the line drops it.
+Landed steps are skipped, since their place in the order is history.
 
 These checks bite at `plumbbob export` and at the check of a build that has a `plan.json`,
 and not yet on the plan card; the card naming them belongs with the frontier card, which is
