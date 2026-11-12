@@ -63,7 +63,7 @@ describe('seamFindings', () => {
     const plan = planOf([null, '`src/*.ts`'])
     expect(seamFindings(plan, TREE).map((f) => [f.step, f.kind, f.words])).toEqual([
       [1, 'unparsed', 'has no `seam:` line.'],
-      [2, 'unparsed', "'s seam token `src/*.ts` is a glob; seams are exact paths or `dir/` grants — D23 (no-glob-seams)."],
+      [2, 'unparsed', "'s seam token `src/*.ts` is a glob; seams are exact paths or `dir/` grants, per D23 (no-glob-seams)."],
     ])
   })
 

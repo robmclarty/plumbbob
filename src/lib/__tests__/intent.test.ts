@@ -66,6 +66,48 @@ describe('parseStepSeam', () => {
     expect(!r.ok && r.error).toContain('absolute')
   })
 
+  it('refuses a token holding `!`, as a glob, naming the token and D23 (no-glob-seams)', () => {
+    const r = parseStepSeam(intentWith(['1. [ ] Step, **done when:** ok', '   - seam: `src/!a.ts`'].join('\n')), 1)
+    expect(r.ok).toBe(false)
+    expect(!r.ok && r.error).toBe(
+      "step 1's seam token `src/!a.ts` is a glob; seams are exact paths or `dir/` grants, per D23 (no-glob-seams).",
+    )
+  })
+
+  it('refuses a token holding a backslash, naming the token and D23 (no-glob-seams)', () => {
+    const r = parseStepSeam(intentWith(['1. [ ] Step, **done when:** ok', '   - seam: `src\\a.ts`'].join('\n')), 1)
+    expect(r.ok).toBe(false)
+    expect(!r.ok && r.error).toBe(
+      "step 1's seam token `src\\a.ts` holds a backslash; seams are POSIX paths, per D23 (no-glob-seams).",
+    )
+  })
+
+  it.each([
+    ['an empty segment', 'src//a.ts'],
+    ['a `.` segment', 'src/./a.ts'],
+    ['a `..` segment', 'src/../a.ts'],
+    ['a leading `..`', '../a.ts'],
+    ['a `.` left after the `./` strip', '././a.ts'],
+    ['a `..` grant', 'src/../'],
+    ['a doubled grant slash', 'src//'],
+  ])('refuses %s, naming the token and D23 (no-glob-seams)', (_label, token) => {
+    const r = parseStepSeam(intentWith(['1. [ ] Step, **done when:** ok', `   - seam: \`${token}\``].join('\n')), 1)
+    expect(r.ok).toBe(false)
+    expect(!r.ok && r.error).toBe(
+      `step 1's seam token \`${token}\` has an empty, \`.\` or \`..\` segment; seams are plain repo-relative paths, per D23 (no-glob-seams).`,
+    )
+  })
+
+  it('reads a leading `/` as absolute, not as an empty segment', () => {
+    const r = parseStepSeam(intentWith(['1. [ ] Step, **done when:** ok', '   - seam: `/src/a.ts`'].join('\n')), 1)
+    expect(!r.ok && r.error).toBe("step 1's seam token `/src/a.ts` is absolute; seams are repo-relative.")
+  })
+
+  it('still strips a leading `./`, and passes a dotted name that is not a dot segment', () => {
+    const r = parseStepSeam(intentWith(['1. [ ] Step, **done when:** ok', '   - seam: `./src/a.ts`, `.github/`, `a..b.ts`'].join('\n')), 1)
+    expect(r.ok && r.seam).toEqual(['src/a.ts', '.github/', 'a..b.ts'])
+  })
+
   it('refuses a step with no seam line', () => {
     const intent = intentWith('1. [ ] Step — **done when:** ok')
     const r = parseStepSeam(intent, 1)

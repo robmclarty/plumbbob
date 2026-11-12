@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: move 2: make the plan schedulable
 
-**Current step:** 1 — docs(plan): spec the step fields and the plan.json export
+**Current step:** 2 — fix(intent): refuse the seam tokens runciter refuses
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -23,7 +23,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 line above. Only ONE step is in flight; a step is done only after a checkpoint:
 check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 
-- ☐ 1. docs(plan): spec the step fields and the plan.json export
+- ☑ 1. docs(plan): spec the step fields and the plan.json export
 - ☐ 2. fix(intent): refuse the seam tokens runciter refuses
 - ☐ 3. feat(intent): read a step's after, stop, and effort lines
 - ☐ 4. feat(plan): derive runciter.plan/1 from intent.md
@@ -38,7 +38,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 > go straight back to the step. Acting the instant an idea arrives is the disease.
 > Capture is one line (`/plumbbob:park` composes it). Harvest happens only at the boundary.
 
-- [ ] fourth plan check: an after: line naming a step later in build order, fold into step 5 (blocker)
+- [x] fourth plan check: an after: line naming a step later in build order, fold into step 5 (blocker)
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -56,7 +56,8 @@ from sprawling across branches.
 
 Harvest results this boundary:
 
-- (none yet)
+- 2026-11-12, at the step 1 boundary: 1 parked idea, classified.
+- **blocker**: park 1 · fourth plan check: an after: line naming a step later in build order, fold into step 5 (blocker) → you approved it at step 1's pause, and step 5 hasn't been built yet, so it folds into that step's done-when
 
 ## Log
 
@@ -83,3 +84,53 @@ folder, so it rides the branch into the PR.)*
   **3.** This build's own plan exports fully serial
 
   Every step here touches `src/lib/intent.ts` or builds on the step before, so no step carries an `after:` line and check 3 has nothing to fire on in either exported plan. The parallel and failing cases live only in step 4's and step 5's fixtures, so the second stop reads two serial plans. That is honest, but it isn't a demonstration of the check ridgeline never had.
+
+- 2026-11-12 — step 1 checkpointed · a640c7940 — docs(plan): spec the step fields and the plan.json export (1 drift, 21m)
+
+  **Summary**: `docs/plan-export.md` now specifies the `after:`, `stop:` and `effort:` lines with a worked step and its exported JSON, the defaults, the field mapping, the words every refusal prints, and how `plan.json` stays current. `docs/decisions.md` records the build's nineteen decisions as D133 to D151, in the build's own order, and D23 has its dated revision.
+
+  1. Some of the words are my calls, not the plan's
+  2. Two refusals beyond the six, because the contract needs them
+  3. An `after:` that points forward in build order goes unchecked
+  4. The ajv version in D15 needs a look at step 4
+  5. One file outside the seam
+
+  **Readout**:
+
+  ```text
+  check        green: 1 of 1 checks
+  done-when    met
+  decisions    7 of 7 honored
+  constraints  5 of 5 honored
+  seam         strayed: 1 path outside the seam
+               → cspell.json
+  diff         +385 -3 across 3 files
+               - cspell.json +2 -1
+               - docs/decisions.md +99 -2
+               - docs/plan-export.md +284 -0
+  spent        21 min · 1 turn · 220s gate · green first run
+  ```
+
+  **Verdict**: ◐ A hair off (seam strayed)
+
+  **Recommendation**: Approve the grammar and the words as written, and add a fourth plumbbob check for an `after:` that names a step later in build order, folded into step 5. That's the one case where the plan and plumbbob's own walk would disagree about order, and catching it at export costs one more loop over steps step 5 already walks.
+
+  **1.** Some of the words are my calls, not the plan's
+
+  The plan settled the grammar but not every edge. I chose these, and each is yours to change before step 2 parses anything: `none` must stand alone (`after: none, 3` is malformed); `stop:` can add a stop or turn a range end `structural`, but it can't remove a range end's `planned` stop, because D3 only lists the two values; `!` counts as a glob character, so it shares the glob message, while a backslash and a bad segment each get their own; the existing glob message swaps its em-dash for `, per D23 (no-glob-seams).`; check 3 looks only at steps inside a range, and it includes landed steps, since every step is exported (D8 (every-step)).
+
+  **2.** Two refusals beyond the six, because the contract needs them
+
+  The contract needs at least one seam entry and a non-empty `done_when` on every step. A step whose seam won't parse, or whose **done when:** is empty, would produce a `plan.json` the schema rejects, so the spec lists both under "The lines themselves" with the words they print. They aren't new rules, just the parse catching it before the schema does.
+
+  **3.** An `after:` that points forward in build order goes unchecked
+
+  If step 3 says `- after: 5` but `## Build order` puts 3 before 5, a scheduler waits on 5 while plumbbob's own serial walk builds 3 first, which is the opposite. None of the six checks catches this. I wrote nothing about it rather than add a seventh check the plan doesn't have. Options: a fourth plumbbob check ("an `after:` names a step later in build order"), or an open question to settle later.
+
+  **4.** The ajv version in D15 needs a look at step 4
+
+  D15 (ajv-dev-dep) says 8.18.0 is "the one already in the tree". pnpm's store does hold `ajv@8.18.0`, but the hoisted `node_modules/ajv` is 8.20.0. D147 records the pin at 8.18.0 as the plan says; step 4 should confirm which one to pin.
+
+  **5.** One file outside the seam
+
+  `cspell.json` gains `xhigh`, the effort rung the spell check didn't know. Steps 3 to 5 will put the same word into `src/`, so the lexicon was the place for it.

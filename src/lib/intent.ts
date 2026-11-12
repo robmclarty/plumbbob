@@ -3,13 +3,14 @@
 // This module reads it in two registers. The seam parse is strict by design: a
 // seam is a step's edit grant (the backtick-wrapped, repo-relative paths on
 // its single `seam:` sub-line) and it gates git behavior, so the parse refuses
-// precisely on globs, absolute paths, a missing step, a missing seam, or more
-// than one seam line, rather than guessing. The best-effort scrapers below
+// precisely on globs, backslashes, empty or dot segments, absolute paths, a
+// missing step, a missing seam, or more than one seam line, rather than
+// guessing. The best-effort scrapers below
 // (title, done-when, decisions, constraints) feed an agent's context, not a
 // gate, so they never refuse; they return what they can and report the lines
 // they skipped.
 
-const GLOB_CHARS = /[*?[\]{}]/
+const GLOB_CHARS = /[*?[\]{}!]/
 
 /** A parsed seam, or the refusal message saying exactly why it didn't parse. */
 export type SeamParse =
@@ -64,8 +65,10 @@ function sliceStep(content: string, step: number): StepSlice {
  *
  * Strict: the seam is the step's edit grant and gates git behavior, so this
  * refuses on a missing step, a missing or duplicated seam line, an empty token,
- * a glob, or an absolute path rather than guessing. Tokens are exact
- * repo-relative paths or `dir/` prefix grants: never globs.
+ * a glob, a backslash, an empty, `.` or `..` segment, or an absolute path
+ * rather than guessing: the tokens runciter's plan contract refuses, so one
+ * grammar holds in both repos. Tokens are exact repo-relative paths or `dir/`
+ * prefix grants: never globs.
  */
 export function parseStepSeam(content: string, step: number): SeamParse {
   const slice = sliceStep(content, step)
@@ -118,14 +121,31 @@ export function parseStepSeam(content: string, step: number): SeamParse {
       return fail(`step ${step}'s seam has an empty token.`)
     }
     if (GLOB_CHARS.test(token)) {
-      return fail(`step ${step}'s seam token \`${raw}\` is a glob; seams are exact paths or \`dir/\` grants — D23 (no-glob-seams).`)
+      return fail(`step ${step}'s seam token \`${raw}\` is a glob; seams are exact paths or \`dir/\` grants, per D23 (no-glob-seams).`)
+    }
+    if (token.includes('\\')) {
+      return fail(`step ${step}'s seam token \`${raw}\` holds a backslash; seams are POSIX paths, per D23 (no-glob-seams).`)
     }
     if (token.startsWith('/')) {
       return fail(`step ${step}'s seam token \`${raw}\` is absolute; seams are repo-relative.`)
     }
+    if (hasBadSegment(token)) {
+      return fail(
+        `step ${step}'s seam token \`${raw}\` has an empty, \`.\` or \`..\` segment; seams are plain repo-relative paths, per D23 (no-glob-seams).`,
+      )
+    }
     seam.push(token)
   }
   return { ok: true, seam }
+}
+
+/**
+ * Whether a seam token has an empty, `.` or `..` segment, once a `dir/` grant's
+ * trailing slash is set aside: runciter's `seam_entry_issue` reads it the same way.
+ */
+function hasBadSegment(token: string): boolean {
+  const body = token.endsWith('/') ? token.slice(0, -1) : token
+  return body.split('/').some((segment) => segment === '' || segment === '.' || segment === '..')
 }
 
 /**
