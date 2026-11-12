@@ -21,7 +21,8 @@ intent-legibility build, and [**D80 (cli-renders-model-relays)**](#d80)–[**D84
 from the 2026-08-28 presentation build, and [**D87 (pause-once)**](#d87)–[**D89 (block-once)**](#d89)
 from the 2026-10-08 said-once-said-whole build, and [**D90 (notice-not-turn)**](#d90)–[**D94 (auto-and-stops)**](#d94)
 from the 2026-10-17 build-ranges build, and [**D95 (run-verb)**](#d95)–[**D108 (order-label)**](#d108)
-from the 2026-10-17 runs-and-the-stop-card build.)
+from the 2026-10-17 runs-and-the-stop-card build, and [**D133 (step-id)**](#d133)–[**D151 (checks-at-export)**](#d151)
+from the 2026-11-11 move-2 build, kept in the build's own order.)
 
 ## Constraints (C)
 
@@ -137,7 +138,9 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   overrides it and records the current HEAD as the baseline. *Amended*: an untracked `.plumbbob/settings.json`, the
   scaffold `setup` leaves, does not count as dirty ([**D126 (setup-before-start)**](#d126)). *Tagged in* `start.ts`.
 - <a id="d23"></a>**D23 (no-glob-seams): Seams are exact paths or `dir/` grants, never globs.** A seam token is matched as
-  an exact path or a directory prefix; a glob is rejected. *Tagged in* `intent.ts`.
+  an exact path or a directory prefix; a glob is rejected. *Revised 2026-11-11*: the parse also refuses `!`, a
+  backslash, and an empty, `.` or `..` segment, still stripping a leading `./`, so the grammar is runciter's
+  ([**D138 (one-seam-grammar)**](#d138)). *Tagged in* `intent.ts`.
 - <a id="d24"></a>**D24 (configurable-check): The heavy check is configurable, defaulting to checkride.** *Amended*: the
   `check` command still resolves through the settings ladder ([**D27 (settings-ladder)**](#d27)), but it is now the
   *override*: a resolved command is spawned exactly as before, and **no setting at all
@@ -1867,6 +1870,100 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   *because* the `intent` slot proves a pointer resolves, not that what it points at passes, and the Scenarios are the
   behavior the plan says must keep working. Each run is a live model session, minutes long, so the slot is opt-in and runs alone.
   *Tagged in* `checkride.config.json` and `scripts/scenario-evals.ts`.
+
+- <a id="d133"></a>**D133 (step-id): A step exports as `step-<n>`, its plan number.** *because* plumbbob numbers a
+  step for life (`## Build order` carries the sequence), so the id is as stable as the number, and `step-<n>` fits
+  the contract's `[a-z0-9][a-z0-9-]{0,63}` for any plan. *Tagged in* `docs/plan-export.md`.
+
+- <a id="d134"></a>**D134 (serial-default): A step depends on what its `- after:` line names, and without one on
+  the step before it in build order.** The line takes step numbers and spans read by `src/lib/steplist.ts`, or
+  `none`; the first step in build order depends on nothing. *because* a scheduler reads a missing dependency as "may
+  run in parallel", so the unannotated plan must export fully serial, which is also what plumbbob does today.
+  *Tagged in* `docs/plan-export.md`.
+
+- <a id="d135"></a>**D135 (range-end-stops): The last step of each range, in build order, exports `stop: "planned"`.**
+  A `- stop:` line (`planned` or `structural`) overrides any step's; every other step is `none`. *because*
+  plumbbob's stops are per range ([**D92 (build-ranges)**](#d92)) and the contract's are per step, taken after the
+  step lands, so the range's last step is where the same call falls. *Tagged in* `docs/plan-export.md`.
+
+- <a id="d136"></a>**D136 (bare-range-approximation): A bare range exports the same `planned` stop on its step,
+  taken after the step lands on the integration branch.** *because* the contract has no stop before landing, and a
+  stop on the integration branch still puts the person ahead of anything that builds on the step, with promotion to
+  `main` a person's every time. *Tagged in* `docs/plan-export.md`.
+
+- <a id="d137"></a>**D137 (effort-line): A `- effort:` line takes `low`, `medium`, `high`, `xhigh` or `max`, and
+  exports `null` when absent.** It is never derived from `- model:`. *because* a model names a seat and a rung names
+  how hard the seat works, and a mapping from one to the other goes stale with the next model release. *Tagged in*
+  `docs/plan-export.md`.
+
+- <a id="d138"></a>**D138 (one-seam-grammar): The seam parse refuses what runciter refuses.** `parseStepSeam` adds
+  `!`, a backslash, and an empty, `.` or `..` segment to the globs and absolute paths it already refused, and still
+  strips a leading `./`; [**D23 (no-glob-seams)**](#d23) carries the dated revision. *because* two grammars for one
+  seam would let plumbbob accept a plan runciter refuses, and the shared parse is where one grammar lives. *Tagged
+  in* `intent.ts`, `docs/plan-export.md`.
+
+- <a id="d139"></a>**D139 (field-mapping): Every other field of `plan.json` is a fact plumbbob already parses.**
+  `title` is the step title, `done_when` its **done when:** text, `context` its `- note:` lines in order,
+  `decisions` and `constraints` the bullets the step context already scrapes, `range` the range's item number as a
+  string (`null` for a step no range names), `build` the slug and title, `source` `intent.md`'s repo-relative path
+  and the sha256 of its bytes, and `contract_paths` `[]`. *because* a builder under runciter should get the same
+  context `plumbbob agent` gives it today. *Tagged in* `docs/plan-export.md`.
+
+- <a id="d140"></a>**D140 (every-step): The export carries every step, landed or not, in plan-number order.**
+  *because* the contract has no field for a landed step, and a `plan.json` that dropped them would rewrite the
+  dependency graph under the person's feet; the gap is raised with runciter before its scheduler ships. *Tagged in*
+  `docs/plan-export.md`.
+
+- <a id="d141"></a>**D141 (strict-fields): A malformed `- after:`, `- stop:` or `- effort:` line, or two of a kind on
+  one step, is a finding that names the step, never a guess.** *because* the seam parse already refuses rather than
+  guesses, and these lines steer a scheduler. *Tagged in* `docs/plan-export.md`.
+
+- <a id="d142"></a>**D142 (reaches-not-names): Two steps in a range may share a seam when either reaches the other
+  through `depends_on`, directly or not.** *because* a transitive dependency serializes the two steps as surely as a
+  direct one, and demanding a direct edge would push plans into redundant `after:` lines. *Tagged in*
+  `docs/plan-export.md`.
+
+- <a id="d143"></a>**D143 (refuse-the-write): `plumbbob export` writes nothing when a plan rule or a plan check
+  fails.** It prints each failure by step and exits 1. *because* a scheduler acting on a plan that fails them would
+  run two steps at once that the plan meant to order. *Tagged in* `docs/plan-export.md`.
+
+- <a id="d144"></a>**D144 (bytes-compare): `plan.json` is serialized one way, and "current" means its bytes equal a
+  fresh derivation's.** Two-space JSON, keys in the contract's order, every default written out, a trailing
+  newline. *because* a byte compare needs no JSON-aware diff, and writing every default means the file never depends
+  on what a reader fills in. *Tagged in* `docs/plan-export.md`.
+
+- <a id="d145"></a>**D145 (export-verb): The verb is `plumbbob export [<slug>]`, on the active build by default and
+  on a named build folder otherwise.** *because* a finished build needs a `plan.json` too, and one verb file is the
+  CLI's rule. *Tagged in* `docs/plan-export.md`.
+
+- <a id="d146"></a>**D146 (cli-keeps-current): `checkpoint` (its tick), `order` and `defer` re-export after they write
+  `intent.md`, when the build folder already holds a `plan.json`.** *because* a verb the person ran shouldn't turn
+  the next check red, and a hand or model edit is what the drift check exists to catch. *Tagged in*
+  `docs/plan-export.md`.
+
+- <a id="d147"></a>**D147 (ajv-dev-dep): Conformance tests validate with `ajv` (`ajv/dist/2020`), pinned at 8.18.0
+  as a dev dependency; the CLI never imports it.** *because* conformance means validating against the vendored
+  schema file itself, and a hand check would restate the schema and drift from it the day runciter regenerates it
+  ([**C2 (few-deliberate-deps)**](#c2)). *Tagged in* `docs/plan-export.md`.
+
+- <a id="d148"></a>**D148 (vendored-contract): runciter's JSON Schema and example are copied byte for byte into
+  `test/contract/runciter-plan/`, with a README naming commit `9b40f0f` and the source paths.** *because* runciter
+  is private and unpublished, so the test can't import it, and a named commit says which version a refreshed copy
+  replaces. *Tagged in* `docs/plan-export.md`.
+
+- <a id="d149"></a>**D149 (opt-in-by-presence): A build writes `plan.json` only once `plumbbob export` has run on
+  it.** From then on the CLI keeps it current and the drift check applies; a build without one is untouched.
+  *because* a build with no scheduler should stay as it is today, and every user's hand edit turning their check red
+  would be a tax on builds no scheduler reads. *Tagged in* `docs/plan-export.md`.
+
+- <a id="d150"></a>**D150 (under-a-part): A seam path that doesn't exist yet passes when its folder exists, or when
+  it sits under an existing path a root `keyframes.md` Map part names.** A new folder outside every part, or a new
+  file in a folder that doesn't exist, fails. *because* a new file is the ordinary case, and "the nearest existing
+  ancestor" is always the repo root, which checks nothing. *Tagged in* `docs/plan-export.md`.
+
+- <a id="d151"></a>**D151 (checks-at-export): The plan checks bite at `plumbbob export` and at the check of an
+  exported build, and nowhere on the plan card yet.** *because* the card naming them belongs with the frontier card,
+  which is later work. *Tagged in* `docs/plan-export.md`.
 
 ### Superseded
 
