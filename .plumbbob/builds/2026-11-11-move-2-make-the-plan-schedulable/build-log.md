@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: move 2: make the plan schedulable
 
-**Current step:** 8 — docs(plan): teach the export where the plan is taught
+**Current step:** none (at the boundary)
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -30,7 +30,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 5. feat(plan): check a plan's dependencies and seams before it exports
 - ☑ 6. feat(export): write plan.json beside intent.md
 - ☑ 7. feat(check): keep plan.json current, and fail the check when it drifts
-- ☐ 8. docs(plan): teach the export where the plan is taught
+- ☑ 8. docs(plan): teach the export where the plan is taught
 
 ## Park list
 
@@ -209,3 +209,57 @@ folder, so it rides the branch into the PR.)*
   The glob message dropped its em-dash for `, per D23 (no-glob-seams).`, as the spec says, so `src/lib/__tests__/seamcheck.test.ts`, which asserted the old words, changed in step 2. Step 6's done-when names the places `cli-docs.test.ts` looks, and `site/api.html` is one of them, so the verb went in there too. `cspell.json` learned `plancheck`, after the spell slot turned step 6's first checkpoint red. Step 4's other red run was three e2e tests timing out at a load average of 60. They passed alone, 71 of 71, and the retry landed green.
 
 - 2026-11-13 — step 7 checkpointed · f380136fe — feat(check): keep plan.json current, and fail the check when it drifts (1 drift, 16m)
+- 2026-11-13 — step 8 checkpointed · 07332adb9 — docs(plan): teach the export where the plan is taught (11m)
+- 2026-11-13 — range 3 of 3's stop recorded — the final read, then `/plumbbob:finish`, then the roadmap's State and its `runciter.plan/1` row, committed in runciter's repo as a separate docs commit
+
+  **Summary**: Once a build has been exported, its `plan.json` now stays current by itself. `checkpoint`'s tick, `order` and `defer` re-export it, and `plumbbob check` (the checkpoint gate too) fails before the gate runs, naming `plumbbob export`, when any other edit leaves the file behind. A build never exported checks exactly as before. The template, the plan, step and refine skills, the glossary and the CLI reference now teach all of this.
+
+  1. Step 7 strayed three paths past its seam, each on purpose
+  2. The check covers every exported build folder, not only the active one
+  3. A drift red stops ahead of the gate and leaves a summary the card can read
+  4. The installed plugin doesn't keep this build's plan.json current yet
+
+  **Readout**:
+
+  ```text
+  steps        2 of 2 landed
+               - 7 f380136 · 8 07332ad
+  check        green: 1 of 1 checks, 2 landings
+  done-when    met
+  decisions    5 of 5 honored
+  constraints  5 of 5 honored
+  seam         strayed: 3 paths outside step 7's seam
+               - cspell.json
+               - src/lib/planfile.ts
+               - src/verbs/export.ts
+  diff         +560 -55 across 19 files
+               - cspell.json +1 -0
+               - docs/cli-reference.md +10 -0
+               - docs/glossary.md +9 -0
+               - docs/plan-export.md +20 -4
+               - skills/plan/SKILL.md +10 -0
+               - skills/refine/SKILL.md +5 -0
+               - skills/step/SKILL.md +10 -0
+               - and 12 more
+  spent        27 min · green first run at every landing · 1 drift warning
+  ```
+
+  **Verdict**: ◐ A hair off (seam strayed)
+
+  **Recommendation**: Do the final read, then `/plumbbob:finish`, then the runciter docs commit for the roadmap's State and its `runciter.plan/1` row, as the plan's stop asks. Every done-when is met and the gate is green from `src`. The one call to make during the read is section 2: whether the check should hold every exported build folder or only the active one.
+
+  **1.** Step 7 strayed three paths past its seam, each on purpose
+
+  The derive-and-check code moved out of `src/verbs/export.ts` into a new `src/lib/planfile.ts`, so export, the three writing verbs and the check all share one derivation (`freshPlan`, `refreshPlan`, `planDrift`). `cspell.json` learned the module's name, the way it already knows `plancheck`. That stray is the hair the Verdict carries; nothing outside the plan's intent moved.
+
+  **2.** The check covers every exported build folder, not only the active one
+
+  `planDrift` walks `.plumbbob/builds/` and holds each folder that has a `plan.json` to a fresh derivation. A finished build, `2026-10-17-build-ranges` included, goes red too if someone hand-edits it. That folder is named by its slug, and its remedy reads `plumbbob export <slug>`. The done-when didn't limit the check to the active build, and a scheduler can be handed any exported plan, so I read it the wide way. `docs/plan-export.md` and the CLI reference now say so. If you want only the active build checked, it's a one-line change.
+
+  **3.** A drift red stops ahead of the gate and leaves a summary the card can read
+
+  When the plan drifts, `runCheck` prints the spec's words and writes a one-check summary, `plan` failing with its lines in `.check/plan.txt`. That follows the override path's precedent, now shared through a `writeSummary` helper. So a pause's check row reads `red: plan failing` and points at those lines, not at the summary left by the last green run. The full gate doesn't run on a drift red, because the fix is one command and the gate would only have to run again after it.
+
+  **4.** The installed plugin doesn't keep this build's plan.json current yet
+
+  The `plumbbob` on PATH is the 0.16.0 plugin, which predates step 7. So its ticks at steps 7 and 8 left this build's `plan.json` behind, and its gate couldn't see the drift either. After each landing I re-exported with `node src/cli.ts export`, and the `src` gate ran green over the whole tree, drift check included. The file re-exported after step 8's tick is still uncommitted, and it rides the next commit along with that tick. Until a release ships step 7, any build exported under the old plugin goes stale at each tick.
