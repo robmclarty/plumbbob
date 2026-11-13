@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: move 2: make the plan schedulable
 
-**Current step:** 6 — feat(export): write plan.json beside intent.md
+**Current step:** 7 — feat(check): keep plan.json current, and fail the check when it drifts
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -28,7 +28,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 3. feat(intent): read a step's after, stop, and effort lines
 - ☑ 4. feat(plan): derive runciter.plan/1 from intent.md
 - ☑ 5. feat(plan): check a plan's dependencies and seams before it exports
-- ☐ 6. feat(export): write plan.json beside intent.md
+- ☑ 6. feat(export): write plan.json beside intent.md
 - ☐ 7. feat(check): keep plan.json current, and fail the check when it drifts
 - ☐ 8. docs(plan): teach the export where the plan is taught
 
@@ -39,6 +39,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 > Capture is one line (`/plumbbob:park` composes it). Harvest happens only at the boundary.
 
 - [x] fourth plan check: an after: line naming a step later in build order, fold into step 5 (blocker)
+- [x] for move 3's design in runciter: let a worker pull the integration tip into its worktree at its own commit points (trunk to worker only, opt-in per plan), instead of weaving mid-step commits into the trunk; and show parallel workers on the host task list or as lanes on the frontier card
 
 ## Harvest  *(run `/plumbbob:harvest` at each step boundary, after green)*
 
@@ -58,6 +59,8 @@ Harvest results this boundary:
 
 - 2026-11-12, at the step 1 boundary: 1 parked idea, classified.
 - **blocker**: park 1 · fourth plan check: an after: line naming a step later in build order, fold into step 5 (blocker) → you approved it at step 1's pause, and step 5 hasn't been built yet, so it folds into that step's done-when
+- 2026-11-13, at range 2 of 3's stop: 1 parked idea, classified.
+- **tangent**: park 2 · for move 3's design in runciter: let a worker pull the integration tip into its worktree at its own commit points (trunk to worker only, opt-in per plan), instead of weaving mid-step commits into the trunk; and show parallel workers on the host task list or as lanes on the frontier card → it is runciter's scheduler design for move 3, and nothing in this build waits on it
 
 ## Log
 
@@ -139,3 +142,68 @@ folder, so it rides the branch into the PR.)*
 - 2026-11-12 — step 3 checkpointed · 4898d4261 — feat(intent): read a step's after, stop, and effort lines (8m)
 - 2026-11-12 — step 4 checkpointed · 8680ae64c — feat(plan): derive runciter.plan/1 from intent.md (1 red, 24m)
 - 2026-11-12 — step 5 checkpointed · a72eb6104 — feat(plan): check a plan's dependencies and seams before it exports (6m)
+- 2026-11-12 — step 6 checkpointed · e3bdedab0 — feat(export): write plan.json beside intent.md (1 red, 1 drift, 9m)
+- 2026-11-13 — range 2 of 3's stop recorded — read the first two exported plans, this build's and `2026-10-17-build-ranges`' (five ranges), each validated against the vendored schema, before the check starts failing on drift
+
+  **Summary**: `plumbbob export` now writes a build's `plan.json` in runciter's `runciter.plan/1`. Behind it are the seam parse tightened to runciter's grammar, a strict reader for the `after:`, `stop:` and `effort:` lines, a pure derivation, and seven rules and checks that refuse the write on any failure. Both real plans exported and validate against the vendored schema: this build's has 8 steps over 3 ranges and `2026-10-17-build-ranges`' has 13 steps over 5, both fully serial, each with a `planned` stop on the last step of every range.
+
+  1. ajv is pinned at 8.20.0, where D15 names 8.18.0
+  2. This build's plan.json is already one tick behind
+  3. Both exports are serial, so check 3 never fired on a real plan
+  4. The fourth check landed as D152 (no-forward-after)
+  5. Three files outside their steps' seams
+
+  **Readout**:
+
+  ```text
+  steps        5 of 5 landed
+               - 2 9483636 · 3 4898d42 · 4 8680ae6 · 5 a72eb61 · 6 e3bdeda
+  check        green: 1 of 1 checks, 5 landings
+  done-when    met
+  decisions    bent: D15 (ajv-dev-dep)
+               → ajv pinned at 8.20.0, not 8.18.0; see section 1
+  constraints  5 of 5 honored
+  seam         strayed: 3 paths outside 2 steps' seams
+               - step 2: src/lib/__tests__/seamcheck.test.ts
+               - step 6: cspell.json, site/api.html
+  diff         +1647 -10 across 21 files
+               - cspell.json +1 -0
+               - docs/cli-reference.md +20 -0
+               - docs/decisions.md +6 -0
+               - docs/plan-export.md +9 -1
+               - package.json +1 -0
+               - pnpm-lock.yaml +3 -0
+               - site/api.html +2 -0
+               - and 14 more
+  spent        55 min · 2 red runs · 2 drift warnings
+  ```
+
+  **Verdict**: ○ Out of plumb (decisions bent)
+
+  **Harvested**: **1** of 2 parked ideas open
+
+  | Park | Why it matters | Lean |
+  | --- | --- | --- |
+  | **P2**: [Parallel steps, tip pulled in](#park-list) | a wide plan could land several steps side by side without half-built work reaching the trunk | tangent: it is runciter's scheduler design for move 3, and nothing in this build waits on it |
+
+  **Recommendation**: Read the two exported plans and approve the range: `.plumbbob/builds/2026-11-11-move-2-make-the-plan-schedulable/plan.json` and `.plumbbob/builds/2026-10-17-build-ranges/plan.json`. They match their intents step for step, and the one stale hash is step 7's to fix. Correct D15 (ajv-dev-dep) and D147 to 8.20.0 when you reply, then run range 3 with `/plumbbob:run`.
+
+  **1.** ajv is pinned at 8.20.0, where D15 names 8.18.0
+
+  D15 (ajv-dev-dep) says to pin ajv 8.18.0 because it is "the one already in the tree". The lockfile only ever held 8.20.0, and that is the hoisted `node_modules/ajv`. 8.18.0 sits in pnpm's store but nothing in this repo resolves to it. I followed the decision's reason over its number and pinned 8.20.0, so nothing new was downloaded and the release-age window never came into it. D15 in `intent.md` and D147 in `docs/decisions.md` both still say 8.18.0, and I left them for you to correct.
+
+  **2.** This build's plan.json is already one tick behind
+
+  The export ran before step 6's checkpoint ticked its box, so the committed `plan.json` for this build carries the hash of the `intent.md` from before the tick (`180d13fe`, where the file now hashes to `56fdbe0f`). `2026-10-17-build-ranges`' is current. Nothing goes red yet, since the drift check is step 7. Step 7 is exactly what fixes this: `checkpoint` re-exports when it ticks, and the check catches every other edit.
+
+  **3.** Both exports are serial, so check 3 never fired on a real plan
+
+  Neither plan has an `after:` line, so every step depends on the one before it, and the overlap check (the one ridgeline never had) has nothing to catch. Its passing and failing cases live only in `src/lib/__tests__/plancheck.test.ts`, which covers equal entries, a grant covering a file, a grant against its bare form, reach through a step in between, and steps in different ranges. Step 1's pause flagged this, and it still holds.
+
+  **4.** The fourth check landed as D152 (no-forward-after)
+
+  The check you approved at step 1's pause (an `after:` may not name a step that builds later) is in `src/lib/plancheck.ts`, with its words in `docs/plan-export.md` and its entry in `docs/decisions.md` as D152, the build's D20. It skips landed steps, since their place in the order is history. Rule 2 reports only dependencies no `after:` line accounts for, because check 1 already names the rest, and the cycle rule waits until every dependency is known, which is how runciter's validator does it.
+
+  **5.** Three files outside their steps' seams
+
+  The glob message dropped its em-dash for `, per D23 (no-glob-seams).`, as the spec says, so `src/lib/__tests__/seamcheck.test.ts`, which asserted the old words, changed in step 2. Step 6's done-when names the places `cli-docs.test.ts` looks, and `site/api.html` is one of them, so the verb went in there too. `cspell.json` learned `plancheck`, after the spell slot turned step 6's first checkpoint red. Step 4's other red run was three e2e tests timing out at a load average of 60. They passed alone, 71 of 71, and the retry landed green.

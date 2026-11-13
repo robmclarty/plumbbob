@@ -59,6 +59,7 @@
     "ollama",
     "oneline",
     "plancheck",
+    "planfile",
     "plumbbob",
     "qwen",
     "reflog",

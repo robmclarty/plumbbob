@@ -1,19 +1,16 @@
 // `plumbbob export [<slug>]`: write a build's plan as data, `plan.json` beside
 // its intent.md, in the shape runciter's scheduler reads (`runciter.plan/1`).
-// The derivation and the checks are pure (src/lib/plan.ts, src/lib/plancheck.ts);
-// this verb reads the files, hashes intent.md's bytes, hands the tree and the
-// root keyframes.md's Map in, and writes the result only when nothing fails,
+// The derivation and its checks run through src/lib/planfile.ts, which reads
+// intent.md and the tree; this verb writes the result only when nothing fails,
 // since a scheduler acting on a plan that fails a check would run two steps at
 // once that the plan meant to order. The first export opts a build in; the
 // file is never written by hand.
 
-import { createHash } from 'node:crypto'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, writeFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { findRepoRoot } from '../lib/git.ts'
 import { notice, transition } from '../lib/notice.ts'
-import { derivePlan, serializePlan } from '../lib/plan.ts'
-import { checkPlan, parseMapPaths } from '../lib/plancheck.ts'
+import { freshPlan, planJsonPath } from '../lib/planfile.ts'
 import { activeBuild, buildDir } from '../lib/sidecar.ts'
 
 /**
@@ -46,35 +43,20 @@ export function exportPlan(cwd: string, args: ReadonlyArray<string>): number {
     return 1
   }
 
-  const bytes = readFileSync(intentFile)
-  const path = relative(root, intentFile).split(sep).join('/')
-  const derived = derivePlan({
-    intent: bytes.toString('utf8'),
-    slug,
-    path,
-    sha256: createHash('sha256').update(bytes).digest('hex'),
-  })
-  const keyframes = join(root, 'keyframes.md')
-  const findings = derived.ok
-    ? checkPlan({
-        plan: derived.plan,
-        facts: derived.facts,
-        tree: { exists: (p) => existsSync(join(root, p)) },
-        mapPaths: existsSync(keyframes) ? parseMapPaths(readFileSync(keyframes, 'utf8')) : [],
-      })
-    : derived.findings
-
-  if (!derived.ok || findings.length > 0) {
+  const fresh = freshPlan(root, slug)
+  if (!fresh.ok) {
     // Each finding is printed whole, its period kept, in the words the spec gives
     // (docs/plan-export.md), which a notice's own punctuation would trim.
-    const tally = findings.length === 1 ? '1 finding' : `${findings.length} findings`
-    process.stderr.write([...findings, `export refused, ${tally}; plan.json not written.`].map((f) => `plumbbob: ${f}\n`).join(''))
+    const tally = fresh.findings.length === 1 ? '1 finding' : `${fresh.findings.length} findings`
+    process.stderr.write(
+      [...fresh.findings, `export refused, ${tally}; plan.json not written.`].map((f) => `plumbbob: ${f}\n`).join(''),
+    )
     return 1
   }
 
-  const out = join(buildDir(root, slug), 'plan.json')
-  writeFileSync(out, serializePlan(derived.plan))
-  const steps = derived.plan.steps.length
+  const out = planJsonPath(root, slug)
+  writeFileSync(out, fresh.text)
+  const steps = fresh.steps
   process.stdout.write(
     transition({
       label: 'Exported',

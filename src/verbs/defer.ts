@@ -15,6 +15,7 @@ import { findRepoRoot } from '../lib/git.ts'
 import { activeBuild, hasSession, intentPath } from '../lib/sidecar.ts'
 import { deferQuestion, type OpenQuestion, questionsToAnswerNamed } from '../lib/orient.ts'
 import { advisory, ending, notice, printEnding, transition } from '../lib/notice.ts'
+import { refreshAdvisory, refreshPlan } from '../lib/planfile.ts'
 import { driverPointer } from './handoff.ts'
 
 // What every refusal about the arguments points at.
@@ -75,6 +76,7 @@ export function defer(cwd: string, args: ReadonlyArray<string>): number {
     return 1
   }
   writeFileSync(path, deferral.intent)
+  const planNotice = refreshAdvisory(refreshPlan(root, activeBuild(root)))
   printEnding(root, {
     tier: 'driver',
     render: 'defer',
@@ -82,6 +84,7 @@ export function defer(cwd: string, args: ReadonlyArray<string>): number {
       // The parser hands back the marker's until-clause as the opener now
       // reads it, `until` and all, so the lead says what the file says.
       lead: transition({ label: 'Deferred', fact: `${plainHandle(deferral.question)} ${deferral.question.deferred ?? `until ${until}`}` }),
+      advisories: [planNotice],
       pointer: driverPointer(root, activeBuild(root)),
     }),
   })

@@ -1,10 +1,13 @@
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { defer } from '../defer.ts'
 import { park } from '../park.ts'
+import { exportPlan } from '../export.ts'
 import { start } from '../start.ts'
 import { activeBuild, intentPath } from '../../lib/sidecar.ts'
 import { ending, transition } from '../../lib/notice.ts'
+import { freshPlan, planJsonPath } from '../../lib/planfile.ts'
 import { parseOpenQuestionRows, questionTotals } from '../../lib/orient.ts'
 import { driverPointer } from '../handoff.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -139,5 +142,26 @@ describe('park beside an open question (D123 (defer-records))', () => {
     captureIo(() => defer(dir, ['Q2', 'step 22']))
     const { stdout } = captureIo(() => park(dir, ['Q2 and Q4 and the Q-ball (tangent)']))
     expect(stdout).not.toContain('⚠')
+  })
+})
+
+describe('defer with an exported plan.json — D14 (cli-keeps-current)', () => {
+  it('re-exports after writing the marker, so the next check stays green', async () => {
+    const dir = await started()
+    mkdirSync(join(dir, 'src'), { recursive: true })
+    expect(captureIo(() => exportPlan(dir, [])).code).toBe(0)
+    const slug = activeBuild(dir) ?? ''
+    const before = readFileSync(planJsonPath(dir, slug), 'utf8')
+    expect(captureIo(() => defer(dir, ['Q1', 'the cache spike'])).code).toBe(0)
+    const after = readFileSync(planJsonPath(dir, slug), 'utf8')
+    expect(after).not.toBe(before)
+    const fresh = freshPlan(dir, slug)
+    expect(fresh.ok && fresh.text).toBe(after)
+  })
+
+  it('writes no plan.json for a build that was never exported', async () => {
+    const dir = await started()
+    expect(captureIo(() => defer(dir, ['Q1', 'the cache spike'])).code).toBe(0)
+    expect(existsSync(planJsonPath(dir, activeBuild(dir) ?? ''))).toBe(false)
   })
 })

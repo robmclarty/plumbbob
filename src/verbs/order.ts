@@ -31,6 +31,7 @@ import {
 } from '../lib/orient.ts'
 import { expandStepList, formatStepList, parseStepList } from '../lib/steplist.ts'
 import { advisory, blocks, ending, notice, printEnding, transition } from '../lib/notice.ts'
+import { refreshAdvisory, refreshPlan } from '../lib/planfile.ts'
 import { driverPointer } from './handoff.ts'
 
 /**
@@ -138,13 +139,14 @@ export function order(cwd: string, args: ReadonlyArray<string>): number {
 function writeOrder(root: string, path: string, ordered: string, sequence: string): void {
   const { intent, recut } = recutPlan(ordered)
   writeFileSync(path, intent)
+  const planNotice = refreshAdvisory(refreshPlan(root, activeBuild(root)))
   const standing = rangeStanding(parseBuildRanges(intent), parseOrderedSteps(intent), null)
   printEnding(root, {
     tier: 'driver',
     render: 'order',
     text: ending({
       lead: blocks([transition({ label: 'Build order', fact: sequence }), recutLead(recut, standing.count)]),
-      advisories: rangeAdvisories(standing),
+      advisories: [...rangeAdvisories(standing), planNotice],
       pointer: driverPointer(root, activeBuild(root)),
     }),
   })

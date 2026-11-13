@@ -36,6 +36,7 @@ import {
   writePause,
 } from '../lib/sidecar.ts'
 import { runCheck } from '../lib/check.ts'
+import { refreshAdvisory, refreshPlan } from '../lib/planfile.ts'
 import { readCommitBody } from '../lib/commitbody.ts'
 import { checkLatch } from '../lib/latch.ts'
 import { markStepDone, parseDetailStep, parseOrderedSteps, parseSteps } from '../lib/orient.ts'
@@ -144,6 +145,9 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
 
   appendFileSync(checkpointsPath(root), `step ${step} ${sha}\n`)
   const flipNotice = flipIntent(root, step)
+  // The tick wrote intent.md, so an exported plan.json follows it here and rides
+  // the same commit the tick does, the next one, which stages them together.
+  const planNotice = refreshAdvisory(refreshPlan(root, activeBuild(root)))
   stampStepStat(root, undefined, step, 'landedAt', new Date().toISOString())
   const pointer = logCheckpoint(root, step, sha, record)
   // The step landed: the build-log's ☐/☑ mirror flips and its Current-step line
@@ -179,7 +183,7 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
     ...(owes === null ? {} : { owes }),
     text: ending({
       lead: transition({ label: 'Checkpoint', fact: `Step ${step} complete`, detail: leadDetail(sha, pointer) }),
-      advisories: [drift, flipNotice],
+      advisories: [drift, flipNotice, planNotice],
       state: landed.state,
     }),
   })

@@ -1,9 +1,12 @@
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { order } from '../order.ts'
+import { exportPlan } from '../export.ts'
 import { start } from '../start.ts'
 import { activeBuild, intentPath, stepPath } from '../../lib/sidecar.ts'
-import { blocks, ending, transition } from '../../lib/notice.ts'
+import { advisory, blocks, ending, transition } from '../../lib/notice.ts'
+import { freshPlan, planJsonPath } from '../../lib/planfile.ts'
 import { driverPointer } from '../handoff.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
@@ -209,5 +212,54 @@ describe('order re-cuts the build ranges — D109 (ranges-follow-the-order)', ()
     expect(stdout).not.toContain('**Build ranges**')
     expect(stdout).toContain('**Build order**: 5, 4, 2, 3\n\nNo range names step 5 ⚠\n  → /plumbbob:refine ranges\n\n**Next Up**')
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('2. `/plumbbob:build 2-3`')
+  })
+})
+
+describe('order with an exported plan.json — D14 (cli-keeps-current)', () => {
+  /** A started plan, its seams' directory made, exported once. */
+  async function exported(intent = INTENT): Promise<{ readonly dir: string; readonly slug: string }> {
+    const dir = await started()
+    writeFileSync(intentPath(dir), intent)
+    mkdirSync(join(dir, 'src'), { recursive: true })
+    expect(captureIo(() => exportPlan(dir, [])).code).toBe(0)
+    return { dir, slug: activeBuild(dir) ?? '' }
+  }
+
+  it('re-exports after writing the order, so the plan follows it', async () => {
+    const { dir, slug } = await exported()
+    expect(captureIo(() => order(dir, ['4', '3'])).code).toBe(0)
+    const plan = JSON.parse(readFileSync(planJsonPath(dir, slug), 'utf8'))
+    const deps = Object.fromEntries(plan.steps.map((s: { id: string; depends_on: string[] }) => [s.id, s.depends_on]))
+    // The landed step 1 comes first, then the order written: 4, 3, 2.
+    expect(deps['step-4']).toEqual(['step-1'])
+    expect(deps['step-3']).toEqual(['step-4'])
+    expect(deps['step-2']).toEqual(['step-3'])
+    const fresh = freshPlan(dir, slug)
+    expect(fresh.ok && fresh.text).toBe(readFileSync(planJsonPath(dir, slug), 'utf8'))
+  })
+
+  it('leaves plan.json as it was, and says so, when the new order fails a plan check', async () => {
+    // Step 4 waits on step 3 by its own line, so putting 4 first names a step that builds after it.
+    const { dir, slug } = await exported(INTENT.replace('`src/d.ts`', '`src/d.ts`\n   - after: 3'))
+    const before = readFileSync(planJsonPath(dir, slug), 'utf8')
+    const { code, stdout } = captureIo(() => order(dir, ['4', '3']))
+    expect(code).toBe(0)
+    expect(readFileSync(planJsonPath(dir, slug), 'utf8')).toBe(before)
+    const fresh = freshPlan(dir, slug)
+    const failed = fresh.ok ? [] : fresh.findings
+    expect(failed.length).toBeGreaterThan(0)
+    expect(stdout).toContain(
+      advisory({
+        fact: 'plan.json was left as it was',
+        detail: [failed.length === 1 ? '1 plan finding' : `${failed.length} plan findings`],
+        remedy: 'plumbbob export names them; fix the plan, then run it again',
+      }),
+    )
+  })
+
+  it('writes no plan.json for a build that was never exported', async () => {
+    const dir = await started()
+    expect(captureIo(() => order(dir, ['4', '3'])).code).toBe(0)
+    expect(existsSync(planJsonPath(dir, activeBuild(dir) ?? ''))).toBe(false)
   })
 })

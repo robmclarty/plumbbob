@@ -4,7 +4,8 @@ import { afterAll, afterEach, describe, expect, it, vi } from 'vitest'
 import type { DoctorCheck, RunOptions, RunResult, Summary, SummaryCheck } from 'checkride'
 import { detectGate, gateDetectsTools, runCheck } from '../check.ts'
 import type { CheckFlags } from '../check.ts'
-import { sidecarDir } from '../sidecar.ts'
+import { buildDir, sidecarDir } from '../sidecar.ts'
+import { freshPlan, planJsonPath } from '../planfile.ts'
 import { settingsPath, localSettingsPath } from '../settings.ts'
 import { cleanupTempRepos, makeTempDir } from '../../../test/helpers/temp-repo.ts'
 import { captureIoAsync } from '../../../test/helpers/capture-io.ts'
@@ -142,6 +143,102 @@ describe('runCheck (spawn override) — D24 (configurable-check)', () => {
       expect(stderr).toContain('ignored for the configured command')
     })
   }
+})
+
+// A build folder holding one intent.md, its one step's seam under a directory
+// that exists, so a fresh derivation passes every plan check.
+const PLAN_INTENT = `# Drift test
+
+## Steps
+
+1. [ ] First, **done when:** a works.
+   - seam: \`src/a.ts\`
+`
+
+function writeBuild(root: string, slug: string, intent = PLAN_INTENT): void {
+  mkdirSync(buildDir(root, slug), { recursive: true })
+  mkdirSync(join(root, 'src'), { recursive: true })
+  writeFileSync(join(buildDir(root, slug), 'intent.md'), intent)
+}
+
+/** Export the build as `plumbbob export` would: the fresh derivation's bytes. */
+function exportBuild(root: string, slug: string): void {
+  const fresh = freshPlan(root, slug)
+  if (!fresh.ok) throw new Error(fresh.findings.join('\n'))
+  writeFileSync(planJsonPath(root, slug), fresh.text)
+}
+
+function readSummary(root: string): Summary {
+  return JSON.parse(readFileSync(join(root, '.check', 'summary.json'), 'utf8')) as Summary
+}
+
+describe('runCheck (plan.json drift) — D14 (cli-keeps-current), C4 (single-stream-unchanged)', () => {
+  it('checks a build with no plan.json exactly as before', async () => {
+    const dir = makeTempDir()
+    writeBuild(dir, 'only')
+    writeSettings(dir, 'true')
+    const { code, stderr } = await captureIoAsync(() => runCheck(dir))
+    expect(code).toBe(0)
+    expect(stderr).toBe('')
+    expect(readSummary(dir).checks.map((c) => c.name)).toEqual(['true'])
+  })
+
+  it('passes an exported build whose plan.json is current, and runs the gate', async () => {
+    const dir = makeTempDir()
+    writeBuild(dir, 'only')
+    exportBuild(dir, 'only')
+    writeSettings(dir, 'true')
+    const { code } = await captureIoAsync(() => runCheck(dir))
+    expect(code).toBe(0)
+    expect(readSummary(dir).checks.map((c) => c.name)).toEqual(['true'])
+  })
+
+  it('fails a drifted plan.json ahead of the gate, naming `plumbbob export`, and leaves a summary the check row can read', async () => {
+    const dir = makeTempDir()
+    writeBuild(dir, 'only')
+    exportBuild(dir, 'only')
+    // A hand edit: any byte drifts the plan, since source.sha256 hashes the whole file.
+    writeFileSync(join(buildDir(dir, 'only'), 'intent.md'), PLAN_INTENT.replace('a works', 'a works well'))
+    writeSettings(dir, 'echo the gate ran')
+    const { code, stdout, stderr } = await captureIoAsync(() => runCheck(dir))
+    expect(code).toBe(1)
+    expect(stdout).not.toContain('the gate ran')
+    expect(stderr).toBe('plumbbob: plan.json is behind intent.md; run `plumbbob export` to bring it current.\n')
+    const summary = readSummary(dir)
+    expect(summary.ok).toBe(false)
+    expect(summary.checks.map((c) => [c.name, c.ok, c.output_file])).toEqual([['plan', false, 'plan.txt']])
+    expect(readFileSync(join(dir, '.check', 'plan.txt'), 'utf8')).toBe(stderr)
+  })
+
+  it('fails a plan that no longer passes its checks with the findings, then the export that brings it current', async () => {
+    const dir = makeTempDir()
+    writeBuild(dir, 'only')
+    exportBuild(dir, 'only')
+    writeFileSync(join(buildDir(dir, 'only'), 'intent.md'), PLAN_INTENT.replace('`src/a.ts`', '`src/a.ts`\n   - after: 9'))
+    writeSettings(dir, 'true')
+    const { code, stderr } = await captureIoAsync(() => runCheck(dir))
+    expect(code).toBe(1)
+    const lines = stderr.trimEnd().split('\n')
+    expect(lines.length).toBeGreaterThan(1)
+    expect(lines.slice(0, -1).every((l) => l.startsWith('plumbbob: ') && l.includes('9'))).toBe(true)
+    expect(lines.at(-1)).toBe('plumbbob: fix the plan, then run `plumbbob export` to bring plan.json current.')
+  })
+
+  it('names another exported build by its slug, and its export by the slug too', async () => {
+    const dir = makeTempDir()
+    writeBuild(dir, 'older')
+    exportBuild(dir, 'older')
+    writeBuild(dir, 'newer')
+    mkdirSync(sidecarDir(dir), { recursive: true })
+    writeFileSync(join(sidecarDir(dir), 'STATE'), 'newer\n')
+    writeFileSync(join(buildDir(dir, 'older'), 'intent.md'), `${PLAN_INTENT}\n`)
+    writeSettings(dir, 'true')
+    const { code, stderr } = await captureIoAsync(() => runCheck(dir))
+    expect(code).toBe(1)
+    expect(stderr).toBe(
+      'plumbbob: .plumbbob/builds/older/plan.json is behind its intent.md; run `plumbbob export older` to bring it current.\n',
+    )
+  })
 })
 
 describe('runCheck — D32 (checkride-gate)', () => {

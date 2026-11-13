@@ -15,12 +15,15 @@
 // Checkride's stream discipline holds: human progress goes to stderr. Exit 0 is
 // green, 1 is red, 2 means the harness itself broke: reported distinctly,
 // because a misconfigured gate must not read as broken code (both still block).
+// Ahead of both paths, an exported build's plan.json is held to its intent.md:
+// a file behind it, or a plan that fails its checks, is red before the gate runs.
 
 import { spawn } from 'node:child_process'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runChecks, runDoctor } from 'checkride'
 import type { DoctorCheck, Summary } from 'checkride'
+import { planDrift } from './planfile.ts'
 import { gateIsRunningFor, withGateMarker } from './reentry.ts'
 import { resolveString } from './settings.ts'
 
@@ -139,8 +142,44 @@ export async function runCheck(root: string, flags: CheckFlags = {}, commandFlag
     )
     return 2
   }
+  const drift = planDrift(root)
+  if (drift.length > 0) {
+    return refusePlanDrift(root, drift)
+  }
   const command = resolveString(root, 'check', '', commandFlag)
   return withGateMarker(root, () => (command.length > 0 ? runCommand(root, command, flags) : runCheckride(root, flags)))
+}
+
+/** The summary's name for the plan-drift check, and where its lines land, relative to `.check/`. */
+const PLAN_CHECK = 'plan'
+const PLAN_OUTPUT = 'plan.txt'
+
+/**
+ * Fail the check on an exported build whose `plan.json` has fallen behind its
+ * intent.md, or whose plan now fails a rule or a check, before the gate runs.
+ *
+ * It runs ahead of the gate because the fix is one command and the whole gate
+ * would have to run again after it anyway. The lines go to stderr in the
+ * spec's words, and the run leaves a one-check summary under `.check/` the
+ * way the override path does, so the pause's check row reads
+ * `red: plan failing` and points at the lines rather than at a stale summary
+ * from the last green run.
+ */
+function refusePlanDrift(root: string, drift: ReadonlyArray<string>): number {
+  const text = drift.map((line) => `plumbbob: ${line}\n`).join('')
+  process.stderr.write(text)
+  writeSummary(
+    root,
+    {
+      name: PLAN_CHECK,
+      description: 'plan.json matches a fresh derivation of intent.md, and the plan passes its rules and checks',
+      exitCode: 1,
+      durationMs: 0,
+      outputFile: PLAN_OUTPUT,
+    },
+    Buffer.from(text),
+  )
+  return 1
 }
 
 /** Where the configured command's combined output lands, relative to `.check/`. */
@@ -187,39 +226,62 @@ function runCommand(root: string, command: string, flags: CheckFlags): Promise<n
   })
 }
 
+/** Record a configured command's run as a one-check summary under `.check/`, beside its captured output. */
+function writeOverrideSummary(root: string, command: string, exitCode: number, durationMs: number, output: Buffer): void {
+  writeSummary(
+    root,
+    {
+      name: command.length <= OVERRIDE_NAME_BUDGET ? command : `${command.slice(0, OVERRIDE_NAME_BUDGET - 1)}…`,
+      description: `the configured "check" command: ${command}`,
+      exitCode,
+      durationMs,
+      outputFile: OVERRIDE_OUTPUT,
+    },
+    output,
+  )
+}
+
+/** One check plumbbob ran itself, as the summary records it. */
+type OwnCheck = {
+  readonly name: string
+  readonly description: string
+  readonly exitCode: number
+  readonly durationMs: number
+  readonly outputFile: string
+}
+
 /**
- * Record a configured command's run as a one-check summary under `.check/`,
- * beside its captured output, in the shape checkride writes for its own runs.
+ * Write a one-check summary under `.check/`, beside the check's captured
+ * output, in the shape checkride writes for its own runs.
  *
  * A summary that cannot be written is reported, never fatal: the gate's
- * verdict is the command's exit code, and a full disk must not turn a green
- * run red.
+ * verdict is the exit code, and a full disk must not turn a green run red.
  */
-function writeOverrideSummary(root: string, command: string, exitCode: number, durationMs: number, output: Buffer): void {
-  const ok = exitCode === 0
+function writeSummary(root: string, check: OwnCheck, output: Buffer): void {
+  const ok = check.exitCode === 0
   const summary: Summary = {
     schema_version: 1,
     timestamp: new Date().toISOString(),
     ok,
     checks_run: 1,
-    total_duration_ms: durationMs,
+    total_duration_ms: check.durationMs,
     run: { partial: false },
     checks: [
       {
-        name: command.length <= OVERRIDE_NAME_BUDGET ? command : `${command.slice(0, OVERRIDE_NAME_BUDGET - 1)}…`,
+        name: check.name,
         adapter: null,
-        description: `the configured "check" command: ${command}`,
+        description: check.description,
         ok,
-        exit_code: exitCode,
-        duration_ms: durationMs,
-        output_file: OVERRIDE_OUTPUT,
+        exit_code: check.exitCode,
+        duration_ms: check.durationMs,
+        output_file: check.outputFile,
       },
     ],
   }
   try {
     const dir = join(root, '.check')
     mkdirSync(dir, { recursive: true })
-    writeFileSync(join(dir, OVERRIDE_OUTPUT), output)
+    writeFileSync(join(dir, check.outputFile), output)
     writeFileSync(join(dir, 'summary.json'), `${JSON.stringify(summary, null, 2)}\n`)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)

@@ -4,6 +4,7 @@ import { dirname, join, relative } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { checkpoint } from '../checkpoint.ts'
 import { handoff } from '../handoff.ts'
+import { exportPlan } from '../export.ts'
 import { start } from '../start.ts'
 import {
   buildLogPath,
@@ -22,6 +23,7 @@ import {
   turnPath,
 } from '../../lib/sidecar.ts'
 import { gitPath } from '../../lib/git.ts'
+import { freshPlan, planJsonPath } from '../../lib/planfile.ts'
 import { advisory, ending, notice, transition } from '../../lib/notice.ts'
 import { setLocalSetting, settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -1008,5 +1010,48 @@ describe('checkpoint — the Range and Stop rows in the boundary table', () => {
       expect(stdout).toContain('| Stop |')
       expect(readRelay(dir)?.owes).toBeUndefined()
     }
+  })
+})
+
+describe('checkpoint with an exported plan.json — D14 (cli-keeps-current)', () => {
+  /** A green session whose build has been exported once. */
+  async function exported(): Promise<string> {
+    const dir = await startedGreen()
+    mkdirSync(join(dir, 'src'), { recursive: true })
+    expect(captureIo(() => exportPlan(dir, [])).code).toBe(0)
+    return dir
+  }
+
+  it('re-exports after its tick, so the plan stays current and rides the next commit with the tick', async () => {
+    const dir = await exported()
+    writeFileSync(join(dir, 'src', 'a.ts'), 'export const a = 1\n')
+    const before = readFileSync(planJsonPath(dir, 'checkpoint-test'), 'utf8')
+    const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(code).toBe(0)
+    const after = readFileSync(planJsonPath(dir, 'checkpoint-test'), 'utf8')
+    expect(after).not.toBe(before) // the tick changed intent.md's bytes, so its hash
+    const fresh = freshPlan(dir, 'checkpoint-test')
+    expect(fresh.ok && fresh.text).toBe(after)
+    expect(stdout).not.toContain('plan.json')
+    // Left in the working tree beside the tick, never committed on its own.
+    const dirty = execFileSync('git', ['status', '--porcelain'], { cwd: dir, encoding: 'utf8' })
+    expect(dirty).toContain('plan.json')
+    expect(dirty).toContain('intent.md')
+  })
+
+  it('refuses at the gate when a hand edit left plan.json behind, naming `plumbbob export`', async () => {
+    const dir = await exported()
+    writeFileSync(intentPath(dir), INTENT.replace('a works', 'a works well'))
+    const { code, stderr } = await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(code).toBe(1)
+    expect(stderr).toContain('plan.json is behind intent.md; run `plumbbob export` to bring it current.')
+    expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [ ]')
+  })
+
+  it('writes no plan.json for a build that was never exported', async () => {
+    const dir = await startedGreen()
+    writeFileSync(join(dir, 'work.txt'), 'pending\n')
+    expect((await captureIoAsync(() => checkpoint(dir, ['1']))).code).toBe(0)
+    expect(existsSync(planJsonPath(dir, 'checkpoint-test'))).toBe(false)
   })
 })
