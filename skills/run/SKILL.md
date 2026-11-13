@@ -184,7 +184,11 @@ checkpoint bodies (`git log` over its commits) and their entries in the build-lo
 never from recall, since a long run can compact its context partway through and lose its
 early steps. A step that landed a hair off comes first among the sections; five at most. The
 card prints the Summary and links the rest
-([D113 (short-card)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d113)).
+([D113 (short-card)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d113)). A caveat the human must see before they
+reply goes in the Summary or the Recommendation, the two parts the card prints, and never in
+text you add around the card: a card you annotate or rewrite is caught by the relay check
+after it has shown, and since shown text cannot be taken back, the recovery prints the card
+twice.
 
 The `## Harvest` section carries one proposal for every open park in the build-log's
 `## Park list`. A park's handle is `P` and its place in that list, counting the harvested

@@ -194,7 +194,10 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    the seam row will name, a decision you had to bend, a doubt about the done-when) is one
    of those sections, and the card carries it where it bears on the call: a bent row's `→`
    line points at it, and your recommendation names it when it changes the move. It is
-   never a paragraph of its own. The recommendation is the last section: the move you would take as its own
+   never a paragraph of its own. A caveat the human must see before they reply goes in the
+   Summary or the recommendation, the two parts the card prints, and never in text you add
+   around the card: a card you annotate or rewrite is caught by the relay check after it
+   has shown, and since shown text cannot be taken back, the recovery prints the card twice. The recommendation is the last section: the move you would take as its own
    sentence, closed by a period, then the reason as a capitalized sentence or two. The lead
    and the recommendation are flowing prose and handoff unwraps both to the renderer's
    width, so never hard-wrap them; handoff also prepends the bold `**Recommendation**:`
