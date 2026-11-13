@@ -124,3 +124,8 @@ is fine; refining is always available.
   `## Open questions`; settled drift gets repaired in place once the human OKs it.
 - **Refine the plan, not the code.** `/plumbbob:refine` touches `intent.md` only; turning a
   decision into a diff is `/plumbbob:build` or your own hands, never this skill.
+- **An exported plan follows the edit.** When the build folder holds a `plan.json`, every
+  approved edit to `intent.md` leaves it behind and turns the next check red. Run
+  `plumbbob export` once the edits are written; when it refuses, its findings name the
+  step and the line, and fixing them is part of the same refine
+  ([D146 (cli-keeps-current)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d146)).

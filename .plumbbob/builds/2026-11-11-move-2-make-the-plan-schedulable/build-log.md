@@ -13,7 +13,7 @@ step boundaries. The antidote to "my plan got lost in the noise."
 
 # Build log: move 2: make the plan schedulable
 
-**Current step:** 7 — feat(check): keep plan.json current, and fail the check when it drifts
+**Current step:** 8 — docs(plan): teach the export where the plan is taught
 **Heavy check:** checkride (set a "check" key in .plumbbob/settings.json to override)
 
 ## Steps
@@ -29,7 +29,7 @@ check green + checkpoint taken, via `/plumbbob:verify` or `/plumbbob:build`.)*
 - ☑ 4. feat(plan): derive runciter.plan/1 from intent.md
 - ☑ 5. feat(plan): check a plan's dependencies and seams before it exports
 - ☑ 6. feat(export): write plan.json beside intent.md
-- ☐ 7. feat(check): keep plan.json current, and fail the check when it drifts
+- ☑ 7. feat(check): keep plan.json current, and fail the check when it drifts
 - ☐ 8. docs(plan): teach the export where the plan is taught
 
 ## Park list
@@ -207,3 +207,5 @@ folder, so it rides the branch into the PR.)*
   **5.** Three files outside their steps' seams
 
   The glob message dropped its em-dash for `, per D23 (no-glob-seams).`, as the spec says, so `src/lib/__tests__/seamcheck.test.ts`, which asserted the old words, changed in step 2. Step 6's done-when names the places `cli-docs.test.ts` looks, and `site/api.html` is one of them, so the verb went in there too. `cspell.json` learned `plancheck`, after the spell slot turned step 6's first checkpoint red. Step 4's other red run was three e2e tests timing out at a load average of 60. They passed alone, 71 of 71, and the retry landed green.
+
+- 2026-11-13 — step 7 checkpointed · f380136fe — feat(check): keep plan.json current, and fail the check when it drifts (1 drift, 16m)

@@ -78,6 +78,16 @@ grew, but its everyday job is to sharpen, not to invent.
    ([D96 (plan-names-the-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d96)).
    Then read `plumbbob status`: its ranges block carries a `⚠` row for any range still
    broken, and none once every undone step sits in exactly one range.
+
+   **Bring an exported plan along.** When the build folder holds a `plan.json`, the edit
+   you just wrote leaves it behind, and the next check fails until it is current again.
+   `plumbbob order` re-exports on its own; an edit made by hand does not, so run
+   `plumbbob export` once the step is written, and read its findings when it refuses
+   ([D146 (cli-keeps-current)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d146)).
+   A step that waits on less than the one before it, or wants a stop or an effort of its
+   own, carries `- after:`, `- stop:` or `- effort:` beneath its seam, in the grammar
+   [docs/plan-export.md](https://github.com/robmclarty/plumbbob/blob/main/docs/plan-export.md)
+   gives.
 4. **Revise the step's harness bindings if they drifted too** *(optional)*. If the
    build carries a `harness.json` (beside `intent.md`) and the reality that moved the
    step also changed which agents it wants, sharpen that step's slot bindings

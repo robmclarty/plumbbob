@@ -413,6 +413,16 @@ their `.check/<slot>` pointers. A `check` key in the settings ladder
 (`settings.local.json` → `settings.json`, [**D27 (settings-ladder)**](decisions.md#d27)) overrides checkride with a shell
 command, spawned with `shell: true` in the repo root; that is how non-checkride repos gate.
 
+Ahead of either path, every build folder holding a `plan.json` is held to its `intent.md`.
+A file that differs from a fresh derivation prints
+``plumbbob: plan.json is behind intent.md; run `plumbbob export` to bring it current.``,
+and a plan that now fails a rule or a check prints its findings and the same export; either
+way the gate does not run, the run exits 1, and `.check/summary.json` records one failing
+`plan` check, so a pause's check row reads `red: plan failing`. `checkpoint`'s tick,
+`order` and `defer` re-export on their own, so only an edit made some other way trips it
+([**D146 (cli-keeps-current)**](decisions.md#d146)). A build never exported checks exactly as
+before; the whole story is in [the plan as data](plan-export.md#keeping-planjson-current).
+
 The flags narrow a checkride run for the iteration loop (`--bail --only types,lint`);
 they map straight onto checkride's own flags and are warned-and-ignored on the override
 path. `checkpoint`'s gate takes no flags: the commit gate is always the full run.

@@ -264,8 +264,10 @@ Once the file exists, two things keep it honest:
 - **The CLI keeps up with its own writes.** `checkpoint` (its tick of the step's box),
   `plumbbob order` and `plumbbob defer` each write `intent.md`, and each re-exports right
   after, so a verb the person ran never turns the next check red
-  ([D146 (cli-keeps-current)](decisions.md#d146)). The checkpoint stages the refreshed
-  `plan.json` in the same commit as the tick that changed it.
+  ([D146 (cli-keeps-current)](decisions.md#d146)). The tick lands in the working tree after
+  the step's commit, and the refreshed `plan.json` lands beside it, so the two ride the
+  next commit together. A write that leaves the plan failing a rule or a check keeps the
+  old file, and the verb's ending says so in an advisory pointing at `plumbbob export`.
 - **The check catches every other edit.** `plumbbob check`, and the checkpoint gate with
   it, derives the plan afresh and compares bytes. A hand edit, or a model's edit through
   `/plumbbob:step` or `/plumbbob:refine`, leaves the file behind, and the check fails until
@@ -278,8 +280,22 @@ plumbbob: plan.json is behind intent.md; run `plumbbob export` to bring it curre
 Any byte counts, since `source.sha256` is the hash of the whole file: a typo fixed in the
 Frame drifts the plan as surely as a new step does, which is what lets a reader tell a
 stale plan from a current one. When the fresh derivation fails a rule or a check, the check
-prints those findings in the words above instead, and `plumbbob export` refuses until they
-are fixed.
+prints those findings in the words above instead, closed by
+``plumbbob: fix the plan, then run `plumbbob export` to bring plan.json current.``, and
+`plumbbob export` refuses until they are fixed.
+
+The check holds every build folder that holds a `plan.json`, a finished one included, since
+a scheduler may be handed any of them. A build other than the active one is named by its
+folder, and so is its export:
+
+```text
+plumbbob: .plumbbob/builds/2026-10-17-build-ranges/plan.json is behind its intent.md; run `plumbbob export 2026-10-17-build-ranges` to bring it current.
+```
+
+The check runs ahead of the gate, and a red one stops there, because the fix is one command
+and the whole gate would run again after it. It leaves `.check/summary.json` holding one
+failing check named `plan`, its lines in `.check/plan.txt`, so a pause's check row reads
+`red: plan failing` and points at them.
 
 ## Conformance
 

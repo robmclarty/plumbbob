@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { start } from '../start.ts'
 import { status } from '../status.ts'
+import { parseStepFields } from '../../lib/intent.ts'
 import { parseBuildRanges } from '../../lib/orient.ts'
 import { activeBuild, buildDir, excludeControl, grantPath, hasSession, sidecarDir, tickPath, turnPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -242,6 +243,21 @@ describe('start', () => {
     expect(run).toContain('(the plan declares none; `/plumbbob:build` builds step 1 alone)')
     writeFileSync(path, intent.replace(/## Build ranges[\s\S]*?(?=## Open questions)/, ''))
     expect(captureIo(() => status(dir)).stdout).toBe(fresh)
+  })
+
+  it('teaches the three step lines a scheduler reads, and the export after a hand edit, while its own steps carry none', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['My Feature']))
+    const intent = readFileSync(join(dir, '.plumbbob', 'builds', `${TODAY}-my-feature`, 'intent.md'), 'utf8')
+    for (const line of ['`- after: 2, 4-5`', '`- stop: planned`', '`- effort: high`', 'run `plumbbob export` again\nafter any edit you make here by hand']) {
+      expect(intent).toContain(line)
+    }
+    // The guidance sits above the list, so the scaffold's own steps still read
+    // with no line of the three and no finding.
+    for (const n of [1, 2]) {
+      const parsed = parseStepFields(intent, n)
+      expect(parsed.ok && [parsed.fields.after, parsed.fields.stop, parsed.fields.effort]).toEqual([null, null, null])
+    }
   })
 
   it('echoes the checkride gate into the scaffolded build-log (documentation only)', async () => {

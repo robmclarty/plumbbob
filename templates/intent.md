@@ -73,7 +73,15 @@ title-type → `feat`. Then drive the build: `/plumbbob:run` a range at a time w
 plan cuts ranges below, `/plumbbob:build` a step at a time when it does not. Later
 steps may be fuzzier than the first; sharpen the next one just-in-time with
 `/plumbbob:step` (empty input auto-syncs it), and use `/plumbbob:refine` to repair the
-whole plan when a blocker rewrites it.)*
+whole plan when a blocker rewrites it. Three more lines are optional, at most one of each
+to a step, and only a scheduler reads them: `- after: 2, 4-5` (or `none`) names the steps
+this one waits on, where no line means the step before it in build order;
+`- stop: planned` (or `structural`) asks for a stop once the step lands, where no line
+means a stop at a range's last step only; and `- effort: high` (`low`, `medium`, `high`,
+`xhigh` or `max`) says how hard the builder should work. `plumbbob export` writes them
+into `plan.json` beside this file, and once that file exists, run `plumbbob export` again
+after any edit you make here by hand
+([plan-export](https://github.com/robmclarty/plumbbob/blob/main/docs/plan-export.md)).)*
 
 1. [ ] feat: <step>, **done when:** <criterion, ideally a test or check result>
    - seam: `<file>`, `<file>`

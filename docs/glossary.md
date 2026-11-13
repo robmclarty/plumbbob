@@ -31,6 +31,15 @@ word up without reading the others first. Each entry points at the page that own
   path outside it is a visible stray, not a refused edit.
 - **Model recommendation** (`model:`): an advisory line under a step naming the smallest
   model that can carry it; `status` and every Next Up line surface it.
+- **Step lines for a scheduler** (`after:`, `stop:`, `effort:`): three optional lines
+  under a step naming what it waits on, whether a stop follows it, and how hard its
+  builder should work. A plan with none of them exports fully serial.
+  → [`plan-export.md`](plan-export.md#the-three-step-lines)
+- **`plan.json`**: the build's plan as data, written beside `intent.md` by
+  `plumbbob export` in `runciter.plan/1`, the shape runciter's scheduler reads. A build
+  has one only once it has been exported; from then on the CLI keeps it current on its
+  own writes, and `plumbbob check` fails when any other edit leaves it behind.
+  → [`plan-export.md`](plan-export.md)
 
 ## The loop
 

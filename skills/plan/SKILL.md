@@ -121,6 +121,16 @@ The argument only seeds how you get there.
    leave `## Build order` alone: it is for later, when a refine appends a step that has to
    land before an existing one (`plumbbob order`).
 
+   **Three lines a scheduler reads are optional.** `- after:`, `- stop:` and `- effort:`
+   each ride a step at most once, and a plan with none of them exports fully serial, which
+   is what plumbbob builds anyway
+   ([docs/plan-export.md](https://github.com/robmclarty/plumbbob/blob/main/docs/plan-export.md)).
+   Write one only when the human asks for it or a scheduler will read the plan. When the
+   build folder already holds a `plan.json`, any edit you make to `intent.md` leaves it
+   behind and turns the next check red, so run `plumbbob export` after the edit, before
+   the plan card
+   ([D146 (cli-keeps-current)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d146)).
+
    **The title *is* the commit subject; author it as one**
    ([D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68)): write each
    `<title>` as a plain, single-line Conventional-Commit subject,
