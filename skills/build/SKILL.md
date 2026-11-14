@@ -69,6 +69,13 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
 3. **Read the plan.** Read the step's **proof**, its **seam**, and the
    **Decisions** and **Constraints** in `intent.md`. Build to *that*; the deciding
    already happened, off the chat.
+   - **Read the step's `like` files before the first edit.** A `- like:` line names the
+     files to copy the pattern from (the dashboard shows it as a `like:` row under the
+     seam). Read each one whole and write the step the way they are written: their
+     naming, their error handling, their test layout. A like file is an exemplar, not
+     part of the seam, so do not edit it; one that does not exist is no blocker, so say
+     so in the Summary and build from the nearest neighbor
+     ([D156 (like-is-advice)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d156)).
    - **Bound `before`-agents load context first.** If `plumbbob status` shows a
      `harness bindings:` block, this build binds agents; see **§ Running bound agents**
      and load their context in before you write. No bindings, no harness: just build.

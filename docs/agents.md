@@ -26,7 +26,9 @@ you wonder why the contract refuses something, it's one of these:
 2. **The CLI owns every side effect** ([**D44 (cli-side-effects)**](decisions.md#d44)). An agent *returns* concerns; PlumbBob
    *applies* them: `parked[]` lands as lines the verb itself appends to the build log's
    `## Park list`, untagged, never by the agent writing `.plumbbob/`. The sidecar keeps a
-   single writer.
+   single writer. The one folder under it an agent may write is its step's
+   [evidence folder](#evidence-something-to-look-at), and a file saved there reaches the
+   pause only when the CLI lists it.
 3. **Review is advisory; checkride gates; the human advances** ([**D45 (advisory-review)**](decisions.md#d45)). An
    `after`-slot agent *informs* the verify pause. No code path lets it fail a step: a
    gate that an agent can trip is the lock returning in autonomy's costume.
@@ -77,7 +79,9 @@ picture of the step you're running against:
       "text": "`pnpm vitest run limiter` passes; the limit reads from RATE_LIMIT_MAX, defaulting to 5"
     },
     "doneWhen": "`pnpm vitest run limiter` passes; the limit reads from RATE_LIMIT_MAX, defaulting to 5",   // proof.text again, kept for agents written before proof
-    "seam": ["src/limiter.ts", "src/__tests__/limiter.test.ts"]   // exact paths / dir/ grants
+    "seam": ["src/limiter.ts", "src/__tests__/limiter.test.ts"],  // exact paths / dir/ grants
+    "like": ["src/throttle.ts"],       // the step's `- like:` line: files to copy the pattern from, [] when it names none
+    "evidenceDir": ".plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/evidence/3"   // where this step's evidence goes, from the repo root
   },
   "decisions":   ["D1 (token-bucket): token bucket over sliding window — because …", "…"],  // verbatim intent bullets
   "constraints": ["C1 (no-new-deps): no new runtime deps — because …", "…"],
@@ -99,6 +103,17 @@ Notes that matter to an author:
   words. `plumbbob checkpoint` runs the command; an agent only reads it. `step.doneWhen`
   carries the same string as `proof.text`, so an agent written against the older field
   keeps working ([**C7 (minimal-envelope)**](decisions.md#c7): the envelope only grows).
+- `step.like` is the files the step names to copy the pattern from, in the order its
+  `- like:` line gives them, and an empty list when the step has no such line. It is
+  advice, read loosely: a token that is not a plain repo-relative path is left out, and a
+  path here may not exist, so check before you read it. A builder reads these files before
+  it edits; a reviewer judges the diff against the pattern they set
+  ([**D156 (like-is-advice)**](decisions.md#d156)).
+- `step.evidenceDir` is the folder this step's evidence goes in, as a path from the repo
+  root, which is your working directory. PlumbBob names it and does not make it: create it
+  when you have something to show, and name each file you saved in the envelope's
+  `evidence[]` ([below](#evidence-something-to-look-at)). An agent that shows nothing
+  ignores the field.
 - `context[]` carries the output of `before`-slot agents, threaded in inline ([**D59 (inline-context)**](decisions.md#d59)): how
   a `build` agent sees what a `before` agent surfaced.
 - `settings` is *plumbbob's* relevant configuration, plus one block that is yours: `settings.agent`
@@ -118,7 +133,10 @@ A single JSON object. Two fields are required; the rest default to empty:
   "summary": "Read RATE_LIMIT_MAX; default 5; added the default test.",  // required, non-empty
   "body": "…longer prose for the human at the pause…",   // optional
   "parked": ["the 429 body should be JSON, not text"],   // optional — appended to the build log's Park list
-  "notes": "needs FOO in the env to run the integration test"  // optional
+  "notes": "needs FOO in the env to run the integration test",  // optional
+  "evidence": [                        // optional: files saved under step.evidenceDir, for the person to look at
+    { "path": ".plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/evidence/3/01-login.png", "caption": "the form, filled" }
+  ]
 }
 ```
 
@@ -142,6 +160,64 @@ log with no Park list warns once rather than losing the line ([**D44 (cli-side-e
 tolerated and dropped ([**C7 (minimal-envelope)**](decisions.md#c7), see Versioning); a malformed `parked` (non-strings,
 blanks) is refused rather than silently dropped, because losing a parked concern is quiet
 data loss.
+
+### Evidence: something to look at
+
+**An agent can hand the person something to look at.** A reviewer's summary is a claim; a
+screenshot of the form after the sixth request is the thing itself. The agent saves the
+file under `step.evidenceDir` and names it in `evidence[]`, each entry a `path` from the
+repo root and a `caption`:
+
+```jsonc
+"evidence": [
+  { "path": ".plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/evidence/3/01-login.png", "caption": "the form, filled" },
+  { "path": ".plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/evidence/3/02-limit.png", "caption": "the 6th request, refused" }
+]
+```
+
+`agent run` keeps the entries that sit under that step's folder and drops the rest, each
+with one line on stderr naming the path:
+
+```text
+plumbbob: dropped evidence README.md (it must be a file under .plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/evidence/3/)
+```
+
+| An entry is dropped when | The line says |
+| --- | --- |
+| it has no string `path`, or no string `caption`, or either is blank | `each entry needs a string "path" and a string "caption"` |
+| the path holds a line break or another control character, a backtick, or an angle bracket | `the path must be one line with no backtick or angle bracket` |
+| the path is absolute | `the path must be relative to the repo root` |
+| the path has a `..` segment, even one that lands back inside | `the path must not climb with ".."` |
+| the path is the folder itself, another step's folder, a directory, or anywhere else | `it must be a file under <folder>/` |
+| the path sits in the folder but a symlink carries it out, the folder or one above it being a link included | `it resolves outside <folder>/` |
+
+An `evidence` that is not a list is ignored whole, with one line. Unlike a malformed
+`parked[]`, none of this refuses the envelope: the status, the summary and the parks all
+stand, because a picture the person never sees costs a look, where a lost park costs a
+concern. A file that is not there yet is still listed; a path given twice keeps its last
+caption. The first row is there because the path is written into the build log and onto
+the pause as it stands, and a path that carried a line of its own would write one there; a
+path dropped for it is printed in quotes, escaped, so the warning stays one line.
+
+What happens to an entry that is kept:
+
+- **The pause lists it.** The step's card carries an `**Evidence**:` part under the
+  Readout, one link a line, the caption as the link's text
+  ([the presentation spec](presentation.md#the-evidence-part)). A step whose agents showed
+  nothing has no such part.
+- **The build log records it.** One line in the `## Log`, with the step, the agent, the
+  path and the caption, written when the agent runs.
+- **Git never sees the file.** The evidence folder is excluded like the control files
+  ([state and git](state-and-git.md#the-evidence-folder)), so a screenshot never rides a
+  commit. The log line is what the record keeps once the file is gone.
+- **Nothing removes it.** PlumbBob never deletes an evidence file
+  ([**C4 (never-destroy)**](decisions.md#c4)); clearing the folder is yours to do. The
+  pause stops listing it when the step lands, is abandoned or is reverted: `revert` winds
+  the work back, so what was shown of it is no longer what you are deciding on.
+
+Evidence is a link and nothing more. It cannot tick a step, pass a gate or fail one
+([**C6 (no-advance-verb)**](decisions.md#c6)); the person looks, then decides
+([**D157 (evidence-is-shown)**](decisions.md#d157)).
 
 ## The manifest: `agent.json`
 
@@ -253,7 +329,8 @@ plumbbob agent run reviewer --agent ./r      # --agent points at an explicit dir
 ```
 
 `agent run` composes the `StepContext`, spawns the command, streams its stderr live, captures
-and validates the envelope on stdout, appends any `parked[]` to the build log's Park list, and records
+and validates the envelope on stdout, appends any `parked[]` to the build log's Park list, keeps the
+`evidence[]` that sits under the step's evidence folder (a Log line each), and records
 the envelope in the step's **handoff ledger** (`builds/<slug>/handoff.json`: untracked,
 step-scoped, cleared when the step checkpoints, [**D47 (handoff-ledger)**](decisions.md#d47)) so a later `agent run` or a
 context-compacted session can thread earlier envelopes back into `context[]`. It re-emits the
@@ -333,6 +410,13 @@ read a newer minor; a **major mismatch is refused** with an upgrade hint pointin
 side is behind ([**D46 (stream-discipline)**](decisions.md#d46)), because across a major the shapes may genuinely disagree. Keep your
 envelope **minimal**; resist field sprawl (SWE-agent's ACI lesson): additions are a minor
 bump, removals or renames are a major ([**C7 (minimal-envelope)**](decisions.md#c7)).
+
+`evidence[]` and `step.evidenceDir` are additions of that kind
+([**D157 (evidence-is-shown)**](decisions.md#d157)). The contract is still 1: an agent
+written before them runs unchanged, and a PlumbBob that predates them drops an `evidence`
+key it does not know, as it drops any other. The envelope `agent run` re-emits and records
+carries `evidence` only when it kept an entry, so an agent that shows nothing prints the
+bytes it printed before.
 
 ## A complete working example
 

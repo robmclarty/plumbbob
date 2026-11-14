@@ -710,7 +710,7 @@ describe('doctor — repo setup — D126 (setup-before-start)', () => {
     expect(stdout).toContain(
       '\n\nplumbbob doctor — repo setup\n' +
         '  ○ repo: no .plumbbob/ folder yet\n' +
-        '  ○ repo: 16 control files not ignored by git (.plumbbob/STATE, .plumbbob/settings.local.json, and 14 others)\n' +
+        '  ○ repo: 18 control files not ignored by git (.plumbbob/STATE, .plumbbob/settings.local.json, and 16 others)\n' +
         '      → plumbbob setup (or /plumbbob:setup) adds what is missing; a setup by hand works too\n',
     )
     expect(stdout).not.toContain('✓ repo')

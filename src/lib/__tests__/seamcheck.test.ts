@@ -75,4 +75,44 @@ describe('seamFindings', () => {
   it('says nothing about a token whose directory does not exist yet', () => {
     expect(seamFindings(planOf(['`lib/limter.ts`']), TREE)).toEqual([])
   })
+
+  it('names a like path that does not exist, with the sibling one edit away when there is one', () => {
+    const plan = planOf(['`src/new.ts`\n   - like: `src/limiter.ts`, `src/limter.ts`, `src/gone.ts`, `src/lib/`, `src/libs/`'])
+    expect(seamFindings(plan, TREE).map((f) => [f.step, f.kind, f.words])).toEqual([
+      [1, 'like-missing', 'likes `src/limter.ts`, which does not exist; `src/limiter.ts` does.'],
+      [1, 'like-missing', 'likes `src/gone.ts`, which does not exist.'],
+      [1, 'like-missing', 'likes `src/libs/`, which does not exist.'],
+    ])
+  })
+
+  it('draws nothing for a like path another undone step makes, by name or under its dir grant', () => {
+    const plan = planOf([
+      '`src/retry.ts`, `src/hooks/`',
+      '`src/user.ts`\n   - like: `src/retry.ts`, `src/hooks/use-retry.ts`, `src/gone.ts`',
+      '`src/later.ts`',
+      '`src/user.ts`\n   - like: `src/later.ts`',
+    ])
+    expect(seamFindings(plan, TREE).map((f) => [f.step, f.kind, f.words])).toEqual([[2, 'like-missing', 'likes `src/gone.ts`, which does not exist.']])
+  })
+
+  it('still names a like path only the step itself, or a landed step, was to make', () => {
+    const plan = planOf(['`src/retry.ts`\n   - like: `src/retry.ts`', 'x `src/once.ts`', '`src/user.ts`\n   - like: `src/once.ts`'])
+    expect(seamFindings(plan, TREE).map((f) => [f.step, f.kind])).toEqual([
+      [1, 'like-missing'],
+      [3, 'like-missing'],
+    ])
+  })
+
+  it('puts a step’s like findings after its seam’s, reads the like of a step whose seam will not parse, and skips a landed step', () => {
+    const plan = planOf(['`src/limter.ts`\n   - like: `src/gone.ts`', null, 'x `src/user.ts`\n   - like: `src/gone.ts`']).replace(
+      '2. [ ] Step 2, **done when:** it works.',
+      '2. [ ] Step 2, **done when:** it works.\n   - like: `src/gone.ts`',
+    )
+    expect(seamFindings(plan, TREE).map((f) => [f.step, f.kind])).toEqual([
+      [1, 'near-miss'],
+      [1, 'like-missing'],
+      [2, 'unparsed'],
+      [2, 'like-missing'],
+    ])
+  })
 })

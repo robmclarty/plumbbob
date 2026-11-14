@@ -88,7 +88,13 @@ lot, and a question you would rather let the work answer is deferred instead
 counted apart ([D118 (questions-table)](decisions.md#d118),
 [D120 (deferred-questions)](decisions.md#d120)). Then it commits the plan on its own
 (`plumbbob checkpoint --plan`), so the first step's diff stays clean. It writes intent
-only, never source. If the build will lean on user-authored agents it also offers to
+only, never source. Between the Frame and the Decisions it runs a research pass sized to
+the work: none for a tiny plan, the codebase and record lenses for a small one, and the
+ecosystem lens too for a medium one, in parallel where the host runs subagents. The
+findings go to `research.md` beside `intent.md`, `plumbbob research --stamp` dates them, and
+each one that changes something reaches the plan as a proposed Decision, an Open question
+or a `like:` line for you to keep or cut ([the research pass](research.md);
+[D158 (research-is-dated)](decisions.md#d158)). If the build will lean on user-authored agents it also offers to
 author `harness.json` beside `intent.md`: the per-step [slot bindings](#the-harness-slots)
 reviewed at the same plan pause.
 
@@ -305,6 +311,10 @@ and `defer Q3 until …` leaves one to the work, listed beneath the table.
 The plan pause's cold read is refine's tip: it surfaces the worst hole and names refine
 for the rest, so the full attack stays optional and arrives when the read says it would
 pay. Refine is where the real adversary looks; the cold read is an estimate.
+
+When the dashboard carries a `research predates a lockfile change: …` row, refine offers to
+run the ecosystem lens again against what moved and restamp `research.md`
+([the research pass](research.md#the-staleness-row)). It is an offer; the row gates nothing.
 
 ### revert
 

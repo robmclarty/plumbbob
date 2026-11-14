@@ -32,6 +32,7 @@ index links. Every other page answers one question, grouped in reading order. Th
 - *How do I install it, exactly?* → [install.md](install.md)
 - *What are these untracked files, and why is it touching my `.git`?* → [state-and-git.md](state-and-git.md)
 - *What does a step's change drag along, and how does the pause sort it?* → [reach.md](reach.md)
+- *What does a plan check before it is approved, and how does it know that has aged?* → [research.md](research.md)
 - *How do I plug in my own agent?* → [agents.md](agents.md)
 - *How do I get a local model reviewing my steps?* → [local-model-review.md](local-model-review.md)
 - *Something is broken.* → [troubleshooting.md](troubleshooting.md)

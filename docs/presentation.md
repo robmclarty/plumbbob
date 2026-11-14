@@ -36,7 +36,7 @@ there.
 | what | whose judgment | how it reaches the turn |
 | --- | --- | --- |
 | the Summary lead, the numbered highlights (kept in the detail file and the record), the `proof`, `decisions`, and `constraints` rows, the title, the why, and the lean for each park at a stop, the recommendation | the model | written into `.plumbbob/detail.md`, read back and rendered by handoff |
-| the Readout's other rows and the changed files beneath its `diff` row, the inline diff when the change is small, Your Call, the state table (the Verdict, Now, Stop, Next Up, and the rows beneath it), each park's handle and text on a stop card, every `details:` link, the `more details` link | the CLI | measured from the session, the gate, the plan, the build log, and git |
+| the Readout's other rows and the changed files beneath its `diff` row, the inline diff when the change is small, the Evidence links, Your Call, the state table (the Verdict, Now, Stop, Next Up, and the rows beneath it), each park's handle and text on a stop card, every `details:` link, the `more details` link | the CLI | measured from the session, the gate, the plan, the build log, the handoff ledger, and git |
 
 The model authors nothing in the turn but the relay. Every defect the build
 that wrote this spec found in a live turn sat in the region the model was
@@ -452,6 +452,39 @@ Tokens and cost stay out. The transcript is host-specific and a price table
 goes stale, while a build is watched by what it consumes in time and attempts,
 which stats.json and the turn ledger already hold.
 
+### The Evidence part
+
+**What an agent saved for the person rides under the Readout, as links.** The Readout is
+what the CLI measured; evidence is what an agent wants looked at, a screenshot or a trace
+it saved under the step's evidence folder and named in its envelope
+([the contract](agents.md#evidence-something-to-look-at)). The step's pause lists each
+piece `agent run` kept, one line each:
+
+```markdown
+**Evidence**:
+
+- [the form, filled](.plumbbob/builds/rate-limit/evidence/3/01-login.png)
+- [the 6th request, refused](.plumbbob/builds/rate-limit/evidence/3/02-limit.png)
+```
+
+- The caption is the link's text and the file's path from the repo root is its target,
+  the short form every link on a card takes
+  ([D107 (short-linked-paths)](decisions.md#d107)). A caption is flattened to one line and
+  its square brackets are escaped; a path is flattened to one line too, and one holding a
+  space or a parenthesis rides in angle brackets.
+- The part sits after the Readout's fence and the inline diff, and before Your Call, so
+  the look comes before the decision.
+- The list is every piece the step's agents showed since the step opened, in the order it
+  arrived. A path shown twice (an agent run again) is listed once, with its last caption.
+- A step whose agents showed nothing has no Evidence part, and its card is the bytes it
+  always was. The stop card and the boundary carry none: the ledger the links are read
+  from clears when the step lands, and the build log holds the captions from then on. It
+  clears on `revert` and `abandon` too, so a step built again opens with no Evidence part.
+
+The part is a list of links and nothing else. It adds no row to the Readout and no rung
+to the Verdict, because a picture is for the person to judge
+([D157 (evidence-is-shown)](decisions.md#d157)).
+
 ## The check row
 
 The gate verdict has one home: the readout's `check` row, measured by handoff
@@ -704,7 +737,11 @@ The Questions row counts the open questions the plan still carries, while
 one is open, split by who acts on them: the ones that wait on the human,
 bold, and the ones deferred until the work answers them, either half alone
 when the other is zero; the dashboard prints the same split beside the parks
-([D120 (deferred-questions)](decisions.md#d120)). The
+([D120 (deferred-questions)](decisions.md#d120)). The plan card alone can
+close on a Research row, `| Research | predates a lockfile change: fascicle
+0.18.0 → 0.19.2 |`, once a lockfile the build's `research.md` was stamped
+against has moved; with no stamp, or nothing moved, the row is absent
+([D158 (research-is-dated)](decisions.md#d158); [the research pass](research.md)). The
 first three rode one line indented beneath the pointer,
 `· range 3 of 5: … · order: … · parked 2 of 7 open`, three labeled fields in
 a line whose indent was all that kept it inside the part
@@ -913,6 +950,20 @@ that would have refused it, a range or a day later. Nothing here refuses the
 plan; the part renders only when it has a line to say, and a model that sees
 it fixes the seam in `intent.md` and shows the card again.
 
+A step's `like:` line draws a line here too
+([D156 (like-is-advice)](decisions.md#d156)). It names a file to copy the
+pattern from, so a like path that does not exist is never a new file on
+purpose, and each one is named after the step's seam findings, with the
+sibling one edit away when there is one:
+
+```text
+- [Step 3](.plumbbob/builds/rate-limit/intent.md#L14) likes `src/limited.ts`, which does not exist; `src/limiter.ts` does.
+- [Step 5](.plumbbob/builds/rate-limit/intent.md#L21) likes `src/retry.ts`, which does not exist.
+```
+
+The count beside `**Seams**:` takes these lines in. Like the rest of the
+part, they refuse nothing.
+
 An auto halt on trouble renders the standard card; the Verdict's worst
 component is the halt reason. A clean halt renders no card at all: its step
 has landed, and nothing is left for the human to decide.
@@ -1014,7 +1065,7 @@ scales down with the turn:
 
 | tier | turns | the ending renders |
 | --- | --- | --- |
-| decision | the build/verify pause, the plan pause, an auto halt on trouble | the whole block: the Summary, the Readout with its changed files, the inline diff when small, Your Call, the state table (the Verdict, Now, Next Up, and the rows beneath it), the recommendation, and the `more details` link, shown once per pause; a later turn at the same pause is the model's reply, closed by the one-line reminder. The plan pause judges no diff and has no step in flight, so it renders the moves, the table headed by Next Up, the recommendation, and the link |
+| decision | the build/verify pause, the plan pause, an auto halt on trouble | the whole block: the Summary, the Readout with its changed files, the inline diff when small, the Evidence part when an agent showed something, Your Call, the state table (the Verdict, Now, Next Up, and the rows beneath it), the recommendation, and the `more details` link, shown once per pause; a later turn at the same pause is the model's reply, closed by the one-line reminder. The plan pause judges no diff and has no step in flight, so it renders the moves, the table headed by Next Up, the recommendation, and the link |
 | decision, at a stop | the stop card that closes a run's range | the whole block in the range's shape: the Summary, the Readout measured across the range, the Harvested part's lean table while a park is open, Your Call, the state table (the Verdict, Stop, Next Up, and the rows beneath it), the recommendation, and the link, shown once per stop; a later turn at the same stop is the model's reply, closed by the one-line reminder ([the stop card](#the-stop-card)) |
 | orientation | the checkpoint boundary (a clean halt's included), a stop's record, finish, status | the transition's lead line, any advisories, and the state table: the Verdict where one was measured (a stop's record measures nothing and renders none), the Stop row on the boundary where a range's last step landed, Next Up, and the rows beneath it; no Your Call block, no recommendation. A boundary already shown ends on its pointer alone. `status` is the exception: it renders the dashboard and nothing else, and the dashboard's last line is its own pointer |
 | driver | park, order, spike, use, recover, revert, agent runs | the transition's lead line, any advisories, and the one labeled Next Up line, no table; no Verdict, since nothing landed |

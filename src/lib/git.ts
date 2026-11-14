@@ -68,6 +68,25 @@ export function hasCommit(root: string): boolean {
 }
 
 /**
+ * The git blob hash of a file as it stands in the working tree, in full, or
+ * null when the file is absent or git cannot hash it.
+ *
+ * `git hash-object` names the blob a commit of the file would store, tracked
+ * or not, so a lockfile edited and not yet committed already reads as moved.
+ * The research stamp records these to say what the world looked like when the
+ * research was done. `path` is repo-relative; the `--` guards one that opens
+ * on a dash. Information, never a gate: best-effort and never throws.
+ */
+export function blobHash(root: string, path: string): string | null {
+  try {
+    const hash = runGit(root, ['hash-object', '--', path])
+    return /^[0-9a-f]{40,64}$/.test(hash) ? hash : null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Dirty = any tracked change or non-ignored untracked file.
  */
 export function isDirty(root: string): boolean {

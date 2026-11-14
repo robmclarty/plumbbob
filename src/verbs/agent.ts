@@ -6,7 +6,9 @@
 // <name> [--step N] [--mode before|build|after]` composes the StepContext,
 // spawns the manifest command, streams its stderr live, captures and validates
 // the child's envelope, re-emits it on this verb's own stdout (machine) with the
-// human summary on stderr, lands `parked[]` through the build-log, and appends
+// human summary on stderr, lands `parked[]` through the build-log, keeps the
+// `evidence[]` that sits under the step's evidence folder (one Log line each,
+// the rest dropped with a warning), and appends
 // the envelope to the handoff ledger (`builds/<slug>/handoff.json`: untracked,
 // step-scoped, cleared at checkpoint) so later runs can thread it back in.
 // No code path here can checkpoint, flip a step, or chain agents, and that
@@ -15,14 +17,16 @@
 // composition, and spawn mechanics live in lib/agents.ts.
 
 import { readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { findRepoRoot } from '../lib/git.ts'
 import {
   SLOTS,
   type AgentEnvelope,
+  type AgentEvidence,
   type AgentManifest,
   type AgentRunResult,
   type Slot,
+  acceptEvidence,
   composeStepContext,
   formatAgentList,
   isSlot,
@@ -33,9 +37,19 @@ import {
   resolveSlotAgents,
   runAgent,
 } from '../lib/agents.ts'
-import { appendToSection } from '../lib/buildlog.ts'
+import { appendToSection, evidenceLogLine } from '../lib/buildlog.ts'
 import { resolveBoolean, resolveNumber, resolveRecord } from '../lib/settings.ts'
-import { appendHandoff, buildFolder, buildLogPath, hasSession, intentPath, resolveBuild, stepPath } from '../lib/sidecar.ts'
+import {
+  appendHandoff,
+  buildFolder,
+  buildLogPath,
+  evidenceDir,
+  hasSession,
+  intentPath,
+  refreshExcludes,
+  resolveBuild,
+  stepPath,
+} from '../lib/sidecar.ts'
 import { notice } from '../lib/notice.ts'
 
 /** The remedy on an ambient binding's advisory: a binding is configuration the loop must survive without. */
@@ -114,6 +128,11 @@ async function run(cwd: string, args: ReadonlyArray<string>): Promise<number> {
     return 1
   }
 
+  // The run invites the agent to save under the step's evidence folder, so the
+  // exclude patterns are brought up to date before anything is saved there: a
+  // build started on an older plumbbob has none for that folder yet.
+  refreshExcludes(root)
+
   // An explicit name outranks every binding: run exactly it, fail loud on a
   // miss. No name: resolve the harness bindings for the slot and run them.
   if (parsed.name !== undefined) {
@@ -186,6 +205,9 @@ async function runOne(root: string, slug: string | null, step: number, spec: Run
     slug: slug ?? '',
     step,
     mode,
+    // Where this step's evidence goes, as the agent would write it in its
+    // envelope: from the repo root, which is also its working directory.
+    evidenceDir: relative(root, evidenceDir(root, slug, step)),
     settings: {
       // The envelope reports the `auto` setting to agents as information only.
       // The checkpoint latch never reads it; a model can write a settings
@@ -378,9 +400,12 @@ function resolveMode(flag: string | undefined, manifest: AgentManifest): ModeRes
  * A failed run (non-zero exit, out-of-contract stdout, timeout, interrupt, or a
  * shell that never started) reports on stderr and stops with NO side effects:
  * the envelope of a failed child is not authoritative. A clean run lands
- * `parked[]`, records the envelope in the handoff ledger, prints the human
- * summary on stderr, and re-emits the machine envelope on stdout, nothing else,
- * ever (the stream discipline: stdout carries the envelope alone).
+ * `parked[]`, keeps the evidence that sits under the step's folder, records the
+ * envelope in the handoff ledger, prints the human summary on stderr, and
+ * re-emits the machine envelope on stdout, nothing else, ever (the stream
+ * discipline: stdout carries the envelope alone). The envelope it records and
+ * re-emits carries the kept evidence only, so the pause and a calling skill
+ * read the same list, and no `evidence` key at all when nothing was kept.
  */
 function report(
   root: string,
@@ -394,12 +419,33 @@ function report(
     process.stderr.write(`${failureLine(name, result)}\n`)
     return 1
   }
-  const { envelope } = result
+  const shown = acceptEvidence(root, relative(root, evidenceDir(root, slug, step)), result.envelope.evidence)
+  for (const warning of [...result.warnings, ...shown.warnings]) {
+    process.stderr.write(`${warning}\n`)
+  }
+  const envelope: AgentEnvelope = { ...result.envelope, evidence: shown.entries }
+  const emitted = shownOnly(envelope)
   applyParked(root, slug, envelope.parked)
-  appendHandoff(root, slug, { agent: name, mode, step, envelope })
+  logEvidence(root, slug, name, step, envelope.evidence)
+  appendHandoff(root, slug, { agent: name, mode, step, envelope: emitted })
   process.stderr.write(humanSummary(name, mode, envelope))
-  process.stdout.write(`${JSON.stringify(envelope)}\n`)
+  if (envelope.evidence.length > 0) {
+    const count = `${envelope.evidence.length} piece${envelope.evidence.length === 1 ? '' : 's'} of evidence`
+    process.stderr.write(notice({ fact: `agent "${name}" showed ${count}`, detail: ['listed at the pause'] }))
+  }
+  process.stdout.write(`${JSON.stringify(emitted)}\n`)
   return 0
+}
+
+/**
+ * The envelope as it is recorded and re-emitted: with its `evidence` when
+ * some was kept, and without the key when none was, so an agent that shows
+ * nothing prints what it printed before there was evidence to show.
+ */
+function shownOnly(envelope: AgentEnvelope): Omit<AgentEnvelope, 'evidence'> & { readonly evidence?: AgentEnvelope['evidence'] } {
+  if (envelope.evidence.length > 0) return envelope
+  const { evidence: _none, ...rest } = envelope
+  return rest
 }
 
 /**
@@ -453,6 +499,46 @@ function applyParked(root: string, slug: string | null, parked: ReadonlyArray<st
     }
     content = updated
     process.stderr.write(notice({ prefix: 'parked', fact: line }))
+  }
+  writeFileSync(path, content)
+}
+
+/**
+ * Record each kept piece of evidence in the build-log's Log, one line apiece.
+ *
+ * The files themselves never reach git, so this line is what the record keeps
+ * of them: the step, the agent, the path, and the caption. A line already in
+ * the Log is not written twice, so re-running an agent that shows the same
+ * thing leaves one line. Best-effort like every build-log write: a missing log
+ * or one with no `## Log` warns once, and the evidence still reaches the pause.
+ */
+function logEvidence(
+  root: string,
+  slug: string | null,
+  name: string,
+  step: number,
+  evidence: ReadonlyArray<AgentEvidence>,
+): void {
+  if (evidence.length === 0) return
+  const path = buildLogPath(root, slug)
+  const count = `${evidence.length} piece${evidence.length === 1 ? '' : 's'} of evidence`
+  let content: string
+  try {
+    content = readFileSync(path, 'utf8')
+  } catch {
+    process.stderr.write(notice({ fact: 'no build-log.md', detail: [`could not record ${count}`] }))
+    return
+  }
+  const date = new Date().toISOString().slice(0, 10)
+  for (const entry of evidence) {
+    const line = evidenceLogLine(date, step, name, entry.path, entry.caption)
+    if (content.split('\n').includes(line)) continue
+    const updated = appendToSection(content, 'Log', line)
+    if (updated === null) {
+      process.stderr.write(notice({ fact: 'no "## Log" in build-log.md', detail: [`could not record ${count}`] }))
+      return
+    }
+    content = updated
   }
   writeFileSync(path, content)
 }

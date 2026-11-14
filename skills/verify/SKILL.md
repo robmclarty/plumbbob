@@ -33,7 +33,10 @@ this skill verifies it the same way: **it reads the diff, not the author**
    `blocked` agent couldn't finish: surface its `notes`, let the human unblock, re-run.
    A `drift` agent found the plan no longer matches reality: stop and send the human to
    `/plumbbob:refine` to repair the plan before checkpointing. No binding, or no harness, is a
-   clean no-op.
+   clean no-op. An agent may also save something for the human to look at (a screenshot, a
+   trace) and name it in its envelope's `evidence[]`. Those are the CLI's to show:
+   `plumbbob handoff` lists each one as a link under the Readout, so leave the paths out
+   of your review, and never treat one as proof the step is done.
 3. **Self-review** *(a single structured read)*. Read `git diff` and
    `.plumbbob/intent.md`, then in one pass check the diff against:
    - the current step's **proof**: is it actually met?

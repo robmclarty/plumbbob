@@ -3,7 +3,7 @@ name: refine
 description: "Keep intent.md true: attack the plan for holes (append as Open questions) and refine or repair the Frame, Decisions, Constraints, Steps, and build ranges to match reality (`ranges` re-cuts the whole section). Usable at any point; you propose, the human approves."
 argument-hint: "[focus | ranges]"
 disable-model-invocation: true
-allowed-tools: Read, Edit, Bash(plumbbob status:*), Bash(plumbbob order:*), Bash(plumbbob defer:*)
+allowed-tools: Read, Edit, Bash(plumbbob status:*), Bash(plumbbob order:*), Bash(plumbbob defer:*), Bash(plumbbob research:*)
 ---
 
 # PlumbBob: refine the plan
@@ -116,13 +116,38 @@ is fine; refining is always available.
   per range. A landed range stays as written, since its call was made. Show the section
   before and after, and write only what the human approves.
 
+## When the research has gone out of date
+
+The state injected above carries a row when the build's `research.md` was stamped against
+a lockfile that has since moved, or against a dependency whose installed version has since
+changed with no lockfile moving. It reads one of two ways:
+
+```text
+research predates a lockfile change: fascicle 0.18.0 → 0.19.2
+research predates a dependency change: fascicle 0.18.0 → 0.19.2
+```
+
+When either shows, say so before anything else and **offer** to run the ecosystem lens again:
+for each dependency the row names (or, when it names only the lockfile, each one the stamp
+lists), read what changed between the two versions in its docs, changelog and issue
+tracker, and hold that against the plan. On a yes, rewrite the `## Ecosystem` section of
+`research.md` with what you find, each finding in the file's one shape (what was found, its
+source, what it changes), then run `plumbbob research --stamp` to restamp it with the names
+it already holds. A finding that changes the plan becomes an Open question or a proposed
+repair, by the two modes above; it never becomes a Decision by itself. The codebase and
+record sections do not age with a lockfile, so leave them. On a no, go on: the row is
+advice and gates nothing
+([D158 (research-is-dated)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d158)).
+With no such row, say nothing about research.
+
 ## The hard contracts
 
 - **You propose; the human converges.** Surface holes and draft repairs, but the human
   approves every change to `intent.md`. Never guess a hole into a Decision.
 - **Open questions for holes, edits for drift.** New uncertainty goes to
   `## Open questions`; settled drift gets repaired in place once the human OKs it.
-- **Refine the plan, not the code.** `/plumbbob:refine` touches `intent.md` only; turning a
+- **Refine the plan, not the code.** `/plumbbob:refine` touches `intent.md` only, and
+  `research.md` on a restamp the human agreed to; turning a
   decision into a diff is `/plumbbob:build` or your own hands, never this skill.
 - **An exported plan follows the edit.** When the build folder holds a `plan.json`, every
   approved edit to `intent.md` leaves it behind and turns the next check red. Run

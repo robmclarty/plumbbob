@@ -134,6 +134,21 @@ export function checkpointLogLine(
 }
 
 /**
+ * The Log line `agent run` writes for one piece of evidence an agent showed:
+ * dated, with the step, the agent, the file's repo-relative path, and its
+ * caption.
+ *
+ * The path rides in a code span, never a link: the file is excluded from git,
+ * so in any other clone a link would point at nothing, and the line is there
+ * to say what was seen once the file is gone. The path and the caption are
+ * each flattened to one line so neither can break the list.
+ */
+export function evidenceLogLine(date: string, step: number, agent: string, path: string, caption: string): string {
+  const oneLine = (text: string): string => text.replace(/\s+/g, ' ').trim()
+  return `- ${date} — step ${step} evidence from ${agent} · \`${oneLine(path)}\` — ${oneLine(caption)}`
+}
+
+/**
  * The Log line `checkpoint --plan` writes when the plan lands: dated, with the
  * short SHA. The cold read's record rides beneath it, so the first entry of a
  * build's history is the plan and the read that approved it.

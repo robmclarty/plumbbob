@@ -2028,6 +2028,52 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   refuses anything ([**D13 (no-edit-guards)**](#d13)). *because* a hand-written ring is a second seam nobody
   checks. *Tagged in* `reach.ts`, `reachfile.ts`, `doctor.ts`, and `docs/reach.md`.
 
+- <a id="d156"></a>**D156 (like-is-advice): A step's `- like:` sub-line names the files to copy the pattern from, and
+  never gates.** The line sits beside the seam and takes one or more backticked repo-relative paths. The build skill
+  reads those files before its first edit; an agent gets them as `step.like` in the StepContext, an empty list when
+  the step names none ([**C7 (minimal-envelope)**](#c7): the envelope only grows); the dashboard shows a `like:` row
+  under the step's seam, only when there is one; and the plan card names a like path that does not exist under
+  `**Seams**:`, beside the seam findings of [**D131 (seams-at-the-plan)**](#d131). The line is read loosely. A token
+  that is not a plain repo-relative path is dropped without a word, a second `like:` line adds its paths to the
+  first, and no like line, however it is written, refuses a build, a checkpoint or an export. `plan.json` does not
+  carry it. *because* a pattern to copy is judgment. *Tagged in* `intent.ts`, `agents.ts`, `orient.ts`,
+  `seamcheck.ts`, the `build`, `plan` and `step` skills, and `docs/agents.md`.
+
+- <a id="d157"></a>**D157 (evidence-is-shown): An agent can hand the person something to look at, and the pause
+  links it.** The output envelope gains an optional `evidence[]`, each entry a repo-relative `path` and a `caption`,
+  and the StepContext gains `step.evidenceDir`, the step's evidence folder (`builds/<slug>/evidence/<n>/`). `agent
+  run` keeps an entry whose path sits under that folder and drops any other (an absolute path, a `..`, another step's
+  folder, a symlink that leads out, a directory, a path that does not print on one line, a missing `path` or
+  `caption`) with one line on stderr naming it, and the rest of the envelope stands; the envelope it re-emits and
+  records carries the kept entries, and no `evidence` key when there are none. The step's pause lists what was kept as links under the Readout, the caption as the link's
+  text, and renders nothing when there is none; the list is dropped when the step lands, is abandoned or is
+  reverted, since it showed work that is no longer the work in flight. The folder is excluded from git like the control files
+  ([**D17 (two-planes)**](#d17)); the build log's `## Log` takes one line for each piece kept, so the record says what
+  was seen after the files are gone, and no verb deletes them ([**C4 (never-destroy)**](#c4)). Both fields are
+  additions, so the contract stays at 1 ([**C7 (minimal-envelope)**](#c7)), and neither can advance the loop
+  ([**C6 (no-advance-verb)**](#c6)). *because* a screenshot is the thing itself where a summary is a claim about it,
+  and one tracked with the build folder would ride every PR. *Tagged in* `agents.ts`, `sidecar.ts`, `buildlog.ts`,
+  `verbs/agent.ts`, `verbs/handoff.ts`, `docs/agents.md`, and `docs/presentation.md`.
+
+- <a id="d158"></a>**D158 (research-is-dated): A build's research carries a stamp, and the CLI says when the world
+  has moved past it.** `/plumbbob:plan` runs a research pass between the Frame and the Decisions, sized to the work:
+  none for a tiny plan, the codebase and record lenses for a small one, the ecosystem lens too for a medium one. The
+  findings go to the build's tracked `research.md`, one section per lens, each finding as what was found, its
+  source, and what it changes; a finding only proposes, and the person keeps or cuts it. The file's first line is
+  the stamp `plumbbob research --stamp [<dep>…]` writes: the date, the short git blob hash of each lockfile at the
+  repo root, and each named dependency's version in `node_modules`, listed by name alone where none can be read.
+  The verb rewrites that one line and nothing beneath it, and a first line that is not a stamp is kept with the
+  stamp put above it ([**C4 (never-destroy)**](#c4)). When a stamped lockfile's
+  hash has moved, the dashboard prints `research predates a lockfile change: fascicle 0.18.0 → 0.19.2` and the plan
+  card's state table gains a `Research` row with the same words, naming the dependencies whose version changed, or
+  the lockfile when none did. When no stamped lockfile moved and a stamped dependency's installed version did, the
+  row reads `research predates a dependency change: fascicle 0.18.0 → 0.19.2`. On either row `/plumbbob:refine`
+  offers to run the ecosystem lens again and restamp. With no
+  `research.md` or no stamp nothing renders and every surface prints the bytes it printed before, and no verb
+  refuses on a stale one. *because* research is a claim about the world on a date, and a claim with no date cannot
+  be seen going out of date. *Tagged in* `research.ts`, `researchfile.ts`, `verbs/research.ts`, the `plan` and
+  `refine` skills, and `docs/research.md`.
+
 ### Superseded
 
 - <a id="d20"></a>**D20 (local-archive): The archive was local-only markdown.** Wrapping wrote a plain-markdown archive

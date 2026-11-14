@@ -116,6 +116,9 @@ function buildPrompt(ctx, diff) {
       lines.push('', `${label}:`, ...items.map((s) => `- ${s}`))
     }
   }
+  // `step.like` is the files the step names to copy the pattern from; absent on
+  // an envelope written before `like` existed, and empty when the step names none.
+  list('Exemplars the step names (the diff should follow the pattern these files set)', step.like)
   list('Decisions already made (do not relitigate)', ctx.decisions)
   list('Constraints', ctx.constraints)
   list('Context from earlier agents', ctx.context)

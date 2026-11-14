@@ -95,7 +95,7 @@ export type Anatomy = {
 export type Tier = 'decision' | 'plan' | 'reminder' | 'boundary' | 'driver' | 'stop' | 'stop-short'
 
 const TIER_PARTS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
-  decision: ['Summary', 'Readout', 'Your Call', 'Verdict', 'Now', 'Next Up', 'Recommendation'],
+  decision: ['Summary', 'Readout', 'Evidence', 'Your Call', 'Verdict', 'Now', 'Next Up', 'Recommendation'],
   plan: ['Open questions', 'Deferred', 'Your Call', 'Next Up', 'Recommendation'],
   reminder: ['Next Up'],
   boundary: ['Verdict', 'Stop', 'Next Up'],
@@ -112,8 +112,10 @@ const TIER_PARTS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
 // the card reviews, which it always owes. The plan pause tables its open
 // questions above its moves only while the plan carries one (D118 (questions-table)),
 // and a question deferred to the work rides a Deferred line beneath that table
-// (D120 (deferred-questions)).
+// (D120 (deferred-questions)). A step's pause lists what an agent saved for
+// the person under the Readout only when one did (D157 (evidence-is-shown)).
 const OPTIONAL_PARTS: Readonly<Partial<Record<Tier, ReadonlyArray<string>>>> = {
+  decision: ['Evidence'],
   plan: ['Open questions', 'Deferred'],
   boundary: ['Stop'],
   stop: ['Harvested'],

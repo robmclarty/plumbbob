@@ -125,6 +125,38 @@ plumbbob agent run reviewer --step 1
 `plumbbob agent run reviewer --agent examples/agents/reviewer --step 1` — the `--agent` path
 flag still wants the name, for the run label.)
 
+## What it shows you
+
+**The reviewer saves the diff it read, and the pause links it.** The diff a reviewer judges
+is the seam's diff after the 40 KB cap, which is not always the diff you have in mind, so
+when PlumbBob names an evidence folder for the step (`step.evidenceDir` in the StepContext)
+the reviewer writes that diff there and names it in the envelope's optional `evidence[]`:
+
+```jsonc
+{
+  "contract": 1,
+  "status": "done",
+  "summary": "pass: wrap() breaks at the last space that fits",
+  "evidence": [
+    { "path": ".plumbbob/builds/2026-07-03-wordwrap/evidence/1/reviewer-diff.patch", "caption": "the diff the reviewer read" }
+  ]
+}
+```
+
+The pause then lists it under the Readout, the caption as the link:
+
+```markdown
+**Evidence**:
+
+- [the diff the reviewer read](.plumbbob/builds/2026-07-03-wordwrap/evidence/1/reviewer-diff.patch)
+```
+
+The field is optional in both directions. Run standalone, or under a PlumbBob that sends
+no `evidenceDir`, the reviewer saves nothing and its envelope carries no `evidence`; a
+write that fails costs the link and nothing else. The folder is excluded from git, so the
+patch never rides a commit, and the build log keeps its path and caption
+([D157 (evidence-is-shown)](../../../docs/decisions.md#d157)).
+
 ## When it can't run
 
 Every *anticipated* obstacle is a `blocked` envelope with the fix in `notes`, exit 0 — fix and

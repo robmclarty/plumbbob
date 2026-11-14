@@ -31,6 +31,7 @@
  */
 
 import { execFile } from 'node:child_process'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { promisify } from 'node:util'
 
 const CONTRACT = 1
@@ -151,6 +152,30 @@ const PROVIDERS = {
   ollama: ollamaProvider,
 }
 
+// --- evidence ----------------------------------------------------------------
+//
+// `evidence[]` is how an agent hands the person something to look at: a file it
+// saved under the step's evidence folder, and a caption the verify pause links
+// it by. A reviewer has one thing worth showing, the diff it read, which is
+// the seam's diff after the byte cap and so may not be the diff the person has
+// in mind. `step.evidenceDir` is the folder, from the repo root (this agent's
+// working directory). A plumbbob that predates the field sends none, and so
+// does the standalone demo; then nothing is saved and the envelope carries no
+// `evidence`. A failed write costs the link and nothing else.
+async function saveEvidence(ctx, diff) {
+  const dir = ctx.step?.evidenceDir
+  if (typeof dir !== 'string' || dir.length === 0) return []
+  const path = `${dir}/reviewer-diff.patch`
+  try {
+    await mkdir(dir, { recursive: true })
+    await writeFile(path, diff)
+  } catch (err) {
+    log(`could not save the diff as evidence (${err instanceof Error ? err.message : String(err)})`)
+    return []
+  }
+  return [{ path, caption: 'the diff the reviewer read' }]
+}
+
 // --- diff collection ---------------------------------------------------------
 //
 // The step's work at the verify pause is staged-or-unstaged but not yet
@@ -198,6 +223,9 @@ function buildPrompt(ctx, diff) {
       lines.push('', `${label}:`, ...items.map((s) => `- ${s}`))
     }
   }
+  // `step.like` is the files the step names to copy the pattern from; absent on
+  // an envelope written before `like` existed, and empty when the step names none.
+  list('Exemplars the step names (the diff should follow the pattern these files set)', step.like)
   list('Decisions already made (do not relitigate)', ctx.decisions)
   list('Constraints', ctx.constraints)
   list('Context from earlier agents', ctx.context)
@@ -290,6 +318,7 @@ async function main() {
     body: z.string().optional(),
     parked: z.array(z.string().min(1)).optional(),
     notes: z.string().optional(),
+    evidence: z.array(z.object({ path: z.string().min(1), caption: z.string().min(1) })).optional(),
   })
 
   const reviewSchema = z.object({
@@ -383,6 +412,8 @@ async function main() {
       }
       if (bodyLines.length > 0) envelope.body = bodyLines.join('\n')
       if (later.length > 0) envelope.parked = later.map((c) => `${c.file}: ${c.issue}`)
+      const evidence = await saveEvidence(ctx, collected.diff)
+      if (evidence.length > 0) envelope.evidence = evidence
       return envelope
     } finally {
       await engine.dispose()

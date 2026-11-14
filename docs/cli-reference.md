@@ -34,6 +34,7 @@ calls `process.exit`, which the bin entry alone owns (`rules/no-process-exit.yml
 | `harvest` | `harvest` | record a harvest from the detail file, and at a run's stop the range's review |
 | `order` | `order <steps>` \| `order --reset` | set the build order: the undone steps in the sequence to build them |
 | `export` | `export [<slug>]` | write the build's plan as data: `plan.json` beside `intent.md`, in `runciter.plan/2` |
+| `research` | `research --stamp [<dep>…] [--build <slug>]` \| `research [--build <slug>]` | stamp the build's `research.md` with the date, the lockfiles and the versions it was done against |
 | `spike` | `spike <slug> [opt…] [--build <slug>]` \| `spike report <slug>` \| `spike done` | throwaway worktree experiment |
 | `agent` | `agent list` \| `agent run <name> [--step N] [--mode …] [--agent <path>] [--build <slug>]` | list user-authored agents, or run one through the doorway |
 | `use` | `use <slug>` | re-point the active-build cursor and resume that build |
@@ -130,7 +131,8 @@ plumbbob status [--build <slug>] [--invoked "<args>"] [--run "<args>"] [--questi
 ```
 
 Prints the orientation dashboard (title, the derived phase, the step list with the next
-step's proof and seam, the last checkpoint, the build order when it departs from the
+step's proof and seam, and its `like:` row when the step names a file to copy the pattern
+from ([**D156 (like-is-advice)**](decisions.md#d156)), the last checkpoint, the build order when it departs from the
 numbering, and the parked / open-question counts, where `parked 2 of 7 open` is the open
 items against everything ever parked), then a
 single suggested next move ([**D8 (status-dashboard)**](decisions.md#d8) / [**D15 (one-next-move)**](decisions.md#d15)). Read-only; prints `NO ACTIVE SESSION` and
@@ -524,7 +526,8 @@ specific step, or the baseline as the fallback. The build folder is now *tracked
 so before the reset `revert` snapshots `builds/<slug>/` to a temp dir and restores it after:
 park lines and intent edits survive even when reverting to a baseline that predates the folder
 ([**C4 (never-destroy)**](decisions.md#c4)). Untracked files **inside the seam** are removed, files outside it are left alone.
-Clears `SEAM`/`STEP`, dropping back to the `DESIGN` boundary. Refuses (exit 1) with no session,
+Clears `SEAM`/`STEP` and the step's `handoff.json`, since what an agent said or showed of
+the work went with it, dropping back to the `DESIGN` boundary. Refuses (exit 1) with no session,
 an invalid `--to`, or a step with no recorded checkpoint.
 
 ### abandon
@@ -672,6 +675,44 @@ opts a build in; one never exported has no `plan.json` and is untouched
 words of every finding are in [the plan as data](plan-export.md). Refuses (exit 1) outside a
 repo, with no build to name, or a folder with no `intent.md`.
 
+### research
+
+```text
+plumbbob research --stamp [<dep>…] [--build <slug>]   # write or refresh the stamp
+plumbbob research [--build <slug>]                    # print the stamp and what has moved
+```
+
+Stamps the build's `research.md`, the file the plan's research pass writes beside
+`intent.md`. With `--stamp` it writes the file's first line: today's date, the short git
+blob hash of each lockfile present at the repo root (`pnpm-lock.yaml`, `package-lock.json`,
+`yarn.lock`, `go.sum`, `Cargo.lock`, `uv.lock`), and each named dependency with the version
+in `node_modules`:
+
+```text
+Researched 2026-11-11 · pnpm-lock.yaml 3f9a1c2 · fascicle 0.18.0, checkride 0.20.0
+```
+
+It prints `**Researched**: .plumbbob/builds/<slug>/research.md (pnpm-lock.yaml 3f9a1c2,
+fascicle 0.18.0)`. A dependency it cannot read is listed by name alone, and with no
+dependency named it keeps the names the stamp already holds. An absent `research.md` is
+created holding the stamp alone. An existing one has its first line replaced when that line
+is a stamp; any other first line is yours, a sentence that happens to open on `Researched`
+included, and the stamp goes above it. Nothing beneath is touched
+([**C4 (never-destroy)**](decisions.md#c4)).
+
+Without `--stamp` it prints the stamp, then either
+`plumbbob: research is current, nothing stamped has moved` or what moved
+(`plumbbob: research predates a lockfile change (fascicle 0.18.0 → 0.19.2)`), and exits 0.
+Once a stamped lockfile's hash moves, `status` carries a
+`research predates a lockfile change: …` row and `handoff --plan` a `Research` row in its
+state table. When no stamped lockfile moved and a stamped dependency's installed version
+did, the row reads `research predates a dependency change: …`. With no `research.md` or no
+stamp, neither prints anything
+([**D158 (research-is-dated)**](decisions.md#d158); [the research pass](research.md)).
+Refuses (exit 1) outside a repo, with no session, with a `--build` slug that has no folder
+under `.plumbbob/builds/` (a slug holding a path separator or `..` is never one), or with a
+dependency name holding a space, a comma, or a middle dot.
+
 ### spike
 
 ```text
@@ -716,9 +757,28 @@ git repository.
 manifest `command` via `sh -c` at the **repo root** with the agent's own directory in
 `PLUMBBOB_AGENT_DIR` ([**D49 (posix-sh)**](decisions.md#d49)) and the context JSON on stdin, streams the child's stderr
 live, and, on a clean run (exit 0 + a valid envelope), lands any `parked[]` through the
-park verb ([**D44 (cli-side-effects)**](decisions.md#d44)), appends the envelope to the step-scoped `builds/<slug>/handoff.json`
-ledger (untracked, cleared at checkpoint or abandon; [**D47 (handoff-ledger)**](decisions.md#d47)), prints the human summary on stderr, and
+park verb ([**D44 (cli-side-effects)**](decisions.md#d44)), keeps the `evidence[]` entries that sit under the step's
+evidence folder (below), appends the envelope to the step-scoped `builds/<slug>/handoff.json`
+ledger (untracked, cleared at checkpoint, revert or abandon; [**D47 (handoff-ledger)**](decisions.md#d47)), prints the human summary on stderr, and
 re-emits the machine envelope on **its own stdout** for the calling skill ([**D46 (stream-discipline)**](decisions.md#d46)).
+
+Evidence ([**D157 (evidence-is-shown)**](decisions.md#d157)): the StepContext names the step's evidence folder in
+`step.evidenceDir` (`.plumbbob/builds/<slug>/evidence/<n>`, from the repo root), and an
+envelope may name files it saved there in `evidence[]`, each a `path` and a `caption`. An
+entry outside that folder, without both strings, or whose path is a directory or does not
+print on one line, is dropped with one stderr line and the run still exits 0:
+
+```text
+plumbbob: dropped evidence README.md (it must be a file under .plumbbob/builds/rate-limit/evidence/3/)
+plumbbob: agent "walkthrough" reports done (after slot, the walk matched the proof)
+plumbbob: agent "walkthrough" showed 2 pieces of evidence (listed at the pause)
+```
+
+Each entry kept gets one line in the build log's `## Log`, and rides the envelope into the
+ledger and onto stdout, which carry the kept entries only, and no `evidence` key at all
+when there are none. `plumbbob handoff` then lists them at the step's pause, under the Readout. The
+folder is excluded from git, `agent run` writes the exclude patterns again before it
+spawns the agent, and no verb clears the folder ([`agents.md`](agents.md#evidence-something-to-look-at)).
 
 - **`--step N`** picks the step (else the in-flight `STEP`; without either it refuses).
 - **A name** runs exactly that agent and **fails loud** on a miss or an undeclared
@@ -1012,6 +1072,7 @@ stays git-excluded; a session is live iff `STATE` is present.
       stats.json           # tracked   — per-step receipts (stamps, red runs, reverts) the spent row reads
       harness.json         # tracked   — optional: per-step agent slot bindings (D42 (harness-bindings); see agents.md)
       reach.json           # tracked   — optional: what atis answered for each step's seam (D155 (reach-is-computed); see reach.md)
+      research.md          # tracked: optional, what the plan checked before it was approved, under a stamp (D158 (research-is-dated); see research.md)
       spike-NN-<name>.md   # tracked   — a spike's report, scaffolded by spike (open, or report <slug>) from templates/spike-report.md
       STEP                 # untracked — the in-flight step number (its presence is the BUILD phase)
       SEAM                 # untracked — the in-flight step's declared paths (awareness, not a lock)
@@ -1019,7 +1080,8 @@ stays git-excluded; a session is live iff `STATE` is present.
       TICK                 # untracked — the TURN value stamped when the step was entered; with TURN, the latch's whole state
       PAUSE                # untracked: which card has shown, a step's pause or (`landed <n>`) its boundary, so a repeat prints its one line (D110 (reply-after-the-card))
       STOP                 # untracked: the range the stop card last showed and the TURN it printed in, read by harvest's latch (D103 (stop-latched))
-      handoff.json         # untracked — step-scoped agent-run ledger, cleared at checkpoint or abandon — D47 (handoff-ledger)
+      handoff.json         # untracked — step-scoped agent-run ledger, cleared at checkpoint, revert or abandon — D47 (handoff-ledger)
+      evidence/<n>/        # untracked: what an agent saved for you to look at during step n; never cleared (D157 (evidence-is-shown))
 ```
 
 Which build a verb acts on resolves `--build <slug>` → the active-build cursor in `STATE` → the sole
@@ -1086,5 +1148,7 @@ contributes nothing rather than wedging the tool.
 - [`runs.md`](runs.md): `status --run`, `handoff --stop`, `harvest`, and `order` at work
   across three runs of one plan.
 - [`reach.md`](reach.md): what atis is asked, what `reach.json` holds, and the `plumb` row.
+- [`research.md`](research.md): the research pass, the stamp on `research.md`, and the row
+  that says it has gone out of date.
 - [`troubleshooting.md`](troubleshooting.md): what to do when a verb refuses.
 - [`decisions.md`](decisions.md): the `D#` / `C#` tags referenced above.

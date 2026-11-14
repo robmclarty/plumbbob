@@ -18,7 +18,7 @@
 >
 > *Publilius Syrus, first century BC, in D. Lyman's 1856 translation*
 
-PlumbBob is a Claude Code plugin (eighteen skills, twenty-two CLI verbs, four hooks) that runs
+PlumbBob is a Claude Code plugin (eighteen skills, twenty-four CLI verbs, four hooks) that runs
 LLM-assisted coding as a loop you control. You and the model settle the plan in a file
 *before* any code, down to where the build will stop for you; then the model builds it
 one small step at a time, each checked and committed on its own, and **stops where the

@@ -44,7 +44,7 @@ describe('setup', () => {
         lead: transition({
           label: 'Setup',
           fact: 'ready to plan',
-          detail: ['added .plumbbob/', 'settings.json', '16 control excludes'],
+          detail: ['added .plumbbob/', 'settings.json', '18 control excludes'],
           remedy: '/plumbbob:plan frames the first build',
         }),
       }),
@@ -82,14 +82,14 @@ describe('setup', () => {
     writeFileSync(settingsPath(dir), '{ "check": "npm test" }\n')
     const { stdout } = captureIo(() => setup(dir))
     expect(readFileSync(settingsPath(dir), 'utf8')).toBe('{ "check": "npm test" }\n')
-    expect(stdout).toContain('(added 16 control excludes)')
+    expect(stdout).toContain('(added 18 control excludes)')
   })
 
   it('adds only the exclude lines that are missing, leaving foreign lines alone', () => {
     const dir = makeTempRepo()
     writeFileSync(gitPath(dir, 'info/exclude'), 'secrets.txt\n.plumbbob/STATE\n.plumbbob/TURN\n')
     const { stdout } = captureIo(() => setup(dir))
-    expect(stdout).toContain('14 control excludes')
+    expect(stdout).toContain('16 control excludes')
     const lines = excludeFile(dir).split('\n')
     expect(lines.filter((line) => line === '.plumbbob/STATE')).toHaveLength(1)
     expect(lines[0]).toBe('secrets.txt')

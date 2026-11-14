@@ -60,7 +60,8 @@ same rule.)*
 verifiable increment with its own **proof** and **seam** (the paths it will touch,
 which `/plumbbob:build` records in the build folder's `SEAM` for orientation: awareness, not a lock).
 The proof opens on its command in backticks when there is one; `plumbbob checkpoint` runs
-that command, and a proof that opens on words is yours to judge.
+that command, and a proof that opens on words is yours to judge; an optional `- like:`
+line beside the seam names a file to copy the pattern from.
 An optional **model** line recommends the smallest model that can carry the step:
 mechanical work runs fine on a small model; subtle or creative work earns a frontier
 one. Advisory for the human, never a gate; write it plain, no backticks (plumbbob

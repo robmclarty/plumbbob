@@ -13,10 +13,10 @@
 // shell over all of it.
 
 import { spawn } from 'node:child_process'
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
-import { parseBuildTitle, parseStepMeta, parseStepSeam, scrapeBullets } from './intent.ts'
+import { dirname, isAbsolute, join, posix, relative, sep } from 'node:path'
+import { parseBuildTitle, parseStepLike, parseStepMeta, parseStepSeam, scrapeBullets } from './intent.ts'
 
 /**
  * The contract major version this plumbbob speaks.
@@ -74,7 +74,10 @@ export type AgentManifest = {
  * `summary` is the one-line headline; `body` and `notes` are optional prose;
  * `parked[]` are park lines (off-plan concerns captured for later triage)
  * which the CLI lands through the park verb, because an agent never writes the
- * `.plumbbob/` sidecar itself (it keeps a single writer). No field here can
+ * `.plumbbob/` sidecar itself (it keeps a single writer). `evidence[]` names
+ * files the agent saved for the person to look at, each with a caption; the
+ * one place under `.plumbbob/` an agent may write is the step's evidence
+ * folder, and the CLI keeps only the entries that sit inside it. No field here can
  * advance the loop: nothing an agent returns may checkpoint, flip a step, or
  * trigger another agent, so the subprocess boundary keeps the human as the
  * clock by construction.
@@ -86,6 +89,17 @@ export type AgentEnvelope = {
   readonly body: string
   readonly parked: ReadonlyArray<string>
   readonly notes: string
+  readonly evidence: ReadonlyArray<AgentEvidence>
+}
+
+/**
+ * One thing an agent hands the person to look at: a file it saved under the
+ * step's evidence folder, as a repo-relative path, and the caption the verify
+ * pause links it by.
+ */
+export type AgentEvidence = {
+  readonly path: string
+  readonly caption: string
 }
 
 export type ManifestParse =
@@ -93,7 +107,7 @@ export type ManifestParse =
   | { readonly ok: false; readonly error: string }
 
 export type EnvelopeParse =
-  | { readonly ok: true; readonly envelope: AgentEnvelope }
+  | { readonly ok: true; readonly envelope: AgentEnvelope; readonly warnings: ReadonlyArray<string> }
   | { readonly ok: false; readonly error: string }
 
 /**
@@ -143,7 +157,10 @@ export function parseManifest(raw: unknown): ManifestParse {
  *
  * Contract first (mismatch → upgrade hint), then a `status` in {done, blocked,
  * drift}, a non-empty `summary`, and a well-formed `parked[]`. Optional prose
- * fields default to empty; unknown keys are tolerated.
+ * fields default to empty; unknown keys are tolerated. `evidence[]` is read
+ * loosely: an entry without a `path` and a `caption` drops, and so does an
+ * `evidence` that is not a list, each with one line in `warnings` for the
+ * caller to print, while the rest of the envelope stands.
  */
 export function parseEnvelope(raw: unknown): EnvelopeParse {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
@@ -165,6 +182,7 @@ export function parseEnvelope(raw: unknown): EnvelopeParse {
   if (typeof parked === 'string') {
     return envelopeFail(parked)
   }
+  const evidence = parseEvidence(obj.evidence)
 
   return {
     ok: true,
@@ -175,7 +193,9 @@ export function parseEnvelope(raw: unknown): EnvelopeParse {
       body: asString(obj.body),
       parked,
       notes: asString(obj.notes),
+      evidence: evidence.entries,
     },
+    warnings: evidence.warnings,
   }
 }
 
@@ -255,6 +275,161 @@ function parseParked(value: unknown): ReadonlyArray<string> | string {
     parked.push(entry.trim())
   }
   return parked
+}
+
+/** The entries of an `evidence[]` that passed a check, and one warning line for each that did not. */
+export type EvidenceRead = {
+  readonly entries: ReadonlyArray<AgentEvidence>
+  readonly warnings: ReadonlyArray<string>
+}
+
+/**
+ * Narrow the envelope's optional `evidence[]` (absent = none) by shape alone.
+ *
+ * Each entry needs a non-blank string `path` and a non-blank string `caption`,
+ * both kept trimmed. Unlike `parked[]`, nothing here refuses the envelope: a
+ * screenshot the person never sees costs a look, where a lost park costs a
+ * concern, so a malformed entry drops with a warning naming it and the result
+ * stands. Whether a path sits under the step's evidence folder is
+ * `acceptEvidence`'s question, since it takes the repo to answer.
+ */
+function parseEvidence(value: unknown): EvidenceRead {
+  if (value === undefined || value === null) {
+    return { entries: [], warnings: [] }
+  }
+  if (!Array.isArray(value)) {
+    return {
+      entries: [],
+      warnings: ['plumbbob: ignored the agent envelope\'s "evidence" (it must be an array of { path, caption } entries)'],
+    }
+  }
+  const entries: AgentEvidence[] = []
+  const warnings: string[] = []
+  for (const entry of value) {
+    const path = isObject(entry) && typeof entry.path === 'string' ? entry.path.trim() : ''
+    const caption = isObject(entry) && typeof entry.caption === 'string' ? entry.caption.trim() : ''
+    if (path.length > 0 && caption.length > 0) {
+      entries.push({ path, caption })
+      continue
+    }
+    const named = path.length > 0 ? path : JSON.stringify(entry)
+    warnings.push(evidenceWarning(named, 'each entry needs a string "path" and a string "caption"'))
+  }
+  return { entries, warnings }
+}
+
+/**
+ * Keep the evidence that sits under one step's evidence folder, and say why
+ * each other entry dropped.
+ *
+ * `dir` is the folder as a repo-relative path. An entry stands when its path
+ * is one printable line (no control character, backtick or angle bracket), is
+ * relative, climbs through no `..`, lies strictly inside the folder, still
+ * lies inside it once every symlink on the way is resolved, and is not a
+ * directory. The folder itself is where the real repo root puts it, so a link
+ * standing in for `evidence/` or for the step's folder carries nothing out. A
+ * path whose file is not there yet is judged by its nearest existing ancestor,
+ * so a linked folder cannot carry a missing file out either. The same path given
+ * twice keeps its last caption. Nothing is read, moved, or removed: this only
+ * decides what the pause may link.
+ */
+export function acceptEvidence(root: string, dir: string, entries: ReadonlyArray<AgentEvidence>): EvidenceRead {
+  const folder = toPosix(dir).replace(/\/+$/, '')
+  const kept = new Map<string, AgentEvidence>()
+  const warnings: string[] = []
+  for (const entry of entries) {
+    const reason = evidenceRefusal(root, folder, entry.path)
+    if (reason !== null) {
+      warnings.push(evidenceWarning(entry.path, reason))
+      continue
+    }
+    const path = posix.normalize(toPosix(entry.path))
+    kept.set(path, { path, caption: entry.caption })
+  }
+  return { entries: [...kept.values()], warnings }
+}
+
+// What an evidence path may not hold: a control character or line break, a
+// backtick, or an angle bracket. The path is written into the build log's code
+// span and the pause's link target, where any of these would end the span or
+// the link early or start a line of the agent's own.
+const UNPRINTABLE_PATH = /[\p{Cc}\p{Zl}\p{Zp}`<>]/u
+
+/**
+ * Why one evidence path does not stand, or null when it does.
+ */
+function evidenceRefusal(root: string, folder: string, path: string): string | null {
+  if (UNPRINTABLE_PATH.test(path)) {
+    return 'the path must be one line with no backtick or angle bracket'
+  }
+  const given = toPosix(path)
+  if (isAbsolute(path) || posix.isAbsolute(given) || /^[a-z]:/i.test(given)) {
+    return 'the path must be relative to the repo root'
+  }
+  if (given.split('/').includes('..')) {
+    return 'the path must not climb with ".."'
+  }
+  const clean = posix.normalize(given)
+  if (!clean.startsWith(`${folder}/`) || clean.endsWith('/')) {
+    return `it must be a file under ${folder}/`
+  }
+  // The folder is anchored to the real repo root and resolved no further, so
+  // a link standing in for it, or for a folder above it, settles elsewhere.
+  const home = join(settled(root), folder)
+  const real = settled(join(root, clean))
+  if (!real.startsWith(`${home}${sep}`)) {
+    return `it resolves outside ${folder}/`
+  }
+  if (isDirectory(real)) {
+    return `it must be a file under ${folder}/`
+  }
+  return null
+}
+
+/** Whether a path is a directory that exists; a path not there yet is not one. */
+function isDirectory(path: string): boolean {
+  try {
+    return statSync(path).isDirectory()
+  } catch {
+    return false
+  }
+}
+
+/**
+ * A path with every symlink on the way resolved, whether or not it exists.
+ *
+ * The nearest ancestor that exists is resolved and the missing tail is put
+ * back on it, so a folder nobody has made yet still settles to where it would
+ * be.
+ */
+function settled(path: string): string {
+  let at = path
+  for (;;) {
+    try {
+      return join(realpathSync(at), relative(at, path))
+    } catch {
+      const up = dirname(at)
+      if (up === at) return path
+      at = up
+    }
+  }
+}
+
+/**
+ * A path with forward slashes, the way an envelope and a markdown link write
+ * one.
+ */
+function toPosix(path: string): string {
+  return path.replace(/\\/g, '/')
+}
+
+/**
+ * The one line a dropped evidence entry gets on stderr: what it was, then why.
+ * A name that would not print on one line is quoted as JSON, so it does.
+ */
+function evidenceWarning(named: string, reason: string): string {
+  const quoted = JSON.stringify(named).replace(/[\u2028\u2029]/g, (c) => `\\u${c.charCodeAt(0).toString(16)}`)
+  return `plumbbob: dropped evidence ${UNPRINTABLE_PATH.test(named) ? quoted : named} (${reason})`
 }
 
 /**
@@ -498,7 +673,11 @@ function agentDirNames(dir: string): string[] {
  * proof, decisions, and constraints are best-effort prose for the agent's
  * context. `step.proof` is the step's proof as written, with the command it
  * opens on when there is one; `step.doneWhen` is the same text under the name
- * it had first, kept so an agent reading it still works.
+ * it had first, kept so an agent reading it still works. `step.evidenceDir`
+ * is the repo-relative folder the agent may save evidence under, which it
+ * makes itself when it has something to show. `step.like` is the
+ * files the step names to copy the pattern from, empty when it names none;
+ * they are advice, read loosely, and whether each exists is not checked.
  */
 export type StepContext = {
   readonly contract: number
@@ -510,6 +689,8 @@ export type StepContext = {
     readonly doneWhen: string
     readonly proof: { readonly command: string | null; readonly text: string }
     readonly seam: ReadonlyArray<string>
+    readonly like: ReadonlyArray<string>
+    readonly evidenceDir: string
   }
   readonly decisions: ReadonlyArray<string>
   readonly constraints: ReadonlyArray<string>
@@ -537,6 +718,7 @@ export function composeStepContext(params: {
   readonly mode: Slot
   readonly context?: ReadonlyArray<string>
   readonly settings?: Record<string, unknown>
+  readonly evidenceDir?: string
 }): StepContextResult {
   const seam = parseStepSeam(params.intent, params.step)
   if (!seam.ok) {
@@ -557,7 +739,15 @@ export function composeStepContext(params: {
       contract: CONTRACT_VERSION,
       mode: params.mode,
       build: { slug: params.slug, title: parseBuildTitle(params.intent) },
-      step: { n: params.step, title: meta.title, doneWhen: meta.proof.text, proof: meta.proof, seam: seam.seam },
+      step: {
+        n: params.step,
+        title: meta.title,
+        doneWhen: meta.proof.text,
+        proof: meta.proof,
+        seam: seam.seam,
+        like: parseStepLike(params.intent, params.step),
+        evidenceDir: params.evidenceDir ?? '',
+      },
       decisions: decisions.items,
       constraints: constraints.items,
       context: params.context ?? [],
@@ -760,7 +950,12 @@ function isObject(value: unknown): value is Record<string, unknown> {
  * that have it so the verb can surface the raw bytes when a run went sideways.
  */
 export type AgentRunResult =
-  | { readonly ok: true; readonly envelope: AgentEnvelope; readonly stdout: string }
+  | {
+      readonly ok: true
+      readonly envelope: AgentEnvelope
+      readonly stdout: string
+      readonly warnings: ReadonlyArray<string>
+    }
   | { readonly ok: false; readonly reason: 'exit'; readonly code: number; readonly stdout: string }
   | { readonly ok: false; readonly reason: 'contract'; readonly error: string; readonly stdout: string }
   | { readonly ok: false; readonly reason: 'timeout'; readonly seconds: number }
@@ -843,7 +1038,7 @@ export function runAgent(params: {
       const parsed = parseChildEnvelope(stdout)
       finish(
         parsed.ok
-          ? { ok: true, envelope: parsed.envelope, stdout }
+          ? { ok: true, envelope: parsed.envelope, stdout, warnings: parsed.warnings }
           : { ok: false, reason: 'contract', error: parsed.error, stdout },
       )
     })

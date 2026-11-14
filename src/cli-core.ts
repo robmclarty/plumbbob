@@ -20,6 +20,7 @@ import { defer } from './verbs/defer.ts'
 import { harvest } from './verbs/harvest.ts'
 import { order } from './verbs/order.ts'
 import { exportPlan } from './verbs/export.ts'
+import { research } from './verbs/research.ts'
 import { build } from './verbs/build.ts'
 import { handoff } from './verbs/handoff.ts'
 import { check } from './verbs/check.ts'
@@ -240,6 +241,15 @@ const VERBS: ReadonlyArray<Verb> = [
     args: [{ name: '<slug>', gloss: 'the build folder to export (default: the active build); a finished build too' }],
     notes:
       "Derives `runciter.plan/2` from intent.md, runs the contract's three plan rules and plumbbob's four plan checks over it, and writes `.plumbbob/builds/<slug>/plan.json`. On any failure it prints each finding and the tally, writes nothing, and exits 1. Refuses (exit 1) outside a repo, with no build to name, or a folder with no intent.md. See docs/plan-export.md.",
+  },
+  {
+    name: 'research',
+    description: "stamp the build's research.md with the date, the lockfiles and the versions it was done against",
+    synopsis: ['research --stamp [<dep>…] [--build <slug>]', 'research [--build <slug>]'],
+    args: [{ name: '<dep>…', gloss: 'the dependencies the plan leans on (default: the ones the stamp already names)' }],
+    flags: [{ name: '--stamp', gloss: 'write or refresh the first line of research.md, and nothing beneath it' }, BUILD_FLAG],
+    notes:
+      "The stamp is research.md's first line: today's date, the short git blob hash of each lockfile at the repo root (pnpm-lock.yaml, package-lock.json, yarn.lock, go.sum, Cargo.lock, uv.lock), and each named dependency with the version in node_modules, or with none where it cannot be read. An absent research.md is created holding the stamp alone. A first line that is not a stamp is kept, and the stamp goes above it. Without `--stamp` it prints the stamp and what has moved since, and exits 0. Refuses (exit 1) outside a repo, with no session, with a `--build` slug that has no folder under .plumbbob/builds/, or with a dependency name holding a space, a comma, or a middle dot. See docs/research.md.",
   },
   {
     name: 'harvest',
@@ -467,6 +477,8 @@ async function dispatch(verb: string, cwd: string, rest: ReadonlyArray<string>):
       return order(cwd, rest)
     case 'export':
       return exportPlan(cwd, rest)
+    case 'research':
+      return research(cwd, rest)
     case 'harvest':
       return harvest(cwd, rest)
     case 'build':

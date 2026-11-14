@@ -44,7 +44,12 @@ grew, but its everyday job is to sharpen, not to invent.
    limiter` passes ``): `plumbbob checkpoint` runs that opening span, and only that one, so
    a proof no command can show opens on words instead. An older step that still carries
    its criterion as a `**done when:**` clause on the title line reads as a proof with no
-   command; move it to a `- proof:` line when you sharpen the step. Keep the
+   command; move it to a `- proof:` line when you sharpen the step. Add an optional
+   `- like:` line (`` - like: `src/throttle.ts` ``) when sharpening turns up a clear
+   exemplar, a file in the repo that already does what this step does; the builder reads
+   it before its first edit. Without one, leave the line out, and cut a like line whose
+   file has moved or no longer fits
+   ([D156 (like-is-advice)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d156)). Keep the
    sharpened `<title>` a plain, single-line Conventional-Commit subject,
    `type(scope): description`; it lands in `git log` verbatim, so as the step tightens
    keep load-bearing detail (file paths, module names) in `seam` and `proof`,

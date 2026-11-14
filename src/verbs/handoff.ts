@@ -61,6 +61,7 @@ import { hasStep } from '../lib/steplist.ts'
 import { isArtifactPath, parseStepSeam } from '../lib/intent.ts'
 import { reachFor } from '../lib/reach.ts'
 import { readReach } from '../lib/reachfile.ts'
+import { researchStale } from '../lib/researchfile.ts'
 import { readProofRun } from '../lib/check.ts'
 import { rerootLinks } from '../lib/links.ts'
 import { type SeamFinding, seamFindings, type Tree } from '../lib/seamcheck.ts'
@@ -75,6 +76,8 @@ import {
   intentPath,
   planCommitted,
   type Relay,
+  type ShownEvidence,
+  readEvidence,
   readPause,
   readStats,
   readStop,
@@ -229,7 +232,20 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
       seams ?? '',
       questions ?? '',
       planCallBlock(first, cardRun(intent, null), planPublish(root, slug), questionTotals(openRows).toAnswer > 0),
-      stateTable(stateRows({ intent, buildLog, verdict: null, now: null, stop: null, nextUp: first, exclude: null, where, questions: false })),
+      stateTable(
+        stateRows({
+          intent,
+          buildLog,
+          verdict: null,
+          now: null,
+          stop: null,
+          nextUp: first,
+          exclude: null,
+          where,
+          questions: false,
+          research: researchStale(root, slug),
+        }),
+      ),
     ]
     const command = reprintCommand('--plan', undefined, named)
     return emit(root, { tier: 'decision', render: 'plan', command }, cardFoot(plan, detail, detailWhere))
@@ -328,6 +344,7 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     parts.push(fence('diff', patch.split('\n')).join('\n'))
   }
   parts.push(
+    evidencePart(readEvidence(root, slug, current)),
     yourCallBlock(current, checkGreen && !proofRed, cardRun(intent, current)),
     stateTable(
       stateRows({
@@ -1205,6 +1222,38 @@ function summaryBlock(summary: Summary | null): string {
   return summary === null ? '' : `**Summary**: ${summary.lead}`
 }
 
+/**
+ * The Evidence part of a step's pause: what the agents run against the step
+ * saved for the person to look at, one link a line, the caption as the link's
+ * text and the file's path from the repo root as its target.
+ *
+ * It rides beneath the Readout and the inline diff, above Your Call, so the
+ * person can look before they decide. Empty when no agent showed anything, and
+ * an empty part drops out of the card. A link is all it is: nothing here can
+ * move the step.
+ */
+function evidencePart(evidence: ReadonlyArray<ShownEvidence>): string {
+  if (evidence.length === 0) return ''
+  return ['**Evidence**:', '', ...evidence.map((e) => `- [${linkText(e.caption)}](${linkTarget(e.path)})`)].join('\n')
+}
+
+/**
+ * A caption as a link's text: on one line, with the brackets that would end
+ * the link early escaped.
+ */
+function linkText(caption: string): string {
+  return caption.replace(/\s+/g, ' ').trim().replace(/[[\]\\]/g, '\\$&')
+}
+
+/**
+ * A path as a link's target, on one line, in angle brackets when it holds a
+ * space or a parenthesis a bare target would stop at.
+ */
+function linkTarget(path: string): string {
+  const flat = path.replace(/\s+/g, ' ').trim()
+  return /[\s()]/.test(flat) ? `<${flat}>` : flat
+}
+
 // The Readout's label, bare on the card and in the record alike: the Now line
 // at the top of the card names the step the fence measures, and a label that
 // named it too would put the step on the card twice.
@@ -1450,8 +1499,8 @@ function planCallBlock(first: Step | undefined, run: Run, publish: Publish, toAn
 
 /**
  * The seams the plan card names, one line per finding, or null when there is
- * nothing to say: a seam the build would refuse, or a token one edit away from
- * a file that exists.
+ * nothing to say: a seam the build would refuse, a token one edit away from
+ * a file that exists, or a `like:` path that does not exist.
  *
  * Each line links its step's opener, the way a question links its own, and
  * nothing here refuses the plan; the human reads it at the one pause where a
@@ -1654,6 +1703,7 @@ type StateInput = {
   readonly exclude: number | null // the step the turn is about, so Next Up and the order skip it
   readonly where: string // the intent file, for Next Up's `details:` link
   readonly questions?: false // the plan card, whose questions table says what the row would count
+  readonly research?: string | null // the plan card, when the stamp on research.md has gone out of date
 }
 
 /**
@@ -1661,7 +1711,8 @@ type StateInput = {
  * something: the Verdict, the step in flight, the Stop, Next Up, the range the
  * next run walks, the build order where `## Build order` re-sequences the
  * plan, the parks once anything has been parked, and the open questions the
- * plan still carries, split by who acts on them. The first row present
+ * plan still carries, split by who acts on them, and on the plan card what the
+ * research predates once its stamp has gone out of date. The first row present
  * becomes the header, which is the Verdict wherever one was measured
  * (D111 (state-table)).
  *
@@ -1686,6 +1737,7 @@ function stateRows(input: StateInput): StateRow[] {
     order.length === 0 ? null : { label: 'Order', value: order },
     parks.total === 0 ? null : { label: 'Parked', value: parkedValue(parks, input.now !== null) },
     questions.toAnswer + questions.deferred === 0 || input.questions === false ? null : { label: 'Questions', value: questionsValue(questions) },
+    input.research === undefined || input.research === null ? null : { label: 'Research', value: input.research },
   ]
   return rows.filter((r): r is StateRow => r !== null)
 }

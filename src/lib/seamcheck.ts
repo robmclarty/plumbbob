@@ -7,10 +7,13 @@
 //
 // Guidance, never a gate: the plan card names what it found, and nothing here
 // refuses a plan. A new file is the ordinary case and draws no line; only a
-// near miss does, so a fresh repo with no `src/` yet reads as clean.
+// near miss does, so a fresh repo with no `src/` yet reads as clean. A step's
+// `like:` line names files to copy a pattern from, so there a path that does
+// not exist is worth a line, since nothing can be copied from it, unless
+// another step of the same plan is the one that makes it.
 
 import { parseSteps } from './orient.ts'
-import { parseStepSeam } from './intent.ts'
+import { parseStepLike, parseStepSeam } from './intent.ts'
 
 /** What the check can see of the working tree: injected, so the check stays pure and its tests need no repo. */
 export type Tree = {
@@ -22,37 +25,73 @@ export type Tree = {
 export type SeamFinding = {
   readonly step: number
   readonly line: number // the step opener's 1-based line, for the card's link
-  readonly kind: 'unparsed' | 'near-miss'
+  readonly kind: 'unparsed' | 'near-miss' | 'like-missing'
   // The words after the step's name: `has no \`seam:\` line.`, `'s seam lists
-  // no files.`, or `names \`src/limited.ts\`, which does not exist;
-  // \`src/limiter.ts\` does.`
+  // no files.`, `names \`src/limited.ts\`, which does not exist;
+  // \`src/limiter.ts\` does.`, or `likes \`src/retry.ts\`, which does not exist.`
   readonly words: string
 }
 
 /**
  * Every seam finding across the plan's undone steps, in step order: a seam the
- * build would refuse, and a token that names no file while a sibling one edit
- * away does.
+ * build would refuse, a token that names no file while a sibling one edit
+ * away does, and a `like:` path that neither exists nor is granted by another
+ * undone step's seam.
  *
  * Landed steps are skipped, since their files may have moved on since. A
  * token that exists, or that names a new file with no near sibling, draws
- * nothing.
+ * nothing. A step's like findings follow its seam's, and a step whose seam
+ * will not parse still has its like read.
  */
 export function seamFindings(intent: string, tree: Tree): SeamFinding[] {
-  return parseSteps(intent)
-    .filter((s) => !s.done)
-    .flatMap((s): SeamFinding[] => {
+  const undone = parseSteps(intent).filter((s) => !s.done)
+  const granted = new Map(
+    undone.map((s): [number, ReadonlyArray<string>] => {
+      const parsed = parseStepSeam(intent, s.n)
+      return [s.n, parsed.ok ? parsed.seam : []]
+    }),
+  )
+  return undone.flatMap((s): SeamFinding[] => {
+      const planned = [...granted].flatMap(([n, seam]) => (n === s.n ? [] : seam))
+      const likes = likeFindings(parseStepLike(intent, s.n), s, tree, planned)
       const parsed = parseStepSeam(intent, s.n)
       if (!parsed.ok) {
         // The parse's own words, less the leading `step N`, which the card's link says.
-        return [{ step: s.n, line: s.line, kind: 'unparsed', words: parsed.error.replace(/^step \d+ ?/, '') }]
+        return [{ step: s.n, line: s.line, kind: 'unparsed', words: parsed.error.replace(/^step \d+ ?/, '') }, ...likes]
       }
-      return parsed.seam.flatMap((token) => {
+      const seams = parsed.seam.flatMap((token): SeamFinding[] => {
         const near = nearMiss(token, tree)
         return near === null
           ? []
           : [{ step: s.n, line: s.line, kind: 'near-miss', words: `names \`${token}\`, which does not exist; \`${near}\` does.` }]
       })
+      return [...seams, ...likes]
+    })
+}
+
+/**
+ * One finding for each of a step's like paths that does not exist, naming the
+ * sibling one edit away when there is one.
+ *
+ * `planned` is every seam token of the plan's other undone steps. A missing
+ * path one of them names, or that sits under one of their `dir/` grants, is a
+ * file the plan itself makes before the exemplar is read, and draws nothing.
+ * Any other missing exemplar is a slip: a file to read is never new on
+ * purpose.
+ */
+function likeFindings(
+  like: ReadonlyArray<string>,
+  step: { readonly n: number; readonly line: number },
+  tree: Tree,
+  planned: ReadonlyArray<string>,
+): SeamFinding[] {
+  return like
+    .filter((path) => !tree.exists(path.endsWith('/') ? path.slice(0, -1) : path))
+    .filter((path) => !planned.some((token) => token === path || (token.endsWith('/') && path.startsWith(token))))
+    .map((path) => {
+      const near = nearMiss(path, tree)
+      const tail = near === null ? '.' : `; \`${near}\` does.`
+      return { step: step.n, line: step.line, kind: 'like-missing', words: `likes \`${path}\`, which does not exist${tail}` }
     })
 }
 

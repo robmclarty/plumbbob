@@ -31,6 +31,7 @@ import {
   stepPath,
 } from '../lib/sidecar.ts'
 import { readGrant, type Grant } from '../lib/latch.ts'
+import { researchStale } from '../lib/researchfile.ts'
 import {
   formatOrientation,
   formatRunDashboard,
@@ -164,6 +165,7 @@ export function status(cwd: string, args: ReadonlyArray<string> = []): number {
     requested: parseRequestedStep(invoked),
     outOfBand: anchor === null ? 0 : commitsSince(root, anchor, PLAN_COMMIT_MARKER),
     waiting: card?.range ?? null,
+    research: researchStale(root, slug),
   }
   if (json) {
     const paused = readPause(root, slug)

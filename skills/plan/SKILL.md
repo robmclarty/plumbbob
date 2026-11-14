@@ -3,7 +3,7 @@ name: plan
 description: "Frame a fresh goal and author the whole plan (Frame, Decisions, Constraints, all Steps, and the build ranges) before any code. Three input modes: no arg interviews you; a file path (or @-mention) absorbs a spec; any other text expands your inline intent."
 argument-hint: "[spec-path | intent]"
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob handoff:*), Bash(plumbbob start:*), Bash(plumbbob checkpoint:*), Bash(plumbbob defer:*), Bash(plumbbob agent list:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob handoff:*), Bash(plumbbob start:*), Bash(plumbbob checkpoint:*), Bash(plumbbob defer:*), Bash(plumbbob agent list:*), Bash(plumbbob research:*)
 ---
 
 # PlumbBob: plan a goal (the whole-goal move)
@@ -60,7 +60,47 @@ The argument only seeds how you get there.
    the **smallest thing** that solves it, what **done looks like**, and what you are
    **explicitly NOT doing**. This is the human's convergence: propose wording, but
    the human decides every line.
-3. **Decisions & Constraints.** Record the settled calls (one line each, with the
+3. **Research**, sized to the work. A plan is written from what you remember, and that
+   has a date. Before the Decisions, check the Frame against the world, through up to three
+   lenses:
+
+   | Lens | Asks | Reads |
+   | --- | --- | --- |
+   | Ecosystem | Is this buildable on the versions installed today? What changed, what is deprecated, what are the known gotchas? | official docs, changelogs and issue trackers, for each dependency the plan leans on |
+   | Codebase | What conventions apply, and which file is the exemplar? | the repo, `rules/`, keyframes.md's Map |
+   | Record | Was this tried, or decided against? | `docs/decisions.md`, keyframes.md, past builds' intent and parks |
+
+   A **tiny** plan runs none and skips this step. A **small** plan runs the codebase and
+   record lenses. A **medium** plan runs all three. Where the host can run subagents, run
+   the lenses in parallel, one subagent each, the ecosystem lens with the host's own web
+   tools; the record lens needs no web at all. Where it cannot, read through them in turn
+   yourself.
+
+   Write what they find to `research.md` in the build folder, beside `intent.md`: one
+   `## Ecosystem`, `## Codebase` or `## Record` section per lens that ran, and every
+   finding in one shape, what was found, its source, and what it changes:
+
+   ```markdown
+   - <what was found, in a sentence>
+     - source: <a URL, or `file:line`>
+     - changes: <a proposed Decision | an Open question | a `like:` path on a step | nothing>
+   ```
+
+   Leave the first line to the CLI. Run
+   `plumbbob research --stamp <the dependencies the plan leans on>` once the file is
+   written: it puts the stamp above the findings (the date, each lockfile's hash, each
+   named dependency's installed version) and rewrites nothing beneath it. That line is how
+   the plan card and the dashboard later say the research has gone out of date
+   ([D158 (research-is-dated)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d158)).
+
+   Then carry each finding that changes something into `intent.md` as a **proposal**: a
+   Decision, an Open question with its lean, or a `- like:` line on the step it serves.
+   Say which came from research when you present the plan, so the human can keep or cut
+   each one. A finding never becomes a Decision by itself; the human decides every line,
+   here as in the Frame. A plan that absorbs a storyboard spec links that record from
+   `research.md` and does not redo it: whether this is the right thing to build was asked
+   there.
+4. **Decisions & Constraints.** Record the settled calls (one line each, with the
    *because*) and the hard rules the build must honor. **Anchor and slug each at birth**:
    mint a two- or three-word slug where the item is born and give it an anchor for
    references to land on (`- <a id="d1"></a>**D1 (default-waves)**: …`,
@@ -101,12 +141,13 @@ The argument only seeds how you get there.
    card counts it as a call still owed
    ([D123 (defer-records)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d123)).
    Deferring is the human's call, never yours: a lean you are unsure of is still a lean.
-4. **Author the Steps.** Write the **full build plan** under `## Steps` (each step a
+5. **Author the Steps.** Write the **full build plan** under `## Steps` (each step a
    small, verifiable increment) in the exact format the parser reads:
 
    ```markdown
    1. [ ] feat(scope): <title>
       - seam: `<file>`, `<file>`
+      - like: <optional; `<file>` to copy the pattern from>
       - proof: `<command>` passes; <what it shows>
       - model: <optional; smallest that can carry it, with the one-phrase why>
    ```
@@ -121,7 +162,15 @@ The argument only seeds how you get there.
    measured, and a proof that opens on words (`- proof: the 6th request in 60s returns
    429`) is a manual one that you judge at the pause. Never open a manual proof on a code
    span that is not a command (a file path, a function call): the checkpoint would try to
-   run it. One `- proof:` line to a step. When the card shows a `**Seams**:` part, it has read a seam the build
+   run it. One `- proof:` line to a step. A `- like:` line is optional and earns its place
+   only when a clear exemplar exists: a file already in the repo that does what this step
+   does, in the shape the step should take (`` - like: `src/throttle.ts` `` on a step that
+   adds a second limiter). Name one file, two at most, in backticks, repo-relative; the
+   builder reads them before its first edit and a reviewer gets them as `step.like`. With
+   no such file, leave the line out, since a loose resemblance teaches the wrong pattern.
+   It is advice and never a gate: nothing refuses on it, and the card names a like path
+   that does not exist under `**Seams**:`
+   ([D156 (like-is-advice)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d156)). When the card shows a `**Seams**:` part, it has read a seam the build
    would refuse, or a path one edit from a file that exists: fix the seam in `intent.md`
    and run `plumbbob handoff --plan` again, or, when the path is a new file on purpose, say
    so in one line and leave it
@@ -169,7 +218,7 @@ The argument only seeds how you get there.
    It is advisory metadata for the human (`/plumbbob:status` surfaces it before each build),
    never a gate, and nothing switches models automatically. Write it plain (no
    backticks) and omit it when any model would do.
-5. **Cut the build ranges.** With the steps written, say where the build stops for a
+6. **Cut the build ranges.** With the steps written, say where the build stops for a
    human call, under `## Build ranges`
    ([D92 (build-ranges)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d92)):
    one sentence on how to drive the build, a `/plumbbob:run` per range, then one numbered
@@ -220,7 +269,7 @@ The argument only seeds how you get there.
    ([D96 (plan-names-the-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d96)),
    so a range you cut is never a grant you mint
    ([D67 (auto-not-a-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d67)).
-6. **Offer harness bindings** *(optional)*. If the build will lean on
+7. **Offer harness bindings** *(optional)*. If the build will lean on
    user-authored agents, author `harness.json` in the build folder (beside `intent.md`)
    and review it at the **same plan pause**, alongside the steps; bindings are
    plan-adjacent configuration, so they converge with the plan. It binds agents to a
@@ -241,7 +290,7 @@ The argument only seeds how you get there.
    `note` and decides when to run one mid-build. Skip the file entirely when no step
    uses an agent; the loop runs identically without it. The plan commit picks it
    up automatically (it lives in the build folder).
-7. **Commit the plan.** Once the human approves the frame and steps, run
+8. **Commit the plan.** Once the human approves the frame and steps, run
    `plumbbob checkpoint --plan` to commit the scaffold on its own: subject
    `chore(<scope>): plan` (with a `plumbbob plan` body marker), only `.plumbbob/builds/<slug>/`,
    a `plan <sha>` line in
@@ -312,7 +361,7 @@ The argument only seeds how you get there.
        commit lands as an empty commit whose message carries the plan, the files staying
        untracked. The rationale is published in `git log`, not the folder, so pass a fuller
        `--body` than you otherwise would, since the message is the whole record.
-8. **Offer to stress-test it.** Suggest `/plumbbob:refine` to attack the frame for holes (or
+9. **Offer to stress-test it.** Suggest `/plumbbob:refine` to attack the frame for holes (or
    to repair the plan as it drifts). Optional, the human's call.
 
 ## The cold read

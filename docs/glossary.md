@@ -35,6 +35,11 @@ word up without reading the others first. Each entry points at the page that own
   [D154 (red-proof-holds)](decisions.md#d154)).
 - **Seam**: the exact paths a step is expected to touch. Orientation, never a lock: a
   path outside it is a visible stray, not a refused edit.
+- **Like**: the files a step names to copy the pattern from, on an optional `- like:`
+  line beside its seam: one or more backticked repo-relative paths. The builder reads
+  them before its first edit, and an agent gets them as `step.like`. Advice, never a
+  gate: a path that does not exist draws a line on the plan card and refuses nothing
+  ([D156 (like-is-advice)](decisions.md#d156)).
 - **Reach**: the files a change to a step's seam usually drags along, by import and by
   co-change. Computed by atis when the plan is approved and stored in the build's
   `reach.json`; never written in the plan, and never a lock. Without atis there is none,
@@ -43,6 +48,17 @@ word up without reading the others first. Each entry points at the page that own
   a stored reach. Each changed file is in the seam, in the reach but not the seam, or
   outside both (`seam 3 · reach 1 · out 1`), and only a file outside both is a stray.
   → [`reach.md`](reach.md#the-plumb-row)
+- **Research pass**: the step of `/plumbbob:plan` between the Frame and the Decisions that
+  checks the plan against the world through up to three lenses: ecosystem (is it buildable
+  on the versions installed), codebase (which conventions and exemplars apply), and record
+  (was it tried or decided against). Sized to the work, and a finding only ever proposes.
+  → [`research.md`](research.md)
+- **Research stamp**: the first line of a build's `research.md`, written by
+  `plumbbob research --stamp`: the date, each lockfile's short git blob hash, and each
+  named dependency's installed version. When a stamped lockfile moves, or a stamped
+  dependency's installed version does, the dashboard and the plan card carry one row saying
+  what the research predates; it never gates
+  ([D158 (research-is-dated)](decisions.md#d158)). → [`research.md`](research.md#the-stamp)
 - **Model recommendation** (`model:`): an advisory line under a step naming the smallest
   model that can carry it; `status` and every Next Up line surface it.
 - **Step lines for a scheduler** (`after:`, `stop:`, `effort:`): three optional lines
@@ -145,6 +161,12 @@ are its parts.
 - **Readout**: the fenced rows of measured facts: `check`, `proof`, `decisions`,
   `constraints`, `seam`, `diff` (with each changed file beneath it), `spent`. Green
   collapses to a count; red names one offender.
+- **Evidence**: a file an agent saved for you to look at (a screenshot, a trace) and
+  named, with a caption, in its envelope's `evidence[]`. The step's pause lists each one
+  as a link under the Readout. The files sit in the step's **evidence folder**
+  (`builds/<slug>/evidence/<n>/`), which git never sees; the build log keeps each path
+  and caption. A link to look at, never a gate
+  ([D157 (evidence-is-shown)](decisions.md#d157)). → [`agents.md`](agents.md#evidence-something-to-look-at)
 - **State table**: the two-column table a card and an orientation ending close on, the
   facts you scan for set apart from the prose: the **Verdict** as its header, then
   **Now**, **Stop**, **Next Up** with the range line beneath it, and the Order, Parked,

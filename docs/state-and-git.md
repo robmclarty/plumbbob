@@ -1,7 +1,7 @@
 # State files and git
 
 PlumbBob keeps a handful of small files under `.plumbbob/` that are deliberately never
-committed, and it keeps them out of your commits by appending 16 lines to one local git
+committed, and it keeps them out of your commits by appending 18 lines to one local git
 file. This page is the full account: what those files hold, why they have to exist,
 exactly what gets written inside `.git`, and the honest answers to the objections that
 follow, including "why are you touching my git at all?"
@@ -12,7 +12,7 @@ has the tree. This page is the *why*.
 ## The short version
 
 - PlumbBob writes exactly one file inside `.git`: **`info/exclude`**, git's own
-  per-clone ignore list. It appends 16 lines, once: at `plumbbob setup`
+  per-clone ignore list. It appends 18 lines, once: at `plumbbob setup`
   (`/plumbbob:setup`) if you run it, else at the first `start`.
 - It **never** writes your `.gitignore`; that file is tracked, and nothing
   PlumbBob-specific belongs in a file your whole team commits.
@@ -54,6 +54,12 @@ the sidecar has a tracked artifact plane and an excluded control plane):
   step's seam ([`reach.md`](reach.md); [D155 (reach-is-computed)](decisions.md#d155)).
   `reach.json` is tracked because a landed step's record was measured against it, and a
   reviewer on another machine, with no atis, should see the same split.
+  `research.md` rides with them too, when the plan ran a research pass: what it checked
+  before it was approved, under a stamp of the date, the lockfiles and the versions it was
+  checked against ([`research.md`](research.md);
+  [D158 (research-is-dated)](decisions.md#d158)). It is tracked because a finding is part
+  of why a Decision was made, and the stamp is only worth reading if it travels with the
+  plan it dates.
 - The **control plane** is what this page is about: facts about *your working copy at this
   instant*. Which step is mid-flight. How many times you've pressed enter. These are true
   for you, in this worktree, for the next ten minutes.
@@ -80,7 +86,8 @@ branch.
 | `builds/<slug>/TICK` | The `TURN` value at the moment the step was entered, or the session opened, so the plan commit waits for a human turn too | `build`, and `start` for the plan commit | `checkpoint` / `abandon` |
 | `builds/<slug>/PAUSE` | Which card has shown: the step whose pause card showed (`2`) or, after a checkpoint, the step whose boundary did (`landed 2`, `landed 2 answered` when that landing answered step 2's pause card, which shortens the stop card after it), so a repeat prints its one line whatever changed since ([D110 (reply-after-the-card)](decisions.md#d110)) | `handoff`, `checkpoint` | `revert` / `abandon` |
 | `builds/<slug>/STOP` | The range whose stop card has shown and the `TURN` it printed in, so a repeat prints the reminder and `plumbbob harvest` records only a range a card showed, a turn later ([D103 (stop-latched)](decisions.md#d103), [D110 (reply-after-the-card)](decisions.md#d110)) | `handoff --stop` | `plumbbob harvest` |
-| `builds/<slug>/handoff.json` | Ledger of agent runs for this step, so a later call can thread earlier results ([D47 (handoff-ledger)](decisions.md#d47)) | `agent run` | `checkpoint` / `abandon` |
+| `builds/<slug>/handoff.json` | Ledger of agent runs for this step, so a later call can thread earlier results ([D47 (handoff-ledger)](decisions.md#d47)) | `agent run` | `checkpoint` / `revert` / `abandon` |
+| `builds/<slug>/evidence/<n>/` | What an agent saved for you to look at while step `n` was open: screenshots, traces, the diff a reviewer read ([D157 (evidence-is-shown)](decisions.md#d157)) | an agent, under `agent run` | never; it is yours to clear |
 | `.check/` | The check gate's raw tool output | checkride | overwritten each run |
 
 `TURN` and `TICK` are the least obvious pair, and they justify the whole mechanism. The
@@ -99,6 +106,28 @@ A step in flight has three exits, and each settles these markers differently.
 to a recorded SHA and clears the step markers with it; `abandon` clears the markers and
 writes a build-log line, touching neither the tree nor git, so the diff stays put and the
 step keeps its `[ ]` in the plan ([D79 (abandon-keeps-work)](decisions.md#d79)).
+
+### The evidence folder
+
+**Evidence is excluded, and the build log keeps what it showed.** An agent can save a file
+for you to look at and name it in its envelope ([the contract](agents.md#evidence-something-to-look-at));
+the files land in `builds/<slug>/evidence/<n>/`, one folder a step. It is the one entry in
+the table above that holds neither a marker nor a counter, and the one PlumbBob never
+clears. It sits on the control plane for a plainer reason than the rest: a screenshot
+tracked with the build folder rides every PR and swells the repo for good, where one that
+is excluded costs nothing and dies with the clone.
+
+What survives is the line. When `agent run` keeps a piece of evidence it appends one line
+to the build log's `## Log`, which is tracked:
+
+```text
+- 2026-11-13 — step 3 evidence from walkthrough · `.plumbbob/builds/rate-limit/evidence/3/01-login.png` — the form, filled
+```
+
+The path rides in a code span, never a link, since in any other clone the file is not
+there. The record says what was seen after the image is gone. No verb deletes the folder,
+at a checkpoint, a revert, an abandon or a finish
+([C4 (never-destroy)](decisions.md#c4)), so it stays until you remove it.
 
 ## How the ignoring works
 
@@ -132,6 +161,8 @@ Here is the complete block it appends:
 .plumbbob/builds/*/PAUSE
 .plumbbob/builds/*/STOP
 .plumbbob/builds/*/handoff.json
+.plumbbob/builds/*/evidence/
+.plumbbob/evidence/
 .check/
 ```
 
@@ -144,8 +175,10 @@ visible to git, because they're meant to be committed.
 which self-heals the one gap that could bite: a PlumbBob upgraded *mid-build* can introduce a
 control file the running session's exclude list never learned about (`TICK`, `GRANT`,
 `handoff.json`, and `detail.md` all arrived that way in earlier versions), and staging with `-A` would sweep
-it into a commit. Every one of those calls appends only what's missing, so the common case
-is a read and no write.
+it into a commit. `agent run` re-applies it too, before it spawns the agent, since that is
+the moment a file is about to be saved into the evidence folder and a build started on an
+older PlumbBob has no line for it. Every one of those calls appends only what's missing, so
+the common case is a read and no write.
 
 **Worktrees.** The path is resolved with `git rev-parse --git-path info/exclude`, which
 returns the *common* gitdir's copy: the only one git actually reads. A linked worktree's
@@ -210,7 +243,7 @@ Four reasons, in rough order of how much they hurt:
    else, silently, with the tool cheerfully reporting the wrong step.
 2. **Its neighbours are tracked on purpose.** `intent.md` and `build-log.md` sit in the same
    folder and are *meant* to be committed. Splitting the sidecar across two filesystems to
-   relocate 15 control files would complicate every path in the tool to save you 16 lines
+   relocate 17 control files would complicate every path in the tool to save you 18 lines
    in one local file.
 3. **It has to be inspectable and disposable.** `cat .plumbbob/builds/*/STEP` answers "where
    was I?" without a tool. `rm -rf .plumbbob` is a complete, obvious uninstall. A home

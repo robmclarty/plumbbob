@@ -12,7 +12,9 @@
 // lines) is strict too, since those lines steer a scheduler. A step's proof
 // (its `proof:` sub-line, or the older `**done when:**` clause on its opener)
 // reads both ways: strictly for the checkpoint that runs its command, loosely
-// for the dashboard and the agent's context.
+// for the dashboard and the agent's context. A step's like (the exemplar paths
+// on its `like:` sub-line) is read loosely only: it is advice, so nothing
+// about it is ever a finding.
 
 import { parseStepList, type StepList } from './steplist.ts'
 
@@ -369,11 +371,14 @@ export function readProof(itemLines: ReadonlyArray<string>): ProofRead {
  * that an unindented line follows (or nothing does), since indented text after
  * a blank line still belongs to the item and unindented text does not. Lines
  * inside a fenced block are blanked in place, so an example in a fence is
- * never read as one of the step's lines.
+ * never read as one of the step's lines. So are the lines of an HTML comment
+ * that runs past the line it opens on, up to and including the one holding
+ * its `-->`, so a sub-line commented out is not read as live.
  */
 function ownLines(itemLines: ReadonlyArray<string>): ReadonlyArray<string> {
   const own: string[] = []
   let fence: string | null = null
+  let comment = false
   for (let i = 0; i < itemLines.length; i++) {
     const line = itemLines[i] ?? ''
     const mark = /^\s*(`{3,}|~{3,})/.exec(line)?.[1] ?? null
@@ -391,6 +396,13 @@ function ownLines(itemLines: ReadonlyArray<string>): ReadonlyArray<string> {
       const next = itemLines.slice(i + 1).find((l) => l.trim() !== '')
       if (next === undefined || /^\S/.test(next)) break
     }
+    if (comment) {
+      if (line.includes('-->')) comment = false
+      own.push('')
+      continue
+    }
+    const open = commentStart(line)
+    comment = open !== -1 && !line.includes('-->', open + 4)
     own.push(line)
   }
   return own
@@ -442,10 +454,16 @@ function legacySubLine(item: ReadonlyArray<string>, subs: ReadonlyArray<number>)
  * span is part of the span, a command's own text, and stays.
  */
 function uncommented(line: string): string {
+  const open = commentStart(line)
+  return (open === -1 ? line : line.slice(0, open)).trimEnd()
+}
+
+/** Where a line's first `<!--` outside a code span starts, or -1 when it holds none. */
+function commentStart(line: string): number {
   let i = 0
   while (i < line.length) {
     if (line.startsWith('<!--', i)) {
-      return line.slice(0, i).trimEnd()
+      return i
     }
     if (line[i] !== '`') {
       i += 1
@@ -456,7 +474,7 @@ function uncommented(line: string): string {
     const close = closingRun(line, i + run, run)
     i = close === -1 ? i + run : close + run
   }
-  return line.trimEnd()
+  return -1
 }
 
 /** Where the backtick run of exactly `length` that closes a code span starts, at or after `from`; -1 when the span never closes. */
@@ -524,6 +542,51 @@ export function parseStepProof(content: string, step: number): StepProofParse {
     }
   }
   return { ok: true, proof: read.proof !== null && read.proof.text === '' ? null : read.proof }
+}
+
+const LIKE_LINE = /^\s*-\s*like:(.*)$/
+
+/**
+ * Read a step's like from its lines: the files it names to copy the pattern
+ * from, in the order written.
+ *
+ * Each backticked token on a `- like:` sub-line is one path, a wrapped
+ * continuation line included and a trailing HTML comment left out. The line
+ * is advice and never a gate, so nothing here is a finding: a token that is
+ * not a plain repo-relative path (a glob, a backslash, an absolute path, a
+ * home-relative `~` path, a drive letter, an empty, `.` or `..` segment) is
+ * dropped, a second `like:` line adds its
+ * paths after the first, and a path named twice is kept once. Only the
+ * step's own sub-bullets count, on the proof reader's terms: a nested bullet,
+ * a line inside a fenced block, and anything past the blank line that ends
+ * the item are prose. Whether a path exists is not asked here.
+ */
+function readLike(itemLines: ReadonlyArray<string>): ReadonlyArray<string> {
+  const item = ownLines(itemLines)
+  const paths = ownSubBullets(item)
+    .filter((i) => LIKE_LINE.test(uncommented(item[i] ?? '')))
+    .flatMap((i) => [...bulletText(item, i, LIKE_LINE).matchAll(/`([^`]+)`/g)])
+    .map((m) => (m[1] ?? '').trim().replace(/^\.\//, ''))
+    .filter((token) => token !== '' && !GLOB_CHARS.test(token) && !token.includes('\\') && !leavesRepo(token) && !hasBadSegment(token))
+  return [...new Set(paths)]
+}
+
+/**
+ * Whether a like token starts somewhere other than the repo root: an absolute
+ * path, a home-relative one a shell would expand (`~/x`, `~user/x`), or a
+ * Windows drive letter (`C:/x`).
+ */
+function leavesRepo(token: string): boolean {
+  return token.startsWith('/') || token.startsWith('~') || /^[a-z]:/i.test(token)
+}
+
+/**
+ * Step `n`'s like paths, best-effort: an empty list for a step with no
+ * `like:` line, and for a missing section or step, never a refusal.
+ */
+export function parseStepLike(content: string, step: number): ReadonlyArray<string> {
+  const slice = sliceStep(content, step)
+  return slice.ok ? readLike(slice.itemLines) : []
 }
 
 /**

@@ -4,7 +4,7 @@
 // contents (no fs), and a malformed document degrades to fewer fields rather
 // than throwing.
 
-import { isArtifactPath, parseStepSeam, readProof, scopeDrift, type StepProof } from './intent.ts'
+import { isArtifactPath, parseStepLike, parseStepSeam, readProof, scopeDrift, type StepProof } from './intent.ts'
 import { binFiles, reachFor, type ReachAnswer, type StoredReach } from './reach.ts'
 import {
   expandStepList,
@@ -68,6 +68,7 @@ export type Orientation = {
   // review (and `/plumbbob:step`-revise) before `/plumbbob:build`.
   readonly nextProof: string | null
   readonly nextSeam: ReadonlyArray<string>
+  readonly nextLike: ReadonlyArray<string> // the files the target step names to copy the pattern from, [] when it names none
   // The target step's advisory model recommendation: the smallest model the
   // plan says can carry the step. Orientation for the human choosing where to
   // spend attention and tokens, never a gate.
@@ -80,6 +81,10 @@ export type Orientation = {
   // range, and a plan commit made by hand carries the `plumbbob plan` body
   // marker, which drops it from the count. 0 renders nothing.
   readonly outOfBand: number
+  // What the build's research predates, when its stamp has gone out of date
+  // (`predates a lockfile change: fascicle 0.18.0 → 0.19.2`). Null renders
+  // nothing: no research.md, no stamp, or nothing moved.
+  readonly research: string | null
 }
 
 /** The raw material `orient` parses: file contents and marker state, no fs. */
@@ -110,6 +115,10 @@ export type OrientInput = {
   // file), since orient stays fs-free; its landed row is marked, and the
   // pointer names the card.
   readonly waiting: number | null
+  // The clause for a research stamp gone out of date, or null or absent when
+  // there is nothing to say. The caller reads it (`researchStale`, which takes
+  // the stamp, the lockfiles and node_modules), since orient stays fs-free.
+  readonly research?: string | null
 }
 
 /** A named `## Section`'s body: its lines, and the 0-based offset of the first. */
@@ -1896,8 +1905,10 @@ export function orient(input: OrientInput): Orientation {
     requested: requestedStep?.n ?? null,
     nextProof: target?.proof?.text ?? null,
     nextSeam: seamParse !== null && seamParse.ok ? seamParse.seam : [],
+    nextLike: target === undefined ? [] : parseStepLike(input.intent, target.n),
     nextModel: target?.model ?? null,
     outOfBand: input.outOfBand,
+    research: input.research ?? null,
   }
 }
 
@@ -3063,6 +3074,9 @@ export function formatOrientation(o: Orientation): string {
     if (o.nextSeam.length > 0) {
       detail.push(`        seam: ${o.nextSeam.join(', ')}`)
     }
+    if (o.nextLike.length > 0) {
+      detail.push(`        like: ${o.nextLike.join(', ')}`)
+    }
     if (o.nextModel !== null) {
       detail.push(`        model: ${o.nextModel}`)
     }
@@ -3086,6 +3100,10 @@ export function formatOrientation(o: Orientation): string {
       ? [`${o.outOfBand} commit${o.outOfBand === 1 ? '' : 's'} since the last checkpoint landed outside plumbbob's ledger.`]
       : []
 
+  // The research row, only when the stamp on research.md has gone out of date:
+  // a stamped lockfile moved since the research was done. Advice, never a gate.
+  const researchRow = o.research === null ? [] : [`research ${o.research}`]
+
   // The build order, whole, only when it departs from the numbering: the
   // dashboard is the reference surface, so nothing is folded to a count here.
   const orderRow = o.buildOrder.length > 0 ? [`build order  ${o.buildOrder.join(', ')}`] : []
@@ -3098,6 +3116,7 @@ export function formatOrientation(o: Orientation): string {
     ...rangesBlock,
     cpLine,
     ...receipts,
+    ...researchRow,
     ...orderRow,
     `${parkedPhrase({ open: o.parked, total: o.parkedTotal })} · ${questionsPhrase(o.questions)}`,
     '',

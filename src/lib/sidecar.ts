@@ -508,6 +508,54 @@ export function clearHandoff(root: string, slug?: string | null): void {
   rmSync(handoffPath(root, slug), { force: true })
 }
 
+/**
+ * One step's evidence folder: `builds/<slug>/evidence/<n>/`, where an agent
+ * saves what it wants the person to look at (a screenshot, a trace) and names
+ * it in its envelope's `evidence[]`.
+ *
+ * It is the one place under `.plumbbob/` an agent writes, and git never sees
+ * it (excludeControl): the files stay in this worktree for as long as the
+ * person keeps them, and the build log keeps each path and caption. Nothing in
+ * plumbbob makes the folder or removes it; the agent makes it when it has
+ * something to show.
+ */
+export function evidenceDir(root: string, slug: string | null | undefined, step: number): string {
+  return join(artifactDir(root, slug), 'evidence', String(step))
+}
+
+/** One piece of evidence as the handoff ledger holds it: the file's repo-relative path and its caption. */
+export type ShownEvidence = { readonly path: string; readonly caption: string }
+
+/**
+ * The evidence the agents run against `step` have shown so far, read from the
+ * handoff ledger in the order it arrived.
+ *
+ * `agent run` writes only the entries it kept, so nothing is judged again
+ * here. A path shown twice (an agent run again) is listed once, with the
+ * caption it carried last. A ledger that is absent, malformed, or holds no
+ * evidence for the step reads as none.
+ */
+export function readEvidence(root: string, slug: string | null | undefined, step: number): ReadonlyArray<ShownEvidence> {
+  let entries: unknown
+  try {
+    entries = JSON.parse(readFileSync(handoffPath(root, slug), 'utf8')) as unknown
+  } catch {
+    return []
+  }
+  if (!Array.isArray(entries)) return []
+  const shown = new Map<string, ShownEvidence>()
+  for (const entry of entries as ReadonlyArray<{ step?: unknown; envelope?: { evidence?: unknown } } | null>) {
+    const evidence = entry?.step === step ? entry.envelope?.evidence : undefined
+    if (!Array.isArray(evidence)) continue
+    for (const item of evidence as ReadonlyArray<{ path?: unknown; caption?: unknown } | null>) {
+      if (typeof item?.path === 'string' && typeof item.caption === 'string') {
+        shown.set(item.path, { path: item.path, caption: item.caption })
+      }
+    }
+  }
+  return [...shown.values()]
+}
+
 // --- The detail plane: `.plumbbob/detail.md`, one flat per-session file holding
 // the in-flight step's full detail. The model overwrites it before every pause
 // (the recap first, then numbered sections matching the highlights); checkpoint
@@ -1126,6 +1174,12 @@ const CONTROL_EXCLUDES: ReadonlyArray<string> = [
   // The agent-run handoff ledger is step-scoped in-flight state, not a
   // tracked artifact: it must never ride a step commit into the PR.
   `${DIRNAME}/builds/*/handoff.json`,
+  // What an agent saved for the person to look at. Screenshots would ride
+  // every PR and swell the repo, so they stay in the worktree and the build
+  // log keeps their paths and captions. The flat form covers a session with no
+  // build named.
+  `${DIRNAME}/builds/*/evidence/`,
+  `${DIRNAME}/evidence/`,
   // The checkride gate writes raw tool output to `.check/`; checkpoint's
   // stageAll must never sweep it into a step commit.
   '.check/',

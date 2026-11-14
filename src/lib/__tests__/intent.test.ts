@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { matchesSeam, parseBuildScope, parseBuildTitle, parseStepFields, parseStepMeta, parseStepProof, parseStepSeam, scrapeBullets } from '../intent.ts'
+import { matchesSeam, parseBuildScope, parseBuildTitle, parseStepFields, parseStepLike, parseStepMeta, parseStepProof, parseStepSeam, scrapeBullets } from '../intent.ts'
 
 function intentWith(stepsBody: string): string {
   return `# Title\n\n## Frame\n\nstuff\n\n## Steps\n\n${stepsBody}\n\n## Open questions\n\n- none\n`
@@ -311,6 +311,74 @@ describe('parseStepProof', () => {
   it('reads a step with neither as no proof, and a missing step as a finding', () => {
     expect(parseStepProof(step(), 1)).toEqual({ ok: true, proof: null })
     expect(parseStepProof(step(), 9)).toEqual({ ok: false, findings: ['intent.md has no step 9 under "## Steps".'] })
+  })
+})
+
+describe('parseStepLike', () => {
+  const step = (...sub: string[]): string => intentWith(['1. [ ] A step', '   - seam: `a.ts`', ...sub].join('\n'))
+
+  it('reads the backticked paths on the like line, in the order written', () => {
+    expect(parseStepLike(step('   - like: `src/throttle.ts`, `src/lib/bucket.ts`', '   - proof: `true`'), 1)).toEqual(['src/throttle.ts', 'src/lib/bucket.ts'])
+  })
+
+  it('is empty for a step with no like line, a missing step, and a missing section', () => {
+    expect(parseStepLike(step('   - proof: `true`'), 1)).toEqual([])
+    expect(parseStepLike(step('   - like: `src/a.ts`'), 9)).toEqual([])
+    expect(parseStepLike('# No steps here\n', 1)).toEqual([])
+  })
+
+  it('drops a token that is not a plain repo-relative path, and keeps the rest', () => {
+    const line = '   - like: `src/*.ts`, `/etc/passwd`, `../up.ts`, `a\\b.ts`, `src//x.ts`, ` `, `./src/ok.ts`, `examples/agents/reviewer/`'
+    expect(parseStepLike(step(line), 1)).toEqual(['src/ok.ts', 'examples/agents/reviewer/'])
+  })
+
+  it('drops a token that starts outside the repo: a home-relative path and a drive letter', () => {
+    const line = '   - like: `src/base.ts`, `~/.ssh/id_rsa`, `~root/x.ts`, `~`, `C:/Windows/x`, `c:x.ts`, `src/~tilde.ts`'
+    expect(parseStepLike(step(line), 1)).toEqual(['src/base.ts', 'src/~tilde.ts'])
+  })
+
+  it('never reads a line inside a comment that runs over several lines, as a like or as a proof', () => {
+    const block = step('   <!--', '   - like: `multi-comment.ts`', '   - proof: `false` commented out', '   -->', '   - like: `live.ts`', '   - proof: `true` holds')
+    expect(parseStepLike(block, 1)).toEqual(['live.ts'])
+    expect(parseStepProof(block, 1)).toEqual({ ok: true, proof: { command: 'true', text: '`true` holds' } })
+    const only = step('   <!-- cut for now', '   - like: `multi-comment.ts`', '   - proof: `false` commented out', '   and back -->')
+    expect(parseStepLike(only, 1)).toEqual([])
+    expect(parseStepProof(only, 1)).toEqual({ ok: true, proof: null })
+    // A comment closed on its own line hides nothing beneath it, and an opener inside a code span opens none.
+    const closed = step('   - note: a note <!-- one line -->', '   - like: `after.ts`', '   - proof: `grep -c "<!--" a.html` passes', '   - like: `later.ts`')
+    expect(parseStepLike(closed, 1)).toEqual(['after.ts', 'later.ts'])
+    // One opened at the end of a live line keeps that line and hides the next.
+    const trailing = step('   - like: `kept.ts` <!-- and', '   - like: `hidden.ts`', '   -->')
+    expect(parseStepLike(trailing, 1)).toEqual(['kept.ts'])
+  })
+
+  it('reads an empty line and one with no backticks as no like at all', () => {
+    expect(parseStepLike(step('   - like:'), 1)).toEqual([])
+    expect(parseStepLike(step('   - like: src/throttle.ts'), 1)).toEqual([])
+  })
+
+  it('joins a second like line after the first, and keeps a path named twice once', () => {
+    expect(parseStepLike(step('   - like: `a.ts`, `b.ts`', '   - like: `b.ts`, `c.ts`'), 1)).toEqual(['a.ts', 'b.ts', 'c.ts'])
+  })
+
+  it('reads a wrapped continuation line, and leaves a trailing comment out', () => {
+    expect(parseStepLike(step('   - like: `a.ts`, <!-- not `x.ts` -->', '     `b.ts`', '   - proof: `c.ts` exists'), 1)).toEqual(['a.ts', 'b.ts'])
+  })
+
+  it('reads only the step\'s own sub-bullets: a nested bullet, a fenced line and prose past the item are not its like', () => {
+    const nested = step('   - note: an example', '     - like: `nested.ts`')
+    expect(parseStepLike(nested, 1)).toEqual([])
+    const fenced = step('   ```md', '   - like: `fenced.ts`', '   ```')
+    expect(parseStepLike(fenced, 1)).toEqual([])
+    const past = step('', 'Prose after the list.', '', '- like: `past.ts`')
+    expect(parseStepLike(past, 1)).toEqual([])
+  })
+
+  it('leaves the seam, the proof and the fields reading as they did', () => {
+    const intent = step('   - like: `src/*.ts`', '   - like:', '   - proof: `true` passes', '   - effort: low')
+    expect(parseStepSeam(intent, 1)).toEqual({ ok: true, seam: ['a.ts'] })
+    expect(parseStepProof(intent, 1)).toEqual({ ok: true, proof: { command: 'true', text: '`true` passes' } })
+    expect(parseStepFields(intent, 1).ok).toBe(true)
   })
 })
 

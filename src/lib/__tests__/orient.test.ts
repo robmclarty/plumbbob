@@ -599,6 +599,13 @@ describe('orient derived fields', () => {
     expect(orient({ ...base, spiking: true, inFlight: 2 }).phase).toBe('SPIKE') // spike wins
   })
 
+  it("nextLike carries the target step's like paths, and is empty without a like line", () => {
+    const intent = '# T\n\n## Steps\n\n1. [ ] a\n   - seam: `src/a.ts`\n   - like: `src/throttle.ts`, `src/bucket.ts`\n2. [ ] b\n   - seam: `src/b.ts`\n'
+    expect(orient({ ...base, intent }).nextLike).toEqual(['src/throttle.ts', 'src/bucket.ts'])
+    expect(orient({ ...base, intent, requested: one(2) }).nextLike).toEqual([])
+    expect(orient({ ...base }).nextLike).toEqual([])
+  })
+
   it('nextSeam is empty when the next step declares no seam', () => {
     const intent = '# T\n\n## Steps\n\n1. [x] a — **done**\n2. [ ] rough idea\n'
     expect(orient({ ...base, intent }).nextSeam).toEqual([])
@@ -624,6 +631,14 @@ describe('formatOrientation', () => {
     expect(out).toContain('proof: the thing works.')
     expect(out).toContain('seam: src/b.ts')
     expect(out).toContain('model: sonnet — mechanical')
+  })
+
+  it('renders a like row under the seam only when the step names an exemplar', () => {
+    const intent = '# T\n\n## Steps\n\n1. [ ] a\n   - seam: `src/a.ts`\n   - like: `src/throttle.ts`, `src/bucket.ts`\n   - proof: `true` passes\n'
+    const out = formatOrientation(orient({ ...base, intent }))
+    expect(out).toContain('        proof: `true` passes\n        seam: src/a.ts\n        like: src/throttle.ts, src/bucket.ts\n')
+    expect(formatOrientation(orient({ ...base, intent: intent.replace('`src/throttle.ts`, `src/bucket.ts`', '') }))).not.toContain('like:')
+    expect(formatOrientation(orient({ ...base }))).not.toContain('like:')
   })
 
   it('renders the whole dashboard exactly', () => {

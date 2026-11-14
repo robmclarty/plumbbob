@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'no
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import {
+  blobHash,
   commit,
   commitNumstat,
   commitsBetween,
@@ -323,5 +324,25 @@ describe('commitsSince', () => {
     execFileSync('git', ['-C', dir, 'checkout', '-q', 'main'], { stdio: 'ignore' })
     execFileSync('git', ['-C', dir, 'merge', '-q', '--no-ff', '-m', 'merge side', 'side'], { stdio: 'ignore' })
     expect(commitsSince(dir, base)).toBe(1)
+  })
+})
+
+describe('blobHash', () => {
+  it("names the blob a commit of the working-tree file would store, tracked or not", () => {
+    const dir = makeTempRepo()
+    writeFileSync(join(dir, 'pnpm-lock.yaml'), 'one\n')
+    const untracked = blobHash(dir, 'pnpm-lock.yaml')
+    expect(untracked).toBe(execFileSync('git', ['-C', dir, 'hash-object', 'pnpm-lock.yaml'], { encoding: 'utf8' }).trim())
+    expect(untracked).toMatch(/^[0-9a-f]{40}$/)
+    stageAll(dir)
+    commit(dir, 'add the lockfile')
+    expect(blobHash(dir, 'pnpm-lock.yaml')).toBe(untracked)
+    writeFileSync(join(dir, 'pnpm-lock.yaml'), 'two\n')
+    expect(blobHash(dir, 'pnpm-lock.yaml')).not.toBe(untracked)
+  })
+
+  it('is null for a file that is not there, and outside a repo', () => {
+    expect(blobHash(makeTempRepo(), 'yarn.lock')).toBeNull()
+    expect(blobHash(makeTempDir(), 'yarn.lock')).toBeNull()
   })
 })

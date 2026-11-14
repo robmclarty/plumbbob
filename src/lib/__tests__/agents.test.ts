@@ -152,6 +152,7 @@ describe('parseEnvelope', () => {
       body: '',
       parked: [],
       notes: '',
+      evidence: [],
     })
   })
 
@@ -262,6 +263,8 @@ describe('composeStepContext', () => {
         doneWhen: 'requests over the cap get a 429',
         proof: { command: null, text: 'requests over the cap get a 429' },
         seam: ['src/limiter.ts', 'src/limiter.test.ts'],
+        like: [],
+        evidenceDir: '',
       },
       decisions: ['D1: use a token bucket — *because* it smooths bursts and is cheap to reason about', 'D2: keep the limit in settings'],
       constraints: ['C1: node builtins only'],
@@ -277,6 +280,20 @@ describe('composeStepContext', () => {
     expect(result.input.context).toEqual([])
     expect(result.input.settings).toEqual({})
     expect(result.input.step.title).toBe('Wire it in')
+  })
+
+  it("carries the step's like paths, and an empty list for a like line that names none", () => {
+    const liked = intent.replace('   - seam: `src/route.ts`', '   - seam: `src/route.ts`\n   - like: `src/throttle.ts`, `src/*.ts`, `src/nowhere.ts`')
+    const result = composeStepContext({ intent: liked, slug: 'slug', step: 2, mode: 'after' })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.input.step.like).toEqual(['src/throttle.ts', 'src/nowhere.ts'])
+    expect(result.warnings).toEqual([])
+
+    const empty = composeStepContext({ intent: intent.replace('   - seam: `src/route.ts`', '   - seam: `src/route.ts`\n   - like:\n   - like: nothing quoted'), slug: 'slug', step: 2, mode: 'after' })
+    expect(empty.ok).toBe(true)
+    if (!empty.ok) return
+    expect(empty.input.step.like).toEqual([])
   })
 
   it('surfaces a malformed bullet as a warning without dropping the good decisions', () => {
