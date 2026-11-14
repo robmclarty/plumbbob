@@ -75,7 +75,7 @@ steps may be fuzzier than the first; sharpen the next one just-in-time with
 `/plumbbob:step` (empty input auto-syncs it), and use `/plumbbob:refine` to repair the
 whole plan when a blocker rewrites it. Three more lines are optional, at most one of each
 to a step, and only a scheduler reads them: `- after: 2, 4-5` (or `none`) names the steps
-this one waits on, where no line means the step before it in build order;
+this one waits on, where no line means every step before it in build order;
 `- stop: planned` (or `structural`) asks for a stop once the step lands, where no line
 means a stop at a range's last step only; and `- effort: high` (`low`, `medium`, `high`,
 `xhigh` or `max`) says how hard the builder should work. `plumbbob export` writes them

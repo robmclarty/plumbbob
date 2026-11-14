@@ -27,7 +27,7 @@ export reads three more, each at most once per step, each a plain value with no 
 
 | Line | Takes | Absent means |
 | --- | --- | --- |
-| `- after:` | step numbers and spans, comma-separated (`2, 4-5`), or `none` | the step before it in build order |
+| `- after:` | step numbers and spans, comma-separated (`2, 4-5`), or `none` | every step before it in build order |
 | `- stop:` | `planned` or `structural` | `planned` on a range's last step, `none` elsewhere |
 | `- effort:` | `low`, `medium`, `high`, `xhigh` or `max` | `null`, which leaves the rung to the builder |
 
@@ -68,8 +68,12 @@ backward, spaces after the commas allowed. `none` says the step waits on nothing
 how a plan lets a step start at once. A step with an `after:` line depends on exactly what
 it names, and the default no longer applies to it.
 
-Without the line, a step depends on the step before it in build order, and the first step in
-build order depends on nothing ([D134 (serial-default)](decisions.md#d134)). Build order is
+Without the line, a step waits on every step before it in build order, and the first step in
+build order depends on nothing ([D134 (serial-default)](decisions.md#d134)). The export writes
+that as the earlier steps nothing earlier already waits on. In a plan with no `after:` line
+that is the one step before it. Once a line has opened the plan up it is every branch still
+open: if step 3 says `after: 1`, steps 2 and 3 may run together, and a step 4 with no line
+exports `["step-2", "step-3"]` and joins them. Build order is
 `## Build order` when the plan has one, and the numbering when it does not, the same order
 every picker in plumbbob reads. A scheduler reads a missing dependency as "may run in
 parallel", which is the unsafe reading, so the plan that says nothing exports the one
@@ -284,13 +288,11 @@ prints those findings in the words above instead, closed by
 ``plumbbob: fix the plan, then run `plumbbob export` to bring plan.json current.``, and
 `plumbbob export` refuses until they are fixed.
 
-The check holds every build folder that holds a `plan.json`, a finished one included, since
-a scheduler may be handed any of them. A build other than the active one is named by its
-folder, and so is its export:
-
-```text
-plumbbob: .plumbbob/builds/2026-10-17-build-ranges/plan.json is behind its intent.md; run `plumbbob export 2026-10-17-build-ranges` to bring it current.
-```
+The check holds the active build and no other ([D151 (checks-at-export)](decisions.md#d151)).
+Another build folder's `plan.json` is left as it was written, and
+`plumbbob export <slug>` brings it current when it is handed to a scheduler. A finished
+build's file would otherwise turn red whenever the derivation itself changed, in every repo
+that upgraded, over a plan nobody is building.
 
 The check runs ahead of the gate, and a red one stops there, because the fix is one command
 and the whole gate would run again after it. It leaves `.check/summary.json` holding one

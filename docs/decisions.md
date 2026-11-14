@@ -1879,7 +1879,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   the step before it in build order.** The line takes step numbers and spans read by `src/lib/steplist.ts`, or
   `none`; the first step in build order depends on nothing. *because* a scheduler reads a missing dependency as "may
   run in parallel", so the unannotated plan must export fully serial, which is also what plumbbob does today.
-  *Tagged in* `docs/plan-export.md`.
+  (Revised 2026-11-13: a step without the line waits on every step before it in build order, exported as the
+  earlier steps no earlier step already waits on. With step 3 reading `after: 1`, step 4 used to export
+  `["step-3"]` alone, so it no longer waited on step 2, and range 2's stop could fall with step 2 unbuilt. A plan
+  with no `after:` line exports the same bytes as before.) *Tagged in* `docs/plan-export.md`.
 
 - <a id="d135"></a>**D135 (range-end-stops): The last step of each range, in build order, exports `stop: "planned"`.**
   A `- stop:` line (`planned` or `structural`) overrides any step's; every other step is `none`. *because*
@@ -1963,7 +1966,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
 
 - <a id="d151"></a>**D151 (checks-at-export): The plan checks bite at `plumbbob export` and at the check of an
   exported build, and nowhere on the plan card yet.** *because* the card naming them belongs with the frontier card,
-  which is later work. *Tagged in* `docs/plan-export.md`.
+  which is later work. (Revised 2026-11-13: the check holds the active build's `plan.json` and no other. It held
+  every exported build folder, so a change to the derivation would have turned each finished build red on upgrade;
+  `plumbbob export <slug>` brings another build's file current when it is handed over.) *Tagged in*
+  `docs/plan-export.md`.
 
 - <a id="d152"></a>**D152 (no-forward-after): plumbbob's plan checks gain a fourth: no undone step's `after:` line
   names a step that comes later in build order.** It prints ``step 3's `after:` names step 5, which builds after it;

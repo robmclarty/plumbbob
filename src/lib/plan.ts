@@ -61,11 +61,37 @@ export function stepId(n: number): string {
 }
 
 /**
+ * What each step waits on, by plan number, walked in build order.
+ *
+ * A step with an `after:` line waits on exactly what the line names. A step
+ * without one waits on everything before it in build order, written as the
+ * earlier steps that no earlier step already waits on: in a plan with no
+ * `after:` line that is the one step before it, and after a line has opened
+ * the plan up it is every branch still open, so the step joins them all.
+ */
+function waitsInOrder(
+  order: ReadonlyArray<number>,
+  afters: ReadonlyMap<number, ReadonlyArray<number> | null>,
+): Map<number, ReadonlyArray<number>> {
+  const waits = new Map<number, ReadonlyArray<number>>()
+  const waitedOn = new Set<number>()
+  const earlier: number[] = []
+  for (const n of order) {
+    const own = afters.get(n) ?? earlier.filter((e) => !waitedOn.has(e))
+    waits.set(n, own)
+    for (const w of own) waitedOn.add(w)
+    earlier.push(n)
+  }
+  return waits
+}
+
+/**
  * Derive `runciter.plan/1` from an intent's text.
  *
  * Every step exports, landed or not, in plan-number order. A step depends on
- * what its `after:` line names, or else on the step before it in build order,
- * so a plan with no `after:` line exports fully serial. The last step of each
+ * what its `after:` line names, or else on everything before it in build
+ * order, so a plan with no `after:` line exports fully serial, and a step
+ * that says nothing never runs beside a step before it. The last step of each
  * range in build order stops `planned`, a bare range's one step included, and
  * a `stop:` line overrides any step's. A step whose lines, seam, or done-when
  * will not read is a finding by step, and any finding refuses the whole plan
@@ -100,36 +126,40 @@ export function derivePlan(input: {
     }),
   )
 
-  const planSteps: PlanStep[] = []
-  const facts: StepFacts[] = []
-  for (const step of steps) {
+  const afters = new Map<number, ReadonlyArray<number> | null>()
+  const read = steps.map((step) => {
     const fields = parseStepFields(intent, step.n)
     const seam = parseStepSeam(intent, step.n)
     const meta = parseStepMeta(intent, step.n)
     if (!fields.ok) findings.push(...fields.findings)
     if (!seam.ok) findings.push(seam.error)
     if (meta.doneWhen === '') findings.push(`step ${step.n} has no **done when:** text; the contract needs one.`)
+    const line = fields.ok ? fields.fields.after : null
+    afters.set(step.n, line === null ? null : line === 'none' ? [] : expandStepList(line, (n) => planned.has(n)))
+    return { step, fields, seam, meta }
+  })
+  const waits = waitsInOrder(
+    ordered.map((s) => s.n),
+    afters,
+  )
+
+  const planSteps: PlanStep[] = []
+  const facts: StepFacts[] = []
+  for (const { step, fields, seam, meta } of read) {
     if (!fields.ok || !seam.ok) continue
-
-    const position = ordered.findIndex((s) => s === step)
-    const line = fields.fields.after
-    const after = line === null ? null : line === 'none' ? [] : expandStepList(line, (n) => planned.has(n))
-    const before = ordered[position - 1]
-    const dependsOn = after ?? (before === undefined ? [] : [before.n])
     const range = ranges.find((r) => hasStep(r.steps, step.n))
-
     planSteps.push({
       id: stepId(step.n),
       title: meta.title,
       range: range === undefined ? null : String(range.item),
-      depends_on: dependsOn.map(stepId),
+      depends_on: (waits.get(step.n) ?? []).map(stepId),
       seam: seam.seam,
       stop: fields.fields.stop ?? (rangeEnds.has(step.n) ? 'planned' : 'none'),
       effort: fields.fields.effort,
       done_when: meta.doneWhen,
       context: fields.fields.notes,
     })
-    facts.push({ n: step.n, done: step.done, position, after })
+    facts.push({ n: step.n, done: step.done, position: ordered.findIndex((s) => s === step), after: afters.get(step.n) ?? null })
   }
 
   if (findings.length > 0) {

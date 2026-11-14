@@ -3,7 +3,7 @@
 // hashes its bytes, hands the tree and the root keyframes.md's Map in, and
 // says what a fresh `plan.json` would hold. Three callers share it: `export`
 // writes the file, the verbs that write intent.md keep an exported one current,
-// and the check fails when one has fallen behind. A build without `plan.json`
+// and the check fails when the active build's has fallen behind. A build without `plan.json`
 // is never touched: the first `plumbbob export` is what opts it in.
 
 import { createHash } from 'node:crypto'
@@ -12,7 +12,7 @@ import { join, relative, sep } from 'node:path'
 import { advisory } from './notice.ts'
 import { derivePlan, serializePlan } from './plan.ts'
 import { checkPlan, parseMapPaths } from './plancheck.ts'
-import { activeBuild, buildDir, listBuilds } from './sidecar.ts'
+import { activeBuild, buildDir } from './sidecar.ts'
 
 /** A fresh derivation: the bytes `plan.json` should hold, or every finding that refuses them. */
 export type FreshPlan =
@@ -90,43 +90,33 @@ export function refreshPlan(root: string, slug: string | null): ReadonlyArray<st
 }
 
 /**
- * Every exported build whose `plan.json` is not what a fresh derivation would
- * write, one line per problem.
+ * The active build's `plan.json` held to its intent.md, one line per problem.
  *
- * The active build reads in the words docs/plan-export.md gives; another build
- * folder is named by its slug, since its remedy names it too. A plan that now
- * fails a rule or a check lists those findings instead of the drift line, and
- * closes on the export that brings it current once they are fixed. Empty when
- * every exported build is current, and always empty in a repo with no
- * `plan.json` at all.
+ * A plan that now fails a rule or a check lists those findings instead of the
+ * drift line, and closes on the export that brings it current once they are
+ * fixed. Empty when the file is current, when the active build was never
+ * exported, and when no build is active: another build folder's `plan.json`
+ * is brought current by `plumbbob export <slug>` when it is handed over, and
+ * the check leaves it alone.
  */
 export function planDrift(root: string): ReadonlyArray<string> {
-  const active = activeBuild(root)
-  return listBuilds(root)
-    .filter((slug) => existsSync(planJsonPath(root, slug)))
-    .flatMap((slug) => {
-      const own = slug === active
-      const named = (line: string): string => (own ? line : `${slug}: ${line}`)
-      let fresh: FreshPlan
-      try {
-        fresh = freshPlan(root, slug)
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err)
-        return [named(`plan.json could not be derived afresh (${message}).`)]
-      }
-      const remedy = own ? '`plumbbob export`' : `\`plumbbob export ${slug}\``
-      if (!fresh.ok) {
-        return [...fresh.findings.map(named), named(`fix the plan, then run ${remedy} to bring plan.json current.`)]
-      }
-      if (readFileSync(planJsonPath(root, slug), 'utf8') === fresh.text) {
-        return []
-      }
-      return [
-        own
-          ? 'plan.json is behind intent.md; run `plumbbob export` to bring it current.'
-          : `${repoPath(root, planJsonPath(root, slug))} is behind its intent.md; run ${remedy} to bring it current.`,
-      ]
-    })
+  const slug = activeBuild(root)
+  if (slug === null || !existsSync(planJsonPath(root, slug))) {
+    return []
+  }
+  let fresh: FreshPlan
+  try {
+    fresh = freshPlan(root, slug)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return [`plan.json could not be derived afresh (${message}).`]
+  }
+  if (!fresh.ok) {
+    return [...fresh.findings, 'fix the plan, then run `plumbbob export` to bring plan.json current.']
+  }
+  return readFileSync(planJsonPath(root, slug), 'utf8') === fresh.text
+    ? []
+    : ['plan.json is behind intent.md; run `plumbbob export` to bring it current.']
 }
 
 /**

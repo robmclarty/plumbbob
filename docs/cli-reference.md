@@ -413,7 +413,7 @@ their `.check/<slot>` pointers. A `check` key in the settings ladder
 (`settings.local.json` → `settings.json`, [**D27 (settings-ladder)**](decisions.md#d27)) overrides checkride with a shell
 command, spawned with `shell: true` in the repo root; that is how non-checkride repos gate.
 
-Ahead of either path, every build folder holding a `plan.json` is held to its `intent.md`.
+Ahead of either path, the active build's `plan.json`, if it has one, is held to its `intent.md`.
 A file that differs from a fresh derivation prints
 ``plumbbob: plan.json is behind intent.md; run `plumbbob export` to bring it current.``,
 and a plan that now fails a rule or a check prints its findings and the same export; either

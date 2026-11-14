@@ -224,7 +224,7 @@ describe('runCheck (plan.json drift) — D14 (cli-keeps-current), C4 (single-str
     expect(lines.at(-1)).toBe('plumbbob: fix the plan, then run `plumbbob export` to bring plan.json current.')
   })
 
-  it('names another exported build by its slug, and its export by the slug too', async () => {
+  it('leaves another exported build alone, drifted or not: only the active build is held', async () => {
     const dir = makeTempDir()
     writeBuild(dir, 'older')
     exportBuild(dir, 'older')
@@ -234,10 +234,9 @@ describe('runCheck (plan.json drift) — D14 (cli-keeps-current), C4 (single-str
     writeFileSync(join(buildDir(dir, 'older'), 'intent.md'), `${PLAN_INTENT}\n`)
     writeSettings(dir, 'true')
     const { code, stderr } = await captureIoAsync(() => runCheck(dir))
-    expect(code).toBe(1)
-    expect(stderr).toBe(
-      'plumbbob: .plumbbob/builds/older/plan.json is behind its intent.md; run `plumbbob export older` to bring it current.\n',
-    )
+    expect(code).toBe(0)
+    expect(stderr).toBe('')
+    expect(readSummary(dir).checks.map((c) => c.name)).toEqual(['true'])
   })
 })
 

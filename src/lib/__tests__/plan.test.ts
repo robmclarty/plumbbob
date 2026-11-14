@@ -102,7 +102,25 @@ describe('derivePlan', () => {
       '   - after: 1-3',
     ].join('\n')
     const plan = derive(intent({ steps }))
-    expect(plan.steps.map((s) => s.depends_on)).toEqual([[], [], ['step-2'], ['step-1', 'step-2', 'step-3']])
+    expect(plan.steps.map((s) => s.depends_on)).toEqual([[], [], ['step-1', 'step-2'], ['step-1', 'step-2', 'step-3']])
+  })
+
+  it('makes a step with no after line wait on every branch an earlier after line opened', () => {
+    const steps = [
+      '1. [ ] a, **done when:** ok',
+      '   - seam: `a.ts`',
+      '2. [ ] b, **done when:** ok',
+      '   - seam: `b.ts`',
+      '3. [ ] c, **done when:** ok',
+      '   - seam: `c.ts`',
+      '   - after: 1',
+      '4. [ ] d, **done when:** ok',
+      '   - seam: `d.ts`',
+      '5. [ ] e, **done when:** ok',
+      '   - seam: `e.ts`',
+    ].join('\n')
+    const plan = derive(intent({ steps }))
+    expect(plan.steps.map((s) => s.depends_on)).toEqual([[], ['step-1'], ['step-1'], ['step-2', 'step-3'], ['step-4']])
   })
 
   it('keeps an after number the plan lacks, for the plan checks to name', () => {
