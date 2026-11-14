@@ -1,5 +1,5 @@
 {
-  "protocol": "runciter.plan/1",
+  "protocol": "runciter.plan/2",
   "build": { "id": "2026-11-12-rate-limit-the-api", "title": "Rate-limit the API" },
   "source": {
     "path": ".plumbbob/builds/2026-11-12-rate-limit-the-api/intent.md",

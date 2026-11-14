@@ -50,7 +50,7 @@ function derive(text: string): Plan {
 describe('derivePlan', () => {
   it('fills the build, source, and plan-wide fields from the intent', () => {
     const plan = derive(intent({ steps: THREE }))
-    expect(plan.protocol).toBe('runciter.plan/1')
+    expect(plan.protocol).toBe('runciter.plan/2')
     expect(plan.build).toEqual({ id: 'rate-limit', title: 'Rate-limit the API' })
     expect(plan.source).toEqual({ path: '.plumbbob/builds/rate-limit/intent.md', sha256: SHA })
     expect(plan.contract_paths).toEqual([])
@@ -79,7 +79,9 @@ describe('derivePlan', () => {
       effort: null,
       done_when: 'the type is exported',
       context: [],
+      landed: true,
     })
+    expect(plan.steps.map((s) => s.landed)).toEqual([true, false, false])
   })
 
   it('follows the build order for the serial default, and lists steps in plan-number order', () => {
@@ -202,8 +204,9 @@ describe('serializePlan', () => {
       'effort',
       'done_when',
       'context',
+      'landed',
     ])
-    expect(text).toContain('\n  "protocol": "runciter.plan/1",\n')
+    expect(text).toContain('\n  "protocol": "runciter.plan/2",\n')
     expect(text).toContain('"effort": null')
   })
 

@@ -4,7 +4,7 @@
   "properties": {
     "protocol": {
       "type": "string",
-      "const": "runciter.plan/1"
+      "const": "runciter.plan/2"
     },
     "build": {
       "type": "object",
@@ -145,6 +145,10 @@
             "items": {
               "type": "string"
             }
+          },
+          "landed": {
+            "default": false,
+            "type": "boolean"
           }
         },
         "required": [

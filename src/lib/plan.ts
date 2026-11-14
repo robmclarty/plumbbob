@@ -1,4 +1,4 @@
-// The plan as data: intent.md derived into runciter's `runciter.plan/1`, the
+// The plan as data: intent.md derived into runciter's `runciter.plan/2`, the
 // shape its scheduler reads as `plan.json`. Runciter owns the shape; this
 // module only writes it, from facts plumbbob already parses (the steps, their
 // seams and lines, the build order, the ranges, the decisions and constraints).
@@ -9,12 +9,12 @@ import { orderSteps, parseBuildOrder, parseBuildRanges, parseSteps } from './ori
 import { expandStepList, hasStep } from './steplist.ts'
 
 /** The contract's protocol tag. */
-const PLAN_PROTOCOL = 'runciter.plan/1'
+const PLAN_PROTOCOL = 'runciter.plan/2'
 
 /** Where the scheduler stops for a person, after a step lands. */
 export type PlanStop = 'none' | 'planned' | 'structural'
 
-/** One step of `runciter.plan/1`, its keys in the contract's order. */
+/** One step of `runciter.plan/2`, its keys in the contract's order. */
 export type PlanStep = {
   readonly id: string
   readonly title: string
@@ -25,9 +25,10 @@ export type PlanStep = {
   readonly effort: StepEffort | null
   readonly done_when: string
   readonly context: ReadonlyArray<string>
+  readonly landed: boolean
 }
 
-/** A whole `runciter.plan/1` object, its keys in the contract's order and every default written out. */
+/** A whole `runciter.plan/2` object, its keys in the contract's order and every default written out. */
 export type Plan = {
   readonly protocol: typeof PLAN_PROTOCOL
   readonly build: { readonly id: string; readonly title: string }
@@ -86,9 +87,10 @@ function waitsInOrder(
 }
 
 /**
- * Derive `runciter.plan/1` from an intent's text.
+ * Derive `runciter.plan/2` from an intent's text.
  *
- * Every step exports, landed or not, in plan-number order. A step depends on
+ * Every step exports in plan-number order, a ticked one marked `landed` so
+ * the scheduler never builds it again. A step depends on
  * what its `after:` line names, or else on everything before it in build
  * order, so a plan with no `after:` line exports fully serial, and a step
  * that says nothing never runs beside a step before it. The last step of each
@@ -158,6 +160,7 @@ export function derivePlan(input: {
       effort: fields.fields.effort,
       done_when: meta.doneWhen,
       context: fields.fields.notes,
+      landed: step.done,
     })
     facts.push({ n: step.n, done: step.done, position: ordered.findIndex((s) => s === step), after: afters.get(step.n) ?? null })
   }
@@ -206,6 +209,7 @@ export function serializePlan(plan: Plan): string {
       effort: s.effort,
       done_when: s.done_when,
       context: s.context,
+      landed: s.landed,
     })),
   }
   return `${JSON.stringify(ordered, null, 2)}\n`

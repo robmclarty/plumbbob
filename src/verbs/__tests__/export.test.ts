@@ -42,7 +42,7 @@ describe('export', () => {
     const { dir, slug } = await started()
     const r = captureIo(() => exportPlan(dir, []))
     expect(r.code).toBe(0)
-    expect(r.stdout).toBe(`**Exported**: .plumbbob/builds/${slug}/plan.json (2 steps, runciter.plan/1)\n`)
+    expect(r.stdout).toBe(`**Exported**: .plumbbob/builds/${slug}/plan.json (2 steps, runciter.plan/2)\n`)
 
     const text = readFileSync(join(buildDir(dir, slug), 'plan.json'), 'utf8')
     const plan = JSON.parse(text)

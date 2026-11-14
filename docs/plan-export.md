@@ -8,9 +8,9 @@ to be said out loud: which step waits on which, where the work stops for a perso
 hard each step should be worked.
 
 `plan.json` is the plan said out loud. It sits beside a build's `intent.md`, in the shape
-runciter's scheduler reads, `runciter.plan/1`, and it is derived from `intent.md` every
+runciter's scheduler reads, `runciter.plan/2`, and it is derived from `intent.md` every
 time, never written by hand. Runciter owns that shape (its
-`docs/plan-protocol.md`, approved at commit `9b40f0f`); plumbbob only writes it. This page gives the three step lines
+`docs/plan-protocol.md`, `/1` approved at commit `9b40f0f` and `/2` on 2026-11-13); plumbbob only writes it. This page gives the three step lines
 the export reads, what a step exports when it has none of them, how every other field is
 filled, the checks a plan must pass before anything is written, and what keeps the file
 current once it exists.
@@ -35,7 +35,7 @@ A worked step, from a plan where step 4 waits on steps 2 and 3 but not on whatev
 order puts before it:
 
 ```markdown
-4. [ ] feat(plan): derive runciter.plan/1 from intent.md, **done when:** `derivePlan` turns an intent into the contract's object, and the vendored example round-trips
+4. [ ] feat(plan): derive runciter.plan/2 from intent.md, **done when:** `derivePlan` turns an intent into the contract's object, and the vendored example round-trips
    - seam: `src/lib/plan.ts`, `src/lib/__tests__/plan.test.ts`
    - model: opus (the contract's shape, where a wrong default is a parallel run)
    - after: 2-3
@@ -49,14 +49,15 @@ It exports as:
 ```json
 {
   "id": "step-4",
-  "title": "feat(plan): derive runciter.plan/1 from intent.md",
+  "title": "feat(plan): derive runciter.plan/2 from intent.md",
   "range": "2",
   "depends_on": ["step-2", "step-3"],
   "seam": ["src/lib/plan.ts", "src/lib/__tests__/plan.test.ts"],
   "stop": "structural",
   "effort": "high",
   "done_when": "`derivePlan` turns an intent into the contract's object, and the vendored example round-trips",
-  "context": ["vendor the schema and the example from runciter at `9b40f0f`."]
+  "context": ["vendor the schema and the example from runciter at `9b40f0f`."],
+  "landed": false
 }
 ```
 
@@ -114,7 +115,7 @@ same context `plumbbob agent` hands one today ([D139 (field-mapping)](decisions.
 
 | Field | From |
 | --- | --- |
-| `protocol` | always `runciter.plan/1` |
+| `protocol` | always `runciter.plan/2` |
 | `build.id`, `build.title` | the build's slug, and the title on `intent.md`'s first line |
 | `source` | `intent.md`'s repo-relative path, and the sha256 of its bytes |
 | `contract_paths` | always `[]`; contract paths and `contract.lock` are later work |
@@ -125,17 +126,22 @@ same context `plumbbob agent` hands one today ([D139 (field-mapping)](decisions.
 | `steps[].seam` | the step's seam tokens, as the strict seam parse reads them |
 | `steps[].done_when` | the step's **done when:** text |
 | `steps[].context` | the step's `- note:` lines, verbatim, in order |
+| `steps[].landed` | `true` when the step's box is ticked, `false` when it is not |
 
 A step's id is its number because plumbbob numbers a step for life: `plumbbob order`
 rewrites the sequence in `## Build order` and never renumbers a step, so the id is as stable
 as the number. Every step exports, landed or not, in plan-number order
-([D140 (every-step)](decisions.md#d140)). The contract has no field for a landed step, and a
-`plan.json` that dropped the landed ones would rewrite the dependency graph under the
-person's feet.
+([D140 (every-step)](decisions.md#d140)). A `plan.json` that dropped the landed ones would
+rewrite the dependency graph under the person's feet, so a ticked step exports with
+`landed: true` instead, and the scheduler never builds it: a step that waits on it may start
+at once, and its stop is not taken again. That is what lets a person build the first range
+with plumbbob and hand the rest over. `runciter.plan/1` had no such field, and a scheduler
+reading it would have built the landed steps again; `/2` exists for this one field.
 
 The file is written one way ([D144 (bytes-compare)](decisions.md#d144)): two-space JSON,
 keys in the contract's order (the order the table above lists them in, and within a step
-`id`, `title`, `range`, `depends_on`, `seam`, `stop`, `effort`, `done_when`, `context`),
+`id`, `title`, `range`, `depends_on`, `seam`, `stop`, `effort`, `done_when`, `context`,
+`landed`),
 every default written out, and a trailing newline. "Current" means its bytes equal a fresh
 derivation's.
 
@@ -301,8 +307,9 @@ failing check named `plan`, its lines in `.check/plan.txt`, so a pause's check r
 
 ## Conformance
 
-The JSON Schema and the example are copied byte for byte from runciter at `9b40f0f` into
-`test/contract/runciter-plan/`, with a README naming the commit and the source paths
+The JSON Schema and the example are copied byte for byte from runciter into
+`test/contract/runciter-plan/` (first at `9b40f0f`, again on 2026-11-13 for `/2`), with a
+README naming where they came from
 ([D148 (vendored-contract)](decisions.md#d148)); runciter is private and unpublished, so
 the test cannot import it. The tests validate every derived plan against that schema with
 `ajv`, a dev dependency the CLI never imports

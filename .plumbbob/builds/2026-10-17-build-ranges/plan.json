@@ -1,5 +1,5 @@
 {
-  "protocol": "runciter.plan/1",
+  "protocol": "runciter.plan/2",
   "build": {
     "id": "2026-10-17-build-ranges",
     "title": "Build ranges"
@@ -54,7 +54,8 @@
       "done_when": "`spike-01-task-notice.md` in this build folder records, on the Claude Code version it names, the `UserPromptSubmit` stdin verbatim (paths trimmed) for a typed prompt, a background Bash job's completion notice, a Monitor event, and a background subagent's completion notice; says whether each one ticks `TURN` and rewrites `GRANT` today, and whether its turn ends on a Stop hook; names the field or the prompt prefix that tells a notice from a typed prompt, or says plainly that nothing does; and closes on a verdict for step 2",
       "context": [
         "the evidence so far is two build logs from this week. Fascicle's step 12 detail reads \"`TURN` was last written at 21:28, when the background Stryker run for step 10 reported back\", and checkride's step 49 detail reads \"their task notifications went through the prompt hook as turns\". The hook reads only the payload's `prompt` field (`src/verbs/turn.ts:151`); a notice probably arrives as a prompt that opens on `<task-notification>`, but nothing has captured one. Reuse the said-once spike's rig (`.plumbbob/builds/2026-10-08-said-once-said-whole/spike-01-stop-hook.md:30`): a small Node probe as the hook, a throwaway repo ([C6 (temp-repo-dogfood)](#c6)), and the TUI under `expect` with the parent's `CLAUDE_*` variables stripped, since headless `claude -p` ticks the hook at about session end (`test/evals/helpers/driver.ts:212`)."
-      ]
+      ],
+      "landed": true
     },
     {
       "id": "step-2",
@@ -78,7 +79,8 @@
       "done_when": "a prompt the spike's rule marks as a notice leaves `TURN` and `GRANT` as they were, clears `RELAY` ([D15 (notice-clears-relay)](#d15)), and emits no in-flight nudge, while a typed prompt ticks, mints, clears, and nudges as it does today; `turn.test.ts` replays the spike's captured payloads; `relay.test.ts` shows a notice after a shown pause letting its turn end, and an ending printed after the notice still checked; `docs/decisions.md` records the rule as the next free number, merging [D11 (notice-not-turn)](#d11) and [D15 (notice-clears-relay)](#d15) with their *because*, amending plumbbob [D64 (approval-latch)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d64) and plumbbob [D65 (human-typed-grants)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d65); `docs/cli-reference.md`'s `turn` entry and the `TURN` row in `docs/state-and-git.md` say a notice is not a turn; and `pnpm check` is green",
       "context": [
         "[D11 (notice-not-turn)](#d11) and [D15 (notice-clears-relay)](#d15) govern it. The check belongs at the top of `applyTurn` (`src/verbs/turn.ts:88`), so the tick, the grant, and the nudge skip together and `RELAY` clears in the same branch; `clearRelay` joins `clearPause` in `src/lib/sidecar.ts`, which owns the destructive writes. A failed read still exits 0 ([C2 (hooks-never-wedge)](#c2)). If step 1 finds nothing that tells a notice apart, this step becomes `docs(build): run long jobs in the foreground during a range`, its seam narrows to `skills/build/SKILL.md` and `docs/decisions.md`, and the decision records the latch's exposure as an open risk."
-      ]
+      ],
+      "landed": true
     },
     {
       "id": "step-3",
@@ -106,7 +108,8 @@
       "done_when": "`src/lib/steplist.ts` parses a step expression (a number, a span `N-M` with N ≤ M, or numbers and spans joined by commas, such as `20,5-9`) into the plan numbers it names, writes a list of steps back as an expression in the order given, folding each ascending run into a span, and refuses anything else; `/plumbbob:build 20,5-9` mints a `GRANT` naming exactly that set, and so does `/plumbbob:build 20, 5-9` ([D16 (list-reading)](#d16)); a plain span mints the same way, and bare numbers alone mint nothing; the latch lands a member, refuses any other step with a message naming the range, and still honors an old `range M` grant with its ceiling ([C8 (old-grants-land)](#c8)); `plumbbob build` names the last undone member in build order as the range's top; `plumbbob build 20,5-9` refuses the way `plumbbob build 1-3` does; `status --invoked` points a list at its first undone step in build order, however it is written; `armGrant` and contract 4 arm what the hook now mints; and `pnpm check` is green",
       "context": [
         "[D12 (step-list-grants)](#d12) and [D16 (list-reading)](#d16) govern it, and [D5 (one-grammar)](#d5) puts the grammar in its own pure module, so the hook, the latch, and step 6's parser read one thing. It replaces the token scan in `grantFromPrompt` (`src/verbs/turn.ts:119`), `Grant`, `parseGrant`, and the range row of `evaluateLatch` (`src/lib/latch.ts:27`, `:109`, `:92`), `lastGrantedNotice` and the range refusal (`src/verbs/build.ts:145`, `:39`), and `parseRequestedStep` (`src/lib/orient.ts:494`), which reads only the raw text, so finding a list's first undone step in build order moves into `orient` (`:574`), where the steps are. Store the set as its normalized expression (`steps 5-9,20`), never expanded, so `1-100000` stays one short line. A range walks in build order and halts before any step it does not name, the same halt a step past the top takes today."
-      ]
+      ],
+      "landed": true
     },
     {
       "id": "step-4",
@@ -134,7 +137,8 @@
       "done_when": "`skills/build/SKILL.md`'s range section says a range may list its steps, starts at its first undone step in build order however it is written ([D16 (list-reading)](#d16)), walks them in build order, lands each, and halts before any step it does not name, in place of the advice to build a re-sequenced stretch step by step; the skill's description names the list form; `docs/decisions.md` records the rule as the next free number, merging [D12 (step-list-grants)](#d12) and [D16 (list-reading)](#d16) with their *because*, and plumbbob [D85 (range-top-lands)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d85) carries a dated revision note; every copy of the range form in `skills/verify/SKILL.md`, `docs/cli-reference.md`, `docs/state-and-git.md`, `docs/skills-reference.md`, `docs/glossary.md`, `docs/happy-path.md`, `README.md`, and `site/` matches; and `pnpm check` is green",
       "context": [
         "the range section opens at `skills/build/SKILL.md:305`, and its last bullet (`:331`) is the advice this replaces. The `GRANT` row in `docs/state-and-git.md:62` and `docs/cli-reference.md:586` names what a grant holds."
-      ]
+      ],
+      "landed": true
     },
     {
       "id": "step-5",
@@ -153,7 +157,8 @@
       "done_when": "`docs/presentation.md` specifies, in the shape [D13 (card-shape)](#d13), [D17 (range-model)](#d17), and [D18 (scaffold-range)](#d18) settle, the exact strings of the range segment beneath Next Up (at the plan pause, the plan commit, a step pause, and a boundary), the bracket's model while a range is suggested, the Stop part on the boundary where a range's last step lands, the dashboard's ranges block with its drift rows, and the template's placeholder range, and says none of them renders for a plan without the section ([D9 (informative-only)](#d9)); `docs/decisions.md` records the build ranges at the next free numbers, merging [D1 (plan-holds-ranges)](#d1) through [D10 (drift-reported)](#d10) with [D13 (card-shape)](#d13), [D14 (auto-and-stops)](#d14), [D17 (range-model)](#d17), and [D18 (scaffold-range)](#d18), and plumbbob [D86 (build-order)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d86) carries a dated revision note for the note line's new segment; this build's own `## Build ranges` section is rewritten in whatever grammar the spec settles; and `pnpm check` is green",
       "context": [
         "the note line's spec sits at `docs/presentation.md:497` to `:515`, the ending's fixed order at `:767`, and the tiers at `:626`. `Stop` is the working label; settle it here. The relay check reads whatever labeled parts the printed block has, so a new label needs nothing from it, but the eval's anatomy reader lists each tier's parts (`test/evals/helpers/anatomy.ts:65`), and step 8 adds `Stop` there as a part a boundary may carry."
-      ]
+      ],
+      "landed": true
     },
     {
       "id": "step-6",
@@ -171,7 +176,8 @@
       "done_when": "a pure parser in `src/lib/orient.ts` reads `## Build ranges` into ranges (the item number, the step expression through `src/lib/steplist.ts`, whether it is bare, the stop text with wrapped lines joined, the optional model, and the opener's line); a second pure function, given the ranges and the steps in build order, names the range holding a given step, the command that runs what is left of it from that step, written in build order ([D16 (list-reading)](#d16)), the range a given step's landing completed, and every range [D10 (drift-reported)](#d10) flags, each with its reason; an item whose command or stop still holds a `<...>` fill-in is scaffold, neither a range nor a report, and the coverage check runs only once a real range parses ([D18 (scaffold-range)](#d18)); any other malformed item is skipped and reported, never thrown; a plan without the section, or with only the placeholder step 5 fixed, yields no ranges and no drift; unit tests cover each, under document order and under a re-sequenced build order; and `pnpm check` is green",
       "context": [
         "the shape follows `parseSteps` and `parseBuildOrder` (`src/lib/orient.ts:141`, `:185`), which read their sections through `sectionLines`. What is left counts only undone steps and comes back in build order through `steplist`'s writer; one step left of a landing range is written `M-M`, which lands it ([D3 (form-says-where)](#d3)), and a bare range stays bare. Checkride's real case makes a good fixture: steps 48 to 57 with step 76 between 51 and 52 in the build order flag a range written `48-57` and pass one written `48-57,76`."
-      ]
+      ],
+      "landed": true
     },
     {
       "id": "step-7",
@@ -190,7 +196,8 @@
       "done_when": "the note beneath Next Up carries the range segment step 5 specified at the plan pause, the plan commit, a step pause, and a boundary, and stays exactly as it is today for a plan without ranges; while the note suggests a range, the bracket's bold model is the range's ([D17 (range-model)](#d17)); a flagged range gets the re-cut wording instead of a command; the driver pointer stays one line; handoff's and checkpoint's tests pin each case; and `pnpm check` is green",
       "context": [
         "every caller gets the segment through `nextUpNote` (`src/verbs/handoff.ts:780`): the plan pause at `:164`, the fresh-session pointer at `:197`, the step pause at `:261`, and `boundaryEnding` at `:349`, which both the checkpoint and the plan commit print. `driverPointer` (`:447`) calls `nextUpLine` alone and stays that way. The bracket is built in `nextUpLine` (`:810`), which now needs the range as well as the step."
-      ]
+      ],
+      "landed": true
     },
     {
       "id": "step-8",
@@ -215,7 +222,8 @@
       "done_when": "the boundary ending carries the Stop part step 5 specified, between the advisories and Next Up, when the step that just landed completes a range that lands its steps, and never for a bare range or a plan without ranges; `checkpoint` and a later `handoff` at the same boundary print it the same way; `ending` places it; the anatomy reader accepts it on a boundary; `relay` passes a boundary relayed whole with its Stop part and holds one that dropped it; tests pin each; and `pnpm check` is green",
       "context": [
         "`boundaryEnding` (`src/verbs/handoff.ts:345`) returns the Verdict and the pointer today; the stop joins them, and `checkpoint` passes it into `ending` (`src/verbs/checkpoint.ts:161`, `src/lib/notice.ts:143`). A range completes when its last undone step lands, whichever step that is, so a step landed by hand inside a range still earns the line when it finishes the range."
-      ]
+      ],
+      "landed": true
     },
     {
       "id": "step-9",
@@ -237,7 +245,8 @@
       "done_when": "`plumbbob status` renders step 5's ranges block beneath the step list, with the range in progress marked and each range's command and stop, a row for every range [D10 (drift-reported)](#d10) flags, and a `next →` that names the range's command when the next step sits in one; a plan without ranges renders exactly as today; `recover` reports a range naming a step the plan lacks, beside its build-order finding; tests pin each; and `pnpm check` is green",
       "context": [
         "`formatOrientation` (`src/lib/orient.ts:1248`) renders the build order row at `:1296`, and `nextMove` (`:519`) writes `next →`. `recover`'s `orderFindings` (`src/verbs/recover.ts:150`) is the model for the new finding. The build skill injects this dashboard, so the model building a bare range's step sees its stop text there, which is how that pause's recommendation gets to speak to it."
-      ]
+      ],
+      "landed": true
     },
     {
       "id": "step-10",
@@ -256,7 +265,8 @@
       "done_when": "under an `--auto` grant, `plumbbob build` entering a step the ranges name as a bare range says the step ends at its pause and the call there is the human's; the build skill's `--auto` halt list gains that halt at the decision tier; a typed range is unchanged, and so is `--auto` on a plan without ranges; tests pin each; and `pnpm check` is green",
       "context": [
         "the notice joins `lastGrantedNotice` (`src/verbs/build.ts:145`), which already names the last step a grant reaches; the halt list it feeds is at `skills/build/SKILL.md:281`. [D14 (auto-and-stops)](#d14) governs it: the halt is the notice's and the skill's, never the latch's."
-      ]
+      ],
+      "landed": true
     },
     {
       "id": "step-11",
@@ -276,7 +286,8 @@
       "done_when": "`templates/intent.md` carries `## Build ranges` after `## Build order`, with guidance in the template's italic-paragraph form and the placeholder item step 5 fixed, which reads as scaffold ([D18 (scaffold-range)](#d18)); `skills/plan/SKILL.md` has the plan author the section with the steps (a range stops where [D7 (plan-places-stops)](#d7) says and nowhere else, a bare build for a call that has to be made before its step lands, a model per range, and sized to the work, so a plan of two or three steps may carry one range or none), presents it at the plan pause, and adds two items to the cold read's lens: a range that runs through a call the plan leaves open, and a range that stops where no call is due; a fresh `start` shows no ranges on the dashboard; a `/plumbbob:plan` run on a small spec in a `mktemp -d` repo, with this repo loaded as the plugin the way the eval driver loads it (one `claude -p` session), writes a section that `plumbbob status` reads with every step in one range and no drift row; and `pnpm check` is green",
       "context": [
         "the three hand-written sections under [Prior art](#prior-art) are the worked examples: one sentence on how to drive the build, then one item per range. Checkride's \"what each range should watch for\" fits a range's own `- note:` sub-line, which the CLI leaves alone ([D2 (range-grammar)](#d2))."
-      ]
+      ],
+      "landed": true
     },
     {
       "id": "step-12",
@@ -298,7 +309,8 @@
       "done_when": "`/plumbbob:step`, `/plumbbob:refine`, and `/plumbbob:harvest` put a step they add into a range and re-cut a range their edits break; `/plumbbob:refine ranges` re-cuts the whole section on request; `/plumbbob:order`, which edits nothing, reads the dashboard after writing and names `/plumbbob:refine` when a range broke; `/plumbbob:build` says a range's Stop part is relayed with the rest of the checkpoint's block, that a bare range's pause recommendation speaks to the range's stop, and that the parks a range piled up are harvested at its stop; `/plumbbob:status` says the dashboard lists the ranges; and `pnpm check` is green",
       "context": [
         "each skill already teaches `plumbbob order` for a step that has to land early (step `:53`, refine `:56`, harvest `:50`), and the range rule rides beside it. Checkride's \"Between ranges\" list is the source for the build skill's lines: harvest once a range lands, since no harvest runs between the steps inside one, and after an early stop, settle the step and rerun what is left, which the card now names."
-      ]
+      ],
+      "landed": true
     },
     {
       "id": "step-13",
@@ -323,7 +335,8 @@
       "done_when": "`docs/cli-reference.md` describes the range segment, the Stop part, the dashboard block, and `recover`'s finding; `docs/happy-path.md` shows a range typed from the card and the stop it lands on; `docs/skills-reference.md`, `docs/glossary.md` (a **Build ranges** entry), `docs/techniques.md`, `README.md`, and `site/` say what the section is and who writes it; every copy matches what the CLI renders; and `pnpm check` is green",
       "context": [
         "Next Up and its note are described at `docs/cli-reference.md:166` to `:169`, and the loop is illustrated in `docs/happy-path.md`'s section 3 (`:166`)."
-      ]
+      ],
+      "landed": true
     }
   ]
 }

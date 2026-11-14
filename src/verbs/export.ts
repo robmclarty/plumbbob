@@ -1,5 +1,5 @@
 // `plumbbob export [<slug>]`: write a build's plan as data, `plan.json` beside
-// its intent.md, in the shape runciter's scheduler reads (`runciter.plan/1`).
+// its intent.md, in the shape runciter's scheduler reads (`runciter.plan/2`).
 // The derivation and its checks run through src/lib/planfile.ts, which reads
 // intent.md and the tree; this verb writes the result only when nothing fails,
 // since a scheduler acting on a plan that fails a check would run two steps at
@@ -60,7 +60,7 @@ export function exportPlan(cwd: string, args: ReadonlyArray<string>): number {
   process.stdout.write(
     transition({
       label: 'Exported',
-      fact: `${relative(root, out).split(sep).join('/')} (${steps} ${steps === 1 ? 'step' : 'steps'}, runciter.plan/1)`,
+      fact: `${relative(root, out).split(sep).join('/')} (${steps} ${steps === 1 ? 'step' : 'steps'}, runciter.plan/2)`,
     }),
   )
   return 0

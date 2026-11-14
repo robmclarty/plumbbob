@@ -1,4 +1,4 @@
-// plumbbob writes `plan.json` in runciter's shape, `runciter.plan/1`, and
+// plumbbob writes `plan.json` in runciter's shape, `runciter.plan/2`, and
 // runciter owns that shape. This pins conformance against the contract itself:
 // the JSON Schema and the example vendored byte for byte from runciter (see
 // runciter-plan/README.md), validated with ajv rather than a hand check that
@@ -88,7 +88,7 @@ const DERIVED: ReadonlyArray<readonly [string, unknown]> = [
   ],
 ]
 
-describe('plan.json conforms to runciter.plan/1', () => {
+describe('plan.json conforms to runciter.plan/2', () => {
   it.each(DERIVED)('%s validates against the vendored schema', (_label, derived) => {
     expect(validate(derived), JSON.stringify(validate.errors)).toBe(true)
   })
@@ -102,6 +102,11 @@ describe('plan.json conforms to runciter.plan/1', () => {
     expect(validate(copy), JSON.stringify(validate.errors)).toBe(true)
     expect(planRules(copy.steps)).toEqual([])
     expect(copy).toEqual(EXAMPLE)
+  })
+
+  it('marks a ticked step landed and every other step not', () => {
+    const derived = DERIVED[0]?.[1] as { steps: { landed: boolean }[] }
+    expect(derived.steps.map((s) => s.landed)).toEqual([true, false, false])
   })
 
   it('the rules catch what the schema cannot', () => {

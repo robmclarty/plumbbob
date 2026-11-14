@@ -1914,8 +1914,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
 
 - <a id="d140"></a>**D140 (every-step): The export carries every step, landed or not, in plan-number order.**
   *because* the contract has no field for a landed step, and a `plan.json` that dropped them would rewrite the
-  dependency graph under the person's feet; the gap is raised with runciter before its scheduler ships. *Tagged in*
-  `docs/plan-export.md`.
+  dependency graph under the person's feet; the gap is raised with runciter before its scheduler ships. (Revised
+  2026-11-13: the contract is `runciter.plan/2`, which gives a step `landed`. A ticked step exports
+  `landed: true`, so a scheduler handed a partly built build skips what is built rather than building it again;
+  every step still exports.) *Tagged in* `docs/plan-export.md`.
 
 - <a id="d141"></a>**D141 (strict-fields): A malformed `- after:`, `- stop:` or `- effort:` line, or two of a kind on
   one step, is a finding that names the step, never a guess.** *because* the seam parse already refuses rather than
@@ -1952,7 +1954,8 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
 - <a id="d148"></a>**D148 (vendored-contract): runciter's JSON Schema and example are copied byte for byte into
   `test/contract/runciter-plan/`, with a README naming commit `9b40f0f` and the source paths.** *because* runciter
   is private and unpublished, so the test can't import it, and a named commit says which version a refreshed copy
-  replaces. *Tagged in* `docs/plan-export.md`.
+  replaces. (Revised 2026-11-13: both files copied again for `runciter.plan/2`; the README says so.) *Tagged in*
+  `docs/plan-export.md`.
 
 - <a id="d149"></a>**D149 (opt-in-by-presence): A build writes `plan.json` only once `plumbbob export` has run on
   it.** From then on the CLI keeps it current and the drift check applies; a build without one is untouched.

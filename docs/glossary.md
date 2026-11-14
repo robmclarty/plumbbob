@@ -36,7 +36,7 @@ word up without reading the others first. Each entry points at the page that own
   builder should work. A plan with none of them exports fully serial.
   → [`plan-export.md`](plan-export.md#the-three-step-lines)
 - **`plan.json`**: the build's plan as data, written beside `intent.md` by
-  `plumbbob export` in `runciter.plan/1`, the shape runciter's scheduler reads. A build
+  `plumbbob export` in `runciter.plan/2`, the shape runciter's scheduler reads. A build
   has one only once it has been exported; from then on the CLI keeps it current on its
   own writes, and `plumbbob check` fails when any other edit leaves it behind.
   → [`plan-export.md`](plan-export.md)

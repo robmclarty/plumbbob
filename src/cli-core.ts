@@ -235,11 +235,11 @@ const VERBS: ReadonlyArray<Verb> = [
   },
   {
     name: 'export',
-    description: "write the build's plan as data: plan.json beside intent.md, in runciter.plan/1",
+    description: "write the build's plan as data: plan.json beside intent.md, in runciter.plan/2",
     synopsis: ['export [<slug>]'],
     args: [{ name: '<slug>', gloss: 'the build folder to export (default: the active build); a finished build too' }],
     notes:
-      "Derives `runciter.plan/1` from intent.md, runs the contract's three plan rules and plumbbob's four plan checks over it, and writes `.plumbbob/builds/<slug>/plan.json`. On any failure it prints each finding and the tally, writes nothing, and exits 1. Refuses (exit 1) outside a repo, with no build to name, or a folder with no intent.md. See docs/plan-export.md.",
+      "Derives `runciter.plan/2` from intent.md, runs the contract's three plan rules and plumbbob's four plan checks over it, and writes `.plumbbob/builds/<slug>/plan.json`. On any failure it prints each finding and the tally, writes nothing, and exits 1. Refuses (exit 1) outside a repo, with no build to name, or a folder with no intent.md. See docs/plan-export.md.",
   },
   {
     name: 'harvest',
