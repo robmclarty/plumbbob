@@ -222,6 +222,15 @@ Read the failing slots the gate printed; each names its raw output under `.check
 not pause: there is nothing to approve until it is green. Narrow the loop while
 iterating: `plumbbob check --bail --only types,lint`.
 
+### `checkpoint` refuses because the proof is red
+
+**Cause.** The step's `- proof:` line opens on a command in backticks, and `checkpoint`
+ran it behind the green gate and it exited non-zero. Nothing was recorded: no commit, no
+ledger line, no flipped box. **Fix.** Read the command's output in `.check/proof.txt`, fix
+the code, and checkpoint again. When the opening code span was never meant as a command
+(a file path, a function call), the proof is a manual one written in the command's place:
+reword the line so it opens on words, and the checkpoint runs nothing.
+
 ### The check gate refuses with "found nothing to check"
 
 **Cause.** No `check` setting is configured, so the gate is checkride ([**D24 (configurable-check)**](decisions.md#d24)/[**D32 (checkride-gate)**](decisions.md#d32)),

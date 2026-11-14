@@ -59,6 +59,9 @@ import {
 import { blocks, cell, notice, printEnding, type StateRow, stateTable } from '../lib/notice.ts'
 import { hasStep } from '../lib/steplist.ts'
 import { isArtifactPath, parseStepSeam } from '../lib/intent.ts'
+import { reachFor } from '../lib/reach.ts'
+import { readReach } from '../lib/reachfile.ts'
+import { readProofRun } from '../lib/check.ts'
 import { rerootLinks } from '../lib/links.ts'
 import { type SeamFinding, seamFindings, type Tree } from '../lib/seamcheck.ts'
 import {
@@ -128,9 +131,11 @@ import {
   remainingOrder,
   resolveRun,
   runBracket,
+  plumbRowFromDiff,
   seamRowFromDiff,
   spentRowValue,
   stopFollowUp,
+  proofRow,
   summaryCheckRow,
   type Run,
   type RunRange,
@@ -299,7 +304,7 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
       `**Next Up**: Back to ${stepPhrase(current, steps)}`,
     ])
   }
-  const { rows, work, summary, checkGreen } = measured(root, slug, intent, detail, current)
+  const { rows, work, summary, checkGreen, proofRed } = measured(root, slug, intent, detail, current)
   const { ladder, worst } = foldVerdict(rows, accruedStats(root, slug, current))
   const counts = countDiff(work)
   const changed = counts.added + counts.removed
@@ -323,7 +328,7 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     parts.push(fence('diff', patch.split('\n')).join('\n'))
   }
   parts.push(
-    yourCallBlock(current, checkGreen, cardRun(intent, current)),
+    yourCallBlock(current, checkGreen && !proofRed, cardRun(intent, current)),
     stateTable(
       stateRows({
         intent,
@@ -624,6 +629,7 @@ function rangeMeasure(root: string, slug: string | null, intent: string, range: 
     commits,
     between: span === null ? [] : commitsBetween(root, span.from, span.to, PLAN_COMMIT_MARKER),
     summary: readCheckSummary(root),
+    reach: readReach(root, slug),
   })
 }
 
@@ -1081,6 +1087,7 @@ type Measured = {
   readonly work: ReadonlyArray<NumstatEntry>
   readonly summary: CheckSummary | null
   readonly checkGreen: boolean
+  readonly proofRed: boolean
 }
 
 /**
@@ -1089,7 +1096,11 @@ type Measured = {
  * measurements where one exists (measured beats attested).
  *
  * `checkGreen` reports the *measured* check alone. A move offered on an
- * attested green would be a move the gate then refuses.
+ * attested green would be a move the gate then refuses. `proofRed` is its
+ * twin for the proof: true only when the last run of this step's proof
+ * command, as the step states it now, came back red. A run recorded for
+ * another step, for a command the proof no longer opens on, or before the
+ * gate last ran, measures nothing here and the model's attested row stands.
  */
 function measured(root: string, slug: string | null, intent: string, detail: string, step: number): Measured {
   const summary = readCheckSummary(root)
@@ -1099,14 +1110,35 @@ function measured(root: string, slug: string | null, intent: string, detail: str
   if (measuredCheck !== null) {
     rows.check = measuredCheck
   }
-  const measuredSeam = seamRowFromDiff(
-    work.map((e) => e.path),
-    seamTokens(root, slug, intent, step),
-  )
+  // With a reach stored for the step's seam as it stands, the seam row becomes
+  // the plumb split; with none, or a stale one, it is the seam row it always was.
+  const paths = work.map((e) => e.path)
+  const seam = seamTokens(root, slug, intent, step)
+  const answer = reachFor(readReach(root, slug), step, seam)
+  const measuredSeam = answer === null ? seamRowFromDiff(paths, seam) : plumbRowFromDiff(paths, seam, answer)
   if (measuredSeam !== null) {
     rows.seam = measuredSeam
   }
-  return { rows, work, summary, checkGreen: measuredCheck?.verdict === 'true' }
+  const run = readProofRun(root)
+  const command = run === null ? null : (parseSteps(intent).find((s) => s.n === step)?.proof?.command ?? null)
+  const current = run !== null && run.step === step && run.command === command && !gateRanSince(summary, run.at)
+  const measuredProof = run !== null && current ? proofRow(run) : null
+  if (measuredProof !== null) {
+    rows.proof = measuredProof
+  }
+  return { rows, work, summary, checkGreen: measuredCheck?.verdict === 'true', proofRed: measuredProof?.verdict === 'failing' }
+}
+
+/**
+ * Whether the gate has run since a proof finished at `at`. The proof runs
+ * behind a green gate, so a gate run after it means the work moved and the
+ * proof has not been asked again; either stamp missing or unreadable reads as
+ * no, and the proof stands.
+ */
+function gateRanSince(summary: CheckSummary | null, at: string): boolean {
+  const gate = Date.parse(summary?.timestamp ?? '')
+  const proof = Date.parse(at)
+  return Number.isFinite(gate) && Number.isFinite(proof) && gate > proof
 }
 
 /**
@@ -1224,6 +1256,7 @@ function spentInputs(root: string, slug: string | null, step: number, summary: C
     now: Date.now(),
     turns: turn === null || tick === null ? null : Math.max(0, turn - tick),
     redChecks: stats.redChecks ?? 0,
+    redProofs: stats.redProofs ?? 0,
     gateMs: summary?.total_duration_ms ?? null,
     driftWarnings: stats.driftWarnings ?? 0,
   }
@@ -1300,6 +1333,7 @@ function accruedStats(root: string, slug: string | null, step: number): AccruedS
   return {
     driftWarnings: stats.driftWarnings ?? 0,
     redChecks: stats.redChecks ?? 0,
+    redProofs: stats.redProofs ?? 0,
     reverts: stats.reverts ?? 0,
     outOfBand: anchor === null ? 0 : commitsSince(root, anchor, PLAN_COMMIT_MARKER),
   }
@@ -1330,7 +1364,8 @@ function readCheckSummary(root: string): CheckSummary | null {
  * directs is the fix. The expand move also names the way back to the card,
  * since an expand turn ends on the reminder and the reminder states no move.
  * `revert` comes last, because a destructive move is named rather than
- * discovered. `looks good` renders only while the measured check is green;
+ * discovered. `looks good` renders only while the measured check is green
+ * and the step's proof, where the CLI ran it, did not come back red;
  * offering a move that would refuse teaches a false ceremony.
  *
  * `run` is what `/plumbbob:run` typed at this pause names. Inside a range
@@ -1339,9 +1374,9 @@ function readCheckSummary(root: string): CheckSummary | null {
  * At a bare range's pause, and at a range's last step, it does no more than
  * `looks good`, so the block keeps its four moves.
  */
-function yourCallBlock(step: number, checkGreen: boolean, run: Run): string {
+function yourCallBlock(step: number, gateGreen: boolean, run: Run): string {
   const moves: string[] = []
-  if (checkGreen) {
+  if (gateGreen) {
     moves.push(callLine('`looks good`', `I checkpoint Step ${step}; back to the boundary`))
     if (run.ok && !run.range.bare && run.left[0] === step && run.left.length > 1) {
       moves.push(callLine('`/plumbbob:run`', `I checkpoint Step ${step}, then run the rest of range ${run.range.item} to its stop`))

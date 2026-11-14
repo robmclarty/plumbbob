@@ -20,29 +20,34 @@ grew, but its everyday job is to sharpen, not to invent.
 
 - **`/plumbbob:step` (no input) → automatic sharpen.** Re-examine the next undone step
   against the completed code, the Decisions, the Constraints, and the build-log, then
-  make the obvious revisions to its **done-when** and **seam** so it matches reality:
+  make the obvious revisions to its **proof** and **seam** so it matches reality:
   for example a file moved, a decision narrowed the scope, an earlier step already did part of
   it. This is the zero-effort "keep my next step in sync" move: if the human does
   nothing else, the next step stays current.
 - **`/plumbbob:step <what changed>` → directed revision.** Take the human's input and propose
-  the matching change: tighten the done-when, adjust the seam, split the step in two, or
+  the matching change: tighten the proof, adjust the seam, split the step in two, or
   add a new increment the plan was missing.
 
 ## What this skill does
 
 1. **Read the plan and the reality.** Read `intent.md`'s Frame, Decisions, Constraints,
    and the steps already done, plus the next undone step, to see what it *should* now be.
-2. **Propose the revision** (or the new/split step): a one-line **title**, a **done-when**
+2. **Propose the revision** (or the new/split step): a one-line **title**, a **proof**
    `/plumbbob:verify` can validate, and a **seam** (exact paths, or a `dir/` grant). Keep it
    small enough to verify in one review pass. Show the before/after so the human can see
    what you changed and why. Re-check the optional `- model:` recommendation too:
    a step that sharpened into rote work can drop to a smaller model; one that grew subtle
    earns a frontier one. Advisory, plain text (no backticks), never a gate.
 3. **Get the human's OK**, then write it into `## Steps` in the standard format:
-   `N. [ ] <title>, **done when:** <criterion>` with a `- seam:` sub-line. Keep the
+   `N. [ ] <title>` with a `- seam:` sub-line and a `- proof:` sub-line beneath it. Open
+   the proof on its command in backticks when there is one (`` - proof: `pnpm vitest run
+   limiter` passes ``): `plumbbob checkpoint` runs that opening span, and only that one, so
+   a proof no command can show opens on words instead. An older step that still carries
+   its criterion as a `**done when:**` clause on the title line reads as a proof with no
+   command; move it to a `- proof:` line when you sharpen the step. Keep the
    sharpened `<title>` a plain, single-line Conventional-Commit subject,
    `type(scope): description`; it lands in `git log` verbatim, so as the step tightens
-   keep load-bearing detail (file paths, module names) in `seam` and `done-when`,
+   keep load-bearing detail (file paths, module names) in `seam` and `proof`,
    **never jammed into the title**. A sharpened step carries its own `(scope)`
    when it touches a distinct code area, one that **overrides the build-default**
    `**Scope:**` header; drop the scope and it falls back to that default → build slug →
@@ -99,7 +104,7 @@ grew, but its everyday job is to sharpen, not to invent.
 
 ## The hard contracts
 
-- **One verifiable increment.** Each step carries a done-when `/plumbbob:verify` can check
+- **One verifiable increment.** Each step carries a proof `/plumbbob:verify` can check
   and a seam small enough to review in one pass.
 - **Edit `## Steps` only**, in the standard format `status` and `build` parse, plus the
   `## Build ranges` items the order cannot settle (a bare range of its own, a stop that
@@ -107,7 +112,7 @@ grew, but its everyday job is to sharpen, not to invent.
   rewrite it. The `## Build order` line is `plumbbob order`'s to write, never yours to
   edit, and so is a range the order re-cuts.
 - **Cite the plan's own numbers in the linked form.** A `D`/`C`/`Q` you write into a
-  step's done-when, seam, or notes reads `[D4 (default-waves)](#d4)`; the slug travels
+  step's proof, seam, or notes reads `[D4 (default-waves)](#d4)`; the slug travels
   with the number, and the link lands on the `<a id="d4">` anchor minted where the item
   was born. Never a bare `D4`; if the item you want to cite has no anchor yet, that is a
   `/plumbbob:refine` repair, not something to invent here.

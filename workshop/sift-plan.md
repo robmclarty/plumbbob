@@ -43,26 +43,33 @@ are open and the Build order line is empty.
 
 ## Steps
 
-1. [ ] feat(life): parse a shelf life written in days, **done when:** `parseLife('3d')` yields 3 days and `'3'`, `'x'` yield the refusal `a shelf life is written in days, like 3d`, under test
+1. [ ] feat(life): parse a shelf life written in days
    - seam: `src/life.ts`, `src/__tests__/life.test.ts`
+   - proof: under test, `parseLife('3d')` yields 3 days and `'3'`, `'x'` yield the refusal `a shelf life is written in days, like 3d`
    - model: haiku (one function, fully specified)
-2. [ ] feat(item): tell a live item from one past its life, **done when:** an item added at day 0 for 3d is alive at day 2 and not at day 4, and `daysLeft` reads 1 at day 2
+2. [ ] feat(item): tell a live item from one past its life
    - seam: `src/item.ts`, `src/__tests__/item.test.ts`
+   - proof: an item added at day 0 for 3d is alive at day 2 and not at day 4, and `daysLeft` reads 1 at day 2
    - model: haiku (pure arithmetic on an injected clock)
-3. [ ] feat(store): keep the list in one JSON file, **done when:** `save` then `load` through a temp dir returns the same items, and a missing file loads as an empty list
+3. [ ] feat(store): keep the list in one JSON file
    - seam: `src/store.ts`, `src/__tests__/store.test.ts`
+   - proof: a `save` then a `load` through a temp dir returns the same items, and a missing file loads as an empty list
    - model: sonnet (fs and temp dirs)
-4. [ ] feat(cli): add an item with sift add, **done when:** `main(['add','milk','--for','3d'], deps)` writes one item with a 3-day life, and `node dist/bin.js add` does the same against `SIFT_FILE`
+4. [ ] feat(cli): add an item with sift add
    - seam: `src/cli.ts`, `src/bin.ts`, `src/index.ts`, `src/__tests__/cli.test.ts`, `package.json`
+   - proof: calling `main(['add','milk','--for','3d'], deps)` writes one item with a 3-day life, and `node dist/bin.js add` does the same against `SIFT_FILE`
    - model: sonnet (argv, deps, and the bin wiring)
-5. [ ] feat(cli): print what is still alive with bare sift, **done when:** with the clock at day 5 a 3d item is absent and a 10d item prints as `call the dentist   5d left`, oldest first per [D2 (oldest-first)](#d2)
+5. [ ] feat(cli): print what is still alive with bare sift
    - seam: `src/sift.ts` (replaces the scaffold's starter), `src/cli.ts`, `src/__tests__/sift.test.ts` (replaces the smoke test)
+   - proof: with the clock at day 5 a 3d item is absent and a 10d item prints as `call the dentist   5d left`, oldest first per [D2 (oldest-first)](#d2)
    - model: sonnet (two modules meet)
-6. [ ] feat(cli): give an item the default life when --for is left off, **done when:** `sift add milk` stores the life [Q1 (default-life)](#q1) settles, under test
+6. [ ] feat(cli): give an item the default life when --for is left off
    - seam: `src/cli.ts`, `src/life.ts`, `src/__tests__/cli.test.ts`
+   - proof: under test, `sift add milk` stores the life [Q1 (default-life)](#q1) settles
    - model: haiku (one branch)
-7. [ ] feat(store): settle what happens to an item that falls off, **done when:** after bare `sift` runs past an item's life the item is gone from the list file and its fate is the one [Q2 (fall-off-fate)](#q2) settles, under test
+7. [ ] feat(store): settle what happens to an item that falls off
    - seam: `src/store.ts`, `src/sift.ts`, `src/__tests__/sift.test.ts`
+   - proof: after bare `sift` runs past an item's life the item is gone from the list file and its fate is the one [Q2 (fall-off-fate)](#q2) settles, under test
    - model: sonnet (two files change together)
 
 ## Build order
@@ -102,7 +109,7 @@ and `render(alive, now)`; `src/cli.ts` exports `main(argv, deps)` with
 
 Steps 1 to 5 landed. `D3` reads 5 days by the hand edit at `B6`; `archive-not-delete` is
 the hand edit at `B13`; `weeks-are-days` and step 8 are the harvest at `B11`, and step 8's
-done-when is as `B12` sharpened it. The Build order line reads `8, 6, 7` and range 3 is
+proof is as `B12` sharpened it. The Build order line reads `8, 6, 7` and range 3 is
 re-cut to match. The fence numbers them `D4` and `D5` as the course does; the live plan
 numbers them as they arrive, the harvest taking the next free D and the pen the one after,
 and the harvest's origin names the park's handle. On paste, renumber both lines, their
@@ -142,29 +149,37 @@ table showed in place of `P2`.
 
 ## Steps
 
-1. [x] feat(life): parse a shelf life written in days, **done when:** `parseLife('3d')` yields 3 days and `'3'`, `'x'` yield the refusal `a shelf life is written in days, like 3d`, under test
+1. [x] feat(life): parse a shelf life written in days
    - seam: `src/life.ts`, `src/__tests__/life.test.ts`
+   - proof: under test, `parseLife('3d')` yields 3 days and `'3'`, `'x'` yield the refusal `a shelf life is written in days, like 3d`
    - model: haiku (one function, fully specified)
-2. [x] feat(item): tell a live item from one past its life, **done when:** an item added at day 0 for 3d is alive at day 2 and not at day 4, and `daysLeft` reads 1 at day 2
+2. [x] feat(item): tell a live item from one past its life
    - seam: `src/item.ts`, `src/__tests__/item.test.ts`
+   - proof: an item added at day 0 for 3d is alive at day 2 and not at day 4, and `daysLeft` reads 1 at day 2
    - model: haiku (pure arithmetic on an injected clock)
-3. [x] feat(store): keep the list in one JSON file, **done when:** `save` then `load` through a temp dir returns the same items, and a missing file loads as an empty list
+3. [x] feat(store): keep the list in one JSON file
    - seam: `src/store.ts`, `src/__tests__/store.test.ts`
+   - proof: a `save` then a `load` through a temp dir returns the same items, and a missing file loads as an empty list
    - model: sonnet (fs and temp dirs)
-4. [x] feat(cli): add an item with sift add, **done when:** `main(['add','milk','--for','3d'], deps)` writes one item with a 3-day life, and `node dist/bin.js add` does the same against `SIFT_FILE`
+4. [x] feat(cli): add an item with sift add
    - seam: `src/cli.ts`, `src/bin.ts`, `src/index.ts`, `src/__tests__/cli.test.ts`, `package.json`
+   - proof: calling `main(['add','milk','--for','3d'], deps)` writes one item with a 3-day life, and `node dist/bin.js add` does the same against `SIFT_FILE`
    - model: sonnet (argv, deps, and the bin wiring)
-5. [x] feat(cli): print what is still alive with bare sift, **done when:** with the clock at day 5 a 3d item is absent and a 10d item prints as `call the dentist   5d left`, oldest first per [D2 (oldest-first)](#d2)
+5. [x] feat(cli): print what is still alive with bare sift
    - seam: `src/sift.ts` (replaces the scaffold's starter), `src/cli.ts`, `src/__tests__/sift.test.ts` (replaces the smoke test)
+   - proof: with the clock at day 5 a 3d item is absent and a 10d item prints as `call the dentist   5d left`, oldest first per [D2 (oldest-first)](#d2)
    - model: sonnet (two modules meet)
-6. [ ] feat(cli): give an item the default life when --for is left off, **done when:** `sift add milk` stores the 5 days [D3 (default-life)](#d3) settles, under test
+6. [ ] feat(cli): give an item the default life when --for is left off
    - seam: `src/cli.ts`, `src/life.ts`, `src/__tests__/cli.test.ts`
+   - proof: under test, `sift add milk` stores the 5 days [D3 (default-life)](#d3) settles
    - model: haiku (one branch)
-7. [ ] feat(store): settle what happens to an item that falls off, **done when:** after bare `sift` runs past an item's life the item is gone from the list file and present in `$SIFT_ARCHIVE` per [D4 (archive-not-delete)](#d4), under test
+7. [ ] feat(store): settle what happens to an item that falls off
    - seam: `src/store.ts`, `src/sift.ts`, `src/__tests__/sift.test.ts`
+   - proof: after bare `sift` runs past an item's life the item is gone from the list file and present in `$SIFT_ARCHIVE` per [D4 (archive-not-delete)](#d4), under test
    - model: sonnet (two files change together)
-8. [ ] feat(life): accept a shelf life written in weeks, **done when:** `parseLife('2w')` yields 14 days and `parseLife('1w')` yields 7, `'2x'` is still refused, and the refusal reads `a shelf life is written in days or weeks, like 3d or 2w`, per [D5 (weeks-are-days)](#d5), under test
+8. [ ] feat(life): accept a shelf life written in weeks
    - seam: `src/life.ts`, `src/__tests__/life.test.ts`
+   - proof: under test, `parseLife('2w')` yields 14 days and `parseLife('1w')` yields 7, `'2x'` is still refused, and the refusal reads `a shelf life is written in days or weeks, like 3d or 2w`, per [D5 (weeks-are-days)](#d5)
    - model: haiku (one branch in one function)
 
 ## Build order

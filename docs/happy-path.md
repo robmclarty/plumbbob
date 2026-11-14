@@ -49,9 +49,9 @@ Under the hood it runs `plumbbob start`, which records a baseline and drops you 
   → frame and decide in .plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md, then build a step
 ```
 
-In interview mode it proposes wording you can accept without typing ("done-when: the
+In interview mode it proposes wording you can accept without typing ("proof: the
 6th request in 60s returns 429, good?") and takes as much detail as you want to give.
-The result is a plan an agent can follow, with **every step carrying a done-when and a
+The result is a plan an agent can follow, with **every step carrying a proof and a
 seam**, and the build ranges last:
 
 ```markdown
@@ -71,14 +71,17 @@ seam**, and the build ranges last:
 - <a id="c1"></a>**C1 (no-new-deps)**: no new runtime dependencies.
 
 ## Steps
-1. [ ] feat(limiter): add a token-bucket limiter, **done when:** `test/limiter.test.ts` passes
+1. [ ] feat(limiter): add a token-bucket limiter
    - seam: `src/limiter.ts`, `test/limiter.test.ts`
+   - proof: `pnpm vitest run limiter` passes
    - model: opus (strong-assertion test authoring)
-2. [ ] feat(login): wire the limiter into POST /login, **done when:** the 6th request in 60s returns 429
+2. [ ] feat(login): wire the limiter into POST /login
    - seam: `src/routes/login.ts`, `test/login.rate.test.ts`
+   - proof: the 6th request in 60s returns 429
    - model: sonnet (mechanical wiring, fully specified)
-3. [ ] feat(config): make the limit configurable via env, **done when:** `RATE_LIMIT_MAX` overrides the default in a test
+3. [ ] feat(config): make the limit configurable via env
    - seam: `src/limiter.ts`, `src/config.ts`, `test/limiter.config.test.ts`, `.env.example`, `test/config.test.ts`
+   - proof: a test shows `RATE_LIMIT_MAX` overriding the default
 
 ## Build ranges
 
@@ -89,6 +92,10 @@ Run step 1 alone to settle how the bucket refills, then run the rest straight th
 2. `/plumbbob:build 2-3`, **stop:** try six logins yourself, then `/plumbbob:finish`
    - model: sonnet
 ```
+
+A step's proof is its finish line. Step 1's opens on a command in backticks, so
+`plumbbob checkpoint` will run it; step 2's opens on words, so it is judged at the pause
+and nothing runs.
 
 The build ranges say where the build stops for you, one item per range: the command that
 defines it, the call that ends it, and the model to run it on. A range ends where a call is
@@ -121,7 +128,7 @@ rest, and the card closes on one link to the read itself:
 | --- | --- |
 |  | **Range 1** on Opus: /plumbbob:run (step 1 to its pause) |
 
-**Recommendation**: Approve it. Every step carries a done-when a test can measure, the seams name files that exist, and each Decision states its because.
+**Recommendation**: Approve it. Every step carries a proof a test can measure, the seams name files that exist, and each Decision states its because.
 
 [more details](.plumbbob/detail.md)
 ```
@@ -158,7 +165,7 @@ prints its own close:
 ## 1. Review the plan: `/plumbbob:status`
 
 Before building, glance at what's next. `/plumbbob:status` is read-only; it prints the
-dashboard, surfaces the **next step's done-when, seam, and model recommendation** so
+dashboard, surfaces the **next step's proof, seam, and model recommendation** so
 you can sanity-check it (and switch models before building, if you agree with the
 recommendation), lists the ranges with their stops, and names the single next move:
 
@@ -167,7 +174,7 @@ PlumbBob — Rate-limit the login endpoint   [DESIGN]
 
   steps  0/3 done
   ▸ 1  feat(limiter): add a token-bucket limiter   ← next
-        done when: `test/limiter.test.ts` passes
+        proof: `pnpm vitest run limiter` passes
         seam: src/limiter.ts, test/limiter.test.ts
         model: opus (strong-assertion test authoring)
     2  feat(login): wire the limiter into POST /login
@@ -202,9 +209,9 @@ steps are born. If the next step still looks right, skip it. If something change
 fire it:
 
 - **`/plumbbob:step` (no input)** auto-sharpens the next step: it re-reads what you've
-  already built, the Decisions, and the Constraints, and syncs the step's done-when and
+  already built, the Decisions, and the Constraints, and syncs the step's proof and
   seam to reality. The zero-effort "keep my next step honest" move.
-- **`/plumbbob:step <what changed>`** makes a directed revision: tighten the done-when,
+- **`/plumbbob:step <what changed>`** makes a directed revision: tighten the proof,
   adjust the seam, or split the step.
 
 You approve the change; it's written back into `## Steps`. Most steps need nothing:
@@ -232,7 +239,7 @@ run  range 1 of 2 · step 1 · ends at step 1's pause
 
 Range 1 is a bare range, so the run builds step 1 the way `/plumbbob:build` would and
 stops at its pause, where the plan reserved the refill call. It reads the step's
-done-when, seam, Decisions, and Constraints, implements *only that step*, and goes
+proof, seam, Decisions, and Constraints, implements *only that step*, and goes
 in-flight, recording the seam for orientation (not a lock):
 
 ```text
@@ -256,7 +263,7 @@ agent pastes the result and writes nothing around it (the
 
 ```text
 check        green: 7 of 7 checks
-done-when    met
+proof        met
 decisions    2 of 2 honored
 constraints  1 of 1 honored
 seam         held: 2 of 2 declared, no strays
@@ -276,7 +283,7 @@ spent        22 min · 2 turns · 41s gate · green first run
 | **Verdict** | ● Plumb |
 | --- | --- |
 | Now | **Step 1** on Opus - feat(limiter): add a token-bucket limiter |
-| Next Up | **Step 2** on Sonnet - feat(login): wire the limiter into POST /login (details: [intent.md:44](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L44)) |
+| Next Up | **Step 2** on Sonnet - feat(login): wire the limiter into POST /login (details: [intent.md:45](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L45)) |
 |  | **Range 2** on Sonnet: /plumbbob:run once step 1 lands |
 
 **Recommendation**: Approve it, refilling on read. The gate is green and the seam held, and a bucket that refills when it is read needs no timer for the route to clean up.
@@ -366,9 +373,13 @@ building. Nothing triages the list mid-range; the parks wait for the range's sto
 
 ## 5. Run the next range to its stop card: `/plumbbob:run`
 
-Back at step 1's pause, you approve. Only then does it checkpoint: committing the work,
-recording the SHA, flipping the step to `[x]`, and returning to the `DESIGN` boundary,
-where it **stops**. The boundary turn scales the anatomy down to what a landed step needs:
+Back at step 1's pause, you approve. Only then does it checkpoint: running the gate and
+then step 1's proof, committing the work, recording the SHA, flipping the step to `[x]`,
+and returning to the `DESIGN` boundary, where it **stops**. Step 1's proof opens on a
+command, so the checkpoint runs `pnpm vitest run limiter` itself and the record keeps the
+measured row (the command, its exit, its time) in place of the agent's `met`. Had it
+exited non-zero, the checkpoint would have refused and recorded nothing, as it does on a
+red check. The boundary turn scales the anatomy down to what a landed step needs:
 the lead line, then the state table (the Verdict, Next Up, and the rows beneath it), with
 no Your Call block, because no decision is pending. `plumbbob checkpoint` prints it all
 itself, as one block, so what the agent relays is one command's output:
@@ -378,7 +389,7 @@ itself, as one block, so what the agent relays is one command's output:
 
 | **Verdict** | ● Plumb |
 | --- | --- |
-| Next Up | **Step 2** on Sonnet - feat(login): wire the limiter into POST /login (details: [intent.md:44](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L44)) |
+| Next Up | **Step 2** on Sonnet - feat(login): wire the limiter into POST /login (details: [intent.md:45](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L45)) |
 |  | **Range 2** on Sonnet: /plumbbob:run (steps 2-3) |
 | Parked | **1** of 1 open: /plumbbob:harvest |
 ```
@@ -422,7 +433,7 @@ proposed for it, and the plan's stop for range 2 in the state table at its foot:
 steps        2 of 2 landed
              - 2 b2c3d4e · 3 e5f6a7b
 check        green: 7 of 7 checks, 2 landings
-done-when    met
+proof        met
 decisions    2 of 2 honored
 constraints  1 of 1 honored
 seam         held: 2 of 2 steps, no strays
@@ -452,7 +463,7 @@ Approving locks in each lean above; to change one, say so first (`make P1 a bloc
 
 | **Verdict** | ● Plumb |
 | --- | --- |
-| Stop | **Range 2** landed - try six logins yourself, then `/plumbbob:finish` (details: [intent.md:58](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L58)) |
+| Stop | **Range 2** landed - try six logins yourself, then `/plumbbob:finish` (details: [intent.md:61](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L61)) |
 | Next Up | Nothing planned - /plumbbob:step or /plumbbob:finish |
 
 **Recommendation**: Approve it, then try six logins yourself before you finish. The gate was green at both landings, and the one park is future work, not this goal's.
@@ -608,7 +619,7 @@ block's `Stop` row says why the build stopped there:
 
 | **Verdict** | ● Plumb |
 | --- | --- |
-| Stop | **Range 2** landed - try six logins yourself, then `/plumbbob:finish` (details: [intent.md:58](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L58)) |
+| Stop | **Range 2** landed - try six logins yourself, then `/plumbbob:finish` (details: [intent.md:61](.plumbbob/builds/2026-07-03-rate-limit-the-login-endpoint/intent.md#L61)) |
 | Next Up | Nothing planned - /plumbbob:step or /plumbbob:finish |
 | Parked | **1** of 1 open: /plumbbob:harvest |
 ```

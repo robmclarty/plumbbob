@@ -111,7 +111,7 @@ nothing was renumbered to make that true. Open it:
 git show --stat 7c2d1e0
 ```
 
-The body opens on a marker line, `plumbbob step 8`, then the done-when and the seam the
+The body opens on a marker line, `plumbbob step 8`, then the proof and the seam the
 step was built to, so `git log --grep plumbbob` finds every landing, and a reviewer who
 reads the commit alone reads the criterion it met.
 

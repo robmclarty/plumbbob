@@ -20,8 +20,9 @@ const INTENT = `# Export test
 
 1. [x] First, **done when:** a works.
    - seam: \`src/a.ts\`
-2. [ ] Second, **done when:** b works.
+2. [ ] Second
    - seam: \`src/b.ts\`
+   - proof: \`pnpm vitest run b\` passes
    - effort: high
 
 ## Build ranges

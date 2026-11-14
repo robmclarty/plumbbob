@@ -16,7 +16,7 @@ const step = (n: number, done: boolean, title: string): Step => ({
   done,
   title,
   planned: true,
-  doneWhen: null,
+  proof: null,
   model: null,
   line: n,
 })

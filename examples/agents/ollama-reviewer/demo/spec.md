@@ -26,7 +26,7 @@ words longer than the width, preserves existing newlines, and is covered by
 ## Decisions
 
 - D1 (greedy-breaking): greedy line breaking over optimal (Knuth-Plass) — *because* it is what `fmt` and
-  `fold` do and the simplest thing that satisfies done-when.
+  `fold` do and the simplest thing that satisfies the proof.
 - D2 (function-first): pure function first, CLI last — *because* the CLI is a thin shell once `wrap()`
   is trustworthy.
 
@@ -37,16 +37,16 @@ words longer than the width, preserves existing newlines, and is covered by
 
 ## Steps
 
-1. [ ] Greedy `wrap(text, width)` with tests — **done when:** `wrap()` breaks lines at
-   the last space that fits and `node --test` passes
+1. [ ] Greedy `wrap(text, width)` with tests
    - seam: `src/wrap.js`, `test/wrap.test.js`
-2. [ ] Edge cases: overlong words and existing newlines — **done when:** words longer
-   than `width` hard-split at the boundary, existing newlines are preserved, and the
-   new tests pass
+   - proof: `node --test` passes; `wrap()` breaks lines at the last space that fits
+2. [ ] Edge cases: overlong words and existing newlines
    - seam: `src/wrap.js`, `test/wrap.test.js`
-3. [ ] `bin/wrap.js` CLI over stdin — **done when:** `echo "some long text" | node
-   bin/wrap.js 20` prints wrapped lines
+   - proof: words longer than `width` hard-split at the boundary, existing newlines are
+     preserved, and the new tests pass
+3. [ ] `bin/wrap.js` CLI over stdin
    - seam: `bin/wrap.js`
+   - proof: `echo "some long text" | node bin/wrap.js 20` prints wrapped lines
 
 ## Harness
 

@@ -35,8 +35,10 @@ differ. It left `.plumbbob/settings.json` alone, since lesson 0 committed it.
 ## Write the Plan by Hand
 
 Open `intent.md` in the new folder. The CLI machine-reads a step's opener (number, box, a
-title that is also the commit subject, `**done when:**`), exactly one `seam:` line of
-backticked repo-relative paths, and an optional `model:` line; everything else is yours.
+title that is also the commit subject), exactly one `seam:` line of backticked
+repo-relative paths, one `proof:` line, and an optional `model:` line; everything else is
+yours. This proof opens on words, so it is yours to judge; one that opened on a command
+in backticks would be run by the checkpoint.
 Delete the two placeholder steps the template ships (they parse as real steps), delete
 `## Build ranges` (one step needs no range), fill the Frame, and write the step:
 
@@ -61,8 +63,9 @@ Delete the two placeholder steps the template ships (they parse as real steps), 
 
 ## Steps
 
-1. [ ] feat(cli): print the path of the list file, **done when:** `main(['path'], deps)` writes `deps.file` and a newline to stdout and returns 0, under test
+1. [ ] feat(cli): print the path of the list file
    - seam: `src/cli.ts`, `src/__tests__/cli.test.ts`
+   - proof: under test, `main(['path'], deps)` writes `deps.file` and a newline to stdout and returns 0
 ```
 
 The `**Scope:**` header is why the plan and finish commits read `chore(sift): …`; left as
@@ -80,7 +83,7 @@ PlumbBob — sift: print the file path   [DESIGN]
 
   steps  0/1 done
   ▸ 1  feat(cli): print the path of the list file   ← next
-        done when: `main(['path'], deps)` writes `deps.file` and a newline to stdout and returns 0, under test
+        proof: under test, `main(['path'], deps)` writes `deps.file` and a newline to stdout and returns 0
         seam: src/cli.ts, src/__tests__/cli.test.ts
 
 last checkpoint  none yet
@@ -147,14 +150,14 @@ plumbbob check
 plumbbob: check green.
 ```
 
-Then judge your diff against the done-when, the Decision, and the Constraint, and write
+Then judge your diff against the proof, the Decision, and the Constraint, and write
 the verdict into `.plumbbob/detail.md`, beside the `builds/` folder, not inside it:
 
 ```markdown
 # Detail · Step 1 · feat(cli): print the path of the list file
 
 ── recap · step 1 of 1 ──
-done-when    met
+proof        met
 decisions    1 of 1 honored
 constraints  1 of 1 honored
 
@@ -189,7 +192,7 @@ plumbbob handoff 1
 
 ```text
 check        green: 9 of 9 checks
-done-when    met
+proof        met
 decisions    1 of 1 honored
 constraints  1 of 1 honored
 seam         held: 2 of 2 declared, no strays

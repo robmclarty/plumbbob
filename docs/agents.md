@@ -72,7 +72,11 @@ picture of the step you're running against:
   "step": {
     "n": 3,
     "title": "Make the limit configurable via env",
-    "doneWhen": "the limit reads from RATE_LIMIT_MAX, defaulting to 5; test covers the default",
+    "proof": {                         // the step's `- proof:` line
+      "command": "pnpm vitest run limiter",   // the code span that opens it, or null
+      "text": "`pnpm vitest run limiter` passes; the limit reads from RATE_LIMIT_MAX, defaulting to 5"
+    },
+    "doneWhen": "`pnpm vitest run limiter` passes; the limit reads from RATE_LIMIT_MAX, defaulting to 5",   // proof.text again, kept for agents written before proof
     "seam": ["src/limiter.ts", "src/__tests__/limiter.test.ts"]   // exact paths / dir/ grants
   },
   "decisions":   ["D1 (token-bucket): token bucket over sliding window — because …", "…"],  // verbatim intent bullets
@@ -85,11 +89,16 @@ picture of the step you're running against:
 Notes that matter to an author:
 
 - `step.seam` is parsed **strictly** (it gates git behavior): exact paths or `dir/` grants,
-  never globs. Everything else (title, done-when, decisions, constraints) is **best-effort
+  never globs. Everything else (title, proof, decisions, constraints) is **best-effort
   prose** scraped from `intent.md` ([**D61 (best-effort-scrape)**](decisions.md#d61)): a formatting quirk warns on stderr and is
   skipped, never wedges the run. `decisions`/`constraints` arrive verbatim, each intent
   bullet as one string with its *because* intact, so an agent sees the reasoning, not just
   the ruling.
+- `step.proof.text` is the proof line as written, backticks included, and
+  `step.proof.command` is the code span that opens it, or `null` for a proof that opens on
+  words. `plumbbob checkpoint` runs the command; an agent only reads it. `step.doneWhen`
+  carries the same string as `proof.text`, so an agent written against the older field
+  keeps working ([**C7 (minimal-envelope)**](decisions.md#c7): the envelope only grows).
 - `context[]` carries the output of `before`-slot agents, threaded in inline ([**D59 (inline-context)**](decisions.md#d59)): how
   a `build` agent sees what a `before` agent surfaced.
 - `settings` is *plumbbob's* relevant configuration, plus one block that is yours: `settings.agent`

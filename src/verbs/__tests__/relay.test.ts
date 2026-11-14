@@ -40,7 +40,7 @@ const INTENT = `# Relay test
 `
 
 const DETAIL = `── recap · step 2 of 3 ──
-done-when    met
+proof        met
 decisions    none exercised
 constraints  all honored
 
@@ -442,7 +442,7 @@ describe('relay — the holds the 2026-10-17 A/B made, replayed — D19 (facts-e
     const card = printed(dir)
     const verdict = /^\| \*\*Verdict\*\* \| (.*) \|$/m.exec(card)
     expect(verdict).not.toBeNull()
-    const laundered = card.replace(verdict?.[0] ?? '', '| **Verdict** | ✗ Not standing (done-when drifted) |')
+    const laundered = card.replace(verdict?.[0] ?? '', '| **Verdict** | ✗ Not standing (proof drifted) |')
     expect(held(relayCheck(dir, stop(dir, { last: laundered })))).not.toBeNull()
     writeFileSync(turnPath(dir), '5\n')
     printed(dir, ['--full'])
@@ -500,7 +500,7 @@ const STOP_CARD = [
   'steps        2 of 2 landed',
   '             - 2 a1b2c3d · 3 b2c3d4e',
   'check        green: 1 of 1 checks, 2 landings',
-  'done-when    met',
+  'proof        met',
   'seam         held: 2 of 2 steps, no strays',
   'diff         +2 -0 across 2 files',
   '             - src/b.ts +1 -0',

@@ -61,7 +61,7 @@ function logPointer(dir: string, label: string): string {
 const DETAIL = `# Detail · Step 1 · First
 
 ── recap · step 1 of 1 ──
-done-when    met
+proof        met
 decisions    none exercised
 constraints  all honored
 
@@ -180,7 +180,7 @@ describe('checkpoint', () => {
     await captureIoAsync(() => checkpoint(dir, ['1']))
     const body = execFileSync('git', ['log', '-1', '--format=%b'], { cwd: dir, encoding: 'utf8' })
     expect(body.startsWith('plumbbob step 1')).toBe(true) // the marker leads the body
-    expect(body).toContain('done when: a works.')
+    expect(body).toContain('proof: a works.')
     expect(body).toContain('seam: src/a.ts')
     expect(body).toContain('work.txt') // the staged diffstat names the changed file
   })
@@ -268,7 +268,7 @@ describe('checkpoint', () => {
     expect(log).toMatch(/- \d{4}-\d{2}-\d{2} — step 1 checkpointed · [0-9a-f]{9} — First\n\n  \*\*Summary\*\*: A works now\.\n\n  1\. The first move\n/)
     expect(log).toContain('  **Readout**:\n\n  ```text\n') // bare, as on the card: the dated line above names the step
     expect(log).not.toContain('**Now**')
-    expect(log).toContain('  done-when    met\n')
+    expect(log).toContain('  proof        met\n')
     // Measured, not recalled, and the measure sees a new file: src/a.ts is the
     // step's whole product and git has never seen it before.
     expect(log).toContain('  diff         +1 -0 across 1 file\n')
@@ -485,7 +485,7 @@ describe('checkpoint', () => {
     writeFileSync(join(dir, 'work.txt'), 'pending\n')
     await captureIoAsync(() => checkpoint(dir, ['1']))
     const body = execFileSync('git', ['log', '-1', '--format=%b'], { cwd: dir, encoding: 'utf8' })
-    expect(body).not.toContain('done when:')
+    expect(body).not.toContain('proof:')
     expect(body).not.toContain('seam:')
     expect(body).toContain('work.txt') // the diffstat still lands
   })
@@ -514,7 +514,7 @@ describe('checkpoint', () => {
       stdin.isTTY = hadTty
     }
     const body = execFileSync('git', ['log', '-1', '--format=%b'], { cwd: dir, encoding: 'utf8' })
-    expect(body).toContain('done when: a works.') // the deterministic fallback took over
+    expect(body).toContain('proof: a works.') // the deterministic fallback took over
   })
 
   it('warns when the intent flip fails, instead of letting the dashboard lie', async () => {
@@ -1053,5 +1053,103 @@ describe('checkpoint with an exported plan.json — D14 (cli-keeps-current)', ()
     writeFileSync(join(dir, 'work.txt'), 'pending\n')
     expect((await captureIoAsync(() => checkpoint(dir, ['1']))).code).toBe(0)
     expect(existsSync(planJsonPath(dir, 'checkpoint-test'))).toBe(false)
+  })
+})
+
+describe('checkpoint runs the proof', () => {
+  /** A started session whose one step proves itself with `command`, behind a green stub gate. */
+  async function startedProving(proofLine: string): Promise<string> {
+    const dir = await startedGreen()
+    writeFileSync(intentPath(dir), `# Checkpoint test\n\n## Steps\n\n1. [ ] First\n   - seam: \`src/\`\n${proofLine}\n`)
+    mkdirSync(join(dir, 'src'), { recursive: true })
+    writeFileSync(join(dir, 'src', 'a.ts'), 'in seam\n')
+    return dir
+  }
+
+  const commits = (dir: string): number => Number(execFileSync('git', ['rev-list', '--count', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim())
+
+  it('a red proof refuses the checkpoint and records nothing, the way a red check does', async () => {
+    const dir = await startedProving('   - proof: `test -f src/b.ts` passes; b exists')
+    const before = commits(dir)
+    const ledger = readFileSync(checkpointsPath(dir), 'utf8')
+    const log = readFileSync(buildLogPath(dir), 'utf8')
+    writeFileSync(detailPath(dir), DETAIL)
+    const { code, stdout, stderr } = await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(code).toBe(1)
+    expect(stdout).toBe('')
+    expect(stderr).toBe(
+      notice({
+        fact: 'checkpoint refused',
+        detail: ['the proof is red', '`test -f src/b.ts` exited 1'],
+        remedy: 'fix it, then run it again',
+      }),
+    )
+    expect(commits(dir)).toBe(before) // nothing committed
+    expect(readFileSync(checkpointsPath(dir), 'utf8')).toBe(ledger) // no ledger line
+    expect(readFileSync(buildLogPath(dir), 'utf8')).toBe(log) // no Log record
+    expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [ ] First') // no flip
+    expect(existsSync(detailPath(dir))).toBe(true) // the pause's detail is still there to show
+    expect(readStats(dir)['1']?.redProofs).toBe(1)
+    expect(readStats(dir)['1']?.redChecks).toBeUndefined()
+  })
+
+  it('a green proof lands the step, and the Log record carries the proof row: the command, its exit, its time', async () => {
+    const dir = await startedProving('   - proof: `test -f src/a.ts` passes; a exists')
+    writeFileSync(detailPath(dir), DETAIL)
+    const { code } = await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(code).toBe(0)
+    expect(readFileSync(checkpointsPath(dir), 'utf8')).toMatch(/step 1 [0-9a-f]{40}/)
+    expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [x] First')
+    const log = readFileSync(buildLogPath(dir), 'utf8')
+    expect(log).toMatch(/ {2}proof {8}met: `test -f src\/a\.ts` · exit 0 · \d+\.\ds\n/)
+    expect(log).not.toContain('  proof        met\n') // measured beats the attested row
+    expect(readStats(dir)['1']?.redProofs).toBeUndefined()
+  })
+
+  it('a red proof, fixed, lands on the next try and the receipt counts the red one', async () => {
+    const dir = await startedProving('   - proof: `test -f src/b.ts` passes; b exists')
+    expect((await captureIoAsync(() => checkpoint(dir, ['1']))).code).toBe(1)
+    writeFileSync(join(dir, 'src', 'b.ts'), 'now it exists\n')
+    const { code, stdout } = await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(code).toBe(0)
+    expect(stdout).toContain('1 red proof before green')
+    expect(readFileSync(buildLogPath(dir), 'utf8')).toContain('1 red proof')
+  })
+
+  it('runs the proof only behind a green gate', async () => {
+    const dir = await startedProving('   - proof: `touch proof-ran.txt` leaves its mark')
+    writeFileSync(settingsPath(dir), JSON.stringify({ check: 'false' }))
+    const { code, stderr } = await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(code).toBe(1)
+    expect(stderr).toContain('the check is red')
+    expect(existsSync(join(dir, 'proof-ran.txt'))).toBe(false)
+  })
+
+  it('a proof that opens on words runs nothing, and neither does the older clause', async () => {
+    const manual = await startedProving('   - proof: the page loads; `false` is only prose here')
+    expect((await captureIoAsync(() => checkpoint(manual, ['1']))).code).toBe(0)
+    expect(existsSync(join(manual, '.check', 'proof.json'))).toBe(false)
+    const legacy = await startedGreen()
+    writeFileSync(intentPath(legacy), '# Checkpoint test\n\n## Steps\n\n1. [ ] First, **done when:** `false` passes\n   - seam: `src/a.ts`\n')
+    writeFileSync(join(legacy, 'work.txt'), 'pending\n')
+    expect((await captureIoAsync(() => checkpoint(legacy, ['1']))).code).toBe(0)
+    expect(existsSync(join(legacy, '.check', 'proof.json'))).toBe(false)
+  })
+
+  it('refuses a step carrying two proof lines before running either', async () => {
+    const dir = await startedProving('   - proof: `touch one.txt` first\n   - proof: `touch two.txt` second')
+    const { code, stderr } = await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(code).toBe(1)
+    expect(stderr).toContain('step 1 has more than one `proof:` line.')
+    expect(existsSync(join(dir, 'one.txt'))).toBe(false)
+    expect(existsSync(join(dir, 'two.txt'))).toBe(false)
+    expect(readFileSync(checkpointsPath(dir), 'utf8')).not.toMatch(/step 1 /)
+  })
+
+  it('the fallback body leads with the proof as the step states it', async () => {
+    const dir = await startedProving('   - proof: `true` passes; a works.')
+    await captureIoAsync(() => checkpoint(dir, ['1']))
+    const body = execFileSync('git', ['log', '-1', '--format=%b'], { cwd: dir, encoding: 'utf8' })
+    expect(body).toContain('proof: `true` passes; a works.')
   })
 })

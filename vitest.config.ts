@@ -7,6 +7,10 @@ export default defineConfig({
     // `pnpm check` before `pnpm build`, so this setup builds dist once when it's
     // absent — the gate no longer depends on a stale dist being left behind.
     globalSetup: ['./test/global-setup.ts'],
+    // plumbbob asks an `atis` on PATH for a step's reach. This drops any real
+    // one from every worker's PATH, so the suite never depends on this machine's
+    // install; a test that wants an answer puts a fake on PATH itself.
+    setupFiles: ['./test/strip-atis.ts'],
     // The eval tier drives real (money-burning) claude sessions and reports
     // pass RATES, not booleans — it must be structurally unrunnable by
     // `pnpm test`. Its files are *.eval.ts (never matched by the include

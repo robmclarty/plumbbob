@@ -4,7 +4,16 @@
 // seams and lines, the build order, the ranges, the decisions and constraints).
 // Pure: the caller reads the file, hashes its bytes, and writes the result.
 
-import { parseBuildTitle, parseStepFields, parseStepMeta, parseStepSeam, scrapeBullets, type StepEffort } from './intent.ts'
+import {
+  parseBuildTitle,
+  parseStepFields,
+  parseStepMeta,
+  parseStepProof,
+  parseStepSeam,
+  scrapeBullets,
+  type StepEffort,
+  type StepProof,
+} from './intent.ts'
 import { orderSteps, parseBuildOrder, parseBuildRanges, parseSteps } from './orient.ts'
 import { expandStepList, hasStep } from './steplist.ts'
 
@@ -23,7 +32,7 @@ export type PlanStep = {
   readonly seam: ReadonlyArray<string>
   readonly stop: PlanStop
   readonly effort: StepEffort | null
-  readonly done_when: string
+  readonly proof: StepProof
   readonly context: ReadonlyArray<string>
   readonly landed: boolean
 }
@@ -95,9 +104,11 @@ function waitsInOrder(
  * order, so a plan with no `after:` line exports fully serial, and a step
  * that says nothing never runs beside a step before it. The last step of each
  * range in build order stops `planned`, a bare range's one step included, and
- * a `stop:` line overrides any step's. A step whose lines, seam, or done-when
- * will not read is a finding by step, and any finding refuses the whole plan
- * rather than exporting a guess.
+ * a `stop:` line overrides any step's. A step's proof is its `proof:` line,
+ * the command being the code span that opens it, or else the older
+ * `**done when:**` clause as text with no command. A step whose lines, seam,
+ * or proof will not read, or that has no proof at all, is a finding by step,
+ * and any finding refuses the whole plan rather than exporting a guess.
  */
 export function derivePlan(input: {
   readonly intent: string
@@ -132,13 +143,14 @@ export function derivePlan(input: {
   const read = steps.map((step) => {
     const fields = parseStepFields(intent, step.n)
     const seam = parseStepSeam(intent, step.n)
-    const meta = parseStepMeta(intent, step.n)
+    const proof = parseStepProof(intent, step.n)
     if (!fields.ok) findings.push(...fields.findings)
     if (!seam.ok) findings.push(seam.error)
-    if (meta.doneWhen === '') findings.push(`step ${step.n} has no **done when:** text; the contract needs one.`)
+    if (!proof.ok) findings.push(...proof.findings)
+    else if (proof.proof === null) findings.push(`step ${step.n} has no proof; the contract needs one.`)
     const line = fields.ok ? fields.fields.after : null
     afters.set(step.n, line === null ? null : line === 'none' ? [] : expandStepList(line, (n) => planned.has(n)))
-    return { step, fields, seam, meta }
+    return { step, fields, seam, proof }
   })
   const waits = waitsInOrder(
     ordered.map((s) => s.n),
@@ -147,18 +159,18 @@ export function derivePlan(input: {
 
   const planSteps: PlanStep[] = []
   const facts: StepFacts[] = []
-  for (const { step, fields, seam, meta } of read) {
-    if (!fields.ok || !seam.ok) continue
+  for (const { step, fields, seam, proof } of read) {
+    if (!fields.ok || !seam.ok || !proof.ok || proof.proof === null) continue
     const range = ranges.find((r) => hasStep(r.steps, step.n))
     planSteps.push({
       id: stepId(step.n),
-      title: meta.title,
+      title: parseStepMeta(intent, step.n).title,
       range: range === undefined ? null : String(range.item),
       depends_on: (waits.get(step.n) ?? []).map(stepId),
       seam: seam.seam,
       stop: fields.fields.stop ?? (rangeEnds.has(step.n) ? 'planned' : 'none'),
       effort: fields.fields.effort,
-      done_when: meta.doneWhen,
+      proof: { command: proof.proof.command, text: proof.proof.text },
       context: fields.fields.notes,
       landed: step.done,
     })
@@ -207,7 +219,7 @@ export function serializePlan(plan: Plan): string {
       seam: s.seam,
       stop: s.stop,
       effort: s.effort,
-      done_when: s.done_when,
+      proof: { command: s.proof.command, text: s.proof.text },
       context: s.context,
       landed: s.landed,
     })),

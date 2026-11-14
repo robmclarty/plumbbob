@@ -75,7 +75,7 @@ The rest of it.
 
 const GREEN_RECAP = `── recap · step 2 of 3 ──
 check        green (checkride: lint, types, test)
-done-when    met: b works
+proof        met: b works
 decisions    honored: D1 (some-decision)
 constraints  all honored
 seam         held: 1 file, all inside
@@ -151,7 +151,7 @@ describe('handoff', () => {
         '',
         '```text',
         'check        green: 3 of 3 checks',
-        'done-when    met',
+        'proof        met',
         'decisions    1 of 1 honored',
         'constraints  2 of 2 honored',
         'seam         held: 1 of 1 declared, no strays',
@@ -356,12 +356,82 @@ describe('handoff', () => {
     writeFileSync(stepPath(dir), '2\n')
     writeFileSync(
       detailPath(dir),
-      GREEN_RECAP.replace('done-when    met: b works', 'done-when    drift: the plan no longer matches reality'),
+      GREEN_RECAP.replace('proof        met: b works', 'proof        drift: the plan no longer matches reality'),
     )
     writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain(stateHead('Verdict', '✗ Not standing (done-when drifted)'))
+    expect(stdout).toContain(stateHead('Verdict', '✗ Not standing (proof drifted)'))
+  })
+
+  it('still reads a detail file whose proof row rides its older done-when label', async () => {
+    const dir = await started()
+    writeFileSync(stepPath(dir), '2\n')
+    writeFileSync(detailPath(dir), GREEN_RECAP.replace('proof        met: b works', 'done-when    not met: b is still broken'))
+    writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
+    const { stdout } = captureIo(() => handoff(dir, []))
+    expect(stdout).toContain('proof        not met: b is still broken')
+    expect(stdout).not.toContain('done-when')
+    expect(stdout).toContain(stateHead('Verdict', '○ Out of plumb (proof not met)'))
+  })
+
+  describe('the measured proof row', () => {
+    const PROVEN = INTENT.replace('2. [ ] Second — **done when:** b works.', '2. [ ] Second\n   - proof: `pnpm test b` passes; b works.')
+
+    function writeProofRun(dir: string, step: number, command: string, exitCode: number, timestamp = '2026-11-13T10:00:00.000Z'): void {
+      mkdirSync(join(dir, '.check'), { recursive: true })
+      const record = { schema_version: 1, step, command, exit_code: exitCode, duration_ms: 4210, timestamp, output_file: 'proof.txt' }
+      writeFileSync(join(dir, '.check', 'proof.json'), JSON.stringify(record))
+    }
+
+    async function paused(): Promise<string> {
+      expect(PROVEN).not.toBe(INTENT)
+      const dir = await started(PROVEN)
+      writeFileSync(stepPath(dir), '2\n')
+      writeFileSync(detailPath(dir), GREEN_RECAP)
+      writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
+      return dir
+    }
+
+    it('a green run of the step\'s command beats the attested row: the command, its exit, its time', async () => {
+      const dir = await paused()
+      writeProofRun(dir, 2, 'pnpm test b', 0)
+      const { stdout } = captureIo(() => handoff(dir, []))
+      expect(stdout).toContain('proof        met: `pnpm test b` · exit 0 · 4.2s\n')
+      expect(stdout).toContain('`looks good`')
+    })
+
+    it('a red run fails the Verdict, points at the output, and withholds looks good', async () => {
+      const dir = await paused()
+      writeProofRun(dir, 2, 'pnpm test b', 1)
+      const { stdout } = captureIo(() => handoff(dir, []))
+      expect(stdout).toContain('proof        not met: `pnpm test b` · exit 1 · 4.2s\n             → .check/proof.txt\n')
+      expect(stdout).toContain(stateHead('Verdict', '○ Out of plumb (proof not met)'))
+      expect(stdout).not.toContain('`looks good`')
+    })
+
+    it('a run recorded for another step, or for a command the proof no longer opens on, measures nothing', async () => {
+      const dir = await paused()
+      writeProofRun(dir, 1, 'pnpm test b', 1)
+      expect(captureIo(() => handoff(dir, ['--full'])).stdout).toContain('proof        met\n')
+      writeProofRun(dir, 2, 'pnpm test a', 1)
+      const { stdout } = captureIo(() => handoff(dir, ['--full']))
+      expect(stdout).toContain('proof        met\n')
+      expect(stdout).toContain('`looks good`')
+    })
+
+    it('a gate run after the proof retires it: the work moved, and the proof has not been asked again', async () => {
+      const dir = await paused()
+      writeProofRun(dir, 2, 'pnpm test b', 1, '2026-11-13T10:00:00.000Z')
+      const summary = { schema_version: 1, timestamp: '2026-11-13T10:05:00.000Z', ok: true, checks_run: 1, checks: [{ name: 'test', ok: true }] }
+      writeFileSync(join(dir, '.check', 'summary.json'), JSON.stringify(summary))
+      const { stdout } = captureIo(() => handoff(dir, []))
+      expect(stdout).toContain('proof        met\n')
+      expect(stdout).toContain('`looks good`')
+      // The other way round, the gate first and the proof behind it, is the checkpoint's own order.
+      writeProofRun(dir, 2, 'pnpm test b', 1, '2026-11-13T10:06:00.000Z')
+      expect(captureIo(() => handoff(dir, ['--full'])).stdout).toContain('proof        not met: `pnpm test b` · exit 1')
+    })
   })
 
   it('measures a red check over a green attested row, pointing at the failing slot output', async () => {
@@ -924,7 +994,7 @@ describe('handoff', () => {
     writeCheckSummary(dir, true, [{ name: 'test', ok: true }])
     const { code, stdout } = captureIo(() => handoff(dir, []))
     expect(code).toBe(0)
-    expect(stdout).toContain('done-when    met') // the Summary above is its evidence
+    expect(stdout).toContain('proof        met') // the Summary above is its evidence
     expect(stdout).toContain('decisions    1 of 1 honored')
     expect(stdout).toContain('constraints  2 of 2 honored') // both declared under `## Constraints`
   })
@@ -1843,7 +1913,7 @@ const STOPPED = `# Handoff stop test
 const RANGE_DETAIL = `# Detail · Range 2 · review the parser before the card reads it
 
 ── recap · range 2 of 3 ──
-done-when    met
+proof        met
 decisions    none exercised
 constraints  all honored
 
@@ -1908,7 +1978,7 @@ function stopCardOf(dir: string, shas: ReadonlyArray<string>): string {
     'steps        2 of 2 landed',
     `             - 2 ${shas[1]?.slice(0, 7)} · 3 ${shas[2]?.slice(0, 7)}`,
     'check        green: 1 of 1 checks, 2 landings',
-    'done-when    met',
+    'proof        met',
     'decisions    none exercised',
     'constraints  all honored',
     'seam         held: 2 of 2 steps, no strays',

@@ -1,9 +1,9 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest'
 import type { DoctorCheck, RunOptions, RunResult, Summary, SummaryCheck } from 'checkride'
-import { detectGate, gateDetectsTools, runCheck } from '../check.ts'
-import type { CheckFlags } from '../check.ts'
+import { detectGate, gateDetectsTools, readProofRun, runCheck, runProof } from '../check.ts'
+import type { CheckFlags, ProofRun } from '../check.ts'
 import { buildDir, sidecarDir } from '../sidecar.ts'
 import { freshPlan, planJsonPath } from '../planfile.ts'
 import { settingsPath, localSettingsPath } from '../settings.ts'
@@ -451,5 +451,53 @@ describe('detectGate (the plan-time probe, research/07 Build 2a)', () => {
     const dir = makeTempDir()
     writeFileSync(join(dir, 'tsconfig.json'), '{}\n')
     expect(await detectGate(dir)).toEqual({ configured: null, detected: true })
+  })
+})
+
+/** Run a proof with the streams captured, and hand back the run beside what it printed. */
+async function proved(dir: string, step: number, command: string): Promise<{ result: ProofRun; stdout: string }> {
+  let result: ProofRun | undefined
+  const { stdout } = await captureIoAsync(async () => {
+    result = await runProof(dir, step, command)
+    return result.exitCode
+  })
+  if (result === undefined) throw new Error('the proof never ran')
+  return { result, stdout }
+}
+
+describe('runProof (a step\'s proof command)', () => {
+  it('runs a green command at the root and records the step, the command, its exit and its time', async () => {
+    const dir = makeTempDir()
+    const { result } = await proved(dir, 3, 'true')
+    expect(result).toMatchObject({ step: 3, command: 'true', exitCode: 0 })
+    const record = JSON.parse(readFileSync(join(dir, '.check', 'proof.json'), 'utf8')) as Record<string, unknown>
+    expect(record).toMatchObject({ schema_version: 1, step: 3, command: 'true', exit_code: 0, output_file: 'proof.txt' })
+    expect(typeof record.duration_ms).toBe('number')
+    expect(readProofRun(dir)).toEqual(result)
+  })
+
+  it('returns a red exit as it came, with the output captured, and leaves the gate summary alone', async () => {
+    const dir = makeTempDir()
+    const { result, stdout } = await proved(dir, 1, 'echo nope; exit 3')
+    expect(result.exitCode).toBe(3)
+    expect(stdout).toContain('nope') // streamed as it ran
+    expect(readFileSync(join(dir, '.check', 'proof.txt'), 'utf8')).toBe('nope\n')
+    expect(existsSync(join(dir, '.check', 'summary.json'))).toBe(false)
+  })
+
+  it('runs through the shell at the repo root', async () => {
+    const dir = makeTempDir()
+    writeFileSync(join(dir, 'here.txt'), 'x\n')
+    expect((await proved(dir, 1, 'test -f here.txt && test -n "$PWD"')).result.exitCode).toBe(0)
+  })
+
+  it('readProofRun is null for a missing or malformed record', () => {
+    const dir = makeTempDir()
+    expect(readProofRun(dir)).toBeNull()
+    mkdirSync(join(dir, '.check'), { recursive: true })
+    writeFileSync(join(dir, '.check', 'proof.json'), '{ "step": "one" }')
+    expect(readProofRun(dir)).toBeNull()
+    writeFileSync(join(dir, '.check', 'proof.json'), 'not json')
+    expect(readProofRun(dir)).toBeNull()
   })
 })

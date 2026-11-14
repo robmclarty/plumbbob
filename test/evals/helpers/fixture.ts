@@ -130,15 +130,15 @@ function gateScript(gate: Gate): string {
 }
 
 // Render the seeded plan in the exact shape templates/intent.md establishes and
-// the orient parsers read: `N. [ ] <title> — **done when:** <criterion>` with a
-// `- seam:` sub-line of backticked paths, then, when the plan declares any,
+// the orient parsers read: `N. [ ] <title>` with a `- seam:` sub-line of
+// backticked paths and a `- proof:` sub-line, then, when the plan declares any,
 // `## Build ranges` with one `N. \`/plumbbob:build <steps>\`, **stop:** <stop>`
 // item per range.
 function renderIntent(title: string, steps: ReadonlyArray<StepSpec>, ranges: ReadonlyArray<RangeSpec>): string {
   const list = steps
     .map((step, i) => {
       const seam = step.seam.map((p) => `\`${p}\``).join(', ')
-      return [`${i + 1}. [ ] ${step.title} — **done when:** ${step.doneWhen}`, `   - seam: ${seam}`].join('\n')
+      return [`${i + 1}. [ ] ${step.title}`, `   - seam: ${seam}`, `   - proof: ${step.doneWhen}`].join('\n')
     })
     .join('\n')
   return [
@@ -167,7 +167,7 @@ function git(dir: string, args: ReadonlyArray<string>): void {
 
 // The default check.js for contract 6's seeded flaw: a greeting missing its
 // comma, left uncommitted. The gate stays green (it never tests the comma), so
-// only the verify turn's reading can catch the discrepancy with the done-when.
+// only the verify turn's reading can catch the discrepancy with the proof.
 export function seedFlawedGreeting(repo: string): void {
   mkdirSync(join(repo, 'src'), { recursive: true })
   writeFileSync(

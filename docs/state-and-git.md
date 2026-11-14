@@ -49,6 +49,11 @@ the sidecar has a tracked artifact plane and an excluded control plane):
   `checkpoints`, `report.md`, `stats.json`, `harness.json`, and each spike's
   `spike-NN-<slug>.md` (the decisions and the record) ride the branch into the PR,
   because "what did we decide, and why" is exactly the thing that normally evaporates.
+  Two derived files ride with them when a build has them: `plan.json`, the plan as data
+  ([`plan-export.md`](plan-export.md)), and `reach.json`, what atis answered for each
+  step's seam ([`reach.md`](reach.md); [D155 (reach-is-computed)](decisions.md#d155)).
+  `reach.json` is tracked because a landed step's record was measured against it, and a
+  reviewer on another machine, with no atis, should see the same split.
 - The **control plane** is what this page is about: facts about *your working copy at this
   instant*. Which step is mid-flight. How many times you've pressed enter. These are true
   for you, in this worktree, for the next ten minutes.

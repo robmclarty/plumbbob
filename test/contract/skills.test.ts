@@ -203,7 +203,7 @@ describe('plan — the whole-goal move: scaffold + frame, no code', () => {
     expect(body).toMatch(/decisions/i)
     expect(body).toMatch(/constraints/i)
     expect(body).toMatch(/## Steps/)
-    expect(body).toMatch(/done.?when/i)
+    expect(body).toMatch(/proof/i)
     expect(body).toMatch(/seam/i)
   })
 
@@ -272,14 +272,14 @@ describe('step — the single-increment move: one verifiable step', () => {
     expect(body).toContain('!`plumbbob status 2>/dev/null')
   })
 
-  it('proposes a step with a done-when and a seam', () => {
-    expect(body).toMatch(/done.?when/i)
+  it('proposes a step with a proof and a seam', () => {
+    expect(body).toMatch(/proof/i)
     expect(body).toMatch(/seam/i)
   })
 
   it('writes ## Steps in the standard format the parser reads', () => {
     expect(body).toMatch(/## Steps/)
-    expect(body).toMatch(/done when:/i)
+    expect(body).toMatch(/- proof:/)
   })
 
   it('revises/sharpens the next step — empty input runs an automatic sharpen', () => {
@@ -345,7 +345,7 @@ describe('build — the default engine: implement the planned step, then verify'
   })
 
   it('builds the decided step and captures new ideas by shelling park, not merely deferring', () => {
-    expect(body).toMatch(/done.?when/i)
+    expect(body).toMatch(/proof/i)
     expect(body).toMatch(/plumbbob park "/) // the actual capture invocation, not a promise
     expect(body).toMatch(/writes nothing/i) // deferring in words captures nothing
   })
@@ -574,7 +574,7 @@ describe('verify — the tick: check, self-review, validate, PAUSE, checkpoint',
 
   it('carries the check → self-review → validate → PAUSE → checkpoint contract', () => {
     expect(body).toMatch(/self-review/i)
-    expect(body).toMatch(/done.?when/i)
+    expect(body).toMatch(/proof/i)
     expect(body).toMatch(/pause/i)
     expect(body).toMatch(/approv/i)
   })

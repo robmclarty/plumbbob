@@ -23,12 +23,26 @@ word up without reading the others first. Each entry points at the page that own
   `*deferred:*` marker naming what will settle it, written by `plumbbob defer`, stays
   open, and is counted apart from the ones that wait on the human. Parking a question
   does not defer it.
-- **Step**: one small, verifiable increment, carrying a done-when and a seam. Its title
+- **Step**: one small, verifiable increment, carrying a proof and a seam. Its title
   is the commit subject it lands as. → [`techniques.md`](techniques.md#steps-as-small-verifiable-increments)
-- **Done-when**: the step's finish line, ideally a test or check result, that the verify
-  pass can actually check.
+- **Proof**: the step's finish line, written on a `- proof:` line beside its seam,
+  ideally a test or check result that the verify pass can actually check. When the line
+  opens on a command in backticks, `plumbbob checkpoint` runs that command once the gate
+  is green, and a red proof refuses the checkpoint as a red check does; a proof that
+  opens on words runs nothing and is judged at the pause. An older plan carries it as a
+  `**done when:**` clause on the step's title line, which still reads, as a proof with
+  no command ([D153 (proof-replaces-done-when)](decisions.md#d153),
+  [D154 (red-proof-holds)](decisions.md#d154)).
 - **Seam**: the exact paths a step is expected to touch. Orientation, never a lock: a
   path outside it is a visible stray, not a refused edit.
+- **Reach**: the files a change to a step's seam usually drags along, by import and by
+  co-change. Computed by atis when the plan is approved and stored in the build's
+  `reach.json`; never written in the plan, and never a lock. Without atis there is none,
+  and nothing else changes. → [`reach.md`](reach.md)
+- **Plumb split** (the `plumb` row): what the Readout's `seam` row becomes for a step with
+  a stored reach. Each changed file is in the seam, in the reach but not the seam, or
+  outside both (`seam 3 · reach 1 · out 1`), and only a file outside both is a stray.
+  → [`reach.md`](reach.md#the-plumb-row)
 - **Model recommendation** (`model:`): an advisory line under a step naming the smallest
   model that can carry it; `status` and every Next Up line surface it.
 - **Step lines for a scheduler** (`after:`, `stop:`, `effort:`): three optional lines
@@ -128,7 +142,7 @@ are its parts.
 - **Summary**: the card's opening line: the outcome, not the activity. Up to five
   numbered **highlights** stay in the detail file behind it, each a handle `expand` can
   open, one `more details` link away.
-- **Readout**: the fenced rows of measured facts: `check`, `done-when`, `decisions`,
+- **Readout**: the fenced rows of measured facts: `check`, `proof`, `decisions`,
   `constraints`, `seam`, `diff` (with each changed file beneath it), `spent`. Green
   collapses to a count; red names one offender.
 - **State table**: the two-column table a card and an orientation ending close on, the

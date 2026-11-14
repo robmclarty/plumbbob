@@ -4,7 +4,8 @@
 // checkpoint identically. It does NOT require a STEP marker (the flat control
 // file recording the step in flight): the step is whatever you pass, else the
 // in-flight STEP, else the next undone step in intent.md's build order. It evaluates the
-// approval latch, gates on a green check, commits any pending work (or records
+// approval latch, gates on a green check and then on the step's proof command
+// where its proof opens on one, commits any pending work (or records
 // the existing HEAD when the tree is already clean: the human's commit skill
 // may have committed first), records the SHA, flips the intent checkbox to
 // `[x]`, and clears the STEP/SEAM markers: returning the dashboard to the
@@ -35,12 +36,14 @@ import {
   stepPath,
   writePause,
 } from '../lib/sidecar.ts'
-import { runCheck } from '../lib/check.ts'
+import { runCheck, runProof } from '../lib/check.ts'
 import { refreshAdvisory, refreshPlan } from '../lib/planfile.ts'
+import { binFiles, reachFor } from '../lib/reach.ts'
+import { readReach, refreshReach } from '../lib/reachfile.ts'
 import { readCommitBody } from '../lib/commitbody.ts'
 import { checkLatch } from '../lib/latch.ts'
 import { markStepDone, parseDetailStep, parseOrderedSteps, parseSteps } from '../lib/orient.ts'
-import { parseBuildScope, parseStepSeam, scopeDrift } from '../lib/intent.ts'
+import { parseBuildScope, parseStepProof, parseStepSeam, scopeDrift } from '../lib/intent.ts'
 import { conventionalSubject, subjectFromTitle, withMarker } from '../lib/commitmsg.ts'
 import { appendToSection, checkpointLogLine, logEntry, planLogLine } from '../lib/buildlog.ts'
 import { AT_BOUNDARY, syncBuildLogState } from '../lib/buildlogsync.ts'
@@ -48,10 +51,10 @@ import { advisory, ending, notice, printEnding, transition } from '../lib/notice
 import { boundaryEnding, detailsLink, isHarvestDetail, parseDetailRange, planRecord, stepRecord } from './handoff.ts'
 
 /**
- * Land a step: latch, check gate, commit, record, return to the boundary.
+ * Land a step: latch, check gate, proof, commit, record, return to the boundary.
  *
- * Exit 1 on any refusal: no session, no resolvable step, a latched tick, or a
- * red/broken check; each refusal says what unblocks it.
+ * Exit 1 on any refusal: no session, no resolvable step, a latched tick, a
+ * red/broken check, or a red proof; each refusal says what unblocks it.
  */
 export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Promise<number> {
   const root = findRepoRoot(cwd)
@@ -113,6 +116,15 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
           })
         : notice({ fact: 'checkpoint refused', detail: ['the check is red'], remedy: 'fix it, then run it again' }),
     )
+    return 1
+  }
+
+  // The proof runs behind a green gate and ahead of the record, so the record
+  // measures the tree the proof left and carries the row the run earned. A red
+  // proof refuses the way a red check does: nothing staged, nothing recorded.
+  const proofRefusal = await holdOnProof(root, step)
+  if (proofRefusal !== null) {
+    process.stderr.write(proofRefusal)
     return 1
   }
 
@@ -191,6 +203,46 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
 }
 
 /**
+ * Run the step's proof command, when its proof opens on one, and return the
+ * refusal to print, or null when the checkpoint may go on.
+ *
+ * A proof with no command runs nothing, and so does a step with no proof or
+ * an intent that cannot be read: the proof is then the model's to attest. A
+ * step carrying two `proof:` lines is refused before anything runs, since
+ * which command to hold it to would be a guess. A red run accrues as a
+ * per-step stat, the way a red check does.
+ */
+async function holdOnProof(root: string, step: number): Promise<string | null> {
+  let intent: string
+  try {
+    intent = readFileSync(intentPath(root), 'utf8')
+  } catch {
+    return null
+  }
+  const parsed = parseStepProof(intent, step)
+  if (!parsed.ok) {
+    const finding = parsed.findings.find((f) => f.includes('`proof:`'))
+    return finding === undefined
+      ? null
+      : notice({ fact: 'checkpoint refused', detail: [finding], remedy: 'keep one proof line that says something, then run it again' })
+  }
+  const command = parsed.proof?.command ?? null
+  if (command === null) {
+    return null
+  }
+  const run = await runProof(root, step, command)
+  if (run.exitCode === 0) {
+    return null
+  }
+  bumpStepStat(root, undefined, step, 'redProofs')
+  return notice({
+    fact: 'checkpoint refused',
+    detail: ['the proof is red', `\`${command}\` exited ${run.exitCode}`],
+    remedy: 'fix it, then run it again',
+  })
+}
+
+/**
  * The plan-approval commit: stage only the build's artifact folder, commit it as
  * `chore(<scope>): plan`, and record a `plan <sha>` line.
  *
@@ -223,6 +275,9 @@ function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
   // its body carries the plan, the files stay untracked, and `--allow-empty`
   // (in commit) makes the empty diff legal. History still reads baseline → plan
   // → steps.
+  // The plan is approved: ask atis, when it is on PATH, what each undone step's
+  // seam reaches, so the answers ride this commit. Silent whatever comes back.
+  refreshReach(root, activeBuild(root))
   const staged = stagePath(root, buildFolder(root))
   const sha = commit(root, planSubject(root), withMarker('plumbbob plan', bodyResult.body ?? undefined))
   appendFileSync(checkpointsPath(root), `plan ${sha}\n`)
@@ -301,15 +356,21 @@ function resolveStep(root: string, args: ReadonlyArray<string>): number | null {
  * in-flight SEAM file when a build is live, else the step's declared seam in
  * intent.md. Plumbbob's own artifact plane is whitelisted inside `scopeDrift`,
  * so the `[x]` flip and build-log line this very checkpoint stages never read
- * as drift. No seam means no warning.
+ * as drift. No seam means no warning. With a reach stored for the step, a
+ * staged file its reach expected is no stray: only one outside the seam and
+ * the reach both is named and counted, so the stat agrees with the pause.
  */
 function scopeDriftNotice(root: string, step: number): string {
   const seam = seamTokens(root, step)
-  const outside = scopeDrift(stagedPaths(root), seam)
+  const strays = scopeDrift(stagedPaths(root), seam)
+  // A step with a stored reach is held to its seam and its reach together, the
+  // way its pause split it: only a file outside both is a stray.
+  const answer = reachFor(readReach(root), step, seam)
+  const outside = answer === null ? strays : binFiles(strays, seam, answer).out
   if (outside.length === 0) return ''
   bumpStepStat(root, undefined, step, 'driftWarnings') // accrues into the build-log's stats receipt, and into the Verdict's third rung
   return advisory({
-    fact: `staged paths reach outside Step ${step}'s seam`,
+    fact: answer === null ? `staged paths reach outside Step ${step}'s seam` : `staged paths reach outside Step ${step}'s seam and its reach`,
     detail: outside,
     remedy: 'the checkpoint captures them, so revise the plan with /plumbbob:step if that is real scope drift',
   })
@@ -426,6 +487,7 @@ function statsSuffix(root: string, step: number): string | null {
   if (stats === undefined) return null
   const parts: string[] = []
   if ((stats.redChecks ?? 0) > 0) parts.push(`${stats.redChecks} red`)
+  if ((stats.redProofs ?? 0) > 0) parts.push(`${stats.redProofs} red proof${stats.redProofs === 1 ? '' : 's'}`)
   if ((stats.driftWarnings ?? 0) > 0) parts.push(`${stats.driftWarnings} drift`)
   if ((stats.reverts ?? 0) > 0) parts.push(`${stats.reverts} revert${stats.reverts === 1 ? '' : 's'}`)
   if (stats.startedAt !== undefined && stats.landedAt !== undefined) {
@@ -493,7 +555,7 @@ function messageArg(args: ReadonlyArray<string>): string | null {
 }
 
 /**
- * The deterministic fallback commit body: the step's done-when, its seam, and
+ * The deterministic fallback commit body: the step's proof, its seam, and
  * the staged diffstat.
  *
  * A hand-built or vibed checkpoint still gets informative history without a
@@ -502,9 +564,9 @@ function messageArg(args: ReadonlyArray<string>): string | null {
  */
 function fallbackBody(root: string, step: number): string | undefined {
   const parts: string[] = []
-  const doneWhen = doneWhenForStep(root, step)
-  if (doneWhen !== null) {
-    parts.push(`done when: ${doneWhen}`)
+  const proof = proofForStep(root, step)
+  if (proof !== null) {
+    parts.push(`proof: ${proof}`)
   }
   const seam = seamForStep(root, step)
   if (seam.length > 0) {
@@ -558,11 +620,11 @@ function heldDetail(root: string): boolean {
 }
 
 /**
- * The step's done-when line from intent.md, or null when absent or unreadable.
+ * The step's proof text from intent.md, or null when absent or unreadable.
  */
-function doneWhenForStep(root: string, step: number): string | null {
+function proofForStep(root: string, step: number): string | null {
   try {
-    return parseSteps(readFileSync(intentPath(root), 'utf8')).find((s) => s.n === step)?.doneWhen ?? null
+    return parseSteps(readFileSync(intentPath(root), 'utf8')).find((s) => s.n === step)?.proof?.text ?? null
   } catch {
     return null
   }

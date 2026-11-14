@@ -79,7 +79,7 @@ is fine; refining is always available.
   that bring `intent.md` back in line with the truth. A step title *is* its checkpoint
   commit subject ([D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68)), so bringing a drifted one back in line
   means keeping it a plain, single-line `type(scope): description` subject, with
-  load-bearing detail (file paths, module names) in `seam` and `done-when`,
+  load-bearing detail (file paths, module names) in `seam` and `proof`,
   **never jammed into the title**; the checkpoint body pass then reconciles and lands
   that subject at the verify pause.
   Show the before/after for each, and **write only what the human approves**. A repair

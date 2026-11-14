@@ -179,7 +179,7 @@ const VERBS: ReadonlyArray<Verb> = [
       { name: '--body', gloss: 'read the commit body from stdin (heredoc)' },
     ],
     notes:
-      'Refuses (exit 1) with no session, no resolvable step, a bad --body, a red check, or no human turn since the step began (the approval latch, D64 (approval-latch)); exit 2 when the gate itself broke.',
+      'Behind a green gate it runs the step\'s proof command, when the proof opens on one in backticks, through sh at the repo root. Refuses (exit 1) with no session, no resolvable step, a bad --body, a red check, a red proof, or no human turn since the step began (the approval latch, D64 (approval-latch)); exit 2 when the gate itself broke.',
   },
   {
     name: 'revert',

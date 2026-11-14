@@ -1,6 +1,6 @@
 ---
 name: verify
-description: "The verify tick: run the check, self-review the diff against intent, validate the step's done-when, pause for your approval, then checkpoint. Executor-agnostic: it reads the diff, not who wrote it."
+description: "The verify tick: run the check, self-review the diff against intent, validate the step's proof, pause for your approval, then checkpoint. Executor-agnostic: it reads the diff, not who wrote it."
 disable-model-invocation: true
 allowed-tools: Read, Write, Bash(plumbbob status:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent:*), Bash(git diff:*), Bash(git status:*)
 ---
@@ -36,7 +36,7 @@ this skill verifies it the same way: **it reads the diff, not the author**
    clean no-op.
 3. **Self-review** *(a single structured read)*. Read `git diff` and
    `.plumbbob/intent.md`, then in one pass check the diff against:
-   - the current step's **done-when** criterion: is it actually met?
+   - the current step's **proof**: is it actually met?
    - the **Decisions**: does anything contradict a settled call?
    - the **Constraints**: are any violated?
    - any **`after`-agent findings** from step 2: advisory, weigh them, don't defer to them.
@@ -45,8 +45,12 @@ this skill verifies it the same way: **it reads the diff, not the author**
    line points at, never as a freeform paragraph. When you cite a Decision or Constraint, carry its slug from `intent.md`
    (`C1 (no-new-deps)`, never a bare `C1`) so each finding reads on its own. You are
    reviewing, not building; do not fix anything.
-4. **Validate.** Decide, yes or no, whether the step's done-when is met. That verdict and
-   its evidence become the recap's `done-when` row, stated there and nowhere else.
+4. **Validate.** Decide, yes or no, whether the step's proof is met. That verdict and
+   its evidence become the recap's `proof` row, stated there and nowhere else. When the
+   proof opens on a command in backticks, you still write the row: `plumbbob checkpoint`
+   runs that command itself once the gate is green, and the measured row (the command, its
+   exit, its time) replaces yours in the record. Running the command yourself first is the
+   cheap way to know your `met` will hold.
 5. **PAUSE.** Write the file, run handoff, paste, then **stop and wait for the human's
    explicit approval**. This is the convergence beat; the human is the clock. Never
    checkpoint without it. A verify pause is a decision turn, and the
@@ -70,7 +74,7 @@ this skill verifies it the same way: **it reads the diff, not the author**
    # Detail · Step <N> · <the step title>
 
    ── recap · step <N> of <M> ──
-   done-when    met
+   proof        met
    decisions    honored: D1 (some-slug), D2 (another-slug)
    constraints  all honored
 
@@ -107,7 +111,7 @@ this skill verifies it the same way: **it reads the diff, not the author**
    `[more details](…)` link to the file, which handoff writes, so you type no path. Five
    sections at most, each titled with one move in plain English, drawn from the
    self-review. A judgment or a flag (a stray the seam row will name, a decision the diff
-   bent, a doubt about the done-when) is one of those sections, and the card carries it
+   bent, a doubt about the proof) is one of those sections, and the card carries it
    where it bears on the call: a bent row's `→` line points at it, and your recommendation
    names it when it changes the move. It is never a paragraph of its own. The
    recommendation is the last section: the move you would take as its own
@@ -207,8 +211,12 @@ this skill verifies it the same way: **it reads the diff, not the author**
 
    Do **not** run a TIL scan or reach for a separate commit skill; the body is yours to
    write in one breath. Omit `--body` entirely and the CLI writes a deterministic body
-   (done-when + seam + diffstat) on its own. Either way, do **not** bump the version or
-   touch the changelog; that is the human's `/version` call. And if step 5 surfaced a
+   (proof + seam + diffstat) on its own. Either way, do **not** bump the version or
+   touch the changelog; that is the human's `/version` call. A proof that opens on a
+   command runs here, after the green gate and before anything is recorded. When it exits
+   non-zero the checkpoint prints `checkpoint refused (the proof is red, ...)` and records
+   nothing, exactly as a red check does: read `.check/proof.txt`, surface what failed, and
+   stop. Never edit the proof line to get past it. And if step 5 surfaced a
    drifted subject the human approved, land *that* subject by adding `-m "<subject>"`,
    overriding the title-derived default for this one commit; unpresented, the CLI's
    deterministic subject stands.

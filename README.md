@@ -61,7 +61,7 @@ record.**
 Everything the model must stay true to lives in one file, the build's `intent.md` under
 `.plumbbob/builds/<slug>/`, written before any code: the **Frame** (the problem, what done
 looks like, what you are not doing), the **Decisions** and **Constraints** (each settled
-call with its *because*), the **Steps** (each with a **done-when** to check it by and a
+call with its *because*), the **Steps** (each with a **proof** to check it by and a
 **seam** of files it may touch), and the **Build ranges** (where the build stops for your
 call).
 
@@ -135,7 +135,7 @@ your next one. Many sessions need only the happy path: plan, run each range, fin
 | `/plumbbob:plan` | open the session and author the whole plan: Frame, Decisions, Constraints, every Step, and the build ranges that say where the build stops for you |
 | `/plumbbob:run` | run what is left of the range holding the next step and stop where the plan says: a step's pause, or the stop card that reviews the range and settles every parked idea in one reply |
 | `/plumbbob:finish` | write the report, make the final commit, clear for the next goal |
-| `/plumbbob:status` | where you are, the next step's done-when and seam, and the next move |
+| `/plumbbob:status` | where you are, the next step's proof and seam, and the next move |
 | `/plumbbob:next` | the one command to remember: asks what to do next as a list of choices, and makes the one you pick |
 
 The other thirteen (build, step, refine, order, spike, park, harvest, verify, revert,

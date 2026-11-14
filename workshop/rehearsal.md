@@ -55,7 +55,7 @@ the rest cost a minute each.
    refuses), and the model may still say tangent. The move is on the card:
    `make Pn a blocker`, rehearsed, with the handle read off the lean table.
 10. **The step 1 refusal text may drift.** The `2w` moment is deterministic only because
-    step 1's done-when fixes the text `a shelf life is written in days, like 3d`. Range 1's
+    step 1's proof fixes the text `a shelf life is written in days, like 3d`. Range 1's
     stop is exactly where that text is approved; `expand 1` at `P12` reads it, and the
     direction `make the refusal read: a shelf life is written in days, like 3d` fixes it
     before anything lands.
@@ -267,7 +267,7 @@ fails is a trap to add above, with its move.
    table and a Next Up row naming range 1.
 5. The plan converges on seven steps and three ranges, or is brought there by one direction
    at the card.
-6. Step 1's done-when carries the refusal text verbatim, and `sift add x --for 2w` prints
+6. Step 1's proof carries the refusal text verbatim, and `sift add x --for 2w` prints
    it at `B9`.
 7. The harvest appends a Decision slugged `weeks-are-days` at the next free number, and
    step 8, and the order verb's ending reads `range 3 of 3 re-cut (steps 8,6-7)`.

@@ -102,10 +102,11 @@ no step, build nothing, and run no checkpoint. `NO ACTIVE SESSION` refuses too, 
 flight, and the header's first step is that step. A run typed there is that pause's
 `looks good`: land it the way the build skill lands an approved pause, with
 `plumbbob checkpoint <n> --body <<'BODY'` and a body proportional to the step, and do not
-enter it again with `plumbbob build`. The checkpoint runs the check, so the step lands only
-on green. When the checkpoint refuses on a red check, the step stays at its pause: write the
+enter it again with `plumbbob build`. The checkpoint runs the check and then the step's
+proof command, when its proof opens on one, so the step lands only on green. When the
+checkpoint refuses on a red check or a red proof, the step stays at its pause: write the
 detail file, run `plumbbob handoff`, paste its block, and end the turn. When the step is not
-finished (its done-when unmet, and no pause card for it in this conversation), finish
+finished (its proof unmet, and no pause card for it in this conversation), finish
 building it first, then verify and land it the same way. Once it lands, a bare range's run
 ends there: relay the checkpoint's block whole and end the turn. A run whose landing range
 that step completed ends on the stop card, below, even when the paused step was the range's
@@ -119,7 +120,7 @@ in its section on step ranges: start at the header's first undone step, build ea
 grant names in build order, check, self-review, and checkpoint it on green, and take the
 next undone step in build order after each landing. A step the grant does not name halts the
 walk before it, since the checkpoint would refuse it. The halt list is the build skill's: a
-red check, a self-review mismatch, a bound agent's `blocked` or `drift`, or a new decision
+red check, a red proof, a self-review mismatch, a bound agent's `blocked` or `drift`, or a new decision
 ends at that step's pause card. `plumbbob build` names the top step as the top of the range
 you granted when it enters it. Once that step lands, its checkpoint prints the boundary
 with the Stop row (`| Stop | **Range 3** landed - <its stop> |`); relay none of it, and end
@@ -153,7 +154,7 @@ and the turn will not close on that boundary
 # Detail · Range <N> · <the stop, as the plan words it>
 
 ── recap · range <N> of <M> ──
-done-when    met
+proof        met
 decisions    honored: D1 (some-slug), D2 (another-slug)
 constraints  all honored
 
@@ -178,7 +179,7 @@ constraints  all honored
 
 The header names the range by its item number, and that is how `checkpoint` and
 `plumbbob harvest` tell the file from a step's. The three rows judge the whole range: every
-step's done-when, the decisions any step exercised, and the constraints. The Summary and the
+step's proof, the decisions any step exercised, and the constraints. The Summary and the
 numbered sections are the range's, not its last step's, and you draw them from the range's
 checkpoint bodies (`git log` over its commits) and their entries in the build-log's `## Log`,
 never from recall, since a long run can compact its context partway through and lose its

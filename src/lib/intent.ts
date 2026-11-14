@@ -6,10 +6,13 @@
 // precisely on globs, backslashes, empty or dot segments, absolute paths, a
 // missing step, a missing seam, or more than one seam line, rather than
 // guessing. The best-effort scrapers below
-// (title, done-when, decisions, constraints) feed an agent's context, not a
+// (title, decisions, constraints) feed an agent's context, not a
 // gate, so they never refuse; they return what they can and report the lines
 // they skipped. The step-field parse (a step's after, stop, effort and note
-// lines) is strict too, since those lines steer a scheduler.
+// lines) is strict too, since those lines steer a scheduler. A step's proof
+// (its `proof:` sub-line, or the older `**done when:**` clause on its opener)
+// reads both ways: strictly for the checkpoint that runs its command, loosely
+// for the dashboard and the agent's context.
 
 import { parseStepList, type StepList } from './steplist.ts'
 
@@ -312,44 +315,232 @@ export function scopeDrift(paths: ReadonlyArray<string>, seam: ReadonlyArray<str
 // what they can parse and, for the bullet scrape, the lines they had to skip so
 // the caller can warn on stderr.
 
-/** A step's title and done-when criterion; absent pieces come back as empty strings. */
-export type StepMeta = { readonly title: string; readonly doneWhen: string }
+/**
+ * A step's proof: what shows the step is done. `text` is the whole line as
+ * written, backticks kept; `command` is the contents of the code span that
+ * opens the line, or null for a proof that opens on words (a manual proof).
+ */
+export type StepProof = { readonly command: string | null; readonly text: string }
 
-const DONE_WHEN = /\*\*done when:\*\*/i
+/** A step's title and its proof; absent pieces come back as empty strings. `doneWhen` is the proof's text, under its older name. */
+export type StepMeta = { readonly title: string; readonly doneWhen: string; readonly proof: StepProof }
+
+/** What one step's lines say about its proof: the proof read, how many `proof:` lines there were, and whether the one read was empty. */
+export type ProofRead = { readonly proof: StepProof | null; readonly lines: number; readonly empty: boolean }
+
+// The older clause, in every spelling the dashboard once read as planned:
+// `**done when:**`, `**done when**:`, or the bare words.
+const DONE_WHEN = /\*{0,2}done when(?::\*{0,2}|\*{0,2}:)/i
+const PROOF_LINE = /^\s*-\s*proof:(.*)$/
+const LEGACY_LINE = /^\s*-\s*\*{0,2}done when(?::\*{0,2}|\*{0,2}:)(.*)$/i
+const NO_PROOF: StepProof = { command: null, text: '' }
 
 /**
- * Scrape step `n`'s title and done-when, best-effort.
+ * Read a step's proof from its lines, opener first.
  *
- * `title` is the text between the `N. [ ]` opener and the `**done when:**`
- * marker; `doneWhen` is everything after it, with wrapped continuation lines
- * joined until the first sub-bullet (the seam line). A missing section or step
- * yields empty strings, never a refusal.
+ * The `- proof:` sub-line wins: its text is kept verbatim, wrapped
+ * continuation lines joined with one space up to the next sub-bullet or blank
+ * line, a trailing HTML comment left out. The command is the code span that
+ * opens that text, and only that one; a span further along is prose. Only the
+ * step's own sub-bullets count: a bullet nested under another, a line inside a
+ * fenced block, and anything past the blank line that ends the item are prose,
+ * so an example never runs. With no `proof:` line, or an empty one, the older
+ * `**done when:**` clause, on the opener or on a sub-bullet of its own, reads as
+ * a proof with no command, so every recorded plan still reads. On a doubled
+ * line the first is read and `lines` says how many there were.
  */
-export function parseStepMeta(content: string, step: number): StepMeta {
-  const slice = sliceStep(content, step)
-  if (!slice.ok) {
-    return { title: '', doneWhen: '' }
+export function readProof(itemLines: ReadonlyArray<string>): ProofRead {
+  const item = ownLines(itemLines)
+  const subs = ownSubBullets(item)
+  const starts = subs.filter((i) => PROOF_LINE.test(uncommented(item[i] ?? '')))
+  const first = starts[0]
+  if (first !== undefined) {
+    const text = bulletText(item, first, PROOF_LINE)
+    if (text !== '') {
+      return { proof: { command: /^`([^`]+)`/.exec(text)?.[1] ?? null, text }, lines: starts.length, empty: false }
+    }
   }
-  // Gather the opener and its wrapped continuation lines, stopping at the first
-  // sub-bullet (`- seam:` and friends), then flatten to one line.
+  const legacy = splitOpener(item).doneWhen ?? legacySubLine(item, subs)
+  return { proof: legacy === null ? null : { command: null, text: legacy }, lines: starts.length, empty: first !== undefined }
+}
+
+/**
+ * A step's lines cut down to the item itself: it ends at the first blank line
+ * that an unindented line follows (or nothing does), since indented text after
+ * a blank line still belongs to the item and unindented text does not. Lines
+ * inside a fenced block are blanked in place, so an example in a fence is
+ * never read as one of the step's lines.
+ */
+function ownLines(itemLines: ReadonlyArray<string>): ReadonlyArray<string> {
+  const own: string[] = []
+  let fence: string | null = null
+  for (let i = 0; i < itemLines.length; i++) {
+    const line = itemLines[i] ?? ''
+    const mark = /^\s*(`{3,}|~{3,})/.exec(line)?.[1] ?? null
+    if (fence !== null) {
+      if (mark !== null && mark.startsWith(fence)) fence = null
+      own.push('')
+      continue
+    }
+    if (mark !== null) {
+      fence = mark
+      own.push('')
+      continue
+    }
+    if (i > 0 && line.trim() === '') {
+      const next = itemLines.slice(i + 1).find((l) => l.trim() !== '')
+      if (next === undefined || /^\S/.test(next)) break
+    }
+    own.push(line)
+  }
+  return own
+}
+
+/**
+ * The indexes of the step's own sub-bullets: the bullets at the depth of its
+ * `- seam:` line, or of its first bullet where it has no seam. A bullet
+ * indented far enough to sit inside another's text is nested, and one back at
+ * the margin under indented siblings starts a list of its own; neither counts.
+ */
+function ownSubBullets(item: ReadonlyArray<string>): ReadonlyArray<number> {
+  const bullets = item.flatMap((l, i) => (i > 0 && /^\s*-\s/.test(l) ? [i] : []))
+  const anchor = bullets.find((i) => /^\s*-\s*seam:/.test(item[i] ?? '')) ?? bullets[0]
+  if (anchor === undefined) return []
+  const depth = indentOf(item[anchor] ?? '')
+  return bullets.filter((i) => {
+    const indent = indentOf(item[i] ?? '')
+    return indent < depth + 2 && (depth === 0 || indent > 0)
+  })
+}
+
+/** How many columns of white space open a line. */
+function indentOf(line: string): number {
+  return /^\s*/.exec(line)?.[0].length ?? 0
+}
+
+/** The text of the bullet at `start` after its `label`: wrapped continuation lines joined with one space, up to the next bullet or blank line. */
+function bulletText(item: ReadonlyArray<string>, start: number, label: RegExp): string {
+  const parts = [(label.exec(uncommented(item[start] ?? ''))?.[1] ?? '').trim()]
+  for (let i = start + 1; i < item.length; i++) {
+    const line = uncommented(item[i] ?? '')
+    if (line.trim() === '' || /^\s*-\s/.test(line) || /^\d+\.\s/.test(line)) {
+      break
+    }
+    parts.push(line.trim())
+  }
+  return parts.join(' ').trim()
+}
+
+/** The older clause written as a sub-bullet of the step (`- **done when:** ...`): its text, or null where no sub-bullet carries one. */
+function legacySubLine(item: ReadonlyArray<string>, subs: ReadonlyArray<number>): string | null {
+  const at = subs.find((i) => LEGACY_LINE.test(uncommented(item[i] ?? '')))
+  return at === undefined ? null : bulletText(item, at, LEGACY_LINE)
+}
+
+/**
+ * A line with its trailing `<!-- ... -->` note cut away. A `<!--` inside a code
+ * span is part of the span, a command's own text, and stays.
+ */
+function uncommented(line: string): string {
+  let i = 0
+  while (i < line.length) {
+    if (line.startsWith('<!--', i)) {
+      return line.slice(0, i).trimEnd()
+    }
+    if (line[i] !== '`') {
+      i += 1
+      continue
+    }
+    let run = 1
+    while (line[i + run] === '`') run += 1
+    const close = closingRun(line, i + run, run)
+    i = close === -1 ? i + run : close + run
+  }
+  return line.trimEnd()
+}
+
+/** Where the backtick run of exactly `length` that closes a code span starts, at or after `from`; -1 when the span never closes. */
+function closingRun(line: string, from: number, length: number): number {
+  let i = from
+  while (i < line.length) {
+    if (line[i] !== '`') {
+      i += 1
+      continue
+    }
+    let run = 1
+    while (line[i + run] === '`') run += 1
+    if (run === length) return i
+    i += run
+  }
+  return -1
+}
+
+/**
+ * Split a step's opener, with its wrapped continuation lines up to the first
+ * sub-bullet, at the older `**done when:**` marker: the title before it, the
+ * clause after it, or null where the opener carries no marker.
+ */
+function splitOpener(itemLines: ReadonlyArray<string>): { readonly title: string; readonly doneWhen: string | null } {
   const collected: string[] = []
-  for (let i = 0; i < slice.itemLines.length; i++) {
-    const line = slice.itemLines[i] ?? ''
-    if (i > 0 && /^\s*-\s/.test(line)) {
+  for (let i = 0; i < itemLines.length; i++) {
+    const line = itemLines[i] ?? ''
+    if (i > 0 && (/^\s*-\s/.test(line) || line.trim() === '')) {
       break
     }
     collected.push(line.trim())
   }
   const body = collected.join(' ').replace(/^\d+\.\s*(?:\[[ xX]\]\s*)?/, '').trim()
-
   const m = DONE_WHEN.exec(body)
   if (m === null) {
-    return { title: stripTrailingSeparator(body), doneWhen: '' }
+    return { title: stripTrailingSeparator(body), doneWhen: null }
   }
-  return {
-    title: stripTrailingSeparator(body.slice(0, m.index)),
-    doneWhen: body.slice(m.index + m[0].length).trim(),
+  return { title: stripTrailingSeparator(body.slice(0, m.index)), doneWhen: body.slice(m.index + m[0].length).trim() }
+}
+
+/** A step's proof (null when it has none), or every finding that kept it from reading, each naming the step. */
+export type StepProofParse =
+  | { readonly ok: true; readonly proof: StepProof | null }
+  | { readonly ok: false; readonly findings: ReadonlyArray<string> }
+
+/**
+ * Parse step `n`'s proof, strictly: a second `proof:` line or an empty one is
+ * a finding that names the step, never a guess, since the checkpoint runs the
+ * command this returns. A step with neither a `proof:` line nor the older
+ * clause reads as null, which is no finding here.
+ */
+export function parseStepProof(content: string, step: number): StepProofParse {
+  const slice = sliceStep(content, step)
+  if (!slice.ok) {
+    return { ok: false, findings: [slice.error] }
   }
+  const read = readProof(slice.itemLines)
+  if (read.lines > 1) {
+    return { ok: false, findings: [`step ${step} has more than one \`proof:\` line.`] }
+  }
+  if (read.empty) {
+    return {
+      ok: false,
+      findings: [`step ${step}'s \`proof:\` line is empty; it takes what shows the step is done, opening on the command in backticks when there is one.`],
+    }
+  }
+  return { ok: true, proof: read.proof !== null && read.proof.text === '' ? null : read.proof }
+}
+
+/**
+ * Scrape step `n`'s title and proof, best-effort.
+ *
+ * `title` is the opener's text, cut at the older `**done when:**` marker where
+ * the opener still carries one; the proof is read loosely (the first `proof:`
+ * line on a doubled one, the older clause where there is none). A missing
+ * section or step yields empty strings, never a refusal.
+ */
+export function parseStepMeta(content: string, step: number): StepMeta {
+  const slice = sliceStep(content, step)
+  if (!slice.ok) {
+    return { title: '', doneWhen: '', proof: NO_PROOF }
+  }
+  const proof = readProof(slice.itemLines).proof ?? NO_PROOF
+  return { title: splitOpener(slice.itemLines).title, doneWhen: proof.text, proof }
 }
 
 /**
@@ -445,7 +636,7 @@ export function scrapeBullets(content: string, heading: string): ScrapedBullets 
 /**
  * Trim a trailing separator (a comma, or the legacy em dash or hyphen) plus
  * surrounding space, so a title never carries the marker that introduced its
- * done-when.
+ * older done-when clause.
  */
 function stripTrailingSeparator(text: string): string {
   return text.replace(/\s*[—,-]+\s*$/, '').trim()

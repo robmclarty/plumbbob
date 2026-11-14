@@ -45,20 +45,25 @@ Steps 2 and 3 are wiring a review can wait for, and steps 4 and 5 close the goal
 ````markdown
 ## Steps
 
-1. [ ] feat(log): add a JSON line logger, **done when:** `test/log.test.ts` parses every line it writes
+1. [ ] feat(log): add a JSON line logger
    - seam: `src/log.ts`, `test/log.test.ts`
+   - proof: `pnpm vitest run log` passes, parsing every line the logger writes
    - model: opus (the field names every later step leans on)
-2. [ ] feat(log): redact secret fields by name, **done when:** `test/redact.test.ts` passes
+2. [ ] feat(log): redact secret fields by name
    - seam: `src/redact.ts`, `test/redact.test.ts`
+   - proof: `pnpm vitest run redact` passes
    - model: sonnet (fully specified by D2)
-3. [ ] feat(http): log every request with its id, **done when:** a request in `test/middleware.test.ts` writes one line carrying its id
+3. [ ] feat(http): log every request with its id
    - seam: `src/middleware.ts`, `test/middleware.test.ts`
+   - proof: a request in `test/middleware.test.ts` writes one line carrying its id
    - model: sonnet (mechanical wiring)
-4. [ ] feat(http): log how long each request took, **done when:** the line carries `ms`, set by the test's fake clock
+4. [ ] feat(http): log how long each request took
    - seam: `src/middleware.ts`, `test/middleware.test.ts`
+   - proof: the line carries `ms`, set by the test's fake clock
    - model: sonnet (mechanical wiring)
-5. [ ] docs(log): document the fields a line carries, **done when:** `docs/logging.md` names every field the logger writes
+5. [ ] docs(log): document the fields a line carries
    - seam: `docs/logging.md`
+   - proof: every field the logger writes is named in `docs/logging.md`
    - model: sonnet
 
 ## Build order
@@ -146,7 +151,7 @@ run  range 2 of 3 · steps 2-3 · ends at step 3's boundary
 ```
 
 Inside the run, each step still passes every beat of the tick but the pause: the check, the
-self-review against the step's done-when and the plan's decisions and constraints, and a
+self-review against the step's proof and the plan's decisions and constraints, and a
 checkpoint of its own. A wrong turn still costs one step to revert. As the run enters its
 last step, `plumbbob build` says so, so the model lands it rather than holding it at a pause
 ([D85 (range-top-lands)](decisions.md#d85)):
@@ -184,7 +189,7 @@ their Log entries rather than from recall, and `plumbbob handoff --stop` renders
 steps        2 of 2 landed
              - 2 2e47835 · 3 9d2de70
 check        green: 1 of 1 checks, 2 landings
-done-when    met
+proof        met
 decisions    2 of 2 honored
 constraints  1 of 1 honored
 seam         held: 2 of 2 steps, no strays

@@ -89,15 +89,19 @@ as decisions, before any code existed.
 ## Steps as small, verifiable increments
 
 Under `## Steps`, the plan is a numbered list where **every step carries two things**: a
-**done-when** and a **seam**.
+**proof** and a **seam**.
 
 ```markdown
-1. [ ] feat(limiter): add a token-bucket limiter, **done when:** `test/limiter.test.ts` passes
+1. [ ] feat(limiter): add a token-bucket limiter
    - seam: `src/limiter.ts`, `test/limiter.test.ts`
+   - proof: `pnpm vitest run limiter` passes; the 6th request in 60s returns 429
 ```
 
-- The **done-when** is a falsifiable criterion the verify pass can actually check: ideally
-  a test or check result (`done when: the 6th request in 60s returns 429`).
+- The **proof** is a falsifiable criterion the verify pass can actually check: ideally
+  a test or check result. When the line opens on a command in backticks, as this one
+  does, `plumbbob checkpoint` runs that command once the gate is green, and a red proof
+  refuses the checkpoint the way a red check does. A proof that opens on words (`proof:
+  the 6th request in 60s returns 429`) runs nothing, and the verify pass judges it.
 - The **seam** is the exact set of paths the step will touch.
 
 `/plumbbob:plan` authors the **whole** list up front, so the happy path is to plan once and
@@ -151,12 +155,13 @@ check  →  self-review  →  validate  →  PAUSE  →  checkpoint
 
 1. **Check**: run the heavy gate (`plumbbob check`). Red stops the tick; there is nothing
    to approve yet.
-2. **Self-review**: read the diff against the step's done-when, the Decisions, and the
+2. **Self-review**: read the diff against the step's proof, the Decisions, and the
    Constraints in one structured pass. Surface every mismatch; fix nothing here.
-3. **Validate**: state, yes or no, whether the done-when is met, with the evidence.
+3. **Validate**: state, yes or no, whether the proof is met, with the evidence.
 4. **Pause**: present all of it and **stop**, waiting for your explicit approval.
-5. **Checkpoint**: *only after you approve*, commit the work, record the SHA, flip the
-   step to `[x]`, and return to DESIGN.
+5. **Checkpoint**: *only after you approve*, run the gate again and then the proof's
+   command when it has one, commit the work, record the SHA, flip the step to `[x]`, and
+   return to DESIGN.
 
 ### The pause is a clock, not a lock
 
@@ -169,7 +174,7 @@ because a wall refuses you, but because the system stops and waits for you to be
 Re-firing the next run, or the next build, *is* the clock tick.
 
 What the loop pulls up to has a fixed shape ([the turn anatomy](presentation.md)): a
-**Summary** of the outcome, a **Readout** of measured rows (the check, the done-when, the
+**Summary** of the outcome, a **Readout** of measured rows (the check, the proof, the
 decisions and constraints, the seam, the diff with each changed file beneath it, what the
 step spent), the **Your Call** block naming the replies, a state table headed by the
 **Verdict** on a four-rung ladder (`● Plumb`, `◐ A hair off`, `○ Out of plumb`,

@@ -1,6 +1,6 @@
 ---
 name: build
-description: "The default engine: read the next planned step from intent, implement it (its done-when, seam, Decisions, Constraints), then verify it through to the approval pause. Swappable: build by hand/vibed/another harness and run /plumbbob:verify instead. `--auto` self-approves and chains to done; a step range like `1-3`, or a list like `20,5-9`, self-approves exactly the steps it names, in build order, then stops."
+description: "The default engine: read the next planned step from intent, implement it (its proof, seam, Decisions, Constraints), then verify it through to the approval pause. Swappable: build by hand/vibed/another harness and run /plumbbob:verify instead. `--auto` self-approves and chains to done; a step range like `1-3`, or a list like `20,5-9`, self-approves exactly the steps it names, in build order, then stops."
 argument-hint: "[step-number | step-range | step-list] [--auto]"
 disable-model-invocation: true
 allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob park:*), Bash(plumbbob defer:*), Bash(plumbbob agent:*), Bash(plumbbob spike:*), Bash(git diff:*)
@@ -63,10 +63,10 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
      entering it, run `plumbbob spike report "<slug>"` (the CLI scaffolds a
      `spike-NN-<slug>.md` in the build folder, stamped `via: step <n>`), then work the
      experiment and record your **Findings** and **Verdict** there. A recorded verdict is
-     what the step's done-when should check; the report, not just the code, is the
+     what the step's proof should check; the report, not just the code, is the
      deliverable. This is the same artifact `/plumbbob:spike` produces for a mid-build fork
      ([D70 (spike-reports)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d70)).
-3. **Read the plan.** Read the step's **done-when**, its **seam**, and the
+3. **Read the plan.** Read the step's **proof**, its **seam**, and the
    **Decisions** and **Constraints** in `intent.md`. Build to *that*; the deciding
    already happened, off the chat.
    - **Bound `before`-agents load context first.** If `plumbbob status` shows a
@@ -94,7 +94,7 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    does: `plumbbob check` (on red, read `.check/summary.json` and the failing slot's
    raw output under `.check/` for the actual diagnostics; while iterating on a fix,
    narrow the loop with `plumbbob check --bail --only <slots>`; the checkpoint gate
-   still runs everything) → self-review the diff against the done-when, the Decisions,
+   still runs everything) → self-review the diff against the proof, the Decisions,
    and the Constraints (a single structured read; cite each with its slug from
    `intent.md`: `C1 (no-new-deps)`, never a bare `C1`) → validate → **PAUSE
    for the human's approval** → only on approval, checkpoint with
@@ -102,8 +102,14 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    step** (a line for a trivial change, a short paragraph for a meatier one; no TIL scan,
    no separate commit skill). The CLI owns the subject and appends this step to the
    build-log's `## Log`, so the history writes itself; you only supply the body (or omit
-   `--body` for the deterministic done-when + seam + diffstat fallback). Do **not** bump
+   `--body` for the deterministic proof + seam + diffstat fallback). Do **not** bump
    the version or changelog; that is the human's `/version` call.
+   - **The checkpoint runs the proof.** When the step's `- proof:` line opens on a command
+     in backticks, `plumbbob checkpoint` runs it at the repo root once the gate is green.
+     A command that exits non-zero refuses the checkpoint and records nothing, the same as
+     a red check: read `.check/proof.txt`, fix the code, and never edit the proof line to
+     get past it. Run the command yourself while you build, so the `proof` row you write
+     is one the checkpoint will confirm.
    - **`--body` reads stdin only.** Redirect the heredoc *into* the command (`--body
      <<'BODY'`). Do **not** pass it as an argument value (`--body "$(cat <<'BODY'…)"`):
      `--body` ignores an argument and always reads stdin. Under an agent harness that
@@ -154,7 +160,7 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    # Detail · Step <N> · <the step title>
 
    ── recap · step <N> of <M> ──
-   done-when    met
+   proof        met
    decisions    honored: D1 (some-slug), D2 (another-slug)
    constraints  all honored
 
@@ -191,7 +197,7 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    `[more details](…)` link to the file, which handoff writes, so you type no path. Five
    sections at most, each titled with one sentence and one move, plain English first, a
    path in backticks only when the name itself is the news. A judgment or a flag (a stray
-   the seam row will name, a decision you had to bend, a doubt about the done-when) is one
+   the seam row will name, a decision you had to bend, a doubt about the proof) is one
    of those sections, and the card carries it where it bears on the call: a bent row's `→`
    line points at it, and your recommendation names it when it changes the move. It is
    never a paragraph of its own. A caveat the human must see before they reply goes in the
@@ -322,7 +328,7 @@ and approves in the human's place**, and it **chains**:
 - Build the next step, running its slots (see **§ Running bound agents**) in the same
   order as the default path: bound `before`-agents → implement (or the bound `build`-agent) → bound
   `after`-agents → `check` → self-review → **if the check is green AND the
-  self-review finds no done-when / Decision / Constraint mismatch, checkpoint** and move
+  self-review finds no proof / Decision / Constraint mismatch, checkpoint** and move
   straight on to the next planned step. Repeat. `--auto` adds no new machinery; the
   `after`-agent output simply feeds the *existing* self-review halt condition.
 - **Stop and hand back to the human** the moment a halt arrives, and end the turn by the

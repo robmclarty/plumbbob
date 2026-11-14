@@ -50,7 +50,10 @@
       ],
       "stop": "planned",
       "effort": "high",
-      "done_when": "a new `docs/plan-export.md` gives the grammar of the `- after:`, `- stop:` and `- effort:` sub-lines with a worked step, the defaults ([D2 (serial-default)](#d2), [D3 (range-end-stops)](#d3), [D5 (effort-line)](#d5)), the field mapping ([D7 (field-mapping)](#d7)), the six rules and checks with the words each failure prints, and what keeps `plan.json` current; `docs/decisions.md` carries the new decisions and D23's dated revision; and the human approves the grammar at the step's pause, before any parser changes",
+      "proof": {
+        "command": null,
+        "text": "a new `docs/plan-export.md` gives the grammar of the `- after:`, `- stop:` and `- effort:` sub-lines with a worked step, the defaults ([D2 (serial-default)](#d2), [D3 (range-end-stops)](#d3), [D5 (effort-line)](#d5)), the field mapping ([D7 (field-mapping)](#d7)), the six rules and checks with the words each failure prints, and what keeps `plan.json` current; `docs/decisions.md` carries the new decisions and D23's dated revision; and the human approves the grammar at the step's pause, before any parser changes"
+      },
       "context": [],
       "landed": true
     },
@@ -67,7 +70,10 @@
       ],
       "stop": "none",
       "effort": null,
-      "done_when": "`parseStepSeam` refuses a token holding `!` or a backslash, or with an empty, `.` or `..` segment, with a message naming the token and D23 (no-glob-seams), still strips a leading `./`, and every undone step's seam in every `intent.md` under `.plumbbob/builds/` still parses; tests in `src/lib/__tests__/intent.test.ts` cover each refusal",
+      "proof": {
+        "command": null,
+        "text": "`parseStepSeam` refuses a token holding `!` or a backslash, or with an empty, `.` or `..` segment, with a message naming the token and D23 (no-glob-seams), still strips a leading `./`, and every undone step's seam in every `intent.md` under `.plumbbob/builds/` still parses; tests in `src/lib/__tests__/intent.test.ts` cover each refusal"
+      },
       "context": [
         "the refusals sit at `src/lib/intent.ts:114` to `:126`; runciter's `seam_entry_issue` is the reference for which tokens fail."
       ],
@@ -86,7 +92,10 @@
       ],
       "stop": "none",
       "effort": null,
-      "done_when": "a pure parser in `src/lib/intent.ts` returns each step's `after` (step numbers, `none`, or absent), `stop` and `effort` from its sub-lines, the step's `- note:` lines in order, and a finding by step for a malformed or duplicated line ([D9 (strict-fields)](#d9)); `after` reads through `src/lib/steplist.ts`; tests cover each value, each refusal, and a step carrying none of the lines",
+      "proof": {
+        "command": null,
+        "text": "a pure parser in `src/lib/intent.ts` returns each step's `after` (step numbers, `none`, or absent), `stop` and `effort` from its sub-lines, the step's `- note:` lines in order, and a finding by step for a malformed or duplicated line ([D9 (strict-fields)](#d9)); `after` reads through `src/lib/steplist.ts`; tests cover each value, each refusal, and a step carrying none of the lines"
+      },
       "context": [],
       "landed": true
     },
@@ -107,7 +116,10 @@
       ],
       "stop": "none",
       "effort": "high",
-      "done_when": "`derivePlan` in a new `src/lib/plan.ts` turns an intent's text, its slug, its repo-relative path and its sha256 into the contract's object per [D1 (step-id)](#d1) to [D8 (every-step)](#d8), and `serializePlan` writes it per [D12 (bytes-compare)](#d12); `test/contract/plan-json.test.ts` validates derived plans (an unannotated plan, one with `after:` lines, one with ranges and a bare range) against the vendored schema with ajv, checks the three plan rules on each, and round-trips the vendored example through the schema and the rules",
+      "proof": {
+        "command": null,
+        "text": "`derivePlan` in a new `src/lib/plan.ts` turns an intent's text, its slug, its repo-relative path and its sha256 into the contract's object per [D1 (step-id)](#d1) to [D8 (every-step)](#d8), and `serializePlan` writes it per [D12 (bytes-compare)](#d12); `test/contract/plan-json.test.ts` validates derived plans (an unannotated plan, one with `after:` lines, one with ranges and a bare range) against the vendored schema with ajv, checks the three plan rules on each, and round-trips the vendored example through the schema and the rules"
+      },
       "context": [
         "vendor `schema/runciter.plan.schema.json` and `schema/examples/runciter.plan.example.json` from `~/Projects/runciter/code/runciter` at `9b40f0f` per [D16 (vendored-contract)](#d16), and add ajv per [D15 (ajv-dev-dep)](#d15)."
       ],
@@ -128,7 +140,10 @@
       ],
       "stop": "none",
       "effort": null,
-      "done_when": "a new `src/lib/plancheck.ts` runs the contract's three plan rules (unique ids, known dependencies, no cycle) and plumbbob's four plan checks (the fourth is [D20 (no-forward-after)](#d20)) over a derived plan with the tree injected, and returns each failure by step in the words `docs/plan-export.md` gives; check 2 skips landed steps; check 3 uses `seams_overlap`'s semantics and [D10 (reaches-not-names)](#d10); tests cover a pass and each failure; `docs/plan-export.md` and `docs/decisions.md` carry the fourth check and its words",
+      "proof": {
+        "command": null,
+        "text": "a new `src/lib/plancheck.ts` runs the contract's three plan rules (unique ids, known dependencies, no cycle) and plumbbob's four plan checks (the fourth is [D20 (no-forward-after)](#d20)) over a derived plan with the tree injected, and returns each failure by step in the words `docs/plan-export.md` gives; check 2 skips landed steps; check 3 uses `seams_overlap`'s semantics and [D10 (reaches-not-names)](#d10); tests cover a pass and each failure; `docs/plan-export.md` and `docs/decisions.md` carry the fourth check and its words"
+      },
       "context": [
         "runciter's `seams_overlap` and `find_cycle` (`src/protocol/plan.ts`) are the reference; re-implement, never import. \"Under a part\" is [D18 (under-a-part)](#d18)."
       ],
@@ -151,7 +166,10 @@
       ],
       "stop": "planned",
       "effort": null,
-      "done_when": "`plumbbob export [<slug>]` derives and checks the plan and writes `.plumbbob/builds/<slug>/plan.json`, or writes nothing and exits 1 naming each failure ([D11 (refuse-the-write)](#d11)); the verb is registered and documented where `test/contract/cli-docs.test.ts` looks; and running it writes this build's `plan.json` and `.plumbbob/builds/2026-10-17-build-ranges/plan.json`, both of which validate against the vendored schema",
+      "proof": {
+        "command": null,
+        "text": "`plumbbob export [<slug>]` derives and checks the plan and writes `.plumbbob/builds/<slug>/plan.json`, or writes nothing and exits 1 naming each failure ([D11 (refuse-the-write)](#d11)); the verb is registered and documented where `test/contract/cli-docs.test.ts` looks; and running it writes this build's `plan.json` and `.plumbbob/builds/2026-10-17-build-ranges/plan.json`, both of which validate against the vendored schema"
+      },
       "context": [],
       "landed": true
     },
@@ -174,7 +192,10 @@
       ],
       "stop": "none",
       "effort": null,
-      "done_when": "`checkpoint`'s tick, `order` and `defer` re-export when the build folder holds a `plan.json` ([D14 (cli-keeps-current)](#d14)); `plumbbob check` and the checkpoint gate exit 1, naming `plumbbob export`, when `plan.json` differs from a fresh derivation or the plan fails a rule or check; a build without `plan.json` checks exactly as before ([C4 (single-stream-unchanged)](#c4)); tests cover a drifted file, a CLI write that keeps it current, and a build with none",
+      "proof": {
+        "command": null,
+        "text": "`checkpoint`'s tick, `order` and `defer` re-export when the build folder holds a `plan.json` ([D14 (cli-keeps-current)](#d14)); `plumbbob check` and the checkpoint gate exit 1, naming `plumbbob export`, when `plan.json` differs from a fresh derivation or the plan fails a rule or check; a build without `plan.json` checks exactly as before ([C4 (single-stream-unchanged)](#c4)); tests cover a drifted file, a CLI write that keeps it current, and a build with none"
+      },
       "context": [
         "the drift check runs ahead of the gate in `runCheck` (`src/lib/check.ts:128`). How its red reaches the recap's check row, which reads `.check/summary.json` (`summaryCheckRow`, `src/lib/orient.ts:2161`), is settled here; the override path's summary (`runCommand`, `src/lib/check.ts:163`) is the precedent for writing one. A re-exported `plan.json` rides the same commit as the `intent.md` write that caused it, so the checkpoint stages it with the tick."
       ],
@@ -199,7 +220,10 @@
       ],
       "stop": "planned",
       "effort": null,
-      "done_when": "`templates/intent.md` shows the three sub-lines in its step guidance, `skills/plan/SKILL.md`, `skills/step/SKILL.md` and `skills/refine/SKILL.md` say to run `plumbbob export` after an edit to a build that has a `plan.json`, `docs/plan-export.md` is linked from `docs/cli-reference.md` and the glossary, and the glossary defines `plan.json`",
+      "proof": {
+        "command": null,
+        "text": "`templates/intent.md` shows the three sub-lines in its step guidance, `skills/plan/SKILL.md`, `skills/step/SKILL.md` and `skills/refine/SKILL.md` say to run `plumbbob export` after an edit to a build that has a `plan.json`, `docs/plan-export.md` is linked from `docs/cli-reference.md` and the glossary, and the glossary defines `plan.json`"
+      },
       "context": [],
       "landed": true
     }

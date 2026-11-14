@@ -95,7 +95,7 @@ changes nothing but `.check/`. A checkride that detects no tool refuses to call 
 green; `{"check": "npm test"}` in `.plumbbob/settings.json` gates through another
 command.
 
-Review your diff against the done-when, the Decisions, and the Constraints, write
+Review your diff against the proof, the Decisions, and the Constraints, write
 `.plumbbob/detail.md` (the shape is two sections down), and render the pause:
 
 ```sh
@@ -129,15 +129,19 @@ plumbbob finish
 **The CLI machine-reads a handful of lines; everything else is yours.** Under `## Steps`:
 
 ```markdown
-1. [ ] feat(login): count failed logins per account, **done when:** six failures in a
-   minute return 429, covered by a test
+1. [ ] feat(login): count failed logins per account
    - seam: `src/login.ts`, `test/login.test.ts`
+   - proof: six failures in a minute return 429, covered by a test
    - model: sonnet
 ```
 
-The opener is the number, the box, a title that becomes the commit subject, and
-`**done when:**`; a step without a done-when is not planned. The `seam:` line is exactly
-one, its paths backticked, repo-relative, and never a glob
+The opener is the number, the box, and a title that becomes the commit subject. The
+`proof:` line is the step's finish line, and a step without one is not planned. When it
+opens on a code span, that span is a command: `plumbbob checkpoint` runs it through `sh`
+at the repo root once the gate is green, and a non-zero exit refuses the checkpoint as a
+red check does. A proof that opens on words, like this one, runs nothing. The older
+`**done when:**` clause on the opener still reads, as a proof with no command. The
+`seam:` line is exactly one, its paths backticked, repo-relative, and never a glob
 ([D23 (no-glob-seams)](decisions.md#d23)); `build` refuses a step with no seam line, two
 of them, an empty one, a glob, or an absolute path. The `model:` line is optional, and
 one still holding the template's `<...>` fill-in reads as absent, as does the
@@ -181,7 +185,7 @@ build-log's `## Log`, then clears it. A step's file:
 # Detail · Step 1 · feat(login): count failed logins per account
 
 ── recap · step 1 of 3 ──
-done-when    met
+proof        met
 decisions    honored: D1 (window-per-account)
 constraints  all honored
 
@@ -202,7 +206,7 @@ The parsers are exact. The header must read `# Detail · Step N · <title>`; a h
 naming another step is a leftover, and `checkpoint` deletes it without recording it. The
 recap opener is `── recap · step N of M ──`, ruled in U+2500 box-drawing dashes and
 separated by the U+00B7 middle dot; a hyphen or a period there and no row is read. The
-rows are three, `done-when`, `decisions`, and `constraints`, the judged rows, each
+rows are three, `proof`, `decisions`, and `constraints`, the judged rows, each
 opening with a verdict word from [the readout](presentation.md#the-readout)'s closed
 set. `check`, `seam`, and `diff` are measured, so a row you write for any of them is
 replaced. The rows are contiguous; the first blank line ends them. The headings match
@@ -263,7 +267,7 @@ heredoc, or from a script.
 and leaves `TURN`, so a repo that has run one hooked session keeps its count, `build`
 stamps `TICK` equal to `TURN`, and the latch reads by stdin. A bare
 `plumbbob checkpoint 1` at the terminal passes on row 1, where `--body` is ignored and
-the deterministic body (done-when, seam, diffstat) is used. A `--body <<'BODY'` heredoc
+the deterministic body (proof, seam, diffstat) is used. A `--body <<'BODY'` heredoc
 moves stdin off the terminal, so the decision falls through: both files exist, no grant,
 `TURN` equals `TICK`, refuse. The refusal is the pause, and it ends as it does in a
 session, with a human turn. Record one, then land:
@@ -331,7 +335,7 @@ abandon an in-flight step first, or its diff rides the commit under `finish`.
 they do not decide. What the CLI leaves to you:
 
 - the plan interview and the spec absorb: Frame, Decisions, Constraints, steps with
-  done-when and seam, ranges, questions, the cold read (`/plumbbob:plan`)
+  proof and seam, ranges, questions, the cold read (`/plumbbob:plan`)
 - the adversarial pass, and the repair after a blocker (`/plumbbob:refine`,
   `/plumbbob:step`)
 - the self-review, the recap's verdict words, the Summary, the highlights, the

@@ -34,7 +34,7 @@ cat .plumbbob/builds/*/intent.md
 Yours will read differently. Check for a Frame of four lines taken from the spec,
 Decisions with a `*because*` each (`D1 (days-only-unit)` and `D2 (oldest-first)`
 in the target), four Constraints from the rules, seven steps, each with a
-`done when:` a test can measure and a `seam:` naming its files, three build ranges,
+`seam:` naming its files and a `proof:` a test can measure, three build ranges,
 and two open questions in the expanded form:
 
 ```markdown
@@ -80,7 +80,7 @@ sentence of each line, with the model's lean in the last column
 | --- | --- |
 |  | **Range 1** on Haiku: /plumbbob:run (step 1 to its pause) |
 
-**Recommendation**: Approve it. Every step carries a done-when a test can measure, the seams name files the scaffold has or the step creates, and no range runs through an open question.
+**Recommendation**: Approve it. Every step carries a proof a test can measure, the seams name files the scaffold has or the step creates, and no range runs through an open question.
 
 [more details](.plumbbob/detail.md)
 ````
@@ -227,7 +227,7 @@ PlumbBob — sift: a list that forgets   [DESIGN]
 
   steps  0/7 done
   ▸ 1  feat(life): parse a shelf life written in days   ← next
-        done when: `parseLife('3d')` yields 3 days and `'3'`, `'x'` yield the refusal `a shelf life is written in days, like 3d`, under test
+        proof: under test, `parseLife('3d')` yields 3 days and `'3'`, `'x'` yield the refusal `a shelf life is written in days, like 3d`
         seam: src/life.ts, src/__tests__/life.test.ts
         model: haiku (one function, fully specified)
     2  feat(item): tell a live item from one past its life

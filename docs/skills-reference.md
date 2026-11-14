@@ -72,7 +72,7 @@ Frames a fresh goal and authors the **complete** plan before any code. It disamb
 its input itself: no argument runs an interview, a file path (or an `@`-mention) absorbs
 an out-of-band spec, any other text is expanded as inline intent. Under the hood it runs
 `plumbbob start` (recording the baseline), fills the build's `intent.md` (Frame, Decisions,
-Constraints, and **all** Steps, each with a done-when, a seam, and (where the signal is
+Constraints, and **all** Steps, each with a proof, a seam, and (where the signal is
 clear) an advisory `model:` recommendation naming the smallest model that can carry the
 step), and the **build ranges**: where the build stops for a human call, one item per
 range, with the command that defines it, the call that ends it, and the model to run it on
@@ -111,7 +111,7 @@ active session and a goal worth more than a one-liner.
 
 Revises the **next undone step** just-in-time: the steps were all planned up front, so
 this is a sharpening tool, not where steps are born. Fired bare, it re-reads what the
-build has already taught you and syncs the step's done-when and seam to reality; given
+build has already taught you and syncs the step's proof and seam to reality; given
 `<what-changed>`, it makes that directed revision (tighten, re-cut, split, or add a step).
 One step at a time, written back into `## Steps` only on your approval. An added step is
 placed by sequence (`plumbbob order`, the [build order](#order)), never by renumbering, and
@@ -151,7 +151,7 @@ and then the same plan driven by hand beside them, is [`runs.md`](runs.md).
 
 The bundled executor: the default engine, not the only one. It's **swappable**:
 implement a step any other way and run `/plumbbob:verify` instead. Fired bare it picks the next undone step (a number jumps); it reads
-the step's done-when, seam, Decisions, and Constraints, goes in-flight
+the step's proof, seam, Decisions, and Constraints, goes in-flight
 (`plumbbob build <n>`), implements *only that step*, then carries straight through the
 verify tick to the pause. When the step is [bound to agents](#the-harness-slots) it runs
 the `before`-slot ones for context, delegates the diff to a `build`-slot agent if one is
@@ -187,9 +187,9 @@ refusal, which names the reply that records the card, and ends the turn
 ### verify
 
 The tick itself, executor-agnostic: run the heavy gate (`plumbbob check`), self-review the
-diff against done-when / Decisions / Constraints, validate the done-when with evidence,
-**PAUSE** for your approval, and only then checkpoint (`plumbbob checkpoint`: commit,
-record the SHA, flip the step to `[x]`). Any `after`-slot [agents](#the-harness-slots)
+diff against proof / Decisions / Constraints, validate the proof with evidence,
+**PAUSE** for your approval, and only then checkpoint (`plumbbob checkpoint`: run the
+proof's command when it opens on one, commit, record the SHA, flip the step to `[x]`). Any `after`-slot [agents](#the-harness-slots)
 run here too, as **advisory input** to the self-review; checkride gates, they never do.
 It reads the *diff, not the author*: a step you wrote by hand or vibed in another harness
 verifies exactly like a `/plumbbob:build` step. The pause it reaches is the same block,
@@ -228,7 +228,7 @@ same verb when they add a step, so you rarely need to fire this yourself.
 ### status
 
 The orientation move: a thin trigger for `plumbbob status`. Prints the dashboard (title,
-phase, the step list with the next step's done-when, seam, and advisory model
+phase, the step list with the next step's proof, seam, and advisory model
 recommendation, last checkpoint, the build order when it departs from the numbering,
 the build ranges when the plan has them, `parked 2 of 7 open`, and the open questions
 counted apart, `open questions 1 to answer, 2 deferred`)

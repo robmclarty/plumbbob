@@ -48,6 +48,7 @@ import { runDoctor } from 'checkride'
 import type { DoctorCheck } from 'checkride'
 import { type AgentListing, listAgents } from '../lib/agents.ts'
 import { gateDetectsTools } from '../lib/check.ts'
+import { atisVersion } from '../lib/reachfile.ts'
 import { marketplacePlumbbob } from '../lib/plugins.ts'
 import { findRepoRoot, gitPath, hasCommit, stagePath } from '../lib/git.ts'
 import {
@@ -663,10 +664,30 @@ function latchReport(cwd: string): { readonly lines: string[]; readonly failed: 
 }
 
 /**
+ * The reach probe: is atis on PATH to split a step's diff at the pause?
+ *
+ * atis is optional. With it, the plan checkpoint stores what each step's seam
+ * reaches and the pause reads the diff against seam and reach; without it the
+ * pause reads the diff against the seam alone, as it always has. Either state
+ * is fine, so this section never adds to the problem count. Outside a repo
+ * there is no build to store a reach for, so the section is skipped.
+ */
+function reachReport(cwd: string): { readonly lines: string[]; readonly failed: number } {
+  const root = findRepoRoot(cwd)
+  if (root === null) return { lines: [], failed: 0 }
+  const version = atisVersion(root)
+  const line =
+    version === null
+      ? '  ○ atis: not on PATH (optional; without it the pause reads a step\'s diff against its seam alone)'
+      : `  ✓ atis ${version}: the pause splits a step's diff into seam, reach, and out`
+  return { lines: ['', 'plumbbob doctor — reach — D155 (reach-is-computed)', line], failed: 0 }
+}
+
+/**
  * Run every doctor section, print the report, and return the exit code.
  *
  * Sections in order: plugin install, sidecar layout (migrating under `--migrate`),
- * repo setup, agents, check gate, approval latch. Exit 1 when any section reported a problem, so
+ * repo setup, agents, check gate, approval latch, reach. Exit 1 when any section reported a problem, so
  * scripts can gate on it; the closing lines cover the restart and the PATH story
  * either way. `env` injects a deterministic toolchain probe for tests (see GateEnv).
  */
@@ -693,6 +714,8 @@ export async function doctor(cwd: string, args: ReadonlyArray<string> = [], env?
 
   const latch = latchReport(cwd)
   out.push(...latch.lines)
+
+  out.push(...reachReport(cwd).lines)
 
   const failed = checks.filter((c) => !c.ok).length + sidecar.failed + repo.failed + agents.failed + gate.failed + latch.failed
   out.push('')

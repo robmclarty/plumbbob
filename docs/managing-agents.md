@@ -69,7 +69,7 @@ not can only be obeyed.
 
 **The drawing on the wall is the job; everything else is weather.** The Frame names the
 problem, the smallest thing that solves it, what done looks like, and what you are
-refusing to do. Each step carries a done-when a check can read. `status` infers one next
+refusing to do. Each step carries a proof a check can read. `status` infers one next
 move and prints the full list beneath it so you can overrule it
 ([D15 (one-next-move)](decisions.md#d15)); one move, because the foreman who gives five
 directions at once gets none of them.
@@ -87,7 +87,7 @@ level.
 So the sign-off is instrumented. `checkpoint` refuses a red check; the gate is checkride,
 called through its API, and a run with every slot skipped is a refusal, not a green
 ([D32 (checkride-gate)](decisions.md#d32)). The verify tick runs that full gate and then
-one structured self-review of the diff against the done-when, the Decisions, and the
+one structured self-review of the diff against the proof, the Decisions, and the
 Constraints ([D16 (check-plus-self-review)](decisions.md#d16)). The self-review is
 advisory, and so is any after-slot agent you add: it informs the pause and cannot fail or
 pass a step ([D45 (advisory-review)](decisions.md#d45)). The measured rows decide; the

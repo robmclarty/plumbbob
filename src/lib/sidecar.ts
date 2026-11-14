@@ -4,7 +4,8 @@
 // procedural, node builtins only.
 //
 // Two planes share the directory: the tracked ARTIFACT plane (settings.json and
-// each build's `builds/<slug>/` folder: intent, build-log, checkpoints, report),
+// each build's `builds/<slug>/` folder: intent, build-log, checkpoints, report,
+// and the `reach.json` atis answered into when it is on PATH),
 // which rides its branch into the PR, and the git-excluded CONTROL plane (STATE,
 // the personal settings overlay, the turn ledger, and each build's in-flight
 // markers), which stays per-worktree and never commits.
@@ -389,7 +390,7 @@ export function checkpointsPath(root: string, slug?: string | null): string {
 }
 
 /**
- * intent.md: the build's plan: steps, seams, decisions, done-when.
+ * intent.md: the build's plan: steps, seams, decisions, proofs.
  */
 export function intentPath(root: string, slug?: string | null): string {
   return join(artifactDir(root, slug), 'intent.md')
@@ -542,6 +543,7 @@ export function clearDetail(root: string): void {
 
 export type StepStats = {
   readonly redChecks?: number
+  readonly redProofs?: number
   readonly driftWarnings?: number
   readonly reverts?: number
   readonly abandons?: number
@@ -581,7 +583,7 @@ export function bumpStepStat(
   root: string,
   slug: string | null | undefined,
   step: number,
-  key: 'redChecks' | 'driftWarnings' | 'reverts' | 'abandons',
+  key: 'redChecks' | 'redProofs' | 'driftWarnings' | 'reverts' | 'abandons',
 ): void {
   patchStepStat(root, slug, step, (current) => ({ [key]: (current[key] ?? 0) + 1 }))
 }

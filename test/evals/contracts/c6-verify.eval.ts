@@ -1,6 +1,6 @@
 // Contract 6 — `/verify` reviews, never builds (the second honest
 // prose-governed number). The fixture seeds a hand-made, uncommitted diff with
-// a subtle flaw: greet() omits the comma the done-when demands, and the gate
+// a subtle flaw: greet() omits the comma the proof demands, and the gate
 // is green (it never tests the comma), so only the verify turn's reading can
 // catch it. The verify turn must author zero source edits (no "fixing it for
 // you" — the flaw's bytes stay wrong), land nothing (the hand-built path has

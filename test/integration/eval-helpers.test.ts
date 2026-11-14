@@ -131,7 +131,7 @@ function pausedFixtureForHolds(): string {
   )
   writeFileSync(
     join(repo, '.plumbbob', 'detail.md'),
-    '── recap · step 1 of 2 ──\ndone-when    met\n\n## Summary\n\nIt greets.\n\n## 1 greet exists\n\nThe story.\n\n## Recommendation\n\nApprove it.\n',
+    '── recap · step 1 of 2 ──\nproof        met\n\n## Summary\n\nIt greets.\n\n## 1 greet exists\n\nThe story.\n\n## Recommendation\n\nApprove it.\n',
   )
   return repo
 }
@@ -274,7 +274,7 @@ describe('eval fixtures (seeded plan, deterministic gates)', () => {
     const checkpoints = readFileSync(join(buildDir, 'checkpoints'), 'utf8')
     expect(checkpoints).toMatch(/^baseline [0-9a-f]{40}\nplan [0-9a-f]{40}\n$/)
     const intent = readFileSync(join(buildDir, 'intent.md'), 'utf8')
-    expect(intent).toContain('1. [ ] Create the greeting — **done when:** src/greet.js exports greet()')
+    expect(intent).toContain('1. [ ] Create the greeting\n   - seam: `src/greet.js`\n   - proof: src/greet.js exports greet()')
     expect(intent).toContain('- seam: `src/farewell.js`')
     const settings = JSON.parse(readFileSync(join(repo, '.plumbbob', 'settings.json'), 'utf8')) as { check: string }
     expect(settings.check).toBe('node check.js')
@@ -830,7 +830,7 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
         '# Detail · Step 1 · Create the greeting module',
         '',
         '── recap · step 1 of 2 ──',
-        'done-when    met',
+        'proof        met',
         'decisions    1 of 1 honored',
         'constraints  all honored',
         '',
@@ -1095,7 +1095,7 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
       '**Readout**:',
       '',
       '```text',
-      'done-when    met',
+      'proof        met',
       'spent        26s',
       '```',
       '',
@@ -1118,7 +1118,7 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
     expect(hasCheckRow(a)).toBe(false)
     const gateProbe = anatomyChecks(noGate, 'decision').find((c) => c.name.endsWith('check row'))
     expect(gateProbe?.pass).toBe(false)
-    expect(gateProbe?.detail).toBe('done-when, spent')
+    expect(gateProbe?.detail).toBe('proof, spent')
   })
 
   it('names what a partial or reordered ending is missing rather than just failing it', () => {
@@ -1158,7 +1158,7 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
       'steps        4 of 4 landed',
       '             - 6 a1b2c3d · 7 b2c3d4e · 8 c3d4e5f · 9 d4e5f6a',
       'check        green: 11 of 11 checks, 4 landings',
-      'done-when    met',
+      'proof        met',
       '```',
       '',
       '**Harvested**: **1** of 8 parked ideas open',
@@ -1334,7 +1334,7 @@ describe('c11 run outcomes (stub session, live renderer)', () => {
     "# Detail · Range 1 · review the greeting and the farewell before the shout helper",
     '',
     '── recap · range 1 of 2 ──',
-    'done-when    met',
+    'proof        met',
     '',
     '## Summary',
     '',

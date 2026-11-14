@@ -16,7 +16,10 @@
       "seam": ["packages/types/src/rate-limit.ts", "packages/types/src/index.ts"],
       "stop": "structural",
       "effort": "high",
-      "done_when": "RateLimit { max, window_ms } is exported from @sandbox/types, with a unit test"
+      "proof": {
+        "command": "pnpm --filter @sandbox/types test",
+        "text": "`pnpm --filter @sandbox/types test` passes; RateLimit { max, window_ms } is exported from @sandbox/types"
+      }
     },
     {
       "id": "server-limiter",
@@ -24,7 +27,10 @@
       "range": "r1",
       "depends_on": ["limit-types"],
       "seam": ["packages/server/src/limiter/", "packages/server/src/routes/login.ts"],
-      "done_when": "the sixth login in a minute from one address gets 429; a test covers it",
+      "proof": {
+        "command": "pnpm --filter @sandbox/server test limiter",
+        "text": "`pnpm --filter @sandbox/server test limiter` passes; the sixth login in a minute from one address gets 429"
+      },
       "context": ["The login route is the only one limited in this build."]
     },
     {
@@ -35,7 +41,7 @@
       "seam": ["packages/client/src/retry.ts", "packages/client/src/__tests__/retry.test.ts"],
       "stop": "planned",
       "effort": "medium",
-      "done_when": "a 429 is retried after Retry-After, at most three times; a test covers it"
+      "proof": { "text": "a 429 is retried after Retry-After, at most three times; a test covers it" }
     }
   ]
 }

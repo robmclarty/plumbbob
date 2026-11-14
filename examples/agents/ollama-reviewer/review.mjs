@@ -107,7 +107,10 @@ function buildPrompt(ctx, diff) {
   const lines = []
   const step = ctx.step ?? {}
   lines.push(`Step ${step.n ?? '?'}: ${step.title ?? '(untitled)'}`)
-  if (step.doneWhen) lines.push(`Done when: ${step.doneWhen}`)
+  // `step.proof.text` is what shows the step is done; `step.doneWhen` carries the
+  // same words on an envelope written before `proof` existed.
+  const proof = step.proof?.text ?? step.doneWhen
+  if (proof) lines.push(`Proof: ${proof}`)
   const list = (label, items) => {
     if (Array.isArray(items) && items.length > 0) {
       lines.push('', `${label}:`, ...items.map((s) => `- ${s}`))
@@ -122,7 +125,7 @@ function buildPrompt(ctx, diff) {
 
 const SYSTEM = [
   'You are a code reviewer giving an advisory second opinion at a checkpoint.',
-  'Judge the diff against the step\'s done-when, decisions, and constraints.',
+  'Judge the diff against the step\'s proof, decisions, and constraints.',
   'Be concrete and terse; cite file paths as they appear in the diff; only raise',
   'concerns you can point to in the diff. Severity "now" means worth a human',
   'look before continuing; "later" means a follow-up worth parking.',

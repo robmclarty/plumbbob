@@ -130,7 +130,7 @@ plumbbob status [--build <slug>] [--invoked "<args>"] [--run "<args>"] [--questi
 ```
 
 Prints the orientation dashboard (title, the derived phase, the step list with the next
-step's done-when and seam, the last checkpoint, the build order when it departs from the
+step's proof and seam, the last checkpoint, the build order when it departs from the
 numbering, and the parked / open-question counts, where `parked 2 of 7 open` is the open
 items against everything ever parked), then a
 single suggested next move ([**D8 (status-dashboard)**](decisions.md#d8) / [**D15 (one-next-move)**](decisions.md#d15)). Read-only; prints `NO ACTIVE SESSION` and
@@ -261,6 +261,10 @@ with no session, no undone step left (`no undone step to build`, with `/plumbbob
 `/plumbbob:build` feature, so the remedy names the step it starts at: its first undone step in
 build order; [**D91 (step-list-grants)**](decisions.md#d91)), or a seam it cannot parse (seams
 are exact paths or `dir/` grants, never globs; [**D23 (no-glob-seams)**](decisions.md#d23)).
+On entry it also asks the `atis` on PATH what the step's seam reaches, when the build's
+`reach.json` holds no answer for the step or holds one asked for other paths, and stores the
+answer there; with a current answer, or no atis, it runs nothing and prints nothing
+([**D155 (reach-is-computed)**](decisions.md#d155); [the reach](reach.md)).
 It also refuses, writing nothing, while a stop card waits for its reply
 ([**D103 (stop-latched)**](decisions.md#d103)), since the step's pause would write over the
 range's review in `.plumbbob/detail.md`; the remedy names the reply that records the card:
@@ -295,7 +299,7 @@ At a build pause it renders the turn entire, in this order:
   product (everything changed since HEAD, staged or not, plus each non-ignored new file),
   each changed file on a continuation line beneath `diff` (`- src/login.ts +40 -3`, seven
   named and the rest a count past eight), and `spent` from `stats.json` and the turn
-  ledger, folded with the three judgment rows (`done-when`, `decisions`, `constraints`) the
+  ledger, folded with the three judgment rows (`proof`, `decisions`, `constraints`) the
   model wrote into the detail file. Green rows collapse to a count, red rows name the one
   offender.
 - a `diff` fence, when the change is 20 lines or fewer and a patch could be produced.
@@ -446,7 +450,14 @@ plumbbob checkpoint --plan  [--body …]
 ```
 
 The executor-agnostic commit tick ([**D3 (author-blind-executor)**](decisions.md#d3)). Resolves the step (explicit `<n>`, else the
-in-flight `STEP`, else the first undone step in build order), then gates on a green check,
+in-flight `STEP`, else the first undone step in build order), then gates on a green check.
+Behind the green gate it runs the step's proof command, when the `- proof:` line opens on
+one in backticks, through `sh` at the repo root, and writes the run to `.check/proof.json`
+and its output to `.check/proof.txt`. A command that exits non-zero prints
+`checkpoint refused (the proof is red, ...)`, exits 1, and records nothing: no commit, no
+ledger line, no flipped box ([**D154 (red-proof-holds)**](decisions.md#d154)). A proof that
+opens on words runs nothing, and a step with two `proof:` lines or an empty one is refused
+before anything runs ([**D153 (proof-replaces-done-when)**](decisions.md#d153)). Then it
 commits any pending work (or records the existing `HEAD` if the tree is already clean) with a
 CLI-owned Conventional subject `<type>(<scope>): <description>` (scope from the build slug, type
 from the step title; author prefix honored, else `feat`), appends `step <n> <sha>` to `checkpoints`,
@@ -465,12 +476,15 @@ header names a different step is a leftover from a step that already landed, so 
 cleared without being recorded. `-m <msg>` overrides
 the subject. The commit **body** leads with a
 `plumbbob step N` marker, then a `--body` heredoc on stdin (skill-composed,
-proportional); without it a deterministic fallback carries done-when + seam + diffstat
+proportional); without it a deterministic fallback carries proof + seam + diffstat
 ([**D68 (conventional-subjects)**](decisions.md#d68)/[**D35 (fallback-body)**](decisions.md#d35)). `--plan` instead commits *only* the build's artifact folder as
 `chore(<scope>): plan` and records a `plan <sha>` line, giving the plan its own commit so
 the first step's diff doesn't absorb the scaffold ([**D36 (plan-commit)**](decisions.md#d36));
 it records the plan pause's cold read the same way, beneath a `plan committed` line in
-the Log. Either form closes on its
+the Log. Just before it stages the folder, `--plan` asks the `atis` on PATH what each undone
+step's seam reaches and writes the answers to the build's `reach.json`, so they ride the plan
+commit; with no atis, or no usable answer, it writes nothing and its output is unchanged
+([**D155 (reach-is-computed)**](decisions.md#d155)). Either form closes on its
 whole ending, `handoff`-rendered and printed here: the lead line, any advisory, and the
 state table, headed by the Verdict the step just earned (the plan commit measures nothing,
 so Next Up heads its table), with the Stop row when the step completes a range, then Next
@@ -490,10 +504,12 @@ ending.
 
 Staged paths outside the step's seam are an advisory, never a gate, and the stray they name
 puts a `seam strayed` rung under that Verdict, the same rung the pause's measured seam row
-gave it. Refuses (exit 1) with no session, no resolvable step, a `--body` asked to read a
+gave it. A step with a stored reach is held to its seam and its reach together: only a staged
+path outside both is named (`Staged paths reach outside Step 3's seam and its reach`), and a
+path in the reach raises nothing. Refuses (exit 1) with no session, no resolvable step, a `--body` asked to read a
 socket (the `--body <<'BODY'` heredoc is the remedy), the approval latch (`no human turn since
 this step began`: the pause, which the human's next turn ends;
-[**D64 (approval-latch)**](decisions.md#d64)), a red check, or a gate that broke (checkride's
+[**D64 (approval-latch)**](decisions.md#d64)), a red check, a red proof, or a gate that broke (checkride's
 exit 2, reported as `the check gate itself broke`). `--plan` runs the same latch keyed on the
 `TICK` that `start` stamped, so the plan pause is a real pause too.
 
@@ -865,8 +881,8 @@ namespace (skills can drop to flat names like `/status`); `--force` overrides th
 plumbbob doctor [--migrate]
 ```
 
-Six sections under one verb: the plugin link, the sidecar layout, the repo setup, the
-user-authored agents, the check gate, and the approval latch.
+Seven sections under one verb: the plugin link, the sidecar layout, the repo setup, the
+user-authored agents, the check gate, the approval latch, and the reach.
 
 **Plugin link** (read-only). Across both install paths it verifies the skills-dir link
 resolves to a package carrying the manifest, the skills, and `hooks/hooks.json` with its four
@@ -906,6 +922,19 @@ ledger is live (`✓ latch: live (turn N)`) or dormant, guidance only until the
 `UserPromptSubmit` hook ticks on your first prompt; dormant is a state, never a failure. A
 settings `auto` is named here as the grant it is not
 ([**D67 (auto-not-a-grant)**](decisions.md#d67)).
+
+**Reach** ([**D155 (reach-is-computed)**](decisions.md#d155)). Says whether `atis` is on
+PATH. atis is optional, so neither line is a counted problem, and the section is skipped
+outside a repo:
+
+```text
+plumbbob doctor — reach — D155 (reach-is-computed)
+  ○ atis: not on PATH (optional; without it the pause reads a step's diff against its seam alone)
+```
+
+With atis found, the line reads
+`✓ atis <version>: the pause splits a step's diff into seam, reach, and out`
+([the reach](reach.md)).
 
 Exits 0 when everything passes, 1 when a check fails or an un-migrated legacy
 sidecar is present.
@@ -982,6 +1011,7 @@ stays git-excluded; a session is live iff `STATE` is present.
       report.md            # tracked   — written at finish
       stats.json           # tracked   — per-step receipts (stamps, red runs, reverts) the spent row reads
       harness.json         # tracked   — optional: per-step agent slot bindings (D42 (harness-bindings); see agents.md)
+      reach.json           # tracked   — optional: what atis answered for each step's seam (D155 (reach-is-computed); see reach.md)
       spike-NN-<name>.md   # tracked   — a spike's report, scaffolded by spike (open, or report <slug>) from templates/spike-report.md
       STEP                 # untracked — the in-flight step number (its presence is the BUILD phase)
       SEAM                 # untracked — the in-flight step's declared paths (awareness, not a lock)
@@ -1041,7 +1071,7 @@ contributes nothing rather than wedging the tool.
 - **0**: success. For `check` (and `checkpoint`'s gate), 0 means the heavy check was
   green.
 - **1**: a refusal or failure: a guard tripped (no session, a step in flight, bad
-  argument), a red check, or an unknown verb. `check` propagates the underlying command's
+  argument), a red check, a red proof, or an unknown verb. `check` propagates the underlying command's
   non-zero code.
 - **2**: the gate itself broke ([**D32 (checkride-gate)**](decisions.md#d32)); checkride couldn't run at all (for
   example a malformed `checkride.config.json`). Fix the harness before trusting green or red.
@@ -1055,5 +1085,6 @@ contributes nothing rather than wedging the tool.
 - [`techniques.md`](techniques.md): what each verb is *for* and how the methods fit.
 - [`runs.md`](runs.md): `status --run`, `handoff --stop`, `harvest`, and `order` at work
   across three runs of one plan.
+- [`reach.md`](reach.md): what atis is asked, what `reach.json` holds, and the `plumb` row.
 - [`troubleshooting.md`](troubleshooting.md): what to do when a verb refuses.
 - [`decisions.md`](decisions.md): the `D#` / `C#` tags referenced above.

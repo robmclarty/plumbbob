@@ -101,7 +101,7 @@ describe('plumbbob checkpoint — executor-agnostic, D3 (author-blind-executor)'
     expect(runCli(dir, ['checkpoint']).status).toBe(0)
     const body = execFileSync('git', ['-C', dir, 'log', '-1', '--format=%b'], { encoding: 'utf8' })
     expect(body.startsWith('plumbbob step 1')).toBe(true)
-    expect(body).toContain('done when: it works')
+    expect(body).toContain('proof: it works')
     expect(body).toContain('seam: x.txt')
     expect(body).toContain('x.txt') // diffstat
   })

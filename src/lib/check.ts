@@ -17,9 +17,13 @@
 // because a misconfigured gate must not read as broken code (both still block).
 // Ahead of both paths, an exported build's plan.json is held to its intent.md:
 // a file behind it, or a plan that fails its checks, is red before the gate runs.
+// Behind the gate, `checkpoint` runs the landing step's proof command through
+// the same shell, and that run leaves its own record under `.check/`.
+// One more subprocess lives here because this is where the gate's do: the
+// optional question to atis about a step's reach, asked quietly and never held to.
 
-import { spawn } from 'node:child_process'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { execFileSync, spawn } from 'node:child_process'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { runChecks, runDoctor } from 'checkride'
 import type { DoctorCheck, Summary } from 'checkride'
@@ -289,6 +293,113 @@ function writeSummary(root: string, check: OwnCheck, output: Buffer): void {
   }
 }
 
+/** One run of a step's proof command: the step it proves, the command, its exit, its wall clock, and when it finished. */
+export type ProofRun = {
+  readonly step: number
+  readonly command: string
+  readonly exitCode: number
+  readonly durationMs: number
+  readonly at: string
+}
+
+/** The proof run's record and its captured output, relative to `.check/`. */
+const PROOF_RECORD = 'proof.json'
+const PROOF_OUTPUT = 'proof.txt'
+
+/**
+ * Run a step's proof command at the repo root, through the shell the way the
+ * configured check and an agent's command run, and return what it measured.
+ *
+ * The command's output streams to the terminal as it arrives and a copy lands
+ * in `.check/proof.txt`, beside a `.check/proof.json` naming the step, the
+ * command, its exit and its time; the pause's readout measures its `proof` row
+ * from that file. The gate's own `summary.json` is left alone, since the check
+ * row reads it. The run holds this root's gate marker, so a proof that drives
+ * a mutating verb back into this repo's gate is refused rather than recursing.
+ * A command that cannot start reads as exit 1.
+ */
+export function runProof(root: string, step: number, command: string): Promise<ProofRun> {
+  const started = Date.now()
+  return withGateMarker(
+    root,
+    () =>
+      new Promise<ProofRun>((resolve) => {
+        const chunks: Buffer[] = []
+        const done = (exitCode: number): void => {
+          const run: ProofRun = { step, command, exitCode, durationMs: Date.now() - started, at: new Date().toISOString() }
+          writeProofRun(root, run, Buffer.concat(chunks))
+          resolve(run)
+        }
+        const child = spawn(command, { cwd: root, shell: true, stdio: ['inherit', 'pipe', 'pipe'] })
+        child.stdout.on('data', (chunk: Buffer) => {
+          chunks.push(chunk)
+          process.stdout.write(chunk)
+        })
+        child.stderr.on('data', (chunk: Buffer) => {
+          chunks.push(chunk)
+          process.stderr.write(chunk)
+        })
+        let settled = false
+        child.on('error', () => {
+          if (!settled) {
+            settled = true
+            done(1)
+          }
+        })
+        child.on('close', (code) => {
+          if (!settled) {
+            settled = true
+            done(code ?? 1)
+          }
+        })
+      }),
+  )
+}
+
+/**
+ * Record a proof run under `.check/`, beside its captured output.
+ *
+ * A record that cannot be written is reported, never fatal: the proof's
+ * verdict is its exit code, and a full disk must not turn a green proof red.
+ */
+function writeProofRun(root: string, run: ProofRun, output: Buffer): void {
+  const record = {
+    schema_version: 1,
+    step: run.step,
+    command: run.command,
+    exit_code: run.exitCode,
+    duration_ms: run.durationMs,
+    timestamp: run.at,
+    output_file: PROOF_OUTPUT,
+  }
+  try {
+    const dir = join(root, '.check')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, PROOF_OUTPUT), output)
+    writeFileSync(join(dir, PROOF_RECORD), `${JSON.stringify(record, null, 2)}\n`)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    process.stderr.write(`plumbbob: could not record the proof run under .check/ (${message}).\n`)
+  }
+}
+
+/**
+ * The last proof run recorded under `.check/`, or null when the file is
+ * absent, unreadable, or not in the shape `runProof` writes.
+ */
+export function readProofRun(root: string): ProofRun | null {
+  try {
+    const parsed = JSON.parse(readFileSync(join(root, '.check', PROOF_RECORD), 'utf8')) as Record<string, unknown>
+    const { step, command, exit_code: exitCode, duration_ms: durationMs, timestamp } = parsed
+    if (typeof step !== 'number' || typeof command !== 'string' || typeof exitCode !== 'number' || typeof durationMs !== 'number') {
+      return null
+    }
+    return { step, command, exitCode, durationMs, at: typeof timestamp === 'string' ? timestamp : '' }
+  } catch {
+    return null
+  }
+}
+
 /**
  * The checkride path: run the gate in-process, refuse an all-skipped run, and
  * name the failing slots on red.
@@ -375,4 +486,35 @@ function hasFlags(flags: CheckFlags): boolean {
     flags.skip !== undefined ||
     flags.include !== undefined
   )
+}
+
+/** What one call to atis came to: its stdout, or a failure and whether asking again is pointless. */
+export type AtisCall =
+  | { readonly ok: true; readonly stdout: string }
+  | { readonly ok: false; readonly fatal: boolean }
+
+/**
+ * Run the `atis` found on PATH at the repo root and hand back what it printed.
+ *
+ * atis is optional and its answer is advice, so the call is silent: stderr is
+ * dropped, nothing is printed here, and a failure is a value, never a throw.
+ * `fatal` is true when atis is not on PATH or ran past `timeoutMs`, the two
+ * failures a second call would only repeat; a non-zero exit is not fatal. The
+ * arguments go as an argv, with no shell, so a path needs no quoting.
+ */
+export function askAtis(root: string, args: ReadonlyArray<string>, timeoutMs: number): AtisCall {
+  try {
+    const stdout = execFileSync('atis', [...args], {
+      cwd: root,
+      encoding: 'utf8',
+      timeout: timeoutMs,
+      stdio: ['ignore', 'pipe', 'ignore'],
+      maxBuffer: 16 * 1024 * 1024,
+    })
+    return { ok: true, stdout }
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code
+    const signal = (err as { readonly signal?: string | null }).signal
+    return { ok: false, fatal: code === 'ENOENT' || code === 'ETIMEDOUT' || (signal !== undefined && signal !== null) }
+  }
 }

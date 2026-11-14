@@ -50,7 +50,7 @@ plumbbob: the seam is orientation, not a lock (2 paths)
 ```
 
 The agent writes the parser and its test, runs the gate (the nine slots from
-lesson 0), reviews its own diff against the step's done-when and the plan's
+lesson 0), reviews its own diff against the step's proof and the plan's
 Decisions and Constraints, and stops. Nothing is committed.
 
 ## Read the Pause
@@ -66,7 +66,7 @@ naming step 1. Roughly:
 
 ```text
 check        green: 9 of 9 checks
-done-when    met
+proof        met
 decisions    1 of 1 honored
 constraints  4 of 4 honored
 seam         held: 2 of 2 declared, no strays
@@ -98,7 +98,7 @@ spent        3 min · 1 turn · 5s gate · green first run
 the gate's own summary file, `seam` from the declared seam held against
 `git diff`, `diff` and the files beneath it from git, and `spent` from the
 step's receipts; the Verdict at the head of the table is the worst of them.
-`done-when`, `decisions`, and `constraints` are the agent's, written into
+`proof`, `decisions`, and `constraints` are the agent's, written into
 `.plumbbob/detail.md` beside the Summary and the recommendation, and
 `plumbbob handoff` reads them back and renders the whole block. The agent
 types none of it into the chat. When the recommendation says the refusal
@@ -206,7 +206,7 @@ grep -n "\[x\]" .plumbbob/builds/*/intent.md
 7d2e94f chore(sift): plan
 b31a0c2 docs: add the spec
 1c0d3a9 chore: scaffold with checkride
-30:1. [x] feat(life): parse a shelf life written in days, **done when:** `parseLife('3d')` yields 3 days and `'3'`, `'x'` yield the refusal `a shelf life is written in days, like 3d`, under test
+30:1. [x] feat(life): parse a shelf life written in days
 ```
 
 The commit's subject is the step's title, so history reads scaffold, spec,
@@ -224,7 +224,7 @@ that run.
 > Readout rows you measured and which you wrote. Change nothing.
 
 Check that it says it measured none of them: `check`, `seam`, `diff`, and
-`spent` are the CLI's, and `done-when`, `decisions`, and `constraints` are its
+`spent` are the CLI's, and `proof`, `decisions`, and `constraints` are its
 own. An agent that claims the check row is its work has not read the file.
 
 ## Try It

@@ -67,7 +67,7 @@ describe('the detail-file lifecycle — D81 (detail-file)', () => {
     writeFileSync(join(dir, 'x.txt'), 'x\n')
     expect(runCli(dir, ['checkpoint']).status).toBe(0)
     const body = commitBody(dir)
-    expect(body).toContain('done when: it works') // the fallback lead still leads the body
+    expect(body).toContain('proof: it works') // the fallback lead still leads the body
     expect(body).not.toContain('detail-only-content')
     expect(buildLog(dir)).toContain('\n\n  detail-only-content')
     expect(sidecarExists(dir, 'detail.md')).toBe(false)

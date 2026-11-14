@@ -30,11 +30,11 @@ plan meets what it never covered.
 
 The workshop builds a list that forgets: every item carries a shelf life, written in
 days, as `3d`. The plan said days, step 1 built days, and the parser refuses anything
-else with a sentence the done-when quoted in advance. Then someone types `--for 2w`.
+else with a sentence the proof quoted in advance. Then someone types `--for 2w`.
 Nobody had thought about passports at plan time.
 
 Three responses are open. Chase it: open the parser, add weeks, add months while you
-are in there, and come back to a step that has lost its done-when. Ignore it, and let
+are in there, and come back to a step that has lost its proof. Ignore it, and let
 the step land over a hole you have already seen. Fold it: write one line down, finish
 the step, and let the plan take the surprise at the next boundary, where it costs a cold
 look instead of a warm one. Chasing lays the next brick by eye; folding holds the line

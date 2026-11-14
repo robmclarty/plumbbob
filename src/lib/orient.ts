@@ -4,7 +4,8 @@
 // contents (no fs), and a malformed document degrades to fewer fields rather
 // than throwing.
 
-import { isArtifactPath, parseStepSeam, scopeDrift } from './intent.ts'
+import { isArtifactPath, parseStepSeam, readProof, scopeDrift, type StepProof } from './intent.ts'
+import { binFiles, reachFor, type ReachAnswer, type StoredReach } from './reach.ts'
 import {
   expandStepList,
   formatStepList,
@@ -21,8 +22,8 @@ export type Step = {
   readonly n: number
   readonly done: boolean
   readonly title: string
-  readonly planned: boolean // carries a `done when:` criterion
-  readonly doneWhen: string | null // the criterion text, for the dashboard
+  readonly planned: boolean // carries a proof: a `proof:` line, or the older `**done when:**` clause
+  readonly proof: StepProof | null // the proof as written, and its command when it opens on one
   readonly model: string | null // the optional `- model:` recommendation, verbatim: advisory, never a gate
   readonly line: number // the 1-based line of the step's opener in intent.md, so a pointer can name where to read it
 }
@@ -65,7 +66,7 @@ export type Orientation = {
   // The target step's detail (the requested step when one is set, else the next
   // undone), so `status` shows what's about to be built and the human can
   // review (and `/plumbbob:step`-revise) before `/plumbbob:build`.
-  readonly nextDoneWhen: string | null
+  readonly nextProof: string | null
   readonly nextSeam: ReadonlyArray<string>
   // The target step's advisory model recommendation: the smallest model the
   // plan says can carry the step. Orientation for the human choosing where to
@@ -151,13 +152,14 @@ export function parseTitle(intent: string): string | null {
 }
 
 /**
- * Parse the steps under `## Steps`: `N. [ |x] Title, **done when:** ...`
- * (the legacy em-dash separator before the marker parses the same).
+ * Parse the steps under `## Steps`: `N. [ |x] Title` with its sub-lines
+ * beneath, or the older `N. [ |x] Title, **done when:** ...` opener.
  *
- * The title is the text before the `**done when:**` marker on the opener line,
- * trailing separator stripped; an opener without the marker falls back to the
- * text up to the first em dash. `planned` is true when the step's block carries
- * a `done when` criterion. Only `## Steps` is machine-read as the build plan;
+ * The title is the opener line's text, cut at the older `**done when:**`
+ * marker where the line still carries one, trailing separator stripped; an
+ * opener without the marker falls back to the text up to the first em dash.
+ * `planned` is true when the step carries a proof, on its `proof:` line or in
+ * the older clause. Only `## Steps` is machine-read as the build plan;
  * narrative roadmap prose lives in its own section and never lands here.
  */
 export function parseSteps(intent: string): Step[] {
@@ -179,14 +181,15 @@ export function parseSteps(intent: string): Step[] {
   })
   return starts.map((s, i) => {
     const blockEnd = starts[i + 1]?.idx ?? lines.length
-    const block = lines.slice(s.idx, blockEnd).join('\n')
-    const dw = /\*\*done when:\*\*\s*(.+)/i.exec(block)
-    const doneWhen = dw ? (dw[1] ?? '').trim() : null
+    const blockLines = lines.slice(s.idx, blockEnd)
+    const block = blockLines.join('\n')
+    const read = readProof(blockLines).proof
+    const proof = read !== null && read.text !== '' ? read : null
     // A model line still opening on the template's `<...>` fill-in recommends
     // nothing, so it reads as no line at all rather than as a model named `<smallest`.
     const md = /^\s*-\s*model:\s*(.+)$/im.exec(block)
     const model = md && !/^<[^<>]+>/.test((md[1] ?? '').trim()) ? (md[1] ?? '').trim() : null
-    return { n: s.n, done: s.done, title: s.title, planned: /done when/i.test(block), doneWhen, model, line: offset + s.idx + 1 }
+    return { n: s.n, done: s.done, title: s.title, planned: proof !== null, proof, model, line: offset + s.idx + 1 }
   })
 }
 
@@ -1891,7 +1894,7 @@ export function orient(input: OrientInput): Orientation {
     buildOrder: remainingOrder(steps, order, null),
     ranges: ranges.view,
     requested: requestedStep?.n ?? null,
-    nextDoneWhen: target?.doneWhen ?? null,
+    nextProof: target?.proof?.text ?? null,
     nextSeam: seamParse !== null && seamParse.ok ? seamParse.seam : [],
     nextModel: target?.model ?? null,
     outOfBand: input.outOfBand,
@@ -1925,10 +1928,15 @@ export type RecapRow = {
   readonly evidence: string
   readonly items?: ReadonlyArray<string>
   readonly pointer?: string
+  readonly measured?: true // the CLI ran it, so the evidence is the measurement and a green row keeps it
+  readonly label?: string // the name the row prints under when it is not its key: the seam row reads `plumb` once a reach splits it
 }
 
 /** The recap's five measuring rows, in the fixed order the fold walks them. */
-const RECAP_ROW_NAMES = ['check', 'done-when', 'decisions', 'constraints', 'seam'] as const
+const RECAP_ROW_NAMES = ['check', 'proof', 'decisions', 'constraints', 'seam'] as const
+
+/** The label the proof row rode under before it was renamed; recorded and in-flight detail files still carry it. */
+const OLD_PROOF_LABEL = 'done-when'
 export type RecapRowName = (typeof RECAP_ROW_NAMES)[number]
 
 /** The recap the model writes into `.plumbbob/detail.md` before a pause, or before a stop card. */
@@ -1954,7 +1962,7 @@ function classifyRecapRow(name: RecapRowName, value: string): { readonly verdict
   switch (name) {
     case 'check':
       return test(/^green\b/, 'true') ?? test(/^red\b/, 'failing') ?? test(/^error\b/, 'failing')
-    case 'done-when':
+    case 'proof':
       return test(/^met\b/, 'true') ?? test(/^not met\b/, 'failing') ?? test(/^drift\b/, 'drift')
     case 'decisions':
       return (
@@ -1989,7 +1997,9 @@ function classifyRecapRow(name: RecapRowName, value: string): { readonly verdict
  * the fold treats exactly like one that never applied, never like a failure.
  * An indented `- ` or `→ ` line attaches to the row above it, which is how a
  * row carrying two or more items, or a pointer at its evidence, survives the
- * round trip through the file.
+ * round trip through the file. The proof row reads under its older
+ * `done-when` label too, so a detail file an earlier session wrote keeps its
+ * judgment.
  */
 export function parseRecap(detail: string, scope: 'step' | 'range' = 'step'): Recap | null {
   const lines = detail.split('\n')
@@ -2023,7 +2033,7 @@ export function parseRecap(detail: string, scope: 'step' | 'range' = 'step'): Re
     if (m === null) {
       continue
     }
-    const label = m[1] ?? ''
+    const label = m[1] === OLD_PROOF_LABEL ? 'proof' : (m[1] ?? '')
     const value = (m[2] ?? '').trim()
     last = null
     if (label === 'diff') {
@@ -2054,6 +2064,7 @@ export type VerdictFold = { readonly ladder: Ladder; readonly worst: string | nu
 export type AccruedStats = {
   readonly driftWarnings: number
   readonly redChecks: number
+  readonly redProofs?: number
   readonly reverts: number
   readonly outOfBand: number
 }
@@ -2107,6 +2118,10 @@ export function foldVerdict(
   if (stats.redChecks > 0) {
     return { ladder: A_HAIR_OFF, worst: `${stats.redChecks} red run${stats.redChecks === 1 ? '' : 's'} before green` }
   }
+  const redProofs = stats.redProofs ?? 0
+  if (redProofs > 0) {
+    return { ladder: A_HAIR_OFF, worst: `${redProofs} red proof${redProofs === 1 ? '' : 's'} before green` }
+  }
   if (stats.reverts > 0) {
     const where = scope === 'range' ? 'in the range' : 'on this step'
     return { ladder: A_HAIR_OFF, worst: `${stats.reverts} revert${stats.reverts === 1 ? '' : 's'} ${where}` }
@@ -2135,6 +2150,7 @@ const CHECK_SUMMARY = '.check/summary.json'
 /** The check summary `plumbbob check` leaves in `.check/summary.json`, the fields the readout reads. */
 export type CheckSummary = {
   readonly ok: boolean
+  readonly timestamp?: string
   readonly total_duration_ms?: number
   readonly checks: ReadonlyArray<{
     readonly name: string
@@ -2142,6 +2158,34 @@ export type CheckSummary = {
     readonly skipped?: boolean
     readonly output_file?: string | null
   }>
+}
+
+/** One run of a step's proof command, as `checkpoint` measured it. */
+export type ProofMeasure = {
+  readonly command: string
+  readonly exitCode: number
+  readonly durationMs: number
+}
+
+/** Where a red proof row points: the command's captured output. */
+const PROOF_OUTPUT = '.check/proof.txt'
+
+/**
+ * The measured proof row from the last run of the step's proof command: the
+ * verdict word, then the command, its exit and its time. The command is cut
+ * with an ellipsis where the row would overflow the value budget, and a red
+ * row points at the command's captured output.
+ */
+export function proofRow(run: ProofMeasure): RecapRow {
+  const green = run.exitCode === 0
+  const word = green ? 'met' : 'not met'
+  const tail = ` · exit ${run.exitCode} · ${(run.durationMs / 1000).toFixed(1)}s`
+  const room = RECAP_VALUE_BUDGET - `${word}: \`\``.length - tail.length
+  const command = run.command.length <= room ? run.command : `${run.command.slice(0, Math.max(1, room - 1))}…`
+  const evidence = `${word}: \`${command}\`${tail}`
+  return green
+    ? { verdict: 'true', word, evidence, measured: true }
+    : { verdict: 'failing', word, evidence, pointer: PROOF_OUTPUT, measured: true }
 }
 
 /**
@@ -2220,6 +2264,40 @@ export function seamRowFromDiff(paths: ReadonlyArray<string>, seam: ReadonlyArra
     : { verdict: 'advisory', word: 'strayed', evidence, items: outside }
 }
 
+/**
+ * The plumb row: the seam row once the step has a stored reach, splitting the
+ * changed work-plane paths three ways. Null on the same terms as the seam row,
+ * with no seam to measure against or nothing changed.
+ *
+ * All three counts always print, so the row keeps one shape: files in the
+ * seam, files in the reach but not the seam, files outside both. Only a file
+ * outside both is a stray. One is named on the row when the line has room and
+ * on the `→` line when it has not; several break onto `- ` lines. The row
+ * stands in the seam row's place and folds as it does, an advisory and never
+ * a failure, so the Verdict still names it `seam strayed`.
+ */
+export function plumbRowFromDiff(paths: ReadonlyArray<string>, seam: ReadonlyArray<string>, answer: ReachAnswer): RecapRow | null {
+  if (seam.length === 0 || paths.length === 0) {
+    return null
+  }
+  const bins = binFiles(paths, seam, answer)
+  const evidence = `seam ${bins.seam.length} · reach ${bins.reach.length} · out ${bins.out.length}`
+  const only = bins.out[0]
+  if (only === undefined) {
+    return { verdict: 'true', word: 'held', evidence, label: PLUMB_LABEL }
+  }
+  if (bins.out.length > 1) {
+    return { verdict: 'advisory', word: 'strayed', evidence, items: bins.out, label: PLUMB_LABEL }
+  }
+  const named = `${evidence} (${only})`
+  return named.length <= RECAP_VALUE_BUDGET
+    ? { verdict: 'advisory', word: 'strayed', evidence: named, label: PLUMB_LABEL }
+    : { verdict: 'advisory', word: 'strayed', evidence, pointer: only, label: PLUMB_LABEL }
+}
+
+/** The name the seam row prints under once a stored reach splits it. */
+const PLUMB_LABEL = 'plumb'
+
 /** The summed working-tree change: line counts and the file count. */
 export type DiffCounts = { readonly added: number; readonly removed: number; readonly files: number }
 
@@ -2283,6 +2361,7 @@ export type SpentInputs = {
   readonly now: number
   readonly turns: number | null
   readonly redChecks: number
+  readonly redProofs?: number
   readonly gateMs: number | null
   readonly driftWarnings: number
 }
@@ -2311,6 +2390,10 @@ export function spentRowValue(input: SpentInputs): string | null {
     parts.push(`${input.redChecks} red run${input.redChecks === 1 ? '' : 's'}`)
   } else if (input.gateMs !== null) {
     parts.push('green first run')
+  }
+  const redProofs = input.redProofs ?? 0
+  if (redProofs > 0) {
+    parts.push(`${redProofs} red proof${redProofs === 1 ? '' : 's'}`)
   }
   if (input.driftWarnings > 0) {
     parts.push(`${input.driftWarnings} drift warning${input.driftWarnings === 1 ? '' : 's'}`)
@@ -2354,17 +2437,18 @@ function durationWords(ms: number): string | null {
  * Collapse a green row to the count that sizes its universe; a failing row
  * comes back untouched, since red is where a row expands to name its offender.
  *
- * `done-when` collapses to its bare word (the Summary above is its evidence),
- * `decisions` to the tags the model listed, and `constraints` to the number
+ * An attested `proof` collapses to its bare word (the Summary above is its
+ * evidence), while one the CLI ran keeps its command, exit and time; `decisions`
+ * collapses to the tags the model listed, and `constraints` to the number
  * declared in intent.md, which the CLI counts rather than trusting the model's
  * arithmetic. The measured rows arrive collapsed already.
  */
 function collapseRow(name: RecapRowName, row: RecapRow, constraints: number): RecapRow {
-  if (row.verdict !== 'true') {
+  if (row.verdict !== 'true' || row.measured === true) {
     return row
   }
   switch (name) {
-    case 'done-when':
+    case 'proof':
       return { ...row, evidence: row.word }
     case 'decisions': {
       const tags = new Set(row.evidence.match(/\b[A-Z]\d+\b/g) ?? [])
@@ -2412,7 +2496,7 @@ export function recapLines(rows: Readonly<Partial<Record<RecapRowName, RecapRow>
       continue
     }
     const shown = collapseRow(name, row, extras.constraints)
-    body.push(`${name.padEnd(13)}${shown.evidence}`)
+    body.push(`${(shown.label ?? name).padEnd(13)}${shown.evidence}`)
     for (const item of shown.items ?? []) {
       body.push(`${RECAP_INDENT}- ${item}`)
     }
@@ -2444,6 +2528,7 @@ export type CommitFile = { readonly path: string; readonly added: number; readon
 /** One step's entry in stats.json: the counters and stamps a range's readout reads. */
 export type RangeStepStats = {
   readonly redChecks?: number
+  readonly redProofs?: number
   readonly driftWarnings?: number
   readonly reverts?: number
   readonly startedAt?: string
@@ -2459,6 +2544,7 @@ export type RangeInput = {
   readonly commits: Readonly<Record<string, ReadonlyArray<CommitFile>>> // each checkpoint's numstat, keyed by its sha
   readonly between: ReadonlyArray<string> // the first-parent commits across the range's span, plan commits left out
   readonly summary: CheckSummary | null // the last check run, or null when none left a summary
+  readonly reach?: StoredReach | null // the build's stored reach, when atis answered: a file in a step's reach is no stray
 }
 
 /** A stop card's identity row: the count landed, and each step's checkpoint sha on continuation lines. */
@@ -2501,12 +2587,12 @@ export function measureRange(input: RangeInput): RangeMeasure {
   if (input.summary !== null) {
     rows.check = summaryCheckRow(input.summary, landed.length)
   }
-  const seam = rangeSeamRow(input.intent, landed, held.length)
+  const seam = rangeSeamRow(input.intent, landed, held.length, input.reach ?? null)
   if (seam !== null) {
     rows.seam = seam
   }
   const stats = held.map((s) => input.stats[String(s.n)] ?? {})
-  const sum = (key: 'redChecks' | 'driftWarnings' | 'reverts'): number => stats.reduce((total, s) => total + (s[key] ?? 0), 0)
+  const sum = (key: 'redChecks' | 'redProofs' | 'driftWarnings' | 'reverts'): number => stats.reduce((total, s) => total + (s[key] ?? 0), 0)
   const recorded = ledgerShas(input.checkpoints)
   return {
     steps: stepsRow(held, shas),
@@ -2517,6 +2603,7 @@ export function measureRange(input: RangeInput): RangeMeasure {
     stats: {
       driftWarnings: sum('driftWarnings'),
       redChecks: sum('redChecks'),
+      redProofs: sum('redProofs'),
       reverts: sum('reverts'),
       outOfBand: input.between.filter((sha) => !recorded.has(sha)).length,
     },
@@ -2617,16 +2704,24 @@ function packed(items: ReadonlyArray<string>, width: number): string[] {
  * is named in the row with its paths as the evidence, the way a step's pause
  * names them; two or more break onto continuation lines, one per step. It is
  * an advisory, as at a pause: a stray in a landed commit asks the same
- * question of the plan.
+ * question of the plan. A step with a stored reach is held to its seam and its
+ * reach together, as its pause held it, so a file its reach expected is no
+ * stray here either.
  */
 function rangeSeamRow(
   intent: string,
   landed: ReadonlyArray<{ readonly n: number; readonly files: ReadonlyArray<CommitFile> }>,
   steps: number,
+  reach: StoredReach | null,
 ): RecapRow | null {
   const measured = landed.flatMap(({ n, files }) => {
     const seam = parseStepSeam(intent, n)
-    return seam.ok ? [{ n, strays: scopeDrift(files.map((f) => f.path), seam.seam) }] : []
+    if (!seam.ok) {
+      return []
+    }
+    const outside = scopeDrift(files.map((f) => f.path), seam.seam)
+    const answer = reachFor(reach, n, seam.seam)
+    return [{ n, strays: answer === null ? outside : binFiles(outside, seam.seam, answer).out }]
   })
   if (measured.length === 0) {
     return null
@@ -2702,6 +2797,7 @@ function rangeSpentValue(stats: ReadonlyArray<RangeStepStats>): string | null {
   const elapsed = Number.isFinite(started) && Number.isFinite(landed) ? durationWords(landed - started) : null
   const red = stats.reduce((sum, s) => sum + (s.redChecks ?? 0), 0)
   const drift = stats.reduce((sum, s) => sum + (s.driftWarnings ?? 0), 0)
+  const redProofs = stats.reduce((sum, s) => sum + (s.redProofs ?? 0), 0)
   const parts: string[] = []
   if (elapsed !== null) {
     parts.push(elapsed)
@@ -2710,6 +2806,9 @@ function rangeSpentValue(stats: ReadonlyArray<RangeStepStats>): string | null {
     parts.push(`${red} red run${red === 1 ? '' : 's'}`)
   } else if (elapsed !== null) {
     parts.push('green first run at every landing')
+  }
+  if (redProofs > 0) {
+    parts.push(`${redProofs} red proof${redProofs === 1 ? '' : 's'}`)
   }
   if (drift > 0) {
     parts.push(`${drift} drift warning${drift === 1 ? '' : 's'}`)
@@ -2958,8 +3057,8 @@ export function formatOrientation(o: Orientation): string {
     // Surface the target step's detail so the human can review it (and `/plumbbob:step`-
     // revise) before building. Only what's present: a rough step shows neither.
     const detail: string[] = []
-    if (o.nextDoneWhen !== null) {
-      detail.push(`        done when: ${o.nextDoneWhen}`)
+    if (o.nextProof !== null) {
+      detail.push(`        proof: ${o.nextProof}`)
     }
     if (o.nextSeam.length > 0) {
       detail.push(`        seam: ${o.nextSeam.join(', ')}`)

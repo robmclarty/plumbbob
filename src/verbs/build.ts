@@ -13,6 +13,7 @@ import { parseBuildRanges, parseOrderedSteps, rangeStanding, rangeStart, skipped
 import { stepLabel, syncBuildLogState } from '../lib/buildlogsync.ts'
 import { readGrant, type Grant } from '../lib/latch.ts'
 import { notice } from '../lib/notice.ts'
+import { refreshReach } from '../lib/reachfile.ts'
 import { hasStep, readBuildArgs } from '../lib/steplist.ts'
 import { waitingCard } from './handoff.ts'
 
@@ -103,6 +104,10 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
 
   writeFileSync(seamPath(root, slug), `${parsed.seam.join('\n')}\n`)
   writeFileSync(stepPath(root, slug), `${step}\n`)
+  // The seam is fixed for the step now. If it is no longer the paths atis was
+  // asked about, or atis was never asked, ask for this one step; when the
+  // stored answer is current nothing runs. Silent whatever comes back.
+  refreshReach(root, slug, step)
   // Stamp the turn ledger on entry (TICK = TURN): the checkpoint latch demands
   // a human turn after this point before the step may land. Skipped when the
   // ledger is dormant: a host with no hooks grows no TURN/TICK files.

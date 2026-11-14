@@ -123,7 +123,8 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   printing the full list and counts so you can always override. *Tagged in* `orient.ts`.
 - <a id="d16"></a>**D16 (check-plus-self-review): The heavy check plus a single structured self-review.** The verify tick runs the
   full gate, then reads the diff against done-when, Decisions, and Constraints in one pass.
-  *Tagged in* `check.ts`, the `build` and `verify` skills.
+  (Revised 2026-11-13 by [**D153 (proof-replaces-done-when)**](#d153): the step's criterion is its proof, and the
+  pass reads the diff against that.) *Tagged in* `check.ts`, the `build` and `verify` skills.
 - <a id="d17"></a>**D17 (two-planes): The sidecar splits into a tracked artifact plane and an excluded control
   plane.** *Amended*: where the whole `.plumbbob/` used to be git-excluded, now only the
   per-worktree **control** files are (`STATE`, `settings.local.json`, and each build's
@@ -217,7 +218,9 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   `finish` skill.
 - <a id="d35"></a>**D35 (fallback-body): The deterministic fallback body.** Without `--body`, a checkpoint's commit body
   is derived, not generated: the step's done-when, its seam, and the staged diffstat, all following the
-  `plumbbob step N` marker line ([**D68 (conventional-subjects)**](#d68)). *Tagged in* `git.ts`, `checkpoint.ts`.
+  `plumbbob step N` marker line ([**D68 (conventional-subjects)**](#d68)). (Revised 2026-11-13 by
+  [**D153 (proof-replaces-done-when)**](#d153): the body's first line is the step's proof, written `proof: …`.)
+  *Tagged in* `git.ts`, `checkpoint.ts`.
 - <a id="d36"></a>**D36 (plan-commit): Plan approval gets its own commit.** `checkpoint --plan` commits only the
   build's artifact folder as `chore(<scope>): plan` ([**D68 (conventional-subjects)**](#d68)) and records a `plan <sha>` line,
   so the scaffold never pollutes the first step's diff and history reads baseline → plan →
@@ -746,7 +749,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   exactly the step whose product is a new file: no seam row, no diff row, and a Verdict folded without
   either.) (Revised 2026-10-26 by [**D113 (short-card)**](#d113): the `diff` row lists the changed files on
   continuation lines beneath it; and by [**D111 (state-table)**](#d111): the Verdict is the header row of the
-  card's state table, folded from the same rows.) Promoted from the 2026-08-28
+  card's state table, folded from the same rows.) (Revised 2026-11-13 by
+  [**D153 (proof-replaces-done-when)**](#d153): the second row is `proof`, and the CLI writes it once the proof's
+  command has run; and by [**D155 (reach-is-computed)**](#d155): a step with a stored reach shows `plumb` in the
+  `seam` row's place.) Promoted from the 2026-08-28
   presentation build, merging its locals
   `readout-and-summary`, `collapse-to-count`, `vanish-or-collapse`, `worst-of-banner`, `circle-ladder`,
   `plumb-when-natural`, `verdict-in-the-row`, `narrowing-named-not-shouted`, `recap-width-budget`,
@@ -1309,7 +1315,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   another step's seam still wandered. No gate or turn clause rides the range's `spent` row, since a gate
   is one run's wall clock and a range has several, only the last on disk, and the ledger counts turns
   from the tick that entered a step. (Revised 2026-10-26 by [**D113 (short-card)**](#d113): the range's `diff`
-  row lists the files its commits changed, each counted once.) Promoted from the 2026-10-17
+  row lists the files its commits changed, each counted once.) (Revised 2026-11-13 by
+  [**D153 (proof-replaces-done-when)**](#d153): the model's first row across the range is `proof`; and by
+  [**D155 (reach-is-computed)**](#d155): a landed step with a stored reach is held to its seam and its reach
+  together, so a file its reach lists is no stray on the range's `seam` row.) Promoted from the 2026-10-17
   runs-and-the-stop-card build, merging
   its local `range-readout`. *Tagged in* `docs/presentation.md`.
 
@@ -1910,7 +1919,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   `decisions` and `constraints` the bullets the step context already scrapes, `range` the range's item number as a
   string (`null` for a step no range names), `build` the slug and title, `source` `intent.md`'s repo-relative path
   and the sha256 of its bytes, and `contract_paths` `[]`. *because* a builder under runciter should get the same
-  context `plumbbob agent` gives it today. *Tagged in* `docs/plan-export.md`.
+  context `plumbbob agent` gives it today. (Revised 2026-11-13: `runciter.plan/2` has no `done_when`. A step
+  exports `proof`, whose `text` is its `- proof:` line verbatim and whose `command` is the code span that opens
+  the line, or `null`; an older **done when:** clause exports as the text with no command.) *Tagged in*
+  `docs/plan-export.md`.
 
 - <a id="d140"></a>**D140 (every-step): The export carries every step, landed or not, in plan-number order.**
   *because* the contract has no field for a landed step, and a `plan.json` that dropped them would rewrite the
@@ -1921,7 +1933,8 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
 
 - <a id="d141"></a>**D141 (strict-fields): A malformed `- after:`, `- stop:` or `- effort:` line, or two of a kind on
   one step, is a finding that names the step, never a guess.** *because* the seam parse already refuses rather than
-  guesses, and these lines steer a scheduler. *Tagged in* `docs/plan-export.md`.
+  guesses, and these lines steer a scheduler. (Revised 2026-11-13: a doubled or empty `- proof:` line is the same
+  kind of finding, and a step with no proof at all refuses the export.) *Tagged in* `docs/plan-export.md`.
 
 - <a id="d142"></a>**D142 (reaches-not-names): Two steps in a range may share a seam when either reaches the other
   through `depends_on`, directly or not.** *because* a transitive dependency serializes the two steps as surely as a
@@ -1979,6 +1992,41 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   move step 5 earlier with `plumbbob order`, or drop it from the line.`` *because* a scheduler would hold step 3 for
   step 5 while plumbbob's own serial walk builds step 3 first, so the two would read the plan's order opposite ways.
   Approved at step 1's pause of the move-2 build, 2026-11-11. *Tagged in* `docs/plan-export.md`.
+
+- <a id="d153"></a>**D153 (proof-replaces-done-when): A step's `- proof:` sub-line names what proves it, opening
+  on the command when there is one.** The line sits beside `- seam:` and replaces the `**done when:**` clause on
+  the title line. Its command is the code span that opens the line, and only that one; a proof that opens on words
+  has no command and is judged at the pause. Only the step's own sub-bullets are read: a bullet nested under
+  another, a line inside a fenced block, and anything past the blank line that ends the item are prose, so an
+  example of a proof never runs. The readers still take the old clause, on the title line or on a sub-bullet of
+  its own, bold or bare, as a proof with no command, so every recorded build reads as it did; when a step has
+  both, the `- proof:` line wins, and two `- proof:` lines or an empty one is a finding. The agent envelope gains `step.proof` (`command`, `text`) and keeps
+  `step.doneWhen`, set to the proof's text ([**C7 (minimal-envelope)**](#c7)). Every label a person reads says
+  `proof`, and the recap reader still takes a recorded `done-when` row. *because* a criterion the CLI can run
+  reads the same every time, and one it cannot is still said plainly. *Tagged in* `intent.ts`, `orient.ts`,
+  `agents.ts`, `templates/intent.md`, the `plan` and `step` skills, `docs/presentation.md`, and
+  `docs/plan-export.md`.
+
+- <a id="d154"></a>**D154 (red-proof-holds): A red proof refuses the checkpoint as a red check does.** Once the
+  gate is green, `plumbbob checkpoint` runs the proof's command through `sh` at the repo root, the way an agent's
+  command runs ([**D49 (posix-sh)**](#d49)), and writes the run to `.check/proof.json` and its output to
+  `.check/proof.txt`. A command that exits non-zero refuses the checkpoint and records nothing: no commit, no
+  ledger line, no flipped box. A proof with no command runs nothing. The Readout's `proof` row then carries the
+  command, its exit and its time, and each red run before the green one is counted on the Verdict's advisory rung
+  (`1 red proof before green`) and on the `spent` row. The command runs at the checkpoint and nowhere earlier.
+  *because* the step said this is what done means. *Tagged in* `check.ts`, `checkpoint.ts`, `handoff.ts`,
+  `docs/presentation.md`, and `docs/cli-reference.md`.
+
+- <a id="d155"></a>**D155 (reach-is-computed): A step's reach comes from atis, never from the plan's prose.** The
+  reach is the files a change to the step's seam usually drags along. plumbbob asks the `atis` on PATH
+  (`atis reach --json -- <seam paths>`) once per undone step when the plan is approved, and again on entering a step
+  whose seam is no longer the paths its answer was asked for, and keeps each answer verbatim in the build's
+  tracked `reach.json`. At the pause, a step with a stored reach shows `plumb` in the `seam` row's place: each
+  changed file is in the seam, in the reach but not the seam, or outside both, and only a file outside both is a
+  stray. atis is optional. Absent, failing, slow, or answering anything but `kind: "atis.reach"` at
+  `schema_version: 1`, it leaves no file and no line of output, and every row reads as it did. The reach never
+  refuses anything ([**D13 (no-edit-guards)**](#d13)). *because* a hand-written ring is a second seam nobody
+  checks. *Tagged in* `reach.ts`, `reachfile.ts`, `doctor.ts`, and `docs/reach.md`.
 
 ### Superseded
 

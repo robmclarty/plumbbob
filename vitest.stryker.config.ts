@@ -44,6 +44,9 @@ export default defineConfig({
     include: ['src/**/*.test.ts', 'test/**/*.test.ts'],
     exclude: ['**/node_modules/**', 'test/evals/**', 'src/__tests__/cli-core.test.ts'],
     globalSetup: ['./test/global-setup.ts'],
+    // As in vitest.config.ts: drop any real `atis` from PATH, so the mutation
+    // run reads the absent case and writes no reach.json into a fixture build.
+    setupFiles: ['./test/strip-atis.ts'],
     testTimeout: 20000,
     isolate: false,
   },

@@ -27,6 +27,7 @@ import {
   parseRequestedStep,
   parseSteps,
   parseTitle,
+  proofRow,
   questionsPhrase,
   questionTotals,
   rangeSpan,
@@ -161,9 +162,9 @@ describe('orient parsers', () => {
       '   - seam: `src/x.ts`',
     ].join('\n')
     const steps = parseSteps(intent)
-    expect(steps[0]?.doneWhen).toBe('no space after the marker')
-    expect(steps[1]?.doneWhen).toBe('trailing spaces survive the parse.')
-    expect(parseSteps(INTENT)[1]?.doneWhen).toBe('the thing works.')
+    expect(steps[0]?.proof?.text).toBe('no space after the marker')
+    expect(steps[1]?.proof?.text).toBe('trailing spaces survive the parse.')
+    expect(parseSteps(INTENT)[1]?.proof?.text).toBe('the thing works.')
   })
 
   it('parseSteps reads the comma step form with a clean title — D78 (em-dash-ban)', () => {
@@ -179,7 +180,7 @@ describe('orient parsers', () => {
     ].join('\n')
     const steps = parseSteps(intent)
     expect(steps[0]).toMatchObject({ n: 1, title: 'feat(scope): add a, then b', planned: true })
-    expect(steps[0]?.doneWhen).toBe('both land')
+    expect(steps[0]?.proof?.text).toBe('both land')
     expect(steps[1]?.title).toBe('Legacy dash')
   })
 
@@ -620,7 +621,7 @@ describe('formatOrientation', () => {
 
   it('surfaces the next undone step\'s done-when, seam, and model so the human can review it', () => {
     const out = formatOrientation(orient({ ...base }))
-    expect(out).toContain('done when: the thing works.')
+    expect(out).toContain('proof: the thing works.')
     expect(out).toContain('seam: src/b.ts')
     expect(out).toContain('model: sonnet — mechanical')
   })
@@ -635,7 +636,7 @@ describe('formatOrientation', () => {
         '  steps  1/3 done',
         '  ✓ 1  First step',
         '  ▸ 2  Second step   ← next',
-        '        done when: the thing works.',
+        '        proof: the thing works.',
         '        seam: src/b.ts',
         '        model: sonnet — mechanical',
         '    3  Third step',
@@ -720,7 +721,7 @@ describe('parseRequestedStep', () => {
 
 describe('rangeStart — D16 (list-reading)', () => {
   const steps = (done: ReadonlyArray<number>, order: ReadonlyArray<number>) =>
-    order.map((n) => ({ n, title: `Step ${n}`, done: done.includes(n), planned: true, doneWhen: null, model: null, line: n }))
+    order.map((n) => ({ n, title: `Step ${n}`, done: done.includes(n), planned: true, proof: null, model: null, line: n }))
 
   it('starts a range at its first undone step in build order, however it is written', () => {
     const ordered = steps([], [20, 5, 6, 7, 8, 9])
@@ -759,7 +760,7 @@ describe('normalizeDetailHeadings', () => {
   })
 
   it('leaves a detail that already has its blank lines exactly as it was', () => {
-    const clean = '# Detail · Step 2 · Title\n\n── recap · step 2 of 3 ──\ndone-when    met\n\n## Summary\n\nDone.\n\n## 1 First\n\nThe story.\n'
+    const clean = '# Detail · Step 2 · Title\n\n── recap · step 2 of 3 ──\nproof        met\n\n## Summary\n\nDone.\n\n## 1 First\n\nThe story.\n'
     expect(normalizeDetailHeadings(clean)).toBe(clean)
     expect(normalizeDetailHeadings(normalizeDetailHeadings('## 1 First\nThe story.'))).toBe('## 1 First\n\nThe story.')
     expect(normalizeDetailHeadings('')).toBe('')
@@ -807,14 +808,14 @@ describe('orient with an explicitly requested step', () => {
     const o = orient({ ...base, requested: one(9) })
     expect(o.next).toBe('step 9 is not in the plan (3 steps planned) — report the mismatch rather than guess')
     expect(o.requested).toBe(null)
-    expect(o.nextDoneWhen).toBe('the thing works.') // detail stays with the next undone step
+    expect(o.nextProof).toBe('the thing works.') // detail stays with the next undone step
   })
 
   it('detail rows repoint at the requested step', () => {
     const o = orient({ ...base, requested: one(1) })
     expect(o.requested).toBe(1)
     expect(o.nextSeam).toEqual(['src/a.ts'])
-    expect(o.nextDoneWhen).toBe(null) // step 1 carries no done-when of its own
+    expect(o.nextProof).toBe(null) // step 1 carries no done-when of its own
   })
 
   it('a request matching the in-flight step keeps the finish move', () => {
@@ -896,14 +897,14 @@ describe('the readout rows', () => {
       'constraints  bent: C1 (no-new-deps), a dep rode in',
       '             - C2 (markdown-only), the fence lost its rails',
       '             → .plumbbob/detail.md',
-      'done-when    met',
+      'proof        met',
       '',
     ].join('\n')
     const parsed = parseRecap(detail)
     expect(parsed?.rows.constraints?.items).toEqual(['C2 (markdown-only), the fence lost its rails'])
     expect(parsed?.rows.constraints?.pointer).toBe('.plumbbob/detail.md')
     // The next label ends the previous row: a stray continuation cannot attach to it.
-    expect(parsed?.rows['done-when']?.items).toBeUndefined()
+    expect(parsed?.rows['proof']?.items).toBeUndefined()
   })
 
   it('parseRecap reads the collapsed count form as green', () => {
@@ -974,7 +975,7 @@ describe('the readout rows', () => {
     const lines = recapLines(
       {
         check: { verdict: 'true', word: 'green', evidence: 'green: 3 of 3 checks' },
-        'done-when': { verdict: 'true', word: 'met', evidence: 'met: the criterion, at length' },
+        proof: { verdict: 'true', word: 'met', evidence: 'met: the criterion, at length' },
         decisions: { verdict: 'true', word: 'honored', evidence: 'honored: D1 (one), D2 (two)' },
         constraints: { verdict: 'failing', word: 'bent', evidence: 'bent: C1 (no-new-deps)', items: ['C2 (markdown-only)'], pointer: '.plumbbob/detail.md' },
       },
@@ -982,7 +983,7 @@ describe('the readout rows', () => {
     )
     expect(lines).toEqual([
       'check        green: 3 of 3 checks',
-      'done-when    met',
+      'proof        met',
       'decisions    2 of 2 honored',
       'constraints  bent: C1 (no-new-deps)',
       '             - C2 (markdown-only)',
@@ -1221,7 +1222,7 @@ describe('the dashboard ranges block', () => {
       ].join('\n'),
     )
     // The block sits under the step list, a blank line between.
-    expect(out).toContain('  ▸ 6  Step 6   ← next\n        done when: it works\n    7  Step 7')
+    expect(out).toContain('  ▸ 6  Step 6   ← next\n        proof: it works\n    7  Step 7')
     expect(out).toContain('   12  Step 12\n\n  ranges  2 of 5 done')
   })
 
@@ -2222,7 +2223,7 @@ describe('the range readout', () => {
   const GREEN = { ok: true, total_duration_ms: 60_000, checks: [{ name: 'lint', ok: true }, { name: 'test', ok: true }] }
   // The model's three judgment rows, as a range's detail writes them.
   const JUDGED = parseRecap(
-    ['── recap · range 1 of 2 ──', 'done-when    met', 'decisions    honored: D1 (one), D2 (two)', 'constraints  all honored', ''].join('\n'),
+    ['── recap · range 1 of 2 ──', 'proof        met', 'decisions    honored: D1 (one), D2 (two)', 'constraints  all honored', ''].join('\n'),
     'range',
   )?.rows
 
@@ -2255,7 +2256,7 @@ describe('the range readout', () => {
       'steps        3 of 3 landed',
       '             - 1 1111111 · 2 2222222 · 3 3333333',
       'check        green: 2 of 2 checks, 3 landings',
-      'done-when    met',
+      'proof        met',
       'decisions    2 of 2 honored',
       'constraints  4 of 4 honored',
       'seam         held: 3 of 3 steps, no strays',
@@ -2383,11 +2384,113 @@ describe('the range readout', () => {
   })
 
   it("reads a range's recap only under the range scope, and a step's only under the step's", () => {
-    const range = ['── recap · range 3 of 5 ──', 'done-when    met', ''].join('\n')
-    const step = ['── recap · step 2 of 3 ──', 'done-when    met', ''].join('\n')
+    const range = ['── recap · range 3 of 5 ──', 'proof        met', ''].join('\n')
+    const step = ['── recap · step 2 of 3 ──', 'proof        met', ''].join('\n')
     expect(parseRecap(range, 'range')).toMatchObject({ n: 3, total: 5 })
     expect(parseRecap(range)).toBe(null)
     expect(parseRecap(step, 'range')).toBe(null)
     expect(parseRecap(step)).toMatchObject({ n: 2, total: 3 })
+  })
+})
+
+describe('the proof line', () => {
+  const NEW = [
+    '# Proofs',
+    '',
+    '## Steps',
+    '',
+    '1. [ ] feat(limiter): read the cap from RATE_LIMIT_MAX',
+    '   - seam: `src/limiter.ts`',
+    '   - proof: `pnpm vitest run limiter` passes; the 6th request',
+    '     in 60s returns 429',
+    '2. [ ] docs: say what is done when the cap is hit',
+    '   - seam: `README.md`',
+    '3. [ ] Old form, **done when:** it still reads',
+    '   - proof: the line wins',
+    '',
+  ].join('\n')
+
+  it('parseSteps reads the proof line, its command, and the whole opener as the title', () => {
+    const steps = parseSteps(NEW)
+    expect(steps[0]).toMatchObject({ n: 1, title: 'feat(limiter): read the cap from RATE_LIMIT_MAX', planned: true })
+    expect(steps[0]?.proof).toEqual({
+      command: 'pnpm vitest run limiter',
+      text: '`pnpm vitest run limiter` passes; the 6th request in 60s returns 429',
+    })
+  })
+
+  it('every older spelling of the clause still reads as planned', () => {
+    const old = [
+      '## Steps',
+      '',
+      '1. [ ] On a sub-bullet',
+      '   - **done when:** it works',
+      '2. [ ] Bare on the opener, done when: it works',
+      '3. [ ] The last step',
+      '   - seam: `a.ts`',
+      '',
+      '- proof: `false` trailing prose, no part of step 3',
+      '',
+    ].join('\n')
+    const steps = parseSteps(old)
+    expect(steps[0]).toMatchObject({ planned: true, proof: { command: null, text: 'it works' } })
+    expect(steps[1]).toMatchObject({ planned: true, proof: { command: null, text: 'it works' } })
+    expect(steps[2]).toMatchObject({ planned: false, proof: null })
+  })
+
+  it('a step with no proof is unplanned, whatever words its title holds', () => {
+    // The title says "done when" in passing; only a proof makes a step planned.
+    expect(parseSteps(NEW)[1]).toMatchObject({ title: 'docs: say what is done when the cap is hit', planned: false, proof: null })
+  })
+
+  it('the proof line wins over the older clause, which still cuts the title', () => {
+    expect(parseSteps(NEW)[2]).toMatchObject({ title: 'Old form', planned: true, proof: { command: null, text: 'the line wins' } })
+  })
+
+  it('the dashboard shows the next step under a proof row', () => {
+    const out = formatOrientation(orient({ ...base, intent: NEW, buildLog: '', checkpoints: '' }))
+    expect(out).toContain('        proof: `pnpm vitest run limiter` passes; the 6th request in 60s returns 429')
+    expect(out).not.toContain('done when:')
+  })
+
+  it('parseRecap reads the row under its older done-when label as the proof row', () => {
+    const detail = ['── recap · step 2 of 3 ──', 'done-when    not met: the sixth request passed', 'decisions    none exercised', ''].join('\n')
+    expect(parseRecap(detail)?.rows.proof).toEqual({ verdict: 'failing', word: 'not met', evidence: 'not met: the sixth request passed' })
+    expect(foldVerdict(parseRecap(detail)?.rows ?? {}, { driftWarnings: 0, redChecks: 0, reverts: 0, outOfBand: 0 }).worst).toBe('proof not met')
+  })
+
+  it('proofRow states the command, its exit and its time, and a green one keeps them through the collapse', () => {
+    const green = proofRow({ command: 'pnpm vitest run limiter', exitCode: 0, durationMs: 4210 })
+    expect(green).toEqual({ verdict: 'true', word: 'met', evidence: 'met: `pnpm vitest run limiter` · exit 0 · 4.2s', measured: true })
+    const lines = recapLines({ proof: green }, { diff: null, spent: null, constraints: 0 })
+    expect(lines).toEqual(['proof        met: `pnpm vitest run limiter` · exit 0 · 4.2s'])
+  })
+
+  it('a red proofRow fails the fold and points at the captured output', () => {
+    const red = proofRow({ command: 'false', exitCode: 1, durationMs: 12 })
+    expect(red).toEqual({ verdict: 'failing', word: 'not met', evidence: 'not met: `false` · exit 1 · 0.0s', pointer: '.check/proof.txt', measured: true })
+    expect(recapLines({ proof: red }, { diff: null, spent: null, constraints: 0 })).toEqual([
+      'proof        not met: `false` · exit 1 · 0.0s',
+      '             → .check/proof.txt',
+    ])
+    expect(foldVerdict({ proof: red }, { driftWarnings: 0, redChecks: 0, reverts: 0, outOfBand: 0 })).toEqual({
+      ladder: { glyph: '○', state: 'Out of plumb' },
+      worst: 'proof not met',
+    })
+  })
+
+  it('proofRow cuts a long command so the value fits the 67 columns', () => {
+    const row = proofRow({ command: `node ${'x'.repeat(120)}`, exitCode: 0, durationMs: 1000 })
+    expect(row.evidence.length).toBe(67)
+    expect(row.evidence).toMatch(/…` · exit 0 · 1\.0s$/)
+  })
+
+  it('red proofs before green are an advisory, behind the red runs, and ride the spent row', () => {
+    const stats = { driftWarnings: 0, redChecks: 0, redProofs: 2, reverts: 1, outOfBand: 0 }
+    expect(foldVerdict({}, stats)).toEqual({ ladder: { glyph: '◐', state: 'A hair off' }, worst: '2 red proofs before green' })
+    expect(foldVerdict({}, { ...stats, redChecks: 1 }).worst).toBe('1 red run before green')
+    expect(spentRowValue({ now: Date.now(), turns: null, redChecks: 0, redProofs: 1, gateMs: 2000, driftWarnings: 0 })).toBe(
+      '2s gate · green first run · 1 red proof',
+    )
   })
 })

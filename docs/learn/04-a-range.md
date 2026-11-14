@@ -36,7 +36,7 @@ four steps and no others
 plan, not from the agent's opinion of it and not from a flag you typed.
 
 Each step still runs the whole tick but the pause: entered, built within its
-seam, checked, reviewed against its done-when, and checkpointed on green. Open
+seam, checked, reviewed against its proof, and checkpointed on green. Open
 a second terminal on the repo and watch the commits arrive:
 
 ```sh
@@ -76,7 +76,7 @@ Harvested part if anything was parked. Roughly:
 steps        4 of 4 landed
              - 2 9f3c1a0 · 3 c27d4e8 · 4 1b8e6f5 · 5 7a4d2c9
 check        green: 9 of 9 checks, 4 landings
-done-when    met
+proof        met
 decisions    2 of 2 honored
 constraints  4 of 4 honored
 seam         held: 4 of 4 steps, no strays

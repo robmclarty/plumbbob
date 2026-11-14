@@ -135,9 +135,24 @@
               }
             ]
           },
-          "done_when": {
-            "type": "string",
-            "minLength": 1
+          "proof": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "default": null,
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "text"
+            ]
           },
           "context": {
             "default": [],
@@ -155,7 +170,7 @@
           "id",
           "title",
           "seam",
-          "done_when"
+          "proof"
         ]
       }
     }

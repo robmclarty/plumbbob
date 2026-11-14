@@ -71,7 +71,11 @@ function plan(steps: string, ranges = ''): unknown {
 }
 
 const step = (n: number, extra: string[] = [], done = false): string =>
-  [`${n}. [${done ? 'x' : ' '}] feat(s${n}): step ${n}, **done when:** step ${n} works`, `   - seam: \`src/s${n}.ts\``, ...extra].join('\n')
+  [`${n}. [${done ? 'x' : ' '}] feat(s${n}): step ${n}`, `   - seam: \`src/s${n}.ts\``, `   - proof: \`pnpm vitest run s${n}\` passes`, ...extra].join('\n')
+
+/** A step written the older way, its acceptance a `**done when:**` clause on the title line. */
+const oldStep = (n: number): string =>
+  [`${n}. [ ] feat(s${n}): step ${n}, **done when:** step ${n} works`, `   - seam: \`src/s${n}.ts\``].join('\n')
 
 const DERIVED: ReadonlyArray<readonly [string, unknown]> = [
   ['an unannotated plan', plan([step(1, [], true), step(2), step(3)].join('\n'))],
@@ -86,6 +90,7 @@ const DERIVED: ReadonlyArray<readonly [string, unknown]> = [
       ['1. `/plumbbob:build 1-2`, **stop:** review', '2. `/plumbbob:build 3`, **stop:** a call', '3. `/plumbbob:build 4`, **stop:** finish'].join('\n'),
     ),
   ],
+  ['a plan whose steps carry the older done-when clause', plan([oldStep(1), step(2), step(3)].join('\n'))],
 ]
 
 describe('plan.json conforms to runciter.plan/2', () => {
@@ -107,6 +112,15 @@ describe('plan.json conforms to runciter.plan/2', () => {
   it('marks a ticked step landed and every other step not', () => {
     const derived = DERIVED[0]?.[1] as { steps: { landed: boolean }[] }
     expect(derived.steps.map((s) => s.landed)).toEqual([true, false, false])
+  })
+
+  it('writes a proof line as its command and text, and the older clause as text alone', () => {
+    const derived = DERIVED[3]?.[1] as { steps: { proof: unknown }[] }
+    expect(derived.steps.map((s) => s.proof)).toEqual([
+      { command: null, text: 'step 1 works' },
+      { command: 'pnpm vitest run s2', text: '`pnpm vitest run s2` passes' },
+      { command: 'pnpm vitest run s3', text: '`pnpm vitest run s3` passes' },
+    ])
   })
 
   it('the rules catch what the schema cannot', () => {

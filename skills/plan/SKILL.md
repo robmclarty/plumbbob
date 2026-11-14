@@ -105,13 +105,23 @@ The argument only seeds how you get there.
    small, verifiable increment) in the exact format the parser reads:
 
    ```markdown
-   1. [ ] feat(scope): <title>, **done when:** <criterion, ideally a test or check result>
+   1. [ ] feat(scope): <title>
       - seam: `<file>`, `<file>`
+      - proof: `<command>` passes; <what it shows>
       - model: <optional; smallest that can carry it, with the one-phrase why>
    ```
 
-   Every step needs a **done-when** `/plumbbob:verify` can check and a **seam** (the exact
-   paths it touches). When the card shows a `**Seams**:` part, it has read a seam the build
+   Every step needs a **proof** `/plumbbob:verify` can check and a **seam** (the exact
+   paths it touches). The proof is the step's finish line, written on its own `- proof:`
+   line beside the seam. **Open it on the command when there is one**: the code span that
+   opens the line, and only that one, is a shell command `plumbbob checkpoint` runs at the
+   repo root once the gate is green, and a command that exits non-zero refuses the
+   checkpoint the way a red check does. So
+   `` - proof: `pnpm vitest run limiter` passes; the 6th request in 60s returns 429 `` is
+   measured, and a proof that opens on words (`- proof: the 6th request in 60s returns
+   429`) is a manual one that you judge at the pause. Never open a manual proof on a code
+   span that is not a command (a file path, a function call): the checkpoint would try to
+   run it. One `- proof:` line to a step. When the card shows a `**Seams**:` part, it has read a seam the build
    would refuse, or a path one edit from a file that exists: fix the seam in `intent.md`
    and run `plumbbob handoff --plan` again, or, when the path is a new file on purpose, say
    so in one line and leave it
@@ -136,7 +146,7 @@ The argument only seeds how you get there.
    `<title>` as a plain, single-line Conventional-Commit subject,
    `type(scope): description`, and it lands in `git log` verbatim (its breaking `!`
    honored); this is how each step lands a *real* `feat`/`fix`/`chore` in the history.
-   Keep load-bearing detail (file paths, module names) in `seam` and `done-when`; it is
+   Keep load-bearing detail (file paths, module names) in `seam` and `proof`; it is
    **never jammed into the title**, which has to read as plain English and as a clean
    subject at once. Aim for **≤72 characters** (GitHub's subject convention): soft
    guidance you eyeball at plan time, no lint, no gate.
@@ -153,7 +163,7 @@ The argument only seeds how you get there.
    **Recommend a model per step where the signal is clear** *(optional)*: the
    `- model:` sub-line names the **smallest model that can carry the step**, with the
    one-phrase why; the human buys capability only where the step needs it. E.g.
-   `model: sonnet (mechanical, fully specified by the done-when)` for rote edits;
+   `model: sonnet (mechanical, fully specified by the proof)` for rote edits;
    `model: opus (strong-assertion test authoring)` where the tests do the thinking;
    `model: fable (subtle cross-cutting design)` for judgment-heavy or creative work.
    It is advisory metadata for the human (`/plumbbob:status` surfaces it before each build),
@@ -316,7 +326,7 @@ Open questions, and keep it to one screen of reading. The lens:
 - an ambiguity a builder would have to guess through;
 - an edge case or a hidden assumption no Decision settles;
 - a collision with the existing code (read the files the seams name);
-- a done-when no test or check can measure, or a seam that names a file that does not
+- a proof no test or check can measure, or a seam that names a file that does not
   exist or misses one that must change;
 - a step too large to review in one pass, or a Decision with no *because*;
 - a range that runs through a call the plan leaves open, so the model would make it;
@@ -360,7 +370,7 @@ Make it easy and non-intrusive:
 - **Triage size first.** A tiny change earns a 3-line Frame and one Step, fast: never
   ceremony on a one-liner. Scale the questions to the work.
 - **Propose, don't interrogate.** Offer concrete suggestions the human can **accept as-is
-  without typing** ("done-when: the 6th request in 60s returns 429, good?"), while
+  without typing** ("proof: the 6th request in 60s returns 429, good?"), while
   taking arbitrary detail when they want to give it, including pointers to other files.
 - **A fork with real alternatives can be a choice.** When the interview reaches a call
   with two to four concrete answers, and your tools include `AskUserQuestion`, ask it

@@ -230,10 +230,10 @@ function boundaryMoves(input: MovesInput): Draft[] {
   const ordered = parseOrderedSteps(orient.intent)
   const next = ordered.find((s) => !s.done)
   if (next === undefined) {
-    return [pick('step', 'Plan the first step', 'Writes the first step of the plan, with its done-when and its seam.', '/plumbbob:step')]
+    return [pick('step', 'Plan the first step', 'Writes the first step of the plan, with its proof and its seam.', '/plumbbob:step')]
   }
   if (!next.planned) {
-    return [pick('step', `Plan step ${next.n}`, `Sharpens step ${next.n} until it has a done-when and a seam; nothing is built.`, '/plumbbob:step'), ...refineMove()]
+    return [pick('step', `Plan step ${next.n}`, `Sharpens step ${next.n} until it has a proof and a seam; nothing is built.`, '/plumbbob:step'), ...refineMove()]
   }
   const run = resolveRun({ intent: orient.intent, inFlight: null, spiking: false, item: null })
   const build = buildDraft(next, run)

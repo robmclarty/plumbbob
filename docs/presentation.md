@@ -35,7 +35,7 @@ there.
 
 | what | whose judgment | how it reaches the turn |
 | --- | --- | --- |
-| the Summary lead, the numbered highlights (kept in the detail file and the record), the `done-when`, `decisions`, and `constraints` rows, the title, the why, and the lean for each park at a stop, the recommendation | the model | written into `.plumbbob/detail.md`, read back and rendered by handoff |
+| the Summary lead, the numbered highlights (kept in the detail file and the record), the `proof`, `decisions`, and `constraints` rows, the title, the why, and the lean for each park at a stop, the recommendation | the model | written into `.plumbbob/detail.md`, read back and rendered by handoff |
 | the Readout's other rows and the changed files beneath its `diff` row, the inline diff when the change is small, Your Call, the state table (the Verdict, Now, Stop, Next Up, and the rows beneath it), each park's handle and text on a stop card, every `details:` link, the `more details` link | the CLI | measured from the session, the gate, the plan, the build log, and git |
 
 The model authors nothing in the turn but the relay. Every defect the build
@@ -66,7 +66,7 @@ The whole turn, rendered (the running example is
 
 ```text
 check        green: 3 of 3 checks
-done-when    met
+proof        met
 decisions    2 of 2 honored
 constraints  4 of 4 honored
 seam         held: 2 of 2 declared, no strays
@@ -120,7 +120,7 @@ Three consequences, spelled out because each was a real defect:
   the check row; it does not also open the Summary or close the turn. (Step
   5 of the build that wrote this spec stated it three times in one pause.)
 - A judgment or a flag (a stray the seam row will name, a decision the step
-  had to bend, a doubt about the done-when) is a numbered section of the
+  had to bend, a doubt about the proof) is a numbered section of the
   detail file, and the card carries it where it bears on the call: a bent
   row's `→` line points at the section, and the recommendation names it when
   it changes the move. It is never a freeform paragraph above or below the
@@ -310,7 +310,7 @@ what earns the readout its trust. The `check` row comes from the last run's
 the step's whole product (everything changed since HEAD, staged or not, plus
 each non-ignored new file counted as all-added lines), and the `spent` row from
 `stats.json` and the turn ledger. The model writes only the three rows that
-take judgment (`done-when`, `decisions`, `constraints`), into the detail file,
+take judgment (`proof`, `decisions`, `constraints`), into the detail file,
 under the header rule that file's wire opens with; handoff parses them there,
 folds them with its measurements, and re-emits the whole set. The model never
 types the fence into the turn.
@@ -320,7 +320,7 @@ every value starts at column 14:
 
 ```text
 check        green: 3 of 3 checks
-done-when    met
+proof        met
 decisions    2 of 2 honored
 constraints  4 of 4 honored
 seam         held: 2 of 2 declared, no strays
@@ -337,10 +337,11 @@ offender when it is not:
 | row | written by | true | failing | plan-wrong |
 | --- | --- | --- | --- | --- |
 | `check` | CLI | `green: <N> of <M> checks` | `red: <slot> failing` | never; the gate measures the work |
-| `done-when` | model | `met` | `not met: <what is missing>` | `drift: <why no diff can meet it>` |
+| `proof` | model, then the CLI once its command has run | `met`, or measured `` met: `<command>` · exit 0 · <time> `` | `not met: <what is missing>`, or measured `` not met: `<command>` · exit <N> · <time> `` | `drift: <why no diff can meet it>` |
 | `decisions` | model | `<N> of <N> honored`, or `none exercised` | `bent: <tag>, <how>` | `drift: <which one reality broke>` |
 | `constraints` | model | `<N> of <N> honored` | `bent: <tag>, <how>` | `drift: <which one reality broke>` |
 | `seam` | CLI | `held: <N> of <M> declared, no strays` | `strayed: <N> paths outside the seam` | never; a seam the plan got wrong shows as a stray, and the detail file says so |
+| `plumb` | CLI, in the `seam` row's place, for a step with a stored reach | `seam <N> · reach <N> · out 0` | `seam <N> · reach <N> · out <N> (<path>)` | never, as with `seam` |
 
 The rules the rows follow:
 
@@ -348,8 +349,23 @@ The rules the rows follow:
   question a reviewer brings to an instrument is "is anything off?", and a
   count that sizes its universe answers it faster than a list does:
   `green: 11 of 11 checks` says both that nothing failed and how much was
-  measured. `done-when` collapses all the way to the bare word, because the
+  measured. `proof` collapses all the way to the bare word, because the
   Summary above it is already its evidence.
+- **A proof with a command is measured, and a measured row is never
+  collapsed.** When the step's `- proof:` line opens on a command in
+  backticks, `plumbbob checkpoint` runs it behind the green gate and records
+  the run in `.check/proof.json`
+  ([D154 (red-proof-holds)](decisions.md#d154)). From then on the row is the CLI's: the word,
+  the command, its exit and its time, as in
+  `` proof        met: `pnpm vitest run limiter` · exit 0 · 4.2s ``, with the
+  command cut by an ellipsis where the value would pass 67 columns. A red one
+  reads `not met:` in the same form and takes a `→` line at
+  `.check/proof.txt`, the command's captured output. The command runs at the
+  checkpoint and nowhere earlier, so a first pause shows the model's `met`
+  and the Log record shows the measured row; a pause rendered after a refused
+  checkpoint shows the red one, and `looks good` is withheld there. A run
+  recorded for another step, for a command the line no longer opens on, or
+  before the last gate run measures nothing, and the model's row stands.
 - The constraint count is the CLI's, read from `## Constraints` in intent.md,
   because a constraint always applies and that is what makes it one. The
   exercised-decision count stays the model's: only it knows which decisions
@@ -367,6 +383,20 @@ The rules the rows follow:
   stray cannot say whether the work wandered or the line was drawn too tight,
   so `strayed` folds no lower than `◐ A hair off` (see the Verdict). The row
   still names its paths, the same as any red row.
+- **With a stored reach, the `seam` row becomes the plumb split.** When the
+  build's `reach.json` holds an answer for the step, asked for the seam as it
+  stands, the row prints under `plumb` and sorts each changed file three
+  ways: in the seam, in the reach but not the seam, or outside both
+  ([D155 (reach-is-computed)](decisions.md#d155); [the reach](reach.md)):
+  `plumb        seam 3 · reach 1 · out 1 (src/routes/admin.ts)`. All three
+  counts always print, so the row keeps one shape, and a step that held reads
+  `seam 1 · reach 1 · out 0`. Only a file outside both is a stray. One is
+  named on the row, or on a `→` line when its path would pass the 67 columns;
+  two or more take a `-` line each. The row opens on no verdict word, since
+  the `out` count is the verdict: zero is held, anything above it is the
+  `seam` row's advisory and folds the same way, to `◐ A hair off (seam
+  strayed)`. With no stored answer, or one asked for other paths, the `seam`
+  row renders as it always has.
 - A cited tag always carries its slug, `D2 (five-per-minute)`, never a bare
   `D2`, the same gloss rule prose follows
   ([D74 (glossed-citations)](decisions.md#d74)).
@@ -413,7 +443,8 @@ Elapsed runs from the step's `startedAt` to now at the pause and to its
 `landedAt` at the boundary; turns is the ledger's `TURN` minus the `TICK`
 stamped when the step was entered; the gate is the last run's
 `total_duration_ms`; and the tail is the red runs accrued before green, or
-`green first run` when there were none. Drift warnings ride last when any
+`green first run` when there were none, then the red proofs (`1 red proof`)
+when a checkpoint's proof command failed before it passed. Drift warnings ride last when any
 accrued. A clause with nothing to say vanishes, and a fresh session with
 nothing at all to count vanishes the row.
 
@@ -499,7 +530,7 @@ parenthetical vanishes when nothing is off:
 | **Verdict** | ● Plumb |
 | **Verdict** | ◐ A hair off (seam strayed) |
 | **Verdict** | ○ Out of plumb (check red) |
-| **Verdict** | ✗ Not standing (done-when drifted) |
+| **Verdict** | ✗ Not standing (proof drifted) |
 ```
 
 It heads the table because it is the fact read first: whether the step is
@@ -522,7 +553,8 @@ can never disagree. The fold, from worst down:
    `<row> <verdict>`, first failing row in row order.
 3. No row failing but advisories accrued → `◐ A hair off`, naming the first
    advisory in a fixed order: a strayed seam (`seam strayed`), red check runs
-   before green (`2 red runs before green`), reverts on this step (`1 revert
+   before green (`2 red runs before green`), red proof runs before green
+   (`1 red proof before green`), reverts on this step (`1 revert
    on this step`), commits outside the ledger (`3 commits outside the
    ledger`).
 4. Otherwise → `● Plumb`.
@@ -721,8 +753,9 @@ call after its words. It does not print the card again. The human who wants the 
 view of the change asks for it with `show the pause`, and `looks good` lands
 it as it stands, the checkpoint refusing on red as always.
 
-The `looks good` line renders only while the measured check is green: on red,
-or with no run to measure, the checkpoint would refuse, and offering a move
+The `looks good` line renders only while the measured check is green and no
+measured proof is red: on red, or with no run to measure, the checkpoint would
+refuse, and offering a move
 that cannot happen teaches a false ceremony. The others always render. The
 block is the face of the approval latch
 ([D64 (approval-latch)](decisions.md#d64)): the human's next message is the
@@ -971,7 +1004,7 @@ plan": each state asks a different move of the human.
 | --- | --- | --- |
 | `● Plumb` | every measure true; the diff matches the plan and the gate agrees | read the diff; approving is safe |
 | `◐ A hair off` | green, with advisories accrued on the way (a strayed seam, red runs, reverts, out-of-band commits) | read the named advisory, then judge |
-| `○ Out of plumb` | a measure failing now: red check, a missed done-when, a bent decision or constraint | send fixes; truing the diff fixes it |
+| `○ Out of plumb` | a measure failing now: red check, a missed proof, a bent decision or constraint | send fixes; truing the diff fixes it |
 | `✗ Not standing` | truing the diff will not fix it; a readout row says `drift` | repair the plan (`/plumbbob:refine`), or revert |
 
 ## The three tiers
@@ -1698,7 +1731,7 @@ The card, whole, at the boundary where the running example's range 3 landed:
 steps        4 of 4 landed
              - 6 a1b2c3d · 7 b2c3d4e · 8 c3d4e5f · 9 d4e5f6a
 check        green: 11 of 11 checks, 4 landings
-done-when    met
+proof        met
 decisions    3 of 3 honored
 constraints  4 of 4 honored
 seam         strayed: 1 path outside step 8's seam
@@ -1720,7 +1753,7 @@ spent        3h 12m · 1 red run
 | Park | Why it matters | Lean |
 | --- | --- | --- |
 | **P6**: [note on the card](.plumbbob/builds/x/build-log.md#L31) | the note says what to watch for at the stop | tangent: the bracket already points at the item, where the note is |
-| **P7**: [second drift](.plumbbob/builds/x/build-log.md#L32) | step 10's done-when assumes recover flags both drifts | blocker: a step before 10 teaches recover the second one |
+| **P7**: [second drift](.plumbbob/builds/x/build-log.md#L32) | step 10's proof assumes recover flags both drifts | blocker: a step before 10 teaches recover the second one |
 | **P8**: [raw link](.plumbbob/builds/x/build-log.md#L33) | the dashboard is read in a fence, where the link stays text | tangent: cosmetic, and the card renders it |
 
 **Your Call**:
@@ -1813,7 +1846,7 @@ range detail's header rule. Eight rows at most, in this order:
 steps        4 of 4 landed
              - 6 a1b2c3d · 7 b2c3d4e · 8 c3d4e5f · 9 d4e5f6a
 check        green: 11 of 11 checks, 4 landings
-done-when    met
+proof        met
 decisions    3 of 3 honored
 constraints  4 of 4 honored
 seam         held: 4 of 4 steps, no strays
@@ -1828,7 +1861,7 @@ spent        3h 12m · green first run at every landing
 | --- | --- | --- | --- |
 | `steps` | CLI | `<N> of <N> landed`, the steps and their checkpoint shas on a continuation line | never; a step the ledger holds no commit for reads `no checkpoint` in its sha's place |
 | `check` | CLI | `green: <N> of <M> checks, <L> landings` | `red: <slot> failing` |
-| `done-when` | model | `met`, every step's | `not met: step 7, <what is missing>`, or `drift: <why no diff can meet it>` |
+| `proof` | model | `met`, every step's | `not met: step 7, <what is missing>`, or `drift: <why no diff can meet it>` |
 | `decisions` | model | `<N> of <N> honored`, the decisions the range exercised, or `none exercised` | `bent: <tag>, <how>`, or `drift` |
 | `constraints` | model | `<N> of <N> honored` | `bent: <tag>, <how>`, or `drift` |
 | `seam` | CLI | `held: <N> of <N> steps, no strays` | `strayed: <N> paths outside step 8's seam` |
@@ -1852,7 +1885,10 @@ The rules the range's rows add to the step's:
   its paths on the `→` line, and two or more strayed steps break onto
   continuation lines, one per step. It folds no lower than `◐ A hair off`,
   as at a pause, since a stray in a landed commit asks the same question of
-  the plan.
+  the plan. A step with a stored reach is held to its seam and its reach
+  together, as its pause held it, so a file its reach lists is no stray here;
+  the row keeps the `seam` label and its wording
+  ([D155 (reach-is-computed)](decisions.md#d155)).
 - The `diff` row sums the commits, a file counted once however many commits
   touched it, and lists those files beneath it the way a step's does, seven
   named and the rest a count past eight
@@ -1899,7 +1935,7 @@ per open park in list order ([D112 (lean-table)](decisions.md#d112)):
 | Park | Why it matters | Lean |
 | --- | --- | --- |
 | **P6**: [note on the card](.plumbbob/builds/x/build-log.md#L31) | the note says what to watch for at the stop | tangent: the bracket already points at the item, where the note is |
-| **P7**: [second drift](.plumbbob/builds/x/build-log.md#L32) | step 10's done-when assumes recover flags both drifts | blocker: a step before 10 teaches recover the second one |
+| **P7**: [second drift](.plumbbob/builds/x/build-log.md#L32) | step 10's proof assumes recover flags both drifts | blocker: a step before 10 teaches recover the second one |
 | **P8**: [raw link](.plumbbob/builds/x/build-log.md#L33) | the dashboard is read in a fence, where the link stays text | tangent: cosmetic, and the card renders it |
 ```
 
@@ -2231,7 +2267,7 @@ turn at all. Its shape:
 # Detail · Step 2 · feat(login): wire the limiter into POST /login
 
 ── recap · step 2 of 3 ──
-done-when    met
+proof        met
 decisions    2 of 2 honored
 constraints  all honored
 
@@ -2273,7 +2309,7 @@ the step's place and one more section:
 # Detail · Range 3 · review the card on a live boundary before the skills teach it
 
 ── recap · range 3 of 5 ──
-done-when    met
+proof        met
 decisions    3 of 3 honored
 constraints  all honored
 

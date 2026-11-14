@@ -28,7 +28,7 @@ between the two is a mode the panel shows, never a mood.
 [readout](presentation.md#the-readout): seven rows at most, in one fence. The
 CLI measures four of them, `check` from the gate's own summary, `seam` and
 `diff` from git, `spent` from the step's stats and the turn ledger. The model
-judges the other three, `done-when`, `decisions`, and `constraints`, and writes
+judges the other three, `proof`, `decisions`, and `constraints`, and writes
 them into the detail file; handoff folds both sets into one fence and the model
 relays it without editing a row ([D82 (readout-ladder)](decisions.md#d82),
 [D80 (cli-renders-model-relays)](decisions.md#d80)). That split is the

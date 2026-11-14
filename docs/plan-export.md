@@ -12,7 +12,7 @@ runciter's scheduler reads, `runciter.plan/2`, and it is derived from `intent.md
 time, never written by hand. Runciter owns that shape (its
 `docs/plan-protocol.md`, `/1` approved at commit `9b40f0f` and `/2` on 2026-11-13); plumbbob only writes it. This page gives the three step lines
 the export reads, what a step exports when it has none of them, how every other field is
-filled, the checks a plan must pass before anything is written, and what keeps the file
+filled, a step's proof among them, the checks a plan must pass before anything is written, and what keeps the file
 current once it exists.
 
 **A plan with none of the new lines exports fully serial.** Every line on this page is
@@ -22,7 +22,7 @@ person writes an `after:` line that says it may.
 
 ## The three step lines
 
-A step in `## Steps` already carries sub-lines (`- seam:`, `- model:`, `- note:`). The
+A step in `## Steps` already carries sub-lines (`- seam:`, `- proof:`, `- model:`, `- note:`). The
 export reads three more, each at most once per step, each a plain value with no backticks:
 
 | Line | Takes | Absent means |
@@ -35,8 +35,9 @@ A worked step, from a plan where step 4 waits on steps 2 and 3 but not on whatev
 order puts before it:
 
 ```markdown
-4. [ ] feat(plan): derive runciter.plan/2 from intent.md, **done when:** `derivePlan` turns an intent into the contract's object, and the vendored example round-trips
+4. [ ] feat(plan): derive runciter.plan/2 from intent.md
    - seam: `src/lib/plan.ts`, `src/lib/__tests__/plan.test.ts`
+   - proof: `pnpm vitest run plan` passes; the vendored example round-trips
    - model: opus (the contract's shape, where a wrong default is a parallel run)
    - after: 2-3
    - stop: structural
@@ -55,7 +56,10 @@ It exports as:
   "seam": ["src/lib/plan.ts", "src/lib/__tests__/plan.test.ts"],
   "stop": "structural",
   "effort": "high",
-  "done_when": "`derivePlan` turns an intent into the contract's object, and the vendored example round-trips",
+  "proof": {
+    "command": "pnpm vitest run plan",
+    "text": "`pnpm vitest run plan` passes; the vendored example round-trips"
+  },
   "context": ["vendor the schema and the example from runciter at `9b40f0f`."],
   "landed": false
 }
@@ -121,10 +125,11 @@ same context `plumbbob agent` hands one today ([D139 (field-mapping)](decisions.
 | `contract_paths` | always `[]`; contract paths and `contract.lock` are later work |
 | `decisions`, `constraints` | the top-level bullets under `## Decisions` and `## Constraints`, verbatim, as the step context scrapes them |
 | `steps[].id` | `step-<n>`, the step's plan number ([D133 (step-id)](decisions.md#d133)) |
-| `steps[].title` | the step's title, before **done when:** |
+| `steps[].title` | the step's title, cut before an older **done when:** clause where the line still has one |
 | `steps[].range` | the item number of the `## Build ranges` entry naming the step, as a string, or `null` |
 | `steps[].seam` | the step's seam tokens, as the strict seam parse reads them |
-| `steps[].done_when` | the step's **done when:** text |
+| `steps[].proof.text` | the step's `- proof:` line, verbatim, backticks kept |
+| `steps[].proof.command` | the contents of the code span that opens that line, or `null` when it opens on words |
 | `steps[].context` | the step's `- note:` lines, verbatim, in order |
 | `steps[].landed` | `true` when the step's box is ticked, `false` when it is not |
 
@@ -136,12 +141,22 @@ rewrite the dependency graph under the person's feet, so a ticked step exports w
 `landed: true` instead, and the scheduler never builds it: a step that waits on it may start
 at once, and its stop is not taken again. That is what lets a person build the first range
 with plumbbob and hand the rest over. `runciter.plan/1` had no such field, and a scheduler
-reading it would have built the landed steps again; `/2` exists for this one field.
+reading it would have built the landed steps again; `/2` began with this field.
+
+A step's proof is what shows it is done. Its text goes to the step's builder and critic as
+the acceptance. Its command, when there is one, is a shell command run at the repo root
+that must exit 0 for the step to count as proven, the same command `plumbbob checkpoint`
+runs once the gate is green. Only the span that opens the line is the command; a span
+further along is prose, and a proof that opens on words is a manual one with nothing to
+run. A step written before the line existed carries its acceptance as a **done when:**
+clause on the title line, and that still reads: it exports as the text, with `command`
+`null`. When a step has both, the `- proof:` line wins. `runciter.plan/2` took this field
+in place of `/1`'s `done_when` string.
 
 The file is written one way ([D144 (bytes-compare)](decisions.md#d144)): two-space JSON,
 keys in the contract's order (the order the table above lists them in, and within a step
-`id`, `title`, `range`, `depends_on`, `seam`, `stop`, `effort`, `done_when`, `context`,
-`landed`),
+`id`, `title`, `range`, `depends_on`, `seam`, `stop`, `effort`, `proof`, `context`,
+`landed`, and within a proof `command`, `text`),
 every default written out, and a trailing newline. "Current" means its bytes equal a fresh
 derivation's.
 
@@ -184,8 +199,8 @@ meant to order, so a failure is never a warning.
 ### The lines themselves
 
 Before any check runs, each step's lines must read. A malformed or doubled `after:`,
-`stop:` or `effort:` line is a finding that names the step, never a guess
-([D141 (strict-fields)](decisions.md#d141)):
+`stop:` or `effort:` line, or a doubled or empty `proof:` line, is a finding that names the
+step, never a guess ([D141 (strict-fields)](decisions.md#d141)):
 
 | When | Prints |
 | --- | --- |
@@ -194,11 +209,14 @@ Before any check runs, each step's lines must read. A malformed or doubled `afte
 | `effort:` holds anything else | ``step 4's `effort:` line reads `hard`; it takes `low`, `medium`, `high`, `xhigh` or `max`.`` |
 | a line is empty | ``step 4's `effort:` line is empty; it takes `low`, `medium`, `high`, `xhigh` or `max`.`` |
 | a step has two of a kind | ``step 4 has more than one `after:` line.`` |
+| a step has two `proof:` lines | ``step 4 has more than one `proof:` line.`` |
+| `proof:` is empty | ``step 4's `proof:` line is empty; it takes what shows the step is done, opening on the command in backticks when there is one.`` |
 
 `none` stands alone: `after: none, 3` reads as malformed. A step whose seam will not parse,
-or whose **done when:** is empty, fails here too, since the contract needs at least one seam
-entry and a `done_when` on every step; the seam's words are the table above, and the other
-prints ``step 4 has no **done when:** text; the contract needs one.``
+or that has no proof at all (no `proof:` line, and no older **done when:** clause with
+words in it), fails here too, since the contract needs at least one seam entry and a proof
+on every step; the seam's words are the table above, and the other prints
+``step 4 has no proof; the contract needs one.``
 
 ### The contract's three rules
 

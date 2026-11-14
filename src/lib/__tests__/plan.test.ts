@@ -67,7 +67,7 @@ describe('derivePlan', () => {
     ])
   })
 
-  it('carries every step, landed or not, with its title, seam, and done-when', () => {
+  it('carries every step, landed or not, with its title, seam, and proof', () => {
     const plan = derive(intent({ steps: THREE }))
     expect(plan.steps[0]).toEqual({
       id: 'step-1',
@@ -77,7 +77,7 @@ describe('derivePlan', () => {
       seam: ['src/types.ts'],
       stop: 'none',
       effort: null,
-      done_when: 'the type is exported',
+      proof: { command: null, text: 'the type is exported' },
       context: [],
       landed: true,
     })
@@ -176,7 +176,47 @@ describe('derivePlan', () => {
     expect(!r.ok && r.findings).toEqual([
       "step 1's seam token `src/*.ts` is a glob; seams are exact paths or `dir/` grants, per D23 (no-glob-seams).",
       "step 2's `effort:` line reads `hard`; it takes `low`, `medium`, `high`, `xhigh` or `max`.",
-      'step 2 has no **done when:** text; the contract needs one.',
+      'step 2 has no proof; the contract needs one.',
+    ])
+  })
+
+  it('reads a proof line: the opening code span is the command, the whole line the text', () => {
+    const steps = [
+      '1. [ ] feat(limiter): read the cap',
+      '   - seam: `a.ts`',
+      '   - proof: `pnpm vitest run limiter` passes; the 6th request returns `429`',
+      '2. [ ] feat(docs): say so',
+      '   - seam: `b.md`',
+      '   - proof: the page names `RATE_LIMIT_MAX`',
+      '3. [ ] feat(client): back off, **done when:** the old clause',
+      '   - seam: `c.ts`',
+      '   - proof: `pnpm test` passes',
+    ].join('\n')
+    const plan = derive(intent({ steps }))
+    expect(plan.steps.map((s) => [s.title, s.proof])).toEqual([
+      ['feat(limiter): read the cap', { command: 'pnpm vitest run limiter', text: '`pnpm vitest run limiter` passes; the 6th request returns `429`' }],
+      ['feat(docs): say so', { command: null, text: 'the page names `RATE_LIMIT_MAX`' }],
+      ['feat(client): back off', { command: 'pnpm test', text: '`pnpm test` passes' }],
+    ])
+  })
+
+  it('refuses a step with no proof, a doubled proof line, or an empty one', () => {
+    const steps = [
+      '1. [ ] a',
+      '   - seam: `a.ts`',
+      '2. [ ] b',
+      '   - seam: `b.ts`',
+      '   - proof: `true` exits 0',
+      '   - proof: and again',
+      '3. [ ] c',
+      '   - seam: `c.ts`',
+      '   - proof:',
+    ].join('\n')
+    const r = derivePlan({ intent: intent({ steps }), slug: 's', path: 'p', sha256: SHA })
+    expect(!r.ok && r.findings).toEqual([
+      'step 1 has no proof; the contract needs one.',
+      'step 2 has more than one `proof:` line.',
+      "step 3's `proof:` line is empty; it takes what shows the step is done, opening on the command in backticks when there is one.",
     ])
   })
 
@@ -202,7 +242,7 @@ describe('serializePlan', () => {
       'seam',
       'stop',
       'effort',
-      'done_when',
+      'proof',
       'context',
       'landed',
     ])

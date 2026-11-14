@@ -5,7 +5,8 @@
   "step": {
     "n": 1,
     "title": "Greedy wrap(text, width) with tests",
-    "doneWhen": "wrap() breaks lines at the last space that fits; node --test passes",
+    "proof": { "command": "node --test", "text": "`node --test` passes; `wrap()` breaks lines at the last space that fits" },
+    "doneWhen": "`node --test` passes; `wrap()` breaks lines at the last space that fits",
     "seam": []
   },
   "decisions": ["D1 (greedy-breaking): greedy line breaking over optimal — because it is what fmt/fold do and the simplest thing that works"],

@@ -9,6 +9,7 @@ These two files are copied byte for byte from runciter, which owns the
 
 Both were first copied from runciter commit `9b40f0f`, the contract as it was approved on
 2026-11-12 (`runciter.plan/1`), and copied again on 2026-11-13 for `runciter.plan/2`, which
-gives a step `landed`.
+gives a step `landed` and turns its `done_when` into `proof`. The second copy is runciter
+commit `e64109e`.
 Never edit them here. To refresh them, copy both files again from a later runciter commit,
 name that commit in place of the one above, and run the test.

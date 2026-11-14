@@ -495,8 +495,10 @@ function agentDirNames(dir: string): string[] {
  * never touches a provider key, so auth, model choice, and sandboxing stay the
  * agent's business. The step's `seam` (the paths the step is granted to
  * edit) is parsed strictly because seams gate git behavior; the title,
- * done-when, decisions, and constraints are best-effort prose for the agent's
- * context.
+ * proof, decisions, and constraints are best-effort prose for the agent's
+ * context. `step.proof` is the step's proof as written, with the command it
+ * opens on when there is one; `step.doneWhen` is the same text under the name
+ * it had first, kept so an agent reading it still works.
  */
 export type StepContext = {
   readonly contract: number
@@ -506,6 +508,7 @@ export type StepContext = {
     readonly n: number
     readonly title: string
     readonly doneWhen: string
+    readonly proof: { readonly command: string | null; readonly text: string }
     readonly seam: ReadonlyArray<string>
   }
   readonly decisions: ReadonlyArray<string>
@@ -554,7 +557,7 @@ export function composeStepContext(params: {
       contract: CONTRACT_VERSION,
       mode: params.mode,
       build: { slug: params.slug, title: parseBuildTitle(params.intent) },
-      step: { n: params.step, title: meta.title, doneWhen: meta.doneWhen, seam: seam.seam },
+      step: { n: params.step, title: meta.title, doneWhen: meta.proof.text, proof: meta.proof, seam: seam.seam },
       decisions: decisions.items,
       constraints: constraints.items,
       context: params.context ?? [],

@@ -66,7 +66,7 @@ folder, so it rides the branch into the PR.)*
 
 - 2026-07-03 — plan committed · 7d2e94fb0
 
-  **Recommendation**: Approve it. Every step carries a done-when a test can measure, the seams name files that exist, and each Decision states its because.
+  **Recommendation**: Approve it. Every step carries a proof a test can measure, the seams name files that exist, and each Decision states its because.
 
   **1.** Q1 (proxy-trust) is the one assumption the limiter keys on, and ops settled it.
 
@@ -84,7 +84,7 @@ folder, so it rides the branch into the PR.)*
 
   ```text
   check        green: 7 of 7 checks
-  done-when    met
+  proof        met: `pnpm vitest run limiter` · exit 0 · 4.2s
   decisions    2 of 2 honored
   constraints  1 of 1 honored
   seam         held: 2 of 2 declared, no strays
@@ -125,7 +125,7 @@ folder, so it rides the branch into the PR.)*
   steps        2 of 2 landed
                - 2 b2c3d4e · 3 e5f6a7b
   check        green: 7 of 7 checks, 2 landings
-  done-when    met
+  proof        met
   decisions    2 of 2 honored
   constraints  1 of 1 honored
   seam         held: 2 of 2 steps, no strays

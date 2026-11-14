@@ -260,6 +260,7 @@ describe('composeStepContext', () => {
         n: 1,
         title: 'The limiter',
         doneWhen: 'requests over the cap get a 429',
+        proof: { command: null, text: 'requests over the cap get a 429' },
         seam: ['src/limiter.ts', 'src/limiter.test.ts'],
       },
       decisions: ['D1: use a token bucket — *because* it smooths bursts and is cheap to reason about', 'D2: keep the limit in settings'],

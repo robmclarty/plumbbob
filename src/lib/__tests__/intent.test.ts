@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { matchesSeam, parseBuildScope, parseBuildTitle, parseStepFields, parseStepMeta, parseStepSeam, scrapeBullets } from '../intent.ts'
+import { matchesSeam, parseBuildScope, parseBuildTitle, parseStepFields, parseStepMeta, parseStepProof, parseStepSeam, scrapeBullets } from '../intent.ts'
 
 function intentWith(stepsBody: string): string {
   return `# Title\n\n## Frame\n\nstuff\n\n## Steps\n\n${stepsBody}\n\n## Open questions\n\n- none\n`
@@ -151,7 +151,7 @@ describe('parseBuildTitle', () => {
 describe('parseStepMeta', () => {
   it('splits the title and done-when of a step', () => {
     const intent = intentWith(['1. [ ] First thing — **done when:** it works', '   - seam: `a.ts`'].join('\n'))
-    expect(parseStepMeta(intent, 1)).toEqual({ title: 'First thing', doneWhen: 'it works' })
+    expect(parseStepMeta(intent, 1)).toEqual({ title: 'First thing', doneWhen: 'it works', proof: { command: null, text: 'it works' } })
   })
 
   it('joins a wrapped done-when up to the seam sub-bullet', () => {
@@ -165,23 +165,152 @@ describe('parseStepMeta', () => {
     expect(parseStepMeta(intent, 1)).toEqual({
       title: 'Big step',
       doneWhen: 'the input JSON is composed from intent.md and settings, warnings surfaced',
+      proof: { command: null, text: 'the input JSON is composed from intent.md and settings, warnings surfaced' },
     })
   })
 
   it('handles a checked box and returns empty strings for an unparseable step', () => {
     const intent = intentWith(['1. [x] Done step — **done when:** shipped', '   - seam: `a.ts`'].join('\n'))
     expect(parseStepMeta(intent, 1).title).toBe('Done step')
-    expect(parseStepMeta(intent, 9)).toEqual({ title: '', doneWhen: '' })
+    expect(parseStepMeta(intent, 9)).toEqual({ title: '', doneWhen: '', proof: { command: null, text: '' } })
   })
 
   it('reads a title-only step with no done-when marker', () => {
     const intent = intentWith(['1. [ ] Just a title', '   - seam: `a.ts`'].join('\n'))
-    expect(parseStepMeta(intent, 1)).toEqual({ title: 'Just a title', doneWhen: '' })
+    expect(parseStepMeta(intent, 1)).toEqual({ title: 'Just a title', doneWhen: '', proof: { command: null, text: '' } })
   })
 
   it('strips the comma separator of the scaffold step form — D78 (em-dash-ban)', () => {
     const intent = intentWith(['1. [ ] First thing, **done when:** it works', '   - seam: `a.ts`'].join('\n'))
-    expect(parseStepMeta(intent, 1)).toEqual({ title: 'First thing', doneWhen: 'it works' })
+    expect(parseStepMeta(intent, 1)).toEqual({ title: 'First thing', doneWhen: 'it works', proof: { command: null, text: 'it works' } })
+  })
+
+  it('reads the proof line of a step, the whole opener as its title, and keeps doneWhen as the proof text', () => {
+    const intent = intentWith(
+      ['1. [ ] feat(limiter): read the cap', '   - seam: `a.ts`', '   - proof: `pnpm vitest run limiter` passes; the 6th request returns 429'].join('\n'),
+    )
+    expect(parseStepMeta(intent, 1)).toEqual({
+      title: 'feat(limiter): read the cap',
+      doneWhen: '`pnpm vitest run limiter` passes; the 6th request returns 429',
+      proof: { command: 'pnpm vitest run limiter', text: '`pnpm vitest run limiter` passes; the 6th request returns 429' },
+    })
+  })
+
+  it('never refuses a doubled proof line: the first one is read', () => {
+    const intent = intentWith(['1. [ ] Twice', '   - proof: `true` first', '   - proof: `false` second'].join('\n'))
+    expect(parseStepMeta(intent, 1).proof).toEqual({ command: 'true', text: '`true` first' })
+  })
+})
+
+describe('parseStepProof', () => {
+  const step = (...sub: string[]): string => intentWith(['1. [ ] A step', '   - seam: `a.ts`', ...sub].join('\n'))
+
+  it('takes the code span that opens the line as the command, and the whole line as the text', () => {
+    expect(parseStepProof(step('   - proof: `pnpm test` passes'), 1)).toEqual({
+      ok: true,
+      proof: { command: 'pnpm test', text: '`pnpm test` passes' },
+    })
+  })
+
+  it('reads a proof that opens on words as a manual proof, a later span staying prose', () => {
+    expect(parseStepProof(step('   - proof: the page loads; `curl localhost` answers 200'), 1)).toEqual({
+      ok: true,
+      proof: { command: null, text: 'the page loads; `curl localhost` answers 200' },
+    })
+  })
+
+  it('takes only the opening span, never a second one', () => {
+    const parsed = parseStepProof(step('   - proof: `a` then `b`'), 1)
+    expect(parsed).toEqual({ ok: true, proof: { command: 'a', text: '`a` then `b`' } })
+  })
+
+  it('joins a wrapped line up to the next sub-bullet, and drops a trailing HTML comment', () => {
+    const intent = step('   - proof: `pnpm test` passes, <!-- `not this` -->', '     and the log is quiet', '   - note: `nor this`')
+    expect(parseStepProof(intent, 1)).toEqual({
+      ok: true,
+      proof: { command: 'pnpm test', text: '`pnpm test` passes, and the log is quiet' },
+    })
+  })
+
+  it('reports a doubled proof line and an empty one as findings that name the step', () => {
+    expect(parseStepProof(step('   - proof: `a`', '   - proof: `b`'), 1)).toEqual({
+      ok: false,
+      findings: ['step 1 has more than one `proof:` line.'],
+    })
+    const empty = parseStepProof(step('   - proof:'), 1)
+    expect(empty.ok).toBe(false)
+    expect(empty.ok ? [] : empty.findings).toEqual([expect.stringContaining("step 1's `proof:` line is empty")])
+  })
+
+  it('reads the older done-when clause as a proof with no command, even where it opens on a span', () => {
+    const intent = intentWith(['1. [ ] Old, **done when:** `pnpm test` passes', '   - seam: `a.ts`'].join('\n'))
+    expect(parseStepProof(intent, 1)).toEqual({ ok: true, proof: { command: null, text: '`pnpm test` passes' } })
+  })
+
+  it('lets the proof line win over the older clause', () => {
+    const intent = intentWith(['1. [ ] Both, **done when:** the old words', '   - proof: `true` the new words'].join('\n'))
+    expect(parseStepProof(intent, 1)).toEqual({ ok: true, proof: { command: 'true', text: '`true` the new words' } })
+    expect(parseStepMeta(intent, 1).title).toBe('Both')
+  })
+
+  it('never reads a bullet nested under another sub-bullet as the step\'s proof', () => {
+    const nested = step('   - note: an example', '     - proof: `touch nested-ran.txt` never runs')
+    expect(parseStepProof(nested, 1)).toEqual({ ok: true, proof: null })
+    const beside = step('   - proof: `true` the real one', '   - note: an example', '     - proof: `false` a sample')
+    expect(parseStepProof(beside, 1)).toEqual({ ok: true, proof: { command: 'true', text: '`true` the real one' } })
+  })
+
+  it('stops at the blank line that ends the last step, so trailing prose is no second proof', () => {
+    const lines = ['1. [ ] A step', '   - seam: `a.ts`', '   - proof: `true` holds', '', 'A proof line is written like so:', '', '- proof: `false` a sample']
+    expect(parseStepProof(intentWith(lines.join('\n')), 1)).toEqual({ ok: true, proof: { command: 'true', text: '`true` holds' } })
+    const only = ['1. [ ] A step', '   - seam: `a.ts`', '', '- proof: `false` a sample', '   - proof: `false` indented under the sample']
+    expect(parseStepProof(intentWith(only.join('\n')), 1)).toEqual({ ok: true, proof: null })
+    const margin = ['1. [ ] A step', '   - seam: `a.ts`', '- proof: `false` a list of its own']
+    expect(parseStepProof(intentWith(margin.join('\n')), 1)).toEqual({ ok: true, proof: null })
+  })
+
+  it('keeps a sub-bullet that follows a blank line inside the item', () => {
+    const loose = ['1. [ ] A step', '', '   - seam: `a.ts`', '', '   - proof: `true` holds'].join('\n')
+    expect(parseStepProof(intentWith(loose), 1)).toEqual({ ok: true, proof: { command: 'true', text: '`true` holds' } })
+  })
+
+  it('never reads a line inside a fenced block as the step\'s proof', () => {
+    const fenced = step('   - note: written like so', '', '   ```md', '   - proof: `false` a sample', '   ```', '', '   - proof: `true` holds')
+    expect(parseStepProof(fenced, 1)).toEqual({ ok: true, proof: { command: 'true', text: '`true` holds' } })
+    const onlyFenced = step('   ~~~', '   - proof: `false` a sample', '   ~~~')
+    expect(parseStepProof(onlyFenced, 1)).toEqual({ ok: true, proof: null })
+  })
+
+  it('keeps a comment opener inside the command, and still drops a trailing comment', () => {
+    expect(parseStepProof(step('   - proof: `grep -c "<!--" a.html` passes'), 1)).toEqual({
+      ok: true,
+      proof: { command: 'grep -c "<!--" a.html', text: '`grep -c "<!--" a.html` passes' },
+    })
+    expect(parseStepProof(step('   - proof: `grep -c "<!--" a.html` passes <!-- a note with `a span` -->'), 1)).toEqual({
+      ok: true,
+      proof: { command: 'grep -c "<!--" a.html', text: '`grep -c "<!--" a.html` passes' },
+    })
+    expect(parseStepProof(step('   - proof: an unclosed ` tick <!-- gone -->'), 1)).toEqual({
+      ok: true,
+      proof: { command: null, text: 'an unclosed ` tick' },
+    })
+    expect(parseStepProof(step('   - proof: `` echo `<!--` `` runs'), 1)).toMatchObject({ ok: true, proof: { text: '`` echo `<!--` `` runs' } })
+  })
+
+  it('reads the older clause on a sub-bullet, bold or bare, as a proof with no command', () => {
+    expect(parseStepProof(step('   - **done when:** `pnpm test` passes'), 1)).toEqual({ ok: true, proof: { command: null, text: '`pnpm test` passes' } })
+    expect(parseStepProof(step('   - done when: it works'), 1)).toEqual({ ok: true, proof: { command: null, text: 'it works' } })
+    expect(parseStepProof(step('   - **Done when**: it works,', '     twice'), 1)).toEqual({ ok: true, proof: { command: null, text: 'it works, twice' } })
+    const bare = intentWith(['1. [ ] Old, done when: it works', '   - seam: `a.ts`'].join('\n'))
+    expect(parseStepProof(bare, 1)).toEqual({ ok: true, proof: { command: null, text: 'it works' } })
+    expect(parseStepMeta(bare, 1).title).toBe('Old')
+    const nested = step('   - note: the old way', '     - **done when:** a sample')
+    expect(parseStepProof(nested, 1)).toEqual({ ok: true, proof: null })
+  })
+
+  it('reads a step with neither as no proof, and a missing step as a finding', () => {
+    expect(parseStepProof(step(), 1)).toEqual({ ok: true, proof: null })
+    expect(parseStepProof(step(), 9)).toEqual({ ok: false, findings: ['intent.md has no step 9 under "## Steps".'] })
   })
 })
 

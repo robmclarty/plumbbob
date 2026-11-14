@@ -57,8 +57,10 @@ same rule.)*
 ## Steps
 
 *(The build plan. `/plumbbob:plan` authors the **whole list up front**: each step a small,
-verifiable increment with its own **done-when** and **seam** (the paths it will touch,
+verifiable increment with its own **proof** and **seam** (the paths it will touch,
 which `/plumbbob:build` records in the build folder's `SEAM` for orientation: awareness, not a lock).
+The proof opens on its command in backticks when there is one; `plumbbob checkpoint` runs
+that command, and a proof that opens on words is yours to judge.
 An optional **model** line recommends the smallest model that can carry the step:
 mechanical work runs fine on a small model; subtle or creative work earns a frontier
 one. Advisory for the human, never a gate; write it plain, no backticks (plumbbob
@@ -83,11 +85,13 @@ into `plan.json` beside this file, and once that file exists, run `plumbbob expo
 after any edit you make here by hand
 ([plan-export](https://github.com/robmclarty/plumbbob/blob/main/docs/plan-export.md)).)*
 
-1. [ ] feat: <step>, **done when:** <criterion, ideally a test or check result>
+1. [ ] feat: <step>
    - seam: `<file>`, `<file>`
+   - proof: <criterion, ideally a test or check result>
    - model: <smallest that can carry it, for example sonnet (mechanical, fully specified)>
-2. [ ] <step>, **done when:** <criterion>
+2. [ ] <step>
    - seam: `<file>`
+   - proof: <criterion>
 
 ## Build order
 

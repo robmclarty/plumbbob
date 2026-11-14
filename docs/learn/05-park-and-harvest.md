@@ -24,7 +24,7 @@ sift: a shelf life is written in days, like 3d (got "2w")
 1
 ```
 
-The sentence in the middle is step 1's done-when, the one you held the card to
+The sentence in the middle is step 1's proof, the one you held the card to
 in lesson 3; the `sift:` prefix and the bracket are the bin's, and yours may
 differ there. The refusal is deterministic because a test pins it. What you
 do next is not.
@@ -153,8 +153,9 @@ the slug, the step's number, and the order line:
 ```markdown
 - <a id="d5"></a>**D5 (weeks-are-days)**: `w` is sugar for seven `d`, *because* the store keeps days and the parser stays one function (step 5's boundary, P2)
 
-8. [ ] feat(life): accept a shelf life written in weeks, **done when:** `parseLife('2w')` yields 14 days and `'2x'` is still refused, with the refusal naming both units
+8. [ ] feat(life): accept a shelf life written in weeks
    - seam: `src/life.ts`, `src/__tests__/life.test.ts`
+   - proof: calling `parseLife('2w')` yields 14 days and `'2x'` is still refused, with the refusal naming both units
    - model: haiku (one more branch in one function)
 
 ## Build order
@@ -202,7 +203,7 @@ PlumbBob — sift: a list that forgets   [DESIGN]
     6  feat(cli): give an item the default life when --for is left off
     7  feat(store): settle what happens to an item that falls off
   ▸ 8  feat(life): accept a shelf life written in weeks   ← next
-        done when: `parseLife('2w')` yields 14 days and `'2x'` is still refused, with the refusal naming both units
+        proof: calling `parseLife('2w')` yields 14 days and `'2x'` is still refused, with the refusal naming both units
         seam: src/life.ts, src/__tests__/life.test.ts
         model: haiku (one more branch in one function)
 

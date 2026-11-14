@@ -268,7 +268,7 @@ expand 1
 
 Expect the first section of the detail file, closing on one line:
 `**Next Up**: Back to **Step 1** on Haiku - feat(life): parse a shelf life written in days`.
-Check that the refusal text in the done-when reads `a shelf life is written in days, like 3d`;
+Check that the refusal text in the proof reads `a shelf life is written in days, like 3d`;
 if it drifted, the direction `make the refusal read: a shelf life is written in days, like 3d`
 goes here, before anything lands. Then:
 
@@ -404,7 +404,7 @@ document order, `ranges  2 of 3 done` with `▸ 3  /plumbbob:build 8,6-7 · sonn
 /plumbbob:step
 ```
 
-Expect a before and after of step 8: the done-when gains `parseLife('1w')` yields 7 days
+Expect a before and after of step 8: the proof gains `parseLife('1w')` yields 7 days
 and the refusal reads `like 3d or 2w`; the seam adds nothing; the model stays haiku. Then:
 
 ```text

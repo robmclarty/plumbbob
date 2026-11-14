@@ -20,18 +20,20 @@ decision the harvest folded in, `D5 (weeks-are-days)`.
 ```
 
 The skill proposes a revision as a before and an after. Yours will read differently;
-check that the done-when gains the one-week case and the refusal text names both units,
+check that the proof gains the one-week case and the refusal text names both units,
 and that the seam and the model line stay put:
 
 ```markdown
-8. [ ] feat(life): accept a shelf life written in weeks, **done when:** `parseLife('2w')` yields 14 days and `'2x'` is still refused, with the refusal naming both units
+8. [ ] feat(life): accept a shelf life written in weeks
    - seam: `src/life.ts`, `src/__tests__/life.test.ts`
+   - proof: calling `parseLife('2w')` yields 14 days and `'2x'` is still refused, with the refusal naming both units
    - model: haiku (one more branch in one function)
 ```
 
 ```markdown
-8. [ ] feat(life): accept a shelf life written in weeks, **done when:** `parseLife('2w')` yields 14 days and `parseLife('1w')` yields 7, `'2x'` is still refused, and the refusal reads `a shelf life is written in days or weeks, like 3d or 2w`, under test
+8. [ ] feat(life): accept a shelf life written in weeks
    - seam: `src/life.ts`, `src/__tests__/life.test.ts`
+   - proof: under test, `parseLife('2w')` yields 14 days and `parseLife('1w')` yields 7, `'2x'` is still refused, and the refusal reads `a shelf life is written in days or weeks, like 3d or 2w`
    - model: haiku (one branch on a parser that exists)
 ```
 
@@ -104,7 +106,7 @@ The counter reads opener lines only ([D76 (resolved-on-opener)](../decisions.md#
 which is why the marker moves on the opener and not on the `*lean:*` line beneath it.
 The deferral kept the question open and off the card
 ([D120 (deferred-questions)](../decisions.md#d120)); the resolution closes it. Step 7's
-done-when says the fate is the one `Q2` settles, and a build reads every Decision before
+proof says the fate is the one `Q2` settles, and a build reads every Decision before
 it reads code, so step 7 builds to `D4` whether or not its line names the file.
 
 ## Run the Re-cut Range
@@ -141,7 +143,7 @@ Your Call, and for the range line's bracket opening on step 8:
 
 ```text
 check        green: 9 of 9 checks
-done-when    met
+proof        met
 decisions    5 of 5 honored
 constraints  4 of 4 honored
 seam         held: 2 of 2 declared, no strays
@@ -199,7 +201,7 @@ card has no lean table, and its second move is the finish:
 steps        3 of 3 landed
              - 8 7c2d1e0f4 · 6 d41a9b3c7 · 7 2f8e6a1b9
 check        green: 9 of 9 checks, 3 landings
-done-when    met
+proof        met
 decisions    5 of 5 honored
 constraints  4 of 4 honored
 seam         held: 3 of 3 steps, no strays
@@ -266,7 +268,7 @@ and the step that built it read your line the way it reads every Decision.
 ## With Your Agent
 
 > Read step 7 and `D4 (archive-not-delete)` in intent.md and tell me whether step 7's
-> done-when, as written, can be measured by a test, and what the test would have to read.
+> proof, as written, can be measured by a test, and what the test would have to read.
 > Just tell me.
 
 Check that it names the archive file by its path or its variable, and the list file

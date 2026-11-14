@@ -38,7 +38,7 @@ const INTENT = `# Harvest test
 const RANGE_DETAIL = `# Detail · Range 2 · review the parser before the card reads it
 
 ── recap · range 2 of 3 ──
-done-when    met
+proof        met
 decisions    none exercised
 constraints  all honored
 
