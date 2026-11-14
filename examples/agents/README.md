@@ -3,8 +3,8 @@
 A **user-authored agent** is any executable that speaks PlumbBob's subprocess envelope — the
 doorway that lets a program plug into the loop as a step's `before`, `build`, or `after` slot.
 The full contract for authors is [`docs/agents.md`](../../docs/agents.md); this folder holds
-three working examples — the contract bare, the contract wrapping a real framework, and the
-same reviewer made provider-switchable:
+four working examples — the contract bare, the contract wrapping a real framework, the
+same reviewer made provider-switchable, and an agent that looks at the running app:
 
 - [`echo-reviewer/`](echo-reviewer/) — POSIX `sh`, nothing to install; read it top to bottom.
 - [`ollama-reviewer/`](ollama-reviewer/) — a [fascicle](https://github.com/robmclarty/fascicle)-composed
@@ -12,6 +12,10 @@ same reviewer made provider-switchable:
 - [`reviewer/`](reviewer/) — the same review, with a **switchable model provider**
   (`claude_cli` by default, `ollama` for local/private compute) chosen through the settings
   ladder.
+- [`walkthrough/`](walkthrough/): a model drives a **running app** through the Playwright
+  MCP server, walks what the step's proof says should be true, and returns its screenshots
+  as evidence. It runs on any of four model providers, a local Ollama among them; its
+  [README](walkthrough/README.md) has the setup and the security notes.
 
 The two fascicle reviewers are two shapes of the same idea, worth holding side by side:
 

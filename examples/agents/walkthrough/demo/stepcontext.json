@@ -1,0 +1,29 @@
+{
+  "contract": 1,
+  "mode": "after",
+  "build": { "slug": "2026-11-13-sign-in-greets-by-name", "title": "Sign-in greets by name" },
+  "step": {
+    "n": 2,
+    "title": "Greet the person by the name they signed in with",
+    "proof": {
+      "command": null,
+      "text": "typing a name into the sign-in form and pressing Continue lands on a page headed \"Welcome, <that name>\" that says you are signed in"
+    },
+    "doneWhen": "typing a name into the sign-in form and pressing Continue lands on a page headed \"Welcome, <that name>\" that says you are signed in",
+    "seam": ["fixture/app.mjs"],
+    "like": [],
+    "evidenceDir": "demo/evidence/2"
+  },
+  "decisions": [],
+  "constraints": [],
+  "context": [],
+  "settings": {
+    "auto": false,
+    "agentTimeout": 0,
+    "agent": {
+      "url": "http://127.0.0.1:4173/",
+      "provider": "ollama",
+      "model": "qwen3:8b"
+    }
+  }
+}

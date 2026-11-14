@@ -57,9 +57,12 @@ lives under [`.plumbbob/builds/`](../.plumbbob/builds/), messy parts included.
 ## A user-authored agent
 
 [`agents/`](agents/) holds a second kind of example: **user-authored agents** —
-executables that plug into the loop through PlumbBob's subprocess envelope. Three ship: the
+executables that plug into the loop through PlumbBob's subprocess envelope. Four ship: the
 reference agent from [`docs/agents.md`](../docs/agents.md) (a POSIX `sh` script and an 8-line
 manifest with nothing to install), a fascicle-composed reviewer that drives a **local
-model via Ollama** — no API key, the diff never leaves your machine — and the same review
+model via Ollama** — no API key, the diff never leaves your machine — the same review
 with a **switchable provider** (`claude_cli` by default, `ollama` for local compute), chosen
-through the settings ladder.
+through the settings ladder, and a fourth that looks at the app where those three read the
+diff: [`agents/walkthrough/`](agents/walkthrough/) drives a running app through the
+Playwright MCP server, walks the step's proof, and returns its screenshots as evidence, on
+any of four model providers.

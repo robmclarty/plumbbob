@@ -1,0 +1,8 @@
+{
+  "contract": 1,
+  "name": "walkthrough",
+  "command": "node \"$PLUMBBOB_AGENT_DIR/walkthrough.mjs\"",
+  "slots": ["after"],
+  "description": "Walks a running web app the way a user would, through the Playwright MCP server, and says whether what it saw matches the step's proof. Saves screenshots as evidence. Returns match or concerns; never gates.",
+  "when": "at the verify pause of a step whose proof is something a person would check by hand in the browser; it costs 10 to 30 model turns, so bind it on those steps only, and start the app first"
+}
