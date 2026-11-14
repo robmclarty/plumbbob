@@ -5,6 +5,33 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - 2026-11-13
+
+- **Added:** `plumbbob export [<slug>]` writes a build's plan as data, `plan.json` beside its
+  `intent.md`, in the shape runciter's scheduler reads (`runciter.plan/1`). It derives the
+  plan from `intent.md` every time, runs the contract's three plan rules and four plan
+  checks of plumbbob's own, and on any finding prints each one and writes nothing. A build
+  opts in by being exported once; a build with no `plan.json` reads, checks and commits as
+  it did before. `docs/plan-export.md` specifies it, and D133 (step-id) through D152
+  (no-forward-after) record it.
+- **Added:** a step takes three optional lines that only a scheduler reads: `- after:` (the
+  steps it waits on, or `none`), `- stop:` (`planned` or `structural`) and `- effort:`
+  (`low` to `max`). A step with no `after:` line waits on every step before it in build
+  order, so a plan with none of the lines exports fully serial, with a `planned` stop on
+  each range's last step. A malformed or doubled line is a finding that names the step.
+- **Added:** once a build is exported, `checkpoint`'s tick, `order` and `defer` re-export
+  after they write `intent.md`, and `plumbbob check` fails ahead of the gate, naming
+  `plumbbob export`, when any other edit leaves the active build's `plan.json` behind.
+- **Changed:** the seam parse refuses what runciter refuses, so a plan plumbbob accepts is
+  never one the scheduler rejects: `!` joins the glob characters, and a backslash or an
+  empty, `.` or `..` segment each get their own message. D138 (one-seam-grammar) records it
+  as a dated revision of D23 (no-glob-seams).
+- **Changed:** the `build` and `run` skills say where a caveat the human must see belongs: in
+  the card's Summary or Recommendation, never around the card, since a card the model
+  rewrote or annotated is caught only after it has shown and then prints twice.
+- **Changed:** `why.md` and lesson 10 say ridgeline is retired and its idea, a scheduler
+  running a plan's steps without you, moved to runciter.
+
 ## [0.16.0] - 2026-11-11
 
 - **Added:** the plan card reads every undone step's seam before the human approves it, and
