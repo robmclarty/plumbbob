@@ -747,11 +747,20 @@ JSON-stdin / JSON-stdout / prose-stderr envelope; these two subcommands list and
 with **no code path to advance the loop**: no checkpoint, no step flip, no chaining
 ([**C6 (no-advance-verb)**](decisions.md#c6), the identity invariant).
 
-`agent list` prints every resolvable agent (name, origin tier (`project` /`personal`),
-slots, and description), walking `.plumbbob/agents/<name>/` (tracked) then
-`~/.plumbbob/agents/<name>/` (personal), project shadowing personal ([**D41 (agent-resolution)**](decisions.md#d41)). A malformed
+`agent list` prints every resolvable agent (name, origin tier (`project` / `personal` / `builtin`),
+slots, and description), walking `.plumbbob/agents/<name>/` (tracked), then
+`~/.plumbbob/agents/<name>/` (personal), then the `builtin-agents/` directory PlumbBob
+ships ([**D159 (builtin-tier)**](decisions.md#d159)). The nearer tier shadows the farther:
+a name in more than one lists once, from the first that holds it ([**D41 (agent-resolution)**](decisions.md#d41)). A malformed
 `agent.json` lists as an `✗ … invalid:` line rather than hiding. Refuses (exit 1) outside a
-git repository.
+git repository. Nothing ships in the built-in tier yet, so today it adds no line; one that
+did would list like any other, with its tier:
+
+```text
+plumbbob agents:
+  reviewer (project) [after] — Flags silent failures and untested branches.
+  <name> (builtin) [after] — <its description>
+```
 
 `agent run` composes the step's `StepContext` from `intent.md` + settings, spawns the
 manifest `command` via `sh -c` at the **repo root** with the agent's own directory in
@@ -785,6 +794,13 @@ spawns the agent, and no verb clears the folder ([`agents.md`](agents.md#evidenc
   `--mode` slot ([**D54 (bindings-degrade-soft)**](decisions.md#d54); you asked for it by name). **No name + `--mode <slot>`** runs the
   step's harness-**bound** agents for that slot ([**D42 (harness-bindings)**](decisions.md#d42)); a bound agent a teammate lacks
   **degrades to a warning** and is skipped ([**D54 (bindings-degrade-soft)**](decisions.md#d54)).
+- **A binding written as a path** names an agent directory in place of a name
+  ([**D160 (path-bindings)**](decisions.md#d160)): `./` from the repo root, `~/` from the
+  home directory, or an absolute path as written. The run is labelled by the manifest's
+  `name`, which is also its `agentConfig` key. A `./` path that is missing, broken, or
+  leaves the repo (a `../` path, `..` segments, a symlink out) **fails loud**; a missing
+  or broken `~/` or absolute path **degrades to a warning** like a missing name
+  ([`agents.md`](agents.md#binding-by-path)).
 - **`--mode`** names the slot; it must be one the manifest declares. A single-slot agent
   infers it; a multi-slot agent requires it.
 - **`--agent <path>`** points at an explicit agent directory (top of the ladder); it still
@@ -795,7 +811,8 @@ spawns the agent, and no verb clears the folder ([`agents.md`](agents.md#evidenc
 Exits **0** on a clean run, **1** on a failed one: a non-zero child exit (reported
 verbatim, the envelope of a failed child is *not* trusted), garbage on stdout (out of
 contract), a timeout kill, an interrupt, an explicit-name miss, or an undeclared-slot
-refusal. A batch of bound agents returns non-zero if any that actually ran failed.
+refusal. A batch of bound agents returns non-zero if any that actually ran failed, or if
+a `./` or `../` path binding was refused.
 
 ### use
 
@@ -968,9 +985,11 @@ ready for a first build: `✓ repo: ready for a first build`, or one `○` line 
 that ignores them its own way reads as ready. Each gap is a warning, never a counted problem;
 `plumbbob setup` adds the first three, and a setup by hand works as well.
 
-**Agents.** Every resolvable [user-authored agent](agents.md) gets its manifest and its
+**Agents.** Every resolvable [agent](agents.md) gets its manifest and its
 `command` checked statically, so a broken agent surfaces here rather than mid-build; with no
-agents the section stays silent.
+agents the section stays silent. Each row names the tier the agent resolves from
+(`project`, `personal`, or `builtin` for one PlumbBob ships), and an empty tier adds
+nothing ([**D159 (builtin-tier)**](decisions.md#d159)).
 
 **Check gate** ([**D32 (checkride-gate)**](decisions.md#d32)). Reports how the heavy gate will resolve in this repo: a configured
 `check` override is named as-is; otherwise checkride's own doctor prints the slot/adapter
@@ -1062,7 +1081,7 @@ stays git-excluded; a session is live iff `STATE` is present.
   settings.json            # tracked   — project defaults: {} (or {"check": "…"}); setup or start seeds it empty
   settings.local.json      # untracked — personal overlay only, e.g. a per-worktree {"check": "…"} (no cursor — that lives in STATE)
   agents/                  # tracked   — optional: user-authored agents, one dir per agent (D41 (agent-resolution); see agents.md)
-    <name>/agent.json      #            — the manifest; personal agents live under ~/.plumbbob/agents/
+    <name>/agent.json      #            — the manifest; personal agents live under ~/.plumbbob/agents/, built-in ones ship with the package (D159 (builtin-tier))
   builds/
     <slug>/                # derived slugs are YYYY-MM-DD-<title-slug>, so ls sorts chronologically
       intent.md            # tracked   — canonical intent (rides the branch into the PR)

@@ -1,12 +1,14 @@
-import { mkdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, mkdirSync, readdirSync, symlinkSync, writeFileSync } from 'node:fs'
+import { basename, join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import {
   CONTRACT_VERSION,
   ENVELOPE_STATUSES,
   SLOTS,
+  builtinAgentsDir,
   composeStepContext,
   formatAgentList,
+  isPathBinding,
   isSlot,
   listAgents,
   parseEnvelope,
@@ -14,6 +16,7 @@ import {
   personalAgentsDir,
   projectAgentsDir,
   resolveAgent,
+  resolveBinding,
 } from '../agents.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 
@@ -469,5 +472,333 @@ describe('formatAgentList', () => {
 
   it('has a friendly empty message', () => {
     expect(formatAgentList([])).toMatch(/no agents/)
+  })
+})
+
+// The built-in tier is injected as a temp directory throughout: no test writes
+// an agent into the shipped `builtin-agents/`.
+describe('the built-in tier — D159 (builtin-tier)', () => {
+  it('resolves a built-in agent when no other tier holds the name, carrying origin and directory', () => {
+    const root = makeTempRepo()
+    const builtinDir = makeTempDir()
+    writeAgent(builtinDir, 'walkthrough', manifest({ name: 'walkthrough', description: 'shipped one' }))
+
+    const result = resolveAgent(root, 'walkthrough', { home: makeTempDir(), builtinDir })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.agent.origin).toBe('builtin')
+    expect(result.agent.dir).toBe(join(builtinDir, 'walkthrough'))
+    expect(result.agent.manifest.description).toBe('shipped one')
+  })
+
+  it('project shadows a built-in of the same name', () => {
+    const root = makeTempRepo()
+    const builtinDir = makeTempDir()
+    writeAgent(projectAgentsDir(root), 'reviewer', manifest({ description: 'project one' }))
+    writeAgent(builtinDir, 'reviewer', manifest({ description: 'shipped one' }))
+
+    const result = resolveAgent(root, 'reviewer', { home: makeTempDir(), builtinDir })
+    expect(result.ok && result.agent.origin).toBe('project')
+    expect(result.ok && result.agent.manifest.description).toBe('project one')
+  })
+
+  it('personal shadows a built-in of the same name', () => {
+    const root = makeTempRepo()
+    const home = makeTempDir()
+    const builtinDir = makeTempDir()
+    writeAgent(personalAgentsDir(home), 'reviewer', manifest({ description: 'personal one' }))
+    writeAgent(builtinDir, 'reviewer', manifest({ description: 'shipped one' }))
+
+    const result = resolveAgent(root, 'reviewer', { home, builtinDir })
+    expect(result.ok && result.agent.origin).toBe('personal')
+    expect(result.ok && result.agent.manifest.description).toBe('personal one')
+  })
+
+  it('project wins when all three tiers hold the name, and personal still beats project-less', () => {
+    const root = makeTempRepo()
+    const home = makeTempDir()
+    const builtinDir = makeTempDir()
+    writeAgent(projectAgentsDir(root), 'reviewer', manifest({ description: 'project one' }))
+    writeAgent(personalAgentsDir(home), 'reviewer', manifest({ description: 'personal one' }))
+    writeAgent(builtinDir, 'reviewer', manifest({ description: 'shipped one' }))
+
+    const all = resolveAgent(root, 'reviewer', { home, builtinDir })
+    expect(all.ok && all.agent.origin).toBe('project')
+    const elsewhere = resolveAgent(makeTempRepo(), 'reviewer', { home, builtinDir })
+    expect(elsewhere.ok && elsewhere.agent.origin).toBe('personal')
+  })
+
+  it('a --agent path still outranks a built-in', () => {
+    const root = makeTempRepo()
+    const builtinDir = makeTempDir()
+    const loose = join(makeTempDir(), 'loose')
+    writeAgent(join(loose, '..'), 'loose', manifest({ description: 'flagged one' }))
+    writeAgent(builtinDir, 'reviewer', manifest({ description: 'shipped one' }))
+
+    const result = resolveAgent(root, 'reviewer', { flagPath: loose, home: makeTempDir(), builtinDir })
+    expect(result.ok && result.agent.origin).toBe('flag')
+  })
+
+  it('surfaces a malformed personal manifest rather than falling through to the built-in', () => {
+    const root = makeTempRepo()
+    const home = makeTempDir()
+    const builtinDir = makeTempDir()
+    writeAgent(personalAgentsDir(home), 'reviewer', manifest({ slots: ['during'] }))
+    writeAgent(builtinDir, 'reviewer', manifest())
+
+    const result = resolveAgent(root, 'reviewer', { home, builtinDir })
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error).toMatch(/during/)
+  })
+
+  it('resolves cleanly past an empty tier directory and a missing one', () => {
+    const root = makeTempRepo()
+    const home = makeTempDir()
+    for (const builtinDir of [makeTempDir(), join(makeTempDir(), 'not-there')]) {
+      expect(listAgents(root, { home, builtinDir })).toEqual([])
+      const result = resolveAgent(root, 'ghost', { home, builtinDir })
+      expect(result.ok).toBe(false)
+      if (result.ok) return
+      expect(result.error).toBe(
+        `no agent named "ghost", looked in ${projectAgentsDir(root)}, ${personalAgentsDir(home)}, and plumbbob's built-in agents`,
+      )
+    }
+  })
+
+  it('never reads the tier README, or any loose file, as an agent', () => {
+    const root = makeTempRepo()
+    const home = makeTempDir()
+    const builtinDir = makeTempDir()
+    writeFileSync(join(builtinDir, 'README.md'), '# Built-in agents\n')
+    writeFileSync(join(builtinDir, 'agent.json'), JSON.stringify(manifest()))
+
+    expect(listAgents(root, { home, builtinDir })).toEqual([])
+    for (const name of ['README.md', 'README', 'agent.json']) {
+      const result = resolveAgent(root, name, { home, builtinDir })
+      expect(result.ok).toBe(false)
+      if (result.ok) return
+      expect(result.error).toMatch(/no agent named/)
+    }
+  })
+
+  it('lists a built-in with its origin, and each shadowed name once from the tier that wins', () => {
+    const root = makeTempRepo()
+    const home = makeTempDir()
+    const builtinDir = makeTempDir()
+    writeAgent(projectAgentsDir(root), 'reviewer', manifest())
+    writeAgent(personalAgentsDir(home), 'formatter', manifest({ name: 'formatter' }))
+    for (const name of ['reviewer', 'formatter', 'walkthrough']) {
+      writeAgent(builtinDir, name, manifest({ name, description: 'shipped one' }))
+    }
+
+    const listings = listAgents(root, { home, builtinDir })
+    expect(listings.map((l) => [l.name, l.origin])).toEqual([
+      ['formatter', 'personal'],
+      ['reviewer', 'project'],
+      ['walkthrough', 'builtin'],
+    ])
+    const out = formatAgentList(listings)
+    expect(out).toContain('  walkthrough (builtin) [after] — shipped one')
+    expect(out).toContain('  reviewer (project) [after]')
+    expect(out).not.toContain('reviewer (builtin)')
+  })
+
+  it('flags a malformed built-in in the listing with its origin', () => {
+    const root = makeTempRepo()
+    const builtinDir = makeTempDir()
+    writeAgent(builtinDir, 'broken', manifest({ slots: [] }))
+    const out = formatAgentList(listAgents(root, { home: makeTempDir(), builtinDir }))
+    expect(out).toMatch(/✗ broken \(builtin\) — invalid:/)
+  })
+
+  it('ships as builtin-agents/ at the package root, holding a README and no agent', () => {
+    const dir = builtinAgentsDir()
+    expect(basename(dir)).toBe('builtin-agents')
+    expect(existsSync(join(dir, '..', 'package.json'))).toBe(true)
+    expect(readdirSync(dir)).toEqual(['README.md'])
+    // With no injected directory the shipped one is walked, and it lists nothing.
+    expect(listAgents(makeTempRepo(), { home: makeTempDir() })).toEqual([])
+  })
+})
+
+describe('isPathBinding — D160 (path-bindings)', () => {
+  it('reads ./, ../, ~/ and an absolute path as a path', () => {
+    for (const binding of ['./tools/walk', '../walk', '~/agents/walk', '/opt/agents/walk', '.', '..', '~']) {
+      expect(isPathBinding(binding)).toBe(true)
+    }
+  })
+
+  it('reads anything else as a name', () => {
+    for (const binding of ['reviewer', 'tools/walk', '.hidden', '..hidden', '~user/walk', 'walk.v2', 'a/./b']) {
+      expect(isPathBinding(binding)).toBe(false)
+    }
+  })
+})
+
+describe('resolveBinding — D160 (path-bindings)', () => {
+  it('resolves a name through the tiers, and a missing name is quiet', () => {
+    const root = makeTempRepo()
+    const home = makeTempDir()
+    const builtinDir = makeTempDir()
+    writeAgent(builtinDir, 'walkthrough', manifest({ name: 'walkthrough' }))
+
+    const hit = resolveBinding(root, 'walkthrough', { home, builtinDir })
+    expect(hit.ok && hit.agent.origin).toBe('builtin')
+    const miss = resolveBinding(root, 'ghost', { home, builtinDir })
+    expect(miss).toMatchObject({ ok: false, loud: false })
+    expect(!miss.ok && miss.error).toMatch(/no agent named "ghost"/)
+  })
+
+  it('a malformed named agent stays quiet, as it was before paths', () => {
+    const root = makeTempRepo()
+    writeAgent(projectAgentsDir(root), 'reviewer', manifest({ slots: ['during'] }))
+    expect(resolveBinding(root, 'reviewer', { home: makeTempDir() })).toMatchObject({ ok: false, loud: false })
+  })
+
+  it('resolves ./ from the repo root, as a directory, with origin path', () => {
+    const root = makeTempRepo()
+    writeAgent(join(root, 'tools'), 'walk', manifest({ name: 'walker' }))
+
+    for (const binding of ['./tools/walk', './tools/walk/', './tools/../tools/walk']) {
+      const result = resolveBinding(root, binding, { home: makeTempDir() })
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.agent.origin).toBe('path')
+      expect(result.agent.dir).toBe(join(root, 'tools', 'walk'))
+      expect(result.agent.manifest.name).toBe('walker')
+    }
+  })
+
+  it('a ./ path does not look in any tier for its last segment', () => {
+    const root = makeTempRepo()
+    writeAgent(projectAgentsDir(root), 'walk', manifest({ name: 'walk' }))
+    expect(resolveBinding(root, './walk', { home: makeTempDir() })).toMatchObject({ ok: false, loud: true })
+  })
+
+  it('a missing ./ path is loud', () => {
+    const root = makeTempRepo()
+    const result = resolveBinding(root, './tools/walk', { home: makeTempDir() })
+    expect(result).toEqual({ ok: false, error: 'no agent.json at binding path ./tools/walk', loud: true })
+  })
+
+  it('a broken ./ path is loud, for bad JSON and for a bad manifest', () => {
+    const root = makeTempRepo()
+    writeAgent(join(root, 'tools'), 'walk', manifest({ slots: ['during'] }))
+    mkdirSync(join(root, 'tools', 'torn'), { recursive: true })
+    writeFileSync(join(root, 'tools', 'torn', 'agent.json'), '{ not json')
+
+    const bad = resolveBinding(root, './tools/walk', { home: makeTempDir() })
+    expect(bad).toMatchObject({ ok: false, loud: true })
+    expect(!bad.ok && bad.error).toMatch(/during/)
+    const torn = resolveBinding(root, './tools/torn', { home: makeTempDir() })
+    expect(torn).toMatchObject({ ok: false, loud: true })
+    expect(!torn.ok && torn.error).toMatch(/not valid JSON/)
+  })
+
+  it('refuses ../ and a ./ that climbs out through .. segments, even when an agent is there', () => {
+    const parent = makeTempDir()
+    const root = join(parent, 'repo')
+    mkdirSync(root)
+    writeAgent(parent, 'walk', manifest())
+
+    for (const binding of ['../walk', './../walk', './tools/../../walk', '..']) {
+      const result = resolveBinding(root, binding, { home: makeTempDir() })
+      expect(result).toEqual({
+        ok: false,
+        error: `binding path ${binding} leaves the repo, and a relative binding must stay inside it`,
+        loud: true,
+      })
+    }
+  })
+
+  it('refuses a path that climbs above the repo and comes back in by its folder name', () => {
+    const parent = makeTempDir()
+    const root = join(parent, 'repo')
+    mkdirSync(root)
+    writeAgent(join(root, 'tools'), 'walk', manifest())
+    expect(resolveBinding(root, './tools/walk', { home: makeTempDir() }).ok).toBe(true)
+
+    for (const binding of ['../repo/tools/walk', './../repo/tools/walk', './tools/../../repo/tools/walk']) {
+      expect(resolveBinding(root, binding, { home: makeTempDir() })).toEqual({
+        ok: false,
+        error: `binding path ${binding} leaves the repo, and a relative binding must stay inside it`,
+        loud: true,
+      })
+    }
+    // A `..` that never rises above the root is still a path inside the repo.
+    expect(resolveBinding(root, './tools/../tools/walk', { home: makeTempDir() }).ok).toBe(true)
+  })
+
+  it('refuses a ./ path a symlinked folder carries out of the repo', () => {
+    const root = makeTempRepo()
+    const outside = makeTempDir()
+    writeAgent(outside, 'walk', manifest())
+    mkdirSync(join(root, 'tools'))
+    symlinkSync(join(outside, 'walk'), join(root, 'tools', 'walk'))
+    symlinkSync(outside, join(root, 'linked'))
+
+    for (const binding of ['./tools/walk', './linked/walk']) {
+      expect(resolveBinding(root, binding, { home: makeTempDir() })).toEqual({
+        ok: false,
+        error: `binding path ${binding} resolves outside the repo, and a relative binding must stay inside it`,
+        loud: true,
+      })
+    }
+  })
+
+  it('refuses a ./ path whose agent.json is a symlink out of the repo', () => {
+    const root = makeTempRepo()
+    const outside = makeTempDir()
+    writeAgent(outside, 'walk', manifest())
+    mkdirSync(join(root, 'tools', 'walk'), { recursive: true })
+    symlinkSync(join(outside, 'walk', 'agent.json'), join(root, 'tools', 'walk', 'agent.json'))
+
+    const result = resolveBinding(root, './tools/walk', { home: makeTempDir() })
+    expect(result).toMatchObject({ ok: false, loud: true })
+    expect(!result.ok && result.error).toMatch(/resolves outside the repo/)
+  })
+
+  it('allows a symlink that stays inside the repo', () => {
+    const root = makeTempRepo()
+    writeAgent(join(root, 'tools'), 'walk', manifest())
+    symlinkSync(join(root, 'tools', 'walk'), join(root, 'alias'))
+    expect(resolveBinding(root, './alias', { home: makeTempDir() }).ok).toBe(true)
+  })
+
+  it('resolves ~/ from the home directory, and a missing or broken one is quiet', () => {
+    const root = makeTempRepo()
+    const home = makeTempDir()
+    writeAgent(join(home, 'agents'), 'walk', manifest({ name: 'walker' }))
+    writeAgent(join(home, 'agents'), 'bad', manifest({ slots: [] }))
+
+    const hit = resolveBinding(root, '~/agents/walk', { home })
+    expect(hit.ok && hit.agent.origin).toBe('path')
+    expect(hit.ok && hit.agent.dir).toBe(join(home, 'agents', 'walk'))
+    expect(resolveBinding(root, '~/agents/ghost', { home })).toEqual({
+      ok: false,
+      error: 'no agent.json at binding path ~/agents/ghost',
+      loud: false,
+    })
+    expect(resolveBinding(root, '~/agents/bad', { home })).toMatchObject({ ok: false, loud: false })
+  })
+
+  it('takes an absolute path as written, and a missing or broken one is quiet', () => {
+    const root = makeTempRepo()
+    const elsewhere = makeTempDir()
+    writeAgent(elsewhere, 'walk', manifest({ name: 'walker' }))
+    writeAgent(elsewhere, 'bad', manifest({ slots: [] }))
+
+    const hit = resolveBinding(root, join(elsewhere, 'walk'), { home: makeTempDir() })
+    expect(hit.ok && hit.agent.dir).toBe(join(elsewhere, 'walk'))
+    expect(resolveBinding(root, join(elsewhere, 'ghost'), { home: makeTempDir() })).toEqual({
+      ok: false,
+      error: `no agent.json at binding path ${join(elsewhere, 'ghost')}`,
+      loud: false,
+    })
+    expect(resolveBinding(root, join(elsewhere, 'bad'), { home: makeTempDir() })).toMatchObject({
+      ok: false,
+      loud: false,
+    })
   })
 })

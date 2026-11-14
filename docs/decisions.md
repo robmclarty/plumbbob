@@ -257,6 +257,9 @@ below.)
   `.plumbbob/agents/<name>/` (tracked, rides the PR), then `~/.plumbbob/agents/<name>/`
   (personal), first hit wins, project shadowing personal: the settings ladder's shape
   ([**D27 (settings-ladder)**](#d27)) and Claude Code's two-level `.claude/agents/` convention. *Tagged in* `agents.ts`.
+  (Revised 2026-11-13 by [**D159 (builtin-tier)**](#d159): a third tier, the agents PlumbBob ships, resolves
+  after personal, so the order is flag → project → personal → built-in, each shadowing the ones after it.
+  And by [**D160 (path-bindings)**](#d160): a binding written as a path names its directory and walks no tier.)
 - <a id="d42"></a>**D42 (harness-bindings): Planned bindings live in `builds/<slug>/harness.json`.** A sibling of `intent.md`
   authored at `/plumbbob:plan` time, not inside the executor-agnostic intent ([**D3 (author-blind-executor)**](#d3)): the plan
   says *what/why*, the harness says *with-what*. *Tagged in* `agents.ts`, `sidecar.ts`, the
@@ -317,6 +320,10 @@ below.)
   (the same never-required contract as `/plumbbob:build` itself). A run that actually starts and
   fails is a hard failure either way: this softens a *missing* agent, never a broken one.
   *Tagged in* `agent.ts`, `agents.ts`, `status.ts`, the `plan` skill.
+  (Revised 2026-11-13 by [**D160 (path-bindings)**](#d160): a binding may be a path, and one written from the
+  repo root (`./`, or a `../` that climbs above it) is an error when it is missing, broken or outside the repo, since
+  the mistake is in the tracked file and not in a teammate's library. A `~/` or absolute path a teammate lacks
+  still degrades soft.)
 - <a id="d55"></a>**D55 (two-audiences): The manifest speaks to two audiences.** `command` is for the deterministic CLI;
   `description` and `when` are prose for the **host model** (the role a subagent's
   frontmatter description plays); `when` is the cue the model reads to fire an agent
@@ -2073,6 +2080,33 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   refuses on a stale one. *because* research is a claim about the world on a date, and a claim with no date cannot
   be seen going out of date. *Tagged in* `research.ts`, `researchfile.ts`, `verbs/research.ts`, the `plan` and
   `refine` skills, and `docs/research.md`.
+
+- <a id="d159"></a>**D159 (builtin-tier): The agents PlumbBob ships resolve last, below the personal tier.**
+  Resolution gains a third tier, the `builtin-agents/` directory at the package root, walked after
+  `.plumbbob/agents/` and `~/.plumbbob/agents/` ([**D41 (agent-resolution)**](#d41)). A project or personal agent of
+  the same name runs in its place, and a malformed one there is an error, never a fall through to the built-in.
+  `agent list` and `doctor` show a built-in with the origin `builtin`. The directory is not named `agents/`, since
+  Claude Code reads a plugin's `agents/` as subagent definitions; it is found from the module's own URL the way
+  `templates/` is, so it resolves from `src/` and from `dist/`, and `package.json`'s `files` carries it. The tier
+  ships empty, holding a README that is never read as an agent, and an empty or missing directory lists nothing
+  and prints nothing. *because* what ships should be a default, and a default is the thing anyone can replace by
+  putting their own beside it. *Tagged in* `agents.ts`, `verbs/agent.ts`, `verbs/doctor.ts`,
+  `builtin-agents/README.md`, and `docs/agents.md`.
+
+- <a id="d160"></a>**D160 (path-bindings): A binding may be a path, and where it points decides how loud a miss
+  is.** A slot value in `harness.json`, or in the settings-level `agents` defaults, is read as a path when it
+  starts with `./`, `../` or `~/`, or is absolute; anything else is a name, as before. A path names the agent's
+  directory the way `--agent <path>` does and walks no tier. `./` resolves from the repo root and must stay inside
+  it: a `../` path, a `./` path that climbs out through `..` segments, and one a symlink carries out (the folder,
+  one above it, or its `agent.json`) are refused. `~/` resolves from the home directory, and an absolute path
+  stands as written. A path has no name, so the run's label, its handoff entry and its `agentConfig` key are the
+  manifest's `name`. A `./` or `../` path that is missing, broken or refused is an error: the batch exits 1, and
+  the bindings beside it still run. A missing or broken `~/` or absolute path warns and is skipped, as an
+  unresolved name is under [**D54 (bindings-degrade-soft)**](#d54). `status` warns on either kind. A path typed
+  as an explicit name is still a name; `--agent` is the typed form. *because* `harness.json` is tracked: a path
+  inside the repo that does not resolve is a mistake everyone on the branch has, and a path on one person's
+  machine is a library a teammate lacks. *Tagged in* `agents.ts`, `verbs/agent.ts`, `verbs/status.ts`, and
+  `docs/agents.md`.
 
 ### Superseded
 

@@ -46,7 +46,7 @@ import { dirname, isAbsolute, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runDoctor } from 'checkride'
 import type { DoctorCheck } from 'checkride'
-import { type AgentListing, listAgents } from '../lib/agents.ts'
+import { type AgentListing, type AgentTiers, listAgents } from '../lib/agents.ts'
 import { gateDetectsTools } from '../lib/check.ts'
 import { atisVersion } from '../lib/reachfile.ts'
 import { marketplacePlumbbob } from '../lib/plugins.ts'
@@ -533,20 +533,21 @@ function agentProblem(listing: AgentListing, root: string): string | null {
 }
 
 /**
- * The agent-validation section: walk every resolvable user-authored agent across
- * both tiers (project `.plumbbob/agents/` + personal `~/.plumbbob/agents/`) and flag
- * anything broken.
+ * The agent-validation section: walk every resolvable agent across the three
+ * tiers (project `.plumbbob/agents/`, personal `~/.plumbbob/agents/`, and the
+ * built-in ones plumbbob ships) and flag anything broken.
  *
  * Flags a malformed agent.json, an unsupported contract version (both arrive as the
  * listing's parse error), or a missing/non-executable command. A repo with no agents
  * shows no section (like the sidecar one), keeping doctor quiet for the common case;
  * outside a repo there is no project tier to anchor to, so the section is skipped
- * entirely.
+ * entirely. An empty tier adds no line of its own: a built-in agent shows as a row
+ * with its origin when one ships, and not before.
  */
-function agentReport(cwd: string): { readonly lines: string[]; readonly failed: number } {
+function agentReport(cwd: string, tiers: AgentTiers): { readonly lines: string[]; readonly failed: number } {
   const root = findRepoRoot(cwd)
   if (root === null) return { lines: [], failed: 0 }
-  const listings = listAgents(root)
+  const listings = listAgents(root, tiers)
   if (listings.length === 0) return { lines: [], failed: 0 }
 
   const lines = ['', 'plumbbob doctor — agents — D48 (doctor-validates-agents)']
@@ -689,9 +690,15 @@ function reachReport(cwd: string): { readonly lines: string[]; readonly failed: 
  * Sections in order: plugin install, sidecar layout (migrating under `--migrate`),
  * repo setup, agents, check gate, approval latch, reach. Exit 1 when any section reported a problem, so
  * scripts can gate on it; the closing lines cover the restart and the PATH story
- * either way. `env` injects a deterministic toolchain probe for tests (see GateEnv).
+ * either way. `env` injects a deterministic toolchain probe for tests (see GateEnv),
+ * and `tiers` moves the agent tiers outside the repo for them.
  */
-export async function doctor(cwd: string, args: ReadonlyArray<string> = [], env?: GateEnv): Promise<number> {
+export async function doctor(
+  cwd: string,
+  args: ReadonlyArray<string> = [],
+  env?: GateEnv,
+  tiers: AgentTiers = {},
+): Promise<number> {
   const checks = pluginChecks()
   const out: string[] = ['plumbbob doctor — plugin install']
   for (const c of checks) {
@@ -706,7 +713,7 @@ export async function doctor(cwd: string, args: ReadonlyArray<string> = [], env?
   const repo = setupReport(cwd)
   out.push(...repo.lines)
 
-  const agents = agentReport(cwd)
+  const agents = agentReport(cwd, tiers)
   out.push(...agents.lines)
 
   const gate = await gateReport(cwd, env)

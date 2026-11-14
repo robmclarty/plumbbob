@@ -655,6 +655,26 @@ describe('status — harness bindings — D48 (doctor-validates-agents)', () => 
     expect(stdout).toContain('⚠ bound agent "ghost" does not resolve')
   })
 
+  it('resolves a binding written as a path, and warns on one that does not — D160 (path-bindings)', async () => {
+    const home = makeTempDir()
+    const dir = await startedWithHarness(
+      JSON.stringify({ contract: 1, defaults: { after: ['./tools/walk', './tools/gone', '../walk', '~/agents/walk'] } }),
+    )
+    mkdirSync(join(dir, 'tools', 'walk'), { recursive: true })
+    writeFileSync(
+      join(dir, 'tools', 'walk', 'agent.json'),
+      JSON.stringify({ contract: 1, name: 'walker', command: 'sh run.sh', slots: ['after'] }),
+    )
+
+    const { code, stdout } = statusWithHome(home, dir)
+    expect(code).toBe(0)
+    expect(stdout).toContain('defaults · after: ./tools/walk, ./tools/gone, ../walk, ~/agents/walk')
+    expect(stdout).not.toContain('bound agent "./tools/walk"')
+    expect(stdout).toContain('⚠ bound agent "./tools/gone" does not resolve — no agent.json at binding path ./tools/gone')
+    expect(stdout).toContain('⚠ bound agent "../walk" does not resolve — binding path ../walk leaves the repo')
+    expect(stdout).toContain('⚠ bound agent "~/agents/walk" does not resolve — no agent.json at binding path ~/agents/walk')
+  })
+
   it('shows no binding section when the build has no harness.json', async () => {
     const home = makeTempDir()
     const dir = makeTempRepo()

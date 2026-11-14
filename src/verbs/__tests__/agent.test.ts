@@ -1,12 +1,12 @@
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { basename, dirname, join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { agent } from '../agent.ts'
 import { checkpoint } from '../checkpoint.ts'
 import { start } from '../start.ts'
 import { buildFolder, buildLogPath, handoffPath, intentPath } from '../../lib/sidecar.ts'
 import { localSettingsPath, settingsPath } from '../../lib/settings.ts'
-import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
+import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
 afterAll(cleanupTempRepos)
@@ -405,6 +405,238 @@ describe('agent run — harness bindings — D42 (harness-bindings), D57 (merge-
     expect(code).toBe(1)
     expect(stderr).toContain('speaks contract 2')
     expect(stderr).toContain('Upgrade')
+  })
+})
+
+// An agent in any directory, for a tier outside the repo or a binding written as
+// a path. Its manifest `name` is set apart from the directory's, so a test can
+// tell which one a run was labelled by.
+function makeAgentAt(dir: string, name: string, slots: ReadonlyArray<string> = ['after']): void {
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(join(dir, 'run.sh'), DONE_SCRIPT)
+  writeFileSync(
+    join(dir, 'agent.json'),
+    `${JSON.stringify({ contract: 1, name, command: 'sh "$PLUMBBOB_AGENT_DIR/run.sh"', slots })}\n`,
+  )
+}
+
+function ledgerAgents(root: string): ReadonlyArray<string> {
+  return JSON.parse(readFileSync(handoffPath(root), 'utf8')).map((entry: { agent: string }) => entry.agent)
+}
+
+const runAfter = ['run', '--step', '1', '--mode', 'after']
+
+describe('agent — the built-in tier — D159 (builtin-tier)', () => {
+  it('agent list shows a built-in with its origin, under the project and personal ones', async () => {
+    const dir = await startedBuild()
+    const home = makeTempDir()
+    const builtinDir = makeTempDir()
+    makeAgent(dir, 'mine', { slots: ['build'], script: DONE_SCRIPT })
+    makeAgentAt(join(builtinDir, 'walkthrough'), 'walkthrough')
+    makeAgentAt(join(builtinDir, 'mine'), 'mine')
+    writeFileSync(join(builtinDir, 'README.md'), '# Built-in agents\n')
+
+    const { code, stdout } = await captureIoAsync(() => agent(dir, ['list'], { home, builtinDir }))
+    expect(code).toBe(0)
+    expect(stdout).toBe('plumbbob agents:\n  mine (project) [build]\n  walkthrough (builtin) [after]\n')
+  })
+
+  it('agent list says nothing of an empty tier', async () => {
+    const dir = await startedBuild()
+    const { stdout } = await captureIoAsync(() => agent(dir, ['list'], { home: makeTempDir(), builtinDir: makeTempDir() }))
+    expect(stdout).toBe('plumbbob: no agents. Add one under .plumbbob/agents/<name>/ or ~/.plumbbob/agents/<name>/.\n')
+  })
+
+  it('runs a built-in by name, and by a binding, when nothing shadows it', async () => {
+    const dir = await startedBuild()
+    const tiers = { home: makeTempDir(), builtinDir: makeTempDir() }
+    makeAgentAt(join(tiers.builtinDir, 'walkthrough'), 'walkthrough')
+    writeHarness(dir, { contract: 1, defaults: { after: ['walkthrough'] } })
+
+    const named = await captureIoAsync(() => agent(dir, ['run', 'walkthrough', '--step', '1'], tiers))
+    expect(named.code).toBe(0)
+    expect(named.stderr).toContain('agent "walkthrough" reports done (after slot')
+    const bound = await captureIoAsync(() => agent(dir, runAfter, tiers))
+    expect(bound.code).toBe(0)
+    expect(ledgerAgents(dir)).toEqual(['walkthrough', 'walkthrough'])
+    expect(existsSync(join(tiers.builtinDir, 'walkthrough', 'last-input.json'))).toBe(true)
+  })
+
+  it('runs the project agent in place of a built-in of the same name', async () => {
+    const dir = await startedBuild()
+    const tiers = { home: makeTempDir(), builtinDir: makeTempDir() }
+    makeAgent(dir, 'walkthrough', { slots: ['after'], script: DONE_SCRIPT })
+    makeAgentAt(join(tiers.builtinDir, 'walkthrough'), 'walkthrough')
+
+    const { code } = await captureIoAsync(() => agent(dir, ['run', 'walkthrough', '--step', '1'], tiers))
+    expect(code).toBe(0)
+    expect(existsSync(join(dir, '.plumbbob', 'agents', 'walkthrough', 'last-input.json'))).toBe(true)
+    expect(existsSync(join(tiers.builtinDir, 'walkthrough', 'last-input.json'))).toBe(false)
+  })
+})
+
+describe('agent run — path bindings — D160 (path-bindings)', () => {
+  it('runs a ./ binding from the repo root, labelled and configured by the manifest name', async () => {
+    const dir = await startedBuild()
+    makeAgentAt(join(dir, 'tools', 'walk'), 'walker')
+    writeHarness(dir, { contract: 1, steps: { 1: { after: ['./tools/walk'] } } })
+    writeFileSync(
+      settingsPath(dir),
+      JSON.stringify({ agentConfig: { walker: { url: 'http://localhost:3000' }, './tools/walk': { wrong: true } } }),
+    )
+
+    const { code, stdout, stderr } = await captureIoAsync(() => agent(dir, runAfter, { home: makeTempDir() }))
+    expect(code).toBe(0)
+    expect(stderr).toContain('agent "walker" reports done (after slot, did the thing)')
+    expect(envelopeFromStdout(stdout)).toMatchObject({ status: 'done' })
+    expect(ledgerAgents(dir)).toEqual(['walker'])
+    const input = JSON.parse(readFileSync(join(dir, 'tools', 'walk', 'last-input.json'), 'utf8'))
+    expect(input.settings.agent).toEqual({ url: 'http://localhost:3000' })
+    // cwd is still the repo root, and the agent's own directory is the path's.
+    expect(realpathSync(readFileSync(join(dir, 'tools', 'walk', 'cwd.txt'), 'utf8').trim())).toBe(realpathSync(dir))
+  })
+
+  it('reads a path in the harness defaults and in the settings-level defaults alike', async () => {
+    const viaHarness = await startedBuild()
+    makeAgentAt(join(viaHarness, 'tools', 'walk'), 'walker')
+    writeHarness(viaHarness, { contract: 1, defaults: { after: './tools/walk' } })
+    expect((await captureIoAsync(() => agent(viaHarness, runAfter, { home: makeTempDir() }))).code).toBe(0)
+    expect(ledgerAgents(viaHarness)).toEqual(['walker'])
+
+    const viaSettings = await startedBuild()
+    makeAgentAt(join(viaSettings, 'tools', 'walk'), 'walker')
+    writeFileSync(settingsPath(viaSettings), JSON.stringify({ agents: { after: ['./tools/walk'] } }))
+    expect((await captureIoAsync(() => agent(viaSettings, runAfter, { home: makeTempDir() }))).code).toBe(0)
+    expect(ledgerAgents(viaSettings)).toEqual(['walker'])
+  })
+
+  it('fails loud on a missing ./ path, and still runs the bindings beside it', async () => {
+    const dir = await startedBuild()
+    makeAgent(dir, 'reviewer', { slots: ['after'], script: DONE_SCRIPT })
+    writeHarness(dir, { contract: 1, steps: { 1: { after: ['./tools/walk', 'reviewer'] } } })
+
+    const { code, stderr } = await captureIoAsync(() => agent(dir, runAfter, { home: makeTempDir() }))
+    expect(code).toBe(1)
+    expect(stderr).toContain('plumbbob: no agent.json at binding path ./tools/walk\n')
+    expect(stderr).not.toContain('skipping this binding')
+    expect(ledgerAgents(dir)).toEqual(['reviewer'])
+  })
+
+  it('fails loud on a broken ./ path', async () => {
+    const dir = await startedBuild()
+    mkdirSync(join(dir, 'tools', 'walk'), { recursive: true })
+    writeFileSync(join(dir, 'tools', 'walk', 'agent.json'), JSON.stringify({ contract: 1, name: 'walker' }))
+    writeHarness(dir, { contract: 1, steps: { 1: { after: ['./tools/walk'] } } })
+
+    const { code, stderr } = await captureIoAsync(() => agent(dir, runAfter, { home: makeTempDir() }))
+    expect(code).toBe(1)
+    expect(stderr).toContain('needs a non-empty "command" string')
+    expect(stderr).not.toContain('skipping this binding')
+    expect(existsSync(handoffPath(dir))).toBe(false)
+  })
+
+  it('refuses a ../ path and a ./ path that climbs out, without running what is there', async () => {
+    const dir = await startedBuild()
+    // A sibling of the repo, so `..` reaches it; removed here since the temp-repo
+    // sweep does not know it.
+    const outside = join(dirname(dir), `${basename(dir)}-outside`)
+    try {
+      makeAgentAt(outside, 'walker')
+      const name = basename(outside)
+      for (const binding of [`../${name}`, `./tools/../../${name}`]) {
+        writeHarness(dir, { contract: 1, steps: { 1: { after: [binding] } } })
+        const { code, stderr } = await captureIoAsync(() => agent(dir, runAfter, { home: makeTempDir() }))
+        expect(code).toBe(1)
+        expect(stderr).toContain(`binding path ${binding} leaves the repo, and a relative binding must stay inside it`)
+        expect(stderr).not.toContain('skipping this binding')
+      }
+      expect(existsSync(join(outside, 'last-input.json'))).toBe(false)
+      expect(existsSync(handoffPath(dir))).toBe(false)
+    } finally {
+      rmSync(outside, { recursive: true, force: true })
+    }
+  })
+
+  it('refuses a ./ path a symlink carries out of the repo, without running what is there', async () => {
+    const dir = await startedBuild()
+    const outside = makeTempDir()
+    makeAgentAt(join(outside, 'walk'), 'walker')
+    symlinkSync(join(outside, 'walk'), join(dir, 'linked'))
+    writeHarness(dir, { contract: 1, steps: { 1: { after: ['./linked'] } } })
+
+    const { code, stderr } = await captureIoAsync(() => agent(dir, runAfter, { home: makeTempDir() }))
+    expect(code).toBe(1)
+    expect(stderr).toContain('binding path ./linked resolves outside the repo, and a relative binding must stay inside it')
+    expect(existsSync(join(outside, 'walk', 'last-input.json'))).toBe(false)
+  })
+
+  it('runs a ~/ binding from the home directory', async () => {
+    const dir = await startedBuild()
+    const home = makeTempDir()
+    makeAgentAt(join(home, 'agents', 'walk'), 'walker')
+    writeHarness(dir, { contract: 1, steps: { 1: { after: ['~/agents/walk'] } } })
+
+    const { code, stderr } = await captureIoAsync(() => agent(dir, runAfter, { home }))
+    expect(code).toBe(0)
+    expect(stderr).toContain('agent "walker" reports done (after slot')
+    expect(existsSync(join(home, 'agents', 'walk', 'last-input.json'))).toBe(true)
+  })
+
+  it('runs an absolute binding as written', async () => {
+    const dir = await startedBuild()
+    const elsewhere = makeTempDir()
+    makeAgentAt(join(elsewhere, 'walk'), 'walker')
+    writeHarness(dir, { contract: 1, steps: { 1: { after: [join(elsewhere, 'walk')] } } })
+
+    const { code } = await captureIoAsync(() => agent(dir, runAfter, { home: makeTempDir() }))
+    expect(code).toBe(0)
+    expect(ledgerAgents(dir)).toEqual(['walker'])
+  })
+
+  it('degrades soft on a missing ~/ path and a missing absolute one — D54 (bindings-degrade-soft)', async () => {
+    const dir = await startedBuild()
+    const gone = join(makeTempDir(), 'walk')
+    makeAgent(dir, 'reviewer', { slots: ['after'], script: DONE_SCRIPT })
+    writeHarness(dir, { contract: 1, steps: { 1: { after: ['~/agents/walk', gone, 'reviewer'] } } })
+
+    const { code, stderr } = await captureIoAsync(() => agent(dir, runAfter, { home: makeTempDir() }))
+    expect(code).toBe(0)
+    expect(stderr).toContain('no agent.json at binding path ~/agents/walk')
+    expect(stderr).toContain(`no agent.json at binding path ${gone}`)
+    expect(stderr.match(/→ skipping this binding/g)).toHaveLength(2)
+    expect(ledgerAgents(dir)).toEqual(['reviewer'])
+  })
+
+  it('degrades soft on a broken ~/ path, as a broken ambient name does', async () => {
+    const dir = await startedBuild()
+    const home = makeTempDir()
+    mkdirSync(join(home, 'agents', 'walk'), { recursive: true })
+    writeFileSync(join(home, 'agents', 'walk', 'agent.json'), '{ not json')
+    writeHarness(dir, { contract: 1, steps: { 1: { after: ['~/agents/walk'] } } })
+
+    const { code, stderr } = await captureIoAsync(() => agent(dir, runAfter, { home }))
+    expect(code).toBe(0)
+    expect(stderr).toContain('is not valid JSON')
+    expect(stderr).toContain('→ skipping this binding')
+  })
+
+  it('still warns and skips a path binding whose manifest does not declare the slot', async () => {
+    const dir = await startedBuild()
+    makeAgentAt(join(dir, 'tools', 'walk'), 'walker', ['build'])
+    writeHarness(dir, { contract: 1, steps: { 1: { after: ['./tools/walk'] } } })
+
+    const { code, stderr } = await captureIoAsync(() => agent(dir, runAfter, { home: makeTempDir() }))
+    expect(code).toBe(0)
+    expect(stderr).toContain('agent "walker" does not declare the \'after\' slot')
+    expect(stderr).toContain('→ skipping this binding')
+  })
+
+  it('reads a path given as an explicit name as a name, which is what --agent is for', async () => {
+    const dir = await startedBuild()
+    makeAgentAt(join(dir, 'tools', 'walk'), 'walker')
+    const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', './tools/walk', '--step', '1'], { home: makeTempDir() }))
+    expect(code).toBe(1)
+    expect(stderr).toContain('no agent named "./tools/walk"')
   })
 })
 

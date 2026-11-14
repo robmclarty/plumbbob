@@ -15,7 +15,8 @@
 import { spawn } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, isAbsolute, join, posix, relative, sep } from 'node:path'
+import { dirname, isAbsolute, join, posix, relative, resolve, sep } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { parseBuildTitle, parseStepLike, parseStepMeta, parseStepSeam, scrapeBullets } from './intent.ts'
 
 /**
@@ -471,11 +472,26 @@ function envelopeFail(error: string): EnvelopeParse {
  *
  * `flag` is a `--agent <path>` override (top priority); `project` is
  * `.plumbbob/agents/` (tracked, so it rides the branch into the PR);
- * `personal` is `~/.plumbbob/agents/` (the user's own library). Resolution
- * walks flag → project → personal, first hit wins: the same
- * most-specific-wins shape as the settings ladder.
+ * `personal` is `~/.plumbbob/agents/` (the user's own library); `builtin` is
+ * the `builtin-agents/` directory plumbbob ships. Resolution walks flag →
+ * project → personal → builtin, first hit wins: the same most-specific-wins
+ * shape as the settings ladder. `path` is a binding written as a path, which
+ * names its directory outright and walks no tier.
  */
-export type AgentOrigin = 'flag' | 'project' | 'personal'
+export type AgentOrigin = 'flag' | 'project' | 'personal' | 'builtin' | 'path'
+
+/**
+ * Where the tiers outside the repo sit, for a caller that needs them somewhere
+ * else.
+ *
+ * Verbs pass nothing and get the environment's home and the directory shipped
+ * with the package; tests pass a temp `home` or `builtinDir` to exercise a tier
+ * without touching process.env or the shipped directory.
+ */
+export type AgentTiers = {
+  readonly home?: string
+  readonly builtinDir?: string
+}
 
 /**
  * A resolved agent: its validated manifest, the tier it came from, and its own
@@ -520,6 +536,19 @@ export function personalAgentsDir(home: string): string {
 }
 
 /**
+ * The built-in agents tier: the `builtin-agents/` directory at the package
+ * root, holding the agents plumbbob ships.
+ *
+ * Resolved relative to the compiled module URL, the way `templates/` is, so
+ * the same hop works from `src/lib/` and `dist/lib/`. It is not named
+ * `agents/` because a host reads a plugin's `agents/` as its own subagent
+ * definitions.
+ */
+export function builtinAgentsDir(): string {
+  return fileURLToPath(new URL('../../builtin-agents', import.meta.url))
+}
+
+/**
  * The home dir the personal tier resolves under.
  *
  * Callers (verbs) pass nothing and get the environment's HOME (matching
@@ -536,14 +565,14 @@ function agentsHome(home?: string): string {
  * A `flagPath` (from `--agent <path>`) points straight at an agent directory
  * and takes top priority. A tier "hits" when it holds an `agent.json`: a
  * malformed one there is surfaced as an error (project still shadows
- * personal), never silently skipped in favor of a different agent; an
- * explicit ask fails loud. Returns the not-found error only when no tier holds
- * a manifest at all.
+ * personal, and both shadow a built-in), never silently skipped in favor of a
+ * different agent; an explicit ask fails loud. Returns the not-found error
+ * only when no tier holds a manifest at all.
  */
 export function resolveAgent(
   root: string,
   name: string,
-  opts: { readonly flagPath?: string; readonly home?: string } = {},
+  opts: AgentTiers & { readonly flagPath?: string } = {},
 ): AgentResolution {
   if (opts.flagPath !== undefined) {
     const hit = loadAgentDir(opts.flagPath, 'flag')
@@ -553,6 +582,7 @@ export function resolveAgent(
   const tiers: ReadonlyArray<readonly [string, AgentOrigin]> = [
     [join(projectAgentsDir(root), name), 'project'],
     [join(personalAgentsDir(home), name), 'personal'],
+    [join(opts.builtinDir ?? builtinAgentsDir(), name), 'builtin'],
   ]
   for (const [dir, origin] of tiers) {
     const hit = loadAgentDir(dir, origin)
@@ -560,22 +590,121 @@ export function resolveAgent(
   }
   return {
     ok: false,
-    error: `no agent named "${name}", looked in ${projectAgentsDir(root)} and ${personalAgentsDir(home)}`,
+    error: `no agent named "${name}", looked in ${projectAgentsDir(root)}, ${personalAgentsDir(home)}, and plumbbob's built-in agents`,
   }
 }
 
 /**
- * Every resolvable agent across both tiers, sorted by name.
+ * A binding's resolution: the agent, or the error and whether it is `loud`.
  *
- * Project shadows personal: a name defined in both resolves (and lists) from
- * project. Each entry carries its origin and resolution; a malformed manifest
- * lands as an errored resolution rather than crashing the walk.
+ * A loud miss is a mistake in the repo, so the run refuses; a quiet one is a
+ * teammate who lacks the agent, so the run warns and skips the binding.
  */
-export function listAgents(root: string, opts: { readonly home?: string } = {}): ReadonlyArray<AgentListing> {
+export type BindingResolution =
+  | { readonly ok: true; readonly agent: ResolvedAgent }
+  | { readonly ok: false; readonly error: string; readonly loud: boolean }
+
+/**
+ * True when a binding is written as a path and not a name: `./` or `../`
+ * (from the repo root), `~/` (from the home directory), or an absolute path.
+ */
+export function isPathBinding(binding: string): boolean {
+  return /^(\.{1,2}|~)(\/|$)/.test(binding) || isAbsolute(binding)
+}
+
+/**
+ * Resolve one binding from harness.json or the settings defaults: a name
+ * through the tiers, a path as the directory it names.
+ *
+ * A name that misses is quiet, because the agent may live in one person's
+ * library. A path splits on where it points. `./` resolves from the repo root
+ * and must stay inside it, lexically and once every symlink is resolved, and a
+ * `../` path cannot; both are loud when they miss or break, since the path is
+ * in the repo and so is the mistake. `~/` resolves from the home directory and
+ * an absolute path stands as written; either one names a place on one person's
+ * machine in a file the whole team tracks, so a miss there is quiet like a
+ * missing name.
+ */
+export function resolveBinding(root: string, binding: string, opts: AgentTiers = {}): BindingResolution {
+  if (!isPathBinding(binding)) {
+    const named = resolveAgent(root, binding, opts)
+    return named.ok ? named : { ok: false, error: named.error, loud: false }
+  }
+  const inRepo = binding.startsWith('.')
+  const escape = inRepo ? repoEscape(root, binding) : null
+  if (escape !== null) {
+    return { ok: false, error: escape, loud: true }
+  }
+  const dir = inRepo
+    ? resolve(root, binding)
+    : binding.startsWith('~')
+      ? join(agentsHome(opts.home), binding.slice(1))
+      : binding
+  const hit = loadAgentDir(dir, 'path')
+  if (hit === null) {
+    return { ok: false, error: `no agent.json at binding path ${binding}`, loud: inRepo }
+  }
+  return hit.ok ? hit : { ok: false, error: hit.error, loud: inRepo }
+}
+
+/**
+ * Why a `./` or `../` binding does not stay in the repo, or null when it does.
+ *
+ * The path is judged twice: as written, where a `..` segment may carry it
+ * above the root, and with every symlink resolved, where a linked folder or a
+ * linked `agent.json` may. A path that is not there yet is judged by its
+ * nearest existing ancestor.
+ */
+function repoEscape(root: string, binding: string): string | null {
+  const dir = resolve(root, binding)
+  if (climbsAbove(binding) || !isInside(resolve(root), dir)) {
+    return `binding path ${binding} leaves the repo, and a relative binding must stay inside it`
+  }
+  const home = settled(root)
+  if (!isInside(home, settled(dir)) || !isInside(home, settled(join(dir, 'agent.json')))) {
+    return `binding path ${binding} resolves outside the repo, and a relative binding must stay inside it`
+  }
+  return null
+}
+
+/**
+ * Whether a relative path steps above where it started at any point on the
+ * way, even when later segments bring it back down.
+ *
+ * `../repo/tools/walk` lands inside a checkout whose folder is named `repo`
+ * and nowhere else, so where it lands says nothing about whether it stayed.
+ */
+function climbsAbove(binding: string): boolean {
+  let depth = 0
+  for (const segment of binding.split(/[\\/]+/)) {
+    if (segment === '' || segment === '.') continue
+    depth += segment === '..' ? -1 : 1
+    if (depth < 0) return true
+  }
+  return false
+}
+
+/** Whether `path` is `folder` itself or sits somewhere under it. */
+function isInside(folder: string, path: string): boolean {
+  return path === folder || path.startsWith(folder.endsWith(sep) ? folder : `${folder}${sep}`)
+}
+
+/**
+ * Every resolvable agent across the three tiers, sorted by name.
+ *
+ * Project shadows personal, and both shadow a built-in: a name defined in
+ * more than one tier resolves (and lists) from the first. Each entry carries
+ * its origin and resolution; a malformed manifest lands as an errored
+ * resolution rather than crashing the walk. An empty or missing tier
+ * directory lists nothing.
+ */
+export function listAgents(root: string, opts: AgentTiers = {}): ReadonlyArray<AgentListing> {
   const home = agentsHome(opts.home)
+  const builtinDir = opts.builtinDir ?? builtinAgentsDir()
   const tiers: ReadonlyArray<readonly [string, AgentOrigin]> = [
     [projectAgentsDir(root), 'project'],
     [personalAgentsDir(home), 'personal'],
+    [builtinDir, 'builtin'],
   ]
   const origins = new Map<string, AgentOrigin>()
   for (const [dir, origin] of tiers) {
@@ -586,7 +715,7 @@ export function listAgents(root: string, opts: { readonly home?: string } = {}):
   return [...origins.keys()].sort().map((name) => ({
     name,
     origin: origins.get(name) as AgentOrigin,
-    resolution: resolveAgent(root, name, { home }),
+    resolution: resolveAgent(root, name, { home, builtinDir }),
   }))
 }
 

@@ -26,6 +26,7 @@
   "files": [
     ".claude-plugin",
     "bin",
+    "builtin-agents",
     "dist",
     "hooks",
     "skills",

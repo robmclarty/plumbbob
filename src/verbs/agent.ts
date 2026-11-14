@@ -1,8 +1,9 @@
 // `plumbbob agent <subcommand>`: the doorway to user-authored agents: anything
 // executable that speaks the JSON envelope contract (JSON in on stdin, JSON out
-// on stdout, prose streamed on stderr). `agent list` walks the two agent tiers
+// on stdout, prose streamed on stderr). `agent list` walks the three agent tiers
 // (the repo's tracked `.plumbbob/agents/<name>/`, then the personal
-// `~/.plumbbob/agents/<name>/`) and prints each resolvable agent. `agent run
+// `~/.plumbbob/agents/<name>/`, then the agents plumbbob ships) and prints each
+// resolvable agent. `agent run
 // <name> [--step N] [--mode before|build|after]` composes the StepContext,
 // spawns the manifest command, streams its stderr live, captures and validates
 // the child's envelope, re-emits it on this verb's own stdout (machine) with the
@@ -25,6 +26,7 @@ import {
   type AgentEvidence,
   type AgentManifest,
   type AgentRunResult,
+  type AgentTiers,
   type Slot,
   acceptEvidence,
   composeStepContext,
@@ -34,6 +36,7 @@ import {
   parseSlotBindings,
   readHarnessFile,
   resolveAgent,
+  resolveBinding,
   resolveSlotAgents,
   runAgent,
 } from '../lib/agents.ts'
@@ -57,11 +60,13 @@ const SKIPPING = 'skipping this binding, since the loop works without it'
 
 /**
  * Dispatch `plumbbob agent list|run`, refusing an unknown subcommand with a hint.
+ *
+ * `tiers` moves the tiers outside the repo for a test; the CLI passes nothing.
  */
-export async function agent(cwd: string, args: ReadonlyArray<string> = []): Promise<number> {
+export async function agent(cwd: string, args: ReadonlyArray<string> = [], tiers: AgentTiers = {}): Promise<number> {
   const [sub, ...rest] = args
-  if (sub === 'list') return list(cwd, rest)
-  if (sub === 'run') return run(cwd, rest)
+  if (sub === 'list') return list(cwd, tiers)
+  if (sub === 'run') return run(cwd, rest, tiers)
   const known = 'Available subcommands: list, run.'
   const message =
     sub === undefined
@@ -72,15 +77,15 @@ export async function agent(cwd: string, args: ReadonlyArray<string> = []): Prom
 }
 
 /**
- * Print every resolvable agent across the project and personal tiers.
+ * Print every resolvable agent across the project, personal and built-in tiers.
  */
-function list(cwd: string, _args: ReadonlyArray<string>): number {
+function list(cwd: string, tiers: AgentTiers): number {
   const root = findRepoRoot(cwd)
   if (root === null) {
     process.stderr.write(notice({ fact: 'not inside a git repository' }))
     return 1
   }
-  process.stdout.write(`${formatAgentList(listAgents(root))}\n`)
+  process.stdout.write(`${formatAgentList(listAgents(root, tiers))}\n`)
   return 0
 }
 
@@ -93,7 +98,7 @@ function list(cwd: string, _args: ReadonlyArray<string>): number {
  * way it composes the StepContext, spawns, and applies side effects (never
  * advancing the loop).
  */
-async function run(cwd: string, args: ReadonlyArray<string>): Promise<number> {
+async function run(cwd: string, args: ReadonlyArray<string>, tiers: AgentTiers): Promise<number> {
   const root = findRepoRoot(cwd)
   if (root === null || !hasSession(root)) {
     process.stderr.write(notice({ fact: 'no active session', remedy: 'plumbbob start "<title>"' }))
@@ -136,20 +141,22 @@ async function run(cwd: string, args: ReadonlyArray<string>): Promise<number> {
   // An explicit name outranks every binding: run exactly it, fail loud on a
   // miss. No name: resolve the harness bindings for the slot and run them.
   if (parsed.name !== undefined) {
-    return runOne(root, slug, step, {
-      name: parsed.name,
-      flagPath: parsed.flagPath,
-      mode: parsed.mode,
-      ambient: false,
-    })
+    return runOne(
+      root,
+      slug,
+      step,
+      { name: parsed.name, flagPath: parsed.flagPath, mode: parsed.mode, ambient: false },
+      tiers,
+    )
   }
-  return runBound(root, slug, step, parsed.mode)
+  return runBound(root, slug, step, parsed.mode, tiers)
 }
 
 /**
  * One run's inputs: the agent name, an optional `--agent` directory override,
  * the requested slot, and whether the run is ambient (harness-bound) or an
- * explicit ask.
+ * explicit ask. An ambient run's `name` is the binding as written, which may
+ * be a path.
  */
 type RunSpec = {
   readonly name: string
@@ -166,18 +173,33 @@ type RunSpec = {
  * configuration the loop must survive without; an explicit ask
  * (`ambient: false`) fails loud on the same miss. A run that actually starts
  * and fails (non-zero exit, timeout, …) is a hard failure either way: the
- * softening covers a *missing* agent, never a broken one.
+ * softening covers a *missing* agent, never a broken one. One ambient miss
+ * stays loud: a binding written as a path inside the repo, which is a mistake
+ * in a tracked file and not a teammate's missing library.
+ *
+ * The run is labelled with the name it was asked for by, and a binding written
+ * as a path has none, so it takes the manifest's `name`: that is what the
+ * summary, the handoff ledger and the `agentConfig` lookup key on.
  */
-async function runOne(root: string, slug: string | null, step: number, spec: RunSpec): Promise<number> {
-  const resolution = resolveAgent(root, spec.name, spec.flagPath !== undefined ? { flagPath: spec.flagPath } : {})
+async function runOne(
+  root: string,
+  slug: string | null,
+  step: number,
+  spec: RunSpec,
+  tiers: AgentTiers,
+): Promise<number> {
+  const resolution = spec.ambient
+    ? resolveBinding(root, spec.name, tiers)
+    : resolveAgent(root, spec.name, spec.flagPath !== undefined ? { ...tiers, flagPath: spec.flagPath } : tiers)
   if (!resolution.ok) {
     return degrade(
-      spec.ambient,
+      spec.ambient && !('loud' in resolution && resolution.loud),
       notice({ fact: resolution.error }).trimEnd(),
       notice({ fact: resolution.error, advisory: true, remedy: SKIPPING }).trimEnd(),
     )
   }
   const { manifest, dir } = resolution.agent
+  const label = resolution.agent.origin === 'path' ? manifest.name : spec.name
 
   const resolved = resolveMode(spec.mode, manifest)
   if (!resolved.ok) {
@@ -221,7 +243,7 @@ async function runOne(root: string, slug: string | null, step: number, spec: Run
       // rides here. Resolution: settings.json's agentConfig[name], with the
       // untracked personal overlay (settings.local.json) replacing the project
       // entry whole (no deep merge) and {} when neither defines it.
-      agent: resolveRecord(root, 'agentConfig')[spec.name] ?? {},
+      agent: resolveRecord(root, 'agentConfig')[label] ?? {},
     },
   })
   if (!composed.ok) {
@@ -240,7 +262,7 @@ async function runOne(root: string, slug: string | null, step: number, spec: Run
     timeoutSeconds: resolveNumber(root, 'agentTimeout', 0),
   })
 
-  return report(root, slug, spec.name, mode, step, result)
+  return report(root, slug, label, mode, step, result)
 }
 
 /**
@@ -249,11 +271,18 @@ async function runOne(root: string, slug: string | null, step: number, spec: Run
  * Bindings merge as a ladder: the per-step harness entry beats the harness
  * `defaults`, which beat the settings-level `agents` key; the first level that
  * names the slot wins, replace not append. A missing bound agent degrades to a
- * warning; an absent harness, or one that binds nothing to this slot, is a
+ * warning, except a binding written as a path inside the repo, whose miss is
+ * an error; an absent harness, or one that binds nothing to this slot, is a
  * clean no-op. Each bound agent runs in turn; the batch exits 1 if any agent
- * that actually ran failed.
+ * that actually ran failed or any binding was refused.
  */
-async function runBound(root: string, slug: string | null, step: number, modeFlag: string | undefined): Promise<number> {
+async function runBound(
+  root: string,
+  slug: string | null,
+  step: number,
+  modeFlag: string | undefined,
+  tiers: AgentTiers,
+): Promise<number> {
   if (modeFlag === undefined) {
     process.stderr.write(
       notice({
@@ -289,22 +318,23 @@ async function runBound(root: string, slug: string | null, step: number, modeFla
 
   let worst = 0
   for (const name of names) {
-    const code = await runOne(root, slug, step, { name, flagPath: undefined, mode: modeFlag, ambient: true })
+    const code = await runOne(root, slug, step, { name, flagPath: undefined, mode: modeFlag, ambient: true }, tiers)
     if (code !== 0) worst = code
   }
   return worst
 }
 
 /**
- * Emit the loud error or the soft warning by whether this run was an explicit
- * ask (name/flag) or an ambient harness binding, and return the matching code.
+ * Emit the loud error or the soft warning, and return the matching code.
  *
- * A hard miss stops with 1; a degraded one warns and returns 0 so a batch of
- * bound agents carries on.
+ * `quiet` is true for an ambient harness binding whose miss may be a
+ * teammate's missing library; an explicit ask (name/flag) and a path binding
+ * inside the repo are not. A hard miss stops with 1; a degraded one warns and
+ * returns 0 so a batch of bound agents carries on.
  */
-function degrade(ambient: boolean, hard: string, soft: string): number {
-  process.stderr.write(`${ambient ? soft : hard}\n`)
-  return ambient ? 0 : 1
+function degrade(quiet: boolean, hard: string, soft: string): number {
+  process.stderr.write(`${quiet ? soft : hard}\n`)
+  return quiet ? 0 : 1
 }
 
 /** The parsed shape of `agent run`'s argv: the agent name plus its value flags. */

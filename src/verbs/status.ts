@@ -16,7 +16,7 @@ import {
   type HarnessBindings,
   type SlotBindings,
   readHarnessFile,
-  resolveAgent,
+  resolveBinding,
 } from '../lib/agents.ts'
 import {
   buildFolder,
@@ -296,7 +296,7 @@ function bindingWarnings(root: string, harness: HarnessBindings): string[] {
   }
   const warnings: string[] = []
   for (const name of [...names].sort()) {
-    const res = resolveAgent(root, name)
+    const res = resolveBinding(root, name)
     if (!res.ok) warnings.push(`  ⚠ bound agent "${name}" does not resolve — ${res.error}`)
   }
   return warnings

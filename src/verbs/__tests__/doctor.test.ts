@@ -607,6 +607,71 @@ describe('doctor — agent validation — D48 (doctor-validates-agents)', () => 
     const { stdout } = await doctorWithHome(home, overrideRepo())
     expect(stdout).not.toContain('plumbbob doctor — agents')
   })
+
+  // The built-in tier is pointed at a temp directory: nothing is written into the
+  // shipped `builtin-agents/`.
+  it('validates a built-in agent with its origin, beside a project one that shadows another — D159 (builtin-tier)', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    const builtinDir = makeTempDir()
+    const healthy = { command: 'sh "$PLUMBBOB_AGENT_DIR/run.sh"', script: '#!/bin/sh\necho hi\n', slots: ['after'] }
+    putAgent(dir, 'reviewer', healthy)
+    for (const name of ['reviewer', 'walkthrough']) {
+      mkdirSync(join(builtinDir, name), { recursive: true })
+      writeFileSync(join(builtinDir, name, 'run.sh'), healthy.script)
+      writeFileSync(
+        join(builtinDir, name, 'agent.json'),
+        JSON.stringify({ contract: 1, name, command: healthy.command, slots: healthy.slots }),
+      )
+    }
+    writeFileSync(join(builtinDir, 'README.md'), '# Built-in agents\n')
+
+    const saved = process.env.HOME
+    process.env.HOME = home
+    try {
+      const { code, stdout } = await captureIoAsync(() => doctor(dir, [], undefined, { builtinDir }))
+      expect(code).toBe(0)
+      expect(stdout).toContain('✓ reviewer (project) [after]')
+      expect(stdout).toContain('✓ walkthrough (builtin) [after]')
+      expect(stdout).not.toContain('reviewer (builtin)')
+      expect(stdout).not.toContain('README')
+    } finally {
+      if (saved === undefined) delete process.env.HOME
+      else process.env.HOME = saved
+    }
+  })
+
+  it('counts a broken built-in as a problem', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const builtinDir = makeTempDir()
+    mkdirSync(join(builtinDir, 'walkthrough'))
+    writeFileSync(
+      join(builtinDir, 'walkthrough', 'agent.json'),
+      JSON.stringify({ contract: 1, name: 'walkthrough', command: 'sh "$PLUMBBOB_AGENT_DIR/gone.sh"', slots: ['after'] }),
+    )
+
+    const saved = process.env.HOME
+    process.env.HOME = home
+    try {
+      const { code, stdout } = await captureIoAsync(() => doctor(overrideRepo(), [], undefined, { builtinDir }))
+      expect(code).toBe(1)
+      expect(stdout).toContain('✗ walkthrough (builtin) — command script')
+    } finally {
+      if (saved === undefined) delete process.env.HOME
+      else process.env.HOME = saved
+    }
+  })
+
+  it('says nothing of the built-in tier while it is empty, as it ships', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const { code, stdout } = await doctorWithHome(home, overrideRepo())
+    expect(code).toBe(0)
+    expect(stdout).not.toContain('plumbbob doctor — agents')
+    expect(stdout).not.toMatch(/built-?in agent/i)
+  })
 })
 
 // The plugin-link section, in-process with HOME pinned (Stryker cannot see the

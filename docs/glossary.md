@@ -262,5 +262,13 @@ are its parts.
   stdin, one envelope on stdout, prose on stderr), bound to a step's `before`, `build`,
   or `after` slot in `harness.json`. It can inform the loop and never advance it.
   → [`agents.md`](agents.md)
+- **Built-in agent**: an agent PlumbBob ships, in the last of the three tiers a name
+  resolves through (project, personal, built-in). A project or personal agent of the same
+  name runs in its place. Nothing ships in the tier yet.
+  → [`agents.md`](agents.md#where-agents-live-resolution)
+- **Path binding**: a `harness.json` binding written as a path to an agent's directory
+  (`./tools/walk`, `~/agents/walk`) in place of a name. A `./` path must stay inside the
+  repo and errors when it does not resolve; a `~/` or absolute path warns and is skipped.
+  → [`agents.md`](agents.md#binding-by-path)
 - **Plumb**: true vertical, the builder's oldest reference. Intent is the line; every
   step is held against it.

@@ -258,18 +258,28 @@ The manifest speaks to **two audiences** ([**D55 (two-audiences)**](decisions.md
 
 ## Where agents live: resolution
 
-Two tiers, plus a flag, resolved first-hit-wins ([**D41 (agent-resolution)**](decisions.md#d41): the settings ladder's shape, and
-the same two-level convention as Claude Code's `.claude/agents/`):
+Three tiers, plus a flag, resolved first-hit-wins ([**D41 (agent-resolution)**](decisions.md#d41): the settings ladder's shape, and
+the same project-then-personal convention as Claude Code's `.claude/agents/`):
 
 ```text
 --agent <path>              →   an explicit directory, top priority (an escape hatch)
 .plumbbob/agents/<name>/    →   project tier: TRACKED, rides the PR — the team's agents
 ~/.plumbbob/agents/<name>/  →   personal tier: your own library, across every repo
+<plumbbob>/builtin-agents/<name>/  →   built-in tier: the agents PlumbBob ships
 ```
 
-A name defined in both resolves from **project** (it shadows personal). A tier "hits" when it
-holds an `agent.json`: a *malformed* manifest there is surfaced as an error, never silently
-skipped in favor of a different agent.
+**The nearer tier shadows the farther one.** A name defined in more than one resolves from
+the first that holds it: project over personal, and either over a built-in. A tier "hits"
+when it holds an `agent.json`: a *malformed* manifest there is surfaced as an error, never
+silently skipped in favor of a different agent, so a broken project agent does not quietly
+hand its name to the personal or the built-in one.
+
+The built-in tier is the directory `builtin-agents/` inside the installed package
+([**D159 (builtin-tier)**](decisions.md#d159)). It resolves last because what ships should
+be a default: to replace a built-in, put an agent of the same name in your project or
+personal tier, and yours runs. `agent list` and `doctor` show a built-in with the origin
+`builtin`. Nothing ships in the tier yet, so today both print what they printed before it
+existed.
 
 Because the project tier is tracked, an agent you commit rides the branch into the PR: a
 teammate gets it for free. An agent only in your **personal** tier is yours alone: if the
@@ -311,10 +321,50 @@ middle of the work" ([**D43 (three-slots)**](decisions.md#d43)). That's judgment
   (`{"agents": {"after": ["reviewer"]}}`). First level that names the slot wins: **replace,
   not append**. A slot bound to `[]` is an explicit override to *nothing*.
 - **`note`** is prose the host model reads (like a manifest's `when`), never mechanics.
+- **A binding may be a path** in place of a name ([below](#binding-by-path)).
 - **`harness.json` stays bindings + prose only** ([**C3 (bindings-not-logic)**](decisions.md#c3)). The moment it grows an `if`, a
   `retry`, or a `loop`, the contract has failed its own spec. Control flow lives in *agents*
   (as code) and in *prose* (read by the model), never in config: GitHub Actions' YAML-grown-a-
   programming-language is the cautionary tale.
+
+### Binding by path
+
+**A binding is a name or a path, and a path names the agent's directory outright.** A slot
+value that starts with `./`, `../` or `~/`, or is an absolute path, is read as a path;
+anything else is a name and walks the tiers. A path walks none of them: it points at a
+directory holding an `agent.json`, the way `--agent <path>` does
+([**D160 (path-bindings)**](decisions.md#d160)).
+
+```jsonc
+{
+  "contract": 1,
+  "defaults": { "after": ["./tools/walk"] },      // from the repo root
+  "steps": {
+    "3": { "after": ["~/agents/strict-reviewer", "reviewer"] }   // from your home directory, then a name
+  }
+}
+```
+
+| The binding starts with | It resolves | A miss is |
+| --- | --- | --- |
+| `./` | from the repo root, and must stay inside the repo | an error |
+| `../` | nowhere: it is refused, since it leaves the repo | an error |
+| `~/` | from your home directory | a warning, and the binding is skipped |
+| `/` (an absolute path) | as written | a warning, and the binding is skipped |
+
+A `./` path is refused when it leaves the repo by any route: through `..` segments
+(`./tools/../../elsewhere`), or through a symlink, whether the link is the folder, one
+above it, or the `agent.json` itself. A link that stays inside the repo is fine.
+
+A path has no name of its own, so the run takes the manifest's `name`: that is the label
+on the summary line and in the handoff ledger, and the key its `agentConfig.<name>` block
+is looked up by. Bind `./tools/walk` whose manifest says `"name": "walker"`, and the run
+reads `agent "walker" reports done` and receives `agentConfig.walker`.
+
+The settings-level defaults (`{"agents": {"after": ["./tools/walk"]}}`) take a path the
+same way. A name typed at the terminal does not: `plumbbob agent run ./tools/walk` looks
+for an agent of that name, and `--agent ./tools/walk` is the way to point a typed run at a
+directory.
 
 ## Running an agent
 
@@ -322,7 +372,7 @@ The skills fire these for you; you rarely type them. The full surface is in the
 [CLI reference](cli-reference.md#agent).
 
 ```sh
-plumbbob agent list                          # every resolvable agent, its tier, slots, description
+plumbbob agent list                          # every resolvable agent, its tier (project, personal, builtin), slots, description
 plumbbob agent run reviewer --step 3         # run a named agent against step 3
 plumbbob agent run --mode after --step 3     # run the step's harness-BOUND after-agents
 plumbbob agent run reviewer --agent ./r      # --agent points at an explicit directory
@@ -346,6 +396,20 @@ The two ways an agent can go missing route differently ([**D54 (bindings-degrade
   declare `after`: **errors**. You asked for that agent specifically; a miss is loud.
 - **A harness binding names it** and a teammate lacks it (personal-tier only): **warns and
   skips** ([**D54 (bindings-degrade-soft)**](decisions.md#d54)). A binding is ambient configuration the loop must survive without.
+- **A harness binding points at it by path**, and the rule follows where the path points
+  ([**D160 (path-bindings)**](decisions.md#d160)). `harness.json` is tracked, so a `./` path
+  that is missing, holds a broken `agent.json`, or leaves the repo is a mistake everyone
+  on the branch has: it **errors**, the batch exits 1, and the bindings beside it still
+  run. A `~/` or absolute path names a place on one person's machine, so a missing or
+  broken one **warns and skips**, as a missing name does.
+
+```text
+plumbbob: no agent.json at binding path ./tools/walk
+plumbbob: binding path ../walk leaves the repo, and a relative binding must stay inside it
+plumbbob: binding path ./linked resolves outside the repo, and a relative binding must stay inside it
+plumbbob: no agent.json at binding path ~/agents/walk ⚠
+  → skipping this binding, since the loop works without it
+```
 
 A run that actually *starts* and then fails (non-zero exit, a timeout, garbage on stdout)
 is a hard failure either way. [D54 (bindings-degrade-soft)](decisions.md#d54) softens a *missing* agent, not a *broken* one.
@@ -444,6 +508,14 @@ for local, private compute, chosen through the settings ladder (`agentConfig.<na
 forwarded to the agent as `ctx.settings.agent`) rather than by editing the agent. It's the
 worked example of config travelling the frozen envelope `settings` field; its README
 carries the full provider matrix.
+
+The last one looks at the app where the reviewers read the diff. It ships under
+[`examples/agents/walkthrough/`](../examples/agents/walkthrough/): you start the app, and
+at the pause a model drives it in a headless browser through the Playwright MCP server,
+walks what the step's proof says, and returns `match` or `concerns` with a screenshot of
+each page as [`evidence[]`](#evidence-something-to-look-at). It runs on Ollama, an
+OpenAI-compatible server, Anthropic or OpenRouter, and costs 10 to 30 model turns a walk,
+so bind it on the steps with a manual proof.
 
 ## See also
 
