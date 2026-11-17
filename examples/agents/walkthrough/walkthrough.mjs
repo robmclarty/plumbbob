@@ -1,11 +1,11 @@
 /**
  * walkthrough: a PlumbBob after-slot agent that looks at the running app.
  *
- * Given the address of an app the person has already started, it drives that
- * app through the Playwright MCP server, walks what the step's title and proof
- * say should be true, and reports whether what it saw matches. The model reads
- * each page as Playwright's text snapshot; the screenshots are for the person,
- * returned as `evidence[]`.
+ * Given the address of a running app (or a command that starts one), it
+ * drives that app through the Playwright MCP server, walks what the step's
+ * title and proof say should be true, and reports whether what it saw matches.
+ * The model reads each page as Playwright's text snapshot; the screenshots are
+ * for the person, returned as `evidence[]`.
  *
  * Config rides the settings ladder as `agentConfig.walkthrough`, which the CLI
  * forwards as `ctx.settings.agent`:
@@ -15,19 +15,39 @@
  *   model           the model id, sent to the provider as written (required)
  *   baseUrl         the provider's address, for Ollama or an OpenAI-compatible server
  *   browser         a Playwright MCP browser name, when its default is not wanted
+ *   start           a shell command that starts the app, run when the url does not answer
+ *   readySeconds    how long a started app has to answer, 30 unless set
  *   maxTurns        the turn cap, 30 unless set
  *   timeoutSeconds  the wall-clock cap, 240 unless set
  *
  * Keys never ride settings. They are read from the environment:
  * OPENAI_API_KEY, ANTHROPIC_API_KEY, OPENROUTER_API_KEY.
  *
+ * `start` is a shell string from settings, run through `sh` at the repo root:
+ * the same trust as the `check` command. The app it starts lives in a process
+ * group of its own, and that group is taken down however the run ends: on a
+ * clean end, on SIGTERM, SIGINT, SIGHUP or SIGQUIT, and, through the
+ * supervisor in supervise.mjs, on a SIGKILL of this process.
+ *
  * The contract (docs/agents.md): StepContext JSON on stdin, one envelope on
  * stdout, narration on stderr, exit 0 when the envelope is authoritative.
  * fascicle's `run_stdio` owns that, so this file never writes to stdout.
- * The walk is in walk.mjs and the pure parts are in lib.mjs.
+ * The walk is in walk.mjs, the app's process is in app.mjs and supervise.mjs,
+ * and the pure parts are in lib.mjs.
  */
 
-import { CONTRACT, blockedEnvelope, hasCredentials, parseStartUrl, readConfig, scrub, withoutCredentials } from './lib.mjs'
+import { answers, startApp } from './app.mjs'
+import {
+  CONTRACT,
+  blockedEnvelope,
+  hasCredentials,
+  parseStartUrl,
+  readConfig,
+  scrub,
+  startBlocked,
+  withAppLine,
+  withoutCredentials,
+} from './lib.mjs'
 
 const AGENT_DIR = import.meta.dirname
 
@@ -60,19 +80,6 @@ function fromEnv(...names) {
     if (typeof value === 'string' && value.trim().length > 0) return value.trim()
   }
   return undefined
-}
-
-/**
- * Asks an address for anything at all, inside a short time limit. Any HTTP
- * answer counts as reachable; only a failed connection returns false.
- */
-async function answers(url, ms = 10_000) {
-  try {
-    await fetch(url, { signal: AbortSignal.timeout(ms), redirect: 'manual' })
-    return true
-  } catch {
-    return false
-  }
 }
 
 /**
@@ -145,6 +152,15 @@ const PROVIDERS = {
   openrouter: keyedProvider('openrouter', KEY_ENV.openrouter),
 }
 
+/** How long a signalled run gets to unwind before the process exits anyway. */
+const SIGNAL_GRACE_MS = 2000
+
+// The signals that stop a run. fascicle's `run_stdio` aborts the run on the
+// first two and knows nothing of the last two: a closed terminal sends
+// SIGHUP, and Ctrl-\ sends SIGQUIT.
+const ABORTING_SIGNALS = ['SIGTERM', 'SIGINT']
+const ENDING_SIGNALS = ['SIGHUP', 'SIGQUIT']
+
 const EXAMPLE_CONFIG =
   '{ "agentConfig": { "walkthrough": { "url": "http://localhost:3000", "provider": "ollama", "model": "qwen3:8b" } } }'
 
@@ -170,7 +186,9 @@ async function loadDeps() {
 
 /**
  * Checks everything that can be checked before a browser starts, cheapest
- * first. Returns a `blocked` envelope, or the pieces the walk needs.
+ * first. Returns a `blocked` envelope, or the pieces the walk needs, with
+ * `running` saying whether the app already answers. The app is not started
+ * here: that waits until the model is known to be reachable.
  */
 async function prepare(ctx) {
   const config = readConfig(ctx)
@@ -217,11 +235,12 @@ async function prepare(ctx) {
       ),
     }
   }
-  if (!(await answers(start.url))) {
+  const running = await answers(start.url)
+  if (!running && config.start === undefined) {
     return {
       blocked: blockedEnvelope(
         `walkthrough found nothing answering at ${start.url}, so no walk was run.`,
-        'Start the app (this agent never starts it for you), check agentConfig.walkthrough.url, and run the agent again.'
+        'Start the app, or set agentConfig.walkthrough.start to the command that starts it; check agentConfig.walkthrough.url, and run the agent again.'
       ),
     }
   }
@@ -235,7 +254,7 @@ async function prepare(ctx) {
       ),
     }
   }
-  return { config, start, provider }
+  return { config, start, provider, running }
 }
 
 /**
@@ -262,11 +281,11 @@ async function main() {
   // best-effort prose the CLI scraped, and a strict shape would wedge on it.
   const stepContextSchema = z.looseObject({ contract: z.literal(CONTRACT) })
 
-  // No `drift`: this agent says `done` or `blocked`, and a mismatch is a
-  // concern under `done` for the person to weigh.
+  // `drift` is the one status the model can ask for, and lib.mjs grants it
+  // only when both of the model's quotes are real.
   const envelopeSchema = z.object({
     contract: z.literal(CONTRACT),
-    status: z.enum(['done', 'blocked']),
+    status: z.enum(['done', 'blocked', 'drift']),
     summary: z.string().min(1),
     body: z.string().optional(),
     notes: z.string().optional(),
@@ -278,39 +297,108 @@ async function main() {
   const trajectory = { record: () => {}, start_span: (name) => name, end_span: () => {} }
 
   const flow = step('walkthrough', async (ctx, run) => {
+    const began = Date.now()
     const ready = await prepare(ctx)
     if (ready.blocked) {
       log(`${ready.blocked.summary} ${ready.blocked.notes}`)
       return ready.blocked
     }
-    const { config, start, provider } = ready
-    log(
-      `walking step ${ctx.step?.n ?? '?'} at ${start.url} with ${config.provider}, ${config.model} (at most ${config.maxTurns} turns, ${config.timeoutSeconds} seconds)`
-    )
-    const engine = create_engine({ providers: provider.engineProviders })
+    const { config, start, provider, running } = ready
+
+    // The app, when this run starts it. A signal begins the teardown at once.
+    // On SIGTERM and SIGINT that is beside fascicle's own handler, which
+    // aborts the run; if the run has not unwound two seconds later the group
+    // is killed and the process exits. Nothing aborts the run on SIGHUP or
+    // SIGQUIT, so there the process exits as soon as the app is stopped, and
+    // an app still coming up goes with it through `startApp`'s exit hook.
+    const owned = { app: null }
+    const exitNow = () => {
+      owned.app?.killNow()
+      process.exit(1)
+    }
+    const onAbortingSignal = () => {
+      owned.app?.stop()
+      setTimeout(exitNow, SIGNAL_GRACE_MS).unref()
+    }
+    const onEndingSignal = () => {
+      setTimeout(exitNow, SIGNAL_GRACE_MS).unref()
+      Promise.resolve(owned.app?.stop()).then(exitNow, exitNow)
+    }
+    for (const signal of ABORTING_SIGNALS) process.on(signal, onAbortingSignal)
+    for (const signal of ENDING_SIGNALS) process.on(signal, onEndingSignal)
+
+    let appLine = null
     try {
-      return await deps.walk(
-        {
-          engine,
-          call: { provider: config.provider, model: config.model },
-          mcp_client: deps.mcp.mcp_client,
-          define_tool,
-          z,
-        },
-        {
-          ctx,
-          config,
-          start,
+      if (config.start !== undefined && running) {
+        appLine = `The app was already answering at ${start.url}, so the walk used it and the start command was not run.`
+        log(`${start.url} already answers; not running the start command`)
+      } else if (config.start !== undefined) {
+        const readySeconds = Math.min(config.readySeconds, config.timeoutSeconds)
+        log(`starting the app (${config.start}); waiting up to ${readySeconds} seconds for ${start.url}`)
+        const app = await startApp({
+          command: config.start,
           cwd: process.cwd(),
-          agentDir: AGENT_DIR,
+          url: start.url,
+          readySeconds,
           abort: run.abort,
-          log,
           secrets: secrets(),
-          keyEnv: KEY_ENV[config.provider],
+        })
+        if (!app.ok && app.why === 'aborted') throw new Error('the run was stopped while the app was starting')
+        if (!app.ok) {
+          const blocked = startBlocked(app, { command: config.start, url: start.url, readySeconds, secrets: secrets() })
+          log(`${blocked.summary} ${blocked.notes}`)
+          return blocked
         }
+        owned.app = app
+        log(`the app answers at ${start.url} (process group ${app.pid})`)
+      }
+
+      log(
+        `walking step ${ctx.step?.n ?? '?'} at ${start.url} with ${config.provider}, ${config.model} (at most ${config.maxTurns} turns, ${config.timeoutSeconds} seconds)`
       )
+      const engine = create_engine({ providers: provider.engineProviders })
+      let envelope
+      try {
+        envelope = await deps.walk(
+          {
+            engine,
+            call: { provider: config.provider, model: config.model },
+            mcp_client: deps.mcp.mcp_client,
+            define_tool,
+            z,
+          },
+          {
+            ctx,
+            config,
+            start,
+            cwd: process.cwd(),
+            agentDir: AGENT_DIR,
+            abort: run.abort,
+            log,
+            secrets: secrets(),
+            keyEnv: KEY_ENV[config.provider],
+            // The wall clock covers the whole run, so what starting the app
+            // cost comes out of it.
+            budgetMs: Math.max(1000, config.timeoutSeconds * 1000 - (Date.now() - began)),
+          }
+        )
+      } finally {
+        await engine.dispose()
+      }
+      if (owned.app !== null) {
+        const gone = await owned.app.stop()
+        log(gone ? 'the app was stopped' : `the app could not be stopped; process group ${owned.app.pid} is still running`)
+        appLine = gone
+          ? 'The app was started by the start command and stopped when the walk ended.'
+          : `The app was started by the start command and could not be stopped: process group ${owned.app.pid} is still running.`
+      }
+      return appLine === null ? envelope : withAppLine(envelope, appLine)
     } finally {
-      await engine.dispose()
+      // Every other way out: an error, a signal, an abort. `stop` runs once,
+      // so on the clean path this is the same promise, already settled.
+      await owned.app?.stop()
+      for (const signal of ABORTING_SIGNALS) process.off(signal, onAbortingSignal)
+      for (const signal of ENDING_SIGNALS) process.off(signal, onEndingSignal)
     }
   })
 

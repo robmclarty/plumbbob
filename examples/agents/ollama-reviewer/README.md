@@ -64,6 +64,9 @@ Watch the split as it runs: the `ollama-reviewer: …` lines and the model's spa
 envelope PlumbBob consumes). With Ollama stopped you get a `blocked` envelope telling
 you to start it — that's the intended loop — D52 (blocked-vs-drift) — not a failure.
 
+The demo input leaves `step.evidenceDir` out on purpose: this agent saves no evidence,
+and a standalone run has no build folder to save it in.
+
 Through PlumbBob — inside an active session (`plumbbob agent run` needs one, plus a
 current step):
 
@@ -94,8 +97,8 @@ Then, in Claude Code:
 1. `/plumbbob:plan .plumbbob/agents/ollama-reviewer/demo/spec.md` — plan absorbs the spec
    into `intent.md` and (per the spec's `## Harness` section) writes `harness.json`
    binding `ollama-reviewer` to every step's after slot. Inspect both at the plan pause.
-2. `/plumbbob:build` — at each step's verify pause the CLI runs the bound agent: the local
-   model's narration streams by, its envelope folds into self-review as **advisory
+2. `/plumbbob:build` — at each step's verify pause the CLI runs the bound agent: the
+   agent's progress lines go by on stderr, its envelope folds into self-review as **advisory
    input** (it informs, never gates), and any `later`-severity concerns land as park
    lines in `build-log.md`.
 
@@ -134,8 +137,12 @@ you want a ceiling.
   native constrained decoding) wrapped in `retry`, then mapped to the envelope.
 - **A human trajectory logger** — `run_stdio` defaults to `stderr_logger` (JSONL on
   stderr, already in contract, aimed at machines); this agent swaps in a logger that
-  streams the model's text raw and prints span names, so the person at the pause
-  watches the review happen.
+  prints span names as plain lines, so the person at the pause watches the review move.
+  The model's text does not stream here: `model_call` records a chunk only under
+  `run.stream`, and `run_stdio` does not stream. The sibling
+  [`reviewer`](../reviewer/) calls `engine.generate` itself and passes `on_chunk`, so
+  its text does.
 - **The envelope** — a completed review is always `done` (advisory even with concerns);
   `now`-severity concerns go in `body` for the human at the pause, `later` ones become
-  `parked[]` and land as park lines.
+  `parked[]` and land as park lines. The summary opens on `pass` or `concerns`, and it
+  reads `concerns` whenever the model lists one, whatever label the model gave.

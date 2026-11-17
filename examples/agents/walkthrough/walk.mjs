@@ -5,16 +5,20 @@
  * The model never talks to the MCP server. It calls the five tools defined
  * here, and each one checks its input, calls the server, reads the page back,
  * holds the browser to the configured origin and saves a screenshot under a
- * name this file chooses. The origin is read again before a picture is taken
- * and once more when the model stops, since a page can leave on a timer. That is where the security notes in the README are
- * kept: in code, with the system prompt saying the same thing a second time.
+ * name this file chooses. A page can leave on a timer, so the origin is read
+ * on both sides of every picture, and a picture that was not on the origin
+ * both times is deleted; it is read once more when the model stops. That is
+ * where the security notes in the README are kept: in code, with the system
+ * prompt saying the same thing a second time.
  */
 
+import { existsSync } from 'node:fs'
 import { mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import {
+  SNAPSHOT_CHAR_CAP,
   SYSTEM_PROMPT,
   blockedEnvelope,
   browserInstallLine,
@@ -28,11 +32,15 @@ import {
   onOrigin,
   oneLine,
   pageUrlOf,
+  proofOf,
   safeEvidenceDir,
   scrub,
   shotName,
+  snapshotOf,
   splitTabs,
+  suppliedByAddress,
   walkEnvelope,
+  withoutFrames,
   wrapPage,
 } from './lib.mjs'
 
@@ -91,12 +99,13 @@ function detailOf(err, secrets = []) {
  * `deps` carries what the walk is built on, so a test can swap the model for
  * a scripted one: `{ engine, call, mcp_client, define_tool, z }`, where `call`
  * is the `{ provider, model }` handed to `engine.generate`. `options` is
- * `{ ctx, config, start, cwd, agentDir, abort, log, secrets, keyEnv }`: the
- * StepContext, the resolved config, the parsed start url, the directory
+ * `{ ctx, config, start, cwd, agentDir, abort, log, secrets, keyEnv, budgetMs }`:
+ * the StepContext, the resolved config, the parsed start url, the directory
  * `step.evidenceDir` is relative to, this agent's own directory, the run's
  * abort signal, a function that narrates on stderr, the key values the run
- * read from the environment, and the name of the variable the provider's key
- * comes from.
+ * read from the environment, the name of the variable the provider's key
+ * comes from, and what is left of the wall-clock cap when some of it was
+ * spent before the walk (the whole of `timeoutSeconds` unless given).
  *
  * No error text reaches the envelope or the log with one of `secrets` in it,
  * and a refused credential is reported by the variable's name alone, since a
@@ -111,7 +120,7 @@ export async function walk(deps, options) {
   const detail = (err) => detailOf(err, secrets)
   const evidenceDir = safeEvidenceDir(ctx?.step?.evidenceDir)
   const timer = new AbortController()
-  const timeout = setTimeout(() => timer.abort(), config.timeoutSeconds * 1000)
+  const timeout = setTimeout(() => timer.abort(), options.budgetMs ?? config.timeoutSeconds * 1000)
   const abort = options.abort ? AbortSignal.any([options.abort, timer.signal]) : timer.signal
   const outerAborted = () => options.abort?.aborted === true
 
@@ -147,29 +156,36 @@ export async function walk(deps, options) {
   let actions = 0
   let shotIndex = evidenceDir === null ? 1 : nextShotIndex(existingShots(cwd, evidenceDir))
 
-  // Saves a screenshot under a name chosen here. A failure costs the picture
-  // and nothing else.
-  const shoot = async (label, caption) => {
-    if (evidenceDir === null) return false
-    const name = shotName(shotIndex, label)
-    shotIndex += 1
-    try {
-      await mkdir(join(cwd, evidenceDir), { recursive: true })
-      await mcp('browser_take_screenshot', { filename: `${evidenceDir}/${name}`, type: 'png', scale: 'css' })
-      shots.push({ name, caption })
-      return true
-    } catch (err) {
-      log(`could not save ${name} (${detail(err)})`)
-      return false
-    }
+  // Every page text the model is sent goes through here, so the drift rule
+  // can hold a quote to what the model was actually shown in this run: the
+  // part of each page under the snapshot cap, and no page it was kept from.
+  // Only the accessibility tree is kept. The address and the title above it
+  // are not the page's text, and an address is the model's own to write.
+  const seen = []
+  const remember = (page) => seen.push(snapshotOf(page.slice(0, SNAPSHOT_CHAR_CAP)))
+  const show = (page) => {
+    remember(page)
+    return wrapPage(page)
   }
+
+  // Every string the model typed into a field or put in an address. A page
+  // shows those back, so the drift rule sets them aside.
+  const supplied = []
 
   // Takes the tab list out of what the browser returned, and records each tab
   // outside the origin once. A tab's title is another page's text, so the
   // model is shown the page it is on and nothing about the tabs beside it.
+  // What is inside a frame goes the same way: a frame can hold another
+  // origin's page, and the snapshot does not say which origin it is on.
   const tabsSeen = new Set()
+  let framesSaid = false
   const pageOnly = (result) => {
-    const { page, offOrigin } = splitTabs(result, start)
+    const unframed = withoutFrames(result)
+    if (unframed.frames > 0 && !framesSaid) {
+      framesSaid = true
+      log('a page holds a frame; what is inside a frame is not shown to the model')
+    }
+    const { page, offOrigin } = splitTabs(unframed.page, start)
     for (const address of offOrigin) {
       if (tabsSeen.has(address)) continue
       tabsSeen.add(address)
@@ -194,8 +210,59 @@ export async function walk(deps, options) {
     if (!onOrigin(pageUrlOf(back), start)) throw new Error(`the browser could not get back to ${start.url}`)
     return {
       held: false,
-      refused: [`Refused: that took the browser outside ${start.origin}. It is back on ${start.url}.`, wrapPage(back)].join('\n'),
+      back,
+      refused: [`Refused: that took the browser outside ${start.origin}. It is back on ${start.url}.`, show(back)].join('\n'),
     }
+  }
+
+  // Deletes one screenshot this run wrote a moment ago, under the step's
+  // evidence folder. Nothing else is ever deleted: `shoot` picks a name no
+  // file had, so the file at that name is this run's own.
+  const discard = async (name) => {
+    await rm(join(cwd, evidenceDir, name), { force: true }).catch((err) => log(`could not delete ${name} (${detail(err)})`))
+  }
+
+  // Saves a screenshot under a name chosen here. The caller has just read the
+  // page on the origin; the page is read again after the picture, and a
+  // picture is kept only when the browser was on the origin both times, since
+  // a page can leave between the read and the shot. A picture that was not is
+  // deleted and recorded as a refusal. A failure to save costs the picture
+  // and nothing else.
+  //
+  // Returns `{ saved, page }` with the page as it stands after the picture,
+  // or `{ saved: false, refused, page }` when the page had left, where the
+  // page is the start url's, read after the browser went back to it.
+  const shoot = async (label, caption) => {
+    if (evidenceDir === null) return { saved: false }
+    while (existsSync(join(cwd, evidenceDir, shotName(shotIndex, label)))) shotIndex += 1
+    const name = shotName(shotIndex, label)
+    shotIndex += 1
+    try {
+      await mkdir(join(cwd, evidenceDir), { recursive: true })
+      await mcp('browser_take_screenshot', { filename: `${evidenceDir}/${name}`, type: 'png', scale: 'css' })
+    } catch (err) {
+      // The browser may have written the file before the call was stopped,
+      // and no second read of the origin stands behind it, so it goes.
+      await discard(name)
+      log(`could not save ${name} (${detail(err)})`)
+      return { saved: false }
+    }
+    let after
+    try {
+      after = await settle()
+    } catch (err) {
+      // Where the browser was after the picture is unknown, so the picture goes.
+      await discard(name)
+      throw err
+    }
+    if (!after.held) {
+      await discard(name)
+      refusals.push(`the screenshot ${name} was taken as the page left ${start.origin}, so it was deleted`)
+      log(`deleted ${name}: the page left ${start.origin} around the screenshot`)
+      return { saved: false, refused: after.refused, page: after.back }
+    }
+    shots.push({ name, caption })
+    return { saved: true, page: after.page }
   }
 
   // Reads the page back after an action. A page outside the configured origin
@@ -204,8 +271,10 @@ export async function walk(deps, options) {
   const observe = async (label, caption) => {
     const at = await settle()
     if (!at.held) return at.refused
-    if (label !== null) await shoot(label, caption)
-    return wrapPage(at.page)
+    if (label === null) return show(at.page)
+    const shot = await shoot(label, caption)
+    if (shot.refused) return shot.refused
+    return show(shot.page ?? at.page)
   }
 
   const { define_tool, z } = deps
@@ -222,6 +291,7 @@ export async function walk(deps, options) {
           return `Refused: ${guard.reason}.`
         }
         log(`navigate ${guard.url}`)
+        supplied.push(...suppliedByAddress(url, guard.url))
         await mcp('browser_navigate', { url: guard.url })
         actions += 1
         const path = new URL(guard.url).pathname
@@ -260,6 +330,7 @@ export async function walk(deps, options) {
       }),
       execute: async ({ element, ref, text, submit }) => {
         log(`type into ${oneLine(element)}`)
+        supplied.push(text)
         await mcp('browser_type', { element, target: ref, text, ...(submit ? { submit: true } : {}) })
         actions += 1
         return observe(`type ${element}`, `after typing into ${element}`)
@@ -273,11 +344,13 @@ export async function walk(deps, options) {
       execute: async ({ caption }) => {
         if (evidenceDir === null) return 'This step has no evidence folder, so nothing was saved.'
         // A page can leave the origin on a timer, after the last action was
-        // read back, so where the browser is gets read again before a picture.
+        // read back, so where the browser is gets read again before a picture,
+        // and `shoot` reads it once more after.
         const at = await settle()
         if (!at.held) return at.refused
-        const saved = await shoot(`shot ${caption}`, caption)
-        return saved ? 'Saved.' : 'The screenshot could not be saved.'
+        const shot = await shoot(`shot ${caption}`, caption)
+        if (shot.refused) return shot.refused
+        return shot.saved ? 'Saved.' : 'The screenshot could not be saved.'
       },
     }),
   ]
@@ -310,16 +383,21 @@ export async function walk(deps, options) {
         `The browser ended on ${oneLine(pageUrlOf(first) ?? 'an address it did not report', 200)}, outside ${start.origin}. Point agentConfig.walkthrough.url at a page that stays on its own origin.`
       )
     }
-    await shoot('start', 'the page the walk opened on')
+    const opening = await shoot('start', 'the page the walk opened on')
+    // When the page left around that first picture, the browser is back on
+    // the start url and the model is given the page as it was read then.
+    const firstShown = opening.page ?? first
+    remember(firstShown)
 
     let finalText = ''
     let ending = 'stop'
+    let turns = null
     try {
       const result = await deps.engine.generate({
         provider: deps.call.provider,
         model: deps.call.model,
         system: SYSTEM_PROMPT,
-        prompt: buildPrompt(ctx, start, first),
+        prompt: buildPrompt(ctx, start, firstShown),
         tools,
         max_steps: config.maxTurns,
         max_tool_calls_per_step: 1,
@@ -328,6 +406,7 @@ export async function walk(deps, options) {
       })
       finalText = typeof result.content === 'string' ? result.content : ''
       if (result.finish_reason === 'max_steps') ending = 'turns'
+      if (Array.isArray(result.steps)) turns = result.steps.length
     } catch (err) {
       if (outerAborted()) throw err
       if (!timer.signal.aborted) {
@@ -351,8 +430,13 @@ export async function walk(deps, options) {
         refusals.push(`the walk could not read where the browser ended (${detail(err)})`)
       }
     }
-    log(`the walk ended (${ending}) after ${actions} ${actions === 1 ? 'action' : 'actions'}`)
-    return walkEnvelope({ finalText, ending, actions, refusals }, buildEvidence(cwd, evidenceDir, shots), config)
+    const asked = turns === null ? '' : ` in ${turns} ${turns === 1 ? 'turn' : 'turns'}`
+    log(`the walk ended (${ending}) after ${actions} ${actions === 1 ? 'action' : 'actions'}${asked}`)
+    return walkEnvelope(
+      { finalText, ending, actions, refusals, proof: proofOf(ctx), seen, supplied },
+      buildEvidence(cwd, evidenceDir, shots),
+      config
+    )
   } finally {
     clearTimeout(timeout)
     await server.close().catch((err) => log(`closing the browser failed (${detail(err)})`))

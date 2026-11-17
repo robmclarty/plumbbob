@@ -7,9 +7,10 @@
  * other loopback name, which is a different origin, so the origin guard has
  * something to refuse with no network at all.
  *
- * Two more pages exist for the tests and are linked from nowhere: `/delayed`
- * leaves for the other origin on a timer, and `/opens-tab` holds a link that
- * opens the other origin's `/elsewhere` in a new tab.
+ * Three more pages exist for the tests and are linked from nowhere: `/delayed`
+ * leaves for the other origin on a timer, `/opens-tab` holds a link that
+ * opens the other origin's `/elsewhere` in a new tab, and `/framed` holds the
+ * other origin's `/elsewhere` in a frame.
  */
 
 import { createServer } from 'node:http'
@@ -46,7 +47,7 @@ function otherOrigin(host) {
 
 /**
  * Answers one request: `/` is the form, `/welcome` greets the name it was
- * given, `/delayed`, `/opens-tab` and `/elsewhere` are the test pages, and
+ * given, `/delayed`, `/opens-tab`, `/framed` and `/elsewhere` are the test pages, and
  * anything else is a 404.
  */
 function handle(req, res) {
@@ -71,6 +72,17 @@ function handle(req, res) {
         'Opens a tab',
         `<h1>Opens a tab</h1>
 <p><a id="tab" target="_blank" href="${escapeHtml(otherOrigin(req.headers.host))}elsewhere">Open the other site</a></p>`
+      )
+    )
+    return
+  }
+  if (url.pathname === '/framed') {
+    res.end(
+      page(
+        'Framed',
+        `<h1>Framed</h1>
+<iframe id="frame" title="The other site" src="${escapeHtml(otherOrigin(req.headers.host))}elsewhere"></iframe>
+<p id="below">Below the frame.</p>`
       )
     )
     return

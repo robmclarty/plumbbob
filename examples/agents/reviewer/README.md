@@ -81,7 +81,10 @@ against the logged-in session.
 Dependencies are `fascicle` + `zod` only. The Ollama path uses fascicle's **native** transport,
 which keeps the AI-SDK peers (`ai`, `ai-sdk-ollama`) out of the package; `claude_cli` is
 fascicle's **external** kind, driving the `claude` binary's own `--json-schema` constrained
-decode. (`ollama-reviewer`, the single-provider sibling, takes the AI-SDK path instead.)
+decode. The native transport sends no schema of its own, so the Ollama descriptor passes the
+review schema as Ollama's `format` field (through `provider_options.ollama`), and the model
+is held to it. Without that an 8B model guesses the keys: `qwen3:8b` failed the schema and
+both repairs on 2 runs of 2. (`ollama-reviewer`, the single-provider sibling, takes the AI-SDK path instead.)
 
 ## Install
 
@@ -107,11 +110,15 @@ node review.mjs < demo/stepcontext.json               # default provider: claude
 PB_REVIEWER_PROVIDER=ollama node review.mjs < demo/stepcontext.json   # the local path
 ```
 
-Watch the split as it runs: the `reviewer: …` lines and the model's streamed text are
-**stderr** (live narration); the single JSON object at the end is **stdout** (the one envelope
+Watch the split as it runs: the `reviewer: …` lines and, on the Ollama path, the model's
+streamed text are **stderr** (live narration); the single JSON object at the end is **stdout** (the one envelope
 PlumbBob consumes). If the chosen provider isn't ready — no `claude` on PATH, Ollama down, a
 model not pulled — you get a `blocked` envelope with the fix in `notes`; that's the intended
 loop — D52 (blocked-vs-drift) — not a failure.
+
+The demo input leaves `step.evidenceDir` out on purpose. A standalone run starts from the
+agent's own folder, and the diff the agent saves as evidence would be written there. With
+no folder named, nothing is saved and the envelope carries no `evidence`.
 
 Through PlumbBob — inside an active session (`plumbbob agent run` needs one, plus a current
 step):
@@ -196,11 +203,15 @@ for a ceiling.
 - **The flow** — resolve provider → `preflight()` (an obstacle short-circuits to `blocked`) →
   `git diff HEAD` scoped to the step's seam plus pseudo-diffs for untracked files, capped at
   40 KB (an empty diff short-circuits to a clean `done`) → `engine.generate` with a zod review
-  schema (`schema_repair_attempts` for the native path; real `--json-schema` for claude_cli),
-  wrapped in `retry` → mapped to the envelope.
+  schema (Ollama's `format` plus `schema_repair_attempts` for the native path; real
+  `--json-schema` for claude_cli), wrapped in `retry` → mapped to the envelope.
 - **A human trajectory logger** — `run_stdio` defaults to `stderr_logger` (JSONL on stderr,
   aimed at machines); this agent swaps in one that streams the model's text raw and prints span
-  names, so the person at the pause watches the review happen.
+  names, so the person at the pause watches the review happen. The text streams because the
+  call passes `on_chunk`; with a schema in force, what streams on the Ollama path is the
+  review as JSON. `claude_cli` returns a schema answer whole, so its run shows the span
+  names and no text.
 - **The envelope** — a completed review is always `done` (advisory even with concerns);
   `now`-severity concerns go in `body` for the human at the pause, `later` ones become
-  `parked[]` and land as park lines.
+  `parked[]` and land as park lines. The summary opens on `pass` or `concerns`, and it reads
+  `concerns` whenever the model lists one, whatever label the model gave.

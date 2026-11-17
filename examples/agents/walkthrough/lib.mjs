@@ -1,8 +1,8 @@
 /**
  * The pure parts of the walkthrough agent: config reading, the origin guard,
- * filename choice, evidence building and verdict mapping. Nothing here starts
- * a browser or calls a model, so `node --test` covers it with no install
- * beyond Node itself.
+ * filename choice, evidence building, the drift rule and verdict mapping.
+ * Nothing here starts a browser, an app or a model, so `node --test` covers it
+ * with no install beyond Node itself.
  */
 
 import { existsSync, readdirSync, statSync } from 'node:fs'
@@ -16,11 +16,33 @@ export const DEFAULT_MAX_TURNS = 30
 /** Four minutes: long enough for a local model, short enough to sit through. */
 export const DEFAULT_TIMEOUT_SECONDS = 240
 
+/** How long a started app has to answer at the url before the walk gives up. */
+export const DEFAULT_READY_SECONDS = 30
+
 /** A snapshot longer than this is cut before the model reads it. */
 export const SNAPSHOT_CHAR_CAP = 20_000
 
 const SLUG_CAP = 40
 const CAPTION_CAP = 80
+const QUOTE_CAP = 300
+
+/** A drift quote shorter than this proves nothing: one word is in every page. */
+const PROOF_QUOTE_FLOOR = 12
+const PAGE_QUOTE_FLOOR = 8
+
+/**
+ * Text the model typed or put in an address is cut out of a page before a
+ * drift quote is looked for there. A string shorter than this is left in:
+ * cutting every `a` the model typed would leave no page to quote.
+ */
+const SUPPLIED_FLOOR = 4
+
+/** A terminal colour or cursor sequence, which an app's output is full of. */
+const ANSI_SEQUENCE = new RegExp(`${String.fromCharCode(27)}\\[[0-9;?]*[A-Za-z]`, 'g')
+
+/** How much of a started app's output a `blocked` envelope carries. */
+const TAIL_LINES = 12
+const TAIL_LINE_CAP = 200
 
 /**
  * Reads a positive whole number from a config value, or returns the fallback.
@@ -42,6 +64,7 @@ function text(value) {
  *
  * The wall-clock cap is held to four fifths of plumbbob's own `agentTimeout`
  * when one is armed, so the walk ends with an envelope before the CLI kills it.
+ * `start` is a shell command and is read as written; nothing here runs it.
  */
 export function readConfig(ctx) {
   const agent = ctx?.settings?.agent ?? {}
@@ -54,6 +77,8 @@ export function readConfig(ctx) {
     model: text(agent.model),
     baseUrl: text(agent.baseUrl),
     browser: text(agent.browser),
+    start: text(agent.start),
+    readySeconds: positiveInt(agent.readySeconds, DEFAULT_READY_SECONDS),
     maxTurns: positiveInt(agent.maxTurns, DEFAULT_MAX_TURNS),
     timeoutSeconds: Math.max(1, timeoutSeconds),
   }
@@ -287,6 +312,80 @@ export function existingShots(cwd, evidenceDir) {
 }
 
 /**
+ * The accessibility tree of a Playwright MCP result, and nothing else: the
+ * lines under its `### Snapshot` heading, without the code fence around them.
+ * The address, the title, the code the server says it ran and its console
+ * notes are the server's words or the model's own, so none of them is page
+ * text a quote can rest on. A result with no snapshot gives an empty string.
+ */
+export function snapshotOf(result) {
+  const lines = String(result ?? '').split('\n')
+  const from = lines.findIndex((line) => /^#+ Snapshot\s*$/.test(line))
+  if (from === -1) return ''
+  const rest = lines.slice(from + 1)
+  const next = rest.findIndex((line) => /^#+ /.test(line))
+  return (next === -1 ? rest : rest.slice(0, next)).filter((line) => !/^```/.test(line)).join('\n')
+}
+
+/**
+ * Cuts what is inside every frame out of a Playwright MCP result. A snapshot
+ * lists a frame's content under its `- iframe` line, whatever origin the
+ * frame is on, and the result names no address for it, so the walk reads no
+ * frame at all: the line stays, with nothing under it.
+ *
+ * Returns `{ page, frames }`, where `frames` counts the frames that had
+ * something under them.
+ */
+export function withoutFrames(result) {
+  const kept = []
+  let frames = 0
+  let under = null
+  for (const line of String(result ?? '').split('\n')) {
+    const indent = line.length - line.trimStart().length
+    if (under !== null && line.trim().length > 0 && indent > under) continue
+    under = null
+    const frame = /^\s*- iframe\b.*:\s*$/.test(line)
+    if (frame) {
+      under = indent
+      frames += 1
+    }
+    kept.push(frame ? line.replace(/:\s*$/, '') : line)
+  }
+  return { page: kept.join('\n'), frames }
+}
+
+/**
+ * Every string an address hands to the app: the address as the model wrote
+ * it, as it resolved, its path, and each part of its query and fragment, both
+ * as sent and decoded. A page that prints its own query back, or the path it
+ * could not find, is printing the model's words, so these are what
+ * `checkDrift` sets aside.
+ */
+export function suppliedByAddress(requested, resolved) {
+  const out = [String(requested ?? '')]
+  const decoded = (value) => {
+    try {
+      return decodeURIComponent(value.replace(/\+/g, ' '))
+    } catch {
+      return value
+    }
+  }
+  try {
+    const url = new URL(resolved)
+    const search = url.search.replace(/^\?/, '')
+    const hash = url.hash.replace(/^#/, '')
+    out.push(url.href, url.pathname, decoded(url.pathname), search, decoded(search), hash, decoded(hash))
+    for (const pair of search.split('&')) {
+      const value = pair.includes('=') ? pair.slice(pair.indexOf('=') + 1) : pair
+      out.push(pair, decoded(pair), value, decoded(value))
+    }
+  } catch {
+    // Not an address: the text as written is all there is.
+  }
+  return [...new Set(out.filter((part) => part.length > 0))]
+}
+
+/**
  * Builds `evidence[]` from the files on disk. `shots` is what the walk asked
  * the browser to save, in order, each `{ name, caption }`; an entry is kept
  * only when its file exists and is not empty, so a screenshot the browser
@@ -315,29 +414,167 @@ export function capSnapshot(snapshotText) {
 }
 
 /**
- * Reads the model's last message for its verdict line. Returns the verdict
- * (`match`, `concern`, or `none` when there is no such line) and the prose
- * around it.
+ * Flattens untrusted text to one line for an indented block in the body:
+ * control characters and backticks out, whitespace squashed, cut to `cap`.
+ * Brackets stay, since a snapshot line is full of them and an indented block
+ * is not read as markdown.
  */
-export function parseVerdict(finalText) {
-  const body = typeof finalText === 'string' ? finalText.trim() : ''
-  const match = /^\s*VERDICT:\s*(MATCH|CONCERN)\b[^\n]*$/im.exec(body)
-  if (match === null) return { verdict: 'none', prose: body }
-  const prose = `${body.slice(0, match.index)}${body.slice(match.index + match[0].length)}`.trim()
-  return { verdict: match[1].toLowerCase(), prose }
+export function quoteLine(value, cap = QUOTE_CAP) {
+  const flat = Array.from(String(value ?? ''), (ch) => (ch.charCodeAt(0) < 32 || ch.charCodeAt(0) === 127 ? ' ' : ch))
+    .join('')
+    .replace(/`/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return flat.length > cap ? `${flat.slice(0, cap - 1).trimEnd()}…` : flat
 }
 
 /**
- * Maps a finished walk to the output envelope. The status is always `done`:
- * the walk ran. A clean match needs the model's MATCH line, a loop that ended
- * on its own, and no refused navigation; anything short of that is a concern,
- * said in the summary and spelled out in the body.
+ * Squashes every run of whitespace to one space, which is all the slack a
+ * drift quote is given.
+ */
+function squash(value) {
+  return String(value ?? '').replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * Takes one pair of quote marks off the ends of a quote, when the model
+ * wrapped it in them. What is left is a part of what was there, so a quote
+ * that was found before is still found.
+ */
+function unwrapQuote(value) {
+  const flat = squash(value)
+  const pairs = { '"': '"', "'": "'", '`': '`', '“': '”', '‘': '’' }
+  return flat.length >= 2 && pairs[flat[0]] === flat.at(-1) ? flat.slice(1, -1).trim() : flat
+}
+
+/**
+ * The step's proof as the walk reads it: the prose of `- proof:`, or the
+ * older `doneWhen`, or undefined when the step names neither.
+ */
+export function proofOf(ctx) {
+  const step = ctx?.step ?? {}
+  return text(step.proof?.text) ?? text(step.doneWhen)
+}
+
+/**
+ * Reads the model's last message for its verdict line. Returns the verdict
+ * (`match`, `concern`, `drift`, or `none` when there is no such line) and the
+ * prose around it. A `drift` also returns `claim`, the two quotes the model
+ * gave on its `PROOF:` and `PAGE:` lines, each undefined when the line is
+ * missing; those lines are taken out of the prose.
+ */
+export function parseVerdict(finalText) {
+  const body = typeof finalText === 'string' ? finalText.trim() : ''
+  const match = /^\s*VERDICT:\s*(MATCH|CONCERN|DRIFT)\b[^\n]*$/im.exec(body)
+  if (match === null) return { verdict: 'none', prose: body }
+  const rest = `${body.slice(0, match.index)}${body.slice(match.index + match[0].length)}`.trim()
+  const verdict = match[1].toLowerCase()
+  if (verdict !== 'drift') return { verdict, prose: rest }
+  const proofLine = /^\s*PROOF:[ \t]*(.*)$/im.exec(rest)
+  const pageLine = /^\s*PAGE:[ \t]*(.*)$/im.exec(rest)
+  const prose = rest
+    .split('\n')
+    .filter((line) => !/^\s*(PROOF|PAGE):/i.test(line))
+    .join('\n')
+    .trim()
+  return {
+    verdict,
+    prose,
+    claim: {
+      proof: proofLine && squash(proofLine[1]).length > 0 ? squash(proofLine[1]) : undefined,
+      page: pageLine && squash(pageLine[1]).length > 0 ? squash(pageLine[1]) : undefined,
+    },
+  }
+}
+
+/**
+ * A page with the model's own words cut out of it. Each supplied string of
+ * `SUPPLIED_FLOOR` characters or more is taken out wherever the page holds
+ * it, in any letter case, longest first, and a character no quote can hold
+ * is left where it was, so a quote cannot run across the cut. A page that
+ * rewrites what it was sent before printing it is not caught by this.
+ */
+function withoutSupplied(page, supplied) {
+  // A snapshot escapes a quote mark and a backslash, so a string holding one
+  // is not echoed as it was typed. Its pieces either side of them are.
+  const parts = supplied.flatMap((part) => [part, ...String(part).split(/["'\\]/)])
+  return [...new Set(parts.map((part) => squash(part)))]
+    .filter((part) => part.length >= SUPPLIED_FLOOR)
+    .sort((a, b) => b.length - a.length)
+    .reduce(
+      (out, part) => out.replace(new RegExp(part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), String.fromCharCode(0)),
+      page
+    )
+}
+
+/**
+ * The drift rule, held in code. A model may claim drift only by quoting a
+ * sentence of the step's proof and an excerpt of a page that contradicts it,
+ * and the claim stands only when both quotes are real: the first is found in
+ * the proof and the second in a snapshot this walk returned to the model,
+ * whitespace aside. `seen` is the accessibility tree of every page the model
+ * was sent in this run. `supplied` is every string the model typed into a
+ * field or put in an address: a page echoes those back, in the field or in
+ * what it prints, and words the model chose are not the page's, so they are
+ * cut out of each page before the quote is looked for.
  *
- * `walk` is `{ finalText, ending, actions, refusals }`, where `ending` is
- * `stop`, `turns` (the turn cap) or `time` (the wall-clock cap).
+ * Returns `{ ok: true, proof, page }` with the quotes as found, or
+ * `{ ok: false, reason }`. Whether the two contradict each other is not
+ * something code can read; that stays the model's claim, shown to the person.
+ */
+export function checkDrift(claim, proof, seen, supplied = []) {
+  if (typeof proof !== 'string' || squash(proof).length === 0) {
+    return { ok: false, reason: 'the step names no proof to drift from' }
+  }
+  if (claim?.proof === undefined && claim?.page === undefined) {
+    return { ok: false, reason: 'it quoted neither the proof nor a page' }
+  }
+  if (claim.proof === undefined) return { ok: false, reason: 'it gave no PROOF line quoting the proof' }
+  if (claim.page === undefined) return { ok: false, reason: 'it gave no PAGE line quoting a page' }
+  const whole = squash(proof)
+  const proofQuote = unwrapQuote(claim.proof)
+  const pageQuote = unwrapQuote(claim.page)
+  if (!whole.includes(proofQuote) || proofQuote.length === 0) {
+    return { ok: false, reason: "its PROOF quote is not in the step's proof" }
+  }
+  if (proofQuote.length < PROOF_QUOTE_FLOOR && proofQuote !== whole) {
+    return { ok: false, reason: `its PROOF quote is under ${PROOF_QUOTE_FLOOR} characters, too short to be a sentence of the proof` }
+  }
+  if (pageQuote.length < PAGE_QUOTE_FLOOR) {
+    return { ok: false, reason: `its PAGE quote is under ${PAGE_QUOTE_FLOOR} characters, too short to show anything` }
+  }
+  const pages = seen.map((page) => squash(page))
+  if (!pages.some((page) => page.includes(pageQuote))) {
+    return { ok: false, reason: 'its PAGE quote is in no page this walk showed it' }
+  }
+  if (!pages.some((page) => withoutSupplied(page, supplied).includes(pageQuote))) {
+    return {
+      ok: false,
+      reason: 'its PAGE quote holds text the model itself typed or put in an address, which is not the page\'s own',
+    }
+  }
+  return { ok: true, proof: proofQuote, page: pageQuote }
+}
+
+/**
+ * Maps a finished walk to the output envelope. A walk that ran is `done`,
+ * with one exception: a drift claim that passes `checkDrift` is `drift`. A
+ * clean match needs the model's MATCH line, a loop that ended on its own, and
+ * no refused navigation; anything short of that is a concern, said in the
+ * summary and spelled out in the body. A drift claim that fails the rule is
+ * one of those concerns.
+ *
+ * `walk` is `{ finalText, ending, actions, refusals, proof, seen, supplied }`,
+ * where `ending` is `stop`, `turns` (the turn cap) or `time` (the wall-clock
+ * cap), `proof` is the step's proof text, `seen` is the accessibility tree of
+ * every page the model was sent and `supplied` is every string the model
+ * typed or put in an address.
  */
 export function walkEnvelope(walk, evidence, caps) {
-  const { verdict, prose } = parseVerdict(walk.finalText)
+  const parsed = parseVerdict(walk.finalText)
+  const { prose } = parsed
+  const drift = parsed.verdict === 'drift' ? checkDrift(parsed.claim, walk.proof, walk.seen ?? [], walk.supplied ?? []) : null
+  const verdict = drift === null ? parsed.verdict : drift.ok ? 'drift' : 'concern'
   const concerns = []
   if (walk.ending === 'turns') {
     concerns.push(`The walk stopped at its cap of ${caps.maxTurns} ${caps.maxTurns === 1 ? 'turn' : 'turns'} before it reached a verdict.`)
@@ -346,29 +583,127 @@ export function walkEnvelope(walk, evidence, caps) {
   } else if (verdict === 'none') {
     concerns.push('The model ended the walk without a VERDICT line.')
   }
+  if (drift !== null && !drift.ok) {
+    concerns.push(`The model claimed drift and the claim was not accepted: ${drift.reason}. It is reported as a concern.`)
+  }
   for (const refusal of walk.refusals) concerns.push(`Refused: ${oneLine(refusal, 200)}.`)
 
   const clean = verdict === 'match' && concerns.length === 0
   const said = oneLine(prose.split('\n').find((line) => line.trim().length > 0) ?? '', 200)
-  const summary = clean
-    ? `match: ${said || 'the walk matched the proof.'}`
-    : `concerns: ${verdict === 'concern' && said ? said : concerns[0] ?? 'the walk did not match the proof.'}`
+  const summary =
+    verdict === 'drift'
+      ? `drift: ${said || 'a page contradicts the proof.'}`
+      : clean
+        ? `match: ${said || 'the walk matched the proof.'}`
+        : `concerns: ${verdict === 'concern' && said ? said : concerns[0] ?? 'the walk did not match the proof.'}`
 
-  const bodyLines = clean ? [] : [...concerns.map((line) => `- ${line}`)]
+  const bodyLines = []
+  const gap = () => (bodyLines.length > 0 ? [''] : [])
+  if (verdict === 'drift') {
+    bodyLines.push(
+      'The proof says:',
+      '',
+      `    ${quoteLine(drift.proof)}`,
+      '',
+      'A page showed:',
+      '',
+      `    ${quoteLine(drift.page)}`,
+      '',
+      "Both quotes were checked: the first is in the step's proof and the second is in a page this walk read. That they contradict each other is the model's claim, so read them.",
+      '',
+      'The fix is a refine of the plan (/plumbbob:refine), never a patch. If the app is wrong, the refine adds the step that mends it; if the proof is stale, the refine rewrites it.'
+    )
+  }
+  if (!clean && concerns.length > 0) bodyLines.push(...gap(), ...concerns.map((line) => `- ${line}`))
+  if (drift !== null && !drift.ok && (parsed.claim.proof !== undefined || parsed.claim.page !== undefined)) {
+    bodyLines.push(
+      '',
+      'What it quoted as the proof:',
+      '',
+      `    ${quoteLine(parsed.claim.proof ?? '(nothing)')}`,
+      '',
+      'What it quoted as a page:',
+      '',
+      `    ${quoteLine(parsed.claim.page ?? '(nothing)')}`
+    )
+  }
   // The summary already carries a one-line report; the body repeats the
   // model's words only when there is more to them than that line.
   const saidItAll = summary.endsWith(said) && said.length > 0 && !prose.trim().includes('\n')
   if (prose.length > 0 && !saidItAll) {
-    bodyLines.push(...(bodyLines.length > 0 ? [''] : []), 'What the model said:', '', prose)
+    bodyLines.push(...gap(), 'What the model said:', '', prose)
   }
   bodyLines.push(
-    ...(bodyLines.length > 0 ? [''] : []),
+    ...gap(),
     `${walk.actions} ${walk.actions === 1 ? 'action' : 'actions'} taken, ${evidence.length} ${evidence.length === 1 ? 'screenshot' : 'screenshots'} saved.`
   )
 
-  const envelope = { contract: CONTRACT, status: 'done', summary, body: bodyLines.join('\n') }
+  const envelope = { contract: CONTRACT, status: verdict === 'drift' ? 'drift' : 'done', summary, body: bodyLines.join('\n') }
   if (evidence.length > 0) envelope.evidence = evidence
   return envelope
+}
+
+/**
+ * Adds one paragraph about the app's process to a finished envelope: to
+ * `notes` when the walk was blocked, to `body` otherwise.
+ */
+export function withAppLine(envelope, line) {
+  const field = envelope.status === 'blocked' ? 'notes' : 'body'
+  const had = typeof envelope[field] === 'string' && envelope[field].length > 0
+  return { ...envelope, [field]: had ? `${envelope[field]}\n\n${line}` : line }
+}
+
+/**
+ * The last lines a started app printed, as they are safe to put in `notes`:
+ * keys cut out first, then escape sequences and control characters, blank
+ * lines dropped, each line cut to a width, and only the last few kept.
+ * `cut` says the head of the text was already dropped, so its first line is
+ * a fragment and goes too.
+ */
+export function outputTail(output, secrets = [], cut = false) {
+  const lines = scrub(output, secrets)
+    .split(/\r?\n/)
+    .slice(cut ? 1 : 0)
+    .map((line) =>
+      Array.from(line.replace(ANSI_SEQUENCE, ''), (ch) => (ch.charCodeAt(0) < 32 || ch.charCodeAt(0) === 127 ? ' ' : ch))
+        .join('')
+        .trimEnd()
+    )
+    .filter((line) => line.trim().length > 0)
+    .map((line) => (line.length > TAIL_LINE_CAP ? `${line.slice(0, TAIL_LINE_CAP - 1)}…` : line))
+  return lines.slice(-TAIL_LINES)
+}
+
+/**
+ * Builds the `blocked` envelope for an app the `start` command did not bring
+ * up. `failure` is what `startApp` returned: `why` is `never-ready` (the
+ * command kept running and nothing answered), `exited` (it ended first) or
+ * `spawn` (the shell could not be run), with the output tail beside it.
+ */
+export function startBlocked(failure, { command, url, readySeconds, secrets = [] }) {
+  // Keys go first: a cut can split one, and half a key is no longer a match.
+  const shown = quoteLine(scrub(command, secrets), 200)
+  const tail =
+    failure.tail.length > 0 ? `Its last output:\n${failure.tail.map((line) => `  ${line}`).join('\n')}` : 'It printed nothing.'
+  const port =
+    'If another program already holds that port, the app could not bind to it and this is what that looks like: free the port, or fix agentConfig.walkthrough.url.'
+  if (failure.why === 'spawn') {
+    return blockedEnvelope(
+      'walkthrough could not run its start command, so no walk was run.',
+      `agentConfig.walkthrough.start (${shown}) is run through sh, and sh could not be started: ${quoteLine(scrub(failure.detail, secrets), 200)}. Start the app yourself and take start out of the config.`
+    )
+  }
+  if (failure.why === 'exited') {
+    const how = failure.exit?.signal ? `was ended by ${failure.exit.signal}` : `exited with code ${failure.exit?.code ?? 'unknown'}`
+    return blockedEnvelope(
+      `walkthrough started the app and it stopped before ${url} answered, so no walk was run.`,
+      `The start command (${shown}) ${how} before anything answered at ${url}. ${port} ${tail}`
+    )
+  }
+  return blockedEnvelope(
+    `walkthrough started the app and ${url} never answered, so no walk was run.`,
+    `The start command (${shown}) ran for ${readySeconds} ${readySeconds === 1 ? 'second' : 'seconds'} and nothing answered at ${url}, so it was stopped. ${port} A slow app needs a longer agentConfig.walkthrough.readySeconds. ${tail}`
+  )
 }
 
 /**
@@ -412,9 +747,15 @@ export const SYSTEM_PROMPT = [
   'If the proof opens with a command in backticks, that command is run elsewhere; judge only what the app shows.',
   '',
   'When you have seen enough, stop calling tools and answer in this shape:',
-  'a first line that is exactly `VERDICT: MATCH` or `VERDICT: CONCERN`,',
+  'a first line that is exactly `VERDICT: MATCH`, `VERDICT: CONCERN` or `VERDICT: DRIFT`,',
   'then one sentence saying what you saw, then any detail worth a look.',
   'MATCH means everything the proof says of the app was there to see. Anything less, or anything you could not check, is CONCERN.',
+  'DRIFT is for one case: a page you were shown says something that contradicts a sentence of the proof.',
+  'To claim it, put two more lines under the verdict line: `PROOF: ` followed by that sentence copied from the proof word for word,',
+  'and `PAGE: ` followed by the text that contradicts it, copied word for word from a page you were shown.',
+  'The PAGE quote must be the page\'s own words: its address, its title, and anything you typed or put in an address yourself do not count, even where the page shows them back.',
+  'A frame shows as `iframe` with nothing under it. This walk does not read inside frames.',
+  'Both quotes are checked against what you were given, and a quote that is not there turns DRIFT into CONCERN. If you cannot quote both, answer CONCERN.',
 ].join('\n')
 
 /**
@@ -423,7 +764,7 @@ export const SYSTEM_PROMPT = [
  */
 export function buildPrompt(ctx, start, firstSnapshot) {
   const step = ctx?.step ?? {}
-  const proof = step.proof?.text ?? step.doneWhen
+  const proof = proofOf(ctx)
   return [
     `Step ${step.n ?? '?'}: ${step.title ?? '(untitled)'}`,
     proof ? `Proof: ${proof}` : 'Proof: (the step names none; walk what its title says)',

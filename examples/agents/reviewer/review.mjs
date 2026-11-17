@@ -10,7 +10,8 @@
  *   • claude_cli (default) — piggybacks the logged-in Claude session; no API
  *     key, no local model to pull. (external transport, needs fascicle >= 0.9.5)
  *   • ollama — a LOCAL model; the diff never leaves the machine. (native
- *     transport, no AI-SDK peer deps — fascicle's prompt+parse+repair loop)
+ *     transport, no AI-SDK peer deps; the review schema rides the request as
+ *     Ollama's own `format`, so the model is held to it)
  *
  * The switch itself is the whole shape: a provider is a descriptor (how to
  * configure the engine, what to call, how to preflight), and adding one is a
@@ -70,6 +71,8 @@ function fromEnv(...names) {
 //   label            the human string for the narration line
 //   engineProviders  the `providers` map handed to create_engine (per-provider)
 //   call             { provider, model } handed to engine.generate
+//   callOptions(jsonSchema)  optional: extra engine.generate options for this
+//                    provider, given the review schema as JSON Schema
 //   preflight()      → null when good to go, else an actionable blocked message
 // A factory (ctx) => descriptor resolves each provider's own config through the
 // precedence above, so the switch is uniform across providers.
@@ -122,6 +125,12 @@ function ollamaProvider(ctx) {
     // default 'ai_sdk' transport would demand ai-sdk-ollama as a peer.
     engineProviders: { ollama: { base_url: baseUrl, transport: 'native' } },
     call: { provider: 'ollama', model },
+    // The native transport sends no schema of its own: it tells the model to
+    // answer in "the expected schema" and never says what that is, so an 8B
+    // model guesses the keys and the run fails its repairs. Ollama's `format`
+    // field takes a JSON Schema and constrains the decode to it; fascicle
+    // merges provider_options.ollama into the /api/chat body as written.
+    callOptions: (jsonSchema) => ({ provider_options: { ollama: { format: jsonSchema } } }),
     // Preflight before burning a model call: an unreachable server and an
     // unpulled model each get an actionable `blocked` — the D52 (blocked-vs-drift) loop: the human
     // reads notes, fixes, re-runs. null = good to go.
@@ -244,7 +253,9 @@ const SYSTEM = [
 // run_stdio's default trajectory is stderr_logger (JSONL on stderr) — already
 // in contract, but aimed at machines. Swap in a human one: span names as
 // narration lines, model text streamed raw as it generates, so the person at
-// the pause watches the review happen.
+// the pause watches the review happen. The text arrives through the on_chunk
+// handed to engine.generate below, which records each chunk here; claude_cli
+// returns a schema answer whole, so on that path only the span names show.
 function stderrTrajectory() {
   let streamed = false
   return {
@@ -382,6 +393,10 @@ async function main() {
       `diff is ${collected.diff.length} bytes${collected.truncated ? ` (truncated to the first ${DIFF_BYTE_CAP})` : ''}`
     )
 
+    // The JSON Schema form of reviewSchema, without the $schema/$id stamps, for
+    // a provider that sends the schema on the wire itself.
+    const { $schema: _schema, $id: _id, ...reviewJsonSchema } = z.toJSONSchema(reviewSchema)
+
     const engine = create_engine({ providers: provider.engineProviders })
     try {
       const { content } = await engine.generate({
@@ -391,6 +406,10 @@ async function main() {
         system: SYSTEM,
         schema: reviewSchema,
         schema_repair_attempts: 2,
+        ...(provider.callOptions?.(reviewJsonSchema) ?? {}),
+        // A chunk reaches the logger only when the call asks for one: without
+        // on_chunk the engine does not stream, and stderr shows span names alone.
+        on_chunk: (chunk) => trajectory.record({ kind: 'model_chunk', chunk }),
         retry: { max_attempts: 2, initial_delay_ms: 500, max_delay_ms: 4000 },
         trajectory,
       })
@@ -405,10 +424,13 @@ async function main() {
           ? [`(The diff was truncated to its first ${DIFF_BYTE_CAP} bytes — the review may be partial.)`]
           : []),
       ]
+      // A small model will answer "pass" and list a concern in the same breath,
+      // so the label follows the list: any concern at all reads as concerns.
+      const assessment = content.concerns.length > 0 ? 'concerns' : content.assessment
       const envelope = {
         contract: CONTRACT,
         status: 'done', // advisory even with concerns — review informs, never gates
-        summary: `${content.assessment}: ${content.summary}`,
+        summary: `${assessment}: ${content.summary}`,
       }
       if (bodyLines.length > 0) envelope.body = bodyLines.join('\n')
       if (later.length > 0) envelope.parked = later.map((c) => `${c.file}: ${c.issue}`)

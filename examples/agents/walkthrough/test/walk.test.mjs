@@ -8,7 +8,7 @@
  */
 
 import assert from 'node:assert/strict'
-import { mkdtempSync, readFileSync, readdirSync, realpathSync, writeFileSync, mkdirSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, readdirSync, realpathSync, writeFileSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { after, before, test } from 'node:test'
@@ -37,8 +37,29 @@ after(async () => {
  * Runs one scripted walk against the fixture in a fresh working directory and
  * returns the envelope, the directory, and what the model was sent.
  */
-async function scripted(turns, { evidenceDir = 'evidence/2', agent = {}, beforeTool = {}, afterGenerate } = {}) {
+async function scripted(turns, { evidenceDir = 'evidence/2', agent = {}, beforeTool = {}, afterGenerate, beforeShot } = {}) {
   const cwd = realpathSync(mkdtempSync(join(tmpdir(), 'walkthrough-')))
+  // `beforeShot` holds the browser's own screenshot back, after the walk has
+  // read the page and before the picture is taken: the gap a page can leave in.
+  const client = beforeShot
+    ? async (...args) => {
+        const server = await mcp_client(...args)
+        const tools = server.tools.map((tool) =>
+          tool.name === 'browser_take_screenshot'
+            ? {
+                ...tool,
+                execute: async (input, ...rest) => {
+                  await beforeShot(input, cwd)
+                  const out = await tool.execute(input, ...rest)
+                  await beforeShot.after?.(input, cwd)
+                  return out
+                },
+              }
+            : tool
+        )
+        return { tools, close: () => server.close() }
+      }
+    : mcp_client
   const { engine, requests } = make_loop_engine(turns)
   // `beforeTool` holds one tool back until the test says go, and
   // `afterGenerate` holds the walk's last step back the same way. Neither
@@ -66,7 +87,7 @@ async function scripted(turns, { evidenceDir = 'evidence/2', agent = {}, beforeT
   const lines = []
   try {
     const envelope = await walk(
-      { engine: model, call: { provider: 'loop', model: 'loop' }, mcp_client, define_tool: held, z },
+      { engine: model, call: { provider: 'loop', model: 'loop' }, mcp_client: client, define_tool: held, z },
       { ctx, config, start: parseStartUrl(config.url), cwd, agentDir: AGENT_DIR, log: (line) => lines.push(line) }
     )
     return { envelope, cwd, requests, lines }
@@ -199,7 +220,8 @@ test('a walk held to its origin: a navigate elsewhere and a link out are both re
 test('a page that leaves on a timer is never photographed, and the walk is a concern', async (t) => {
   const { envelope, requests } = await scripted(
     [
-      [{ name: 'navigate', input: { url: '/delayed' } }],
+      // Long enough that the navigate is read back and photographed first.
+      [{ name: 'navigate', input: { url: '/delayed?ms=4000' } }],
       [{ name: 'take_screenshot', input: { caption: 'the delayed page' } }],
       'VERDICT: MATCH\nThe page is there.',
     ],
@@ -222,9 +244,72 @@ test('a page that leaves on a timer is never photographed, and the walk is a con
   assert.match(envelope.summary, /^concerns: Refused: the page went to http:\/\/localhost:\d+\/elsewhere, outside/)
 })
 
+test('a page that leaves between the read and the screenshot: that one picture is deleted', async (t) => {
+  // The walk reads /delayed on the origin, then the browser's screenshot is
+  // held until the page has left, so the picture taken is of the other site.
+  const left = leftTheOrigin()
+  const written = []
+  const beforeShot = async (input) => {
+    if (/delayed/.test(input.filename)) await left()
+  }
+  beforeShot.after = (input, cwd) => {
+    if (/delayed/.test(input.filename)) written.push(existsSync(join(cwd, input.filename)))
+  }
+  const { envelope, cwd, requests, lines } = await scripted(
+    [[{ name: 'navigate', input: { url: '/delayed?ms=1500' } }], 'VERDICT: MATCH\nThe page is there.'],
+    { beforeShot }
+  )
+  if (skipWithoutBrowser(t, envelope)) return
+
+  // The picture was really taken and really on disk for a moment.
+  assert.deepEqual(written, [true])
+  // It is gone, it is not evidence, and nothing else in the folder was touched.
+  assert.deepEqual(readdirSync(join(cwd, 'evidence/2')), ['01-start.png'])
+  assert.deepEqual(
+    envelope.evidence.map((e) => e.path),
+    ['evidence/2/01-start.png']
+  )
+  assert.ok(lines.some((line) => /^deleted 02-navigate-delayed\.png: the page left/.test(line)))
+  // The model is told, and is shown the start page, never the other one.
+  const results = toolResults(requests)
+  assert.match(results[0], /^Refused: that took the browser outside http:\/\/127\.0\.0\.1:\d+\. It is back on /)
+  assert.match(results[0], /heading "Sign in"/)
+  assert.doesNotMatch(results.join('\n'), /Elsewhere/)
+  assert.equal(envelope.status, 'done')
+  assert.match(envelope.summary, /^concerns: Refused: the page went to http:\/\/localhost:\d+\/elsewhere, outside/)
+  assert.match(
+    envelope.body,
+    /- Refused: the screenshot 02-navigate-delayed\.png was taken as the page left http:\/\/127\.0\.0\.1:\d+, so it was deleted\./
+  )
+})
+
+test('a screenshot the model asks for is deleted the same way, and an earlier file is left alone', async (t) => {
+  const left = leftTheOrigin()
+  const beforeShot = async (input) => {
+    if (/shot-the-delayed-page/.test(input.filename)) await left()
+  }
+  const { envelope, cwd, requests } = await scripted(
+    [
+      [{ name: 'navigate', input: { url: '/delayed?ms=4000' } }],
+      [{ name: 'take_screenshot', input: { caption: 'the delayed page' } }],
+      'VERDICT: MATCH\nThe page is there.',
+    ],
+    { beforeShot }
+  )
+  if (skipWithoutBrowser(t, envelope)) return
+
+  assert.deepEqual(readdirSync(join(cwd, 'evidence/2')).sort(), ['01-start.png', '02-navigate-delayed.png'])
+  assert.deepEqual(
+    envelope.evidence.map((e) => e.path),
+    ['evidence/2/01-start.png', 'evidence/2/02-navigate-delayed.png']
+  )
+  assert.match(toolResults(requests)[1], /^Refused: that took the browser outside/)
+  assert.match(envelope.body, /the screenshot 03-shot-the-delayed-page\.png was taken as the page left/)
+})
+
 test('a walk that ends off its origin is a concern, whatever the model said', async (t) => {
   const { envelope } = await scripted(
-    [[{ name: 'navigate', input: { url: '/delayed' } }], 'VERDICT: MATCH\nThe page is there.'],
+    [[{ name: 'navigate', input: { url: '/delayed?ms=4000' } }], 'VERDICT: MATCH\nThe page is there.'],
     { afterGenerate: leftTheOrigin() }
   )
   if (skipWithoutBrowser(t, envelope)) return
@@ -363,4 +448,146 @@ test('an app that does not answer is blocked, and the browser is closed', async 
   assert.equal(envelope.status, 'blocked')
   assert.equal(requests.length, 0)
   assert.ok(envelope.notes.length > 0)
+})
+
+test('a drift the model can back with both quotes is drift, with the quotes side by side', async (t) => {
+  const { envelope } = await scripted([
+    [{ name: 'navigate', input: { url: '/welcome' } }],
+    [
+      'VERDICT: DRIFT',
+      'PROOF: lands on a page headed "Welcome, Ada"',
+      'PAGE: heading "Welcome, stranger"',
+      'The welcome page greets a stranger, not Ada.',
+    ].join('\n'),
+  ])
+  if (skipWithoutBrowser(t, envelope)) return
+
+  assert.equal(envelope.status, 'drift')
+  assert.equal(envelope.summary, 'drift: The welcome page greets a stranger, not Ada.')
+  assert.match(
+    envelope.body,
+    /^The proof says:\n\n {4}lands on a page headed "Welcome, Ada"\n\nA page showed:\n\n {4}heading "Welcome, stranger"\n\n/
+  )
+  assert.match(envelope.body, /The fix is a refine of the plan \(\/plumbbob:refine\), never a patch\./)
+  assert.match(envelope.body, /1 action taken, 2 screenshots saved\.$/)
+  assert.equal(envelope.evidence.length, 2)
+})
+
+test('a model cannot produce drift from a page it never saw', async (t) => {
+  // "Welcome, stranger" is what /welcome says, and this walk never opens it.
+  const unseen = await scripted([
+    ['VERDICT: DRIFT', 'PROOF: lands on a page headed "Welcome, Ada"', 'PAGE: heading "Welcome, stranger"', 'It greets a stranger.'].join('\n'),
+  ])
+  if (skipWithoutBrowser(t, unseen.envelope)) return
+  assert.equal(unseen.envelope.status, 'done')
+  assert.equal(unseen.envelope.summary, 'concerns: It greets a stranger.')
+  assert.match(
+    unseen.envelope.body,
+    /- The model claimed drift and the claim was not accepted: its PAGE quote is in no page this walk showed it\. It is reported as a concern\./
+  )
+  assert.match(unseen.envelope.body, /What it quoted as a page:\n\n {4}heading "Welcome, stranger"/)
+
+  // Nor from a page the walk kept from it: the other origin's tab is open in
+  // the browser and its title is never shown, so quoting it does not stand.
+  const hidden = await scripted([
+    [{ name: 'navigate', input: { url: '/opens-tab' } }],
+    [{ name: 'click', input: { element: 'Open the other site', ref: '#tab' } }],
+    ['VERDICT: DRIFT', 'PROOF: lands on a page headed "Welcome, Ada"', 'PAGE: Elsewhere title', 'Another site opened.'].join('\n'),
+  ])
+  assert.equal(hidden.envelope.status, 'done')
+  assert.match(hidden.envelope.body, /its PAGE quote is in no page this walk showed it/)
+})
+
+test('a drift cannot rest on words the model put there itself', async (t) => {
+  const claim = (page) =>
+    ['VERDICT: DRIFT', 'PROOF: lands on a page headed "Welcome, Ada"', `PAGE: ${page}`, 'It greets Mallory.'].join('\n')
+  const own = /not accepted: its PAGE quote holds text the model itself typed or put in an address, which is not the page's own\./
+  const nowhere = /not accepted: its PAGE quote is in no page this walk showed it\./
+
+  // Typed into the field and never sent: the snapshot echoes the field.
+  const typed = await scripted([
+    [{ name: 'type', input: { element: 'Name field', ref: '#name', text: 'the page is headed Welcome, Mallory' } }],
+    claim('the page is headed Welcome, Mallory'),
+  ])
+  if (skipWithoutBrowser(t, typed.envelope)) return
+  assert.match(toolResults(typed.requests)[0], /the page is headed Welcome, Mallory/, 'the field does echo it')
+  assert.equal(typed.envelope.status, 'done')
+  assert.match(typed.envelope.body, own)
+
+  // Put in an address the app ignores: it is on the address line and nowhere on the page.
+  const query = await scripted([[{ name: 'navigate', input: { url: '/?headed=Welcome,Mallory' } }], claim('headed=Welcome,Mallory')])
+  assert.match(toolResults(query.requests)[0], /Page URL: \S*headed=Welcome,Mallory/, 'the address line does carry it')
+  assert.equal(query.envelope.status, 'done')
+  assert.match(query.envelope.body, nowhere)
+
+  // Put in an address the app prints back.
+  const printed = await scripted([
+    [{ name: 'navigate', input: { url: '/welcome?name=nobody+at+all+signed+in' } }],
+    claim('nobody at all signed in'),
+  ])
+  assert.match(toolResults(printed.requests)[0], /heading "Welcome, nobody at all signed in"/)
+  assert.equal(printed.envelope.status, 'done')
+  assert.match(printed.envelope.body, own)
+
+  // What the server writes above every page is not a page's text.
+  for (const line of ['- Page URL:', '- Page Title: Sign in']) {
+    const boilerplate = await scripted([claim(line)])
+    assert.equal(boilerplate.envelope.status, 'done', line)
+    assert.match(boilerplate.envelope.body, nowhere)
+  }
+})
+
+test('what is inside a frame is never shown to the model, and cannot be quoted', async (t) => {
+  const { envelope, requests, lines } = await scripted([
+    [{ name: 'navigate', input: { url: '/framed' } }],
+    [{ name: 'snapshot', input: {} }],
+    ['VERDICT: DRIFT', 'PROOF: lands on a page headed "Welcome, Ada"', 'PAGE: heading "Elsewhere heading"', 'Another site is on the page.'].join('\n'),
+  ])
+  if (skipWithoutBrowser(t, envelope)) return
+
+  const results = toolResults(requests)
+  // The page around the frame is read, and the frame is there as a line.
+  assert.match(results[1], /heading "Framed"/)
+  assert.match(results[1], /- iframe \[ref=\w+\]\n/)
+  assert.match(results[1], /Below the frame\./)
+  assert.doesNotMatch(JSON.stringify(requests.at(-1).messages), /Elsewhere/)
+  assert.equal(envelope.status, 'done')
+  assert.match(envelope.body, /not accepted: its PAGE quote is in no page this walk showed it\./)
+  assert.equal(lines.filter((line) => /what is inside a frame is not shown to the model/.test(line)).length, 1)
+})
+
+test('a screenshot whose call fails after the file was written is deleted', async (t) => {
+  // The browser writes the picture, then the call is cut off: what a stop or
+  // the wall-clock cap does to a screenshot already on its way.
+  const written = []
+  const beforeShot = async () => {}
+  beforeShot.after = (input, cwd) => {
+    if (!/navigate-welcome/.test(input.filename)) return
+    written.push(existsSync(join(cwd, input.filename)))
+    throw new Error('the call was stopped')
+  }
+  const { envelope, cwd, lines } = await scripted(
+    [[{ name: 'navigate', input: { url: '/welcome' } }], 'VERDICT: MATCH\nThe page is there.'],
+    { beforeShot }
+  )
+  if (skipWithoutBrowser(t, envelope)) return
+
+  assert.deepEqual(written, [true])
+  assert.deepEqual(readdirSync(join(cwd, 'evidence/2')), ['01-start.png'])
+  assert.deepEqual(
+    envelope.evidence.map((e) => e.path),
+    ['evidence/2/01-start.png']
+  )
+  assert.ok(lines.some((line) => /^could not save 02-navigate-welcome\.png \(the call was stopped\)/.test(line)), lines.join('\n'))
+})
+
+test('a drift whose proof quote is not in the proof is a concern', async (t) => {
+  const { envelope } = await scripted([
+    [{ name: 'navigate', input: { url: '/welcome' } }],
+    ['VERDICT: DRIFT', 'PROOF: the page must greet Ada by her full name', 'PAGE: heading "Welcome, stranger"', 'It greets a stranger.'].join('\n'),
+  ])
+  if (skipWithoutBrowser(t, envelope)) return
+  assert.equal(envelope.status, 'done')
+  assert.match(envelope.summary, /^concerns: It greets a stranger\./)
+  assert.match(envelope.body, /not accepted: its PROOF quote is not in the step's proof\./)
 })

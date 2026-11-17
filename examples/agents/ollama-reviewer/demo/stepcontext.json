@@ -7,10 +7,11 @@
     "title": "Greedy wrap(text, width) with tests",
     "proof": { "command": "node --test", "text": "`node --test` passes; `wrap()` breaks lines at the last space that fits" },
     "doneWhen": "`node --test` passes; `wrap()` breaks lines at the last space that fits",
-    "seam": []
+    "seam": [],
+    "like": []
   },
   "decisions": ["D1 (greedy-breaking): greedy line breaking over optimal — because it is what fmt/fold do and the simplest thing that works"],
   "constraints": ["C1 (no-runtime-deps): no runtime dependencies — because the demo must run anywhere Node runs", "C2 (node-test-only): node:test only — because the point is the loop, not the test framework"],
   "context": [],
-  "settings": { "auto": false, "agentTimeout": 0 }
+  "settings": { "auto": false, "agentTimeout": 0, "agent": {} }
 }

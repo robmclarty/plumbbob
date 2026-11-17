@@ -136,8 +136,9 @@ const SYSTEM = [
 
 // run_stdio's default trajectory is stderr_logger (JSONL on stderr) — already
 // in contract, but aimed at machines. Swap in a human one: span names as
-// narration lines, model text streamed raw as it generates, so the person at
-// the pause watches the review happen.
+// narration lines, so the person at the pause watches the review move. It
+// would print the model's text too, but model_call records a chunk only under
+// run.stream and run_stdio does not stream, so the span names are what shows.
 function stderrTrajectory() {
   let streamed = false
   return {
@@ -261,10 +262,13 @@ async function main() {
       (r) => {
         const now = r.content.concerns.filter((c) => c.severity === 'now')
         const later = r.content.concerns.filter((c) => c.severity === 'later')
+        // A small model will answer "pass" and list a concern in the same
+        // breath, so the label follows the list: any concern reads as concerns.
+        const assessment = r.content.concerns.length > 0 ? 'concerns' : r.content.assessment
         const envelope = {
           contract: CONTRACT,
           status: 'done', // advisory even when there are concerns — review informs, never gates
-          summary: `${r.content.assessment}: ${r.content.summary}`,
+          summary: `${assessment}: ${r.content.summary}`,
           body: [
             ...(now.length > 0 ? ['Concerns worth a look before continuing:', ...now.map((c) => `- ${c.file}: ${c.issue}`)] : []),
             ...(truncated ? [`(The diff was truncated to its first ${DIFF_BYTE_CAP} bytes — the review may be partial.)`] : []),
