@@ -99,7 +99,17 @@ this skill verifies it the same way: **it reads the diff, not the author**
 
    The three rows under the header rule are yours, and only those three; `check`, `seam`,
    `diff`, and `spent` are measured by the CLI, and a row you wrote for them would be
-   overwritten. Keep the rows contiguous (the first blank line ends them). Each opens with
+   overwritten. When the build folder's `reach.json` holds an answer for this step, the
+   `seam` row prints as `plumb` (`seam 3 · reach 1 · out 1`): a changed file is in the
+   seam, in the reach the plan could have expected, or outside both, and only an `out`
+   file is a stray
+   ([D155 (reach-is-computed)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d155)).
+   A `plan` row is the CLI's too, measured and shown by `plumbbob handoff`: when
+   `intent.md` was edited during the step, the Readout counts the lines and a Plan Edit
+   part beneath it shows the diff. You never edit `intent.md` during a step. If you find
+   you must, stop and say so
+   ([D162 (plan-edit-shown)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d162)).
+   Keep the rows contiguous (the first blank line ends them). Each opens with
    a verdict word from the closed set in the turn anatomy (`met`, `not met`, `drift`;
    `honored`, `none exercised`, `bent`, `drift`; `all honored`, `bent`, `drift`); a cited
    decision or constraint carries its slug (`C1 (no-new-deps)`, never a bare `C1`); a row
@@ -113,7 +123,7 @@ this skill verifies it the same way: **it reads the diff, not the author**
    build log's record keeps them; the card prints none of them and closes instead on a
    `[more details](…)` link to the file, which handoff writes, so you type no path. Five
    sections at most, each titled with one move in plain English, drawn from the
-   self-review. A judgment or a flag (a stray the seam row will name, a decision the diff
+   self-review. A judgment or a flag (a stray the seam row will name, or the `plumb` row count as `out`, a decision the diff
    bent, a doubt about the proof) is one of those sections, and the card carries it
    where it bears on the call: a bent row's `→` line points at it, and your recommendation
    names it when it changes the move. It is never a paragraph of its own. The
@@ -138,7 +148,8 @@ this skill verifies it the same way: **it reads the diff, not the author**
    your own; it carries fences of its own and they cannot nest. It prints the Summary, the
    Readout fence (its measured `check`, `seam`, `diff`, and `spent` rows folded with your
    three, the changed files listed beneath `diff`), a `diff` fence when the change is 20
-   lines or fewer, Your Call, the state table (the Verdict folded worst-of from the same
+   lines or fewer, an Evidence list when a bound agent saved something to look at, Your
+   Call, the state table (the Verdict folded worst-of from the same
    rows, the Now row naming the step you reviewed, Next Up, and the rows beneath it), your
    recommendation, and the `more details` link last. Run it once: a second run at the same
    pause prints the one-line reminder instead of the card, so if that line comes back

@@ -21,6 +21,7 @@
 // disagree about which parks are open; a park no proposal names stays open,
 // and the record says nothing about it.
 
+import { keepPlanCurrent } from '../lib/planfile.ts'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { ending, notice, printEnding, transition } from '../lib/notice.ts'
@@ -72,6 +73,9 @@ export function harvest(cwd: string, _args: ReadonlyArray<string>): number {
     return 1
   }
   const slug = activeBuild(root)
+  // A fold written into intent.md by hand before this verb ran leaves an
+  // exported plan.json behind; bring it current before anything is recorded.
+  keepPlanCurrent(root, slug)
   const detail = readOr(detailPath(root))
   const item = parseDetailRange(detail)
   if (item === null && !isHarvestDetail(detail)) {

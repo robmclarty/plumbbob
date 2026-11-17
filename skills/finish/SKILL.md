@@ -2,7 +2,7 @@
 name: finish
 description: "Finish the build: write the report (what shipped, decisions, parked/harvested items, deferred tangents), then make the final commit that closes the session. The build folder rides the branch into the PR: no separate archive. Report by default, no gate."
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob harvest:*), Bash(plumbbob order:*), Bash(plumbbob finish:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob harvest:*), Bash(plumbbob order:*), Bash(plumbbob finish:*), Bash(plumbbob export:*)
 ---
 
 # PlumbBob: finish the build (the close-out)

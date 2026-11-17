@@ -3,7 +3,9 @@
 // git-excluded turn ledger (flat files under `.plumbbob/`): it ticks `TURN`,
 // the monotonic count of human turns the checkpoint latch compares against a
 // step's entry stamp to know a human turn intervened since the step began, and
-// it rewrites `GRANT` from the literal prompt, minting a one-turn
+// it settles the plan mark (the plan as it stands when a person types is the
+// plan they are typing over, so only an edit made after the prompt is shown as
+// one), and it rewrites `GRANT` from the literal prompt, minting a one-turn
 // self-approval only when the human typed `/build --auto`, a step range (`N-M`,
 // or a list such as `20,5-9`), or `/plumbbob:run`, clearing it otherwise (those
 // strings can only come from a human keystroke, because `build` and `run` are
@@ -43,6 +45,7 @@ import {
   stepPath,
   turnPath,
 } from '../lib/sidecar.ts'
+import { basePlan, settlePlan } from '../lib/planmark.ts'
 import { hasStep, normalizeStepList, readBuildArgs } from '../lib/steplist.ts'
 import { waitingCard } from './handoff.ts'
 
@@ -268,6 +271,8 @@ export function applyTurn(cwd: string, raw: string): boolean {
     const minted = mintSafely(root, prompt)
     setGrant(root, minted.grant)
     setRun(root, minted.run)
+    baseSafely(root, minted.grant !== null && minted.planEdits === true)
+    settleSafely(root)
   }
   // Last, so a record that cannot be written never costs the tick or the grant.
   notePrompt(root, promptId)
@@ -342,8 +347,12 @@ function argumentLine(prompt: string, invocation: RegExpExecArray): string {
 /** What the hook read of the active build, for resolving a run; the range number comes from the prompt. */
 export type BuildRead = Omit<RunInput, 'item'>
 
-/** What one typed prompt leaves in GRANT and in the RUN mark: null clears each. */
-export type Minted = { readonly grant: string | null; readonly run: number | null }
+/**
+ * What one typed prompt leaves in GRANT and in the RUN mark: null clears
+ * each. `planEdits` is set only when the prompt minted a grant and the
+ * invocation that minted it carried `--plan-edits`.
+ */
+export type Minted = { readonly grant: string | null; readonly run: number | null; readonly planEdits?: true }
 
 /**
  * The GRANT one typed prompt mints and the RUN mark it leaves, given the
@@ -364,12 +373,14 @@ export function mintFromPrompt(prompt: string, build: BuildRead | null, marked: 
   const run = RUN_INVOCATION.exec(prompt)
   const first = BUILD_INVOCATION.exec(prompt)
   if (run === null || (first !== null && first.index < run.index)) {
-    return { grant: grantFromPrompt(prompt), run: heldMark(build, marked) }
+    const grant = grantFromPrompt(prompt)
+    const flagged = grant !== null && first !== null && readBuildArgs(argumentLine(prompt, first)).planEdits === true
+    return { grant, run: heldMark(build, marked), ...(flagged ? { planEdits: true as const } : {}) }
   }
   const args = readRunArgs(argumentLine(prompt, run))
   const resolved = args === null || build === null ? null : resolveRun({ ...build, item: args.item })
   if (resolved?.ok !== true || resolved.grant === null) return { grant: null, run: null }
-  return { grant: resolved.grant, run: resolved.range.item }
+  return { grant: resolved.grant, run: resolved.range.item, ...(args?.planEdits === true ? { planEdits: true as const } : {}) }
 }
 
 /**
@@ -393,6 +404,32 @@ function mintSafely(root: string, prompt: string): Minted {
     return mintFromPrompt(prompt, readBuild(root), readRun(root))
   } catch {
     return { grant: null, run: null }
+  }
+}
+
+/**
+ * Take or drop the run's plan base at a typed prompt. A failure leaves no
+ * allowance, which is the strict reading, and never costs the tick or the
+ * grant.
+ */
+function baseSafely(root: string, allowed: boolean): void {
+  try {
+    basePlan(root, undefined, allowed)
+  } catch {
+    // No base, so a plan edit stops the run as it does without the flag.
+  }
+}
+
+/**
+ * Settle the plan mark at a typed prompt: the plan as it stands is the plan
+ * the human is typing over. A failure settles nothing, and never costs the
+ * tick or the grant.
+ */
+function settleSafely(root: string): void {
+  try {
+    settlePlan(root)
+  } catch {
+    // The mark stays as it was, so a plan that then reads as edited is shown.
   }
 }
 

@@ -173,6 +173,14 @@ pause) and idles there until you approve. **Pull, not block.** You stay the deci
 because a wall refuses you, but because the system stops and waits for you to be the clock.
 Re-firing the next run, or the next build, *is* the clock tick.
 
+The plan is held the same way. Nothing stops an edit to `intent.md` in the middle of a
+step, by you or by the model. PlumbBob keeps a copy of the plan as it was last approved,
+and when the file differs from that copy at a pause, the card says so in a `plan` row of
+its own and shows the diff beneath the Readout. A run you granted stops at that step
+instead of landing it, because the grant was for the plan as it stood when you typed it
+([D162 (plan-edit-shown)](decisions.md#d162)). The edit is never refused; it is never
+carried past you either.
+
 What the loop pulls up to has a fixed shape ([the turn anatomy](presentation.md)): a
 **Summary** of the outcome, a **Readout** of measured rows (the check, the proof, the
 decisions and constraints, the seam, the diff with each changed file beneath it, what the
@@ -391,7 +399,8 @@ default** (what shipped, the decisions and why, what was parked and how it was c
 the final status, and the deferred tangents that become future work), but there is **no
 refuse-without-report gate**; guidance offers the artifact, it does not wall the exit. Then
 `plumbbob finish` appends a `## Checkpoints` list of the SHAs and a `## Stats` table (a row
-per step: red checks, drift warnings, reverts, wall-clock) to the report, makes the final
+per step: red checks, drift warnings, reverts, wall-clock, and plan edits when a step
+landed with an edited plan) to the report, makes the final
 commit (subject `chore(<scope>): finish`), and clears the control state. It writes **no
 separate archive copy**: the build's `builds/<slug>/` folder is tracked, so it merges into
 `main` with the branch and rides into the PR.

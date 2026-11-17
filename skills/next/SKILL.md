@@ -2,7 +2,7 @@
 name: next
 description: "The one command to remember: asks what to do next as a short list of choices, the moves open from where the build stands, then makes the one you pick. A move that lands work or starts a run stays typed, and its choice says what to type."
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob start:*), Bash(plumbbob build:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob park:*), Bash(plumbbob defer:*), Bash(plumbbob order:*), Bash(plumbbob agent:*), Bash(plumbbob spike:*), Bash(git diff:*), Bash(git status:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob start:*), Bash(plumbbob build:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob park:*), Bash(plumbbob defer:*), Bash(plumbbob order:*), Bash(plumbbob agent:*), Bash(plumbbob spike:*), Bash(git diff:*), Bash(git status:*), Bash(plumbbob export:*), Bash(plumbbob research:*), WebSearch, WebFetch
 ---
 
 # PlumbBob: what next? (the one door)

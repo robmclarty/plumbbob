@@ -3,7 +3,7 @@ name: plan
 description: "Frame a fresh goal and author the whole plan (Frame, Decisions, Constraints, all Steps, and the build ranges) before any code. Three input modes: no arg interviews you; a file path (or @-mention) absorbs a spec; any other text expands your inline intent."
 argument-hint: "[spec-path | intent]"
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob handoff:*), Bash(plumbbob start:*), Bash(plumbbob checkpoint:*), Bash(plumbbob defer:*), Bash(plumbbob agent list:*), Bash(plumbbob research:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob handoff:*), Bash(plumbbob start:*), Bash(plumbbob checkpoint:*), Bash(plumbbob defer:*), Bash(plumbbob agent list:*), Bash(plumbbob research:*), Bash(plumbbob export:*), WebSearch, WebFetch
 ---
 
 # PlumbBob: plan a goal (the whole-goal move)
@@ -74,7 +74,8 @@ The argument only seeds how you get there.
    record lenses. A **medium** plan runs all three. Where the host can run subagents, run
    the lenses in parallel, one subagent each, the ecosystem lens with the host's own web
    tools; the record lens needs no web at all. Where it cannot, read through them in turn
-   yourself.
+   yourself. With no web tool on the host, skip the ecosystem lens and say so when you
+   present the plan; never write an ecosystem finding from memory.
 
    Write what they find to `research.md` in the build folder, beside `intent.md`: one
    `## Ecosystem`, `## Codebase` or `## Record` section per lens that ran, and every
@@ -184,7 +185,8 @@ The argument only seeds how you get there.
    each ride a step at most once, and a plan with none of them exports fully serial, which
    is what plumbbob builds anyway
    ([docs/plan-export.md](https://github.com/robmclarty/plumbbob/blob/main/docs/plan-export.md)).
-   Write one only when the human asks for it or a scheduler will read the plan. When the
+   Write one only when the human asks for it or a scheduler will read the plan. The first
+   `plumbbob export` is what creates `plan.json`, and a build never exported has none. When the
    build folder already holds a `plan.json`, any edit you make to `intent.md` leaves it
    behind and turns the next check red, so run `plumbbob export` after the edit, before
    the plan card
@@ -289,7 +291,13 @@ The argument only seeds how you get there.
    agent, not *when*; the host model reads each manifest's `when` prose and a step's
    `note` and decides when to run one mid-build. Skip the file entirely when no step
    uses an agent; the loop runs identically without it. The plan commit picks it
-   up automatically (it lives in the build folder).
+   up automatically (it lives in the build folder). A binding may be a path in place of
+   a name: `./tools/walk` resolves from the repo root and must stay inside it, so an
+   agent kept in the repo outside `.plumbbob/agents/` is bound by its path and every
+   clone runs it, where a name only your personal tier holds is skipped with a warning
+   on a teammate's machine. `plumbbob agent list` walks the tiers, so an
+   agent bound by its path does not show there
+   ([D160 (path-bindings)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d160)).
 8. **Commit the plan.** Once the human approves the frame and steps, run
    `plumbbob checkpoint --plan` to commit the scaffold on its own: subject
    `chore(<scope>): plan` (with a `plumbbob plan` body marker), only `.plumbbob/builds/<slug>/`,

@@ -1,5 +1,7 @@
+import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
 import { agent } from '../agent.ts'
 import { checkpoint } from '../checkpoint.ts'
@@ -223,8 +225,22 @@ describe('agent run — failure modes — D46 (stream-discipline), D51 (agent-ti
     })
     const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', 'slow', '--step', '1']))
     expect(code).toBe(1)
-    expect(stderr).toContain('timed out after 1s')
+    // The shell and its sleep went on the SIGTERM, so nothing was killed.
+    expect(stderr).toContain('agent "slow" timed out after 1s (stopped)')
+    expect(stderr).not.toContain('killed')
   }, 15000)
+
+  it('says killed, and the grace it gave, only for an agent the SIGKILL had to end', async () => {
+    const dir = await startedBuild()
+    writeFileSync(settingsPath(dir), JSON.stringify({ agentTimeout: 1 }))
+    makeAgent(dir, 'deaf', {
+      slots: ['build'],
+      script: `trap '' TERM\ncat >/dev/null\nwhile :; do sleep 0.1; done\n`,
+    })
+    const { code, stderr } = await captureIoAsync(() => agent(dir, ['run', 'deaf', '--step', '1']))
+    expect(code).toBe(1)
+    expect(stderr).toContain('agent "deaf" timed out after 1s (given 5s to stop, killed)')
+  }, 30000)
 })
 
 describe('agent run — fail-loud resolution — D54 (bindings-degrade-soft)', () => {
@@ -425,6 +441,82 @@ function ledgerAgents(root: string): ReadonlyArray<string> {
 }
 
 const runAfter = ['run', '--step', '1', '--mode', 'after']
+
+// plumbbob being stopped is a signal to the process itself, so this runs the
+// real CLI in a process of its own and signals that.
+const CLI = fileURLToPath(new URL('../../cli.ts', import.meta.url))
+
+describe('agent run — an interrupt ends the batch — D161 (graceful-agent-stop)', () => {
+  for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
+    it(`starts no later binding once ${signal} has stopped the first`, async () => {
+      const dir = await startedBuild()
+      makeAgent(dir, 'first', {
+        slots: ['after'],
+        script: `exec 2>/dev/null\ncat >/dev/null\necho up > "$PLUMBBOB_AGENT_DIR/up"\nwhile :; do sleep 0.1; done\n`,
+      })
+      makeAgent(dir, 'second', {
+        slots: ['after'],
+        script: `cat >/dev/null\necho started > "$PLUMBBOB_AGENT_DIR/started"\necho '{"contract":1,"status":"done","summary":"ran anyway"}'\n`,
+      })
+      makeAgent(dir, 'third', { slots: ['after'], script: DONE_SCRIPT })
+      writeHarness(dir, { contract: 1, defaults: { after: ['first', 'second', 'third'] }, steps: {} })
+
+      const cli = spawn(process.execPath, [CLI, 'agent', 'run', '--mode', 'after', '--step', '1'], {
+        cwd: dir,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      })
+      let stdout = ''
+      let stderr = ''
+      cli.stdout.on('data', (chunk: Buffer) => (stdout += chunk.toString()))
+      cli.stderr.on('data', (chunk: Buffer) => (stderr += chunk.toString()))
+      const closed = new Promise<number | null>((done) => cli.on('close', done))
+
+      const up = join(dir, '.plumbbob', 'agents', 'first', 'up')
+      const deadline = Date.now() + 20_000
+      while (!existsSync(up) && Date.now() < deadline) {
+        await new Promise((tick) => setTimeout(tick, 50))
+      }
+      expect(existsSync(up)).toBe(true)
+      cli.kill(signal)
+
+      expect(await closed).toBe(1)
+      expect(stderr).toContain('agent "first" killed (interrupted)')
+      expect(stderr).toContain('plumbbob: interrupted, so not running second, third')
+      expect(stderr).not.toContain('agent "second"')
+      expect(existsSync(join(dir, '.plumbbob', 'agents', 'second', 'started'))).toBe(false)
+      expect(existsSync(join(dir, '.plumbbob', 'agents', 'third', 'last-input.json'))).toBe(false)
+      expect(stdout).toBe('')
+      expect(existsSync(handoffPath(dir))).toBe(false)
+    }, 40_000)
+  }
+
+  it('says nothing more when the interrupted agent was the last one bound', async () => {
+    const dir = await startedBuild()
+    makeAgent(dir, 'only', {
+      slots: ['after'],
+      script: `exec 2>/dev/null\ncat >/dev/null\necho up > "$PLUMBBOB_AGENT_DIR/up"\nwhile :; do sleep 0.1; done\n`,
+    })
+    writeHarness(dir, { contract: 1, defaults: { after: ['only'] }, steps: {} })
+    const cli = spawn(process.execPath, [CLI, 'agent', 'run', '--mode', 'after', '--step', '1'], {
+      cwd: dir,
+      stdio: ['ignore', 'ignore', 'pipe'],
+    })
+    let stderr = ''
+    cli.stderr.on('data', (chunk: Buffer) => (stderr += chunk.toString()))
+    const closed = new Promise<number | null>((done) => cli.on('close', done))
+    const up = join(dir, '.plumbbob', 'agents', 'only', 'up')
+    const deadline = Date.now() + 20_000
+    while (!existsSync(up) && Date.now() < deadline) {
+      await new Promise((tick) => setTimeout(tick, 50))
+    }
+    expect(existsSync(up)).toBe(true)
+    cli.kill('SIGTERM')
+
+    expect(await closed).toBe(1)
+    expect(stderr).toContain('agent "only" killed (interrupted)')
+    expect(stderr).not.toContain('not running')
+  }, 40_000)
+})
 
 describe('agent — the built-in tier — D159 (builtin-tier)', () => {
   it('agent list shows a built-in with its origin, under the project and personal ones', async () => {

@@ -108,6 +108,13 @@
               "type": "string"
             }
           },
+          "like": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "stop": {
             "default": "none",
             "type": "string",

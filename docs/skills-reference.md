@@ -124,7 +124,10 @@ placed by sequence (`plumbbob order`, the [build order](#order)), never by renum
 the verb files it into the build range the order puts it in; the skill edits a range itself
 only to give a step a bare range of its own, or to move a stop, in the same before/after. It can also sharpen
 that step's [harness bindings](#the-harness-slots) just-in-time when the agents it wants
-have drifted. Most steps need nothing; skip straight to `/plumbbob:run` (or
+have drifted. It adds a `- like:` line when sharpening turns up a clear exemplar and cuts
+one whose file moved ([D156 (like-is-advice)](decisions.md#d156)), and after an edit made
+by hand it runs `plumbbob export` when the build has a `plan.json`
+([D146 (cli-keeps-current)](decisions.md#d146)). Most steps need nothing; skip straight to `/plumbbob:run` (or
 `/plumbbob:build`).
 
 ### run
@@ -184,7 +187,12 @@ checkpoint prints the boundary block for it to relay. An `expand`, or a directio
 answered in the model's own words above one line pointing back at the step, since a card
 shows once and every later turn at it is a reply
 ([D110 (reply-after-the-card)](decisions.md#d110)), and `show the pause` has the skill run
-`plumbbob handoff --full` to bring it back. While a
+`plumbbob handoff --full` to bring it back. With a stored reach the Readout's `seam` row
+prints as `plumb`, the diff split into seam, reach, and out
+([the reach](reach.md#the-plumb-row)), and what a bound agent saved to look at shows as
+links beneath the Readout ([D157 (evidence-is-shown)](decisions.md#d157)). A red proof
+halts `--auto` and a range the way a red check does
+([D154 (red-proof-holds)](decisions.md#d154)). While a
 run's stop card waits for its reply, `plumbbob build` enters no step, since the step's
 pause would write over the range's review in `.plumbbob/detail.md`; the skill relays the
 refusal, which names the reply that records the card, and ends the turn
@@ -199,8 +207,8 @@ proof's command when it opens on one, commit, record the SHA, flip the step to `
 run here too, as **advisory input** to the self-review; checkride gates, they never do.
 It reads the *diff, not the author*: a step you wrote by hand or vibed in another harness
 verifies exactly like a `/plumbbob:build` step. The pause it reaches is the same block,
-rendered the same way, and the one file it writes is the detail file, never the diff
-under review.
+rendered the same way, `plumb` row and evidence links included, and the one file it writes
+is the detail file, never the diff under review.
 
 ### park
 
@@ -234,8 +242,9 @@ same verb when they add a step, so you rarely need to fire this yourself.
 ### status
 
 The orientation move: a thin trigger for `plumbbob status`. Prints the dashboard (title,
-phase, the step list with the next step's proof, seam, and advisory model
-recommendation, last checkpoint, the build order when it departs from the numbering,
+phase, the step list with the next step's proof, seam, `like:` files, and advisory model
+recommendation, a `research predates …` row when the plan's research has aged, last
+checkpoint, the build order when it departs from the numbering,
 the build ranges when the plan has them, `parked 2 of 7 open`, and the open questions
 counted apart, `open questions 1 to answer, 2 deferred`)
 and names the single next move, which is the run when the next step sits in a range. The model line is the plan's suggestion of the smallest model that can carry
@@ -251,7 +260,8 @@ signal** (the approach is wrong; stop and replan). It proposes every class at on
 reply settles the list: you call each one, changing any lean before you approve. Confirmed
 items are recorded through `plumbbob harvest`, under `## Harvest`, after `plumbbob handoff
 --harvest` shows every proposal in the lean table, and a confirmed blocker is
-folded into `intent.md`; when it becomes a step, `plumbbob order` places it in the
+folded into `intent.md`, with a `plumbbob export` after the fold when the build has a
+`plan.json`; when it becomes a step, `plumbbob order` places it in the
 [build order](#order) and files it into the build range still to come that the order puts it
 in. A
 range's stop is the boundary that matters most: no harvest runs between the steps inside a
@@ -284,7 +294,9 @@ beside its `intent.md`, binding agents to a step's three lifecycle slots:
 
 `/plumbbob:plan` authors the bindings at plan time and `/plumbbob:step` sharpens them just-in-time;
 both keep the file **bindings + prose only, never a conditional** ([C3 (bindings-not-logic)](decisions.md#c3)). The file says
-*which* agent; *when* to fire one mid-build is judgment the host model makes by reading
+*which* agent, by name or by a `./` path to an agent kept in the repo
+([D160 (path-bindings)](decisions.md#d160)); a name resolves through the project, personal,
+and built-in tiers, in that order ([D159 (builtin-tier)](decisions.md#d159)). *When* to fire one mid-build is judgment the host model makes by reading
 each manifest's `when` prose and a step's `note`. `/plumbbob:build` runs the `before`/`build`
 slots, `/plumbbob:verify` runs `after`, and `/plumbbob:run` drives both across a range; each
 surfaces a non-`done` envelope by its status:
@@ -298,7 +310,8 @@ for authors lives in [`agents.md`](agents.md); `plumbbob status` lists a build's
 ### refine
 
 Keeps `intent.md` honest, in two modes. **Attack**: a cold, adversarial read of the Frame
-and Decisions that surfaces holes as one-line **Open questions**, never as Decisions,
+and Decisions that surfaces holes as **Open questions** (an opener, a `*plain:*` line, and
+a `*lean:*` line), never as Decisions,
 because resolving a hole is your call. **Repair**: when the plan has drifted from what the
 code actually does, it proposes the edits that bring it back, before/after, written only
 on your approval, a step it adds placed through `plumbbob order`, which files it into a build
@@ -312,7 +325,8 @@ The plan pause's cold read is refine's tip: it surfaces the worst hole and names
 for the rest, so the full attack stays optional and arrives when the read says it would
 pay. Refine is where the real adversary looks; the cold read is an estimate.
 
-When the dashboard carries a `research predates a lockfile change: …` row, refine offers to
+When the dashboard carries a `research predates a lockfile change: …` row, or a
+`research predates a dependency change: …` one, refine offers to
 run the ecosystem lens again against what moved and restamp `research.md`
 ([the research pass](research.md#the-staleness-row)). It is an offer; the row gates nothing.
 
@@ -371,7 +385,7 @@ destructive by design).
 Readies a repo that has never used plumbbob for its first `/plumbbob:plan` (a thin driver
 for `plumbbob setup`). It adds only what is missing: the `.plumbbob/` folder, a
 `settings.json` seeded as `{}`, and the `info/exclude` lines that keep the control files
-(`STATE`, `TURN`, `PROMPT`, `RELAY`, and the rest) out of git. An existing folder, settings
+(`STATE`, `TURN`, `PROMPT`, `RELAY`, each build's evidence folder, and the rest) out of git. An existing folder, settings
 file, or exclude line is left as it is, so a second run adds nothing and says so. It opens
 no session; `/plumbbob:plan` does that ([D126 (setup-before-start)](decisions.md#d126)).
 
@@ -381,7 +395,9 @@ Diagnoses the install from inside a session (a thin trigger for `plumbbob doctor
 plugin linked, are the skills and all four hooks present, is there a marketplace/skills-dir
 collision, does the repo carry a legacy sidecar, is the repo set up for a first build, and
 how the check gate will resolve. A repo-setup gap is a `○` warning, never a failure, since
-a repo set up by hand can be as ready as one `/plumbbob:setup` touched. On a
+a repo set up by hand can be as ready as one `/plumbbob:setup` touched. Its reach section
+says whether `atis` is on PATH for [the reach](reach.md); atis is optional, so a missing
+one is a `○` line too. On a
 **marketplace** install this is the only way to reach `doctor` (the CLI is on PATH only
 inside a session).
 

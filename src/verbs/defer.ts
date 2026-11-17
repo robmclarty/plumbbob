@@ -13,6 +13,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { activeBuild, hasSession, intentPath } from '../lib/sidecar.ts'
+import { remarkPlan } from '../lib/planmark.ts'
 import { deferQuestion, type OpenQuestion, questionsToAnswerNamed } from '../lib/orient.ts'
 import { advisory, ending, notice, printEnding, transition } from '../lib/notice.ts'
 import { refreshAdvisory, refreshPlan } from '../lib/planfile.ts'
@@ -60,7 +61,8 @@ export function defer(cwd: string, args: ReadonlyArray<string>): number {
   }
   const path = intentPath(root)
   const date = new Date().toISOString().slice(0, 10)
-  const deferral = deferQuestion(readFileSync(path, 'utf8'), question, date, until)
+  const before = readFileSync(path, 'utf8')
+  const deferral = deferQuestion(before, question, date, until)
   if (deferral.kind === 'resolved') {
     process.stderr.write(notice({ fact: `${question} is already resolved`, detail: ['its opener says so'] }))
     return 1
@@ -76,6 +78,8 @@ export function defer(cwd: string, args: ReadonlyArray<string>): number {
     return 1
   }
   writeFileSync(path, deferral.intent)
+  // The deferral is the CLI's own write, so the plan mark follows it.
+  remarkPlan(root, undefined, before)
   const planNotice = refreshAdvisory(refreshPlan(root, activeBuild(root)))
   printEnding(root, {
     tier: 'driver',

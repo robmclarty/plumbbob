@@ -37,6 +37,7 @@ order puts before it:
 ```markdown
 4. [ ] feat(plan): derive runciter.plan/2 from intent.md
    - seam: `src/lib/plan.ts`, `src/lib/__tests__/plan.test.ts`
+   - like: `src/lib/intent.ts`
    - proof: `pnpm vitest run plan` passes; the vendored example round-trips
    - model: opus (the contract's shape, where a wrong default is a parallel run)
    - after: 2-3
@@ -54,6 +55,7 @@ It exports as:
   "range": "2",
   "depends_on": ["step-2", "step-3"],
   "seam": ["src/lib/plan.ts", "src/lib/__tests__/plan.test.ts"],
+  "like": ["src/lib/intent.ts"],
   "stop": "structural",
   "effort": "high",
   "proof": {
@@ -128,6 +130,7 @@ same context `plumbbob agent` hands one today ([D139 (field-mapping)](decisions.
 | `steps[].title` | the step's title, cut before an older **done when:** clause where the line still has one |
 | `steps[].range` | the item number of the `## Build ranges` entry naming the step, as a string, or `null` |
 | `steps[].seam` | the step's seam tokens, as the strict seam parse reads them |
+| `steps[].like` | the paths the step's `- like:` lines name, in the order written, or `[]` |
 | `steps[].proof.text` | the step's `- proof:` line, verbatim, backticks kept |
 | `steps[].proof.command` | the contents of the code span that opens that line, or `null` when it opens on words |
 | `steps[].context` | the step's `- note:` lines, verbatim, in order |
@@ -143,6 +146,13 @@ at once, and its stop is not taken again. That is what lets a person build the f
 with plumbbob and hand the rest over. `runciter.plan/1` had no such field, and a scheduler
 reading it would have built the landed steps again; `/2` began with this field.
 
+A step's `like` is the files its `- like:` lines name to copy the pattern from
+([D156 (like-is-advice)](decisions.md#d156)), so a builder under runciter reads the same
+exemplars `plumbbob agent` hands one as `step.like`. It is advice. A token that is not a
+plain repo-relative path is dropped before the export, so what is written always fits the
+contract's path grammar, and no check below reads the list: a like path that does not exist
+exports as written, and the plan card is where it shows.
+
 A step's proof is what shows it is done. Its text goes to the step's builder and critic as
 the acceptance. Its command, when there is one, is a shell command run at the repo root
 that must exit 0 for the step to count as proven, the same command `plumbbob checkpoint`
@@ -155,7 +165,7 @@ in place of `/1`'s `done_when` string.
 
 The file is written one way ([D144 (bytes-compare)](decisions.md#d144)): two-space JSON,
 keys in the contract's order (the order the table above lists them in, and within a step
-`id`, `title`, `range`, `depends_on`, `seam`, `stop`, `effort`, `proof`, `context`,
+`id`, `title`, `range`, `depends_on`, `seam`, `like`, `stop`, `effort`, `proof`, `context`,
 `landed`, and within a proof `command`, `text`),
 every default written out, and a trailing newline. "Current" means its bytes equal a fresh
 derivation's.
@@ -287,7 +297,7 @@ active build, and `plumbbob export <slug>` for any build folder, a finished one 
 existed ([D149 (opt-in-by-presence)](decisions.md#d149)): a person with no scheduler pays
 nothing for one.
 
-Once the file exists, two things keep it honest:
+Once the file exists, three things keep it honest:
 
 - **The CLI keeps up with its own writes.** `checkpoint` (its tick of the step's box),
   `plumbbob order` and `plumbbob defer` each write `intent.md`, and each re-exports right
@@ -296,10 +306,15 @@ Once the file exists, two things keep it honest:
   the step's commit, and the refreshed `plan.json` lands beside it, so the two ride the
   next commit together. A write that leaves the plan failing a rule or a check keeps the
   old file, and the verb's ending says so in an advisory pointing at `plumbbob export`.
-- **The check catches every other edit.** `plumbbob check`, and the checkpoint gate with
-  it, derives the plan afresh and compares bytes. A hand edit, or a model's edit through
-  `/plumbbob:step` or `/plumbbob:refine`, leaves the file behind, and the check fails until
-  `plumbbob export` runs again:
+- **The verbs that move a build on refresh it first.** `plumbbob build`, `checkpoint`,
+  `harvest` and `finish` each bring the file up to `intent.md` before they do anything
+  else, so a hand edit, or a model's edit through `/plumbbob:step`, `/plumbbob:refine` or
+  a harvest's fold, is caught up by the next move and never reaches the gate or a commit
+  as a stale file. Nobody has to remember the export. When the edit leaves the plan
+  failing a rule or a check, the old file is kept and the verb says so.
+- **The check catches what is left.** `plumbbob check` run by itself refreshes nothing: it
+  derives the plan afresh and compares bytes, so a CI run, or a check between two moves,
+  still fails on a file that is behind, until `plumbbob export` runs again:
 
 ```text
 plumbbob: plan.json is behind intent.md; run `plumbbob export` to bring it current.
@@ -326,7 +341,7 @@ failing check named `plan`, its lines in `.check/plan.txt`, so a pause's check r
 ## Conformance
 
 The JSON Schema and the example are copied byte for byte from runciter into
-`test/contract/runciter-plan/` (first at `9b40f0f`, again on 2026-11-13 for `/2`), with a
+`test/contract/runciter-plan/` (first at `9b40f0f`, twice more on 2026-11-13 for `/2`), with a
 README naming where they came from
 ([D148 (vendored-contract)](decisions.md#d148)); runciter is private and unpublished, so
 the test cannot import it. The tests validate every derived plan against that schema with

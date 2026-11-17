@@ -75,6 +75,7 @@ describe('derivePlan', () => {
       range: null,
       depends_on: [],
       seam: ['src/types.ts'],
+      like: [],
       stop: 'none',
       effort: null,
       proof: { command: null, text: 'the type is exported' },
@@ -82,6 +83,33 @@ describe('derivePlan', () => {
       landed: true,
     })
     expect(plan.steps.map((s) => s.landed)).toEqual([true, false, false])
+  })
+
+  it('exports a step\'s like in the order written, and an empty list for a step with none', () => {
+    const steps = [
+      '1. [ ] a',
+      '   - seam: `a.ts`',
+      '   - like: `src/lib/intent.ts`, `./src/lib/__tests__/`',
+      '   - proof: `true` passes',
+      '   - like: `docs/agents.md`, `src/lib/intent.ts`',
+      '2. [ ] b',
+      '   - seam: `b.ts`',
+      '   - proof: `true` passes',
+    ].join('\n')
+    const plan = derive(intent({ steps }))
+    expect(plan.steps.map((s) => s.like)).toEqual([['src/lib/intent.ts', 'src/lib/__tests__/', 'docs/agents.md'], []])
+  })
+
+  it('drops a like token the contract would refuse, and never makes it a finding', () => {
+    const steps = [
+      '1. [ ] a',
+      '   - seam: `a.ts`',
+      '   - like: `src/*.ts`, `/etc/passwd`, `../up.ts`, `src\\a.ts`, `src//a.ts`, `~/x`, `src/kept.ts`',
+      '   - like:',
+      '   - proof: `true` passes',
+    ].join('\n')
+    const r = derivePlan({ intent: intent({ steps }), slug: 'rate-limit', path: '.plumbbob/builds/rate-limit/intent.md', sha256: SHA })
+    expect(r.ok && r.plan.steps[0]?.like).toEqual(['src/kept.ts'])
   })
 
   it('follows the build order for the serial default, and lists steps in plan-number order', () => {
@@ -240,6 +268,7 @@ describe('serializePlan', () => {
       'range',
       'depends_on',
       'seam',
+      'like',
       'stop',
       'effort',
       'proof',

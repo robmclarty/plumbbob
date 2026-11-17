@@ -683,6 +683,34 @@ describe('status — harness bindings — D48 (doctor-validates-agents)', () => 
     expect(stdout).not.toContain('harness bindings')
   })
 
+  it('lists agents bound in settings alone, so a build with no harness.json still shows the block', async () => {
+    const home = makeTempDir()
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Settings Bound']))
+    writeFileSync(join(dir, '.plumbbob', 'settings.json'), JSON.stringify({ agents: { after: ['reviewer', 'ghost'] } }))
+    putAgent(dir, 'reviewer')
+
+    const { code, stdout } = statusWithHome(home, dir)
+    expect(code).toBe(0)
+    expect(stdout).toContain('harness bindings:')
+    expect(stdout).toContain('settings · after: reviewer, ghost')
+    expect(stdout).not.toContain('bound agent "reviewer"')
+    expect(stdout).toContain('⚠ bound agent "ghost" does not resolve')
+  })
+
+  it('lists the settings bindings above the harness rows when both bind agents', async () => {
+    const home = makeTempDir()
+    const dir = await startedWithHarness(JSON.stringify({ contract: 1, defaults: { before: ['gather'] } }))
+    writeFileSync(join(dir, '.plumbbob', 'settings.json'), JSON.stringify({ agents: { after: ['reviewer'] } }))
+    for (const name of ['reviewer', 'gather']) putAgent(dir, name)
+
+    const { stdout } = statusWithHome(home, dir)
+    const block = stdout.slice(stdout.indexOf('harness bindings:'))
+    expect(block.indexOf('settings · after: reviewer')).toBeGreaterThan(0)
+    expect(block.indexOf('settings · after: reviewer')).toBeLessThan(block.indexOf('defaults · before: gather'))
+    expect(stdout).not.toContain('⚠')
+  })
+
   it('surfaces a broken harness.json rather than hiding it', async () => {
     const home = makeTempDir()
     const dir = await startedWithHarness('{ not json')

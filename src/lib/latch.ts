@@ -143,7 +143,14 @@ export function parseGrant(raw: string): Grant | null {
  * (which latches on the TICK that `start` stamped).
  */
 export function checkLatch(root: string, step: number | null): LatchDecision {
-  return evaluateLatch({
+  return evaluateLatch(latchInput(root, step))
+}
+
+/**
+ * The latch's inputs as the worktree holds them now.
+ */
+function latchInput(root: string, step: number | null): LatchInput {
+  return {
     isTTY: process.stdin.isTTY === true,
     turn: readCount(turnPath(root)),
     tick: readCount(tickPath(root)),
@@ -151,7 +158,43 @@ export function checkLatch(root: string, step: number | null): LatchDecision {
     step,
     // Read from the settings ladder, but only to decorate the pause, never to allow.
     settingsAuto: resolveBoolean(root, 'auto', false),
-  })
+  }
+}
+
+/**
+ * The refusal for a landing whose plan was edited after the human last
+ * typed, with the lines the edit added and removed.
+ *
+ * An approval, and a grant, cover the plan as it stood when the human typed
+ * them, so a step whose plan changed since stops at its pause, grant or not.
+ * Like every latch refusal it is the pause rather than an error, and it says
+ * what the pause is and how it ends. `plumbbob handoff` prints the whole card
+ * for an edit no card has shown, so the command it names is the one that
+ * shows the row.
+ */
+export function planEditMessage(step: number, added: number, removed: number): string {
+  return `plumbbob: checkpoint refused — intent.md was edited during step ${step} (+${added} -${removed}), and the human has
+not typed since it changed. An approval, or a grant they typed, covers the plan as it stood
+when they typed it, not a changed one. This is the pause, and the call is theirs: write the
+detail file, run \`plumbbob handoff\` (it prints the card with the \`plan\` row and the diff)
+and relay it whole, then end the turn. Their approval on their next turn is what lets this
+land — re-run \`checkpoint\` then and stop at the boundary.
+`
+}
+
+/**
+ * The refusal for a plan edit a grant with \`--plan-edits\` still does not
+ * cover: one that changes a Decision, a Constraint, or a step that has landed.
+ */
+export function planEditHeldMessage(step: number, added: number, removed: number, held: string): string {
+  return `plumbbob: checkpoint refused — intent.md was edited during step ${step} (+${added} -${removed}), and the edit changes
+${held}. The grant the human typed allows plan edits, and it does not reach the
+Decisions, the Constraints, or a step that has landed: those are what the range was
+approved against. This is the pause, and the call is theirs: write the detail file, run
+\`plumbbob handoff\` (it prints the card with the \`plan\` row and the diff) and relay it
+whole, then end the turn. Their approval on their next turn is what lets this land —
+re-run \`checkpoint\` then and stop at the boundary.
+`
 }
 
 /** What the stop's record latch reads: a human at the keyboard, the turn count now, and the turn the stop card printed in. */

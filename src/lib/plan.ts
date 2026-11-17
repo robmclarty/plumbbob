@@ -7,6 +7,7 @@
 import {
   parseBuildTitle,
   parseStepFields,
+  parseStepLike,
   parseStepMeta,
   parseStepProof,
   parseStepSeam,
@@ -30,6 +31,7 @@ export type PlanStep = {
   readonly range: string | null
   readonly depends_on: ReadonlyArray<string>
   readonly seam: ReadonlyArray<string>
+  readonly like: ReadonlyArray<string>
   readonly stop: PlanStop
   readonly effort: StepEffort | null
   readonly proof: StepProof
@@ -106,9 +108,12 @@ function waitsInOrder(
  * range in build order stops `planned`, a bare range's one step included, and
  * a `stop:` line overrides any step's. A step's proof is its `proof:` line,
  * the command being the code span that opens it, or else the older
- * `**done when:**` clause as text with no command. A step whose lines, seam,
- * or proof will not read, or that has no proof at all, is a finding by step,
- * and any finding refuses the whole plan rather than exporting a guess.
+ * `**done when:**` clause as text with no command. A step's like is the paths
+ * its `like:` lines name that read as plain repo-relative paths, an empty
+ * list for none; it is advice, so a like line is never a finding. A step
+ * whose lines, seam, or proof will not read, or that has no proof at all, is
+ * a finding by step, and any finding refuses the whole plan rather than
+ * exporting a guess.
  */
 export function derivePlan(input: {
   readonly intent: string
@@ -168,6 +173,7 @@ export function derivePlan(input: {
       range: range === undefined ? null : String(range.item),
       depends_on: (waits.get(step.n) ?? []).map(stepId),
       seam: seam.seam,
+      like: parseStepLike(intent, step.n),
       stop: fields.fields.stop ?? (rangeEnds.has(step.n) ? 'planned' : 'none'),
       effort: fields.fields.effort,
       proof: { command: proof.proof.command, text: proof.proof.text },
@@ -217,6 +223,7 @@ export function serializePlan(plan: Plan): string {
       range: s.range,
       depends_on: s.depends_on,
       seam: s.seam,
+      like: s.like,
       stop: s.stop,
       effort: s.effort,
       proof: { command: s.proof.command, text: s.proof.text },

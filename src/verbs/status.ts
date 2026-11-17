@@ -15,9 +15,11 @@ import {
   SLOTS,
   type HarnessBindings,
   type SlotBindings,
+  parseSlotBindings,
   readHarnessFile,
   resolveBinding,
 } from '../lib/agents.ts'
+import { resolveRecord } from '../lib/settings.ts'
 import {
   buildFolder,
   buildLogPath,
@@ -31,6 +33,7 @@ import {
   stepPath,
 } from '../lib/sidecar.ts'
 import { readGrant, type Grant } from '../lib/latch.ts'
+import { planEditsAllowed } from '../lib/planmark.ts'
 import { researchStale } from '../lib/researchfile.ts'
 import {
   formatOrientation,
@@ -177,7 +180,7 @@ export function status(cwd: string, args: ReadonlyArray<string> = []): number {
   const dashboard =
     run === null
       ? formatOrientation(orient(input))
-      : withWaiting(formatRunDashboard(input, resolveRunArgs(run, input), grantText(readGrant(root))), card)
+      : withPlanEdits(withWaiting(formatRunDashboard(input, resolveRunArgs(run, input), grantText(readGrant(root))), card), root, slug)
   const lines = [dashboard, ...harnessSection(root, slug)]
   process.stdout.write(`${lines.join('\n')}\n`)
   return 0
@@ -238,32 +241,51 @@ function withWaiting(dashboard: string, card: WaitingCard | null): string {
 }
 
 /**
- * The active build's harness bindings: the agents bound to each slot, per
- * `defaults` and per step.
+ * The run dashboard with its grant line saying when the grant standing this
+ * turn was typed with `--plan-edits`, so the person can see the flag took.
+ * With no such grant, or no grant line, the dashboard is returned as it is.
+ */
+function withPlanEdits(dashboard: string, root: string, slug: string | null): string {
+  if (readGrant(root) === null || !planEditsAllowed(root, slug)) {
+    return dashboard
+  }
+  return dashboard
+    .split('\n')
+    .map((l) => (l.startsWith('     grant: ') ? `${l} · plan edits allowed` : l))
+    .join('\n')
+}
+
+/**
+ * The agents bound to each slot: the settings-level `agents` defaults, then
+ * the active build's `harness.json`, its `defaults` and each step.
  *
- * Bindings live in `builds/<slug>/harness.json` and status is the surface that
- * reports them: no separate `agent check` verb. Any bound agent that does not
+ * Status is the surface that reports bindings: no separate `agent check`
+ * verb. A `settings` row is what `agent run --mode` falls back to for a slot
+ * the harness leaves unnamed, so a repo that binds agents in settings alone
+ * still shows the block the skills look for. Any bound agent that does not
  * resolve gets a warning, not an error: a teammate can lack a personal agent
- * and the loop still works. Returns [] when the build has no harness.json (a
- * clean no-op) or the file binds nothing, so the dashboard stays uncluttered
- * for builds that use no agents. A broken harness.json surfaces its parse
- * error rather than hiding.
+ * and the loop still works. Returns [] when nothing is bound anywhere, so the
+ * dashboard stays uncluttered for builds that use no agents. A broken
+ * harness.json surfaces its parse error rather than hiding.
  */
 function harnessSection(root: string, slug: string | null): string[] {
   const parsed = readHarnessFile(join(buildFolder(root, slug), 'harness.json'))
-  if (parsed === null) return []
-  if (!parsed.ok) return ['', `harness bindings: ✗ ${parsed.error}`]
+  if (parsed !== null && !parsed.ok) return ['', `harness bindings: ✗ ${parsed.error}`]
 
-  const harness = parsed.harness
+  const settings = parseSlotBindings(resolveRecord(root, 'agents'))
+  const harness = parsed?.harness ?? null
   const rows: string[] = []
-  for (const frag of slotFragments(harness.defaults)) rows.push(`  defaults · ${frag}`)
-  for (const [n, binding] of [...harness.steps.entries()].sort((a, b) => a[0] - b[0])) {
-    for (const frag of slotFragments(binding.bindings)) rows.push(`  step ${n} · ${frag}`)
-    if (binding.note.length > 0) rows.push(`  step ${n} · note: ${binding.note}`)
+  for (const frag of slotFragments(settings)) rows.push(`  settings · ${frag}`)
+  if (harness !== null) {
+    for (const frag of slotFragments(harness.defaults)) rows.push(`  defaults · ${frag}`)
+    for (const [n, binding] of [...harness.steps.entries()].sort((a, b) => a[0] - b[0])) {
+      for (const frag of slotFragments(binding.bindings)) rows.push(`  step ${n} · ${frag}`)
+      if (binding.note.length > 0) rows.push(`  step ${n} · note: ${binding.note}`)
+    }
   }
   if (rows.length === 0) return []
 
-  return ['', 'harness bindings:', ...rows, ...bindingWarnings(root, harness)]
+  return ['', 'harness bindings:', ...rows, ...bindingWarnings(root, settings, harness)]
 }
 
 /**
@@ -282,16 +304,17 @@ function slotFragments(bindings: SlotBindings): string[] {
 }
 
 /**
- * A warning line for every distinct agent bound anywhere in the harness that
- * does not resolve.
+ * A warning line for every distinct agent bound anywhere, in settings or in
+ * the harness, that does not resolve.
  *
  * Deduped and sorted so the report is stable; a name bound in several slots
  * warns once.
  */
-function bindingWarnings(root: string, harness: HarnessBindings): string[] {
+function bindingWarnings(root: string, settings: SlotBindings, harness: HarnessBindings | null): string[] {
   const names = new Set<string>()
-  for (const slot of SLOTS) for (const name of harness.defaults[slot] ?? []) names.add(name)
-  for (const binding of harness.steps.values()) {
+  for (const slot of SLOTS) for (const name of settings[slot] ?? []) names.add(name)
+  for (const slot of SLOTS) for (const name of harness?.defaults[slot] ?? []) names.add(name)
+  for (const binding of harness?.steps.values() ?? []) {
     for (const slot of SLOTS) for (const name of binding.bindings[slot] ?? []) names.add(name)
   }
   const warnings: string[] = []

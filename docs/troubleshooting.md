@@ -334,6 +334,38 @@ range out of step with the order, writing the order again with `plumbbob order` 
 the order settles. A run refuses a flagged range until the row is gone, and `plumbbob order`
 names each range it left for you beneath its ending.
 
+## Agents
+
+### `doctor` shows a `✗` or `○` row ending in `(path)`
+
+**Cause.** A slot in the active build's `harness.json`, or in the settings `agents` key,
+binds an agent by path, and the path does not resolve to a directory holding a valid
+`agent.json` ([**D160 (path-bindings)**](decisions.md#d160)). The row ends by saying which
+file binds it and what a run will do. A `✗` row is a `./` or `../` path: the mistake is in
+a tracked file, so `agent run` refuses the binding and the batch exits 1. A `○` row is a
+`~/` or absolute path: it names a place on one machine, so a run warns and skips it.
+**Fix.** For a `✗` row, correct the path, restore the agent's directory, or repair its
+`agent.json`; a `../` path, and a `./` path that a `..` segment or a symlink carries out of
+the repo, has to be rewritten to stay inside it. For a `○` row, install the agent at that
+path, or leave it, since the loop works without it.
+
+### An agent run takes five seconds to end after Ctrl-C or a timeout
+
+**Cause.** A stop sends the agent's process group SIGTERM and waits up to 5 seconds
+before SIGKILL ([**D161 (graceful-agent-stop)**](decisions.md#d161)). The run ends as soon
+as the group is empty, so a full 5 seconds means something the agent started ignored the
+signal. **Fix.** Have the agent trap TERM and close what it opened, and it ends at once.
+A second Ctrl-C skips the rest of the wait.
+
+### A process an agent started is gone once the agent exits
+
+**Cause.** When an agent exits, PlumbBob stops whatever is still running in the agent's
+process group, the same way it stops a timed-out agent
+([**D161 (graceful-agent-stop)**](decisions.md#d161)). An app server left in the
+background would otherwise outlive the run with nobody to close it. **Fix.** If the
+process is meant to stay up, start it in a session of its own, so it is outside the
+agent's group.
+
 ## The hooks
 
 ### A raw `git commit` asks for permission while a step is in flight

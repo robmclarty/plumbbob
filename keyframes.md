@@ -46,9 +46,9 @@ stays the log.
 - **M2 (lib)**: Shared machinery: git, the check gate, the latch, intent and build-log
   parsing.
   - paths: src/lib/
-- **M3 (plugin)**: The eighteen skills, the hooks that wire the turn loop, and the templates a
-  build starts from.
-  - paths: skills/, hooks/, templates/
+- **M3 (plugin)**: The eighteen skills, the hooks that wire the turn loop, the templates a
+  build starts from, and the agents PlumbBob ships.
+  - paths: skills/, hooks/, templates/, builtin-agents/
 - **M4 (gate)**: What `pnpm check` runs: the checkride config, the ast-grep rules, the refs
   scanner.
   - paths: checkride.config.json, sgconfig.yml, rules/, scripts/

@@ -28,6 +28,8 @@
 //
 // 4. Agent validation. Every resolvable user-authored agent gets its manifest and its
 //    `command` statically checked, so a broken agent surfaces here rather than mid-build.
+//    A binding written as a path, in the active build's harness.json or the settings
+//    `agents` key, is resolved the way a run resolves it and gets a row of its own.
 //
 // 5. The check gate. When a `check` setting overrides checkride (the default heavy
 //    check), doctor names the command; otherwise it runs checkride's own doctor and
@@ -46,13 +48,27 @@ import { dirname, isAbsolute, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runDoctor } from 'checkride'
 import type { DoctorCheck } from 'checkride'
-import { type AgentListing, type AgentTiers, listAgents } from '../lib/agents.ts'
+import {
+  type AgentListing,
+  type AgentTiers,
+  type BindingResolution,
+  type Slot,
+  type SlotBindings,
+  SLOTS,
+  isPathBinding,
+  listAgents,
+  parseSlotBindings,
+  readHarnessFile,
+  resolveBinding,
+} from '../lib/agents.ts'
 import { gateDetectsTools } from '../lib/check.ts'
 import { atisVersion } from '../lib/reachfile.ts'
 import { marketplacePlumbbob } from '../lib/plugins.ts'
 import { findRepoRoot, gitPath, hasCommit, stagePath } from '../lib/git.ts'
 import {
+  activeBuild,
   buildDir,
+  buildFolder,
   buildFolderIgnored,
   excludeControl,
   listBuilds,
@@ -62,7 +78,7 @@ import {
   slugify,
   unignoredControl,
 } from '../lib/sidecar.ts'
-import { resolveBoolean, resolveString, settingsPath } from '../lib/settings.ts'
+import { resolveBoolean, resolveRecord, resolveString, settingsPath } from '../lib/settings.ts'
 
 /**
  * The injectable toolchain-probe seam checkride's doctor accepts.
@@ -532,23 +548,111 @@ function agentProblem(listing: AgentListing, root: string): string | null {
   return checkCommand(manifest.command, dir, root)
 }
 
+/** A binding written as a path, the files that bind it, and the slots it is bound under. */
+type BoundPath = { readonly binding: string; readonly where: string; readonly slots: ReadonlyArray<Slot> }
+
+/**
+ * Every binding written as a path in the active build's harness.json and in
+ * the settings ladder's `agents` key, each once, sorted, with where it is
+ * bound and under which slots.
+ *
+ * Names are left out: a name that resolves already has its row from the tier
+ * walk, and one that does not is `status`'s warning. `error` is the harness's
+ * own parse error when the file is there and broken, since a run refuses on
+ * that before it reads a binding.
+ */
+function boundPaths(root: string): { readonly paths: ReadonlyArray<BoundPath>; readonly error: string | null } {
+  const harness = readHarnessFile(join(buildFolder(root, activeBuild(root)), 'harness.json'))
+  const inHarness: SlotBindings[] =
+    harness === null || !harness.ok
+      ? []
+      : [harness.harness.defaults, ...[...harness.harness.steps.values()].map((step) => step.bindings)]
+  const sources: ReadonlyArray<readonly [string, ReadonlyArray<SlotBindings>]> = [
+    ['harness.json', inHarness],
+    ['settings', [parseSlotBindings(resolveRecord(root, 'agents'))]],
+  ]
+
+  const found = new Map<string, { readonly wheres: string[]; readonly slots: Set<Slot> }>()
+  for (const [where, levels] of sources) {
+    for (const bindings of levels) {
+      for (const slot of SLOTS) {
+        for (const binding of bindings[slot] ?? []) {
+          if (!isPathBinding(binding)) continue
+          const entry = found.get(binding) ?? { wheres: [], slots: new Set<Slot>() }
+          if (!entry.wheres.includes(where)) entry.wheres.push(where)
+          entry.slots.add(slot)
+          found.set(binding, entry)
+        }
+      }
+    }
+  }
+  return {
+    paths: [...found.entries()]
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([binding, entry]) => ({
+        binding,
+        where: entry.wheres.join(' and '),
+        // In lifecycle order, whatever order the files named them in.
+        slots: SLOTS.filter((slot) => entry.slots.has(slot)),
+      })),
+    error: harness !== null && !harness.ok ? harness.error : null,
+  }
+}
+
+/**
+ * One path binding's row, and whether it counts as a problem.
+ *
+ * The binding is resolved by the rule a run uses, so the row says what the run
+ * will do. One that resolves is named by its manifest, as a run labels it, and
+ * has its `command` checked like any agent. One that does not is a failing row
+ * where the run would refuse (a path inside the repo) and a warning where the
+ * run would skip it (a path on one person's machine). One that resolves but is
+ * bound under a slot its manifest does not declare is a warning as well: a run
+ * of that slot warns and skips the binding, so the row is not counted.
+ */
+function pathRow(bound: BoundPath, resolution: BindingResolution, root: string): { readonly line: string; readonly failed: boolean } {
+  if (!resolution.ok) {
+    const fate = resolution.loud ? 'a run refuses it' : 'a run warns and skips it'
+    return {
+      line: `  ${resolution.loud ? '✗' : '○'} ${bound.binding} (path) — ${resolution.error.replace(/\.$/, '')}; bound in ${bound.where}, where ${fate}`,
+      failed: resolution.loud,
+    }
+  }
+  const { manifest, dir } = resolution.agent
+  const head = `${manifest.name} (path ${bound.binding})`
+  const problem = checkCommand(manifest.command, dir, root)
+  if (problem !== null) return { line: `  ✗ ${head} — ${problem}`, failed: true }
+  const declared = `[${manifest.slots.join(', ')}]`
+  const undeclared = bound.slots.filter((slot) => !manifest.slots.includes(slot))
+  if (undeclared.length === 0) return { line: `  ✓ ${head} ${declared}`, failed: false }
+  const named = undeclared.map((slot) => `'${slot}'`).join(' and ')
+  const noun = undeclared.length === 1 ? 'slot' : 'slots'
+  return {
+    line: `  ○ ${head} ${declared} — does not declare the ${named} ${noun}; bound in ${bound.where}, where a run warns and skips it`,
+    failed: false,
+  }
+}
+
 /**
  * The agent-validation section: walk every resolvable agent across the three
  * tiers (project `.plumbbob/agents/`, personal `~/.plumbbob/agents/`, and the
- * built-in ones plumbbob ships) and flag anything broken.
+ * built-in ones plumbbob ships) and flag anything broken, then do the same for
+ * every binding written as a path.
  *
  * Flags a malformed agent.json, an unsupported contract version (both arrive as the
  * listing's parse error), or a missing/non-executable command. A repo with no agents
- * shows no section (like the sidecar one), keeping doctor quiet for the common case;
- * outside a repo there is no project tier to anchor to, so the section is skipped
- * entirely. An empty tier adds no line of its own: a built-in agent shows as a row
- * with its origin when one ships, and not before.
+ * and no path bindings shows no section (like the sidecar one), keeping doctor quiet
+ * for the common case; outside a repo there is no project tier to anchor to, so the
+ * section is skipped entirely. An empty tier adds no line of its own: a built-in
+ * agent shows as a row with its origin when one ships, and not before. A harness.json
+ * that does not parse is a failing row too, since no bound agent runs until it does.
  */
 function agentReport(cwd: string, tiers: AgentTiers): { readonly lines: string[]; readonly failed: number } {
   const root = findRepoRoot(cwd)
   if (root === null) return { lines: [], failed: 0 }
   const listings = listAgents(root, tiers)
-  if (listings.length === 0) return { lines: [], failed: 0 }
+  const bound = boundPaths(root)
+  if (listings.length === 0 && bound.paths.length === 0 && bound.error === null) return { lines: [], failed: 0 }
 
   const lines = ['', 'plumbbob doctor — agents — D48 (doctor-validates-agents)']
   let failed = 0
@@ -561,6 +665,15 @@ function agentReport(cwd: string, tiers: AgentTiers): { readonly lines: string[]
       lines.push(`  ✗ ${listing.name} (${listing.origin}) — ${problem}`)
       failed += 1
     }
+  }
+  if (bound.error !== null) {
+    lines.push(`  ✗ bindings — ${bound.error}`)
+    failed += 1
+  }
+  for (const path of bound.paths) {
+    const row = pathRow(path, resolveBinding(root, path.binding, tiers), root)
+    lines.push(row.line)
+    if (row.failed) failed += 1
   }
   return { lines, failed }
 }

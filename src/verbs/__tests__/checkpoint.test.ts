@@ -1039,12 +1039,27 @@ describe('checkpoint with an exported plan.json — D14 (cli-keeps-current)', ()
     expect(dirty).toContain('intent.md')
   })
 
-  it('refuses at the gate when a hand edit left plan.json behind, naming `plumbbob export`', async () => {
+  it('brings plan.json current before the gate, so a hand edit to intent.md does not refuse the checkpoint', async () => {
     const dir = await exported()
     writeFileSync(intentPath(dir), INTENT.replace('a works', 'a works well'))
+    writeFileSync(join(dir, 'work.txt'), 'pending\n')
+    const { code, stderr } = await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(code).toBe(0)
+    expect(stderr).not.toContain('plan.json')
+    const fresh = freshPlan(dir, 'checkpoint-test')
+    expect(fresh.ok && fresh.text).toBe(readFileSync(planJsonPath(dir, 'checkpoint-test'), 'utf8'))
+    expect(readFileSync(planJsonPath(dir, 'checkpoint-test'), 'utf8')).toContain('a works well')
+  })
+
+  it('still refuses at the gate when the hand edit leaves the plan failing a check, and keeps the old file', async () => {
+    const dir = await exported()
+    const before = readFileSync(planJsonPath(dir, 'checkpoint-test'), 'utf8')
+    writeFileSync(intentPath(dir), INTENT.replace(/(\n1\. \[ \][^\n]*\n)/, '$1   - after: 9\n'))
     const { code, stderr } = await captureIoAsync(() => checkpoint(dir, ['1']))
     expect(code).toBe(1)
-    expect(stderr).toContain('plan.json is behind intent.md; run `plumbbob export` to bring it current.')
+    expect(stderr).toContain('lan.json was left as it was')
+    expect(stderr).toContain('fix the plan, then run `plumbbob export` to bring plan.json current.')
+    expect(readFileSync(planJsonPath(dir, 'checkpoint-test'), 'utf8')).toBe(before)
     expect(readFileSync(intentPath(dir), 'utf8')).toContain('1. [ ]')
   })
 

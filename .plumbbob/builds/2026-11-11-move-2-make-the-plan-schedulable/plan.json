@@ -48,6 +48,7 @@
         "docs/plan-export.md",
         "docs/decisions.md"
       ],
+      "like": [],
       "stop": "planned",
       "effort": "high",
       "proof": {
@@ -68,6 +69,7 @@
         "src/lib/intent.ts",
         "src/lib/__tests__/intent.test.ts"
       ],
+      "like": [],
       "stop": "none",
       "effort": null,
       "proof": {
@@ -90,6 +92,7 @@
         "src/lib/intent.ts",
         "src/lib/__tests__/intent.test.ts"
       ],
+      "like": [],
       "stop": "none",
       "effort": null,
       "proof": {
@@ -114,6 +117,7 @@
         "package.json",
         "pnpm-lock.yaml"
       ],
+      "like": [],
       "stop": "none",
       "effort": "high",
       "proof": {
@@ -138,6 +142,7 @@
         "docs/plan-export.md",
         "docs/decisions.md"
       ],
+      "like": [],
       "stop": "none",
       "effort": null,
       "proof": {
@@ -164,6 +169,7 @@
         ".plumbbob/builds/2026-11-11-move-2-make-the-plan-schedulable/plan.json",
         ".plumbbob/builds/2026-10-17-build-ranges/plan.json"
       ],
+      "like": [],
       "stop": "planned",
       "effort": null,
       "proof": {
@@ -190,6 +196,7 @@
         "src/verbs/defer.ts",
         "src/verbs/__tests__/defer.test.ts"
       ],
+      "like": [],
       "stop": "none",
       "effort": null,
       "proof": {
@@ -218,6 +225,7 @@
         "docs/glossary.md",
         "src/verbs/__tests__/start.test.ts"
       ],
+      "like": [],
       "stop": "planned",
       "effort": null,
       "proof": {

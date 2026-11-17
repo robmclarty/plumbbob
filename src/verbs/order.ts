@@ -17,6 +17,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { activeBuild, hasSession, intentPath } from '../lib/sidecar.ts'
+import { remarkPlan } from '../lib/planmark.ts'
 import {
   clearBuildOrder,
   orderSteps,
@@ -138,7 +139,10 @@ export function order(cwd: string, args: ReadonlyArray<string>): number {
  */
 function writeOrder(root: string, path: string, ordered: string, sequence: string): void {
   const { intent, recut } = recutPlan(ordered)
+  const before = readFileSync(path, 'utf8')
   writeFileSync(path, intent)
+  // The order is the CLI's own write, so the plan mark follows it.
+  remarkPlan(root, undefined, before)
   const planNotice = refreshAdvisory(refreshPlan(root, activeBuild(root)))
   const standing = rangeStanding(parseBuildRanges(intent), parseOrderedSteps(intent), null)
   printEnding(root, {

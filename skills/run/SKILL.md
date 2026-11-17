@@ -1,9 +1,9 @@
 ---
 name: run
 description: "Run what is left of the range holding the next step, or of range N: the plan's `## Build ranges` names the steps, the turn hook mints their grant from the plan, and the run walks them the way a typed range is walked, then ends on the stop card, the range's review with every open park proposed, which one reply settles. A bare range builds its one step to its pause. Reads the build skill beside it for the per-step loop."
-argument-hint: "[range-number]"
+argument-hint: "[range-number] [--plan-edits]"
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob park:*), Bash(plumbbob defer:*), Bash(plumbbob agent:*), Bash(plumbbob spike:*), Bash(git diff:*), Bash(plumbbob harvest:*), Bash(plumbbob order:*), Bash(git log:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob park:*), Bash(plumbbob defer:*), Bash(plumbbob agent:*), Bash(plumbbob spike:*), Bash(git diff:*), Bash(plumbbob harvest:*), Bash(plumbbob order:*), Bash(git log:*), Bash(plumbbob export:*)
 ---
 
 # PlumbBob: run a range
@@ -120,8 +120,16 @@ in its section on step ranges: start at the header's first undone step, build ea
 grant names in build order, check, self-review, and checkpoint it on green, and take the
 next undone step in build order after each landing. A step the grant does not name halts the
 walk before it, since the checkpoint would refuse it. The halt list is the build skill's: a
-red check, a red proof, a self-review mismatch, a bound agent's `blocked` or `drift`, or a new decision
-ends at that step's pause card. `plumbbob build` names the top step as the top of the range
+red check (a red `plan` check that `plumbbob export` clears is no halt), a red proof, a checkpoint refused because `intent.md` was edited during the step, a self-review mismatch, a bound agent's `blocked` or `drift`, or a new decision
+ends at that step's pause card. At a halt for a plan edit the card's `plan` row and its
+Plan Edit part are measured by the CLI and are the CLI's to show. You never edit `intent.md`
+during a step; if you find you must, stop and say so
+([D162 (plan-edit-shown)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d162)).
+When the human typed `--plan-edits` with the run, the build skill's exception applies: an
+edit that sharpens a step still ahead lands and is listed at the next card, and one that
+changes a Decision, a Constraint, or a landed step still halts
+([D163 (plan-edits-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d163)).
+`plumbbob build` names the top step as the top of the range
 you granted when it enters it. Once that step lands, its checkpoint prints the boundary
 with the Stop row (`| Stop | **Range 3** landed - <its stop> |`); relay none of it, and end
 the run on the stop card, below, in the same turn.

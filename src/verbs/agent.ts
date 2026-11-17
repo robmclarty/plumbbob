@@ -141,13 +141,14 @@ async function run(cwd: string, args: ReadonlyArray<string>, tiers: AgentTiers):
   // An explicit name outranks every binding: run exactly it, fail loud on a
   // miss. No name: resolve the harness bindings for the slot and run them.
   if (parsed.name !== undefined) {
-    return runOne(
+    const ran = await runOne(
       root,
       slug,
       step,
       { name: parsed.name, flagPath: parsed.flagPath, mode: parsed.mode, ambient: false },
       tiers,
     )
+    return ran.code
   }
   return runBound(root, slug, step, parsed.mode, tiers)
 }
@@ -163,6 +164,18 @@ type RunSpec = {
   readonly flagPath: string | undefined
   readonly mode: string | undefined
   readonly ambient: boolean
+}
+
+/**
+ * How one agent's run ended: the exit code it earns, and whether plumbbob was
+ * told to stop while it ran. An interrupt is the person or the host ending the
+ * whole verb, so a batch reads `interrupted` and runs nothing after it.
+ */
+type RunEnd = { readonly code: number; readonly interrupted: boolean }
+
+/** A run that ended on its own, with `code`. */
+function ended(code: number): RunEnd {
+  return { code, interrupted: false }
 }
 
 /**
@@ -187,15 +200,17 @@ async function runOne(
   step: number,
   spec: RunSpec,
   tiers: AgentTiers,
-): Promise<number> {
+): Promise<RunEnd> {
   const resolution = spec.ambient
     ? resolveBinding(root, spec.name, tiers)
     : resolveAgent(root, spec.name, spec.flagPath !== undefined ? { ...tiers, flagPath: spec.flagPath } : tiers)
   if (!resolution.ok) {
-    return degrade(
-      spec.ambient && !('loud' in resolution && resolution.loud),
-      notice({ fact: resolution.error }).trimEnd(),
-      notice({ fact: resolution.error, advisory: true, remedy: SKIPPING }).trimEnd(),
+    return ended(
+      degrade(
+        spec.ambient && !('loud' in resolution && resolution.loud),
+        notice({ fact: resolution.error }).trimEnd(),
+        notice({ fact: resolution.error, advisory: true, remedy: SKIPPING }).trimEnd(),
+      ),
     )
   }
   const { manifest, dir } = resolution.agent
@@ -204,10 +219,12 @@ async function runOne(
   const resolved = resolveMode(spec.mode, manifest)
   if (!resolved.ok) {
     const parts = { fact: resolved.fact, detail: resolved.detail }
-    return degrade(
-      spec.ambient,
-      notice(resolved.remedy === undefined ? parts : { ...parts, remedy: resolved.remedy }).trimEnd(),
-      notice({ ...parts, advisory: true, remedy: SKIPPING }).trimEnd(),
+    return ended(
+      degrade(
+        spec.ambient,
+        notice(resolved.remedy === undefined ? parts : { ...parts, remedy: resolved.remedy }).trimEnd(),
+        notice({ ...parts, advisory: true, remedy: SKIPPING }).trimEnd(),
+      ),
     )
   }
   const mode = resolved.mode
@@ -219,7 +236,7 @@ async function runOne(
     process.stderr.write(
       notice({ fact: 'no intent.md for the active build', detail: ['cannot compose the agent input'] }),
     )
-    return 1
+    return ended(1)
   }
 
   const composed = composeStepContext({
@@ -248,7 +265,7 @@ async function runOne(
   })
   if (!composed.ok) {
     process.stderr.write(`plumbbob: ${composed.error}\n`)
-    return 1
+    return ended(1)
   }
   for (const warning of composed.warnings) {
     process.stderr.write(`${warning}\n`)
@@ -262,7 +279,10 @@ async function runOne(
     timeoutSeconds: resolveNumber(root, 'agentTimeout', 0),
   })
 
-  return report(root, slug, label, mode, step, result)
+  return {
+    code: report(root, slug, label, mode, step, result),
+    interrupted: !result.ok && result.reason === 'interrupted',
+  }
 }
 
 /**
@@ -274,7 +294,9 @@ async function runOne(
  * warning, except a binding written as a path inside the repo, whose miss is
  * an error; an absent harness, or one that binds nothing to this slot, is a
  * clean no-op. Each bound agent runs in turn; the batch exits 1 if any agent
- * that actually ran failed or any binding was refused.
+ * that actually ran failed or any binding was refused. An interrupt ends the
+ * batch where it stands: the signal was meant for plumbbob, so the agents bound
+ * after the one it stopped are named and not started.
  */
 async function runBound(
   root: string,
@@ -317,9 +339,16 @@ async function runBound(
   }
 
   let worst = 0
-  for (const name of names) {
-    const code = await runOne(root, slug, step, { name, flagPath: undefined, mode: modeFlag, ambient: true }, tiers)
-    if (code !== 0) worst = code
+  for (const [at, name] of names.entries()) {
+    const ran = await runOne(root, slug, step, { name, flagPath: undefined, mode: modeFlag, ambient: true }, tiers)
+    if (ran.code !== 0) worst = ran.code
+    if (ran.interrupted) {
+      const left = names.slice(at + 1)
+      if (left.length > 0) {
+        process.stderr.write(notice({ fact: `interrupted, so not running ${left.join(', ')}` }))
+      }
+      return 1
+    }
   }
   return worst
 }
@@ -480,6 +509,9 @@ function shownOnly(envelope: AgentEnvelope): Omit<AgentEnvelope, 'evidence'> & {
 
 /**
  * One stderr line naming exactly how a failed run failed.
+ *
+ * A timed-out agent that went when it was asked reads `stopped`; the `killed`
+ * wording, with the grace it was given, is kept for one the SIGKILL had to end.
  */
 function failureLine(name: string, result: Exclude<AgentRunResult, { ok: true }>): string {
   switch (result.reason) {
@@ -491,7 +523,10 @@ function failureLine(name: string, result: Exclude<AgentRunResult, { ok: true }>
     case 'contract':
       return notice({ fact: `agent "${name}" is out of contract`, detail: [result.error] }).trimEnd()
     case 'timeout':
-      return notice({ fact: `agent "${name}" timed out after ${result.seconds}s`, detail: ['killed'] }).trimEnd()
+      return notice({
+        fact: `agent "${name}" timed out after ${result.seconds}s`,
+        detail: result.killed ? [`given ${result.graceSeconds}s to stop`, 'killed'] : ['stopped'],
+      }).trimEnd()
     case 'interrupted':
       return notice({ fact: `agent "${name}" killed`, detail: ['interrupted'] }).trimEnd()
     case 'spawn':

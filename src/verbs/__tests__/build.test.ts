@@ -2,6 +2,8 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { build } from '../build.ts'
+import { exportPlan } from '../export.ts'
+import { freshPlan, planJsonPath } from '../../lib/planfile.ts'
 import { notice } from '../../lib/notice.ts'
 import { start } from '../start.ts'
 import {
@@ -601,5 +603,27 @@ describe('build — a stop card waiting for its reply — D103 (stop-latched)', 
     writeFileSync(join(alt, 'intent.md'), INTENT)
     expect(captureIo(() => build(dir, ['--build', 'alt-build', '2'])).code).toBe(0)
     expect(captureIo(() => build(dir, ['--build', String(activeBuild(dir)), '4'])).stderr).toBe(refusal(2, 3, RUN_3))
+  })
+})
+
+describe('build with an exported plan.json — D146 (cli-keeps-current)', () => {
+  it('brings plan.json up to a hand-edited intent.md as it enters the step', async () => {
+    const dir = await startedWithSteps()
+    mkdirSync(join(dir, 'src'), { recursive: true })
+    const slug = activeBuild(dir) ?? ''
+    expect(captureIo(() => exportPlan(dir, [])).code).toBe(0)
+    writeFileSync(intentPath(dir), INTENT.replace('a works', 'a works well'))
+    const { code, stderr } = captureIo(() => build(dir, ['1']))
+    expect(code).toBe(0)
+    expect(stderr).not.toContain('plan.json')
+    const fresh = freshPlan(dir, slug)
+    expect(fresh.ok && fresh.text).toBe(readFileSync(planJsonPath(dir, slug), 'utf8'))
+    expect(readFileSync(planJsonPath(dir, slug), 'utf8')).toContain('a works well')
+  })
+
+  it('writes no plan.json for a build that was never exported', async () => {
+    const dir = await startedWithSteps()
+    expect(captureIo(() => build(dir, ['1'])).code).toBe(0)
+    expect(existsSync(planJsonPath(dir, activeBuild(dir) ?? ''))).toBe(false)
   })
 })

@@ -40,7 +40,13 @@ and if you are reading this, that is not your situation.
    A `○` line is a warning, never a failed check. The repo setup section's `○` lines name
    what a first build still lacks (the `.plumbbob/` folder, its `settings.json`, a control
    file git does not ignore, a first commit); `/plumbbob:setup` adds the first three, and
-   the human fires it. A repo set up by hand can leave a warning standing.
+   the human fires it. A repo set up by hand can leave a warning standing. The reach
+   section's `○ atis` line is the same and carries no `→ fix`: atis is optional, and
+   without it the pause reads a step's diff against its seam alone. In the agents
+   section, a `✗` or `○` row whose name is followed by `(path)` or `(path <where>)`, and
+   a `✗ bindings` row, each point at a binding in the build's `harness.json` or the
+   settings `agents` key. They carry no `→ fix` either. The mend is correcting that
+   binding, so name the file for the human; no restart is needed.
 3. If a check failed, apply its named `→ fix`, then restart Claude Code (or `/reload-plugins`).
 4. If the report is empty or shows `command not found`, the CLI is not on PATH: for a
    skills-dir / global install run `npm i -g plumbbob && plumbbob init`; for a marketplace

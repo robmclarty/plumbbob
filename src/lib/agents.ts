@@ -1074,8 +1074,10 @@ function isObject(value: unknown): value is Record<string, unknown> {
  * stdout parsed to a valid envelope. A non-zero exit is a failed run reported
  * verbatim: the envelope of a child that failed is not trusted; `contract` is
  * exit-0-but-garbage (unparseable stdout or a version mismatch, carrying
- * parseEnvelope's hint); `timeout` and `interrupted` are the kill paths;
- * `spawn` is a shell that never started. `stdout` rides along on the outcomes
+ * parseEnvelope's hint); `timeout` and `interrupted` are the stop paths, and
+ * a `timeout` carries the grace the agent was given to stop in and whether it
+ * took the SIGKILL to end it (`killed`), or it went on the SIGTERM; `spawn` is
+ * a shell that never started. `stdout` rides along on the outcomes
  * that have it so the verb can surface the raw bytes when a run went sideways.
  */
 export type AgentRunResult =
@@ -1087,9 +1089,36 @@ export type AgentRunResult =
     }
   | { readonly ok: false; readonly reason: 'exit'; readonly code: number; readonly stdout: string }
   | { readonly ok: false; readonly reason: 'contract'; readonly error: string; readonly stdout: string }
-  | { readonly ok: false; readonly reason: 'timeout'; readonly seconds: number }
+  | {
+      readonly ok: false
+      readonly reason: 'timeout'
+      readonly seconds: number
+      readonly graceSeconds: number
+      readonly killed: boolean
+    }
   | { readonly ok: false; readonly reason: 'interrupted' }
   | { readonly ok: false; readonly reason: 'spawn'; readonly error: string }
+
+/**
+ * How many seconds a stopped agent has to clean up before its process group
+ * is killed.
+ *
+ * An agent that started an app server or a browser needs a moment to close
+ * it. Five seconds covers a tidy shutdown and is short enough that a person
+ * who pressed Ctrl-C is still at the keyboard when the run reports.
+ */
+export const STOP_GRACE_SECONDS = 5
+
+// The signals that mean plumbbob itself is being stopped while an agent runs:
+// Ctrl-C, a host ending the command, and the terminal going away.
+const STOP_SIGNALS = ['SIGINT', 'SIGTERM', 'SIGHUP'] as const
+
+// How often a stop looks to see whether the agent's process group has emptied.
+const STOP_POLL_MS = 25
+
+// How long a stop still waits after the group's SIGKILL before it reports
+// anyway, for the process a kill cannot reach.
+const KILL_SETTLE_MS = 1000
 
 /**
  * Spawn an agent's `command` and settle with the run's outcome.
@@ -1100,12 +1129,21 @@ export type AgentRunResult =
  * its files. The composed StepContext is delivered as JSON on stdin. Stdout is
  * piped and captured (the envelope); stderr is inherited so the child's prose
  * streams live to the terminal: production (narrating) never collides with
- * consumption (one structured result at the pause). A SIGINT while the child
- * runs kills it and reports `interrupted` rather than orphaning it; the human
- * is present, Ctrl-C works. A positive `timeoutSeconds` arms a kill timer
- * (0 = off; a timeout is the user's explicit opt-in). Async `spawn`, not
+ * consumption (one structured result at the pause). Async `spawn`, not
  * `spawnSync`, so the parent stays live to interrupt gracefully. Never
  * rejects: every failure mode is a resolved `AgentRunResult`.
+ *
+ * The agent is spawned as the leader of its own process group, so a stop
+ * reaches everything it started and not the shell alone. A stop sends the
+ * group SIGTERM, waits up to `graceSeconds` (STOP_GRACE_SECONDS when absent)
+ * for the group to empty, then sends it SIGKILL, and the run settles once the
+ * group is gone. Three things stop an agent: a positive `timeoutSeconds`
+ * expiring (0 = off; a timeout is the user's explicit opt-in), reported as
+ * `timeout`; a SIGINT, SIGTERM or SIGHUP reaching plumbbob while the agent
+ * runs, reported as `interrupted`; and the agent exiting while something it
+ * started is still running, where the stop sweeps what is left and the run
+ * reports the exit it had. A second signal during the grace skips the rest of
+ * it. An agent that leaves nothing behind settles the moment it closes.
  */
 export function runAgent(params: {
   readonly root: string
@@ -1113,39 +1151,98 @@ export function runAgent(params: {
   readonly agentDir: string
   readonly input: StepContext
   readonly timeoutSeconds: number
+  readonly graceSeconds?: number
 }): Promise<AgentRunResult> {
+  const graceSeconds = params.graceSeconds ?? STOP_GRACE_SECONDS
   return new Promise((resolve) => {
     const child = spawn(params.command, {
       cwd: params.root,
       shell: true,
+      detached: true,
       env: { ...process.env, PLUMBBOB_AGENT_DIR: params.agentDir },
       stdio: ['pipe', 'pipe', 'inherit'],
     })
 
     let stdout = ''
     let settled = false
+    // The result a stop under way will report, and when its SIGKILL went out.
+    let stopping: AgentRunResult | null = null
+    let killedAt: number | null = null
     let timer: ReturnType<typeof setTimeout> | null = null
+    let grace: ReturnType<typeof setTimeout> | null = null
+    let poll: ReturnType<typeof setInterval> | null = null
+
+    // Signal the agent's whole process group; `0` only asks whether any of it
+    // is left. False when there is nothing there to signal. Where a group
+    // cannot be addressed at all, the signal goes to the child alone.
+    const signalGroup = (signal: NodeJS.Signals | 0): boolean => {
+      if (child.pid === undefined) return false
+      try {
+        process.kill(-child.pid, signal)
+        return true
+      } catch {
+        return signal !== 0 && child.exitCode === null && child.signalCode === null && child.kill(signal)
+      }
+    }
 
     const finish = (result: AgentRunResult): void => {
       if (settled) return
       settled = true
       if (timer !== null) clearTimeout(timer)
-      process.off('SIGINT', onSigint)
+      if (grace !== null) clearTimeout(grace)
+      if (poll !== null) clearInterval(poll)
+      for (const signal of STOP_SIGNALS) process.off(signal, onSignal)
+      process.off('exit', onExit)
+      // A process that left the group may still hold the pipe; let go of it
+      // so it cannot keep this one alive.
+      child.stdout.destroy()
       resolve(result)
     }
 
-    // Kill the child and report, rather than let a Ctrl-C orphan it. The
-    // SIGKILL escalation covers a child that ignores the interrupt.
-    function onSigint(): void {
-      child.kill('SIGKILL')
-      finish({ ok: false, reason: 'interrupted' })
+    const kill = (): void => {
+      if (killedAt !== null) return
+      killedAt = Date.now()
+      signalGroup('SIGKILL')
     }
-    process.on('SIGINT', onSigint)
+
+    // Stop the group and report `result` once it is gone. A stop asked for
+    // while one is under way keeps the first result and skips the grace.
+    const stop = (result: AgentRunResult): void => {
+      if (settled) return
+      if (stopping !== null) {
+        kill()
+        return
+      }
+      stopping = result
+      if (timer !== null) clearTimeout(timer)
+      if (!signalGroup('SIGTERM')) {
+        finish(result)
+        return
+      }
+      grace = setTimeout(kill, graceSeconds * 1000)
+      poll = setInterval(() => {
+        const unreachable = killedAt !== null && Date.now() - killedAt >= KILL_SETTLE_MS
+        if (signalGroup(0) && !unreachable) return
+        // Only now is it known whether the SIGTERM was enough.
+        finish(!result.ok && result.reason === 'timeout' ? { ...result, killed: killedAt !== null } : result)
+      }, STOP_POLL_MS)
+    }
+
+    // Stop the agent and report, rather than let a Ctrl-C orphan it.
+    function onSignal(): void {
+      stop({ ok: false, reason: 'interrupted' })
+    }
+    for (const signal of STOP_SIGNALS) process.on(signal, onSignal)
+
+    // plumbbob going away by any other road has no time left to wait.
+    function onExit(): void {
+      signalGroup('SIGKILL')
+    }
+    process.on('exit', onExit)
 
     if (params.timeoutSeconds > 0) {
       timer = setTimeout(() => {
-        child.kill('SIGKILL')
-        finish({ ok: false, reason: 'timeout', seconds: params.timeoutSeconds })
+        stop({ ok: false, reason: 'timeout', seconds: params.timeoutSeconds, graceSeconds, killed: false })
       }, params.timeoutSeconds * 1000)
     }
 
@@ -1160,12 +1257,14 @@ export function runAgent(params: {
     })
 
     child.on('close', (code: number | null) => {
+      // A stop already under way reports its own result once the group is gone.
+      if (stopping !== null) return
       if (code !== 0) {
-        finish({ ok: false, reason: 'exit', code: code ?? 1, stdout })
+        stop({ ok: false, reason: 'exit', code: code ?? 1, stdout })
         return
       }
       const parsed = parseChildEnvelope(stdout)
-      finish(
+      stop(
         parsed.ok
           ? { ok: true, envelope: parsed.envelope, stdout, warnings: parsed.warnings }
           : { ok: false, reason: 'contract', error: parsed.error, stdout },

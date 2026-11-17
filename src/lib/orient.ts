@@ -1156,16 +1156,22 @@ function writeRecut(intent: string, ranges: ReadonlyArray<BuildRange>, recut: Re
  * a range number names that range, and anything else, nothing included, names
  * the range holding the next step.
  *
- * `--auto` beside the verb adds nothing, so it is passed over. Numbers joined
+ * `--auto` beside the verb adds nothing, so it is passed over, and
+ * `--plan-edits` is passed over and noted, since it rides the grant. Numbers joined
  * by a dash or a comma are a span or a list of ranges (`2-4`, `2, 3`), a form
  * no run defines, and read as null, so nothing is minted or resolved for them.
  * Trailing sentence punctuation is the sentence's, and so is a comma after the
  * last number (`/plumbbob:run 3, then review`), as it is after a build's.
  */
-export function readRunArgs(text: string): { readonly item: number | null } | null {
+export function readRunArgs(text: string): { readonly item: number | null; readonly planEdits?: true } | null {
   const words: string[] = []
+  let planEdits = false
   for (const token of text.split(/\s+/)) {
     const word = token.replace(/[.;:!?]+$/, '')
+    if (word === '--plan-edits') {
+      planEdits = true
+      continue
+    }
     if (word === '' || word === '--auto') {
       continue
     }
@@ -1178,7 +1184,7 @@ export function readRunArgs(text: string): { readonly item: number | null } | nu
   if (/[,-]/.test(run)) {
     return null
   }
-  return { item: run === '' ? null : Number(run.split(' ')[0]) }
+  return { item: run === '' ? null : Number(run.split(' ')[0]), ...(planEdits ? { planEdits: true as const } : {}) }
 }
 
 /** What a run is resolved from: the plan's text, the step in flight, whether a spike is open, and the range typed. */
@@ -1920,9 +1926,10 @@ export function orient(input: OrientInput): Orientation {
 
 /**
  * One measuring row's classification: holding, failing now, the plan itself
- * is wrong, or an advisory. Only the seam row can be advisory: the seam is
- * awareness rather than a lock, so a stray folds no lower than the Verdict's
- * third rung.
+ * is wrong, or an advisory. Only the seam and plan rows can be advisory: the
+ * seam is awareness rather than a lock, and an edit to the plan is the
+ * person's call rather than a failure, so neither folds lower than the
+ * Verdict's third rung.
  */
 export type RecapVerdict = 'true' | 'failing' | 'drift' | 'advisory'
 
@@ -1943,8 +1950,12 @@ export type RecapRow = {
   readonly label?: string // the name the row prints under when it is not its key: the seam row reads `plumb` once a reach splits it
 }
 
-/** The recap's five measuring rows, in the fixed order the fold walks them. */
-const RECAP_ROW_NAMES = ['check', 'proof', 'decisions', 'constraints', 'seam'] as const
+/**
+ * The recap's measuring rows, in the fixed order the fold walks them. The
+ * model writes up to five; `plan` is the CLI's alone, measured against the
+ * plan mark and never read from the detail file.
+ */
+const RECAP_ROW_NAMES = ['check', 'proof', 'decisions', 'constraints', 'seam', 'plan'] as const
 
 /** The label the proof row rode under before it was renamed; recorded and in-flight detail files still carry it. */
 const OLD_PROOF_LABEL = 'done-when'
@@ -1992,6 +2003,10 @@ function classifyRecapRow(name: RecapRowName, value: string): { readonly verdict
       )
     case 'seam':
       return test(/^held\b/, 'true') ?? test(/^strayed\b/, 'advisory') ?? test(/^drift\b/, 'drift')
+    case 'plan':
+      // Never attested: whether the plan was edited is the CLI's to measure,
+      // so a `plan` row the model wrote is dropped like any row it cannot read.
+      return null
   }
 }
 
@@ -2074,6 +2089,7 @@ export type VerdictFold = { readonly ladder: Ladder; readonly worst: string | nu
 /** A step's accrued stats, or a range's summed across its steps: the advisory inputs to the fold's third rung. */
 export type AccruedStats = {
   readonly driftWarnings: number
+  readonly planEdits?: number
   readonly redChecks: number
   readonly redProofs?: number
   readonly reverts: number
@@ -2084,7 +2100,7 @@ export type AccruedStats = {
  * Fold the recap's measuring rows worst-of with the step's accrued stats:
  * drift beats a live failure beats an advisory beats plumb, and each rung
  * names the one component that earned it. The advisory rung runs in a fixed
- * order, the seam stray first.
+ * order, the seam stray first and an edited plan second.
  *
  * A strayed seam is an advisory, never a failure: a path outside the seam
  * says either that the work wandered or that the line was drawn too tight,
@@ -2125,6 +2141,11 @@ export function foldVerdict(
     // checkpoint rather than once per stray path, and this is the one advisory
     // that asks a question of the plan rather than of the work.
     return { ladder: A_HAIR_OFF, worst: 'seam strayed' }
+  }
+  if ((stats.planEdits ?? 0) > 0) {
+    // The landed twin of the pause's `plan` row, uncounted for the same
+    // reason: the stat bumps once per landing that carried an edit.
+    return { ladder: A_HAIR_OFF, worst: 'plan edited' }
   }
   if (stats.redChecks > 0) {
     return { ladder: A_HAIR_OFF, worst: `${stats.redChecks} red run${stats.redChecks === 1 ? '' : 's'} before green` }
@@ -2309,6 +2330,24 @@ export function plumbRowFromDiff(paths: ReadonlyArray<string>, seam: ReadonlyArr
 /** The name the seam row prints under once a stored reach splits it. */
 const PLUMB_LABEL = 'plumb'
 
+/**
+ * The measured plan row: intent.md differs from the plan mark, so the plan
+ * was edited during the step, by the lines the edit added and removed.
+ *
+ * The row exists only when there is an edit to report. It is an advisory and
+ * never a failure: nothing blocks an edit to the plan, and whether this one
+ * stands is the person's call, so the fold names it `plan edited` on the
+ * third rung and `looks good` stays on the card.
+ */
+export function planRowFromEdit(edit: { readonly added: number; readonly removed: number }): RecapRow {
+  return {
+    verdict: 'advisory',
+    word: 'edited',
+    evidence: `edited during the step: intent.md +${edit.added} -${edit.removed}`,
+    measured: true,
+  }
+}
+
 /** The summed working-tree change: line counts and the file count. */
 export type DiffCounts = { readonly added: number; readonly removed: number; readonly files: number }
 
@@ -2375,6 +2414,7 @@ export type SpentInputs = {
   readonly redProofs?: number
   readonly gateMs: number | null
   readonly driftWarnings: number
+  readonly planEdits?: number
 }
 
 /**
@@ -2408,6 +2448,10 @@ export function spentRowValue(input: SpentInputs): string | null {
   }
   if (input.driftWarnings > 0) {
     parts.push(`${input.driftWarnings} drift warning${input.driftWarnings === 1 ? '' : 's'}`)
+  }
+  const planEdits = input.planEdits ?? 0
+  if (planEdits > 0) {
+    parts.push(`${planEdits} plan edit${planEdits === 1 ? '' : 's'}`)
   }
   return parts.length === 0 ? null : parts.join(' · ')
 }
@@ -2541,6 +2585,7 @@ export type RangeStepStats = {
   readonly redChecks?: number
   readonly redProofs?: number
   readonly driftWarnings?: number
+  readonly planEdits?: number
   readonly reverts?: number
   readonly startedAt?: string
   readonly landedAt?: string
@@ -2603,7 +2648,7 @@ export function measureRange(input: RangeInput): RangeMeasure {
     rows.seam = seam
   }
   const stats = held.map((s) => input.stats[String(s.n)] ?? {})
-  const sum = (key: 'redChecks' | 'redProofs' | 'driftWarnings' | 'reverts'): number => stats.reduce((total, s) => total + (s[key] ?? 0), 0)
+  const sum = (key: 'redChecks' | 'redProofs' | 'driftWarnings' | 'planEdits' | 'reverts'): number => stats.reduce((total, s) => total + (s[key] ?? 0), 0)
   const recorded = ledgerShas(input.checkpoints)
   return {
     steps: stepsRow(held, shas),
@@ -2613,6 +2658,7 @@ export function measureRange(input: RangeInput): RangeMeasure {
     spent: rangeSpentValue(stats),
     stats: {
       driftWarnings: sum('driftWarnings'),
+      planEdits: sum('planEdits'),
       redChecks: sum('redChecks'),
       redProofs: sum('redProofs'),
       reverts: sum('reverts'),
@@ -2793,7 +2839,7 @@ function rangeDiffValue(files: ReadonlyArray<CommitFile>): string {
 /**
  * The range's `spent` row: from the first step's `startedAt` to the last
  * step's `landedAt`, then the red runs summed across the steps, or `green
- * first run at every landing`, then any drift warnings. Null when nothing is
+ * first run at every landing`, then any drift warnings and plan edits. Null when nothing is
  * countable.
  *
  * The clock reads only the steps `build` entered, since a step landed by hand
@@ -2823,6 +2869,10 @@ function rangeSpentValue(stats: ReadonlyArray<RangeStepStats>): string | null {
   }
   if (drift > 0) {
     parts.push(`${drift} drift warning${drift === 1 ? '' : 's'}`)
+  }
+  const planEdits = stats.reduce((sum, s) => sum + (s.planEdits ?? 0), 0)
+  if (planEdits > 0) {
+    parts.push(`${planEdits} plan edit${planEdits === 1 ? '' : 's'}`)
   }
   return parts.length === 0 ? null : parts.join(' · ')
 }

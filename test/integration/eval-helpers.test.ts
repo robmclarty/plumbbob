@@ -866,6 +866,39 @@ describe('turn-anatomy readers (the shape every ending is measured against)', ()
     expect(shapeDetail(a, 'decision')).toBe('')
   })
 
+  it('reads a pause over an edited plan as a whole decision ending, the plan row and the Plan Edit part included', () => {
+    const repo = pausedFixture()
+    const intent = join(repo, '.plumbbob', 'builds', EVAL_SLUG, 'intent.md')
+    // An edit long enough to pass the diff's cap, so the label line carries its overflow sentence too.
+    writeFileSync(intent, readFileSync(intent, 'utf8') + Array.from({ length: 50 }, (_, i) => `- note ${i + 1}\n`).join(''))
+    const { stdout } = runCli(repo, ['handoff'])
+    expect(stdout).toContain('`plumbbob handoff --full` prints the other')
+    const a = readAnatomy(stdout)
+    expect(a.rows.get('plan')).toBe('edited during the step: intent.md +50 -0')
+    expect(a.labels).toEqual(['Summary', 'Readout', 'Plan Edit', 'Your Call', 'Verdict', 'Now', 'Next Up', 'Recommendation'])
+    expect(a.moves).toHaveLength(4) // `looks good` stays on the card
+    expect(a.strays).toEqual([])
+    expect(a.endsOn).toBe('Recommendation')
+    expect(endingRenders(a, 'decision')).toBe(true)
+    expect(shapeDetail(a, 'decision')).toBe('')
+  })
+
+  it('reads a Plan Edit diff that quotes a Decision line as a diff, not as a label inside a fence', () => {
+    const repo = pausedFixture()
+    const intent = join(repo, '.plumbbob', 'builds', EVAL_SLUG, 'intent.md')
+    // The line shape intent.md gives every Decision, Constraint and Question: an anchor, then a bold label and a colon.
+    writeFileSync(intent, `${readFileSync(intent, 'utf8')}\n## Decisions\n\n- <a id="d1"></a>**D1 (one-thing)**: do it twice\n`)
+    const { stdout } = runCli(repo, ['handoff'])
+    expect(stdout).toContain('+- <a id="d1"></a>**D1 (one-thing)**: do it twice')
+    const a = readAnatomy(stdout)
+    expect(a.nestedFence).toBe(false)
+    expect(a.rows.get('plan')).toBe('edited during the step: intent.md +4 -0')
+    expect(a.labels).toEqual(['Summary', 'Readout', 'Plan Edit', 'Your Call', 'Verdict', 'Now', 'Next Up', 'Recommendation'])
+    expect(a.strays).toEqual([])
+    expect(endingRenders(a, 'decision')).toBe(true)
+    expect(shapeDetail(a, 'decision')).toBe('')
+  })
+
   it('reads a pause already shown as a reminder ending: the answer above it, no card', () => {
     const repo = pausedFixture()
     const card = runCli(repo, ['handoff']).stdout // the first render stamps the card

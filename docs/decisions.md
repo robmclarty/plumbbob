@@ -290,6 +290,10 @@ below.)
   resolvable agent (manifest well-formed, command present/executable, contract supported);
   `status` lists the active build's harness bindings and warns on ones that don't resolve:
   the surfaces the user already checks carry the report, so no separate `agent check` verb.
+  (Revised 2026-11-13: `doctor` also reports each binding written as a path, a failing row for one a run would
+  refuse and a warning row for one a run would skip, per [**D160 (path-bindings)**](#d160). Revised 2026-11-14:
+  `status` lists the settings-level `agents` defaults too, as `settings ·` rows, with or without a
+  `harness.json`, since the skills look for that block before they run a bound agent.)
   *Tagged in* `doctor.ts`, `status.ts`.
 - <a id="d49"></a>**D49 (posix-sh): POSIX only; the command runs via `sh -c` at the repo root.** `command` is a shell
   string (not an argv array), spawned with the **repo root** as cwd so a build-slot agent's
@@ -302,7 +306,8 @@ below.)
 - <a id="d51"></a>**D51 (agent-timeout): `agentTimeout`, off by default.** A settings-ladder key (seconds): absent or `0`
   means no timeout, set means kill the child on expiry and report a failed run; the human is
   present (Ctrl-C works, [**D58 (sigint-forwarded)**](#d58)), so enforcement is the user's explicit opt-in.
-  *Tagged in* `agents.ts`, `settings.ts`.
+  (Revised 2026-11-13 by [**D161 (graceful-agent-stop)**](#d161): on expiry the agent's process group is sent
+  SIGTERM, given 5 seconds, then killed.) *Tagged in* `agents.ts`, `settings.ts`.
 - <a id="d52"></a>**D52 (blocked-vs-drift): `blocked` and `drift` route differently at the pause.** `blocked` = the agent
   couldn't finish (surface its `notes`, unblock, re-run); `drift` = it finished but found the
   plan no longer matches reality (repair with `/plumbbob:refine` before continuing): the two halts
@@ -345,7 +350,9 @@ below.)
   *Tagged in* `agents.ts`, `agent.ts`, `settings.ts`.
 - <a id="d58"></a>**D58 (sigint-forwarded): SIGINT is forwarded to the child.** The human is present, so Ctrl-C kills the
   agent (with a SIGKILL escalation) and reports, rather than orphaning it.
-  *Tagged in* `agents.ts`.
+  (Revised 2026-11-13 by [**D161 (graceful-agent-stop)**](#d161): SIGTERM and SIGHUP are passed on as well, the
+  signal goes to the agent's whole process group, and an interrupt ends the verb, so the agents bound after the
+  stopped one do not start.) *Tagged in* `agents.ts`.
 - <a id="d59"></a>**D59 (inline-context): Before-slot outputs travel inline as `context[]`.** Inline in the input JSON is
   the simplest transport until size proves otherwise; revisit only on evidence.
   *Tagged in* `agents.ts`, the `build` skill.
@@ -397,7 +404,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   red [**D32 (checkride-gate)**](#d32), `start` refuses dirty [**D22 (clean-baseline)**](#d22), the agent envelope can't advance the loop
   [**C6 (no-advance-verb)**](#c6)). A host with no hooks grows no ledger and behaves exactly as before: the latch stays
   dormant rather than wedging. (Amended 2026-10-17: a background job's notice reaches the same hook
-  and is not a human turn, so it never ticks `TURN` ([**D90 (notice-not-turn)**](#d90)).) *Tagged in*
+  and is not a human turn, so it never ticks `TURN` ([**D90 (notice-not-turn)**](#d90)).)
+  (Revised 2026-11-14 by [**D162 (plan-edit-shown)**](#d162): a grant does not cover a plan edited during the
+  step. A step is refused while `intent.md` differs from the plan mark and is not the plan that stood at the
+  human's last typed prompt, whatever the `GRANT` or the `TICK` says, and it lands on their next turn.) *Tagged in*
   `latch.ts`, `checkpoint.ts`, `sidecar.ts`, `build.ts`, `start.ts`, `turn.ts`, `doctor.ts`.
 - <a id="d65"></a>**D65 (human-typed-grants): Grants come from the human's literal prompt.** One-turn self-approval is minted
   only from strings the model cannot type: `build` is `disable-model-invocation`, so a `--auto`
@@ -1527,7 +1537,9 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   their own in three runs of five, each held by the relay check.) (Revised 2026-10-31 by
   [**D121 (reply-after-the-tools)**](#d121): the reply comes after the turn's last tool call, with
   `plumbbob handoff` run first and its line kept, so a client that folds text written before a tool call still
-  shows the reply; the pointer still closes it.) *Tagged in* `handoff.ts`, `turn.ts`, `harvest.ts`,
+  shows the reply; the pointer still closes it.)
+  (Revised 2026-11-14 by [**D162 (plan-edit-shown)**](#d162): a pause card that has shown comes back whole,
+  unasked, when `intent.md` was edited after it showed, since that edit is the human's call.) *Tagged in* `handoff.ts`, `turn.ts`, `harvest.ts`,
   `sidecar.ts`, the `build`, `verify`, `run`, and `step` skills, and `docs/presentation.md`.
 
 - <a id="d111"></a>**D111 (state-table): The state a card or an orientation ending closes on rides one two-column
@@ -1928,7 +1940,9 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   and the sha256 of its bytes, and `contract_paths` `[]`. *because* a builder under runciter should get the same
   context `plumbbob agent` gives it today. (Revised 2026-11-13: `runciter.plan/2` has no `done_when`. A step
   exports `proof`, whose `text` is its `- proof:` line verbatim and whose `command` is the code span that opens
-  the line, or `null`; an older **done when:** clause exports as the text with no command.) *Tagged in*
+  the line, or `null`; an older **done when:** clause exports as the text with no command. Revised again the same
+  day: a step also exports `like`, the paths its `- like:` lines name, per
+  [**D156 (like-is-advice)**](#d156), so the builder's context under runciter matches `step.like`.) *Tagged in*
   `docs/plan-export.md`.
 
 - <a id="d140"></a>**D140 (every-step): The export carries every step, landed or not, in plan-number order.**
@@ -1963,7 +1977,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
 
 - <a id="d146"></a>**D146 (cli-keeps-current): `checkpoint` (its tick), `order` and `defer` re-export after they write
   `intent.md`, when the build folder already holds a `plan.json`.** *because* a verb the person ran shouldn't turn
-  the next check red, and a hand or model edit is what the drift check exists to catch. *Tagged in*
+  the next check red, and a hand or model edit is what the drift check exists to catch. (Revised 2026-11-14:
+  `build`, `checkpoint`, `harvest` and `finish` also bring the file current before they start, so a hand or model
+  edit is caught up by the next move instead of by a sentence in a skill telling the model to export. `plumbbob
+  check` run alone still refreshes nothing and fails on a file that is behind, which is what CI needs.) *Tagged in*
   `docs/plan-export.md`.
 
 - <a id="d147"></a>**D147 (ajv-dev-dep): Conformance tests validate with `ajv` (`ajv/dist/2020`), pinned at 8.18.0
@@ -2043,8 +2060,11 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   `**Seams**:`, beside the seam findings of [**D131 (seams-at-the-plan)**](#d131). The line is read loosely. A token
   that is not a plain repo-relative path is dropped without a word, a second `like:` line adds its paths to the
   first, and no like line, however it is written, refuses a build, a checkpoint or an export. `plan.json` does not
-  carry it. *because* a pattern to copy is judgment. *Tagged in* `intent.ts`, `agents.ts`, `orient.ts`,
-  `seamcheck.ts`, the `build`, `plan` and `step` skills, and `docs/agents.md`.
+  carry it. *because* a pattern to copy is judgment. (Revised 2026-11-13: `plan.json` carries it. `runciter.plan/2`
+  gives a step `like`, and the export writes the paths that read, `[]` for a step with none, so a builder under
+  runciter's scheduler sees the exemplars a plumbbob agent does. It still gates nothing: no plan check reads the
+  list, and the scheduler never locks on it.) *Tagged in* `intent.ts`, `agents.ts`, `orient.ts`, `plan.ts`,
+  `seamcheck.ts`, the `build`, `plan` and `step` skills, `docs/agents.md` and `docs/plan-export.md`.
 
 - <a id="d157"></a>**D157 (evidence-is-shown): An agent can hand the person something to look at, and the pause
   links it.** The output envelope gains an optional `evidence[]`, each entry a repo-relative `path` and a `caption`,
@@ -2102,11 +2122,86 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   stands as written. A path has no name, so the run's label, its handoff entry and its `agentConfig` key are the
   manifest's `name`. A `./` or `../` path that is missing, broken or refused is an error: the batch exits 1, and
   the bindings beside it still run. A missing or broken `~/` or absolute path warns and is skipped, as an
-  unresolved name is under [**D54 (bindings-degrade-soft)**](#d54). `status` warns on either kind. A path typed
+  unresolved name is under [**D54 (bindings-degrade-soft)**](#d54). `status` warns on either kind, and `doctor`
+  reports each. A path typed
   as an explicit name is still a name; `--agent` is the typed form. *because* `harness.json` is tracked: a path
   inside the repo that does not resolve is a mistake everyone on the branch has, and a path on one person's
   machine is a library a teammate lacks. *Tagged in* `agents.ts`, `verbs/agent.ts`, `verbs/status.ts`, and
   `docs/agents.md`.
+
+- <a id="d161"></a>**D161 (graceful-agent-stop): A stopped agent is asked first, then killed, and everything it
+  started goes with it.** `runAgent` spawns the agent as the leader of its own process group
+  ([**D49 (posix-sh)**](#d49) already fixes the platform). A stop sends the group SIGTERM, waits up to 5 seconds
+  (`STOP_GRACE_SECONDS`) for it to empty, then sends it SIGKILL, and the run reports once the group is gone.
+  Three things stop an agent: an `agentTimeout` expiring ([**D51 (agent-timeout)**](#d51)); a SIGINT, SIGTERM or
+  SIGHUP reaching PlumbBob while the agent runs ([**D58 (sigint-forwarded)**](#d58)); and the agent exiting with
+  something it started still running, which is swept the same way while the run keeps the result it had. A
+  second signal during the grace skips the rest of it. An interrupt ends the verb: the agents bound after the
+  stopped one are named and not started, so a host that sends TERM and then KILL finds nothing new running.
+  The timed-out line gains one clause, `(stopped)` for an agent that went on the SIGTERM and
+  `(given 5s to stop, killed)` for one the SIGKILL ended; exit codes and every other message stand. Two costs are accepted. The agent's
+  group is not the terminal's, so a Ctrl-C reaches PlumbBob alone and PlumbBob passes it on. A SIGKILL of
+  PlumbBob itself cannot be caught, and it leaves the agent running. *because* an agent that starts an app
+  server or a browser is the only one that knows how to close it, and a SIGKILL sent to the shell alone gave it
+  no chance to and left what it started running. *Tagged in* `agents.ts`, `verbs/agent.ts`, and `docs/agents.md`.
+
+- <a id="d162"></a>**D162 (plan-edit-shown): A plan edited during a step is shown at its pause, and a grant
+  does not carry it past the person.** The CLI keeps a mark, `builds/<slug>/MARK`: an untracked copy of
+  `intent.md` as it last knew the plan sanctioned, under the `TURN` it was taken in and the step whose entry
+  settled it. `start` takes it, the first `checkpoint --plan` takes it, and each of the CLI's own writes to `intent.md`
+  moves it (the tick after a landing, `order`, `defer`), so none of those is ever an edit. The person's typed
+  prompt is what accepts a changed plan: `plumbbob turn` takes the mark again at each one, since the plan as
+  it stands when they type is the plan they are typing over. It keeps the copy in two cases, a step in flight
+  and a mark a step's entry settled whose plan changed and never landed, and there it only notes the hash of
+  the plan typed over. `build <n>` names the step on the mark and accepts nothing: a plan that differs at
+  entry was edited after the last prompt, so the edit is carried into the step. At the pause, when `intent.md` differs from the mark, the Readout gains a `plan` row
+  (`edited during the step: intent.md +3 -1`), the Verdict takes the advisory rung `plan edited` behind a seam
+  stray, and a **Plan Edit** part beneath the Readout shows the diff against the mark, cut at 40 lines with the
+  rest counted and printed by `plumbbob handoff --full`. `looks good` stays offered. Bytes are bytes: a
+  whitespace change counts, as line counts. `checkpoint` refuses a step whose plan differs from the mark and is not the plan that stood at the
+  person's last typed prompt, whatever the grant (`--auto`, a typed range, a run) or the entry stamp says, so
+  a step built by hand or abandoned first is held the same way and so is an edit made after a reply at the
+  pause; a terminal is never refused. The refusal is the pause and records nothing. A card that has already
+  shown comes back whole at the next `handoff` when the plan was edited after it showed, the one exception to
+  [**D110 (reply-after-the-card)**](#d110), so the handoff the refusal names always carries the row. A plan
+  committed again, beside a step in flight, or in a turn that carries a grant leaves the mark alone. After
+  the person's reply the step lands, its Log record keeps
+  the row, a `planEdits` stat counts it, the boundary names it among its advisories, and a range's stop card
+  folds it. `abandon` and `revert` leave the mark, so dropping a step and entering it again launders nothing.
+  A host with no turn hook has no prompt to measure from, so an entry there accepts the plan as it stands
+  (as does an entry over a mark taken before the host counted turns), an edit made after the entry is still
+  shown, and no checkpoint is refused for it. A deleted `MARK` reads
+  as no mark, the way a deleted `TICK` opens the latch. A build with no mark reports nothing
+  and gains one at its next entry. With no difference nothing renders, and every surface prints the bytes it
+  printed before. It revises nothing in [**D10 (pause-not-lock)**](#d10): no edit is blocked. *because* the
+  skills tell a model to park a new idea instead of editing the plan mid-build, and nothing in the CLI could
+  see whether it had; a rule nobody can see broken holds only while it is kept, and the person approving a
+  step was reading a diff measured against a plan that may have moved under it. *Tagged in* `planmark.ts`,
+  `sidecar.ts`, `latch.ts`, `orient.ts`, `verbs/build.ts`, `verbs/checkpoint.ts`, `verbs/handoff.ts`,
+  `verbs/turn.ts`, `verbs/order.ts`, `verbs/defer.ts`, `verbs/start.ts`, `verbs/finish.ts`, the `build`, `verify` and `run`
+  skills, and `docs/presentation.md`. (Revised 2026-11-15 by [**D163 (plan-edits-grant)**](#d163): a grant typed
+  with `--plan-edits` lands the edit instead of stopping for it, short of a Decision, a Constraint, or a landed step.)
+
+- <a id="d163"></a>**D163 (plan-edits-grant): A grant typed with `--plan-edits` lands a plan edit, lists it at
+  the next card, and never reaches the Decisions, the Constraints, or a landed step.** The flag rides the grant
+  it is typed with (`/plumbbob:build --auto`, a typed range or list, `/plumbbob:run`), on the same line. The
+  turn hook, minting the grant from the person's literal prompt, also writes `builds/<slug>/BASE`: an untracked
+  copy of `intent.md` as it stands, under that `TURN`. While `TURN` still reads that turn and a grant stands,
+  `checkpoint` lands a step whose plan differs from the mark where [**D162 (plan-edit-shown)**](#d162) would
+  refuse it. Three things still refuse, in the latch's voice and naming which: an edit that changes a line under
+  `## Decisions`, one under `## Constraints`, or the block of a step whose box is ticked. Everything that
+  decision shows stays: the step's `plan` row in its Log record, the `plan edited` rung, the boundary's advisory, the stat. The
+  first card after the run, a pause or a stop card, carries a **Plan Edits** part: the steps that edited the
+  plan, and one diff of the plan now against `BASE` with every box read as unticked, capped at 40 lines. The
+  part prints once: the person's next prompt drops `BASE` after a card has shown it, and keeps it until one has.
+  The allowance is one turn long, as the grant is. The flag with no grant does nothing, a job reporting back
+  cannot carry it, and no settings key stands in for it. *because* some builds are worth running long and
+  unattended, and a plan that sharpens its later steps as it learns is what a long build needs; the allowance
+  has to be the person's typed word, since a line a model can write is a permission it could give itself
+  ([**D65 (human-typed-grants)**](#d65), [**D67 (auto-not-a-grant)**](#d67)); and the Decisions and Constraints
+  are what the range was approved against, so they are not the build's to move. *Tagged in* `planmark.ts`,
+  `sidecar.ts`, `latch.ts`, `verbs/turn.ts`, `verbs/checkpoint.ts`, `verbs/handoff.ts`, `verbs/status.ts`,
+  `verbs/finish.ts`, the `build` and `run` skills, `docs/runs.md` and `docs/presentation.md`.
 
 ### Superseded
 

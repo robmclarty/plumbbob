@@ -41,7 +41,7 @@ describe('a like line is advice', () => {
     expect(exported.code).toBe(0)
     const plan = JSON.parse(readFileSync(join(buildDir(dir, activeBuild(dir) ?? ''), 'plan.json'), 'utf8'))
     expect(plan.steps).toHaveLength(1)
-    expect(Object.keys(plan.steps[0])).not.toContain('like') // the plan contract carries no like
+    expect(plan.steps[0].like).toEqual(['src/nowhere.ts']) // only the paths that read, and the missing file is no finding
 
     const entered = captureIo(() => build(dir, ['1']))
     expect(entered.code).toBe(0)

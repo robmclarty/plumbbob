@@ -11,6 +11,7 @@
 // pointer is printed here rather than by `handoff`, the one ending handoff
 // cannot render: finish has just cleared the session it would read from.
 
+import { keepPlanCurrent } from '../lib/planfile.ts'
 import { appendFileSync, existsSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { commit, findRepoRoot, isDirty, stageAll } from '../lib/git.ts'
@@ -18,6 +19,8 @@ import { readCommitBody } from '../lib/commitbody.ts'
 import {
   buildScope,
   checkpointsPath,
+  clearBase,
+  clearMark,
   clearTick,
   hasSession,
   intentPath,
@@ -68,6 +71,9 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
 
   const { build: slug } = resolveBuild(root, args)
 
+  // The last commit of the build carries plan.json as intent.md now reads.
+  keepPlanCurrent(root, slug)
+
   const reported = existsSync(reportPath(root, slug))
   if (reported) {
     appendCheckpointShas(root, slug)
@@ -100,6 +106,8 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   // so left behind, a stale `auto` could self-approve the next session's first
   // landing.
   clearTick(root, slug)
+  clearMark(root, slug)
+  clearBase(root, slug)
   setGrant(root, null)
   rmSync(join(sidecarDir(root), 'STATE'), { force: true })
 
@@ -167,9 +175,11 @@ function buildDefaultScope(root: string, slug: string | null): string | null {
  * Roll the per-step receipts into report.md as a `## Stats` table.
  *
  * One row per step plus totals (red checks, drift warnings, reverts,
- * wall-clock) so "is the loop worth it?" is a table, not a feeling. Silently
- * skipped when nothing accrued (a build with no red/revert/drift and no
- * `build <n>` stamps has nothing to say).
+ * wall-clock) so "is the loop worth it?" is a table, not a feeling. A `plan
+ * edits` column joins them only when a step landed with an edited plan, so a
+ * build where none did reads as it always has. Silently skipped when nothing
+ * accrued (a build with no red/revert/drift and no `build <n>` stamps has
+ * nothing to say).
  */
 function appendStats(root: string, slug: string | null): void {
   const stats = readStats(root, slug)
@@ -180,15 +190,20 @@ function appendStats(root: string, slug: string | null): void {
   if (steps.length === 0) {
     return
   }
-  const totals = { redChecks: 0, driftWarnings: 0, reverts: 0, wallMs: 0 }
-  const rows = steps.map((n) => {
+  const totals = { redChecks: 0, driftWarnings: 0, planEdits: 0, reverts: 0, wallMs: 0 }
+  for (const n of steps) {
     const s = stats[String(n)] ?? {}
     totals.redChecks += s.redChecks ?? 0
     totals.driftWarnings += s.driftWarnings ?? 0
+    totals.planEdits += s.planEdits ?? 0
     totals.reverts += s.reverts ?? 0
-    const wall = wallClockMs(s)
-    totals.wallMs += wall ?? 0
-    return `| ${n} | ${s.redChecks ?? 0} | ${s.driftWarnings ?? 0} | ${s.reverts ?? 0} | ${formatWall(wall)} |`
+    totals.wallMs += wallClockMs(s) ?? 0
+  }
+  // The cell a row gains under the `plan edits` column, or nothing without it.
+  const edited = (count: number): string => (totals.planEdits > 0 ? ` ${count} |` : '')
+  const rows = steps.map((n) => {
+    const s = stats[String(n)] ?? {}
+    return `| ${n} | ${s.redChecks ?? 0} | ${s.driftWarnings ?? 0} |${edited(s.planEdits ?? 0)} ${s.reverts ?? 0} | ${formatWall(wallClockMs(s))} |`
   })
   appendFileSync(
     reportPath(root, slug),
@@ -196,10 +211,10 @@ function appendStats(root: string, slug: string | null): void {
       '',
       '## Stats',
       '',
-      '| step | red checks | drift warnings | reverts | wall-clock |',
-      '| ---- | ---------- | -------------- | ------- | ---------- |',
+      `| step | red checks | drift warnings |${totals.planEdits > 0 ? ' plan edits |' : ''} reverts | wall-clock |`,
+      `| ---- | ---------- | -------------- |${totals.planEdits > 0 ? ' ---------- |' : ''} ------- | ---------- |`,
       ...rows,
-      `| **total** | ${totals.redChecks} | ${totals.driftWarnings} | ${totals.reverts} | ${formatWall(totals.wallMs > 0 ? totals.wallMs : null)} |`,
+      `| **total** | ${totals.redChecks} | ${totals.driftWarnings} |${edited(totals.planEdits)} ${totals.reverts} | ${formatWall(totals.wallMs > 0 ? totals.wallMs : null)} |`,
       '',
     ].join('\n'),
   )

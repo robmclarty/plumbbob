@@ -63,6 +63,7 @@ import { reachFor } from '../lib/reach.ts'
 import { readReach } from '../lib/reachfile.ts'
 import { researchStale } from '../lib/researchfile.ts'
 import { readProofRun } from '../lib/check.ts'
+import { type PlanEdit, planEdit, runEdits, type RunEdits, shownPlan, shownRunEdits } from '../lib/planmark.ts'
 import { rerootLinks } from '../lib/links.ts'
 import { type SeamFinding, seamFindings, type Tree } from '../lib/seamcheck.ts'
 import {
@@ -134,6 +135,7 @@ import {
   remainingOrder,
   resolveRun,
   runBracket,
+  planRowFromEdit,
   plumbRowFromDiff,
   seamRowFromDiff,
   spentRowValue,
@@ -148,6 +150,11 @@ import {
 // fewer the patch rides the turn; at 21 it stays in the working tree behind
 // the counted diff row.
 const INLINE_DIFF_MAX = 20
+
+// How many lines of a plan edit's diff ride the card. Past it the card says
+// how many it left out, and `--full` prints them all: an edit to the plan is
+// shown whole on request, and never grows the card past reading by default.
+const PLAN_DIFF_MAX = 40
 
 // The seam rule, and the one tier that still has a seam to mark: at the plan
 // pause the model presents the framed plan above the relay, so the rule keeps
@@ -309,18 +316,27 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   // opens on the Summary the model wrote into the detail file, so there is no
   // seam left to rule off.
   const detail = settleDetail(root, rawDetail)
-  if (!full && shown?.kind === 'pause' && shown.step === current) {
+  // The plan the card would show as edited, by its hash, or null with no
+  // edit to show.
+  const planShown = shownPlan(root, slug)
+  if (!full && shown?.kind === 'pause' && shown.step === current && (planShown === null || planShown === shown.plan)) {
     // The pause the human already read: the reply above this line is what
     // they asked for, and the card would push it off the screen. It stays the
     // reminder whatever changed since, a rewritten detail file, an edit, or a
     // gate run that moved the check row, because a later turn at the pause is
-    // the model's reply, and the card comes back only when asked.
+    // the model's reply, and the card comes back only when asked. The one
+    // change that brings it back unasked is a plan edit the card did not
+    // show: that edit is the human's call, and a line that points back at a
+    // card without it would have them approve a plan they have not seen.
     const command = reprintCommand(null, explicit, named)
     return emit(root, { tier: 'decision', render: 'reminder', command }, [
       `**Next Up**: Back to ${stepPhrase(current, steps)}`,
     ])
   }
-  const { rows, work, summary, checkGreen, proofRed } = measured(root, slug, intent, detail, current)
+  // The plan against its mark: an edit made during the step, or carried into
+  // it, earns its own row, a rung on the Verdict, and the diff beneath.
+  const edit = planEdit(root, slug)
+  const { rows, work, summary, checkGreen, proofRed } = measured(root, slug, intent, detail, current, edit)
   const { ladder, worst } = foldVerdict(rows, accruedStats(root, slug, current))
   const counts = countDiff(work)
   const changed = counts.added + counts.removed
@@ -329,7 +345,8 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
   // to the bare counts rather than pointing at a fence that never arrives.
   const patch = changed > 0 && changed <= INLINE_DIFF_MAX ? diffPatch(root, work) : ''
   const inline = patch.length > 0
-  writePause(root, slug, { kind: 'pause', step: current })
+  writePause(root, slug, { kind: 'pause', step: current, ...(planShown === null ? {} : { plan: planShown }) })
+  const command = reprintCommand('--full', explicit, named)
   const readout = recapLines(rows, {
     diff: diffRowValue(counts, inline),
     files: diffFileItems(work),
@@ -344,6 +361,8 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     parts.push(fence('diff', patch.split('\n')).join('\n'))
   }
   parts.push(
+    planEditPart(edit, where, full, command),
+    runEditsPart(root, slug, where, full, command),
     evidencePart(readEvidence(root, slug, current)),
     yourCallBlock(current, checkGreen && !proofRed, cardRun(intent, current)),
     stateTable(
@@ -359,7 +378,6 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
       }),
     ),
   )
-  const command = reprintCommand('--full', explicit, named)
   return emit(root, { tier: 'decision', render: 'card', command }, cardFoot(parts, detail, detailWhere))
 }
 
@@ -539,6 +557,7 @@ function stopCard(root: string, slug: string | null, named: string | null, full:
     parts.push([READOUT_LABEL, '', ...fence('text', review.readout)].join('\n'))
   }
   parts.push(
+    runEditsPart(root, slug, where, full, reprintCommand('--stop --full', undefined, named)),
     harvestPart(parks, proposals, parkLine(root, slug)) ?? '',
     stopCallBlock(leanExample(parks, proposals), intent),
     stateTable(
@@ -999,7 +1018,10 @@ export function stepRecord(root: string, slug: string | null, step: number, writ
     return raw.length === 0 ? null : raw
   }
   const intent = readOr(intentPath(root, slug))
-  const { rows, work, summary: check } = measured(root, slug, intent, detail, step)
+  // Read before the landing ticks the plan and takes the mark again, so the
+  // record keeps the `plan` row the pause showed. The diff itself stays out:
+  // the step's commit holds the change.
+  const { rows, work, summary: check } = measured(root, slug, intent, detail, step, planEdit(root, slug))
   const { ladder, worst } = foldVerdict(rows, accruedStats(root, slug, step))
   const readout = recapLines(rows, {
     diff: diffRowValue(countDiff(work), false),
@@ -1118,8 +1140,19 @@ type Measured = {
  * command, as the step states it now, came back red. A run recorded for
  * another step, for a command the proof no longer opens on, or before the
  * gate last ran, measures nothing here and the model's attested row stands.
+ *
+ * `edit` is the plan edit a pause has to show, and it becomes the `plan` row.
+ * Only a pending step passes one: a landed step's plan has been ticked and
+ * marked again, so a boundary measures no edit.
  */
-function measured(root: string, slug: string | null, intent: string, detail: string, step: number): Measured {
+function measured(
+  root: string,
+  slug: string | null,
+  intent: string,
+  detail: string,
+  step: number,
+  edit: PlanEdit | null = null,
+): Measured {
   const summary = readCheckSummary(root)
   const measuredCheck = summary === null ? null : summaryCheckRow(summary)
   const work = diffNumstat(root).filter((e) => !isArtifactPath(e.path))
@@ -1142,6 +1175,9 @@ function measured(root: string, slug: string | null, intent: string, detail: str
   const measuredProof = run !== null && current ? proofRow(run) : null
   if (measuredProof !== null) {
     rows.proof = measuredProof
+  }
+  if (edit !== null) {
+    rows.plan = planRowFromEdit(edit)
   }
   return { rows, work, summary, checkGreen: measuredCheck?.verdict === 'true', proofRed: measuredProof?.verdict === 'failing' }
 }
@@ -1238,6 +1274,57 @@ function evidencePart(evidence: ReadonlyArray<ShownEvidence>): string {
 }
 
 /**
+ * The Plan Edit part of a step's pause: what changed in intent.md against the
+ * plan as last approved, as a diff in its own fence.
+ *
+ * It rides beneath the Readout and the work's inline diff, so the `plan` row
+ * and the change it counts are read together, above Your Call. The label line
+ * names the file and the lines added and removed. A diff longer than the cap
+ * is cut there, and the label says how many lines were left out and names
+ * `reprint`, the command that prints this same card whole, with the step and
+ * the build the pause was named by. Empty when the plan was not edited, and
+ * an empty part drops out of the card.
+ */
+function planEditPart(edit: PlanEdit | null, where: string, full: boolean, reprint: string): string {
+  if (edit === null) return ''
+  const capped = !full && edit.lines.length > PLAN_DIFF_MAX
+  const shown = capped ? edit.lines.slice(0, PLAN_DIFF_MAX) : edit.lines
+  const left = edit.lines.length - shown.length
+  const more = capped
+    ? ` The diff below stops at ${PLAN_DIFF_MAX} lines, and \`${reprint}\` prints the other ${left}.`
+    : ''
+  const lead = `**Plan Edit**: [intent.md](${where}) +${edit.added} -${edit.removed}, against the plan as last approved.${more}`
+  return [lead, '', ...fence('diff', shown)].join('\n')
+}
+
+/**
+ * The Plan Edits part: what a run did to the plan under a grant the human
+ * typed with `--plan-edits`, on the first card after it.
+ *
+ * One line names the steps that edited the plan and the lines added and
+ * removed since the grant was typed, and a `diff` fence shows the plan now
+ * against the plan as the grant found it, with every step's box read as
+ * unticked, since a tick is the CLI's own write. The diff is capped as the
+ * Plan Edit part's is, and `reprint` names the command that prints it whole.
+ * Printing it records that a card has shown the run's edits, so the base is
+ * dropped at the human's next prompt. Empty when the run edited nothing.
+ */
+function runEditsPart(root: string, slug: string | null, where: string, full: boolean, reprint: string): string {
+  const run: RunEdits | null = runEdits(root, slug)
+  if (run === null) return ''
+  shownRunEdits(root, slug)
+  const { edit, steps } = run
+  const capped = !full && edit.lines.length > PLAN_DIFF_MAX
+  const shown = capped ? edit.lines.slice(0, PLAN_DIFF_MAX) : edit.lines
+  const more = capped
+    ? ` The diff below stops at ${PLAN_DIFF_MAX} lines, and \`${reprint}\` prints the other ${edit.lines.length - shown.length}.`
+    : ''
+  const named = steps.length === 1 ? `step ${steps[0]}` : `steps ${steps.slice(0, -1).join(', ')} and ${steps.at(-1)}`
+  const lead = `**Plan Edits**: [intent.md](${where}) +${edit.added} -${edit.removed} since the grant was typed with \`--plan-edits\`, by ${named}; ticks are the CLI's and are left out.${more}`
+  return [lead, '', ...fence('diff', shown)].join('\n')
+}
+
+/**
  * A caption as a link's text: on one line, with the brackets that would end
  * the link early escaped.
  */
@@ -1308,6 +1395,7 @@ function spentInputs(root: string, slug: string | null, step: number, summary: C
     redProofs: stats.redProofs ?? 0,
     gateMs: summary?.total_duration_ms ?? null,
     driftWarnings: stats.driftWarnings ?? 0,
+    planEdits: stats.planEdits ?? 0,
   }
 }
 
@@ -1381,6 +1469,7 @@ function accruedStats(root: string, slug: string | null, step: number): AccruedS
   const anchor = lastLedgerSha(readOr(checkpointsPath(root, slug)))
   return {
     driftWarnings: stats.driftWarnings ?? 0,
+    planEdits: stats.planEdits ?? 0,
     redChecks: stats.redChecks ?? 0,
     redProofs: stats.redProofs ?? 0,
     reverts: stats.reverts ?? 0,

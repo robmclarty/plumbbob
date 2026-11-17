@@ -91,6 +91,10 @@ const DERIVED: ReadonlyArray<readonly [string, unknown]> = [
     ),
   ],
   ['a plan whose steps carry the older done-when clause', plan([oldStep(1), step(2), step(3)].join('\n'))],
+  [
+    'a plan whose step names what it is like',
+    plan([step(1, ['   - like: `src/s0.ts`, `src/*.ts`, `src/__tests__/`']), step(2)].join('\n')),
+  ],
 ]
 
 describe('plan.json conforms to runciter.plan/2', () => {
@@ -121,6 +125,17 @@ describe('plan.json conforms to runciter.plan/2', () => {
       { command: 'pnpm vitest run s2', text: '`pnpm vitest run s2` passes' },
       { command: 'pnpm vitest run s3', text: '`pnpm vitest run s3` passes' },
     ])
+  })
+
+  it('writes a step\'s like after its seam, the paths that read and no others', () => {
+    const derived = DERIVED[4]?.[1] as { steps: Record<string, unknown>[] }
+    expect(derived.steps.map((s) => s.like)).toEqual([['src/s0.ts', 'src/__tests__/'], []])
+    expect(Object.keys(derived.steps[0] ?? {}).slice(4, 7)).toEqual(['seam', 'like', 'stop'])
+  })
+
+  it('the vendored example carries a like, so the copy is the contract that has one', () => {
+    expect(EXAMPLE.steps.map((s: { like?: unknown }) => s.like)).toContainEqual(['packages/server/src/throttle/bucket.ts'])
+    expect(SCHEMA.properties.steps.items.properties.like).toEqual({ default: [], type: 'array', items: { type: 'string' } })
   })
 
   it('the rules catch what the schema cannot', () => {

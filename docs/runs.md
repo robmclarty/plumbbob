@@ -462,6 +462,14 @@ has a case it fits better:
 - **`/plumbbob:build --auto`** chains to the end of the plan, halting at each bare range's
   pause, since that is a call the plan reserved ([D94 (auto-and-stops)](decisions.md#d94)). It
   ends on boundaries rather than stop cards.
+- **`--plan-edits`**, typed with a run, a range, or `--auto`, trades a stop for a longer
+  unattended stretch. Without it a step whose `intent.md` was edited halts the run at its
+  pause ([D162 (plan-edit-shown)](decisions.md#d162)). With it the edit lands, each step
+  still records its `plan` row, and the next card lists everything the run did to the plan
+  in one diff. It never reaches the Decisions, the Constraints, or a step that has landed:
+  an edit there still halts. It lasts for the grant it was typed with, and it is yours to
+  type; nothing in a settings file turns it on
+  ([D163 (plan-edits-grant)](decisions.md#d163)).
 
 ## How the build order and the ranges fit
 

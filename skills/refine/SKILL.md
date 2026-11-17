@@ -3,7 +3,7 @@ name: refine
 description: "Keep intent.md true: attack the plan for holes (append as Open questions) and refine or repair the Frame, Decisions, Constraints, Steps, and build ranges to match reality (`ranges` re-cuts the whole section). Usable at any point; you propose, the human approves."
 argument-hint: "[focus | ranges]"
 disable-model-invocation: true
-allowed-tools: Read, Edit, Bash(plumbbob status:*), Bash(plumbbob order:*), Bash(plumbbob defer:*), Bash(plumbbob research:*)
+allowed-tools: Read, Edit, Bash(plumbbob status:*), Bash(plumbbob order:*), Bash(plumbbob defer:*), Bash(plumbbob research:*), Bash(plumbbob export:*), WebSearch, WebFetch
 ---
 
 # PlumbBob: refine the plan
@@ -74,7 +74,9 @@ is fine; refining is always available.
   Never retype the table as a list of your own
   ([D118 (questions-table)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d118)).
 - **Repair (re-sync to reality).** When the plan has drifted (a Decision was overtaken
-  by what you built, a Constraint changed, a Step no longer matches the seam, or a
+  by what you built, a Constraint changed, a Step no longer matches the seam, a `- like:`
+  line names a file that moved, a step still carries its proof as a `**done when:**`
+  clause on the title line, or a
   **step's title no longer describes what the diff actually does**), propose the edits
   that bring `intent.md` back in line with the truth. A step title *is* its checkpoint
   commit subject ([D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68)), so bringing a drifted one back in line
@@ -138,7 +140,9 @@ repair, by the two modes above; it never becomes a Decision by itself. The codeb
 record sections do not age with a lockfile, so leave them. On a no, go on: the row is
 advice and gates nothing
 ([D158 (research-is-dated)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d158)).
-With no such row, say nothing about research.
+With no such row, say nothing about research. With no web tool on the host, say that the
+lens cannot run here and leave the stamp as it is; never write an ecosystem finding from
+memory.
 
 ## The hard contracts
 

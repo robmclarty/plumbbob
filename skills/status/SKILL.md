@@ -19,8 +19,9 @@ skill carries **no Edit and no Write tool**: the CLI is the source of truth, so
 Status is an orientation turn (the
 [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)):
 the dashboard is the whole output, relayed verbatim. Everything the human needs is
-already in those bytes: the step in flight, the next step's proof, seam, and `model:`
-recommendation, the counts, and the one next move. You relay it; you do not re-compose or
+already in those bytes: the step in flight, the next step's proof, seam, `like:` files,
+and `model:` recommendation, a `research predates …` row when the plan's research has
+aged (`/plumbbob:refine` offers the re-run), the counts, and the one next move. You relay it; you do not re-compose or
 annotate it.
 
 ## What it does

@@ -1,5 +1,7 @@
-import { existsSync, mkdirSync, readdirSync, symlinkSync, writeFileSync } from 'node:fs'
+import { execFileSync, spawn } from 'node:child_process'
+import { existsSync, mkdirSync, readFileSync, readdirSync, symlinkSync, writeFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
 import {
   CONTRACT_VERSION,
@@ -17,7 +19,10 @@ import {
   projectAgentsDir,
   resolveAgent,
   resolveBinding,
+  runAgent,
+  STOP_GRACE_SECONDS,
 } from '../agents.ts'
+import type { StepContext } from '../agents.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 
 afterAll(cleanupTempRepos)
@@ -801,4 +806,196 @@ describe('resolveBinding — D160 (path-bindings)', () => {
       loud: false,
     })
   })
+})
+
+// The stop path. Each agent here is a shell script in a temp dir; one that
+// starts something of its own writes that process's pid to a file, so the test
+// can ask the system whether it is still there once the run has settled.
+const AGENTS_MODULE = fileURLToPath(new URL('../agents.ts', import.meta.url))
+
+const STOP_INPUT: StepContext = {
+  contract: CONTRACT_VERSION,
+  mode: 'after',
+  build: { slug: 'stop-test', title: 'Stop test' },
+  step: { n: 1, title: 'First', doneWhen: '', proof: { command: null, text: '' }, seam: [], like: [], evidenceDir: '' },
+  decisions: [],
+  constraints: [],
+  context: [],
+  settings: {},
+}
+
+const DONE_ENVELOPE = '{"contract":1,"status":"done","summary":"walked it"}'
+
+// Write `script` as run.sh in a fresh temp dir and return the dir, which is
+// both the run's root and the agent's own directory.
+function stopAgent(script: string): string {
+  const dir = makeTempDir()
+  writeFileSync(join(dir, 'run.sh'), script)
+  return dir
+}
+
+function runStopAgent(dir: string, opts: { readonly timeoutSeconds: number; readonly graceSeconds?: number }) {
+  return runAgent({
+    root: dir,
+    command: 'sh "$PLUMBBOB_AGENT_DIR/run.sh"',
+    agentDir: dir,
+    input: STOP_INPUT,
+    ...opts,
+  })
+}
+
+// Whether a pid names a process at all, running or a zombie: `ps` lists both
+// and exits non-zero when it finds neither.
+function isThere(pid: number): boolean {
+  try {
+    execFileSync('ps', ['-p', String(pid)], { stdio: 'ignore' })
+    return true
+  } catch {
+    return false
+  }
+}
+
+function pidIn(dir: string, file: string): number {
+  const pid = Number(readFileSync(join(dir, file), 'utf8').trim())
+  expect(Number.isInteger(pid) && pid > 0).toBe(true)
+  return pid
+}
+
+// A process of the agent's own that shrugs off SIGTERM and holds none of the
+// agent's pipes, so only a signal sent to the whole group can end it.
+const STUBBORN_GRANDCHILD = `sh -c 'trap "" TERM; echo $$ > "$PLUMBBOB_AGENT_DIR/grandchild.pid"; while :; do sleep 0.1; done' >/dev/null 2>&1 &
+while [ ! -s "$PLUMBBOB_AGENT_DIR/grandchild.pid" ]; do sleep 0.05; done
+`
+
+describe('runAgent — the stop — D161 (graceful-agent-stop)', () => {
+  it('gives an agent five seconds to stop by default', () => {
+    expect(STOP_GRACE_SECONDS).toBe(5)
+  })
+
+  it('lets an agent that traps TERM clean up and exit inside the grace', async () => {
+    // The shell names a foreground sleep that a signal ended; that line is
+    // sent nowhere, to keep the test's own output clean.
+    const dir = stopAgent(`exec 2>/dev/null
+echo $$ > "$PLUMBBOB_AGENT_DIR/agent.pid"
+trap 'echo cleaned > "$PLUMBBOB_AGENT_DIR/cleaned"; exit 0' TERM
+cat >/dev/null
+while :; do sleep 0.1; done
+`)
+    const began = Date.now()
+    const result = await runStopAgent(dir, { timeoutSeconds: 1, graceSeconds: 20 })
+    const took = Date.now() - began
+
+    // It went on the SIGTERM, so the result says no SIGKILL was sent.
+    expect(result).toEqual({ ok: false, reason: 'timeout', seconds: 1, graceSeconds: 20, killed: false })
+    expect(readFileSync(join(dir, 'cleaned'), 'utf8')).toBe('cleaned\n')
+    // It settled when the agent went, well short of the grace it was offered.
+    expect(took).toBeLessThan(10_000)
+    expect(isThere(pidIn(dir, 'agent.pid'))).toBe(false)
+  }, 30_000)
+
+  it('kills an agent that ignores TERM once the grace runs out', async () => {
+    const dir = stopAgent(`echo $$ > "$PLUMBBOB_AGENT_DIR/agent.pid"
+trap '' TERM
+cat >/dev/null
+while :; do sleep 0.1; done
+`)
+    const began = Date.now()
+    const result = await runStopAgent(dir, { timeoutSeconds: 1, graceSeconds: 1 })
+    const took = Date.now() - began
+
+    expect(result).toEqual({ ok: false, reason: 'timeout', seconds: 1, graceSeconds: 1, killed: true })
+    // The timeout, then the whole grace: TERM alone did not end it.
+    expect(took).toBeGreaterThanOrEqual(2000)
+    expect(isThere(pidIn(dir, 'agent.pid'))).toBe(false)
+  }, 30_000)
+
+  it('takes a grandchild down with a timed-out agent', async () => {
+    const dir = stopAgent(`${STUBBORN_GRANDCHILD}cat >/dev/null
+while :; do sleep 0.1; done
+`)
+    const result = await runStopAgent(dir, { timeoutSeconds: 1, graceSeconds: 0.5 })
+
+    expect(result).toMatchObject({ ok: false, reason: 'timeout', killed: true })
+    expect(isThere(pidIn(dir, 'grandchild.pid'))).toBe(false)
+  }, 30_000)
+
+  it('sweeps what a cleanly exiting agent left running, and still reads its envelope', async () => {
+    const dir = stopAgent(`${STUBBORN_GRANDCHILD}cat >/dev/null
+echo '${DONE_ENVELOPE}'
+`)
+    const result = await runStopAgent(dir, { timeoutSeconds: 0, graceSeconds: 0.5 })
+
+    expect(result).toMatchObject({
+      ok: true,
+      envelope: { status: 'done', summary: 'walked it' },
+      stdout: `${DONE_ENVELOPE}\n`,
+    })
+    expect(isThere(pidIn(dir, 'grandchild.pid'))).toBe(false)
+  }, 30_000)
+
+  it('sweeps what a failing agent left running, and still reports its exit code', async () => {
+    const dir = stopAgent(`${STUBBORN_GRANDCHILD}cat >/dev/null
+echo partial
+exit 3
+`)
+    const result = await runStopAgent(dir, { timeoutSeconds: 0, graceSeconds: 0.5 })
+
+    expect(result).toEqual({ ok: false, reason: 'exit', code: 3, stdout: 'partial\n' })
+    expect(isThere(pidIn(dir, 'grandchild.pid'))).toBe(false)
+  }, 30_000)
+
+  it('settles at once for an agent that leaves nothing behind', async () => {
+    const dir = stopAgent(`cat >/dev/null\necho '${DONE_ENVELOPE}'\n`)
+    const began = Date.now()
+    const result = await runStopAgent(dir, { timeoutSeconds: 0, graceSeconds: 20 })
+
+    expect(result).toMatchObject({ ok: true, stdout: `${DONE_ENVELOPE}\n` })
+    expect(Date.now() - began).toBeLessThan(10_000)
+  }, 30_000)
+
+  // plumbbob being stopped is a signal to the process itself, so this one runs
+  // runAgent in a process of its own and signals that.
+  for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
+    it(`stops the agent and its grandchild when plumbbob itself gets ${signal}`, async () => {
+      const dir = stopAgent(`${STUBBORN_GRANDCHILD}echo $$ > "$PLUMBBOB_AGENT_DIR/agent.pid"
+cat >/dev/null
+while :; do sleep 0.1; done
+`)
+      writeFileSync(
+        join(dir, 'driver.mjs'),
+        `import { runAgent } from ${JSON.stringify(AGENTS_MODULE)}
+const dir = ${JSON.stringify(dir)}
+const result = await runAgent({
+  root: dir,
+  command: 'sh "$PLUMBBOB_AGENT_DIR/run.sh"',
+  agentDir: dir,
+  input: ${JSON.stringify(STOP_INPUT)},
+  timeoutSeconds: 0,
+  graceSeconds: 0.5,
+})
+process.stdout.write(JSON.stringify(result))
+`,
+      )
+      const driver = spawn(process.execPath, [join(dir, 'driver.mjs')], { stdio: ['ignore', 'pipe', 'inherit'] })
+      let out = ''
+      driver.stdout.on('data', (chunk: Buffer) => {
+        out += chunk.toString()
+      })
+      const closed = new Promise<number | null>((done) => driver.on('close', done))
+
+      // Wait until the agent is up and has started its grandchild.
+      const deadline = Date.now() + 20_000
+      while (!existsSync(join(dir, 'agent.pid')) && Date.now() < deadline) {
+        await new Promise((tick) => setTimeout(tick, 50))
+      }
+      expect(existsSync(join(dir, 'agent.pid'))).toBe(true)
+      driver.kill(signal)
+
+      // The driver outlives the signal long enough to stop the agent and say so.
+      expect(await closed).toBe(0)
+      expect(JSON.parse(out)).toEqual({ ok: false, reason: 'interrupted' })
+      expect(isThere(pidIn(dir, 'agent.pid'))).toBe(false)
+      expect(isThere(pidIn(dir, 'grandchild.pid'))).toBe(false)
+    }, 40_000)
+  }
 })

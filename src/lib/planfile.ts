@@ -1,9 +1,10 @@
 // A build's plan as a file: the reads and writes around the pure derivation
 // (src/lib/plan.ts) and its checks (src/lib/plancheck.ts). It reads intent.md,
 // hashes its bytes, hands the tree and the root keyframes.md's Map in, and
-// says what a fresh `plan.json` would hold. Three callers share it: `export`
+// says what a fresh `plan.json` would hold. Four callers share it: `export`
 // writes the file, the verbs that write intent.md keep an exported one current,
-// and the check fails when the active build's has fallen behind. A build without `plan.json`
+// the verbs that move a build on refresh it before they start, and the check
+// fails when the active build's has fallen behind. A build without `plan.json`
 // is never touched: the first `plumbbob export` is what opts it in.
 
 import { createHash } from 'node:crypto'
@@ -136,4 +137,22 @@ export function refreshAdvisory(findings: ReadonlyArray<string> | null): string 
     detail: [findings.length === 1 ? '1 plan finding' : `${findings.length} plan findings`],
     remedy: 'plumbbob export names them; fix the plan, then run it again',
   })
+}
+
+/**
+ * Bring an exported build's `plan.json` up to its intent.md at the start of a
+ * verb that moves the build on, so an edit made by hand since the last export
+ * never reaches the gate or a commit as a stale file.
+ *
+ * `build`, `checkpoint`, `harvest` and `finish` call it first. It writes only
+ * when the bytes differ, does nothing for a build that was never exported,
+ * and prints the advisory on stderr when the plan now fails a rule or a check
+ * and the old file was kept. `plumbbob check` run alone refreshes nothing and
+ * still fails on a file that is behind, which is what a CI run needs.
+ */
+export function keepPlanCurrent(root: string, slug: string | null): void {
+  const left = refreshAdvisory(refreshPlan(root, slug))
+  if (left.length > 0) {
+    process.stderr.write(left)
+  }
 }

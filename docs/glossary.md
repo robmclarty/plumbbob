@@ -35,6 +35,21 @@ word up without reading the others first. Each entry points at the page that own
   [D154 (red-proof-holds)](decisions.md#d154)).
 - **Seam**: the exact paths a step is expected to touch. Orientation, never a lock: a
   path outside it is a visible stray, not a refused edit.
+- **Plan-edits grant** (`--plan-edits`): a flag typed with a run, a range, or `--auto` that
+  lets that grant land a step whose plan was edited, except where the edit changes a
+  Decision, a Constraint, or a landed step. The next card lists what the run did to the plan
+  ([D163 (plan-edits-grant)](decisions.md#d163)).
+- **Plan mark** (`builds/<slug>/MARK`): PlumbBob's copy of `intent.md` as it last knew
+  the plan approved, taken when the plan lands, after each of the CLI's own writes to the
+  file, and at a step's entry when a human turn stood between the mark and the entry.
+  Untracked, and never a lock: it exists so a later edit can be measured against it.
+  → [`state-and-git.md`](state-and-git.md#the-control-plane-files)
+- **Plan edit** (the `plan` row): a change to `intent.md` since the plan mark, found at a
+  step's pause. The Readout counts its lines (`edited during the step: intent.md +3 -1`),
+  the **Plan Edit** part beneath it shows the diff, and the Verdict reads
+  `◐ A hair off (plan edited)`. An advisory, so `looks good` stays yours to say; the
+  checkpoint stops at the pause for an edit made after you last typed, grant or not
+  ([D162 (plan-edit-shown)](decisions.md#d162)). → [`presentation.md`](presentation.md#the-plan-edit-part)
 - **Like**: the files a step names to copy the pattern from, on an optional `- like:`
   line beside its seam: one or more backticked repo-relative paths. The builder reads
   them before its first edit, and an agent gets them as `step.like`. Advice, never a
@@ -130,7 +145,8 @@ word up without reading the others first. Each entry points at the page that own
   hook from the prompt you typed and good for that one turn: `auto`, the steps a typed
   range names, or the steps a run's range has left, read from the plan at the keystroke.
   The latch lands what it names and nothing else, and one the model writes is no grant.
-  → [`decisions.md`](decisions.md#d96)
+  It covers the plan as you approved it: a step whose plan was edited stops at its pause
+  ([D162 (plan-edit-shown)](decisions.md#d162)). → [`decisions.md`](decisions.md#d96)
 - **Revert**: `git reset --hard` to a recorded checkpoint, with the build folder
   snapshotted across it so your plan and park lines survive.
 - **Abandon**: the third exit from a step: drop the attempt, keep the diff in the tree,
@@ -159,8 +175,8 @@ are its parts.
   numbered **highlights** stay in the detail file behind it, each a handle `expand` can
   open, one `more details` link away.
 - **Readout**: the fenced rows of measured facts: `check`, `proof`, `decisions`,
-  `constraints`, `seam`, `diff` (with each changed file beneath it), `spent`. Green
-  collapses to a count; red names one offender.
+  `constraints`, `seam`, `diff` (with each changed file beneath it), `spent`, and `plan`
+  on a step that edited the plan. Green collapses to a count; red names one offender.
 - **Evidence**: a file an agent saved for you to look at (a screenshot, a trace) and
   named, with a caption, in its envelope's `evidence[]`. The step's pause lists each one
   as a link under the Readout. The files sit in the step's **evidence folder**

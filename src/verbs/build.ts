@@ -5,6 +5,7 @@
 // in-flight signal (the dashboard derives the BUILD phase from it); this verb
 // never checkpoints; only `checkpoint` commits.
 
+import { keepPlanCurrent } from '../lib/planfile.ts'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
 import { hasSession, intentPath, resolveBuild, seamPath, stampStepStat, stampTick, stepPath } from '../lib/sidecar.ts'
@@ -13,6 +14,7 @@ import { parseBuildRanges, parseOrderedSteps, rangeStanding, rangeStart, skipped
 import { stepLabel, syncBuildLogState } from '../lib/buildlogsync.ts'
 import { readGrant, type Grant } from '../lib/latch.ts'
 import { notice } from '../lib/notice.ts'
+import { enterPlan } from '../lib/planmark.ts'
 import { refreshReach } from '../lib/reachfile.ts'
 import { hasStep, readBuildArgs } from '../lib/steplist.ts'
 import { waitingCard } from './handoff.ts'
@@ -58,6 +60,10 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
     return 1
   }
 
+  // A step or a refine edited by hand since the last export leaves plan.json
+  // behind; entering a step brings it current, so the step's own check is not
+  // red over the plan.
+  keepPlanCurrent(root, slug)
   const intent = readFileSync(intentPath(root, slug), 'utf8')
   // A stop card waiting for its reply holds every step, bare or named: the
   // step's pause would write over the range's review in the detail file before
@@ -102,6 +108,11 @@ export function build(cwd: string, args: ReadonlyArray<string>): number {
     return 1
   }
 
+  // Settle the plan mark before the step is in flight: a plan changed since
+  // the mark with a human turn in between is accepted as it stands, and one
+  // changed with nobody present keeps the older mark, so the edit is shown at
+  // this step's pause.
+  enterPlan(root, slug, step)
   writeFileSync(seamPath(root, slug), `${parsed.seam.join('\n')}\n`)
   writeFileSync(stepPath(root, slug), `${step}\n`)
   // The seam is fixed for the step now. If it is no longer the paths atis was

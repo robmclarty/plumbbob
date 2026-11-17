@@ -9,7 +9,7 @@
 // test/integration/doctor.test.ts drives the same checks through the real CLI).
 
 import { execFileSync } from 'node:child_process'
-import { chmodSync, existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
@@ -674,6 +674,199 @@ describe('doctor — agent validation — D48 (doctor-validates-agents)', () => 
   })
 })
 
+// Bindings written as paths. The repo holds one build, so it is the active one
+// and its harness.json is the one doctor reads; the settings rung is the
+// tracked settings.json overrideRepo already wrote.
+const BOUND_SLUG = 'bound-build'
+
+function writeBoundHarness(dir: string, harness: Record<string, unknown>): void {
+  mkdirSync(buildDir(dir, BOUND_SLUG), { recursive: true })
+  writeFileSync(join(buildDir(dir, BOUND_SLUG), 'harness.json'), `${JSON.stringify({ contract: 1, ...harness }, null, 2)}\n`)
+}
+
+// An agent directory at any path, with a manifest name of its own and a
+// command that needs no script.
+function putAgentAt(dir: string, name: string, command = 'true'): void {
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(join(dir, 'agent.json'), JSON.stringify({ contract: 1, name, command, slots: ['after'] }))
+}
+
+function agentsSection(stdout: string): ReadonlyArray<string> {
+  const lines = stdout.split('\n')
+  const from = lines.indexOf('plumbbob doctor — agents — D48 (doctor-validates-agents)')
+  return from === -1 ? [] : lines.slice(from, lines.indexOf('', from))
+}
+
+describe('doctor — path bindings — D160 (path-bindings)', () => {
+  it('prints byte for byte what it printed before for a harness and settings that bind names only', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    putAgent(dir, 'reviewer', { command: 'sh "$PLUMBBOB_AGENT_DIR/run.sh"', script: '#!/bin/sh\n', slots: ['after'] })
+    mkdirSync(buildDir(dir, BOUND_SLUG), { recursive: true })
+    const before = await doctorWithHome(home, dir)
+
+    // Names that resolve and names that do not, at every level that can bind.
+    writeBoundHarness(dir, {
+      defaults: { after: ['reviewer', 'ghost'] },
+      steps: { 1: { before: 'scout', build: ['reviewer'] } },
+    })
+    writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true', agents: { after: ['reviewer', 'nobody'] } }))
+    const after = await doctorWithHome(home, dir)
+
+    expect(after.stdout).toBe(before.stdout)
+    expect(after.code).toBe(before.code)
+    expect(agentsSection(after.stdout)).toEqual([
+      'plumbbob doctor — agents — D48 (doctor-validates-agents)',
+      '  ✓ reviewer (project) [after]',
+    ])
+  })
+
+  it('shows no agents section for names-only bindings in a repo with no agents', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    writeBoundHarness(dir, { defaults: { after: 'ghost' } })
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(0)
+    expect(stdout).not.toContain('plumbbob doctor — agents')
+  })
+
+  it('lists a path binding that resolves by its manifest name, with the path as its origin', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    putAgentAt(join(dir, 'tools', 'walk'), 'walkthrough')
+    putAgentAt(join(home, 'agents', 'mine'), 'my-reviewer')
+    const elsewhere = join(makeTempDir(), 'abs')
+    putAgentAt(elsewhere, 'far')
+    writeBoundHarness(dir, { defaults: { after: ['./tools/walk', '~/agents/mine', elsewhere] } })
+
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(0)
+    expect(agentsSection(stdout)).toEqual([
+      'plumbbob doctor — agents — D48 (doctor-validates-agents)',
+      '  ✓ walkthrough (path ./tools/walk) [after]',
+      `  ✓ far (path ${elsewhere}) [after]`,
+      '  ✓ my-reviewer (path ~/agents/mine) [after]',
+    ])
+  })
+
+  it('fails a ./ path that is missing, broken, or refused, each as a counted problem', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    mkdirSync(join(dir, 'tools', 'broken'), { recursive: true })
+    writeFileSync(join(dir, 'tools', 'broken', 'agent.json'), '{ not json')
+    writeBoundHarness(dir, {
+      defaults: { after: ['./tools/gone'] },
+      steps: { 2: { after: ['./tools/broken', '../outside'] } },
+    })
+
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(1)
+    expect(agentsSection(stdout)).toEqual([
+      'plumbbob doctor — agents — D48 (doctor-validates-agents)',
+      '  ✗ ../outside (path) — binding path ../outside leaves the repo, and a relative binding must stay inside it; bound in harness.json, where a run refuses it',
+      `  ✗ ./tools/broken (path) — ${join(realpathSync(dir), 'tools', 'broken', 'agent.json')} is not valid JSON; bound in harness.json, where a run refuses it`,
+      '  ✗ ./tools/gone (path) — no agent.json at binding path ./tools/gone; bound in harness.json, where a run refuses it',
+    ])
+    expect(stdout).toContain('plumbbob: 3 problem(s)')
+  })
+
+  it('warns on a missing ~/ or absolute path without counting it', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    const absent = join(makeTempDir(), 'nowhere')
+    writeBoundHarness(dir, { defaults: { after: ['~/agents/ghost', absent] } })
+
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(0)
+    expect(agentsSection(stdout)).toEqual([
+      'plumbbob doctor — agents — D48 (doctor-validates-agents)',
+      `  ○ ${absent} (path) — no agent.json at binding path ${absent}; bound in harness.json, where a run warns and skips it`,
+      '  ○ ~/agents/ghost (path) — no agent.json at binding path ~/agents/ghost; bound in harness.json, where a run warns and skips it',
+    ])
+    expect(stdout).toContain('all checks passed')
+  })
+
+  it('reads the settings agents key too, and names both files for a path bound in each', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true', agents: { after: ['./tools/gone', './tools/only-settings'] } }))
+    writeBoundHarness(dir, { defaults: { before: './tools/gone' }, steps: { 1: { after: './tools/gone' } } })
+
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(1)
+    expect(agentsSection(stdout)).toEqual([
+      'plumbbob doctor — agents — D48 (doctor-validates-agents)',
+      '  ✗ ./tools/gone (path) — no agent.json at binding path ./tools/gone; bound in harness.json and settings, where a run refuses it',
+      '  ✗ ./tools/only-settings (path) — no agent.json at binding path ./tools/only-settings; bound in settings, where a run refuses it',
+    ])
+    expect(stdout).toContain('plumbbob: 2 problem(s)')
+  })
+
+  it('lists path bindings after the named agents, and checks a resolved one\'s command', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    putAgent(dir, 'reviewer', { command: 'sh "$PLUMBBOB_AGENT_DIR/run.sh"', script: '#!/bin/sh\n', slots: ['after'] })
+    putAgentAt(join(dir, 'tools', 'walk'), 'walkthrough', 'sh "$PLUMBBOB_AGENT_DIR/gone.sh"')
+    writeBoundHarness(dir, { defaults: { after: ['reviewer', './tools/walk'] } })
+
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(1)
+    expect(agentsSection(stdout)).toEqual([
+      'plumbbob doctor — agents — D48 (doctor-validates-agents)',
+      '  ✓ reviewer (project) [after]',
+      `  ✗ walkthrough (path ./tools/walk) — command script ${join(realpathSync(dir), 'tools', 'walk', 'gone.sh')} does not exist`,
+    ])
+    expect(stdout).toContain('plumbbob: 1 problem(s)')
+  })
+
+  it('warns, uncounted, on a path bound under a slot its manifest does not declare', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    // Both fixtures declare `after` alone. One is bound where it runs and
+    // where it does not; the other only where it does not, in both files.
+    putAgentAt(join(dir, 'tools', 'part'), 'part')
+    putAgentAt(join(dir, 'tools', 'none'), 'none')
+    writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true', agents: { build: ['./tools/none'] } }))
+    writeBoundHarness(dir, {
+      defaults: { after: ['./tools/part'], before: ['./tools/none'] },
+      steps: { 2: { build: './tools/part' } },
+    })
+
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(0)
+    expect(agentsSection(stdout)).toEqual([
+      'plumbbob doctor — agents — D48 (doctor-validates-agents)',
+      "  ○ none (path ./tools/none) [after] — does not declare the 'before' and 'build' slots; bound in harness.json and settings, where a run warns and skips it",
+      "  ○ part (path ./tools/part) [after] — does not declare the 'build' slot; bound in harness.json, where a run warns and skips it",
+    ])
+    expect(stdout).toContain('all checks passed')
+  })
+
+  it('fails a harness.json that does not parse, since no bound agent runs until it does', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    mkdirSync(buildDir(dir, BOUND_SLUG), { recursive: true })
+    const file = join(buildDir(dir, BOUND_SLUG), 'harness.json')
+    writeFileSync(file, '{ nope')
+
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(1)
+    expect(agentsSection(stdout)).toEqual([
+      'plumbbob doctor — agents — D48 (doctor-validates-agents)',
+      `  ✗ bindings — ${realpathSync(file)} is not valid JSON.`,
+    ])
+  })
+})
+
 // The plugin-link section, in-process with HOME pinned (Stryker cannot see the
 // subprocess integration suite, and these checks are pure fs reads anyway).
 describe('doctor — plugin link (HOME pinned)', () => {
@@ -775,7 +968,7 @@ describe('doctor — repo setup — D126 (setup-before-start)', () => {
     expect(stdout).toContain(
       '\n\nplumbbob doctor — repo setup\n' +
         '  ○ repo: no .plumbbob/ folder yet\n' +
-        '  ○ repo: 18 control files not ignored by git (.plumbbob/STATE, .plumbbob/settings.local.json, and 16 others)\n' +
+        '  ○ repo: 20 control files not ignored by git (.plumbbob/STATE, .plumbbob/settings.local.json, and 18 others)\n' +
         '      → plumbbob setup (or /plumbbob:setup) adds what is missing; a setup by hand works too\n',
     )
     expect(stdout).not.toContain('✓ repo')

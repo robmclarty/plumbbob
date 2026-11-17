@@ -272,7 +272,9 @@ export function clearStep(root: string, slug?: string | null): void {
  *
  * It records that a card showed, never what the card said: a later turn that
  * changes the work is the model's reply, and the card comes back only on
- * request (D110 (reply-after-the-card)).
+ * request (D110 (reply-after-the-card)). The one thing it keeps of the card
+ * is the plan it showed as edited, `2 plan:<hash>`, so a plan edited after
+ * the card showed brings the card back with its `plan` row.
  */
 export function pausePath(root: string, slug?: string | null): string {
   return join(artifactDir(root, slug), 'PAUSE')
@@ -284,7 +286,13 @@ export function pausePath(root: string, slug?: string | null): string {
  * `answered`, so a stop card that follows it prints short
  * (D119 (short-stop-after-a-halt)).
  */
-export type PauseStamp = { readonly kind: 'pause' | 'landed'; readonly step: number; readonly answered?: true }
+export type PauseStamp = {
+  readonly kind: 'pause' | 'landed'
+  readonly step: number
+  readonly answered?: true
+  // On a pause whose card showed a plan edit: the hash of the plan it showed.
+  readonly plan?: string
+}
 
 /**
  * The card PAUSE says has shown, or null when the file is absent or does not
@@ -298,7 +306,11 @@ export function readPause(root: string, slug?: string | null): PauseStamp | null
       return null
     }
     const stamp = { kind: m[1] === undefined ? ('pause' as const) : ('landed' as const), step: Number(m[2]) }
-    return stamp.kind === 'landed' && m[3] === 'answered' ? { ...stamp, answered: true } : stamp
+    if (stamp.kind === 'pause') {
+      const plan = /^plan:([0-9a-f]+)$/.exec(m[3] ?? '')?.[1]
+      return plan === undefined ? stamp : { ...stamp, plan }
+    }
+    return m[3] === 'answered' ? { ...stamp, answered: true } : stamp
   } catch {
     return null
   }
@@ -311,7 +323,8 @@ export function readPause(root: string, slug?: string | null): PauseStamp | null
 export function writePause(root: string, slug: string | null | undefined, stamp: PauseStamp): void {
   try {
     const answered = stamp.kind === 'landed' && stamp.answered === true ? ' answered' : ''
-    writeFileSync(pausePath(root, slug), `${stamp.kind === 'landed' ? 'landed ' : ''}${stamp.step}${answered}\n`)
+    const plan = stamp.kind === 'pause' && stamp.plan !== undefined ? ` plan:${stamp.plan}` : ''
+    writeFileSync(pausePath(root, slug), `${stamp.kind === 'landed' ? 'landed ' : ''}${stamp.step}${answered}${plan}\n`)
   } catch {
     // A read-only tree or a vanished build folder: the card still renders.
   }
@@ -593,6 +606,7 @@ export type StepStats = {
   readonly redChecks?: number
   readonly redProofs?: number
   readonly driftWarnings?: number
+  readonly planEdits?: number
   readonly reverts?: number
   readonly abandons?: number
   readonly startedAt?: string
@@ -631,7 +645,7 @@ export function bumpStepStat(
   root: string,
   slug: string | null | undefined,
   step: number,
-  key: 'redChecks' | 'redProofs' | 'driftWarnings' | 'reverts' | 'abandons',
+  key: 'redChecks' | 'redProofs' | 'driftWarnings' | 'planEdits' | 'reverts' | 'abandons',
 ): void {
   patchStepStat(root, slug, step, (current) => ({ [key]: (current[key] ?? 0) + 1 }))
 }
@@ -883,6 +897,147 @@ export function stampTick(root: string, slug?: string | null): void {
  */
 export function clearTick(root: string, slug?: string | null): void {
   rmSync(tickPath(root, slug), { force: true })
+}
+
+// --- The plan mark: `builds/<slug>/MARK`, the plan as the CLI last knew it to
+// be sanctioned. A snapshot of intent.md's text under the TURN it was taken in
+// and the step whose entry settled it, so a later read can say whether the
+// plan changed since, show the change, and tell whether a human turn stood
+// between the two. Written when a build starts, when the plan lands, after
+// each of the CLI's own writes to intent.md, at a step's entry, and at a typed
+// prompt, which also notes the plan the human typed over when it differs from
+// the snapshot. In-flight control like TICK: untracked, per-worktree, cleared
+// at finish. ---
+
+/**
+ * MARK: the plan as the CLI last knew it sanctioned, beside TICK.
+ */
+export function markPath(root: string, slug?: string | null): string {
+  return join(artifactDir(root, slug), 'MARK')
+}
+
+/**
+ * The plan mark: the snapshot of intent.md, the turn it was taken in (null
+ * with no turn hook), and the step whose entry settled it (null when a start,
+ * a plan commit, a landing, or a typed prompt took it). `seen` is the hash of
+ * the plan as it stood at the human's last typed prompt, kept only while that
+ * plan differs from the snapshot: the edit a person has typed over.
+ */
+export type PlanMark = {
+  readonly turn: number | null
+  readonly step: number | null
+  readonly text: string
+  readonly seen?: string
+}
+
+/**
+ * The plan mark, or null when MARK is absent or its header does not parse: a
+ * build started before the mark existed has none, and a mark that cannot be
+ * read is no mark.
+ */
+export function readMark(root: string, slug?: string | null): PlanMark | null {
+  let raw: string
+  try {
+    raw = readFileSync(markPath(root, slug), 'utf8')
+  } catch {
+    return null
+  }
+  const m = /^turn (\d+|-)\nstep (\d+|-)\n(?:seen ([0-9a-f]+)\n)?\n/.exec(raw)
+  if (m === null) return null
+  return {
+    turn: m[1] === '-' ? null : Number(m[1]),
+    step: m[2] === '-' ? null : Number(m[2]),
+    text: raw.slice(m[0].length),
+    ...(m[3] === undefined ? {} : { seen: m[3] }),
+  }
+}
+
+/**
+ * Write the plan mark: a `turn N` line, a `step K` line, a `seen <hash>` line
+ * when it carries one, a blank line, then the snapshot byte for byte.
+ *
+ * Best-effort: a failed write leaves the older mark, or none, and a plan that
+ * then reads as edited is shown to the person rather than lost.
+ */
+export function writeMark(root: string, slug: string | null | undefined, mark: PlanMark): void {
+  try {
+    const seen = mark.seen === undefined ? '' : `seen ${mark.seen}\n`
+    writeFileSync(markPath(root, slug), `turn ${mark.turn ?? '-'}\nstep ${mark.step ?? '-'}\n${seen}\n${mark.text}`)
+  } catch {
+    // A read-only tree or a vanished build folder: the verb goes on.
+  }
+}
+
+/**
+ * Remove the plan mark: `finish` clears it with the build's other in-flight
+ * control files. Absent is a no-op.
+ */
+export function clearMark(root: string, slug?: string | null): void {
+  rmSync(markPath(root, slug), { force: true })
+}
+
+// --- The run's plan base: `builds/<slug>/BASE`, the plan as it stood when the
+// human typed a grant that allows plan edits (`--plan-edits`). Its presence
+// under the turn it names is the allowance; its snapshot is what the next
+// card measures the run's edits against. In-flight control like MARK:
+// untracked, per-worktree, dropped once a card has shown it and the human has
+// typed again, and cleared at finish. ---
+
+/**
+ * BASE: the plan as it stood when a grant allowing plan edits was typed.
+ */
+export function basePath(root: string, slug?: string | null): string {
+  return join(artifactDir(root, slug), 'BASE')
+}
+
+/**
+ * The run's plan base: the turn the grant was typed in, the steps that have
+ * landed a plan edit under it, whether a card has shown the run's edits, and
+ * the snapshot of intent.md taken at that prompt.
+ */
+export type PlanBase = {
+  readonly turn: number
+  readonly steps: ReadonlyArray<number>
+  readonly shown: boolean
+  readonly text: string
+}
+
+/**
+ * The run's plan base, or null when BASE is absent or its header does not
+ * parse: no base is no allowance.
+ */
+export function readBase(root: string, slug?: string | null): PlanBase | null {
+  let raw: string
+  try {
+    raw = readFileSync(basePath(root, slug), 'utf8')
+  } catch {
+    return null
+  }
+  const m = /^turn (\d+)\nsteps ([\d,]*|-)\nshown (yes|no)\n\n/.exec(raw)
+  if (m === null) return null
+  const listed = m[2] === '-' || m[2] === '' ? [] : (m[2] ?? '').split(',').map(Number)
+  return { turn: Number(m[1]), steps: listed, shown: m[3] === 'yes', text: raw.slice(m[0].length) }
+}
+
+/**
+ * Write the run's plan base: a `turn N` line, a `steps` line, a `shown` line,
+ * a blank line, then the snapshot byte for byte. Best-effort, like the mark:
+ * a failed write leaves no allowance, which is the strict reading.
+ */
+export function writeBase(root: string, slug: string | null | undefined, base: PlanBase): void {
+  try {
+    const steps = base.steps.length === 0 ? '-' : base.steps.join(',')
+    writeFileSync(basePath(root, slug), `turn ${base.turn}\nsteps ${steps}\nshown ${base.shown ? 'yes' : 'no'}\n\n${base.text}`)
+  } catch {
+    // A read-only tree or a vanished build folder: the run stays strict.
+  }
+}
+
+/**
+ * Remove the run's plan base. Absent is a no-op.
+ */
+export function clearBase(root: string, slug?: string | null): void {
+  rmSync(basePath(root, slug), { force: true })
 }
 
 /**
@@ -1171,6 +1326,12 @@ const CONTROL_EXCLUDES: ReadonlyArray<string> = [
   // The stop stamp likewise: the range whose card has shown, and the turn it
   // printed in, for the reminder and the record's latch.
   `${DIRNAME}/builds/*/STOP`,
+  // The plan mark is a whole copy of intent.md, kept to tell an edit from the
+  // plan as it was approved. Tracked, it would ride every step commit twice.
+  `${DIRNAME}/builds/*/MARK`,
+  // The run's plan base is a second copy of intent.md, as it stood when a
+  // grant allowing plan edits was typed.
+  `${DIRNAME}/builds/*/BASE`,
   // The agent-run handoff ledger is step-scoped in-flight state, not a
   // tracked artifact: it must never ride a step commit into the PR.
   `${DIRNAME}/builds/*/handoff.json`,

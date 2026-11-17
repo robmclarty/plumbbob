@@ -2,7 +2,7 @@
 name: harvest
 description: "Triage the park list at a step boundary: propose one class (blocker/tangent/pivot) for every open parked item at once, and once the human settles them in one reply, fold a confirmed blocker into intent and record the rest with plumbbob harvest. A run's stop card carries its own harvest."
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob order:*), Bash(plumbbob defer:*), Bash(plumbbob handoff:*), Bash(plumbbob harvest:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob order:*), Bash(plumbbob defer:*), Bash(plumbbob handoff:*), Bash(plumbbob harvest:*), Bash(plumbbob export:*)
 ---
 
 # PlumbBob: harvest the park list
@@ -118,6 +118,7 @@ the call on each one theirs. The detail file you write first is the proposal; re
   ([D123 (defer-records)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d123)).
 - Fold a confirmed blocker into `intent.md`, and defer each question a confirmed tangent
   sets aside, before you run `plumbbob harvest`, so the record and the plan agree when it
-  lands.
+  lands. `plumbbob harvest` brings an exported `plan.json` up to the fold as it starts
+  ([D146 (cli-keeps-current)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d146)).
 - Never reclassify or resolve an item the human hasn't confirmed, and default every
   uncertain item to **tangent**, never to blocker.

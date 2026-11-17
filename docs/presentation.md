@@ -36,7 +36,7 @@ there.
 | what | whose judgment | how it reaches the turn |
 | --- | --- | --- |
 | the Summary lead, the numbered highlights (kept in the detail file and the record), the `proof`, `decisions`, and `constraints` rows, the title, the why, and the lean for each park at a stop, the recommendation | the model | written into `.plumbbob/detail.md`, read back and rendered by handoff |
-| the Readout's other rows and the changed files beneath its `diff` row, the inline diff when the change is small, the Evidence links, Your Call, the state table (the Verdict, Now, Stop, Next Up, and the rows beneath it), each park's handle and text on a stop card, every `details:` link, the `more details` link | the CLI | measured from the session, the gate, the plan, the build log, the handoff ledger, and git |
+| the Readout's other rows and the changed files beneath its `diff` row, the inline diff when the change is small, the Plan Edit part when the plan was edited, the Evidence links, Your Call, the state table (the Verdict, Now, Stop, Next Up, and the rows beneath it), each park's handle and text on a stop card, every `details:` link, the `more details` link | the CLI | measured from the session, the gate, the plan, the build log, the handoff ledger, and git |
 
 The model authors nothing in the turn but the relay. Every defect the build
 that wrote this spec found in a live turn sat in the region the model was
@@ -308,15 +308,18 @@ every row the model attests is one it can pad or get wrong, and determinism is
 what earns the readout its trust. The `check` row comes from the last run's
 `.check/summary.json`, the `seam` and `diff` rows from the SEAM marker against
 the step's whole product (everything changed since HEAD, staged or not, plus
-each non-ignored new file counted as all-added lines), and the `spent` row from
+each non-ignored new file counted as all-added lines), the `plan` row from
+intent.md against the plan mark, and the `spent` row from
 `stats.json` and the turn ledger. The model writes only the three rows that
 take judgment (`proof`, `decisions`, `constraints`), into the detail file,
 under the header rule that file's wire opens with; handoff parses them there,
 folds them with its measurements, and re-emits the whole set. The model never
 types the fence into the turn.
 
-The fence holds seven rows at most, in this order, labels padded with spaces so
-every value starts at column 14:
+The fence holds eight rows at most, in this order, labels padded with spaces so
+every value starts at column 14. The `plan` row stands between `seam` and
+`diff`, and only on a step that edited the plan, so the fence below, which
+has none, is the one nearly every step prints:
 
 ```text
 check        green: 3 of 3 checks
@@ -342,6 +345,7 @@ offender when it is not:
 | `constraints` | model | `<N> of <N> honored` | `bent: <tag>, <how>` | `drift: <which one reality broke>` |
 | `seam` | CLI | `held: <N> of <M> declared, no strays` | `strayed: <N> paths outside the seam` | never; a seam the plan got wrong shows as a stray, and the detail file says so |
 | `plumb` | CLI, in the `seam` row's place, for a step with a stored reach | `seam <N> · reach <N> · out 0` | `seam <N> · reach <N> · out <N> (<path>)` | never, as with `seam` |
+| `plan` | CLI, only when intent.md differs from the plan mark | no row | `edited during the step: intent.md +<added> -<removed>` | never; an edit is the person's call |
 
 The rules the rows follow:
 
@@ -397,6 +401,23 @@ The rules the rows follow:
   `seam` row's advisory and folds the same way, to `◐ A hair off (seam
   strayed)`. With no stored answer, or one asked for other paths, the `seam`
   row renders as it always has.
+- **A plan edited during the step earns its own row.** The CLI keeps a mark of
+  the plan as it last knew it approved: a copy of intent.md, taken when the
+  plan lands, after each of its own writes to the file, and at each prompt
+  the person types while no step's edit is waiting to be shown
+  ([D162 (plan-edit-shown)](decisions.md#d162)). When intent.md differs from
+  the mark at a step's pause, the fence gains
+  `plan         edited during the step: intent.md +3 -1`, the lines the edit
+  added and removed. A change that is only whitespace, or one trailing
+  newline, still counts, and the row says so as line counts and nothing more.
+  Like the `seam` row's stray it is an advisory, never a failure: nothing
+  blocks an edit to the plan ([D10 (pause-not-lock)](decisions.md#d10)), and
+  whether this one stands is the person's call, so it folds no lower than
+  `◐ A hair off (plan edited)` and `looks good` stays on the card. The row
+  takes no `→` line, because the change itself rides beneath the fence in
+  [the Plan Edit part](#the-plan-edit-part). The row is the CLI's alone: a
+  `plan` row written into the detail file is never read. With no difference
+  there is no row, and the card is the bytes it always was.
 - A cited tag always carries its slug, `D2 (five-per-minute)`, never a bare
   `D2`, the same gloss rule prose follows
   ([D74 (glossed-citations)](decisions.md#d74)).
@@ -421,9 +442,9 @@ The rules the rows follow:
   The model's three rows are written to fit, which the collapsed forms make
   easy: one short clause after the verdict word, with the full story in the
   detail file.
-- Measured beats attested. The model has no check or seam row to write; the
-  CLI's measurement is the only one, so a model cannot vibe the gate green or
-  the seam held.
+- Measured beats attested. The model has no check, seam, or plan row to write;
+  the CLI's measurement is the only one, so a model cannot vibe the gate green,
+  the seam held, or the plan untouched.
 
 The model may only say true, failing, or drift. It has no word for "green
 with an asterisk": the softer judgment belongs to the CLI, which measures
@@ -444,13 +465,90 @@ Elapsed runs from the step's `startedAt` to now at the pause and to its
 stamped when the step was entered; the gate is the last run's
 `total_duration_ms`; and the tail is the red runs accrued before green, or
 `green first run` when there were none, then the red proofs (`1 red proof`)
-when a checkpoint's proof command failed before it passed. Drift warnings ride last when any
-accrued. A clause with nothing to say vanishes, and a fresh session with
+when a checkpoint's proof command failed before it passed. Drift warnings ride after them when any
+accrued. Plan edits (`1 plan edit`) come last, and only on a range's stop card: the count is
+taken when the step lands, after its own record is written, so the step's record keeps the
+`plan` row and its dated Log line carries the count in its suffix. A clause with nothing to say vanishes, and a fresh session with
 nothing at all to count vanishes the row.
 
 Tokens and cost stay out. The transcript is host-specific and a price table
 goes stale, while a build is watched by what it consumes in time and attempts,
 which stats.json and the turn ledger already hold.
+
+### The Plan Edit part
+
+**An edit to the plan is shown at the pause, as a diff.** The `plan` row says
+that intent.md changed and by how much; this part shows the change, measured
+against the same mark, in a `diff` fence of its own:
+
+````markdown
+**Plan Edit**: [intent.md](.plumbbob/builds/rate-limit/intent.md) +3 -1, against the plan as last approved.
+
+```diff
+@@ -14,7 +14,9 @@
+    - seam: `src/routes/login.ts`
+    - proof: `pnpm vitest run limiter`
+ 3. [ ] feat(config): make the limit configurable via env
+-   - seam: `src/config.ts`
++   - seam: `src/config.ts`, `src/routes/admin.ts`
++4. [ ] feat(admin): show the limit on the admin page
++   - seam: `src/routes/admin.ts`
+ 
+ ## Decisions
+ 
+```
+````
+
+- The label line links the file, by its path from the repo root, and gives the
+  lines added and removed, the counts the `plan` row carries.
+- The fence holds a unified diff, three lines of context around each change.
+  The plan as last approved is the left side and intent.md as it stands is
+  the right.
+- The part sits after the Readout's fence and the inline diff, and before the
+  Evidence part and Your Call, so the change is read before the decision.
+- A diff longer than 40 lines stops there, and the label line says how many
+  lines it left out and where they are:
+  ``The diff below stops at 40 lines, and `plumbbob handoff --full` prints the other 58.``
+  `--full` prints the part whole.
+- A step whose plan matches the mark has no Plan Edit part. The boundary and
+  the stop card carry none either: the landing takes the mark again, the
+  step's commit holds the change, and the build-log record keeps the `plan`
+  row.
+
+### The Plan Edits part
+
+A grant typed with `--plan-edits` lets a run land plan edits, so the person reads them
+after the fact, together. The first card after such a run, a step's pause or a range's
+stop card, carries one more part:
+
+```markdown
+**Plan Edits**: [intent.md](.plumbbob/builds/rate-limit/intent.md) +4 -1 since the grant was typed with `--plan-edits`, by steps 6 and 8; ticks are the CLI's and are left out.
+```
+
+- A `diff` fence follows: the plan now against the plan as it stood when the grant was
+  typed, in one diff, with every step's box read as unticked on both sides.
+- It is cut at 40 lines as the Plan Edit part is, and names the command that prints the
+  rest.
+- On a pause card it sits after the Plan Edit part; on a stop card, before the Harvested
+  list.
+- It prints once. A reprint in the same turn still carries it, and the person's next
+  prompt drops it. A run that edited nothing prints no part.
+- `plumbbob status --run` says `· plan edits allowed` on its `grant:` line while such a
+  grant stands.
+
+Each step that edited the plan still lands with its own `plan` row in the build log, its
+`plan edited` rung, and the boundary's advisory
+([D163 (plan-edits-grant)](decisions.md#d163)).
+
+A plan edited with nobody present is the case the Plan Edit part exists for. A run
+that changes the plan it was granted to build stops at that step's pause
+([D162 (plan-edit-shown)](decisions.md#d162)): `plumbbob checkpoint` refuses
+to land a step whose plan changed after the person last typed, the model
+writes the detail file and runs `plumbbob handoff`, and this part is what the
+person finds there. A card that has already shown answers a later handoff
+with its one line ([D110 (reply-after-the-card)](decisions.md#d110)), with one
+exception: a plan edit the card did not show brings the whole card back, so
+the handoff after a refusal always carries the row and the diff.
 
 ### The Evidence part
 
@@ -472,8 +570,8 @@ piece `agent run` kept, one line each:
   ([D107 (short-linked-paths)](decisions.md#d107)). A caption is flattened to one line and
   its square brackets are escaped; a path is flattened to one line too, and one holding a
   space or a parenthesis rides in angle brackets.
-- The part sits after the Readout's fence and the inline diff, and before Your Call, so
-  the look comes before the decision.
+- The part sits after the Readout's fence, the inline diff, and the Plan Edit part, and
+  before Your Call, so the look comes before the decision.
 - The list is every piece the step's agents showed since the step opened, in the order it
   arrived. A path shown twice (an agent run again) is listed once, with its last caption.
 - A step whose agents showed nothing has no Evidence part, and its card is the bytes it
@@ -585,7 +683,8 @@ can never disagree. The fold, from worst down:
 2. Any row failing (`red`, `not met`, `bent`) → `○ Out of plumb`, named
    `<row> <verdict>`, first failing row in row order.
 3. No row failing but advisories accrued → `◐ A hair off`, naming the first
-   advisory in a fixed order: a strayed seam (`seam strayed`), red check runs
+   advisory in a fixed order: a strayed seam (`seam strayed`), an edited plan
+   (`plan edited`), red check runs
    before green (`2 red runs before green`), red proof runs before green
    (`1 red proof before green`), reverts on this step (`1 revert
    on this step`), commits outside the ledger (`3 commits outside the
@@ -606,7 +705,15 @@ the stat the checkpoint bumped once carries it instead, the paths riding the
 advisory printed above the table. Both wear the same words, `seam
 strayed`, so a stray earns the same rung whichever command rendered it.
 
-That last rung counts only commits that are not plumbbob's own. A
+An edited plan sits second in that order and travels the same way. At the
+pause the measured `plan` row carries it; once the step lands, the mark is
+taken again, the row is gone, and the stat the checkpoint bumped carries
+`plan edited` to the boundary and to a range's stop card, with the line
+counts on the advisory printed above the table
+([D162 (plan-edit-shown)](decisions.md#d162)). It carries no count either: the
+stat bumps once for a landing that carried an edit.
+
+The last rung of that order counts only commits that are not plumbbob's own. A
 `chore(plan)` harvest lands between nearly every step, and an advisory that
 trips on routine housekeeping stops meaning anything within three steps, so
 both surfaces, handoff's Verdict and the receipts line on `status`, drop the
@@ -1054,7 +1161,7 @@ plan": each state asks a different move of the human.
 | state | it means | your move |
 | --- | --- | --- |
 | `● Plumb` | every measure true; the diff matches the plan and the gate agrees | read the diff; approving is safe |
-| `◐ A hair off` | green, with advisories accrued on the way (a strayed seam, red runs, reverts, out-of-band commits) | read the named advisory, then judge |
+| `◐ A hair off` | green, with advisories accrued on the way (a strayed seam, an edited plan, red runs, reverts, out-of-band commits) | read the named advisory, then judge |
 | `○ Out of plumb` | a measure failing now: red check, a missed proof, a bent decision or constraint | send fixes; truing the diff fixes it |
 | `✗ Not standing` | truing the diff will not fix it; a readout row says `drift` | repair the plan (`/plumbbob:refine`), or revert |
 
@@ -1065,7 +1172,7 @@ scales down with the turn:
 
 | tier | turns | the ending renders |
 | --- | --- | --- |
-| decision | the build/verify pause, the plan pause, an auto halt on trouble | the whole block: the Summary, the Readout with its changed files, the inline diff when small, the Evidence part when an agent showed something, Your Call, the state table (the Verdict, Now, Next Up, and the rows beneath it), the recommendation, and the `more details` link, shown once per pause; a later turn at the same pause is the model's reply, closed by the one-line reminder. The plan pause judges no diff and has no step in flight, so it renders the moves, the table headed by Next Up, the recommendation, and the link |
+| decision | the build/verify pause, the plan pause, an auto halt on trouble | the whole block: the Summary, the Readout with its changed files, the inline diff when small, the Plan Edit part when the plan was edited, the Evidence part when an agent showed something, Your Call, the state table (the Verdict, Now, Next Up, and the rows beneath it), the recommendation, and the `more details` link, shown once per pause; a later turn at the same pause is the model's reply, closed by the one-line reminder. The plan pause judges no diff and has no step in flight, so it renders the moves, the table headed by Next Up, the recommendation, and the link |
 | decision, at a stop | the stop card that closes a run's range | the whole block in the range's shape: the Summary, the Readout measured across the range, the Harvested part's lean table while a park is open, Your Call, the state table (the Verdict, Stop, Next Up, and the rows beneath it), the recommendation, and the link, shown once per stop; a later turn at the same stop is the model's reply, closed by the one-line reminder ([the stop card](#the-stop-card)) |
 | orientation | the checkpoint boundary (a clean halt's included), a stop's record, finish, status | the transition's lead line, any advisories, and the state table: the Verdict where one was measured (a stop's record measures nothing and renders none), the Stop row on the boundary where a range's last step landed, Next Up, and the rows beneath it; no Your Call block, no recommendation. A boundary already shown ends on its pointer alone. `status` is the exception: it renders the dashboard and nothing else, and the dashboard's last line is its own pointer |
 | driver | park, order, spike, use, recover, revert, agent runs | the transition's lead line, any advisories, and the one labeled Next Up line, no table; no Verdict, since nothing landed |
@@ -1948,7 +2055,7 @@ The rules the range's rows add to the step's:
 - The `spent` row runs from the first step's `startedAt` to the last step's
   `landedAt`, then the red runs summed across the steps, or
   `green first run at every landing` when there were none, then any drift
-  warnings. No gate clause rides it: a gate is one run's wall clock, and a
+  warnings and plan edits. No gate clause rides it: a gate is one run's wall clock, and a
   range has several, only the last of which is on disk. No turn count rides
   it either, since the ledger counts a step's turns from the tick that
   entered it, and a range has one tick per step.
@@ -1958,7 +2065,8 @@ The rules the range's rows add to the step's:
 The Verdict folds as a step's does, worst-of, and names its component the
 same way: a drifted row, then the first failing row in row order, then the
 first advisory in a fixed order, now counted across the range (`seam
-strayed`, `2 red runs before green`, `1 revert in the range`, `3 commits
+strayed`, `plan edited` when a step of the range landed with an edited
+plan, `2 red runs before green`, `1 revert in the range`, `3 commits
 outside the ledger`, the last counting commits between the range's
 checkpoints that are not plumbbob's own), then `● Plumb`.
 
@@ -2449,6 +2557,9 @@ The numeric lines, in one place:
 - **Five highlights, in the detail file.** More means the step's story has
   not been compressed. The card prints none of them; the `more details` link
   and the `expand` move are where they are read.
+- **Forty lines of a plan edit.** The Plan Edit part's diff stops at 40
+  lines, hunk lines and context included, and its label line counts the rest
+  and names `plumbbob handoff --full`, which prints them all.
 - **Eight lines of files.** The changed files beneath a `diff` row name
   seven and fold the rest to a count past eight, at a pause and at a stop.
 - **Two levels.** The turn body, then the detail plane. Nothing hides at a
@@ -2468,7 +2579,8 @@ The numeric lines, in one place:
   table cells, and the recommendation flow at the renderer's width. Only the
   readout's columns are laid out to a number, because only they are columns.
 - **Zero code blocks** in the default turn body beyond the readout fence, the
-  one inline-diff exception above, and a shell command's own `sh` fence in
+  one inline-diff exception above, the Plan Edit part's diff on a step that
+  edited the plan, and a shell command's own `sh` fence in
   the recommendation ([D114 (command-fences)](decisions.md#d114)).
 - **Two tables at most.** The state table on every card and orientation
   ending, and the lean table on a stop card or a harvest's render.

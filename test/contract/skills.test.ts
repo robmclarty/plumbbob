@@ -429,8 +429,8 @@ describe('run — a range of the plan, walked by the build skill — D95 (run-ve
     expect(data.model).toBeUndefined()
   })
 
-  it('takes a range number as its one argument', () => {
-    expect(data['argument-hint']).toBe('"[range-number]"')
+  it('takes a range number, and the flag that lets the run land plan edits', () => {
+    expect(data['argument-hint']).toBe('"[range-number] [--plan-edits]"')
   })
 
   it("grants the build skill's tools, since it drives the same loop, plus what its stop card records with", () => {

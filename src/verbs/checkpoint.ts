@@ -37,11 +37,21 @@ import {
   writePause,
 } from '../lib/sidecar.ts'
 import { runCheck, runProof } from '../lib/check.ts'
-import { refreshAdvisory, refreshPlan } from '../lib/planfile.ts'
+import { keepPlanCurrent, refreshAdvisory, refreshPlan } from '../lib/planfile.ts'
 import { binFiles, reachFor } from '../lib/reach.ts'
 import { readReach, refreshReach } from '../lib/reachfile.ts'
 import { readCommitBody } from '../lib/commitbody.ts'
-import { checkLatch } from '../lib/latch.ts'
+import { checkLatch, planEditHeldMessage, planEditMessage, readGrant } from '../lib/latch.ts'
+import {
+  enterPlan,
+  heldPlanEdit,
+  markPlan,
+  noteRunEdit,
+  type PlanEdit,
+  planEdit,
+  planEditUnseen,
+  planEditsAllowed,
+} from '../lib/planmark.ts'
 import { markStepDone, parseDetailStep, parseOrderedSteps, parseSteps } from '../lib/orient.ts'
 import { parseBuildScope, parseStepProof, parseStepSeam, scopeDrift } from '../lib/intent.ts'
 import { conventionalSubject, subjectFromTitle, withMarker } from '../lib/commitmsg.ts'
@@ -67,6 +77,11 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   // add, which also leans on the excludes to skip the in-flight markers inside
   // the build folder.
   refreshExcludes(root)
+
+  // Ahead of the gate and of either commit: a hand edit to intent.md since the
+  // last export would otherwise fail the plan check, or ride the plan commit as
+  // a stale file.
+  keepPlanCurrent(root, activeBuild(root))
 
   if (args.includes('--plan')) {
     return checkpointPlan(root, args)
@@ -97,6 +112,30 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   if (!latch.allow) {
     process.stderr.write(latch.message)
     return 1
+  }
+
+  // A step built by hand never ran `build <n>`, so no entry settled the plan
+  // mark for it; the landing settles it by the entry's rule instead.
+  if (readStep(root) !== step) {
+    enterPlan(root, undefined, step)
+  }
+  // An approval, and a grant, cover the plan as it stood when the human
+  // typed. A step whose plan was edited since stops here at its pause,
+  // whatever the grant or the entry stamp says: nothing is run, staged, or
+  // recorded, and the human's next turn lands it.
+  const edit = planEdit(root)
+  if (edit !== null && planEditUnseen(root)) {
+    // A grant the human typed with `--plan-edits` lets the edit land, and still
+    // holds at the Decisions, the Constraints, and any step already landed.
+    const allowed = planEditsAllowed(root) && readGrant(root) !== null
+    const held = allowed ? heldPlanEdit(root) : null
+    if (!allowed || held !== null) {
+      process.stderr.write(
+        held === null ? planEditMessage(step, edit.added, edit.removed) : planEditHeldMessage(step, edit.added, edit.removed, held),
+      )
+      return 1
+    }
+    noteRunEdit(root, undefined, step)
   }
 
   const gate = await runCheck(root)
@@ -156,7 +195,14 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   }
 
   appendFileSync(checkpointsPath(root), `step ${step} ${sha}\n`)
+  // An edited plan that landed is counted on the step, which is what carries
+  // it past this point: the Log line, the boundary's Verdict, a range's stop
+  // card, and the finish report all read the stat.
+  const planNote = planEditNotice(root, step, edit)
   const flipNotice = flipIntent(root, step)
+  // The tick is the CLI's own write, and the step has landed with whatever
+  // edit it carried: the plan as it stands is the plan as sanctioned.
+  markPlan(root)
   // The tick wrote intent.md, so an exported plan.json follows it here and rides
   // the same commit the tick does, the next one, which stages them together.
   const planNotice = refreshAdvisory(refreshPlan(root, activeBuild(root)))
@@ -195,7 +241,7 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
     ...(owes === null ? {} : { owes }),
     text: ending({
       lead: transition({ label: 'Checkpoint', fact: `Step ${step} complete`, detail: leadDetail(sha, pointer) }),
-      advisories: [drift, flipNotice, planNotice],
+      advisories: [drift, planNote, flipNotice, planNotice],
       state: landed.state,
     }),
   })
@@ -278,16 +324,28 @@ function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
   // The plan is approved: ask atis, when it is on PATH, what each undone step's
   // seam reaches, so the answers ride this commit. Silent whatever comes back.
   refreshReach(root, activeBuild(root))
+  const first = readStep(root) === null && !planLanded(root)
   const staged = stagePath(root, buildFolder(root))
   const sha = commit(root, planSubject(root), withMarker('plumbbob plan', bodyResult.body ?? undefined))
   appendFileSync(checkpointsPath(root), `plan ${sha}\n`)
+  // The plan the human just approved is the plan as sanctioned. Only the
+  // first plan commit says so, with no step in flight and no grant standing:
+  // a plan committed again, beside a step, or by a granted run leaves the
+  // mark where it is, so an edit waiting to be shown is not made the approved
+  // plan by committing it.
+  if (first && readGrant(root) === null) {
+    markPlan(root)
+  }
   // The cold read that approved the plan is the Log's first entry, beneath a
   // dated plan line; the detail file is then spent, the same as at a step.
   const pointer = logPlan(root, sha, planRecord(root, activeBuild(root), readDetail(root, null) ?? ''))
   clearDetail(root)
   // Landing the plan consumes `start`'s entry stamp: a later hand-built diff
-  // (no `build <n>`) must find no stale TICK and stay guidance-governed.
-  clearTick(root)
+  // (no `build <n>`) must find no stale TICK and stay guidance-governed. A
+  // step in flight keeps the stamp its own entry wrote.
+  if (readStep(root) === null) {
+    clearTick(root)
+  }
   // No Verdict: the plan commit measures nothing. The pointer aims at the step
   // the build starts on, which is what `handoff` renders from a null step.
   printEnding(root, {
@@ -308,6 +366,19 @@ function checkpointPlan(root: string, args: ReadonlyArray<string>): number {
     }),
   })
   return 0
+}
+
+/**
+ * Whether the checkpoints file already records a plan commit.
+ */
+function planLanded(root: string): boolean {
+  try {
+    return readFileSync(checkpointsPath(root), 'utf8')
+      .split('\n')
+      .some((line) => line.startsWith('plan '))
+  } catch {
+    return false
+  }
 }
 
 /**
@@ -373,6 +444,24 @@ function scopeDriftNotice(root: string, step: number): string {
     fact: answer === null ? `staged paths reach outside Step ${step}'s seam` : `staged paths reach outside Step ${step}'s seam and its reach`,
     detail: outside,
     remedy: 'the checkpoint captures them, so revise the plan with /plumbbob:step if that is real scope drift',
+  })
+}
+
+/**
+ * The advisory for a landed step that edited the plan, or '' when it did not.
+ *
+ * The pause showed the `plan` row and the diff; once the step lands the mark
+ * is taken again and the row is gone, so the boundary says it here and the
+ * bumped stat puts a `plan edited` rung under the Verdict, the way a seam
+ * stray survives its landing.
+ */
+function planEditNotice(root: string, step: number, edit: PlanEdit | null): string {
+  if (edit === null) return ''
+  bumpStepStat(root, undefined, step, 'planEdits')
+  return advisory({
+    fact: `Step ${step} edited the plan`,
+    detail: [`intent.md +${edit.added} -${edit.removed}`],
+    remedy: 'the build log keeps the row, so revise the plan with /plumbbob:refine if the edit should not stand',
   })
 }
 
@@ -489,6 +578,7 @@ function statsSuffix(root: string, step: number): string | null {
   if ((stats.redChecks ?? 0) > 0) parts.push(`${stats.redChecks} red`)
   if ((stats.redProofs ?? 0) > 0) parts.push(`${stats.redProofs} red proof${stats.redProofs === 1 ? '' : 's'}`)
   if ((stats.driftWarnings ?? 0) > 0) parts.push(`${stats.driftWarnings} drift`)
+  if ((stats.planEdits ?? 0) > 0) parts.push(`${stats.planEdits} plan edit${stats.planEdits === 1 ? '' : 's'}`)
   if ((stats.reverts ?? 0) > 0) parts.push(`${stats.reverts} revert${stats.reverts === 1 ? '' : 's'}`)
   if (stats.startedAt !== undefined && stats.landedAt !== undefined) {
     const ms = Date.parse(stats.landedAt) - Date.parse(stats.startedAt)

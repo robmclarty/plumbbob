@@ -49,6 +49,7 @@
       "seam": [
         ".plumbbob/builds/2026-10-17-build-ranges/spike-01-task-notice.md"
       ],
+      "like": [],
       "stop": "planned",
       "effort": null,
       "proof": {
@@ -77,6 +78,7 @@
         "docs/cli-reference.md",
         "docs/state-and-git.md"
       ],
+      "like": [],
       "stop": "none",
       "effort": null,
       "proof": {
@@ -109,6 +111,7 @@
         "test/evals/helpers/driver.ts",
         "test/evals/contracts/c4-range.eval.ts"
       ],
+      "like": [],
       "stop": "none",
       "effort": null,
       "proof": {
@@ -141,6 +144,7 @@
         "site/docs.html",
         "site/index.html"
       ],
+      "like": [],
       "stop": "planned",
       "effort": null,
       "proof": {
@@ -164,6 +168,7 @@
         "docs/decisions.md",
         ".plumbbob/builds/2026-10-17-build-ranges/intent.md"
       ],
+      "like": [],
       "stop": "planned",
       "effort": null,
       "proof": {
@@ -186,6 +191,7 @@
         "src/lib/orient.ts",
         "src/lib/__tests__/orient.test.ts"
       ],
+      "like": [],
       "stop": "none",
       "effort": null,
       "proof": {
@@ -209,6 +215,7 @@
         "src/verbs/__tests__/handoff.test.ts",
         "src/verbs/__tests__/checkpoint.test.ts"
       ],
+      "like": [],
       "stop": "none",
       "effort": null,
       "proof": {
@@ -238,6 +245,7 @@
         "test/evals/helpers/anatomy.ts",
         "test/integration/eval-helpers.test.ts"
       ],
+      "like": [],
       "stop": "none",
       "effort": null,
       "proof": {
@@ -264,6 +272,7 @@
         "src/verbs/recover.ts",
         "src/verbs/__tests__/recover.test.ts"
       ],
+      "like": [],
       "stop": "none",
       "effort": null,
       "proof": {
@@ -287,6 +296,7 @@
         "src/verbs/__tests__/build.test.ts",
         "skills/build/SKILL.md"
       ],
+      "like": [],
       "stop": "planned",
       "effort": null,
       "proof": {
@@ -311,6 +321,7 @@
         "src/verbs/__tests__/start.test.ts",
         "src/verbs/__tests__/status.test.ts"
       ],
+      "like": [],
       "stop": "none",
       "effort": null,
       "proof": {
@@ -337,6 +348,7 @@
         "skills/build/SKILL.md",
         "skills/status/SKILL.md"
       ],
+      "like": [],
       "stop": "none",
       "effort": null,
       "proof": {
@@ -366,6 +378,7 @@
         "site/docs.html",
         "site/index.html"
       ],
+      "like": [],
       "stop": "planned",
       "effort": null,
       "proof": {

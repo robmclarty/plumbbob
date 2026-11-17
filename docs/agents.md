@@ -319,7 +319,9 @@ middle of the work" ([**D43 (three-slots)**](decisions.md#d43)). That's judgment
 - **The merge ladder** ([**D57 (merge-ladder)**](decisions.md#d57)): for a given step and slot, a `--agent` flag beats a per-step
   entry, which beats `defaults`, which beats project-wide defaults in `settings.json`
   (`{"agents": {"after": ["reviewer"]}}`). First level that names the slot wins: **replace,
-  not append**. A slot bound to `[]` is an explicit override to *nothing*.
+  not append**. A slot bound to `[]` is an explicit override to *nothing*. `plumbbob status`
+  lists every level under `harness bindings:`, the settings defaults as `settings ·` rows,
+  whether or not the build has a `harness.json`.
 - **`note`** is prose the host model reads (like a manifest's `when`), never mechanics.
 - **A binding may be a path** in place of a name ([below](#binding-by-path)).
 - **`harness.json` stays bindings + prose only** ([**C3 (bindings-not-logic)**](decisions.md#c3)). The moment it grows an `if`, a
@@ -416,12 +418,43 @@ is a hard failure either way. [D54 (bindings-degrade-soft)](decisions.md#d54) so
 
 ### Interrupts and timeouts
 
-- **Ctrl-C** is forwarded to the child and kills it, then reports: a present human's
-  interrupt never orphans the agent ([**D58 (sigint-forwarded)**](decisions.md#d58)).
+- **Ctrl-C** stops the agent, then reports: a present human's interrupt never orphans the
+  agent ([**D58 (sigint-forwarded)**](decisions.md#d58)).
 - **Timeouts are off by default** ([**D51 (agent-timeout)**](decisions.md#d51)). Set `agentTimeout` (seconds) in the settings
   ladder to arm one; absent or `0` means no timeout. The human is present by default (Ctrl-C
-  works), so enforcement is your explicit opt-in, not PlumbBob's guess. On expiry the child is
-  killed and the run reported as failed.
+  works), so enforcement is your explicit opt-in, not PlumbBob's guess. On expiry the agent is
+  stopped and the run reported as failed.
+
+**A stop asks first, and it reaches everything the agent started**
+([**D161 (graceful-agent-stop)**](decisions.md#d161)). The agent runs as the leader of its
+own process group. To stop it, PlumbBob sends the whole group SIGTERM, waits up to 5
+seconds for the group to empty, then sends it SIGKILL, and reports once nothing is left.
+An agent that starts an app server or a browser should trap TERM and close what it
+opened. One that traps nothing is cleaned up all the same, since the signal goes to the
+group and not to the shell alone.
+
+```text
+plumbbob: agent "walkthrough" timed out after 120s (stopped)
+plumbbob: agent "walkthrough" timed out after 120s (given 5s to stop, killed)
+```
+
+The first line is an agent that went when it was asked. The second is one the SIGKILL had
+to end.
+
+Five things follow from that:
+
+- **The run ends when the group is empty**, so an agent that exits on TERM costs no wait;
+  the 5 seconds are spent only on a process that ignores the signal.
+- **A second Ctrl-C skips the rest of the grace** and kills the group at once.
+- **What an agent leaves running is swept when it exits.** The same stop runs after a
+  clean exit and after a failed one, and the run keeps the result it had. A process meant
+  to outlive the agent has to start in a session of its own.
+- **PlumbBob passes the interrupt on.** The agent's group is not the terminal's, so a
+  Ctrl-C reaches PlumbBob alone, and so do a SIGTERM and a SIGHUP; each one stops the
+  agent the same way. A SIGKILL of PlumbBob itself cannot be caught, and it leaves the
+  agent running.
+- **An interrupt ends the whole run.** When a slot binds several agents, the ones after
+  the stopped agent are not started. The run names them and exits 1.
 
 ## Composing agents (nested invocation)
 

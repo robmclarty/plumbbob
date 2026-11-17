@@ -95,13 +95,13 @@ export type Anatomy = {
 export type Tier = 'decision' | 'plan' | 'reminder' | 'boundary' | 'driver' | 'stop' | 'stop-short'
 
 const TIER_PARTS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
-  decision: ['Summary', 'Readout', 'Evidence', 'Your Call', 'Verdict', 'Now', 'Next Up', 'Recommendation'],
+  decision: ['Summary', 'Readout', 'Plan Edit', 'Plan Edits', 'Evidence', 'Your Call', 'Verdict', 'Now', 'Next Up', 'Recommendation'],
   plan: ['Open questions', 'Deferred', 'Your Call', 'Next Up', 'Recommendation'],
   reminder: ['Next Up'],
   boundary: ['Verdict', 'Stop', 'Next Up'],
   driver: ['Next Up'],
-  stop: ['Summary', 'Readout', 'Harvested', 'Your Call', 'Verdict', 'Stop', 'Next Up', 'Recommendation'],
-  'stop-short': ['Harvested', 'Your Call', 'Verdict', 'Stop', 'Next Up'],
+  stop: ['Summary', 'Readout', 'Plan Edits', 'Harvested', 'Your Call', 'Verdict', 'Stop', 'Next Up', 'Recommendation'],
+  'stop-short': ['Plan Edits', 'Harvested', 'Your Call', 'Verdict', 'Stop', 'Next Up'],
 }
 
 // The parts a tier may carry without owing them. The Stop row rides only the
@@ -113,13 +113,17 @@ const TIER_PARTS: Readonly<Record<Tier, ReadonlyArray<string>>> = {
 // questions above its moves only while the plan carries one (D118 (questions-table)),
 // and a question deferred to the work rides a Deferred line beneath that table
 // (D120 (deferred-questions)). A step's pause lists what an agent saved for
-// the person under the Readout only when one did (D157 (evidence-is-shown)).
+// the person under the Readout only when one did (D157 (evidence-is-shown)),
+// and it shows the plan's diff there, under a `plan` row in the fence, only
+// when intent.md was edited during the step (D162 (plan-edit-shown)). The
+// first card after a run granted with `--plan-edits` lists what the run did to
+// the plan, once (D163 (plan-edits-grant)).
 const OPTIONAL_PARTS: Readonly<Partial<Record<Tier, ReadonlyArray<string>>>> = {
-  decision: ['Evidence'],
+  decision: ['Plan Edit', 'Plan Edits', 'Evidence'],
   plan: ['Open questions', 'Deferred'],
   boundary: ['Stop'],
-  stop: ['Harvested'],
-  'stop-short': ['Harvested'],
+  stop: ['Plan Edits', 'Harvested'],
+  'stop-short': ['Plan Edits', 'Harvested'],
 }
 
 // What each tier must NOT render. The Your Call block belongs only where a
@@ -296,9 +300,26 @@ function stateRow(line: string): { readonly label: string; readonly value: strin
 // gets its own line and the preamble stays the stray it is. Splitting here
 // rather than in the classifier keeps both findings separate: the ending is
 // whole, and something preceded it.
+//
+// A line inside a fence is never split. A Plan Edit diff quotes intent.md, and
+// a Decision's line there carries its own bold label mid-line
+// (`+- <a id="d1"></a>**D1 (slug)**: …`); cut at the label, its second half
+// would read as a part's label inside a fence, the mark of a wrapped block.
 function splitMidLineLabels(lines: ReadonlyArray<string>): ReadonlyArray<string> {
   const out: string[] = []
+  let ticks: string | null = null
   for (const line of lines) {
+    const mark = FENCE.exec(line.replace(/\s+$/, ''))
+    if (ticks !== null) {
+      if (mark !== null && mark[1] !== undefined && mark[1].length >= ticks.length && mark[2] === '') ticks = null
+      out.push(line)
+      continue
+    }
+    if (mark !== null && mark[1] !== undefined) {
+      ticks = mark[1]
+      out.push(line)
+      continue
+    }
     // A table row is a row, never a label run into prose: the range line's
     // `**Range 3**: /plumbbob:run …` bolds its range ahead of a colon.
     const at = TABLE_ROW.test(line.trim()) ? -1 : line.search(/\*\*[^*]+\*\*:/)

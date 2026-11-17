@@ -1,9 +1,9 @@
 ---
 name: build
 description: "The default engine: read the next planned step from intent, implement it (its proof, seam, Decisions, Constraints), then verify it through to the approval pause. Swappable: build by hand/vibed/another harness and run /plumbbob:verify instead. `--auto` self-approves and chains to done; a step range like `1-3`, or a list like `20,5-9`, self-approves exactly the steps it names, in build order, then stops."
-argument-hint: "[step-number | step-range | step-list] [--auto]"
+argument-hint: "[step-number | step-range | step-list] [--auto] [--plan-edits]"
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob park:*), Bash(plumbbob defer:*), Bash(plumbbob agent:*), Bash(plumbbob spike:*), Bash(git diff:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob build:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob park:*), Bash(plumbbob defer:*), Bash(plumbbob agent:*), Bash(plumbbob spike:*), Bash(git diff:*), Bash(plumbbob export:*)
 ---
 
 # PlumbBob: build a step (the default engine)
@@ -90,8 +90,13 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    marker on each opener and never by the park list
    ([D123 (defer-records)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d123)).
    When `plumbbob park` warns that a question it names still counts as one to answer,
-   defer it if the human said the work will settle it, and leave it to them otherwise. If you
-   genuinely cannot finish without touching more than the seam, that is scope drift:
+   defer it if the human said the work will settle it, and leave it to them otherwise. When
+   the build folder's `reach.json` holds an answer for this step, a file it lists is the
+   ripple the plan could have expected: touch it when the step needs it, without asking
+   first, and the `plumb` row counts it as `reach`
+   ([D155 (reach-is-computed)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d155)).
+   If you genuinely cannot finish without touching a file outside both the seam and the
+   reach (or outside the seam, when the step has no stored reach), that is scope drift:
    surface it to the human rather than sprawling.
    - **Bound agents can shape the build.** If `plumbbob status` shows a
      `harness bindings:` block, a `build`-slot agent may author the diff, a `when`-cue may
@@ -101,7 +106,9 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    does: `plumbbob check` (on red, read `.check/summary.json` and the failing slot's
    raw output under `.check/` for the actual diagnostics; while iterating on a fix,
    narrow the loop with `plumbbob check --bail --only <slots>`; the checkpoint gate
-   still runs everything) → self-review the diff against the proof, the Decisions,
+   still runs everything; a red check named `plan` alone means `plan.json` is behind
+   `intent.md`, so run `plumbbob export` and check again, and treat it as red only when
+   the export refuses and names its findings) → self-review the diff against the proof, the Decisions,
    and the Constraints (a single structured read; cite each with its slug from
    `intent.md`: `C1 (no-new-deps)`, never a bare `C1`) → validate → **PAUSE
    for the human's approval** → only on approval, checkpoint with
@@ -117,6 +124,11 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
      a red check: read `.check/proof.txt`, fix the code, and never edit the proof line to
      get past it. Run the command yourself while you build, so the `proof` row you write
      is one the checkpoint will confirm.
+   - **The `plan` row is the CLI's.** `plumbbob handoff` measures `intent.md` against
+     the plan as last approved. When it was edited during the step, the Readout gains a
+     `plan` row counting the lines and a Plan Edit part beneath it shows the diff. It is
+     the CLI's to show, so write no row for it
+     ([D162 (plan-edit-shown)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d162)).
    - **`--body` reads stdin only.** Redirect the heredoc *into* the command (`--body
      <<'BODY'`). Do **not** pass it as an argument value (`--body "$(cat <<'BODY'…)"`):
      `--body` ignores an argument and always reads stdin. Under an agent harness that
@@ -189,7 +201,12 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
 
    The three rows under the header rule are yours, and only those three; `check`, `seam`,
    `diff`, and `spent` are measured by the CLI, and a row you wrote for them would be
-   overwritten. Keep the rows contiguous (the first blank line ends them). Each opens with a
+   overwritten. When the build folder's `reach.json` holds an answer for this step, the
+   `seam` row prints as `plumb` (`seam 3 · reach 1 · out 1`): a changed file is in the
+   seam, in the reach the plan could have expected, or outside both, and only an `out`
+   file is a stray
+   ([D155 (reach-is-computed)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d155)).
+   Keep the rows contiguous (the first blank line ends them). Each opens with a
    verdict word from the closed set in the turn anatomy (`met`, `not met`, `drift`;
    `honored`, `none exercised`, `bent`, `drift`; `all honored`, `bent`, `drift`); a cited
    decision or constraint carries its slug (`C1 (no-new-deps)`, never a bare `C1`); a row
@@ -204,7 +221,7 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    `[more details](…)` link to the file, which handoff writes, so you type no path. Five
    sections at most, each titled with one sentence and one move, plain English first, a
    path in backticks only when the name itself is the news. A judgment or a flag (a stray
-   the seam row will name, a decision you had to bend, a doubt about the proof) is one
+   the seam row will name, or the `plumb` row count as `out`, a decision you had to bend, a doubt about the proof) is one
    of those sections, and the card carries it where it bears on the call: a bent row's `→`
    line points at it, and your recommendation names it when it changes the move. It is
    never a paragraph of its own. A caveat the human must see before they reply goes in the
@@ -234,7 +251,8 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    your own; it carries fences of its own and they cannot nest. It prints the Summary, the
    Readout fence (its measured `check`, `seam`, `diff`, and `spent` rows folded with your
    three, the changed files listed beneath `diff`), a `diff` fence when the change is 20
-   lines or fewer, Your Call, the state table (the Verdict folded worst-of from the same
+   lines or fewer, an Evidence list when a bound agent saved something to look at, Your
+   Call, the state table (the Verdict folded worst-of from the same
    rows, the Now row naming the step in flight, Next Up with the next range on its second
    line, and the Order and Parked rows when they apply), your recommendation, and the `more details` link last. Run it
    once: a second run at the same pause prints the one-line reminder instead of the card,
@@ -324,7 +342,11 @@ harness *is* bound, this is what each affected step gains, in lifecycle order.
   bound `after`-agents (`plumbbob agent run --step <n> --mode after`) and fold their
   envelopes into the self-review as **advisory input**; they inform, they never gate
   (checkride gates, the human is the clock; an `after`-agent that could fail a step would
-  be the old lock back in another form).
+  be the old lock back in another form). What an agent saved and named in its envelope's
+  `evidence[]` (a screenshot, a trace) is the CLI's to show: `plumbbob handoff` lists each
+  piece as a link under the Readout, so leave the paths out of your review, and never
+  treat one as proof the step is done
+  ([D157 (evidence-is-shown)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d157)).
 
 ## `--auto`: let the agent be the clock (opt-in)
 
@@ -341,7 +363,11 @@ and approves in the human's place**, and it **chains**:
 - **Stop and hand back to the human** the moment a halt arrives, and end the turn by the
   kind of halt it is
   ([D85 (range-top-lands)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d85)):
-  - **A halt on trouble leaves a step unlanded.** The check is red, the self-review finds
+  - **A halt on trouble leaves a step unlanded.** The check is red (a red `plan` check
+    that `plumbbob export` clears, as step 5 says, is no halt), the step's proof
+    command is red (the checkpoint refused and recorded nothing), the checkpoint
+    refused because `intent.md` was edited during the step (a grant covers the plan the
+    human approved, so it recorded nothing and the step waits at its pause), the self-review finds
     a mismatch (surface exactly what, and do not checkpoint it), a bound agent returns
     `blocked` or `drift` (unblock-and-re-run, or `/plumbbob:refine`; an agent cannot
     advance the loop), or a new decision is needed. The step is still in flight and the
@@ -442,10 +468,20 @@ out, or the next step in build order is one the range does not name),
   checkpoints a hand-built or vibed diff just the same.
 - **Build the decided step, not a new one.** Implement what `intent.md` settled. A
   new idea mid-build is captured with `plumbbob park`, not an edit: a promise to
-  defer writes nothing; the park line does.
+  defer writes nothing; the park line does. You never edit `intent.md` during a step. If
+  you find you must, stop and say so. The one exception is the human's to grant: when
+  they typed `--plan-edits` with the range, the run or `--auto`, you may sharpen a step
+  still ahead (its proof, its seam, a note, a step split in two) as the build learns, and
+  the checkpoint lands it and lists it at the next card. It is never yours to add or to
+  ask for mid-run, it does not reach the Decisions, the Constraints, or a step that has
+  landed (an edit there still halts), and it permits sharpening the plan, not swapping the
+  goal
+  ([D163 (plan-edits-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d163)).
 - **Default ends at the pause.** Implement → verify → wait for approval; never
   checkpoint without it. Only an explicit `--auto` or a step range lets the agent approve
-  in your place, and it still halts on a red check or any mismatch; a range also stops
+  in your place, and it still halts on a red check (one `plumbbob export` cannot clear),
+  a red proof, a checkpoint refused for a plan edit, or any mismatch; a range
+  also stops
   once its top step lands.
 - **Agents feed the beat; they never advance it**. `before` loads context,
   `build` writes the diff, `after` is advisory; none can checkpoint, flip a step, or

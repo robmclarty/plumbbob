@@ -154,6 +154,16 @@ const read = (opts: { done?: ReadonlyArray<number>; inFlight?: number; spiking?:
 describe('mintFromPrompt — D96 (plan-names-the-grant)', () => {
   it('mints what is left of the range holding the next step, and marks the range', () => {
     expect(mintFromPrompt('/plumbbob:run', read(), null)).toEqual({ grant: 'steps 1-3', run: 1 })
+    // `--plan-edits` rides the grant it is typed with, and only a grant.
+    expect(mintFromPrompt('/plumbbob:run --plan-edits', read(), null)).toEqual({ grant: 'steps 1-3', run: 1, planEdits: true })
+    expect(mintFromPrompt('/plumbbob:build 1-3 --plan-edits', read(), null)).toEqual({ grant: 'steps 1-3', run: null, planEdits: true })
+    expect(mintFromPrompt('/plumbbob:build --plan-edits 1-3', read(), null)).toEqual({ grant: 'steps 1-3', run: null, planEdits: true })
+    expect(mintFromPrompt('/plumbbob:build --auto --plan-edits', read(), null)).toEqual({ grant: 'auto', run: null, planEdits: true })
+    expect(mintFromPrompt('/plumbbob:build 2 --plan-edits', read(), null)).toEqual({ grant: null, run: null })
+    expect(mintFromPrompt('carry on, --plan-edits is fine', read(), null)).toEqual({ grant: null, run: null })
+    expect(mintFromPrompt('/plumbbob:build 1-3\nand --plan-edits on the next line', read(), null)).toEqual({ grant: 'steps 1-3', run: null })
+    expect(mintFromPrompt('/plumbbob:build 1-3 --plan-edits-too', read(), null).planEdits).toBeUndefined()
+    expect(mintFromPrompt('/plumbbob:build 1-3 and then maybe --plan-edits', read(), null)).toEqual({ grant: 'steps 1-3', run: null })
     expect(mintFromPrompt('/plumbbob:run', read({ done: [1] }), null)).toEqual({ grant: 'steps 2-3', run: 1 })
     expect(mintFromPrompt('/plumbbob:run', read({ done: [1, 2, 3, 4] }), null)).toEqual({ grant: 'steps 5-9', run: 3 })
   })

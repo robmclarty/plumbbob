@@ -1,7 +1,7 @@
 # State files and git
 
 PlumbBob keeps a handful of small files under `.plumbbob/` that are deliberately never
-committed, and it keeps them out of your commits by appending 18 lines to one local git
+committed, and it keeps them out of your commits by appending 20 lines to one local git
 file. This page is the full account: what those files hold, why they have to exist,
 exactly what gets written inside `.git`, and the honest answers to the objections that
 follow, including "why are you touching my git at all?"
@@ -12,7 +12,7 @@ has the tree. This page is the *why*.
 ## The short version
 
 - PlumbBob writes exactly one file inside `.git`: **`info/exclude`**, git's own
-  per-clone ignore list. It appends 18 lines, once: at `plumbbob setup`
+  per-clone ignore list. It appends 20 lines, once: at `plumbbob setup`
   (`/plumbbob:setup`) if you run it, else at the first `start`.
 - It **never** writes your `.gitignore`; that file is tracked, and nothing
   PlumbBob-specific belongs in a file your whole team commits.
@@ -84,8 +84,10 @@ branch.
 | `builds/<slug>/SEAM` | The step's declared paths, one per line (awareness, not a lock) | `build` | `checkpoint` / `revert` / `abandon` |
 | `builds/<slug>/SPIKE` | Marker: a spike fork is open | `spike` | `spike done` / `finish` |
 | `builds/<slug>/TICK` | The `TURN` value at the moment the step was entered, or the session opened, so the plan commit waits for a human turn too | `build`, and `start` for the plan commit | `checkpoint` / `abandon` |
-| `builds/<slug>/PAUSE` | Which card has shown: the step whose pause card showed (`2`) or, after a checkpoint, the step whose boundary did (`landed 2`, `landed 2 answered` when that landing answered step 2's pause card, which shortens the stop card after it), so a repeat prints its one line whatever changed since ([D110 (reply-after-the-card)](decisions.md#d110)) | `handoff`, `checkpoint` | `revert` / `abandon` |
+| `builds/<slug>/PAUSE` | Which card has shown: the step whose pause card showed (`2`, or `2 plan:<hash>` when that card showed a plan edit, so an edit made since brings the card back) or, after a checkpoint, the step whose boundary did (`landed 2`, `landed 2 answered` when that landing answered step 2's pause card, which shortens the stop card after it), so a repeat prints its one line whatever changed since ([D110 (reply-after-the-card)](decisions.md#d110)) | `handoff`, `checkpoint` | `revert` / `abandon` |
 | `builds/<slug>/STOP` | The range whose stop card has shown and the `TURN` it printed in, so a repeat prints the reminder and `plumbbob harvest` records only a range a card showed, a turn later ([D103 (stop-latched)](decisions.md#d103), [D110 (reply-after-the-card)](decisions.md#d110)) | `handoff --stop` | `plumbbob harvest` |
+| `builds/<slug>/MARK` | The plan as PlumbBob last knew it approved: a copy of `intent.md` under the `TURN` it was taken in and the step whose entry settled it. A later `intent.md` is compared with it, so a plan edited during a step is counted and shown at that step's pause. While an edit waits it also holds a hash of the plan as it stood at your last typed prompt, which is the edit a checkpoint will land ([D162 (plan-edit-shown)](decisions.md#d162)) | `start`, `checkpoint` (the first plan commit, and each landing after its tick), `build`, `turn` at each typed prompt, and `order` and `defer` after their own writes | `finish` |
+| `builds/<slug>/BASE` | The plan as it stood when you typed a grant with `--plan-edits`: a copy of `intent.md` under that `TURN`, the steps that have landed a plan edit since, and whether a card has listed them. While `TURN` still reads that turn, a plan edit lands; the next card lists the run's edits against this copy, and your prompt after that drops it ([D163 (plan-edits-grant)](decisions.md#d163)). | `turn`, at a prompt whose grant carries `--plan-edits`; `checkpoint`, which adds a step that landed an edit; `handoff`, which marks it shown | `turn` at the prompt after a card showed it, and `finish` |
 | `builds/<slug>/handoff.json` | Ledger of agent runs for this step, so a later call can thread earlier results ([D47 (handoff-ledger)](decisions.md#d47)) | `agent run` | `checkpoint` / `revert` / `abandon` |
 | `builds/<slug>/evidence/<n>/` | What an agent saved for you to look at while step `n` was open: screenshots, traces, the diff a reviewer read ([D157 (evidence-is-shown)](decisions.md#d157)) | an agent, under `agent run` | never; it is yours to clear |
 | `.check/` | The check gate's raw tool output | checkride | overwritten each run |
@@ -96,6 +98,23 @@ lands) needs to know one thing: *has a human taken a turn since this step began?
 fact about a conversation, and a conversation leaves no other durable trace. A counter file
 and a stamp file are the entire implementation. Delete them and the latch reads "ledger
 dormant" and stands down: it fails open, it never wedges.
+
+`MARK` is the one control file that holds a copy of something tracked, and it is the same
+kind of fact as the pair above: what the plan said the last time a person stood behind it.
+Git cannot answer that. `HEAD` holds the plan as of the last commit, and a plan refined at a
+boundary, with you there, is ahead of `HEAD` and still approved. So the CLI keeps its own
+copy and moves it only at the moments it knows the plan is sanctioned: its own writes, a
+landing, and the prompt you type, since the plan as it stands when you speak is the plan you
+are speaking over. A step's entry does not move it on a host that counts turns, so what
+changed after your last prompt rides into the step. The file blocks nothing. An `intent.md` that differs from it is reported at the pause, in the Readout's
+`plan` row and the diff beneath it, and a build started before the mark existed has none and
+reports nothing until its next step is entered. `abandon` and `revert` leave the mark where
+it is, so a step dropped and entered again is still measured against the plan as approved,
+and an edit a dropped step never showed outlasts your next prompt and is shown at the next
+entry. Like the ledger pair, the mark fails open: delete the file and the build has no mark,
+reports nothing, and gains a fresh one from the plan as it stands at the next entry or
+landing. That loss is silent, so a missing `MARK` in the middle of a step is worth a look at
+`git diff` on `intent.md`.
 
 Phase is **derived, not stored**: SPIKE present ⇒ SPIKE, STEP present ⇒ BUILD, otherwise
 DESIGN. No status field exists to drift out of sync with reality, which is why these are
@@ -160,6 +179,8 @@ Here is the complete block it appends:
 .plumbbob/builds/*/TICK
 .plumbbob/builds/*/PAUSE
 .plumbbob/builds/*/STOP
+.plumbbob/builds/*/MARK
+.plumbbob/builds/*/BASE
 .plumbbob/builds/*/handoff.json
 .plumbbob/builds/*/evidence/
 .plumbbob/evidence/
@@ -174,7 +195,7 @@ visible to git, because they're meant to be committed.
 `finish` then re-apply it on their way into `git add -A`,
 which self-heals the one gap that could bite: a PlumbBob upgraded *mid-build* can introduce a
 control file the running session's exclude list never learned about (`TICK`, `GRANT`,
-`handoff.json`, and `detail.md` all arrived that way in earlier versions), and staging with `-A` would sweep
+`handoff.json`, `detail.md`, `MARK`, and `BASE` all arrived that way), and staging with `-A` would sweep
 it into a commit. `agent run` re-applies it too, before it spawns the agent, since that is
 the moment a file is about to be saved into the evidence folder and a build started on an
 older PlumbBob has no line for it. Every one of those calls appends only what's missing, so
@@ -243,7 +264,7 @@ Four reasons, in rough order of how much they hurt:
    else, silently, with the tool cheerfully reporting the wrong step.
 2. **Its neighbours are tracked on purpose.** `intent.md` and `build-log.md` sit in the same
    folder and are *meant* to be committed. Splitting the sidecar across two filesystems to
-   relocate 17 control files would complicate every path in the tool to save you 18 lines
+   relocate 19 control files would complicate every path in the tool to save you 20 lines
    in one local file.
 3. **It has to be inspectable and disposable.** `cat .plumbbob/builds/*/STEP` answers "where
    was I?" without a tool. `rm -rf .plumbbob` is a complete, obvious uninstall. A home

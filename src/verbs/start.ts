@@ -27,6 +27,7 @@ import {
   stampTick,
 } from '../lib/sidecar.ts'
 import { scaffoldSettings } from '../lib/settings.ts'
+import { markPlan } from '../lib/planmark.ts'
 import { advisory, ending, notice, printEnding, transition } from '../lib/notice.ts'
 
 /**
@@ -193,6 +194,9 @@ export async function start(cwd: string, args: ReadonlyArray<string>): Promise<n
   // grant's lifetime is one turn.
   setGrant(root, null)
   stampTick(root, local ? null : slug)
+  // The plan mark starts at the scaffold: every later read of intent.md is
+  // measured against the plan as the CLI last knew it sanctioned.
+  markPlan(root, local ? null : slug)
 
 
   // The tracked layout plants `builds/<slug>/` to ride the branch into the PR,

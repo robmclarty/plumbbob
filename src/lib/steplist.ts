@@ -114,11 +114,13 @@ export type BuildArgs = {
   // Every number and span in the run as one list, or null when the run holds
   // no number, or a range that does not parse.
   readonly steps: StepList | null
+  // Set only when `--plan-edits` sat among the arguments read.
+  readonly planEdits?: true
 }
 
 /**
  * Read the arguments a build invocation carries, up to the first token that is
- * not one: `--auto`, or a run of digits, commas, and dashes.
+ * not one: `--auto`, `--plan-edits`, or a run of digits, commas, and dashes.
  *
  * Once any number carries a comma or a dash, every number and span in the run
  * joins one list, so `20, 5-9` typed with a space reads as `20,5-9`. Trailing
@@ -128,6 +130,7 @@ export type BuildArgs = {
  */
 export function readBuildArgs(text: string): BuildArgs {
   let auto = false
+  let planEdits = false
   const words: string[] = []
   for (const token of text.split(/\s+/)) {
     const word = token.replace(/[.;:!?]+$/, '')
@@ -136,11 +139,15 @@ export function readBuildArgs(text: string): BuildArgs {
       auto = true
       continue
     }
+    if (word === '--plan-edits') {
+      planEdits = true
+      continue
+    }
     if (!/^[\d,-]+$/.test(word)) break
     words.push(word)
   }
   const items = words.map((w, i) => (i === words.length - 1 ? w.replace(/,+$/, '') : w)).filter((w) => w !== '')
   const range = items.some((w) => /[,-]/.test(w))
   const steps = items.length === 0 ? null : parseStepList(items.join(',').replace(/,{2,}/g, ','))
-  return { auto, range, steps }
+  return { auto, range, steps, ...(planEdits ? { planEdits: true as const } : {}) }
 }

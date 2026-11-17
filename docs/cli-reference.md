@@ -138,6 +138,13 @@ items against everything ever parked), then a
 single suggested next move ([**D8 (status-dashboard)**](decisions.md#d8) / [**D15 (one-next-move)**](decisions.md#d15)). Read-only; prints `NO ACTIVE SESSION` and
 exits 0 when there is no session.
 
+When agents are bound, a `harness bindings:` block follows the dashboard: a `settings ·` row
+for each slot the settings ladder's `agents` key names, then the build's `harness.json`, its
+`defaults ·` rows and a `step N ·` row per step. The settings rows print with or without a
+`harness.json`, so a repo that binds its agents in settings alone still shows the block. A
+bound agent that does not resolve draws a `⚠` line beneath
+([**D48 (doctor-validates-agents)**](decisions.md#d48)).
+
 `--questions` prints the plan's open questions in place of the dashboard, as the one table
 the plan card carries ([**D118 (questions-table)**](decisions.md#d118)): a row per open
 question: its handle in bold, then the question linked to its opener in `intent.md`, why it
@@ -267,6 +274,15 @@ On entry it also asks the `atis` on PATH what the step's seam reaches, when the 
 `reach.json` holds no answer for the step or holds one asked for other paths, and stores the
 answer there; with a current answer, or no atis, it runs nothing and prints nothing
 ([**D155 (reach-is-computed)**](decisions.md#d155); [the reach](reach.md)).
+Entry settles the plan mark too, the copy of `intent.md` in `builds/<slug>/MARK` that
+stands for the plan as last approved ([**D162 (plan-edit-shown)**](decisions.md#d162)). The
+prompt you type is what accepts a changed plan: the turn hook takes the mark again at each
+one, so a refine, a new step, or your own editor's change is the plan by the time you speak.
+A plan that differs from the mark at entry was therefore edited after you last typed, with
+nobody there: the mark keeps its copy, and the edit is carried into this step and shown at
+its pause. On a host with no turn hook there is no prompt to measure from, and the entry
+takes the plan as it stands. A build with no mark gains one here. None of it prints
+anything, and no edit is refused.
 It also refuses, writing nothing, while a stop card waits for its reply
 ([**D103 (stop-latched)**](decisions.md#d103)), since the step's pause would write over the
 range's review in `.plumbbob/detail.md`; the remedy names the reply that records the card:
@@ -305,6 +321,15 @@ At a build pause it renders the turn entire, in this order:
   model wrote into the detail file. Green rows collapse to a count, red rows name the one
   offender.
 - a `diff` fence, when the change is 20 lines or fewer and a patch could be produced.
+- `**Plan Edit**:` only when `intent.md` differs from the plan mark: the file as a link, the
+  lines added and removed, then the change as a unified diff in its own `diff` fence. The
+  Readout carries the same fact as a `plan` row,
+  `plan         edited during the step: intent.md +3 -1`, between `seam` and `diff`, and the
+  Verdict names it `plan edited` on the advisory rung; `looks good` stays offered, since the
+  edit is your call. Past 40 lines the diff stops, the label line says how many lines it
+  left out, and the `--full` command it names prints them all. A card that has shown
+  comes back whole, unasked, when the plan was edited after it showed
+  ([**D162 (plan-edit-shown)**](decisions.md#d162)).
 - `**Your Call**:` the moves a human actually makes at a pause, each with its outcome. The
   `expand` move also names the way back to the card: `show the pause`. Inside a range that
   lands its steps, with steps still ahead of the one in flight, a `/plumbbob:run` row lands
@@ -463,7 +488,8 @@ before anything runs ([**D153 (proof-replaces-done-when)**](decisions.md#d153)).
 commits any pending work (or records the existing `HEAD` if the tree is already clean) with a
 CLI-owned Conventional subject `<type>(<scope>): <description>` (scope from the build slug, type
 from the step title; author prefix honored, else `feat`), appends `step <n> <sha>` to `checkpoints`,
-flips the step to `[x]`, and clears `SEAM`/`STEP`, dropping the dashboard back to the
+flips the step to `[x]`, takes the plan mark again after that tick (the tick is the CLI's
+own write, never an edit), and clears `SEAM`/`STEP`, dropping the dashboard back to the
 `DESIGN` boundary, and stamps `PAUSE` with the boundary it prints (`landed <n>`, with
 `answered` after it when the step's own pause card had shown), so a later `handoff` there
 ends on its pointer. It also appends the step's entry to the
@@ -513,7 +539,34 @@ socket (the `--body <<'BODY'` heredoc is the remedy), the approval latch (`no hu
 this step began`: the pause, which the human's next turn ends;
 [**D64 (approval-latch)**](decisions.md#d64)), a red check, a red proof, or a gate that broke (checkride's
 exit 2, reported as `the check gate itself broke`). `--plan` runs the same latch keyed on the
-`TICK` that `start` stamped, so the plan pause is a real pause too.
+`TICK` that `start` stamped, so the plan pause is a real pause too, and the first plan
+commit takes the plan mark: the plan you just approved is the plan a later edit is measured
+against. A plan committed again, beside a step in flight, or by a turn that carries a
+grant leaves the mark where it is, so committing an edited plan never makes it the
+approved one.
+
+One more refusal covers an edited plan ([**D162 (plan-edit-shown)**](decisions.md#d162)).
+When `intent.md` differs from the plan mark and is not the plan that stood when you last
+typed, `checkpoint` refuses before the gate runs and records nothing. No grant opens it
+(`--auto`, a typed range, a run), and neither does a step with no entry stamp, one built by
+hand or abandoned first. A terminal, and a host with no turn hook, are never refused:
+
+```text
+plumbbob: checkpoint refused — intent.md was edited during step 4 (+3 -1), and the human has
+not typed since it changed. An approval, or a grant they typed, covers the plan as it stood
+when they typed it, not a changed one. This is the pause, and the call is theirs: write the
+detail file, run `plumbbob handoff` (it prints the card with the `plan` row and the diff)
+and relay it whole, then end the turn. Their approval on their next turn is what lets this
+land — re-run `checkpoint` then and stop at the boundary.
+```
+
+The refusal is the pause, as the latch's own is. Once you have replied, the step lands as
+any approved step does: its Log entry keeps the `plan` row, its dated line gains
+`1 plan edit`, the ending prints `Step 4 edited the plan ⚠ (intent.md +3 -1)` among its
+advisories, and the Verdict wears `plan edited`, at this boundary and on the stop card of
+the range the step belongs to. A step with no grant needs no such refusal: the latch already
+waits for your turn, and the pause already showed the row. A step landed by hand, with no
+`build` entry, has its mark settled at the checkpoint by the entry's rule.
 
 ### revert
 
@@ -805,8 +858,17 @@ spawns the agent, and no verb clears the folder ([`agents.md`](agents.md#evidenc
   infers it; a multi-slot agent requires it.
 - **`--agent <path>`** points at an explicit agent directory (top of the ladder); it still
   needs a name for the run label.
-- **Ctrl-C** kills the child and reports rather than orphaning it ([**D58 (sigint-forwarded)**](decisions.md#d58)); a positive
-  `agentTimeout` (below) arms a kill timer ([**D51 (agent-timeout)**](decisions.md#d51)).
+- **Ctrl-C** stops the agent and reports rather than orphaning it ([**D58 (sigint-forwarded)**](decisions.md#d58)); a positive
+  `agentTimeout` (below) arms a timer that does the same ([**D51 (agent-timeout)**](decisions.md#d51)).
+- **A stop** sends SIGTERM to the agent's whole process group, waits up to 5 seconds for it
+  to empty, then sends SIGKILL, so what the agent started goes with it
+  ([**D161 (graceful-agent-stop)**](decisions.md#d161)). The same stop sweeps whatever an
+  agent left running when it exited. A timed-out run reads
+  `agent "<name>" timed out after <n>s (stopped)` when the agent went on the SIGTERM, and
+  `agent "<name>" timed out after <n>s (given 5s to stop, killed)` when it took the SIGKILL.
+- **An interrupt ends the verb.** A SIGINT, SIGTERM or SIGHUP stops the agent that is
+  running, and the agents bound after it in the slot are not started; the run names them
+  (`interrupted, so not running <names>`) and exits 1.
 
 Exits **0** on a clean run, **1** on a failed one: a non-zero child exit (reported
 verbatim, the envelope of a failed child is *not* trusted), garbage on stdout (out of
@@ -839,7 +901,7 @@ The close-out ([**D9 (finish-no-gate)**](decisions.md#d9)/[**D29 (finish-replace
 refusal), makes the final
 commit (subject `chore(<scope>): finish`, mirroring the step-checkpoint Conventional shape; body
 leads with a `plumbbob finish` marker, then an optional `--body` heredoc), and clears
-the control state (`STATE`, the cursor, the in-flight markers). No separate archive copy: the
+the control state (`STATE`, the cursor, the in-flight markers, the plan mark). No separate archive copy: the
 tracked build folder already *is* the record and merges into `main` with the branch, so it
 rides into the PR ([**D26 (build-folders)**](decisions.md#d26)). **No** refuse-without-report gate stands in the way. It closes on its own ending: the
 lead line naming the folder that now rides the branch, then its state table, whose one row
@@ -859,7 +921,12 @@ checkpoint latch reads, and emits any nudge as `additionalContext` JSON on stdou
 A typed prompt also rewrites `GRANT`, the one-turn self-approval, from what was typed:
 `auto` for `/plumbbob:build --auto`, the steps a range or a list names for
 `/plumbbob:build 2-3` or `/plumbbob:build 20,5-9`, and nothing otherwise
-([**D91 (step-list-grants)**](decisions.md#d91)). `/plumbbob:run` mints from the plan
+([**D91 (step-list-grants)**](decisions.md#d91)). Any of them, and `/plumbbob:run`, may carry
+`--plan-edits` on the same line. The hook then also writes `BASE`, a copy of the plan as it
+stands, and for that turn a step whose `intent.md` was edited lands instead of stopping,
+unless the edit changes a Decision, a Constraint, or a step that has landed. The flag with
+no grant beside it does nothing, a job reporting back cannot carry it, and the next prompt
+typed without it is strict again ([**D163 (plan-edits-grant)**](decisions.md#d163)). `/plumbbob:run` mints from the plan
 instead: the hook reads the active build's `intent.md`, resolves the range the run names
 (the one holding the next step, or range 3 for `/plumbbob:run 3`), and writes
 `steps <what is left>`, frozen at the keystroke, so a later edit to the ranges or the build
@@ -991,6 +1058,28 @@ agents the section stays silent. Each row names the tier the agent resolves from
 (`project`, `personal`, or `builtin` for one PlumbBob ships), and an empty tier adds
 nothing ([**D159 (builtin-tier)**](decisions.md#d159)).
 
+A [binding written as a path](agents.md#binding-by-path), in the active build's
+`harness.json` or in the settings `agents` key, gets a row of its own beneath them,
+resolved by the rule a run uses ([**D160 (path-bindings)**](decisions.md#d160)). One that
+resolves is listed by its manifest name with the path as its origin, and its `command` is
+checked like any agent's. A `./` or `../` path that is missing, broken or refused is a
+`✗` row and a counted problem, since the run would refuse it. A missing or broken `~/` or
+absolute path is a `○` row and no problem, since the run would warn and skip it. A path
+that resolves but is bound under a slot its manifest does not declare is a `○` row too,
+naming the slot, since a run of that slot warns and skips the binding. A
+binding by name adds no row: one that resolves already has its row above, and one that
+does not is `status`'s warning. A `harness.json` that does not parse is a `✗ bindings`
+row.
+
+```text
+plumbbob doctor — agents — D48 (doctor-validates-agents)
+  ✓ reviewer (project) [after]
+  ✗ ./tools/gone (path) — no agent.json at binding path ./tools/gone; bound in harness.json, where a run refuses it
+  ✓ walkthrough (path ./tools/walk) [after]
+  ○ ~/agents/ghost (path) — no agent.json at binding path ~/agents/ghost; bound in harness.json, where a run warns and skips it
+  ○ scout (path ./tools/scout) [before] — does not declare the 'after' slot; bound in harness.json, where a run warns and skips it
+```
+
 **Check gate** ([**D32 (checkride-gate)**](decisions.md#d32)). Reports how the heavy gate will resolve in this repo: a configured
 `check` override is named as-is; otherwise checkride's own doctor prints the slot/adapter
 table (`✓ types ← tsc`, `○ spell — no tool detected`, …) so you can see what a green gate
@@ -1099,6 +1188,8 @@ stays git-excluded; a session is live iff `STATE` is present.
       TICK                 # untracked — the TURN value stamped when the step was entered; with TURN, the latch's whole state
       PAUSE                # untracked: which card has shown, a step's pause or (`landed <n>`) its boundary, so a repeat prints its one line (D110 (reply-after-the-card))
       STOP                 # untracked: the range the stop card last showed and the TURN it printed in, read by harvest's latch (D103 (stop-latched))
+      MARK                 # untracked: the plan as last approved, a copy of intent.md under the TURN and step it was taken at, with the plan you last typed over while an edit waits, which an edit is measured against (D162 (plan-edit-shown))
+      BASE                 # untracked: the plan as it stood when a grant was typed with --plan-edits, and the steps that have landed a plan edit under it (D163 (plan-edits-grant))
       handoff.json         # untracked — step-scoped agent-run ledger, cleared at checkpoint, revert or abandon — D47 (handoff-ledger)
       evidence/<n>/        # untracked: what an agent saved for you to look at during step n; never cleared (D157 (evidence-is-shown))
 ```
@@ -1140,8 +1231,9 @@ is **not** a setting: it
 is `STATE`'s content, so plumbbob never rewrites this hand-editable overlay ([**D28 (state-cursor)**](decisions.md#d28)). `agents` sets
 project-wide slot bindings for [user-authored agents](agents.md): the bottom rung under a
 build's `harness.json` and the `--agent` flag ([**D57 (merge-ladder)**](decisions.md#d57)). `agentTimeout` (seconds) arms a
-kill timer for a spawned agent; absent or `0` means no timeout, since the human is present
-and Ctrl-C works ([**D51 (agent-timeout)**](decisions.md#d51)). `agentConfig` is a record keyed by
+timer that stops a spawned agent; absent or `0` means no timeout, since the human is present
+and Ctrl-C works ([**D51 (agent-timeout)**](decisions.md#d51)). The stop gives the agent 5 seconds to
+clean up before it is killed ([**D161 (graceful-agent-stop)**](decisions.md#d161)). `agentConfig` is a record keyed by
 agent name: the named agent receives its entry as `settings.agent` in the envelope, the local
 overlay replaces the project entry whole rather than merging into it, and `{}` rides when
 neither file defines one. Both files are optional JSON: a missing or malformed one

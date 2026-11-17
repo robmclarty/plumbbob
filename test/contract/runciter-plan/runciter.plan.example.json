@@ -27,6 +27,7 @@
       "range": "r1",
       "depends_on": ["limit-types"],
       "seam": ["packages/server/src/limiter/", "packages/server/src/routes/login.ts"],
+      "like": ["packages/server/src/throttle/bucket.ts"],
       "proof": {
         "command": "pnpm --filter @sandbox/server test limiter",
         "text": "`pnpm --filter @sandbox/server test limiter` passes; the sixth login in a minute from one address gets 429"

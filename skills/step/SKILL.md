@@ -3,7 +3,7 @@ name: step
 description: "Revise the next increment just-in-time: sharpen the next undone step against what's now true, or (with input) re-cut, split, or add a step. Empty input runs an automatic sharpen. One at a time; the human approves."
 argument-hint: "[what-changed]"
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob order:*), Bash(plumbbob agent list:*)
+allowed-tools: Read, Edit, Write, Bash(plumbbob status:*), Bash(plumbbob order:*), Bash(plumbbob agent list:*), Bash(plumbbob export:*)
 ---
 
 # PlumbBob: revise the next step (the single-increment move)
@@ -103,7 +103,9 @@ grew, but its everyday job is to sharpen, not to invent.
    step also changed which agents it wants, sharpen that step's slot bindings
    (`before`/`build`/`after`) and `note` at the same time; this is the just-in-time
    counterpart to `/plumbbob:plan`'s plan-time binding. `plumbbob agent list` shows what's
-   resolvable. Same rule as the plan move: bindings + prose only, never a conditional
+   resolvable by name; a binding may also be a `./` path to an agent kept elsewhere in
+   the repo
+   ([D160 (path-bindings)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d160)). Same rule as the plan move: bindings + prose only, never a conditional
   . Leave it untouched when the step's agents are still right, or when the build
    uses none.
 

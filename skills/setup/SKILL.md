@@ -20,8 +20,8 @@ when it is missing:
 - the `.plumbbob/` folder at the repo root;
 - `.plumbbob/settings.json`, seeded as `{}`, since an absent key already is the default;
 - one line per control file (`STATE`, `TURN`, `PROMPT`, `RELAY`, the in-flight markers
-  inside each build, and `.check/`) in the clone's `.git/info/exclude`, so git never
-  tracks them.
+  and the evidence folder inside each build, and `.check/`) in the clone's
+  `.git/info/exclude`, so git never tracks them.
 
 Every write is additive. An existing folder or settings file is left as it is, a line
 already in the exclude file is not written twice, and a clone that keeps the whole sidecar
