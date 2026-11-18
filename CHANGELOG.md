@@ -5,6 +5,55 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.1] - 2026-11-17
+
+- **Added:** a step's `- proof:` sub-line replaces the `**done when:**` clause. It opens on
+  the command when there is one, and `checkpoint` runs that command after a green gate; a
+  red proof refuses the checkpoint and records nothing, as a red check does. The Readout's
+  `proof` row carries the command, its exit and its time. The old clause still reads as a
+  proof with no command, so every recorded build reads as it did. D153
+  (proof-replaces-done-when), D154 (red-proof-holds).
+- **Added:** the reach, what a change to a seam usually drags along. With `atis` installed,
+  plumbbob asks `atis reach --json` at the plan checkpoint and at `build`, and the
+  Readout's `seam` row becomes the `plumb` row: each file in the diff is in the seam, in
+  the reach, or outside both. With atis absent, every row reads as before. `docs/reach.md`
+  specifies it. D155 (reach-is-computed).
+- **Added:** a step's `- like:` sub-line names the files to copy the pattern from. Agents
+  get them as `step.like`, and the plan card flags a like path that does not exist. A bad
+  like line refuses nothing. D156 (like-is-advice).
+- **Added:** an agent's result may carry `evidence`, files it saved under the step's
+  evidence folder, each with a caption. The pause links them under the Readout and the
+  build log records each one. D157 (evidence-is-shown).
+- **Added:** `plumbbob research --stamp` dates a build's `research.md` with each lockfile's
+  hash and each named dependency's version, and the plan card and dashboard say when a
+  stamped one has moved. D158 (research-is-dated).
+- **Added:** agent resolution gains a built-in tier below the personal one, and a binding
+  may be a path (`./`, `~/` or absolute) instead of a name. D159 (builtin-tier), D160
+  (path-bindings).
+- **Added:** a plan edited during a step is shown at the pause: the Readout gains a `plan`
+  row, the Verdict a `plan edited` rung, and a Plan Edit part shows the diff. `checkpoint`
+  refuses a step whose plan changed and has not stood at a typed prompt, so a granted run
+  halts there. A grant typed with `--plan-edits` lands the edit instead and lists
+  everything the run did to the plan on the next card; it never reaches the Decisions, the
+  Constraints, or a landed step. D162 (plan-edit-shown), D163 (plan-edits-grant).
+- **Added:** a walkthrough example agent that drives a running app through its step's
+  proof in a real browser and returns screenshots as evidence.
+- **Changed:** `plumbbob export` writes `runciter.plan/2` in place of `/1`: a step carries
+  `landed`, `proof: { command, text }` in place of `done_when`, and its `like`. A scheduler
+  handed a partly built build no longer rebuilds what has landed.
+- **Changed:** `build`, `checkpoint`, `harvest` and `finish` bring an exported `plan.json`
+  up to `intent.md` before they start. `plumbbob check` run alone still fails on a stale
+  file.
+- **Changed:** a stopped agent is asked first: its process group gets SIGTERM, five
+  seconds, then SIGKILL. D161 (graceful-agent-stop).
+- **Changed:** the `plan`, `refine` and `next` skills may use the web tools, and a file the
+  step's reach lists may be touched without asking.
+- **Fixed:** a tangent handed over at a pause was built instead of parked. The pause nudge
+  and the `build` skill now split direction, a change the human spells out for what the
+  step built, from a tangent, one that leaves a choice open or reaches past the step.
+- **Fixed:** the reviewer example's Ollama path sent no response schema, so its default
+  model guessed the keys.
+
 ## [0.17.0] - 2026-11-13
 
 - **Added:** `plumbbob export [<slug>]` writes a build's plan as data, `plan.json` beside its
