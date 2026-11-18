@@ -855,6 +855,20 @@ function isThere(pid: number): boolean {
   }
 }
 
+/**
+ * Whether `pid` is still there once it has had a few seconds to go. A killed
+ * process stays in the table until its parent reaps it, and on a loaded
+ * machine that can trail the run's report by a moment, so a stop is judged
+ * by the process being gone soon, not gone at the instant the run returned.
+ */
+async function stillThere(pid: number): Promise<boolean> {
+  const deadline = Date.now() + 5000
+  while (isThere(pid) && Date.now() < deadline) {
+    await new Promise((tick) => setTimeout(tick, 50))
+  }
+  return isThere(pid)
+}
+
 function pidIn(dir: string, file: string): number {
   const pid = Number(readFileSync(join(dir, file), 'utf8').trim())
   expect(Number.isInteger(pid) && pid > 0).toBe(true)
@@ -890,7 +904,7 @@ while :; do sleep 0.1; done
     expect(readFileSync(join(dir, 'cleaned'), 'utf8')).toBe('cleaned\n')
     // It settled when the agent went, well short of the grace it was offered.
     expect(took).toBeLessThan(10_000)
-    expect(isThere(pidIn(dir, 'agent.pid'))).toBe(false)
+    expect(await stillThere(pidIn(dir, 'agent.pid'))).toBe(false)
   }, 30_000)
 
   it('kills an agent that ignores TERM once the grace runs out', async () => {
@@ -906,7 +920,7 @@ while :; do sleep 0.1; done
     expect(result).toEqual({ ok: false, reason: 'timeout', seconds: 1, graceSeconds: 1, killed: true })
     // The timeout, then the whole grace: TERM alone did not end it.
     expect(took).toBeGreaterThanOrEqual(2000)
-    expect(isThere(pidIn(dir, 'agent.pid'))).toBe(false)
+    expect(await stillThere(pidIn(dir, 'agent.pid'))).toBe(false)
   }, 30_000)
 
   it('takes a grandchild down with a timed-out agent', async () => {
@@ -916,7 +930,7 @@ while :; do sleep 0.1; done
     const result = await runStopAgent(dir, { timeoutSeconds: 1, graceSeconds: 0.5 })
 
     expect(result).toMatchObject({ ok: false, reason: 'timeout', killed: true })
-    expect(isThere(pidIn(dir, 'grandchild.pid'))).toBe(false)
+    expect(await stillThere(pidIn(dir, 'grandchild.pid'))).toBe(false)
   }, 30_000)
 
   it('sweeps what a cleanly exiting agent left running, and still reads its envelope', async () => {
@@ -930,7 +944,7 @@ echo '${DONE_ENVELOPE}'
       envelope: { status: 'done', summary: 'walked it' },
       stdout: `${DONE_ENVELOPE}\n`,
     })
-    expect(isThere(pidIn(dir, 'grandchild.pid'))).toBe(false)
+    expect(await stillThere(pidIn(dir, 'grandchild.pid'))).toBe(false)
   }, 30_000)
 
   it('sweeps what a failing agent left running, and still reports its exit code', async () => {
@@ -941,7 +955,7 @@ exit 3
     const result = await runStopAgent(dir, { timeoutSeconds: 0, graceSeconds: 0.5 })
 
     expect(result).toEqual({ ok: false, reason: 'exit', code: 3, stdout: 'partial\n' })
-    expect(isThere(pidIn(dir, 'grandchild.pid'))).toBe(false)
+    expect(await stillThere(pidIn(dir, 'grandchild.pid'))).toBe(false)
   }, 30_000)
 
   it('settles at once for an agent that leaves nothing behind', async () => {
@@ -994,8 +1008,8 @@ process.stdout.write(JSON.stringify(result))
       // The driver outlives the signal long enough to stop the agent and say so.
       expect(await closed).toBe(0)
       expect(JSON.parse(out)).toEqual({ ok: false, reason: 'interrupted' })
-      expect(isThere(pidIn(dir, 'agent.pid'))).toBe(false)
-      expect(isThere(pidIn(dir, 'grandchild.pid'))).toBe(false)
+      expect(await stillThere(pidIn(dir, 'agent.pid'))).toBe(false)
+      expect(await stillThere(pidIn(dir, 'grandchild.pid'))).toBe(false)
     }, 40_000)
   }
 })

@@ -569,7 +569,8 @@ describe('turnContext — the nudge, D64 (approval-latch) amended: guidance, not
     )
     // Feedback at a pause is not a tangent: the park line would swallow it.
     expect(context).not.toContain('a new idea or tangent is a park, not an edit')
-    expect(context).toContain('A tangent the human hands you is still a park')
+    expect(context).toContain('A change the human spells out for what step 2 built is direction')
+    expect(context).toContain('is a tangent, even when the human asks you to do it now and even in part')
   })
 
   it('keeps the park nudge while the stamp names another card: the boundary before, or another step', async () => {

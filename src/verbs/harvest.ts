@@ -21,6 +21,7 @@
 // disagree about which parks are open; a park no proposal names stays open,
 // and the record says nothing about it.
 
+import { dropShownBase, markPlan } from '../lib/planmark.ts'
 import { keepPlanCurrent } from '../lib/planfile.ts'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { findRepoRoot } from '../lib/git.ts'
@@ -127,6 +128,16 @@ export function harvest(cwd: string, _args: ReadonlyArray<string>): number {
   writeFileSync(buildLogPath(root, slug), updated)
   clearDetail(root)
   clearStop(root, slug)
+  if (stop !== null) {
+    // A stop is recorded only once the human has read its card and replied,
+    // and what they confirmed there is folded into the plan before this verb
+    // runs. That plan is the one they stand behind, so the mark takes it: a
+    // run typed at the stop then builds on the fold rather than halting at
+    // its first step for an edit the person asked for. The card that listed
+    // a run's plan edits has been answered, so its base goes too.
+    markPlan(root, slug)
+    dropShownBase(root, slug)
+  }
 
   // Outside a stop the label names the act, `Recorded`, since `Harvested` is
   // the stop card's part and one label over a part that proposes and an ending

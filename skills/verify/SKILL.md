@@ -2,7 +2,7 @@
 name: verify
 description: "The verify tick: run the check, self-review the diff against intent, validate the step's proof, pause for your approval, then checkpoint. Executor-agnostic: it reads the diff, not who wrote it."
 disable-model-invocation: true
-allowed-tools: Read, Write, Bash(plumbbob status:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent:*), Bash(git diff:*), Bash(git status:*)
+allowed-tools: Read, Write, Bash(plumbbob status:*), Bash(plumbbob handoff:*), Bash(plumbbob check:*), Bash(plumbbob checkpoint:*), Bash(plumbbob agent:*), Bash(plumbbob export:*), Bash(git diff:*), Bash(git status:*)
 ---
 
 # PlumbBob: verify a step (the tick)
@@ -21,12 +21,15 @@ this skill verifies it the same way: **it reads the diff, not the author**
    names the failing slots and where each tool's raw output landed: read
    `.check/summary.json`, then the failing slot's own file (`.check/<slot>.json` or
    `.check/<slot>.stdout.txt`) for the actual diagnostics instead of scraping
-   scrollback. Report what failed and do **not** pause for approval; there is
+   scrollback. One red is no stop: a check named `plan` alone means `plan.json` is behind
+   `intent.md`, so run `plumbbob export` and check again, and treat it as red only when
+   the export refuses and names its findings. Otherwise report what failed and do **not** pause for approval; there is
    nothing to approve yet. The human fixes it and re-invokes. (Exit 2 means the gate
    itself broke: a harness problem to surface, not a code failure.)
-2. **Run any bound `after`-agents** *(optional)*. If the build's `harness.json`
-   binds agents to this step's `after` slot, run `plumbbob agent run --step <n> --mode
-   after`. Their envelopes are **advisory input to the self-review, never a gate**;
+2. **Run any bound `after`-agents** *(optional)*. If the dashboard above shows a
+   `harness bindings:` block (a `harness.json` beside `intent.md`, or agents bound in
+   settings), run `plumbbob agent run --step <n> --mode after`; it is a clean no-op when
+   nothing is bound to the slot. Their envelopes are **advisory input to the self-review, never a gate**;
    `plumbbob check` already gated in step 1, and an `after`-agent that could fail a step
    would be the old lock back in another form. Fold a `done` envelope's
    `summary`/`body` into the review below; route a non-`done` one by its status. A
@@ -38,7 +41,7 @@ this skill verifies it the same way: **it reads the diff, not the author**
    `plumbbob handoff` lists each one as a link under the Readout, so leave the paths out
    of your review, and never treat one as proof the step is done.
 3. **Self-review** *(a single structured read)*. Read `git diff` and
-   `.plumbbob/intent.md`, then in one pass check the diff against:
+   `intent.md` in the build folder (`.plumbbob/builds/<slug>/intent.md`), then in one pass check the diff against:
    - the current step's **proof**: is it actually met?
    - the **Decisions**: does anything contradict a settled call?
    - the **Constraints**: are any violated?
@@ -271,7 +274,8 @@ instead.**
 - **Read the diff, not the author**. Verify identically whether the code was
   built by `/plumbbob:build`, by hand, vibed, or by another harness.
 - **Red means stop, not pause.** A failing check is not an approval decision; report
-  it and end your turn.
+  it and end your turn. A red `plan` check that `plumbbob export` clears is the one
+  exception, as step 1 says.
 - **You review; you do not build.** If the self-review finds a problem, surface it
   and stop; fixing is a new build beat, not part of verify. The one file the tick writes
   is `.plumbbob/detail.md`, the turn's presentation; it never edits the diff under review.

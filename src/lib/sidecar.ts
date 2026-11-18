@@ -992,14 +992,19 @@ export function basePath(root: string, slug?: string | null): string {
 
 /**
  * The run's plan base: the turn the grant was typed in, the steps that have
- * landed a plan edit under it, whether a card has shown the run's edits, and
- * the snapshot of intent.md taken at that prompt.
+ * landed a plan edit under it, whether the CLI's own `order` or `defer` wrote
+ * the plan during the run, whether a card has shown the run's edits, the
+ * snapshot of intent.md taken at that prompt, and, once the allowance has
+ * ended, the plan as it stood then, so a later edit is never read as the
+ * run's.
  */
 export type PlanBase = {
   readonly turn: number
   readonly steps: ReadonlyArray<number>
+  readonly cli: boolean
   readonly shown: boolean
   readonly text: string
+  readonly after?: string
 }
 
 /**
@@ -1013,21 +1018,34 @@ export function readBase(root: string, slug?: string | null): PlanBase | null {
   } catch {
     return null
   }
-  const m = /^turn (\d+)\nsteps ([\d,]*|-)\nshown (yes|no)\n\n/.exec(raw)
+  const m = /^turn (\d+)\nsteps ([\d,]*|-)\ncli (yes|no)\nshown (yes|no)\nfrozen (\d+|-)\n\n/.exec(raw)
   if (m === null) return null
   const listed = m[2] === '-' || m[2] === '' ? [] : (m[2] ?? '').split(',').map(Number)
-  return { turn: Number(m[1]), steps: listed, shown: m[3] === 'yes', text: raw.slice(m[0].length) }
+  const body = raw.slice(m[0].length)
+  const cut = m[5] === '-' ? null : Number(m[5])
+  return {
+    turn: Number(m[1]),
+    steps: listed,
+    cli: m[3] === 'yes',
+    shown: m[4] === 'yes',
+    text: cut === null ? body : body.slice(0, cut),
+    ...(cut === null ? {} : { after: body.slice(cut) }),
+  }
 }
 
 /**
- * Write the run's plan base: a `turn N` line, a `steps` line, a `shown` line,
- * a blank line, then the snapshot byte for byte. Best-effort, like the mark:
- * a failed write leaves no allowance, which is the strict reading.
+ * Write the run's plan base: a `turn N` line, a `steps` line, a `cli` line, a
+ * `shown` line, a `frozen` line giving the snapshot's length when a second
+ * text follows it, a blank line, then the snapshot byte for byte and the
+ * frozen plan after it. Best-effort, like the mark: a failed write leaves no
+ * allowance, which is the strict reading.
  */
 export function writeBase(root: string, slug: string | null | undefined, base: PlanBase): void {
   try {
     const steps = base.steps.length === 0 ? '-' : base.steps.join(',')
-    writeFileSync(basePath(root, slug), `turn ${base.turn}\nsteps ${steps}\nshown ${base.shown ? 'yes' : 'no'}\n\n${base.text}`)
+    const frozen = base.after === undefined ? '-' : String(base.text.length)
+    const head = `turn ${base.turn}\nsteps ${steps}\ncli ${base.cli ? 'yes' : 'no'}\nshown ${base.shown ? 'yes' : 'no'}\nfrozen ${frozen}\n\n`
+    writeFileSync(basePath(root, slug), `${head}${base.text}${base.after ?? ''}`)
   } catch {
     // A read-only tree or a vanished build folder: the run stays strict.
   }

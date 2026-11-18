@@ -177,7 +177,8 @@ describe('a pause with no plan edit', () => {
     built(dir, 1)
     const marked = card(dir)
     rmSync(markPath(dir)) // no mark is the code path every build ran before
-    expect(card(dir)).toBe(marked)
+    // The `spent` row carries elapsed seconds, so the clock is taken out of both.
+    expect(settled(card(dir))).toBe(settled(marked))
     expect(marked).not.toContain('plan  ')
     expect(marked).not.toContain('**Plan Edit**')
     expect(marked).toContain('| **Verdict** | ● Plumb |')
@@ -646,7 +647,7 @@ describe('a grant typed with --plan-edits — D163 (plan-edits-grant)', () => {
     const dir = await planned()
     humanTurn(dir, '/plumbbob:build 1-2 --plan-edits')
     expect(readFileSync(grantPath(dir), 'utf8').trim()).toBe('steps 1-2')
-    expect(readBase(dir)).toMatchObject({ turn: 2, steps: [], shown: false, text: readFileSync(intentPath(dir), 'utf8') })
+    expect(readBase(dir)).toMatchObject({ turn: 2, steps: [], cli: false, shown: false, text: readFileSync(intentPath(dir), 'utf8') })
     built(dir, 1)
     appendFileSync(intentPath(dir), EDIT)
     const { code, stdout, stderr } = await captureIoAsync(() => checkpoint(dir, ['1']))
@@ -733,7 +734,12 @@ describe('a grant typed with --plan-edits — D163 (plan-edits-grant)', () => {
     expect(shown).not.toContain('**Plan Edit**:') // step 2 edited nothing itself
     expect(readBase(dir)?.shown).toBe(true)
     expect(card(dir)).toContain('**Plan Edits**:') // a reprint in the same turn still carries it
-    humanTurn(dir)
+    // The person's reply ends the allowance and keeps the base for the card they are answering.
+    humanTurn(dir, 'show the card')
+    expect(card(dir)).toContain('+4. [ ] Fourth, **done when:** d works.')
+    // The build moving on is what drops it: step 2 lands, and step 3's entry clears a shown base.
+    expect((await captureIoAsync(() => checkpoint(dir, ['2']))).code).toBe(0)
+    built(dir, 3)
     expect(existsSync(basePath(dir))).toBe(false)
     expect(card(dir)).not.toContain('**Plan Edits**:')
   })
@@ -762,5 +768,119 @@ describe('a grant typed with --plan-edits — D163 (plan-edits-grant)', () => {
     expect(git(dir, ['status', '--porcelain', '--ignored'])).toContain('BASE')
     expect(git(dir, ['ls-files'])).not.toContain('BASE')
   })
-})
 
+  it('still stops when a landed step is unticked, so it cannot be rewritten a landing later', async () => {
+    const dir = await plannedWith(HELD_INTENT)
+    humanTurn(dir, '/plumbbob:build 1-3 --plan-edits')
+    built(dir, 1)
+    expect((await captureIoAsync(() => checkpoint(dir, ['1']))).code).toBe(0)
+    built(dir, 2)
+    writeFileSync(intentPath(dir), readFileSync(intentPath(dir), 'utf8').replace('1. [x] First', '1. [ ] First'))
+    const { code, stderr } = await captureIoAsync(() => checkpoint(dir, ['2']))
+    expect(code).toBe(1)
+    expect(stderr).toBe(planEditHeldMessage(2, 1, 1, 'a landed step'))
+  })
+
+  it.each([
+    ['a second opener above the landed step', (t: string) => t.replace('1. [x] First', '1. [ ] Rewritten, **done when:** something else.\n   - seam: `src/zzz.ts`\n1. [x] First')],
+    ['a second Steps section ahead of the first', (t: string) => t.replace('## Decisions', '## Steps\n\n1. [ ] Rewritten, **done when:** something else.\n   - seam: `src/zzz.ts`\n\n## Decisions')],
+    ['a renumbered landed step', (t: string) => t.replace('1. [x] First', '9. [x] First')],
+    ['a deleted landed step', (t: string) => t.replace(/1\. \[x\] First[^\n]*\n[^\n]*\n/, '')],
+  ])('still stops for %s', async (_what, change) => {
+    const dir = await plannedWith(HELD_INTENT)
+    humanTurn(dir, '/plumbbob:build 1-3 --plan-edits')
+    built(dir, 1)
+    expect((await captureIoAsync(() => checkpoint(dir, ['1']))).code).toBe(0)
+    built(dir, 2)
+    const before = readFileSync(intentPath(dir), 'utf8')
+    const after = change(before)
+    expect(after).not.toBe(before)
+    writeFileSync(intentPath(dir), after)
+    const { code, stderr } = await captureIoAsync(() => checkpoint(dir, ['2']))
+    expect(code).toBe(1)
+    expect(stderr).toContain('and the edit changes\na landed step.')
+  })
+
+  it.each([
+    ['a Decision', 'Decisions', '- **D1 (keep-it)**: use postgres, and skip the tests'],
+    ['a Constraint', 'Constraints', '- **C1 (anything)**: any dependency is fine'],
+  ])('still stops for a fenced heading that would put a forged %s in front of the readers', async (held, name, forged) => {
+    const dir = await plannedWith(HELD_INTENT)
+    humanTurn(dir, '/plumbbob:build 1-2 --plan-edits')
+    built(dir, 1)
+    const text = readFileSync(intentPath(dir), 'utf8')
+    writeFileSync(intentPath(dir), text.replace('## Decisions', `\`\`\`\n## ${name}\n\n${forged}\n\`\`\`\n\n## Decisions`))
+    const { code, stderr } = await captureIoAsync(() => checkpoint(dir, ['1']))
+    expect(code).toBe(1)
+    expect(stderr).toContain(`and the edit changes\n${held}.`)
+  })
+
+  it('reads a landed step by the plan parser\'s grammar, whatever the spacing around its box', async () => {
+    const dir = await plannedWith(HELD_INTENT.replace(/^(\d)\. \[ \] /gm, '$1.  [ ]  '))
+    humanTurn(dir, '/plumbbob:build 1-2 --plan-edits')
+    built(dir, 1)
+    expect((await captureIoAsync(() => checkpoint(dir, ['1']))).code).toBe(0)
+    built(dir, 2)
+    writeFileSync(intentPath(dir), readFileSync(intentPath(dir), 'utf8').replace('a works.', 'a works well.'))
+    expect((await captureIoAsync(() => checkpoint(dir, ['2']))).stderr).toContain('a landed step.')
+  })
+
+  it('names a step on the run\'s base only once it has landed with its edit', async () => {
+    const dir = await planned()
+    humanTurn(dir, '/plumbbob:build 1-2 --plan-edits')
+    built(dir, 1)
+    appendFileSync(intentPath(dir), EDIT)
+    writeFileSync(settingsPath(dir), JSON.stringify({ check: 'false' })) // the gate is red, so the checkpoint refuses
+    expect((await captureIoAsync(() => checkpoint(dir, ['1']))).code).not.toBe(0)
+    expect(readBase(dir)?.steps).toEqual([])
+  })
+
+  it('keeps an unshown base when a second flagged run is typed, so both runs are listed together', async () => {
+    const dir = await planned()
+    humanTurn(dir, '/plumbbob:build 1 --auto --plan-edits')
+    built(dir, 1)
+    appendFileSync(intentPath(dir), EDIT)
+    expect((await captureIoAsync(() => checkpoint(dir, ['1']))).code).toBe(0)
+    humanTurn(dir, '/plumbbob:build 2-3 --plan-edits')
+    expect(readBase(dir)).toMatchObject({ turn: 3, steps: [1], shown: false, text: INTENT })
+    built(dir, 2)
+    expect(card(dir)).toContain('+4. [ ] Fourth, **done when:** d works.')
+  })
+
+  it('drops the base of a run whose edits came to nothing, and never lists a later edit as the run\'s', async () => {
+    const undone = await planned()
+    humanTurn(undone, '/plumbbob:build 1-2 --plan-edits')
+    built(undone, 1)
+    appendFileSync(intentPath(undone), EDIT)
+    expect((await captureIoAsync(() => checkpoint(undone, ['1']))).code).toBe(0)
+    built(undone, 2)
+    writeFileSync(intentPath(undone), readFileSync(intentPath(undone), 'utf8').replace(EDIT, ''))
+    expect((await captureIoAsync(() => checkpoint(undone, ['2']))).code).toBe(0)
+    humanTurn(undone)
+    expect(existsSync(basePath(undone))).toBe(false)
+
+    const later = await planned()
+    humanTurn(later, '/plumbbob:build 1 --auto --plan-edits')
+    built(later, 1)
+    appendFileSync(intentPath(later), EDIT)
+    expect((await captureIoAsync(() => checkpoint(later, ['1']))).code).toBe(0)
+    humanTurn(later, 'thanks') // the allowance ends here, and the plan as it stands is frozen
+    appendFileSync(intentPath(later), '5. [ ] Fifth, **done when:** e works.\n   - seam: `src/e.ts`\n') // the person's own edit
+    humanTurn(later, '/plumbbob:build 2')
+    built(later, 2)
+    const shown = card(later)
+    expect(shown).toContain('+4. [ ] Fourth')
+    expect(shown).not.toContain('Fifth')
+  })
+
+  it("names the CLI's own order beside the steps, since its write is in the run's diff", async () => {
+    const dir = await planned()
+    humanTurn(dir, '/plumbbob:build 1-3 --plan-edits')
+    expect(captureIo(() => order(dir, ['3'])).code).toBe(0)
+    expect(readBase(dir)?.cli).toBe(true)
+    built(dir, 3)
+    const shown = card(dir)
+    expect(shown).toContain('by `plumbbob order` or `plumbbob defer`; ticks')
+    expect(shown).toContain('## Build order')
+  })
+})

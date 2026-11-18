@@ -6,7 +6,7 @@ import { handoff, isHarvestDetail } from '../handoff.ts'
 import { harvest } from '../harvest.ts'
 import { park } from '../park.ts'
 import { start } from '../start.ts'
-import { buildLogPath, checkpointsPath, detailPath, intentPath, readRelay, statsPath, stopPath, turnPath } from '../../lib/sidecar.ts'
+import { buildLogPath, checkpointsPath, detailPath, intentPath, readMark, readRelay, statsPath, stopPath, turnPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
@@ -153,6 +153,24 @@ describe("harvest — a stop's record — D104 (harvest-records)", () => {
       ].join('\n'),
     )
     expect(readRelay(dir)).toEqual({ turn: 5, tier: 'orientation', render: 'harvest', text: stdout })
+  })
+
+  it('takes the plan mark when it records a stop, so a fold the person confirmed is the plan a run builds on — D162 (plan-edit-shown)', async () => {
+    const dir = await atStop({ card: false })
+    writeFileSync(buildLogPath(dir), log(dir).replace(/- \[ \]/g, '- [x]'))
+    writeFileSync(turnPath(dir), '4\n')
+    captureIo(() => handoff(dir, ['--stop']))
+    writeFileSync(turnPath(dir), '5\n')
+    const folded = `${INTENT}\n## Decisions\n\n- **D1 (folded)**: the blocker the person confirmed at the stop\n`
+    writeFileSync(intentPath(dir), folded)
+    expect(captureIo(() => harvest(dir, [])).code).toBe(0)
+    expect(readMark(dir)?.text).toBe(folded)
+    // Outside a stop the verb records parks and leaves the mark alone.
+    const other = await atStop({ card: false, detail: HARVEST_DETAIL })
+    const before = readMark(other)?.text
+    writeFileSync(intentPath(other), folded)
+    expect(captureIo(() => harvest(other, [])).code).toBe(0)
+    expect(readMark(other)?.text).toBe(before)
   })
 
   it('records a stop with no park open as the review alone — D100 (stop-card)', async () => {

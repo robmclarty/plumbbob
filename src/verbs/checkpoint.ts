@@ -135,7 +135,6 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
       )
       return 1
     }
-    noteRunEdit(root, undefined, step)
   }
 
   const gate = await runCheck(root)
@@ -199,6 +198,11 @@ export async function checkpoint(cwd: string, args: ReadonlyArray<string>): Prom
   // it past this point: the Log line, the boundary's Verdict, a range's stop
   // card, and the finish report all read the stat.
   const planNote = planEditNotice(root, step, edit)
+  // Named on the run's base only now, with the landing certain, so the steps
+  // the next card lists are the steps whose records carry the `plan` row.
+  if (edit !== null && planEditsAllowed(root)) {
+    noteRunEdit(root, undefined, step)
+  }
   const flipNotice = flipIntent(root, step)
   // The tick is the CLI's own write, and the step has landed with whatever
   // edit it carried: the plan as it stands is the plan as sanctioned.

@@ -290,8 +290,13 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    of it). Then run `plumbbob handoff --full` and paste its output whole, with nothing
    written around it. Never run `--full` to read the card for yourself, after a compaction
    or in a fresh session; what it prints is the turn's ending, and the relay check holds a
-   turn that does not close on it. Read the detail file and `plumbbob status` instead. A
-   tangent the human hands you at the pause is still a park.
+   turn that does not close on it. Read the detail file and `plumbbob status` instead.
+
+   Tell direction from a tangent. A change the human spells out for what the step built is
+   direction: make it. A change that leaves a choice open (how new behaviour should act,
+   what a refactor covers) or reaches past the step is a tangent, even when the human asks
+   you to do it now and even in part: park it, edit no source for it, and say which choice
+   it waits on.
 
    **Then hand off with the next model.** `plumbbob checkpoint` prints the whole boundary
    ending itself: `**Checkpoint**: Step N complete (<sha>)`, any advisory (a staged path
@@ -316,8 +321,8 @@ Skip this section unless `plumbbob status` shows a `harness bindings:` block. Ne
 build binds **no** agents; for them the default path above is the whole story. When a
 harness *is* bound, this is what each affected step gains, in lifecycle order.
 
-- **`before`: load context in (step 3).** If the build's `harness.json` binds agents to
-  this step's `before` slot, run `plumbbob agent run --step <n> --mode before` first: each
+- **`before`: load context in (step 3).** If the `harness bindings:` block binds agents to
+  this step's `before` slot (in `harness.json` or in settings), run `plumbbob agent run --step <n> --mode before` first: each
   returns a validated envelope on stdout that plumbbob also appends to the step's
   `handoff.json`, and its `summary`/`body` become **context you read into the build** (that
   is the whole point of the slot: load the context in before you write). No binding, or no

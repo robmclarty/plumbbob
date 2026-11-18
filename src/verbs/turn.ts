@@ -196,12 +196,14 @@ function pauseNudge(step: number): string {
     `plumbbob: step ${step}'s card has shown, and this message is the human's reply to it. ` +
     `An approval lands the step: run \`plumbbob checkpoint ${step}\` and relay its ending. ` +
     `Anything else is answered in your own words, after every tool call and with none after it: ` +
-    `first read what you need and make the change it asks for, ` +
-    `write \`.plumbbob/detail.md\` again when a change moves what the card said, so the record matches what lands, ` +
+    `first read what you need, then tell direction from a tangent. ` +
+    `A change the human spells out for what step ${step} built is direction: make the change it asks for. ` +
+    `A change that leaves a choice open (how new behaviour should act, what a refactor covers) or reaches past the step is a tangent, even when the human asks you to do it now and even in part: ` +
+    `capture it with \`plumbbob park "<one line>"\`, edit no source for it, and say which choice it waits on. ` +
+    `Then write \`.plumbbob/detail.md\` again when a change moves what the card said, so the record matches what lands, ` +
     `and run \`plumbbob handoff\` last among them, keeping the one line it prints. ` +
     REPLY_LAST +
-    `Only when the human asks to see the card again, run \`plumbbob handoff --full\` and paste its output exactly as it printed, as the whole turn. ` +
-    `A tangent the human hands you is still a park: \`plumbbob park "<one line>"\`.`
+    `Only when the human asks to see the card again, run \`plumbbob handoff --full\` and paste its output exactly as it printed, as the whole turn.`
   )
 }
 

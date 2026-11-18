@@ -2180,7 +2180,10 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   `sidecar.ts`, `latch.ts`, `orient.ts`, `verbs/build.ts`, `verbs/checkpoint.ts`, `verbs/handoff.ts`,
   `verbs/turn.ts`, `verbs/order.ts`, `verbs/defer.ts`, `verbs/start.ts`, `verbs/finish.ts`, the `build`, `verify` and `run`
   skills, and `docs/presentation.md`. (Revised 2026-11-15 by [**D163 (plan-edits-grant)**](#d163): a grant typed
-  with `--plan-edits` lands the edit instead of stopping for it, short of a Decision, a Constraint, or a landed step.)
+  with `--plan-edits` lands the edit instead of stopping for it, short of a Decision, a Constraint, or a landed step.
+  Revised 2026-11-17: `plumbbob harvest` takes the mark again when it records a stop. The stop's record needs the
+  person's reply to its card, and what they confirmed is folded into the plan before the verb runs, so a
+  `/plumbbob:run` typed at the stop builds on the fold instead of halting at its first step.)
 
 - <a id="d163"></a>**D163 (plan-edits-grant): A grant typed with `--plan-edits` lands a plan edit, lists it at
   the next card, and never reaches the Decisions, the Constraints, or a landed step.** The flag rides the grant
@@ -2189,12 +2192,19 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   copy of `intent.md` as it stands, under that `TURN`. While `TURN` still reads that turn and a grant stands,
   `checkpoint` lands a step whose plan differs from the mark where [**D162 (plan-edit-shown)**](#d162) would
   refuse it. Three things still refuse, in the latch's voice and naming which: an edit that changes a line under
-  `## Decisions`, one under `## Constraints`, or the block of a step whose box is ticked. Everything that
-  decision shows stays: the step's `plan` row in its Log record, the `plan edited` rung, the boundary's advisory, the stat. The
+  `## Decisions`, one under `## Constraints`, or the block of a step whose box is ticked. Each is read as the
+  CLI's own readers read it, the first heading of its name and the first block of a step's number, so the hold
+  also covers a second heading of the name anywhere in the file, a second opener carrying a landed step's number,
+  and a landed step whose box is unticked: each would put other text in front of those readers, or free the step
+  for a later edit, while the original stood untouched. Everything that decision shows stays: the step's `plan` row in its Log record, the `plan edited` rung, the boundary's advisory, the stat. The
   first card after the run, a pause or a stop card, carries a **Plan Edits** part: the steps that edited the
-  plan, and one diff of the plan now against `BASE` with every box read as unticked, capped at 40 lines. The
-  part prints once: the person's next prompt drops `BASE` after a card has shown it, and keeps it until one has.
-  The allowance is one turn long, as the grant is. The flag with no grant does nothing, a job reporting back
+  plan, `plumbbob order` or `plumbbob defer` when either wrote it during the run, and one diff of the plan as
+  the run left it against `BASE` with every box read as unticked, capped at 40 lines. A step is named once its
+  landing is certain. The person's next prompt ends the allowance and freezes the plan as it stands beside
+  `BASE`, so nothing changed later is listed as the run's; a run whose edits came to nothing leaves no base, and
+  a second flagged run typed before any card has shown the first is listed with it. `BASE` stays for the
+  reprint of the card that showed it and goes when the build moves on: the next step's entry, or the stop's
+  record. The allowance is one turn long, as the grant is. The flag with no grant does nothing, a job reporting back
   cannot carry it, and no settings key stands in for it. *because* some builds are worth running long and
   unattended, and a plan that sharpens its later steps as it learns is what a long build needs; the allowance
   has to be the person's typed word, since a line a model can write is a permission it could give itself

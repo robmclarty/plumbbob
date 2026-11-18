@@ -711,6 +711,31 @@ describe('status — harness bindings — D48 (doctor-validates-agents)', () => 
     expect(stdout).not.toContain('⚠')
   })
 
+  it('shows no settings row for a slot the harness defaults override, to none or to another agent', async () => {
+    const home = makeTempDir()
+    const none = await startedWithHarness(JSON.stringify({ contract: 1, defaults: { after: [] } }))
+    writeFileSync(join(none, '.plumbbob', 'settings.json'), JSON.stringify({ agents: { after: ['ghost'] } }))
+    const off = statusWithHome(home, none).stdout
+    expect(off).not.toContain('harness bindings')
+    expect(off).not.toContain('ghost')
+
+    const other = await startedWithHarness(JSON.stringify({ contract: 1, defaults: { after: ['reviewer'] } }))
+    writeFileSync(join(other, '.plumbbob', 'settings.json'), JSON.stringify({ agents: { after: ['ghost'], before: ['gather'] } }))
+    for (const name of ['reviewer', 'gather']) putAgent(other, name)
+    const shown = statusWithHome(home, other).stdout
+    expect(shown).toContain('settings · before: gather')
+    expect(shown).toContain('defaults · after: reviewer')
+    expect(shown).not.toContain('ghost')
+  })
+
+  it.each(['"reviewer"', '7', 'null', '{"after":{"x":1}}', '[1,2]'])('never fails on a malformed settings agents value (%s)', async (value) => {
+    const home = makeTempDir()
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Odd Settings']))
+    writeFileSync(join(dir, '.plumbbob', 'settings.json'), `{"agents": ${value}}`)
+    expect(statusWithHome(home, dir).code).toBe(0)
+  })
+
   it('surfaces a broken harness.json rather than hiding it', async () => {
     const home = makeTempDir()
     const dir = await startedWithHarness('{ not json')

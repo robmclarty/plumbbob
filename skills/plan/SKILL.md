@@ -56,7 +56,7 @@ The argument only seeds how you get there.
      human now (while they're still deciding, not at the first refused
      checkpoint) and offer to set the `check` key in `.plumbbob/settings.json`
      (for example `"check": "npm test"`) before any step is built.
-2. **Frame** (`.plumbbob/intent.md`), with the human: the **Problem** in plain words,
+2. **Frame** (`intent.md` in the build folder, `.plumbbob/builds/<slug>/intent.md`), with the human: the **Problem** in plain words,
    the **smallest thing** that solves it, what **done looks like**, and what you are
    **explicitly NOT doing**. This is the human's convergence: propose wording, but
    the human decides every line.

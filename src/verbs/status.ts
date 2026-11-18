@@ -275,7 +275,15 @@ function harnessSection(root: string, slug: string | null): string[] {
   const settings = parseSlotBindings(resolveRecord(root, 'agents'))
   const harness = parsed?.harness ?? null
   const rows: string[] = []
-  for (const frag of slotFragments(settings)) rows.push(`  settings · ${frag}`)
+  // A slot the harness defaults name, an explicit `[]` included, replaces the
+  // settings default for it, so that row would name an agent no run reaches.
+  const reached = Object.fromEntries(
+    SLOTS.filter((slot) => harness?.defaults[slot] === undefined).flatMap((slot) => {
+      const names = settings[slot]
+      return names === undefined ? [] : [[slot, names]]
+    }),
+  ) as SlotBindings
+  for (const frag of slotFragments(reached)) rows.push(`  settings · ${frag}`)
   if (harness !== null) {
     for (const frag of slotFragments(harness.defaults)) rows.push(`  defaults · ${frag}`)
     for (const [n, binding] of [...harness.steps.entries()].sort((a, b) => a[0] - b[0])) {
@@ -285,7 +293,7 @@ function harnessSection(root: string, slug: string | null): string[] {
   }
   if (rows.length === 0) return []
 
-  return ['', 'harness bindings:', ...rows, ...bindingWarnings(root, settings, harness)]
+  return ['', 'harness bindings:', ...rows, ...bindingWarnings(root, reached, harness)]
 }
 
 /**

@@ -29,7 +29,14 @@ const config = {
   // vitest's own ~1 minute. 10 gives that real headroom while still failing in
   // reasonable time if the vitest 4 deadlock returns; the default 5 was never the
   // problem, but it was too tight to tell a slow run from a wedged one.
-  dryRunTimeoutMinutes: 10,
+  dryRunTimeoutMinutes: 25,
+  // The dry run loads the whole suite into one process (`isolate: false`) with
+  // every mutant instrumented. At 2,100 tests and 17,000 mutants that passed
+  // Node's default heap on 2026-11-17: the runner ran out of memory twice and
+  // Stryker gave up before mutating anything. 6 GB a runner is headroom on a
+  // 32 GB machine at the default concurrency, and the dry run's allowance went
+  // from 10 minutes to 25 with it, since the same growth took it past 10.
+  testRunnerNodeArgs: ['--max-old-space-size=6144'],
   // No such file, on purpose: see the note at the top.
   tsconfigFile: 'tsconfig.stryker-skip.json',
   // Only the mutated sources. Stryker 10's default scan also reaches

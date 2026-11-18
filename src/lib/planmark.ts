@@ -106,6 +106,9 @@ export function markPlan(root: string, slug?: string | null): void {
 export function remarkPlan(root: string, slug: string | null | undefined, before: string): void {
   const mark = readMark(root, slug)
   const intent = readIntent(root, slug)
+  if (intent !== null && intent !== before) {
+    noteRunWrite(root, slug)
+  }
   if (mark === null || intent === null) {
     return
   }
@@ -162,6 +165,7 @@ export function settlePlan(root: string, slug?: string | null): void {
  * settle. A build with no mark gains one here and reports nothing.
  */
 export function enterPlan(root: string, slug: string | null | undefined, step: number): void {
+  dropShownBase(root, slug)
   const intent = readIntent(root, slug)
   if (intent === null) {
     return
@@ -232,25 +236,50 @@ export function shownPlan(root: string, slug?: string | null): string | null {
 }
 
 /**
- * Take or drop the run's plan base at a typed prompt, which the turn hook
- * calls after it has counted the turn and minted the grant.
+ * Take, keep or settle the run's plan base at a typed prompt, which the turn
+ * hook calls after it has counted the turn and minted the grant.
  *
  * A prompt whose grant carries `--plan-edits` takes the base: the plan as it
  * stands is what the run's edits will be measured against, and the base
- * under this turn is the allowance. Any other prompt ends the allowance. It
- * drops the base once a card has shown the run's edits, and keeps it until
- * then, so a run that ended on a boundary still has its edits listed on the
- * next card.
+ * under this turn is the allowance. A base whose edits no card has shown yet
+ * is kept and only moved to this turn, so two flagged runs back to back are
+ * listed together. Any other prompt ends the allowance. A base that never
+ * noted an edit is dropped there; one that did is frozen, the plan as it
+ * stands kept beside the snapshot, so nothing changed later is read as the
+ * run's, and dropped when the run's edits came to nothing. A base a card has
+ * shown is left for that card's reprint and dropped when the build moves on.
  */
 export function basePlan(root: string, slug: string | null | undefined, allowed: boolean): void {
   const turn = readTurn(root)
   const intent = readIntent(root, slug)
+  const base = readBase(root, slug)
+  const waiting = base !== null && !base.shown && (base.steps.length > 0 || base.cli)
   if (allowed && turn !== null && intent !== null) {
-    writeBase(root, slug, { turn, steps: [], shown: false, text: intent })
+    if (base !== null && waiting) {
+      writeBase(root, slug, { turn, steps: base.steps, cli: base.cli, shown: false, text: base.text })
+    } else {
+      writeBase(root, slug, { turn, steps: [], cli: false, shown: false, text: intent })
+    }
     return
   }
+  if (base === null || base.shown) {
+    return
+  }
+  if (!waiting || intent === null || unticked(base.text) === unticked(base.after ?? intent)) {
+    clearBase(root, slug)
+  } else if (base.after === undefined) {
+    writeBase(root, slug, { ...base, after: intent })
+  }
+}
+
+/**
+ * Drop a base a card has already shown, as the build moves on: a step's
+ * entry and a recorded stop call it. Until then the card that showed the
+ * run's edits can still be reprinted whole.
+ */
+export function dropShownBase(root: string, slug?: string | null): void {
   const base = readBase(root, slug)
-  if (base !== null && (base.shown || base.steps.length === 0)) {
+  if (base !== null && base.shown && base.turn !== readTurn(root)) {
     clearBase(root, slug)
   }
 }
@@ -261,7 +290,7 @@ export function basePlan(root: string, slug: string | null | undefined, allowed:
  */
 export function planEditsAllowed(root: string, slug?: string | null): boolean {
   const base = readBase(root, slug)
-  return base !== null && base.turn === readTurn(root)
+  return base !== null && base.after === undefined && base.turn === readTurn(root)
 }
 
 /**
@@ -272,7 +301,11 @@ export function planEditsAllowed(root: string, slug?: string | null): boolean {
  * A grant that allows plan edits lets the build sharpen what is still ahead
  * of it. The Decisions and Constraints are what the range was approved
  * against, and a landed step is the record of what was built, so a change to
- * either still waits for the person.
+ * either still waits for the person. Each is read the way the CLI's own
+ * readers read it, the first heading of its name and the first block of a
+ * step's number, and a second heading of the name or a second opener of a
+ * landed number holds too, since either would put other text in front of
+ * those readers while the original stood untouched behind it.
  */
 export function heldPlanEdit(root: string, slug?: string | null): 'a Decision' | 'a Constraint' | 'a landed step' | null {
   const mark = readMark(root, slug)
@@ -280,12 +313,15 @@ export function heldPlanEdit(root: string, slug?: string | null): 'a Decision' |
   if (mark === null || intent === null) {
     return null
   }
-  if (section(mark.text, 'Decisions') !== section(intent, 'Decisions')) return 'a Decision'
-  if (section(mark.text, 'Constraints') !== section(intent, 'Constraints')) return 'a Constraint'
-  const before = landedSteps(mark.text)
+  if (sectionChanged(mark.text, intent, 'Decisions')) return 'a Decision'
+  if (sectionChanged(mark.text, intent, 'Constraints')) return 'a Constraint'
+  if (headings(mark.text, 'Steps') !== headings(intent, 'Steps')) return 'a landed step'
+  const before = stepBlocks(mark.text)
   const after = stepBlocks(intent)
-  for (const [n, block] of before) {
-    if (after.get(n) !== block) return 'a landed step'
+  for (const [n, was] of before) {
+    if (!was.landed) continue
+    const now = after.get(n)
+    if (now === undefined || !now.landed || now.block !== was.block || now.openers !== was.openers) return 'a landed step'
   }
   return null
 }
@@ -301,30 +337,48 @@ export function noteRunEdit(root: string, slug: string | null | undefined, step:
   }
 }
 
-/** What a run did to the plan: the steps that edited it, and one diff against the plan as the grant found it. */
-export type RunEdits = { readonly steps: ReadonlyArray<number>; readonly edit: PlanEdit }
+/**
+ * Note that one of the CLI's own verbs, `order` or `defer`, wrote the plan
+ * while a run's allowance stood: the write is no step's edit, and it is
+ * still part of what the run did to the plan, so the next card says so.
+ */
+function noteRunWrite(root: string, slug?: string | null): void {
+  const base = readBase(root, slug)
+  if (base !== null && !base.cli && base.after === undefined && base.turn === readTurn(root)) {
+    writeBase(root, slug, { ...base, cli: true })
+  }
+}
+
+/**
+ * What a run did to the plan: the steps that edited it, whether the CLI's
+ * own `order` or `defer` wrote it too, and one diff against the plan as the
+ * grant found it.
+ */
+export type RunEdits = { readonly steps: ReadonlyArray<number>; readonly cli: boolean; readonly edit: PlanEdit }
 
 /**
  * The plan edits a run landed under its allowance, for the next card to
  * list, or null when it landed none.
  *
- * The diff is the plan now against the plan as it stood when the grant was
- * typed, with every step's box read as unticked on both sides: a tick is the
- * CLI's own write, never an edit.
+ * The diff is the plan as the run left it against the plan as it stood when
+ * the grant was typed, with every step's box read as unticked on both sides:
+ * a tick is the CLI's own write, never an edit. While the allowance stands
+ * the plan as the run left it is the plan now; once it has ended it is the
+ * plan frozen at that prompt, so a later edit is never listed as the run's.
  */
 export function runEdits(root: string, slug?: string | null): RunEdits | null {
   const base = readBase(root, slug)
-  const intent = readIntent(root, slug)
-  if (base === null || intent === null || base.steps.length === 0) {
+  const now = base?.after ?? readIntent(root, slug)
+  if (base === null || now === null || (base.steps.length === 0 && !base.cli)) {
     return null
   }
-  const edit = diffLines(unticked(base.text), unticked(intent))
-  return edit.lines.length === 0 ? null : { steps: base.steps, edit }
+  const edit = diffLines(unticked(base.text), unticked(now))
+  return edit.lines.length === 0 ? null : { steps: base.steps, cli: base.cli, edit }
 }
 
 /**
- * Record that a card has shown the run's edits, so the base is dropped at
- * the human's next prompt and a reprint in this turn still carries them.
+ * Record that a card has shown the run's edits, so the base is dropped once
+ * the build moves on and a reprint of that card still carries them.
  */
 export function shownRunEdits(root: string, slug?: string | null): void {
   const base = readBase(root, slug)
@@ -333,8 +387,9 @@ export function shownRunEdits(root: string, slug?: string | null): void {
   }
 }
 
-// A step's opener in the plan: its number and its box.
-const STEP_OPENER = /^(\d+)\. \[([ xX])\] /
+// A step's opener in the plan, in the plan parser's own grammar: its number,
+// then its box, with any run of whitespace around it.
+const STEP_OPENER = /^(\d+)\.(\s+)\[([ xX])\](\s+)/
 
 /**
  * A plan's text with every step's box unticked.
@@ -342,67 +397,69 @@ const STEP_OPENER = /^(\d+)\. \[([ xX])\] /
 function unticked(text: string): string {
   return text
     .split('\n')
-    .map((line) => line.replace(/^(\d+\. )\[[xX]\] /, '$1[ ] '))
+    .map((line) => line.replace(STEP_OPENER, '$1.$2[ ]$4'))
     .join('\n')
 }
 
 /**
- * The lines of a `## <name>` section, heading included, up to the next
- * second-level heading; the empty string when the plan has no such section.
- * Lines inside a fence are part of the section they sit in.
+ * How many lines of a plan read as the `## <name>` heading, wherever they
+ * sit: inside a fence or a comment as well, since the CLI's readers take the
+ * first such line whatever surrounds it.
  */
-function section(text: string, name: string): string {
-  const lines = text.split('\n')
-  const out: string[] = []
-  let inside = false
-  let fenced = false
-  for (const line of lines) {
-    if (/^\s*(```|~~~)/.test(line)) fenced = !fenced
-    const heading = !fenced && /^## /.test(line)
-    if (heading) inside = line.trim() === `## ${name}`
-    if (inside) out.push(line)
-  }
-  return out.join('\n')
+function headings(text: string, name: string): number {
+  return text.split('\n').filter((line) => line.trim() === `## ${name}`).length
 }
 
 /**
- * Every step of the plan's `## Steps` section by number: its opener, with the
- * box read as unticked, and the lines beneath it up to the next step.
+ * The lines of a plan's `## <name>` section as the CLI's readers take it:
+ * from the first line that reads as the heading to the next line that opens
+ * a second-level heading. Empty when the plan has no such heading.
  */
-function stepBlocks(text: string): Map<number, string> {
-  const blocks = new Map<number, string>()
-  let current: number | null = null
-  let held: string[] = []
-  const close = (): void => {
-    if (current !== null) blocks.set(current, held.join('\n').trimEnd())
-  }
-  for (const line of section(text, 'Steps').split('\n').slice(1)) {
+function section(text: string, name: string): ReadonlyArray<string> {
+  const lines = text.split('\n')
+  const start = lines.findIndex((line) => line.trim() === `## ${name}`)
+  if (start === -1) return []
+  const rest = lines.slice(start + 1)
+  const end = rest.findIndex((line) => line.startsWith('## '))
+  return [lines[start] ?? '', ...(end === -1 ? rest : rest.slice(0, end))]
+}
+
+/**
+ * Whether a section the allowance never reaches reads differently now: its
+ * lines changed, or the plan gained or lost a heading of its name.
+ */
+function sectionChanged(before: string, after: string, name: string): boolean {
+  return headings(before, name) !== headings(after, name) || section(before, name).join('\n') !== section(after, name).join('\n')
+}
+
+/** A step as the held check reads it: whether its box is ticked, its lines with the box read as unticked, and how many openers carry its number. */
+type StepBlock = { readonly landed: boolean; readonly block: string; readonly openers: number }
+
+/**
+ * Every step of the plan's `## Steps` section by number, the first block of
+ * a number standing for it as it does for the CLI's readers, with a count of
+ * the openers that carry the number.
+ */
+function stepBlocks(text: string): Map<number, StepBlock> {
+  const found: Array<{ n: number; landed: boolean; lines: string[] }> = []
+  for (const line of section(text, 'Steps').slice(1)) {
     const opener = STEP_OPENER.exec(line)
     if (opener !== null) {
-      close()
-      current = Number(opener[1])
-      held = [line.replace(STEP_OPENER, '$1. [ ] ')]
-    } else if (current !== null) {
-      held.push(line)
+      found.push({ n: Number(opener[1]), landed: opener[3] !== ' ', lines: [line.replace(STEP_OPENER, '$1.$2[ ]$4')] })
+    } else {
+      found.at(-1)?.lines.push(line)
     }
   }
-  close()
+  const blocks = new Map<number, StepBlock>()
+  for (const step of found) {
+    const first = blocks.get(step.n)
+    if (first === undefined) {
+      blocks.set(step.n, { landed: step.landed, block: step.lines.join('\n').trimEnd(), openers: 1 })
+    } else {
+      blocks.set(step.n, { ...first, openers: first.openers + 1 })
+    }
+  }
   return blocks
-}
-
-/**
- * The steps a plan shows as landed, by number, each with its block.
- */
-function landedSteps(text: string): Map<number, string> {
-  const ticked = new Set(
-    section(text, 'Steps')
-      .split('\n')
-      .flatMap((line) => {
-        const opener = STEP_OPENER.exec(line)
-        return opener !== null && opener[2] !== ' ' ? [Number(opener[1])] : []
-      }),
-  )
-  return new Map([...stepBlocks(text)].filter(([n]) => ticked.has(n)))
 }
 
 /** One line of an aligned pair of texts: kept, removed from the first, or added by the second. */

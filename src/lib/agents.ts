@@ -1155,6 +1155,14 @@ export function runAgent(params: {
 }): Promise<AgentRunResult> {
   const graceSeconds = params.graceSeconds ?? STOP_GRACE_SECONDS
   return new Promise((resolve) => {
+    // Registered before the fork: the agent leads a group of its own, so a
+    // signal that reached plumbbob in the gap between the spawn and these
+    // handlers would kill plumbbob by default and leave the agent running with
+    // nothing to stop it. A handler only runs from the event loop, after this
+    // turn has set up everything it reads.
+    for (const signal of STOP_SIGNALS) process.on(signal, onSignal)
+    process.on('exit', onExit)
+
     const child = spawn(params.command, {
       cwd: params.root,
       shell: true,
@@ -1232,13 +1240,11 @@ export function runAgent(params: {
     function onSignal(): void {
       stop({ ok: false, reason: 'interrupted' })
     }
-    for (const signal of STOP_SIGNALS) process.on(signal, onSignal)
 
     // plumbbob going away by any other road has no time left to wait.
     function onExit(): void {
       signalGroup('SIGKILL')
     }
-    process.on('exit', onExit)
 
     if (params.timeoutSeconds > 0) {
       timer = setTimeout(() => {

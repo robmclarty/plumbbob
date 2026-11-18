@@ -531,8 +531,14 @@ stop card, carries one more part:
   rest.
 - On a pause card it sits after the Plan Edit part; on a stop card, before the Harvested
   list.
-- It prints once. A reprint in the same turn still carries it, and the person's next
-  prompt drops it. A run that edited nothing prints no part.
+- A reprint of the card that showed it still carries it, capped or whole, and it goes
+  when the build moves on: the next step's entry, or the stop's record. A run that
+  edited nothing, or whose edits came to nothing, prints no part.
+- The plan as the run left it is frozen at the person's next prompt, so an edit made
+  after the run is never listed as the run's.
+- When `plumbbob order` or `plumbbob defer` wrote the plan during the run, the lead names
+  them beside the steps (``by step 6 and `plumbbob order` or `plumbbob defer` ``), since
+  their writes are in the diff.
 - `plumbbob status --run` says `· plan edits allowed` on its `grant:` line while such a
   grant stands.
 

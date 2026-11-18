@@ -1313,13 +1313,15 @@ function runEditsPart(root: string, slug: string | null, where: string, full: bo
   const run: RunEdits | null = runEdits(root, slug)
   if (run === null) return ''
   shownRunEdits(root, slug)
-  const { edit, steps } = run
+  const { edit, steps, cli } = run
   const capped = !full && edit.lines.length > PLAN_DIFF_MAX
   const shown = capped ? edit.lines.slice(0, PLAN_DIFF_MAX) : edit.lines
   const more = capped
     ? ` The diff below stops at ${PLAN_DIFF_MAX} lines, and \`${reprint}\` prints the other ${edit.lines.length - shown.length}.`
     : ''
-  const named = steps.length === 1 ? `step ${steps[0]}` : `steps ${steps.slice(0, -1).join(', ')} and ${steps.at(-1)}`
+  const by =
+    steps.length === 0 ? [] : [steps.length === 1 ? `step ${steps[0]}` : `steps ${steps.slice(0, -1).join(', ')} and ${steps.at(-1)}`]
+  const named = [...by, ...(cli ? ['`plumbbob order` or `plumbbob defer`'] : [])].join(' and ')
   const lead = `**Plan Edits**: [intent.md](${where}) +${edit.added} -${edit.removed} since the grant was typed with \`--plan-edits\`, by ${named}; ticks are the CLI's and are left out.${more}`
   return [lead, '', ...fence('diff', shown)].join('\n')
 }
