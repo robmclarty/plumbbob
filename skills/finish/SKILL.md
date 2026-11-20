@@ -52,10 +52,11 @@ record.
      ([D125 (linked-park-names)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d125)).
    - `## Final status`: done or partial, and what is left.
    - `## Deferred tangents`: the harvested items that become future work.
-   Stop there. `plumbbob finish` appends `## Checkpoints` (the baseline and step SHAs) and
-   `## Stats` (the per-step receipts) itself, so do **not** hand-write either; a report
-   that spells them out collides with the CLI's own tail. This is the "yeah, I did that"
-   artifact. Write it by default; the human may edit it.
+   Stop there. `plumbbob finish` appends `## Footprint` (the contract paths touched, how
+   the steps were proved, and the size), `## Checkpoints` (the baseline and step SHAs) and
+   `## Stats` (the per-step receipts) itself, so do **not** hand-write any of them; a
+   report that spells them out collides with the CLI's own tail. This is the "yeah, I did
+   that" artifact. Write it by default; the human may edit it.
 3. **Finish.** Run `plumbbob finish`, which appends the checkpoint SHAs to the
    report and makes the final commit (subject `chore(<scope>): finish`, its body
    led by a `plumbbob finish` marker plus an optional proportional `--body`), then

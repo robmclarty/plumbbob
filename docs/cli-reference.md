@@ -138,6 +138,19 @@ items against everything ever parked), then a
 single suggested next move ([**D8 (status-dashboard)**](decisions.md#d8) / [**D15 (one-next-move)**](decisions.md#d15)). Read-only; prints `NO ACTIVE SESSION` and
 exits 0 when there is no session.
 
+When the `grain` setting is `fine` or `coarse` ([**D165 (grain)**](decisions.md#d165)), one
+line follows the dashboard after a blank line, ahead of any `harness bindings:` block, saying
+what a step takes under that grain:
+
+```text
+grain  fine: a step's seam names 3 paths at most
+```
+
+Under `coarse` it reads `grain  coarse: a step's proof opens on a command`. The line also
+prints beneath `NO ACTIVE SESSION`, and beneath the list of builds `status` prints when none
+is active, since `/plumbbob:plan` reads this output before it opens a session. With the grain
+at `default`, or no key at all, nothing prints, and `--questions` and `--json` never carry it.
+
 When agents are bound, a `harness bindings:` block follows the dashboard: a `settings ·` row
 for each slot the settings ladder's `agents` key names, then the build's `harness.json`, its
 `defaults ·` rows and a `step N ·` row per step. The settings rows print with or without a
@@ -896,9 +909,10 @@ folder; `status` with no cursor lists the available builds instead of refusing.
 plumbbob finish [--body <<'BODY' … BODY] [--build <slug>]
 ```
 
-The close-out ([**D9 (finish-no-gate)**](decisions.md#d9)/[**D29 (finish-replaces-wrap)**](decisions.md#d29)). Appends the checkpoint SHAs to the build's `report.md`
-(the report itself is written by the `/plumbbob:finish` skill; a missing one is noted, never a
-refusal), makes the final
+The close-out ([**D9 (finish-no-gate)**](decisions.md#d9)/[**D29 (finish-replaces-wrap)**](decisions.md#d29)). Appends up to three sections to the build's `report.md`:
+`## Footprint` once a step has landed, `## Checkpoints` (the baseline and step SHAs), and
+`## Stats` (the per-step receipts) when any accrued. The report itself is written by the
+`/plumbbob:finish` skill, and a missing one is noted, never a refusal. Then it makes the final
 commit (subject `chore(<scope>): finish`, mirroring the step-checkpoint Conventional shape; body
 leads with a `plumbbob finish` marker, then an optional `--body` heredoc), and clears
 the control state (`STATE`, the cursor, the in-flight markers, the plan mark). No separate archive copy: the
@@ -907,6 +921,36 @@ rides into the PR ([**D26 (build-folders)**](decisions.md#d26)). **No** refuse-w
 lead line naming the folder that now rides the branch, then its state table, whose one row
 is `| **Next Up** | Nothing planned - /plumbbob:plan |`, printed here because finish has just
 cleared the session `handoff` would read one from. Refuses (exit 1) only with no session.
+
+`## Footprint` is the build's reach in three lines at most, rendered by the CLI from the
+ledger's `step <n> <sha>` lines, those commits, the plan's proofs and the `contractPaths`
+setting ([**D166 (finish-footprint)**](decisions.md#d166)):
+
+```markdown
+## Footprint
+
+- **Contract**: touched `packages/shared/` (steps 3, 5) and `schemas/api.json` (step 5)
+- **Proof**: 5 of 6 steps by a command; step 4 in words
+- **Size**: 14 files, +310 -42, over 6 steps
+```
+
+`Contract` renders only when [`contractPaths`](#settings) lists something. It names each
+entry the build changed a file under, with the steps that did, or `(outside a step)` when
+none did, and reads `none touched` when nothing under any entry changed. `Proof` counts the landed
+steps whose `- proof:` line opens on a command and names the rest; a step with no proof is
+among the rest. `Size` counts the distinct files and sums the added and deleted lines across
+the steps' commits, leaving out everything under `.plumbbob/`; a binary file counts as a file
+with no lines.
+
+A step is landed while a commit the ledger records for it is on the branch. One that landed
+twice with no revert between brings both commits, and one a `revert` rewound past, and that
+never landed again, is left out. `Proof` and `Size` measure those commits alone. `Contract`
+reads the rest of the build as well: every other commit on the branch since the ledger's
+baseline, and the tree as `finish` is about to commit it. So `none touched` speaks for the
+whole build, and a contract path changed by hand between checkpoints is still named. It is best-effort, as
+`## Checkpoints` is: a ledger or a plan that will not read, or a step whose last recorded
+commit the repo does not hold, leaves it out whole, and `finish` goes on to the same commit
+and the same exit.
 
 ### turn
 
@@ -1217,9 +1261,12 @@ default. The known keys:
 { "agents": { "after": ["reviewer"] } }  // project-wide slot bindings — the bottom of the ladder — D57 (merge-ladder)
 { "agentTimeout": 120 }                  // kill a user-authored agent after N seconds (0/absent = off — D51 (agent-timeout))
 { "agentConfig": { "reviewer": { … } } } // per-agent config, handed to that agent as settings.agent in its envelope
+{ "contractPaths": ["packages/shared/", "schemas/api.json"] } // the paths the rest of the repo depends on, read from this file alone (D164 (contract-paths))
+{ "grain": "coarse" }                    // how coarsely a plan cuts its steps: fine, default or coarse (D165 (grain))
 
 // settings.local.json  (untracked — personal, per-worktree)
-{ "check": "pnpm check --only types,lint" }   // the same keys, overriding the tracked file in this worktree only
+{ "check": "pnpm check --only types,lint" }   // the same keys, all but contractPaths, overriding the tracked file in this worktree only
+{ "grain": "fine" }                           // the grain for the model you run here, over the project's
 ```
 
 `check` overrides the heavy gate (a shell command run in the repo root; its exit code is
@@ -1238,6 +1285,25 @@ agent name: the named agent receives its entry as `settings.agent` in the envelo
 overlay replaces the project entry whole rather than merging into it, and `{}` rides when
 neither file defines one. Both files are optional JSON: a missing or malformed one
 contributes nothing rather than wedging the tool.
+
+`contractPaths` lists the **contract paths**: the paths the rest of the repo depends on (the
+shared types, the schemas, the generated clients), each an exact repo-relative file or a
+`dir/` grant, written as a seam is. It is the one key that skips the ladder. It is read from
+`settings.json` alone, since the contract is the team's, and a personal overlay that narrowed
+it would hide a touch from the one person who needed to see it
+([**D164 (contract-paths)**](decisions.md#d164)). A value that is not a list reads as none,
+and an entry that is not a non-blank string is dropped. The list refuses nothing: a finished
+report's [`## Footprint`](#finish) names the entries the build touched.
+
+`grain` says how coarsely a plan cuts its steps: `fine` for a model with a small window,
+`coarse` for a frontier model or a step run as a workflow, and `default` (or any other value)
+for the plan as it was cut before the key existed ([**D165 (grain)**](decisions.md#d165)). It
+resolves through the whole ladder, since a developer sets it for the model they run. Under
+`fine` a step's seam names 3 paths at most, a `dir/` grant counting as one; under `coarse` a
+step's proof opens on a command. [`status`](#status) prints the grain in one line, and the
+plan card names a step cut against it under `**Seams**:`
+([the seams part](presentation.md#the-seams-part)). It is guidance: no plan is refused for
+it, and no grain moves a stop.
 
 ## Exit codes
 

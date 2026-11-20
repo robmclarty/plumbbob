@@ -1,8 +1,8 @@
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { cleanupFixtures, makeFixtureRepo, runCli, sidecarExists, writeSidecar } from '../helpers/fixture-repo.ts'
+import { cleanupFixtures, makeFixtureRepo, readSidecar, runCli, sidecarExists, writeSidecar } from '../helpers/fixture-repo.ts'
 
 afterAll(cleanupFixtures)
 
@@ -72,6 +72,43 @@ describe('plumbbob finish — the close-out, D9 (finish-no-gate)/D29 (finish-rep
       encoding: 'utf8',
     })
     expect(committed).toMatch(/- step 1 def5678/)
+  })
+
+  it('writes a Footprint above the Checkpoints of the committed report — D166 (finish-footprint)', () => {
+    const dir = makeFixtureRepo()
+    runCli(dir, ['start', 'Footprint', '--slug', 'footprint'])
+    writeSidecar(dir, 'intent.md', '# Footprint\n\n## Steps\n\n1. [x] The schema\n   - seam: `schemas/`\n   - proof: `pnpm test` passes\n')
+    writeFileSync(join(dir, '.plumbbob', 'settings.json'), JSON.stringify({ contractPaths: ['schemas/'] }))
+    // One landed step, as a checkpoint leaves it: a commit, and its line on the ledger.
+    mkdirSync(join(dir, 'schemas'))
+    writeFileSync(join(dir, 'schemas', 'api.json'), '{}\n')
+    execFileSync('git', ['-C', dir, 'add', '-A'], { stdio: 'ignore' })
+    execFileSync('git', ['-C', dir, 'commit', '-q', '-m', 'step 1'], { stdio: 'ignore' })
+    const sha = execFileSync('git', ['-C', dir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+    writeSidecar(dir, 'checkpoints', `${readSidecar(dir, 'checkpoints')}step 1 ${sha}\n`)
+    writeReport(dir)
+    expect(runCli(dir, ['finish']).status).toBe(0)
+
+    // The section rode into the final commit, between the model's report and the CLI's ledger.
+    const committed = execFileSync('git', ['-C', dir, 'show', 'HEAD:.plumbbob/builds/footprint/report.md'], {
+      encoding: 'utf8',
+    })
+    expect(committed).toContain(
+      [
+        'The thing.',
+        '',
+        '## Footprint',
+        '',
+        '- **Contract**: touched `schemas/` (step 1)',
+        '- **Proof**: 1 of 1 step by a command',
+        '- **Size**: 1 file, +1 -0, over 1 step',
+        '',
+        '## Checkpoints',
+        '',
+        '- baseline ',
+      ].join('\n'),
+    )
+    expect(committed.endsWith(`\n- step 1 ${sha}\n`)).toBe(true)
   })
 
   it('finishes a --local build with an empty commit and no tracked artifacts', () => {

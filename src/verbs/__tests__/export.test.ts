@@ -1,9 +1,12 @@
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { exportPlan } from '../export.ts'
 import { start } from '../start.ts'
+import { contractPaths } from '../../lib/contract.ts'
+import { grainFindings, resolveGrain } from '../../lib/grain.ts'
+import { settingsPath } from '../../lib/settings.ts'
 import { activeBuild, buildDir, intentPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
@@ -108,5 +111,35 @@ describe('export', () => {
     const r = captureIo(() => exportPlan(makeTempRepo(), []))
     expect(r.code).toBe(1)
     expect(r.stderr).toContain('no build to export')
+  })
+
+  it('exports a step cut against the grain all the same, under fine and under coarse, since neither finding is a plan check — D165 (grain)', async () => {
+    // Step 2 names 4 paths, one over what fine takes, and is proved in words, which coarse names.
+    const against = INTENT.replace('`src/b.ts`', '`src/b.ts`, `src/c.ts`, `src/d.ts`, `src/e.ts`').replace('`pnpm vitest run b` passes', 'b works')
+    const { dir, slug } = await started(against)
+    const planPath = join(buildDir(dir, slug), 'plan.json')
+    expect(captureIo(() => exportPlan(dir, [])).code).toBe(0)
+    const ungrained = readFileSync(planPath, 'utf8')
+    for (const [grain, kind] of [
+      ['fine', 'seam-breadth'],
+      ['coarse', 'proof-in-words'],
+    ]) {
+      writeFileSync(settingsPath(dir), JSON.stringify({ grain }))
+      // The plan card would name step 2 under this grain.
+      expect(grainFindings(readFileSync(intentPath(dir), 'utf8'), resolveGrain(dir)).map((f) => [f.step, f.kind])).toEqual([[2, kind]])
+      rmSync(planPath)
+      const r = captureIo(() => exportPlan(dir, []))
+      expect(r.code).toBe(0)
+      expect(r.stderr).toBe('')
+      expect(readFileSync(planPath, 'utf8')).toBe(ungrained)
+    }
+  })
+
+  it('exports contract_paths as [] whatever contractPaths lists — D164 (contract-paths)', async () => {
+    const { dir, slug } = await started()
+    writeFileSync(settingsPath(dir), JSON.stringify({ contractPaths: ['src/', 'schemas/api.json'] }))
+    expect(contractPaths(dir)).toEqual(['src/', 'schemas/api.json'])
+    expect(captureIo(() => exportPlan(dir, [])).code).toBe(0)
+    expect(JSON.parse(readFileSync(join(buildDir(dir, slug), 'plan.json'), 'utf8')).contract_paths).toEqual([])
   })
 })

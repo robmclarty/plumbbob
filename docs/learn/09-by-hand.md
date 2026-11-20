@@ -285,7 +285,7 @@ from your detail file, and `stats.json`. The tree is dirty when it returns; leav
 ## Finish by Hand
 
 Write `report.md` in the build folder, five sections and no more, since `finish` appends
-`## Checkpoints` and `## Stats` itself:
+`## Footprint`, `## Checkpoints` and `## Stats` itself:
 
 ```markdown
 # Report — sift: print the file path

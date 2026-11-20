@@ -548,9 +548,10 @@ Done. All three steps checkpointed and green.
 - Throttle /password-reset with the same limiter.
 ```
 
-`plumbbob finish` appends `## Checkpoints` (the baseline and step SHAs) and `## Stats`
-(the per-step receipts) to that file itself, so the written half stops at the five
-sections above. Then it makes the final commit (subject
+`plumbbob finish` appends `## Footprint` (how the steps were proved, and the size of what
+they changed), `## Checkpoints` (the baseline and step SHAs) and `## Stats` (the per-step
+receipts) to that file itself, so the written half stops at the five sections above. Then
+it makes the final commit (subject
 `chore(rate-limit-the-login-endpoint): finish`, with a `plumbbob finish` body marker) and
 clears `STATE` (the session sentinel and cursor in one), `TICK`, the grant, and the
 in-flight markers. It writes no separate archive copy: the tracked build folder *is* the

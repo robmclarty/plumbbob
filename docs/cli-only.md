@@ -324,9 +324,9 @@ is needed. [The stop card](presentation.md#the-stop-card) says what it asks;
 
 At the end, write `.plumbbob/builds/<slug>/report.md` with five sections,
 `## What shipped`, `## Decisions and why`, `## Parked & harvested`, `## Final status`,
-and `## Deferred tangents`, and stop there: `finish` appends `## Checkpoints` and
-`## Stats` itself, makes the `chore(<scope>): finish` commit, and deletes `SEAM`, `STEP`,
-`SPIKE`, `TICK`, `GRANT`, and `STATE`. It refuses only with no session, so land or
+and `## Deferred tangents`, and stop there: `finish` appends `## Footprint`,
+`## Checkpoints` and `## Stats` itself, makes the `chore(<scope>): finish` commit, and
+deletes `SEAM`, `STEP`, `SPIKE`, `TICK`, `GRANT`, and `STATE`. It refuses only with no session, so land or
 abandon an in-flight step first, or its diff rides the commit under `finish`.
 
 ## What the skills do that the CLI cannot

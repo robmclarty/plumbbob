@@ -169,6 +169,8 @@ tests), `no-console` (the CLI writes through `process.stdout` / `process.stderr`
   files are optional JSON; a malformed one contributes nothing rather than wedging the
   tool. Supersedes the flat `.plumbbob/config`.
   *Tagged in* `settings.ts`, `check.ts`, `start.ts`.
+  (Revised 2026-11-20 by [**D164 (contract-paths)**](#d164): `contractPaths` is the one key that skips the
+  ladder. It is read from `settings.json` alone, so a local overlay cannot narrow it.)
 - <a id="d28"></a>**D28 (state-cursor): The active-build cursor lives in `STATE`.** Which build a verb acts on resolves
   `--build <slug>` → the cursor in `.plumbbob/STATE` → the sole build in `builds/` → a refusal
   with a hint. The session sentinel and the cursor are the *same* file: `STATE`'s existence
@@ -2212,6 +2214,73 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   are what the range was approved against, so they are not the build's to move. *Tagged in* `planmark.ts`,
   `sidecar.ts`, `latch.ts`, `verbs/turn.ts`, `verbs/checkpoint.ts`, `verbs/handoff.ts`, `verbs/status.ts`,
   `verbs/finish.ts`, the `build` and `run` skills, `docs/runs.md` and `docs/presentation.md`.
+
+- <a id="d164"></a>**D164 (contract-paths): `contractPaths` names the paths the rest of the repo depends on, and
+  only the tracked settings file can list them.** The key holds a list of repo-relative entries in the seam
+  grammar, an exact file or a `dir/` grant, in `.plumbbob/settings.json`: the shared types, the schemas, the
+  generated clients. It is the one key that skips the ladder ([**D27 (settings-ladder)**](#d27)):
+  `settings.local.json` is never opened for it, so an overlay can neither add an entry nor drop one. A missing
+  key, a value that is not a list, and an entry that is not a non-blank string each read as nothing, and one bad
+  entry costs only itself. An entry is trimmed and loses a leading `./`, as a seam token does, and is named once;
+  none is validated, so a glob or an absolute path stays in the list and matches nothing. A changed path touches
+  an entry as it would sit in a seam: it is that file, or it lies under that `dir/` grant. Nothing refuses an
+  edit to a contract path ([**D10 (pause-not-lock)**](#d10)), and the setting has one reader so far, the report's
+  footprint ([**D166 (finish-footprint)**](#d166)). `plan.json` still exports `contract_paths` as `[]`
+  ([**D139 (field-mapping)**](#d139)), since what that field carries is runciter's contract to settle first.
+  *because* the contract is the team's, and a personal overlay that narrowed it would hide a touch from the one
+  person who needed to see it. *Tagged in* `contract.ts`, `settings.ts`, `docs/cli-reference.md`, and
+  `docs/plan-export.md`.
+
+- <a id="d165"></a>**D165 (grain): A `grain` setting says how coarsely a plan cuts its steps, and the plan card
+  names a step cut against it.** `grain` is `fine`, `default` or `coarse`, resolved through the whole ladder
+  ([**D27 (settings-ladder)**](#d27)), since a developer on a local model sets it for themselves; any other value
+  reads as `default`. Under `fine`, an undone step whose seam parses to more than 3 entries, a `dir/` grant
+  counting as one, draws `'s seam names 5 paths; the grain is fine, which takes 3 at most.` Under `coarse`, an
+  undone step whose proof opens on words ([**D153 (proof-replaces-done-when)**](#d153)) draws
+  `is proved in words; the grain is coarse, where a proof opens on a command.` Each is a linked line on the plan
+  card under `**Seams**:`, after that step's seam and like findings and inside the same count
+  ([**D131 (seams-at-the-plan)**](#d131)). A seam that will not parse draws no grain line, since the seam check
+  names it already, and neither does a step with no proof or with one that will not parse. `plumbbob status`
+  prints one line beneath the dashboard, `grain  fine: a step's seam names 3 paths at most` or
+  `grain  coarse: a step's proof opens on a command`, and beneath `NO ACTIVE SESSION` and the `NO ACTIVE BUILD`
+  list too, since the plan skill is handed status before a session opens; `--json` and `--questions` are as they
+  were. Under `default` nothing renders, and every surface prints the bytes it printed before. The findings
+  refuse nothing ([**D10 (pause-not-lock)**](#d10)), neither joins the plan checks that gate `plumbbob export`
+  ([**D151 (checks-at-export)**](#d151)), and no grain moves a stop or stands as a grant: a range still ends
+  where a human call is due ([**D92 (build-ranges)**](#d92)). *because* "a small, verifiable increment" was
+  bounding two things at once, what a model can hold and what a person can absorb. The first grows with every
+  model release and the second does not, and the ranges already carry the second. The limit is 3 since, of the
+  197 steps in this repo's recorded builds whose seams parse, 47% name 3 paths or fewer. *Tagged in* `grain.ts`,
+  `verbs/handoff.ts`, `verbs/status.ts`, the `plan` skill, `docs/presentation.md`, and `docs/cli-reference.md`.
+
+- <a id="d166"></a>**D166 (finish-footprint): `finish` writes a `## Footprint` section into the report, and the
+  CLI renders every line of it.** `plumbbob finish` appends it to `report.md` ahead of `## Checkpoints`, when a
+  report exists and at least one step landed: three lines at most, in one order. `Contract` renders only when
+  `contractPaths` lists something ([**D164 (contract-paths)**](#d164)), and reads `none touched`, or each entry the
+  build changed a file under, in the setting's order, with the steps that did
+  (``touched `packages/shared/` (steps 3, 5)``), or `outside a step` when none did. `Proof` counts the landed steps whose proof opens on a command
+  and names the rest (`5 of 6 steps by a command; step 4 in words`); a step with no proof, or with one that will
+  not parse, is in words. `Size` counts the distinct changed files and sums the added and deleted lines across
+  the steps' commits (`14 files, +310 -42, over 6 steps`), with PlumbBob's own files under `.plumbbob/` left out
+  and a binary file counted as a file with no lines; `Contract` reads every changed path, so an entry under
+  `.plumbbob/` is still named. The facts are on disk already: the ledger's `step <n> <sha>` lines, the numstat of
+  each of those commits that is on the branch (HEAD, or a commit HEAD descends from; a commit two steps recorded
+  is read once), the proofs in `intent.md`, and the setting. A landed step is one with such a commit. After a
+  revert and a landing again that is the last line recorded for the step, since the revert took the earlier commit
+  off the branch. A step whose tick was cleared by hand lands again on top of its first commit, and both are read.
+  A step a revert took away for good is left out, though the ledger keeps its line. `Proof` and `Size` measure
+  the ledger's commits alone. `Contract` reads the rest of the build as well (every other commit on the branch
+  since the ledger's baseline, and the tree as `finish` is about to commit it), so `none touched` speaks for the
+  whole build, and a touch no step owns is surfaced the way a commit outside the ledger is
+  ([**D66 (oob-commits-surfaced)**](#d66)). It is
+  best-effort, as `## Checkpoints` is: a ledger or a plan that will not read, or a step whose last recorded commit
+  the repo does not hold, leaves the section out whole, and `finish` exits as it would have
+  ([**D9 (finish-no-gate)**](#d9)). The `finish` skill names the section beside `## Checkpoints` and `## Stats`
+  as one the model must not write. It is a footprint and not evidence, which
+  [**D157 (evidence-is-shown)**](#d157) minted for a file an agent saved for the person to look at. *because* the
+  threat on a team is a change nobody saw, and a line in the pull request answers that where a lock in the
+  editor would not; the lines are facts, so the model writes none of them. *Tagged in* `footprint.ts`, `git.ts`,
+  `orient.ts`, `verbs/finish.ts`, the `finish` skill, and `docs/cli-reference.md`.
 
 ### Superseded
 

@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { renderFootprint } from '../../src/lib/footprint.ts'
 import { parseStepProof } from '../../src/lib/intent.ts'
 import { parseSteps } from '../../src/lib/orient.ts'
 
@@ -51,6 +52,20 @@ describe('the rate-limit example is the build the happy path tells', () => {
 
   it('keeps the measured row for the step whose proof has a command', () => {
     expect(buildLog).toMatch(/^ {2}proof {8}met: `pnpm vitest run limiter` · exit 0 · \d+\.\ds$/m)
+  })
+
+  it('carries the Footprint finish would write for it, above the Checkpoints and the Stats — D166 (finish-footprint)', () => {
+    const report = read(`${EXAMPLE}/report.md`)
+    const headings = [...report.matchAll(/^## .*$/gm)].map((m) => m[0])
+    expect(headings.slice(-3)).toEqual(['## Footprint', '## Checkpoints', '## Stats'])
+    // What the three steps changed is what the build log's two diff rows list, file by file.
+    const files = [...buildLog.matchAll(/^ +- (\S+) \+(\d+) -(\d+)$/gm)].map((m) => ({ path: m[1] ?? '', added: Number(m[2]), removed: Number(m[3]) }))
+    expect(files).toHaveLength(7)
+    const steps = parseSteps(intent).map((step, i) => {
+      const proof = parseStepProof(intent, step.n)
+      return { n: step.n, files: i === 0 ? files : [], byCommand: proof.ok && proof.proof !== null && proof.proof.command !== null }
+    })
+    expect(report).toContain(`\n${renderFootprint({ steps, contract: [] })}\n## Checkpoints\n`)
   })
 
   it('points every intent.md link in the happy path at the line it names', () => {

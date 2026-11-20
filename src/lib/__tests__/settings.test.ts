@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { afterAll, describe, expect, it } from 'vitest'
-import { resolveString, resolveBoolean, settingsPath, localSettingsPath } from '../settings.ts'
+import { resolveString, resolveBoolean, resolveTrackedList, settingsPath, localSettingsPath } from '../settings.ts'
 import { sidecarDir } from '../sidecar.ts'
 import { cleanupTempRepos, makeTempDir } from '../../../test/helpers/temp-repo.ts'
 
@@ -83,5 +83,60 @@ describe('resolveBoolean', () => {
     const dir = makeTempDir()
     writeProject(dir, { auto: 'yes' })
     expect(resolveBoolean(dir, 'auto', false)).toBe(false)
+  })
+})
+
+describe('resolveTrackedList', () => {
+  it('is empty when no settings file exists', () => {
+    expect(resolveTrackedList(makeTempDir(), 'contractPaths')).toEqual([])
+  })
+
+  it('is empty when settings.json lacks the key', () => {
+    const dir = makeTempDir()
+    writeProject(dir, { check: 'make ci' })
+    expect(resolveTrackedList(dir, 'contractPaths')).toEqual([])
+  })
+
+  it('reads the list from settings.json, in the order it is written', () => {
+    const dir = makeTempDir()
+    writeProject(dir, { contractPaths: ['schemas/api.json', 'packages/shared/'] })
+    expect(resolveTrackedList(dir, 'contractPaths')).toEqual(['schemas/api.json', 'packages/shared/'])
+  })
+
+  it('never reads settings.local.json: an overlay cannot add a list the tracked file lacks', () => {
+    const dir = makeTempDir()
+    writeProject(dir, {})
+    writeLocal(dir, { contractPaths: ['packages/shared/'] })
+    expect(resolveTrackedList(dir, 'contractPaths')).toEqual([])
+  })
+
+  it('never reads settings.local.json: an overlay cannot narrow or empty the tracked list', () => {
+    const dir = makeTempDir()
+    writeProject(dir, { contractPaths: ['packages/shared/', 'schemas/api.json'] })
+    writeLocal(dir, { contractPaths: ['schemas/api.json'] })
+    expect(resolveTrackedList(dir, 'contractPaths')).toEqual(['packages/shared/', 'schemas/api.json'])
+    writeLocal(dir, { contractPaths: [] })
+    expect(resolveTrackedList(dir, 'contractPaths')).toEqual(['packages/shared/', 'schemas/api.json'])
+  })
+
+  it('is empty for a value that is not a list', () => {
+    for (const value of ['packages/shared/', 3, true, null, { 0: 'packages/shared/' }]) {
+      const dir = makeTempDir()
+      writeProject(dir, { contractPaths: value })
+      expect(resolveTrackedList(dir, 'contractPaths')).toEqual([])
+    }
+  })
+
+  it('drops an entry that is not a non-blank string and keeps the others in order', () => {
+    const dir = makeTempDir()
+    writeProject(dir, { contractPaths: ['packages/shared/', 3, '', '   ', null, true, ['nested/'], { path: 'x' }, 'schemas/api.json'] })
+    expect(resolveTrackedList(dir, 'contractPaths')).toEqual(['packages/shared/', 'schemas/api.json'])
+  })
+
+  it('survives a malformed settings file by reading nothing', () => {
+    const dir = makeTempDir()
+    mkdirSync(sidecarDir(dir), { recursive: true })
+    writeFileSync(settingsPath(dir), '{ "contractPaths": ["packages/shared/"')
+    expect(resolveTrackedList(dir, 'contractPaths')).toEqual([])
   })
 })

@@ -398,7 +398,9 @@ When the goal is done, `/plumbbob:finish` ends the build. It writes a `report.md
 default** (what shipped, the decisions and why, what was parked and how it was classified,
 the final status, and the deferred tangents that become future work), but there is **no
 refuse-without-report gate**; guidance offers the artifact, it does not wall the exit. Then
-`plumbbob finish` appends a `## Checkpoints` list of the SHAs and a `## Stats` table (a row
+`plumbbob finish` appends a `## Footprint` section (the contract paths touched, how the
+steps were proved, and the size; [D166 (finish-footprint)](decisions.md#d166)), a
+`## Checkpoints` list of the SHAs and a `## Stats` table (a row
 per step: red checks, drift warnings, reverts, wall-clock, and plan edits when a step
 landed with an edited plan) to the report, makes the final
 commit (subject `chore(<scope>): finish`), and clears the control state. It writes **no

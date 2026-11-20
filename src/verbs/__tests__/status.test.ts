@@ -5,6 +5,7 @@ import { status } from '../status.ts'
 import { handoff } from '../handoff.ts'
 import { start } from '../start.ts'
 import { buildDir, checkpointsPath, detailPath, grantPath, markSpike, pausePath, sidecarDir, stepPath, stopPath } from '../../lib/sidecar.ts'
+import { localSettingsPath, settingsPath } from '../../lib/settings.ts'
 import { formatVerbHelp } from '../../cli-core.ts'
 import { commit, headSha, stageAll } from '../../lib/git.ts'
 import { cleanupTempRepos, makeTempDir, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -621,6 +622,157 @@ describe('status — out-of-band receipts — D66 (oob-commits-surfaced)', () =>
     commit(dir, 'raw commit mid-window')
     const { stdout } = captureIo(() => status(dir))
     expect(stdout).toContain("1 commit since the last checkpoint landed outside plumbbob's ledger.")
+  })
+})
+
+describe('status — the grain line — D165 (grain)', () => {
+  const FINE = "grain  fine: a step's seam names 3 paths at most"
+  const COARSE = "grain  coarse: a step's proof opens on a command"
+
+  // One undone step cut against both grains, with an open question, so every
+  // surface below has something to print.
+  const GRAINED = [
+    '# Grained',
+    '',
+    '## Steps',
+    '',
+    '1. [ ] feat: wide',
+    '   - seam: `src/a.ts`, `src/b.ts`, `src/c.ts`, `src/d.ts`',
+    '   - proof: it works',
+    '',
+    '## Build ranges',
+    '',
+    '1. `/plumbbob:build 1`, **stop:** review it',
+    '',
+    '## Open questions',
+    '',
+    '- <a id="q1"></a>**Q1 (slug)**: Which one?, *resolve by:* decide',
+    '',
+  ].join('\n')
+
+  async function grained(): Promise<string> {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Grained', '--slug', 'grained']))
+    writeFileSync(join(buildDir(dir, 'grained'), 'intent.md'), GRAINED)
+    return dir
+  }
+
+  /** A session with two builds and no cursor, so status lists them. */
+  async function withoutCursor(): Promise<string> {
+    const dir = await grained()
+    mkdirSync(buildDir(dir, 'second-build'), { recursive: true })
+    writeFileSync(join(buildDir(dir, 'second-build'), 'intent.md'), '# Second\n')
+    writeFileSync(join(sidecarDir(dir), 'STATE'), '')
+    return dir
+  }
+
+  it('adds one line beneath the dashboard under fine, and under coarse, and changes nothing above it', async () => {
+    const dir = await grained()
+    const plain = captureIo(() => status(dir)).stdout
+    writeFileSync(settingsPath(dir), JSON.stringify({ grain: 'fine' }))
+    const fine = captureIo(() => status(dir))
+    expect(fine.code).toBe(0)
+    expect(fine.stdout).toBe(`${plain}\n${FINE}\n`)
+    writeFileSync(settingsPath(dir), JSON.stringify({ grain: 'coarse' }))
+    expect(captureIo(() => status(dir)).stdout).toBe(`${plain}\n${COARSE}\n`)
+  })
+
+  it('reads the grain through the settings ladder, the overlay first', async () => {
+    const dir = await grained()
+    writeFileSync(settingsPath(dir), JSON.stringify({ grain: 'coarse' }))
+    writeFileSync(localSettingsPath(dir), JSON.stringify({ grain: 'fine' }))
+    const { stdout } = captureIo(() => status(dir))
+    expect(stdout).toContain(FINE)
+    expect(stdout).not.toContain('coarse')
+  })
+
+  it('prints it beneath the run dashboard too', async () => {
+    const dir = await grained()
+    const plain = captureIo(() => status(dir, ['--run', ''])).stdout
+    expect(plain.startsWith('run  range 1 of 1')).toBe(true)
+    writeFileSync(settingsPath(dir), JSON.stringify({ grain: 'coarse' }))
+    expect(captureIo(() => status(dir, ['--run', ''])).stdout).toBe(`${plain}\n${COARSE}\n`)
+  })
+
+  it('sets it ahead of the harness bindings, a block of its own', async () => {
+    const home = makeTempDir()
+    const dir = await grained()
+    writeFileSync(settingsPath(dir), JSON.stringify({ grain: 'fine', agents: { after: ['reviewer'] } }))
+    putAgent(dir, 'reviewer')
+    const { stdout } = statusWithHome(home, dir)
+    expect(stdout.endsWith(`\n\n${FINE}\n\nharness bindings:\n  settings · after: reviewer\n`)).toBe(true)
+  })
+
+  it('prints it beneath the NO ACTIVE SESSION sentinel, which stays the first line, so a plan cut before a session opens reads it', async () => {
+    const dir = makeTempRepo()
+    mkdirSync(sidecarDir(dir), { recursive: true })
+    writeFileSync(settingsPath(dir), JSON.stringify({ grain: 'fine' }))
+    const { code, stdout } = captureIo(() => status(dir))
+    expect(code).toBe(0)
+    expect(stdout).toBe(`NO ACTIVE SESSION\n\n${FINE}\n`)
+    writeFileSync(localSettingsPath(dir), JSON.stringify({ grain: 'coarse' }))
+    expect(captureIo(() => status(dir)).stdout).toBe(`NO ACTIVE SESSION\n\n${COARSE}\n`)
+  })
+
+  it('prints the sentinel alone outside a git repo, where there are no settings to read', async () => {
+    const dir = makeTempDir()
+    mkdirSync(sidecarDir(dir), { recursive: true })
+    writeFileSync(settingsPath(dir), JSON.stringify({ grain: 'fine' }))
+    expect(captureIo(() => status(dir)).stdout).toBe('NO ACTIVE SESSION\n')
+  })
+
+  it('prints it beneath the NO ACTIVE BUILD list', async () => {
+    const dir = await withoutCursor()
+    const plain = captureIo(() => status(dir)).stdout
+    expect(plain).toBe('NO ACTIVE BUILD — pick one with `plumbbob use <slug>`:\n  grained\n  second-build\n')
+    writeFileSync(settingsPath(dir), JSON.stringify({ grain: 'coarse' }))
+    expect(captureIo(() => status(dir)).stdout).toBe(`${plain}\n${COARSE}\n`)
+  })
+
+  it('prints the bytes it printed before under the default grain, whether the key is absent, set to default, or names no grain', async () => {
+    const dir = await grained()
+    const lost = await withoutCursor()
+    const bare = makeTempRepo()
+    mkdirSync(sidecarDir(bare), { recursive: true })
+    const views: ReadonlyArray<readonly [string, ReadonlyArray<string>]> = [
+      [dir, []],
+      [dir, ['--run', '']],
+      [dir, ['--invoked', '1']],
+      [lost, []],
+      [bare, []],
+    ]
+    const before = views.map(([cwd, args]) => captureIo(() => status(cwd, args)).stdout)
+    expect(before[4]).toBe('NO ACTIVE SESSION\n')
+    for (const grain of ['default', 'medium', 3]) {
+      for (const cwd of [dir, lost, bare]) writeFileSync(settingsPath(cwd), JSON.stringify({ grain }))
+      expect(views.map(([cwd, args]) => captureIo(() => status(cwd, args)).stdout)).toEqual(before)
+    }
+    expect(before.join('')).not.toContain('grain  ') // the line's label; the build's own name holds the word
+  })
+
+  it('leaves --json and --questions exactly as they are under a grain, with a session, without one, and with no build active', async () => {
+    const dir = await grained()
+    const lost = await withoutCursor()
+    const bare = makeTempRepo()
+    mkdirSync(sidecarDir(bare), { recursive: true })
+    const views: ReadonlyArray<readonly [string, ReadonlyArray<string>]> = [
+      [dir, ['--json']],
+      [dir, ['--json', '--run', '']],
+      [dir, ['--questions']],
+      [bare, ['--json']],
+      [bare, ['--questions']],
+      [lost, ['--json']],
+      [lost, ['--questions']],
+    ]
+    const before = views.map(([cwd, args]) => captureIo(() => status(cwd, args)).stdout)
+    expect(before[2]).toContain('**Open questions**: **1** to answer')
+    // Either sentinel is all `--questions` prints where there is no plan to read.
+    expect(before[4]).toBe('NO ACTIVE SESSION\n')
+    expect(before[6]).toBe('NO ACTIVE BUILD — pick one with `plumbbob use <slug>`:\n  grained\n  second-build\n')
+    for (const grain of ['fine', 'coarse']) {
+      for (const cwd of [dir, lost, bare]) writeFileSync(settingsPath(cwd), JSON.stringify({ grain }))
+      expect(views.map(([cwd, args]) => captureIo(() => status(cwd, args)).stdout)).toEqual(before)
+    }
   })
 })
 

@@ -1,15 +1,17 @@
-// `plumbbob finish`: the close-out. It appends the checkpoint SHAs and per-step
-// stats to report.md, makes the final commit, and clears the control state (the
-// untracked session and step markers under `.plumbbob/`). The build folder is NOT
-// deleted; the tracked `.plumbbob/builds/<slug>/` folder IS the archive: it
-// merges with the branch and shows up in the PR, so nothing is copied into a
-// separate local archive. A missing report never blocks the exit: guidance
-// offers the artifact, it does not wall the door. The git footprint stays
-// additive: one forward commit under the Conventional `chore(<scope>): finish`
-// subject, with the `plumbbob finish` identifier riding a marker line at the head
-// of the body so `git log --grep plumbbob` still finds it. The turn's forward
-// pointer is printed here rather than by `handoff`, the one ending handoff
-// cannot render: finish has just cleared the session it would read from.
+// `plumbbob finish`: the close-out. It appends a `## Footprint` section (the
+// contract paths touched, how the steps were proved, the size), the checkpoint
+// SHAs and the per-step stats to report.md, makes the final commit, and clears
+// the control state (the untracked session and step markers under
+// `.plumbbob/`). The build folder is NOT deleted; the tracked
+// `.plumbbob/builds/<slug>/` folder IS the archive: it merges with the branch
+// and shows up in the PR, so nothing is copied into a separate local archive.
+// A missing report never blocks the exit: guidance offers the artifact, it does
+// not wall the door. The git footprint stays additive: one forward commit under
+// the Conventional `chore(<scope>): finish` subject, with the `plumbbob finish`
+// identifier riding a marker line at the head of the body so
+// `git log --grep plumbbob` still finds it. The turn's forward pointer is
+// printed here rather than by `handoff`, the one ending handoff cannot render:
+// finish has just cleared the session it would read from.
 
 import { keepPlanCurrent } from '../lib/planfile.ts'
 import { appendFileSync, existsSync, readFileSync, rmSync } from 'node:fs'
@@ -36,6 +38,7 @@ import {
   type StepStats,
 } from '../lib/sidecar.ts'
 import { conventionalSubject, withMarker } from '../lib/commitmsg.ts'
+import { gatherFootprint, renderFootprint } from '../lib/footprint.ts'
 import { parseBuildScope } from '../lib/intent.ts'
 import { advisory, ending, notice, printEnding, transition } from '../lib/notice.ts'
 
@@ -48,9 +51,9 @@ const NEXT_UP = 'Nothing planned - /plumbbob:plan'
  * Close out the active build: report tail, final commit, control-state cleanup.
  *
  * Requires an active session (the `.plumbbob/STATE` sentinel). When report.md
- * exists it gains a `## Checkpoints` SHA list and a `## Stats` table first; when
- * it doesn't, finish notes the absence and proceeds; the exit is never gated on
- * a report.
+ * exists it gains a `## Footprint` section (once a step has landed), a
+ * `## Checkpoints` SHA list and a `## Stats` table first; when it doesn't,
+ * finish notes the absence and proceeds; the exit is never gated on a report.
  */
 export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
   const root = findRepoRoot(cwd)
@@ -59,10 +62,10 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
     return 1
   }
 
-  // Checked before any of finish's writes: appendCheckpointShas/appendStats
-  // are plain appends, not idempotent, so a refusal after they ran would
-  // duplicate those sections on retry. A socket stdin can never deliver the
-  // requested body, so there is nothing to do first.
+  // Checked before any of finish's writes: appendFootprint, appendCheckpointShas
+  // and appendStats are plain appends, not idempotent, so a refusal after they
+  // ran would duplicate those sections on retry. A socket stdin can never
+  // deliver the requested body, so there is nothing to do first.
   const bodyResult = readCommitBody(args)
   if (!bodyResult.ok) {
     process.stderr.write(bodyResult.message)
@@ -76,6 +79,7 @@ export function finish(cwd: string, args: ReadonlyArray<string> = []): number {
 
   const reported = existsSync(reportPath(root, slug))
   if (reported) {
+    appendFootprint(root, slug)
     appendCheckpointShas(root, slug)
     appendStats(root, slug)
   }
@@ -169,6 +173,30 @@ function buildDefaultScope(root: string, slug: string | null): string | null {
     // no intent.md: fall through to the slug rung.
   }
   return buildScope(slug)
+}
+
+/**
+ * Append the build's footprint to report.md as a `## Footprint` section, ahead
+ * of `## Checkpoints`: the contract paths the build touched, how its landed
+ * steps were proved, and the size of what they changed.
+ *
+ * The CLI renders it from the ledger, the commits on the branch, the tree as it
+ * stands, the plan's proofs and the `contractPaths` setting, so the model
+ * writes none of it.
+ * Skipped when no step landed. Best-effort, as `## Checkpoints` is: a file
+ * that will not read, a commit that will not resolve, or an append that fails
+ * leaves the section out, and finish goes on to the same exit.
+ */
+function appendFootprint(root: string, slug: string | null): void {
+  try {
+    const facts = gatherFootprint(root, slug)
+    const section = facts === null ? null : renderFootprint(facts)
+    if (section !== null) {
+      appendFileSync(reportPath(root, slug), `\n${section}`)
+    }
+  } catch {
+    // best-effort: the footprint is information, and finish never fails for it.
+  }
 }
 
 /**

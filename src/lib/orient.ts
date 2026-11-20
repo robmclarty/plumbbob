@@ -2701,6 +2701,19 @@ function ledgerLines(checkpoints: string): LedgerLine[] {
 }
 
 /**
+ * Every `step <n> <sha>` line of the ledger, in the order it was written: a
+ * step that landed twice is here twice.
+ *
+ * `stepShas` keeps one sha to a step, which is right after a revert and a
+ * landing again. A step whose tick was cleared by hand lands again with its
+ * first commit still on the branch, so a reader that sums what a step changed
+ * asks here and checks each commit against the branch itself.
+ */
+export function stepLandings(checkpoints: string): ReadonlyArray<{ readonly n: number; readonly sha: string }> {
+  return ledgerLines(checkpoints).flatMap((line) => (line.step === null ? [] : [{ n: line.step, sha: line.sha }]))
+}
+
+/**
  * Each step's checkpoint sha, the last line for a step landed twice (a revert,
  * then a landing again), since that is the commit on the branch now.
  */

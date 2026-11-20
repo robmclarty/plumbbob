@@ -124,7 +124,7 @@ same context `plumbbob agent` hands one today ([D139 (field-mapping)](decisions.
 | `protocol` | always `runciter.plan/2` |
 | `build.id`, `build.title` | the build's slug, and the title on `intent.md`'s first line |
 | `source` | `intent.md`'s repo-relative path, and the sha256 of its bytes |
-| `contract_paths` | always `[]`; contract paths and `contract.lock` are later work |
+| `contract_paths` | always `[]`; the `contractPaths` setting is not exported ([D164 (contract-paths)](decisions.md#d164)), and `contract.lock` is later work |
 | `decisions`, `constraints` | the top-level bullets under `## Decisions` and `## Constraints`, verbatim, as the step context scrapes them |
 | `steps[].id` | `step-<n>`, the step's plan number ([D133 (step-id)](decisions.md#d133)) |
 | `steps[].title` | the step's title, cut before an older **done when:** clause where the line still has one |

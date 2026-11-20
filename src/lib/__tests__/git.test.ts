@@ -14,6 +14,8 @@ import {
   gitPath,
   hasCommit,
   headSha,
+  isAncestor,
+  isCommit,
   isDirty,
   isIgnored,
   PLAN_COMMIT_MARKER,
@@ -31,6 +33,11 @@ afterAll(cleanupTempRepos)
 function git(dir: string, ...args: string[]): void {
   execFileSync('git', ['-C', dir, ...args], { stdio: 'ignore' })
 }
+
+// File names git prints quoted and escaped unless it is asked not to: a byte
+// outside ASCII (`ß` has one form, so no file system rewrites it), a double
+// quote, and a tab.
+const ODD_NAMES: ReadonlyArray<string> = ['maß.ts', 'a "b".ts', 'c\td.ts']
 
 describe('diffNumstat', () => {
   it('counts an unstaged edit against HEAD as tracked', () => {
@@ -81,6 +88,17 @@ describe('diffNumstat', () => {
     expect(diffNumstat(makeTempDir())).toEqual([])
   })
 
+  it('reads a tracked path as it is on disk, never the quoted form git prints', () => {
+    const dir = makeTempRepo()
+    for (const name of ODD_NAMES) writeFileSync(join(dir, name), 'one\n')
+    stageAll(dir)
+    commit(dir, 'odd names')
+    for (const name of ODD_NAMES) writeFileSync(join(dir, name), 'one\ntwo\n')
+    const entries = diffNumstat(dir)
+    expect(entries.map((e) => e.path).sort()).toEqual([...ODD_NAMES].sort())
+    expect(entries.every((e) => e.added === 1 && e.removed === 0 && !e.untracked)).toBe(true)
+  })
+
   it('still lists untracked files when HEAD is unborn', () => {
     const dir = makeTempRepo({ commit: false })
     writeFileSync(join(dir, 'new.txt'), 'a\n')
@@ -118,6 +136,60 @@ describe('commitNumstat', () => {
   it('is empty for a sha the repo does not know, and outside a repo', () => {
     expect(commitNumstat(makeTempRepo(), 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef')).toEqual([])
     expect(commitNumstat(makeTempDir(), 'HEAD')).toEqual([])
+  })
+
+  it('reads a path as it is on disk, never the quoted form git prints for a byte outside ASCII, a double quote or a tab', () => {
+    const dir = makeTempRepo()
+    mkdirSync(join(dir, 'packages', 'shared'), { recursive: true })
+    for (const name of ODD_NAMES) writeFileSync(join(dir, 'packages', 'shared', name), 'one\n')
+    stageAll(dir)
+    const sha = commit(dir, 'odd names')
+    expect(commitNumstat(dir, sha).map((e) => e.path).sort()).toEqual(ODD_NAMES.map((name) => `packages/shared/${name}`).sort())
+    expect(commitNumstat(dir, sha).every((e) => e.added === 1 && e.removed === 0)).toBe(true)
+  })
+})
+
+describe('isCommit', () => {
+  it('is true for a commit the repo holds, one that changed nothing included', () => {
+    const dir = makeTempRepo()
+    expect(isCommit(dir, headSha(dir))).toBe(true)
+    const empty = commit(dir, 'nothing staged')
+    expect(commitNumstat(dir, empty)).toEqual([])
+    expect(isCommit(dir, empty)).toBe(true)
+  })
+
+  it('is false for a sha the repo does not know, for one that names no commit, and outside a repo', () => {
+    const dir = makeTempRepo()
+    expect(isCommit(dir, 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef')).toBe(false)
+    const tree = execFileSync('git', ['-C', dir, 'rev-parse', 'HEAD^{tree}'], { encoding: 'utf8' }).trim()
+    expect(isCommit(dir, tree)).toBe(false)
+    expect(isCommit(makeTempDir(), 'HEAD')).toBe(false)
+  })
+})
+
+describe('isAncestor', () => {
+  it('is true for HEAD and for a commit HEAD descends from', () => {
+    const dir = makeTempRepo()
+    const base = headSha(dir)
+    expect(isAncestor(dir, base)).toBe(true)
+    commit(dir, 'a later commit')
+    expect(isAncestor(dir, base)).toBe(true)
+    expect(isAncestor(dir, headSha(dir))).toBe(true)
+  })
+
+  it('is false for a commit a reset rewound past, which the repo still holds', () => {
+    const dir = makeTempRepo()
+    const base = headSha(dir)
+    const rewound = commit(dir, 'rewound past')
+    resetHard(dir, base)
+    expect(isCommit(dir, rewound)).toBe(true)
+    expect(isAncestor(dir, rewound)).toBe(false)
+  })
+
+  it('is false for a sha the repo does not know, with HEAD unborn, and outside a repo', () => {
+    expect(isAncestor(makeTempRepo(), 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef')).toBe(false)
+    expect(isAncestor(makeTempRepo({ commit: false }), 'HEAD')).toBe(false)
+    expect(isAncestor(makeTempDir(), 'HEAD')).toBe(false)
   })
 })
 

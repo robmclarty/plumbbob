@@ -1,9 +1,11 @@
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { finish } from '../finish.ts'
+import { revert } from '../revert.ts'
 import { advisory, ending, transition } from '../../lib/notice.ts'
+import { settingsPath } from '../../lib/settings.ts'
 import { start } from '../start.ts'
 import { bumpStepStat, checkpointsPath, grantPath, hasSession, intentPath, reportPath, sidecarDir, stampStepStat, tickPath } from '../../lib/sidecar.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
@@ -185,5 +187,211 @@ describe('finish — the Stats roll-up (research/07 2b)', () => {
     writeFileSync(reportPath(dir), '# Report\n')
     captureIo(() => finish(dir))
     expect(readFileSync(reportPath(dir), 'utf8')).not.toContain('## Stats')
+  })
+})
+
+// A plan of two landed steps: the first proved by a command, the second in words.
+const TWO_STEPS = [
+  '# Footprint',
+  '',
+  '## Steps',
+  '',
+  '1. [x] First',
+  '   - seam: `src/a.ts`',
+  '   - proof: `pnpm test` passes',
+  '2. [x] Second',
+  '   - seam: `docs/`',
+  '   - proof: the page reads right in a browser',
+  '',
+].join('\n')
+
+// Land a step the way a checkpoint leaves it: one commit carrying `files` and
+// whatever bookkeeping the tree holds, named on the ledger. Returns its sha.
+function landStep(dir: string, n: number, files: Readonly<Record<string, string>>): string {
+  for (const [path, content] of Object.entries(files)) {
+    mkdirSync(dirname(join(dir, path)), { recursive: true })
+    writeFileSync(join(dir, path), content)
+  }
+  execFileSync('git', ['-C', dir, 'add', '-A'], { stdio: 'ignore' })
+  execFileSync('git', ['-C', dir, 'commit', '-q', '-m', `step ${n}`], { stdio: 'ignore' })
+  const sha = execFileSync('git', ['-C', dir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+  appendFileSync(checkpointsPath(dir), `step ${n} ${sha}\n`)
+  return sha
+}
+
+describe('finish — the Footprint section — D166 (finish-footprint)', () => {
+  it('writes it above ## Checkpoints, from the ledger, the commits and the plan', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Footprint', '--slug', 'footprint']))
+    writeFileSync(intentPath(dir), TWO_STEPS)
+    landStep(dir, 1, { 'src/a.ts': 'one\ntwo\n' })
+    const last = landStep(dir, 2, { 'src/a.ts': 'one\n', 'docs/b.md': 'b\n' })
+    writeFileSync(reportPath(dir), '# Report\n')
+    const { code } = captureIo(() => finish(dir))
+    expect(code).toBe(0)
+    const report = readFileSync(reportPath(dir), 'utf8')
+    // No Contract line: the repo sets no contractPaths. The build folder each
+    // commit swept along is plumbbob's own, so it is out of Size.
+    expect(report).toContain(
+      [
+        '# Report',
+        '',
+        '## Footprint',
+        '',
+        '- **Proof**: 1 of 2 steps by a command; step 2 in words',
+        '- **Size**: 2 files, +3 -1, over 2 steps',
+        '',
+        '## Checkpoints',
+        '',
+        '- baseline ',
+      ].join('\n'),
+    )
+    expect(report).not.toContain('**Contract**')
+    // The tail is the ledger's still, with nothing after its last line.
+    expect(report.endsWith(`\n- step 2 ${last}\n`)).toBe(true)
+  })
+
+  it('sits above ## Stats too, once per report', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Footprint order', '--slug', 'footprint-order']))
+    writeFileSync(intentPath(dir), TWO_STEPS)
+    landStep(dir, 1, { 'src/a.ts': 'one\n' })
+    bumpStepStat(dir, 'footprint-order', 1, 'redChecks')
+    writeFileSync(reportPath(dir), '# Report\n')
+    captureIo(() => finish(dir))
+    const report = readFileSync(reportPath(dir), 'utf8')
+    const headings = [...report.matchAll(/^## .*$/gm)].map((m) => m[0])
+    expect(headings).toEqual(['## Footprint', '## Checkpoints', '## Stats'])
+  })
+
+  it('names the contract entries the steps touched when contractPaths lists some', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Footprint contract', '--slug', 'footprint-contract']))
+    writeFileSync(intentPath(dir), TWO_STEPS)
+    writeFileSync(settingsPath(dir), JSON.stringify({ contractPaths: ['packages/shared/', 'schemas/api.json', 'never/'] }))
+    landStep(dir, 1, { 'packages/shared/types.ts': 'export type A = 1\n' })
+    landStep(dir, 2, { 'packages/shared/index.ts': 'export {}\n', 'schemas/api.json': '{}\n' })
+    writeFileSync(reportPath(dir), '# Report\n')
+    captureIo(() => finish(dir))
+    expect(readFileSync(reportPath(dir), 'utf8')).toContain(
+      [
+        '## Footprint',
+        '',
+        '- **Contract**: touched `packages/shared/` (steps 1, 2) and `schemas/api.json` (step 2)',
+        '- **Proof**: 1 of 2 steps by a command; step 2 in words',
+        '- **Size**: 3 files, +3 -0, over 2 steps',
+        '',
+        '## Checkpoints',
+      ].join('\n'),
+    )
+  })
+
+  it('says none touched when contractPaths lists some and no step reached one', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Footprint untouched', '--slug', 'footprint-untouched']))
+    writeFileSync(intentPath(dir), TWO_STEPS)
+    writeFileSync(settingsPath(dir), JSON.stringify({ contractPaths: ['packages/shared/'] }))
+    landStep(dir, 1, { 'src/a.ts': 'one\n' })
+    writeFileSync(reportPath(dir), '# Report\n')
+    captureIo(() => finish(dir))
+    expect(readFileSync(reportPath(dir), 'utf8')).toContain('\n## Footprint\n\n- **Contract**: none touched\n- **Proof**: 1 of 1 step by a command\n')
+  })
+
+  it('counts both landings of a step whose tick was cleared by hand, so it landed again', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Footprint landed twice', '--slug', 'footprint-twice']))
+    writeFileSync(intentPath(dir), TWO_STEPS)
+    writeFileSync(settingsPath(dir), JSON.stringify({ contractPaths: ['packages/shared/'] }))
+    landStep(dir, 1, { 'packages/shared/types.ts': 'export type A = 1\nexport type B = 2\n' })
+    landStep(dir, 1, { 'src/a.ts': 'one\n' })
+    writeFileSync(reportPath(dir), '# Report\n')
+    captureIo(() => finish(dir))
+    expect(readFileSync(reportPath(dir), 'utf8')).toContain(
+      [
+        '## Footprint',
+        '',
+        '- **Contract**: touched `packages/shared/` (step 1)',
+        '- **Proof**: 1 of 1 step by a command',
+        '- **Size**: 2 files, +3 -0, over 1 step',
+        '',
+        '## Checkpoints',
+      ].join('\n'),
+    )
+  })
+
+  it('leaves out a step `plumbbob revert` took off the branch, though the ledger keeps its line', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Footprint reverted', '--slug', 'footprint-reverted']))
+    writeFileSync(intentPath(dir), TWO_STEPS)
+    writeFileSync(settingsPath(dir), JSON.stringify({ contractPaths: ['packages/shared/'] }))
+    landStep(dir, 1, { 'src/a.ts': 'one\n' })
+    const second = landStep(dir, 2, { 'packages/shared/types.ts': 'export type A = 1\n', 'docs/b.md': 'b\n' })
+    expect(captureIo(() => revert(dir, ['--to', '1'])).code).toBe(0)
+    expect(existsSync(join(dir, 'packages', 'shared', 'types.ts'))).toBe(false)
+    writeFileSync(reportPath(dir), '# Report\n')
+    captureIo(() => finish(dir))
+    const report = readFileSync(reportPath(dir), 'utf8')
+    expect(report).toContain(
+      [
+        '## Footprint',
+        '',
+        '- **Contract**: none touched',
+        '- **Proof**: 1 of 1 step by a command',
+        '- **Size**: 1 file, +1 -0, over 1 step',
+        '',
+        '## Checkpoints',
+      ].join('\n'),
+    )
+    // The ledger is the record of what was landed, so its tail still names the step.
+    expect(report.endsWith(`\n- step 2 ${second}\n`)).toBe(true)
+  })
+
+  it('leaves a report with no landed step as it read before the section existed', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['No step landed']))
+    writeFileSync(settingsPath(dir), JSON.stringify({ contractPaths: ['packages/shared/'] }))
+    writeFileSync(reportPath(dir), '# Report\n')
+    captureIo(() => finish(dir))
+    expect(readFileSync(reportPath(dir), 'utf8')).toMatch(/^# Report\n\n## Checkpoints\n\n- baseline [0-9a-f]{40}\n$/)
+  })
+
+  it('writes no report of its own when there is none, with a step landed', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['No report, one step']))
+    writeFileSync(intentPath(dir), TWO_STEPS)
+    landStep(dir, 1, { 'src/a.ts': 'one\n' })
+    const { code } = captureIo(() => finish(dir))
+    expect(code).toBe(0)
+    expect(existsSync(reportPath(dir))).toBe(false)
+  })
+
+  it('leaves it out and finishes all the same when a recorded commit does not resolve', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Unknown commit']))
+    writeFileSync(intentPath(dir), TWO_STEPS)
+    landStep(dir, 1, { 'src/a.ts': 'one\n' })
+    appendFileSync(checkpointsPath(dir), 'step 2 def5678\n')
+    writeFileSync(reportPath(dir), '# Report\n')
+    const { code } = captureIo(() => finish(dir))
+    expect(code).toBe(0)
+    const report = readFileSync(reportPath(dir), 'utf8')
+    expect(report).not.toContain('## Footprint')
+    expect(report).toContain('\n## Checkpoints\n\n- baseline')
+    expect(report.endsWith('\n- step 2 def5678\n')).toBe(true)
+    expect(hasSession(dir)).toBe(false)
+  })
+
+  it('leaves it out and finishes all the same when the plan will not read', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['No plan']))
+    landStep(dir, 1, { 'src/a.ts': 'one\n' })
+    rmSync(intentPath(dir), { force: true })
+    writeFileSync(reportPath(dir), '# Report\n')
+    const { code } = captureIo(() => finish(dir))
+    expect(code).toBe(0)
+    const report = readFileSync(reportPath(dir), 'utf8')
+    expect(report).not.toContain('## Footprint')
+    expect(report).toContain('\n## Checkpoints\n\n- baseline')
+    expect(hasSession(dir)).toBe(false)
   })
 })

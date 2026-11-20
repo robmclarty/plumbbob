@@ -170,7 +170,9 @@ export type NumstatEntry = {
  * (rather than a working-tree diff merged with a cached one) nets a file
  * staged and then edited again into a single row; `--no-renames` keeps a
  * staged `git mv` as two plain paths instead of one `{old => new}` arrow,
- * which is also the shape the seam row wants.
+ * which is also the shape the seam row wants. A tracked path arrives as it is
+ * on disk (`-z`), never in the quoted form git prints for a byte outside
+ * ASCII, a double quote or a tab.
  *
  * This feeds the recap's `diff` and `seam` rows at the pause: information,
  * never a gate, so it is best-effort and never throws ([] on any failure).
@@ -185,7 +187,7 @@ export function diffNumstat(root: string): ReadonlyArray<NumstatEntry> {
 function trackedNumstat(root: string): ReadonlyArray<NumstatEntry> {
   let out: string
   try {
-    out = runGit(root, ['diff', '--numstat', '--no-renames', 'HEAD'])
+    out = runGit(root, ['diff', '--numstat', '--no-renames', '-z', 'HEAD'])
   } catch {
     return []
   }
@@ -200,7 +202,9 @@ function trackedNumstat(root: string): ReadonlyArray<NumstatEntry> {
  * landed, where the pause reads `diffNumstat` for the working tree: a landed
  * step's work is its commit, and the tree is clean by then. `--no-renames`
  * keeps a moved file as two plain paths, the shape the seam row wants, as it
- * does at the pause.
+ * does at the pause. `-z` keeps each path as it is on disk: without it git
+ * quotes and escapes a path holding a byte outside ASCII, a double quote or a
+ * tab, and a quoted path sits under no seam and no contract entry.
  *
  * Information, never a gate: best-effort and never throws ([] for a sha the
  * repo does not know).
@@ -208,7 +212,7 @@ function trackedNumstat(root: string): ReadonlyArray<NumstatEntry> {
 export function commitNumstat(root: string, sha: string): ReadonlyArray<NumstatEntry> {
   let out: string
   try {
-    out = runGit(root, ['diff-tree', '--no-commit-id', '--numstat', '--no-renames', '-r', '--root', sha])
+    out = runGit(root, ['diff-tree', '--no-commit-id', '--numstat', '--no-renames', '-r', '--root', '-z', sha])
   } catch {
     return []
   }
@@ -216,17 +220,55 @@ export function commitNumstat(root: string, sha: string): ReadonlyArray<NumstatE
 }
 
 /**
- * Numstat output as entries: `-` (a binary file) counts 0, and every path is
- * one git has a blob for.
+ * Whether `sha` names a commit this repo holds.
+ *
+ * `commitNumstat` reads [] for a commit that changed nothing and for a sha the
+ * repo does not know alike, so a caller that has to tell the two apart asks
+ * here first. Best-effort and never throws: false for a sha that names no
+ * commit, and outside a repo.
+ */
+export function isCommit(root: string, sha: string): boolean {
+  try {
+    runGit(root, ['cat-file', '-e', `${sha}^{commit}`])
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Whether `sha` is on the current branch: HEAD itself, or a commit HEAD
+ * descends from.
+ *
+ * A commit a `revert` rewound past stays in the repo, and so stays on the
+ * ledger, without being part of what the branch holds; `isCommit` is true for
+ * it and this is false. Best-effort and never throws: false for a sha the
+ * repo does not know, with HEAD unborn, and outside a repo.
+ */
+export function isAncestor(root: string, sha: string): boolean {
+  try {
+    runGit(root, ['merge-base', '--is-ancestor', sha, 'HEAD'])
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * `--numstat -z` output as entries: `-` (a binary file) counts 0, and every
+ * path is one git has a blob for.
+ *
+ * Each record ends on a NUL and holds the two counts and the path, tabs
+ * between them, so a tab inside the path is the path's own.
  */
 function numstatLines(out: string): ReadonlyArray<NumstatEntry> {
-  if (out.length === 0) {
-    return []
-  }
-  return out.split('\n').map((line) => {
-    const [added, removed, ...path] = line.split('\t')
-    return { added: toCount(added), removed: toCount(removed), path: path.join('\t'), untracked: false }
-  })
+  return out
+    .split('\0')
+    .filter((record) => record.length > 0)
+    .map((record) => {
+      const [added, removed, ...path] = record.split('\t')
+      return { added: toCount(added), removed: toCount(removed), path: path.join('\t'), untracked: false }
+    })
 }
 
 /**

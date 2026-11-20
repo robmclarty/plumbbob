@@ -25,8 +25,8 @@ Log before anything else happens:
 ```
 
 Then it writes `report.md` into the build folder from `intent.md` and the Log, and runs
-`plumbbob finish`, which appends the checkpoint SHAs and the per-step receipts to that
-file, makes the final commit, and clears the control state:
+`plumbbob finish`, which appends the footprint, the checkpoint SHAs and the per-step
+receipts to that file, makes the final commit, and clears the control state:
 
 ```text
 **Session**: finished (b7e4c9d02, .plumbbob/builds/2026-11-04-sift-a-list-that-forgets/ rides your branch into the PR)
@@ -45,9 +45,14 @@ Five sections are the model's: what shipped, the decisions and why, the parks as
 with the class each settled as (the lean table's shape, `Settled` in place of `Lean`;
 [D112 (lean-table)](../decisions.md#d112),
 [D125 (linked-park-names)](../decisions.md#d125)), the final status, and the deferred
-tangents. Two are the CLI's, appended beneath:
+tangents. Three are the CLI's, appended beneath:
 
 ```markdown
+## Footprint
+
+- **Proof**: 0 of 8 steps by a command; steps 1, 2, 3, 4, 5, 6, 7, 8 in words
+- **Size**: 13 files, +460 -23, over 8 steps
+
 ## Checkpoints
 
 - baseline 1c0d3a9e2
@@ -75,6 +80,11 @@ tangents. Two are the CLI's, appended beneath:
 | 8 | 0 | 0 | 0 | 2m |
 | **total** | 0 | 0 | 0 | 26m |
 ```
+
+The footprint is counted from the ledger and the commits it names
+([D166 (finish-footprint)](../decisions.md#d166)). Its `Proof` line reads 0 of 8 because
+every proof in this plan opens on words, so each was judged at its pause; a proof that
+opens on a command in backticks is one `checkpoint` runs, and it is counted here.
 
 The report synthesizes; it does not re-narrate, because the Log already did, step by
 step, as each landed. No gate stood between you and the exit: a build with no report

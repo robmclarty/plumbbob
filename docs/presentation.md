@@ -1077,6 +1077,21 @@ sibling one edit away when there is one:
 The count beside `**Seams**:` takes these lines in. Like the rest of the
 part, they refuse nothing.
 
+A step cut against the grain draws a line here as well, when the `grain`
+setting is `fine` or `coarse` ([D165 (grain)](decisions.md#d165)). Under
+`fine`, a step whose seam names more than 3 paths (a `dir/` grant counts as
+one) draws the first line below; under `coarse`, a step whose proof opens on
+words draws the second. Each follows its step's seam and like lines:
+
+```text
+- [Step 3](.plumbbob/builds/rate-limit/intent.md#L14)'s seam names 5 paths; the grain is fine, which takes 3 at most.
+- [Step 4](.plumbbob/builds/rate-limit/intent.md#L17) is proved in words; the grain is coarse, where a proof opens on a command.
+```
+
+One grain is set at a time, so a card carries one kind or the other. The
+count takes them in, they refuse nothing, and with the grain at `default` the
+part reads as it did before the setting existed.
+
 An auto halt on trouble renders the standard card; the Verdict's worst
 component is the halt reason. A clean halt renders no card at all: its step
 has landed, and nothing is left for the human to decide.

@@ -76,6 +76,12 @@ word up without reading the others first. Each entry points at the page that own
   ([D158 (research-is-dated)](decisions.md#d158)). → [`research.md`](research.md#the-stamp)
 - **Model recommendation** (`model:`): an advisory line under a step naming the smallest
   model that can carry it; `status` and every Next Up line surface it.
+- **Grain** (`grain`): how coarsely a plan cuts its steps, a setting of `fine`, `default`
+  or `coarse` sized to the model that builds them. Under `fine` a step's seam names 3
+  paths at most; under `coarse` a step's proof opens on a command. `status` prints the
+  grain, and the plan card names a step cut against it. Guidance, never a gate, and it
+  moves no stop: the grain follows the model, and the ranges follow the person
+  ([D165 (grain)](decisions.md#d165)). → [`cli-reference.md`](cli-reference.md#settings)
 - **Step lines for a scheduler** (`after:`, `stop:`, `effort:`): three optional lines
   under a step naming what it waits on, whether a stop follows it, and how hard its
   builder should work. A plan with none of them exports fully serial.
@@ -163,8 +169,22 @@ word up without reading the others first. Each entry points at the page that own
 - **Finish**: the close-out: the report is written, the final commit made, the control
   state cleared. The folder stays.
 - **Report** (`report.md`): what shipped and why, what was parked and how it was
-  classified, and the deferred tangents, with the checkpoint SHAs and the per-step stats
-  appended by the CLI.
+  classified, and the deferred tangents, with the footprint, the checkpoint SHAs and the
+  per-step stats appended by the CLI.
+- **Footprint** (`## Footprint`): the section `plumbbob finish` writes into the report,
+  ahead of the checkpoint SHAs: the contract paths the build touched, how many of its
+  landed steps a command proved, and the size of what those steps changed. The CLI counts every
+  line of it from the ledger and the commits, so the model writes none. It differs from
+  evidence in what it is and when it shows: evidence is a file an agent saved for you to
+  look at, linked at one step's pause, and the footprint is three lines of counted fact
+  about the whole build, in the report that rides into the pull request
+  ([D166 (finish-footprint)](decisions.md#d166)). → [`cli-reference.md`](cli-reference.md#finish)
+- **Contract path** (`contractPaths`): a path the rest of the repo depends on (the shared
+  types, the schemas, the generated clients), listed in the tracked `settings.json` as a
+  file or a `dir/` grant, the way a seam is written. The list is read from that file
+  alone, so a personal overlay cannot narrow it. Never a lock: an edit to one is named in
+  the footprint and refused nowhere ([D164 (contract-paths)](decisions.md#d164)).
+  → [`cli-reference.md`](cli-reference.md#settings)
 
 ## The turn
 

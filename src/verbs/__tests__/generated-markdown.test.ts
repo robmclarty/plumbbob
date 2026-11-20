@@ -282,4 +282,26 @@ describe('generated markdown lints clean under a consumer-strict gate', () => {
     captureIo(() => finish(dir))
     expect(await lintFindings(dir, [reportPath(dir)])).toEqual([])
   })
+
+  it('the finish report: a Footprint of three lines above Checkpoints and the Stats table — D166 (finish-footprint)', async () => {
+    const dir = makeTempRepo()
+    await captureIoAsync(() => start(dir, ['Footprint lines', '--slug', 'footprint-lines']))
+    writeFileSync(intentPath(dir), '# Footprint lines\n\n## Steps\n\n1. [x] First\n   - seam: `src/`\n   - proof: the page reads right\n')
+    writeFileSync(settingsPath(dir), JSON.stringify({ contractPaths: ['src/shared/'] }))
+    // One landed step, as a checkpoint leaves it: a commit, and its line on the ledger.
+    mkdirSync(join(dir, 'src', 'shared'), { recursive: true })
+    writeFileSync(join(dir, 'src', 'shared', 'types.ts'), 'export type A = 1\n')
+    execFileSync('git', ['-C', dir, 'add', '-A'], { stdio: 'ignore' })
+    execFileSync('git', ['-C', dir, 'commit', '-q', '-m', 'step 1'], { stdio: 'ignore' })
+    const sha = execFileSync('git', ['-C', dir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+    writeFileSync(checkpointsPath(dir), `${readFileSync(checkpointsPath(dir), 'utf8')}step 1 ${sha}\n`)
+    writeFileSync(reportPath(dir), '# Report\n')
+    bumpStepStat(dir, 'footprint-lines', 1, 'redChecks')
+    captureIo(() => finish(dir))
+    // All three lines are in the file linted, so a clean run is not a vacuous one.
+    expect(readFileSync(reportPath(dir), 'utf8')).toContain(
+      '\n## Footprint\n\n- **Contract**: touched `src/shared/` (step 1)\n- **Proof**: 0 of 1 step by a command; step 1 in words\n- **Size**: 1 file, +1 -0, over 1 step\n\n## Checkpoints\n',
+    )
+    expect(await lintFindings(dir, [reportPath(dir)])).toEqual([])
+  })
 })

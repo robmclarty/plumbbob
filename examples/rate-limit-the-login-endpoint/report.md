@@ -38,6 +38,11 @@ Q1 (proxy-trust) was resolved with ops before the plan was approved.
 
 - Throttle `/password-reset` with the same limiter.
 
+## Footprint
+
+- **Proof**: 1 of 3 steps by a command; steps 2, 3 in words
+- **Size**: 7 files, +109 -9, over 3 steps
+
 ## Checkpoints
 
 - baseline 3a1f2b0c1e57d9a24c68f0b3d1a5e7c92b4d6f80

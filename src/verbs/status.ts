@@ -6,7 +6,10 @@
 // behavior, so the `NO ACTIVE SESSION` sentinel is kept exact. A stop card
 // still waiting for its reply marks its range and takes the next move. With
 // `--run`, it prints the run a `/plumbbob:run` invocation names above the
-// dashboard, and names the waiting card again beneath the run's grant.
+// dashboard, and names the waiting card again beneath the run's grant. A
+// `grain` setting other than the default adds one line beneath the dashboard,
+// and beneath either sentinel, since the plan skill reads this output before
+// it opens a session.
 
 import { readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
@@ -19,6 +22,7 @@ import {
   readHarnessFile,
   resolveBinding,
 } from '../lib/agents.ts'
+import { FINE_SEAM_LIMIT, resolveGrain } from '../lib/grain.ts'
 import { resolveRecord } from '../lib/settings.ts'
 import {
   buildFolder,
@@ -112,14 +116,25 @@ function grantText(grant: Grant | null): string | null {
  * data and nothing else: the moves a person can make from here, the steps of
  * the range in play, and the open questions, for a surface with controls of
  * its own (`--run` names the range the steps are read from).
+ *
+ * A `grain` setting other than the default adds one line beneath the
+ * dashboard, ahead of the harness bindings, and beneath either sentinel, so
+ * the plan skill reads what to cut its steps to whether or not a session is
+ * open. `--questions` and `--json` print what they printed without it, a
+ * sentinel included.
  */
 export function status(cwd: string, args: ReadonlyArray<string> = []): number {
   const root = findRepoRoot(cwd)
   const { raw: run, rest: afterRun } = takeRaw(args, '--run', '')
   const { raw: invoked, rest } = takeRaw(afterRun, '--invoked', null)
   const json = rest.includes('--json')
+  const questions = rest.includes('--questions')
   if (root === null || !hasSession(root)) {
-    process.stdout.write(json ? stateJson('no-session', [PLAN_MOVE], [], []) : 'NO ACTIVE SESSION\n')
+    // The sentinel stays the first line, exact; the grain rides beneath it,
+    // read from the settings a repo keeps between sessions. `--questions`
+    // asked for the questions alone, so its sentinel stays bare.
+    const grain = json || questions || root === null ? [] : grainSection(root)
+    process.stdout.write(json ? stateJson('no-session', [PLAN_MOVE], [], []) : `${['NO ACTIVE SESSION', ...grain].join('\n')}\n`)
     return 0
   }
   // A session with builds but no resolvable cursor (finish cleared it, or the repo
@@ -133,13 +148,12 @@ export function status(cwd: string, args: ReadonlyArray<string> = []): number {
       return 0
     }
     if (builds.length > 0) {
-      process.stdout.write(
-        `NO ACTIVE BUILD — pick one with \`plumbbob use <slug>\`:\n${builds.map((b) => `  ${b}`).join('\n')}\n`,
-      )
+      const listed = ['NO ACTIVE BUILD — pick one with `plumbbob use <slug>`:', ...builds.map((b) => `  ${b}`), ...(questions ? [] : grainSection(root))]
+      process.stdout.write(`${listed.join('\n')}\n`)
       return 0
     }
   }
-  if (rest.includes('--questions')) {
+  if (questions) {
     // The open questions alone, as the plan card tables them: the view a skill
     // relays when the human asks what is still open (D118 (questions-table)),
     // with the deferred ones in their own table (D120 (deferred-questions)).
@@ -181,7 +195,7 @@ export function status(cwd: string, args: ReadonlyArray<string> = []): number {
     run === null
       ? formatOrientation(orient(input))
       : withPlanEdits(withWaiting(formatRunDashboard(input, resolveRunArgs(run, input), grantText(readGrant(root))), card), root, slug)
-  const lines = [dashboard, ...harnessSection(root, slug)]
+  const lines = [dashboard, ...grainSection(root), ...harnessSection(root, slug)]
   process.stdout.write(`${lines.join('\n')}\n`)
   return 0
 }
@@ -253,6 +267,23 @@ function withPlanEdits(dashboard: string, root: string, slug: string | null): st
     .split('\n')
     .map((l) => (l.startsWith('     grant: ') ? `${l} · plan edits allowed` : l))
     .join('\n')
+}
+
+/**
+ * The grain the plan is cut to, as its own block beneath whatever status
+ * printed above it: a blank line, then one `grain` line saying what a step
+ * takes under that grain.
+ *
+ * Nothing under the `default` grain, so a repo that sets none prints the bytes
+ * it printed before. The line states the measure and refuses nothing: the plan
+ * skill reads it where it cuts the steps, and the plan card names any step cut
+ * against it.
+ */
+function grainSection(root: string): string[] {
+  const grain = resolveGrain(root)
+  if (grain === 'default') return []
+  const takes = grain === 'fine' ? `a step's seam names ${FINE_SEAM_LIMIT} paths at most` : "a step's proof opens on a command"
+  return ['', `grain  ${grain}: ${takes}`]
 }
 
 /**

@@ -181,6 +181,15 @@ The argument only seeds how you get there.
    leave `## Build order` alone: it is for later, when a refine appends a step that has to
    land before an existing one (`plumbbob order`).
 
+   **When status names a grain, cut the steps to it.** The `grain` line in the state above
+   sizes a step to the model that builds it, and it alone moves "small enough to verify in
+   one review pass". Under `fine` a step's seam names 3 paths at most, so cut smaller.
+   Under `coarse` a step may run past one review pass when its proof opens on a command,
+   and the cold read does not flag such a step for its size: the command carries what a
+   read of the diff no longer can. The card names a step cut against the grain under
+   `**Seams**:`, as guidance. Leave the ranges where the human calls are; no grain moves
+   one.
+
    **Three lines a scheduler reads are optional.** `- after:`, `- stop:` and `- effort:`
    each ride a step at most once, and a plan with none of them exports fully serial, which
    is what plumbbob builds anyway

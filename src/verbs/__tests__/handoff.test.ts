@@ -28,7 +28,7 @@ import {
   turnPath,
   writePause,
 } from '../../lib/sidecar.ts'
-import { settingsPath } from '../../lib/settings.ts'
+import { localSettingsPath, settingsPath } from '../../lib/settings.ts'
 import { cleanupTempRepos, makeTempRepo } from '../../../test/helpers/temp-repo.ts'
 import { captureIo, captureIoAsync } from '../../../test/helpers/capture-io.ts'
 
@@ -606,6 +606,90 @@ describe('handoff', () => {
   it('renders no Seams part when every seam names a file that exists or a new one', async () => {
     const dir = await started(INTENT.replace('1. [x] First', '1. [ ] First'))
     expect(captureIo(() => handoff(dir, ['--plan'])).stdout).not.toContain('**Seams**')
+  })
+
+  it("sets a step's grain finding after its seam and like findings, in the same part and under the same count — D165 (grain)", async () => {
+    // Step 1's seam is wide and otherwise clean, so its grain finding has to
+    // land ahead of step 2's seam findings; step 2 draws all three kinds.
+    const plan = INTENT.replace('1. [x] First', '1. [ ] First')
+      .replace('`src/a.ts`', '`src/a.ts`, `src/a2.ts`, `src/a3.ts`, `src/a4.ts`, `src/a5.ts`')
+      .replace('   - seam: `src/b.ts`\n', '   - seam: `src/limter.ts`, `src/b.ts`, `src/b2.ts`, `src/b3.ts`\n   - like: `src/gone.ts`\n')
+      .replace('   - seam: `src/c.ts`\n', '')
+    const dir = await started(plan)
+    mkdirSync(join(dir, 'src'), { recursive: true })
+    writeFileSync(join(dir, 'src', 'limiter.ts'), 'export const cap = 5\n')
+    // The overlay, since a developer on a local model sets the grain for themselves.
+    writeFileSync(localSettingsPath(dir), JSON.stringify({ grain: 'fine' }))
+    const { code, stdout } = captureIo(() => handoff(dir, ['--plan']))
+    const where = relative(dir, intentPath(dir))
+    expect(code).toBe(0) // guidance: the card names it and refuses nothing
+    expect(stdout).toContain(
+      [
+        '---',
+        '',
+        '**Seams**: 5 to look at',
+        '',
+        `- [Step 1](${where}#L5)'s seam names 5 paths; the grain is fine, which takes 3 at most.`,
+        `- [Step 2](${where}#L7) names \`src/limter.ts\`, which does not exist; \`src/limiter.ts\` does.`,
+        `- [Step 2](${where}#L7) likes \`src/gone.ts\`, which does not exist.`,
+        `- [Step 2](${where}#L7)'s seam names 4 paths; the grain is fine, which takes 3 at most.`,
+        `- [Step 3](${where}#L10) has no \`seam:\` line.`,
+        '',
+        '**Your Call**:',
+      ].join('\n'),
+    )
+  })
+
+  it('names a step proved in words under the coarse grain, and leaves one proved by a command alone — D165 (grain)', async () => {
+    const plan = INTENT.replace('1. [x] First', '1. [ ] First').replace(
+      '2. [ ] Second — **done when:** b works.\n   - seam: `src/b.ts`\n',
+      '2. [ ] Second\n   - seam: `src/b.ts`\n   - proof: `pnpm vitest run b` passes; b works\n',
+    )
+    const dir = await started(plan)
+    writeFileSync(settingsPath(dir), JSON.stringify({ grain: 'coarse' }))
+    const { code, stdout } = captureIo(() => handoff(dir, ['--plan']))
+    const where = relative(dir, intentPath(dir))
+    expect(code).toBe(0)
+    expect(stdout).toContain(
+      [
+        '---',
+        '',
+        '**Seams**: 2 to look at',
+        '',
+        `- [Step 1](${where}#L5) is proved in words; the grain is coarse, where a proof opens on a command.`,
+        `- [Step 3](${where}#L10) is proved in words; the grain is coarse, where a proof opens on a command.`,
+        '',
+        '**Your Call**:',
+      ].join('\n'),
+    )
+  })
+
+  it('renders no Seams part under a grain the plan is already cut to — D165 (grain)', async () => {
+    const dir = await started(INTENT.replace('1. [x] First', '1. [ ] First'))
+    writeFileSync(settingsPath(dir), JSON.stringify({ grain: 'fine' })) // every seam names one path
+    expect(captureIo(() => handoff(dir, ['--plan'])).stdout).not.toContain('**Seams**')
+  })
+
+  it('prints the card it printed before under the default grain, whether the key is absent, set to default, or names no grain — D165 (grain)', async () => {
+    // A plan cut against both grains (a seam of 5, every proof in words) that
+    // also draws one finding of the seam check's own.
+    const plan = INTENT.replace('1. [x] First', '1. [ ] First')
+      .replace('`src/a.ts`', '`src/a.ts`, `src/a2.ts`, `src/a3.ts`, `src/a4.ts`, `src/a5.ts`')
+      .replace('   - seam: `src/c.ts`\n', '')
+    const dir = await started(plan)
+    const before = captureIo(() => handoff(dir, ['--plan'])).stdout
+    const where = relative(dir, intentPath(dir))
+    expect(before).toContain(['---', '', '**Seams**: 1 to look at', '', `- [Step 3](${where}#L9) has no \`seam:\` line.`, '', '**Your Call**:'].join('\n'))
+    expect(before).not.toContain('the grain is')
+    for (const grain of ['default', 'medium', 3]) {
+      writeFileSync(settingsPath(dir), JSON.stringify({ grain }))
+      expect(captureIo(() => handoff(dir, ['--plan'])).stdout).toBe(before)
+    }
+    // The same plan under each grain does differ, so the comparison is not empty.
+    for (const grain of ['fine', 'coarse']) {
+      writeFileSync(settingsPath(dir), JSON.stringify({ grain }))
+      expect(captureIo(() => handoff(dir, ['--plan'])).stdout).not.toBe(before)
+    }
   })
 
   it('tables the open questions above the moves, with the move that settles them, and no Questions row — D118 (questions-table)', async () => {

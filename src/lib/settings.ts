@@ -10,15 +10,22 @@
 // Known keys: `check` (string: the command for the heavy verify gate, a project
 // default in settings.json), `auto` (boolean: a personal preference, so it
 // belongs in settings.local.json), `agents` (slot bindings the agent verb reads),
-// `agentTimeout` (seconds; 0 turns it off), and `agentConfig` (a record keyed by
+// `agentTimeout` (seconds; 0 turns it off), `agentConfig` (a record keyed by
 // agent name, handed to that agent inside its envelope; a local overlay replaces
-// the whole entry). `auto` is NOT a checkpoint grant: the approval
-// latch never reads it to allow a land (a model can write this file, and a grant
-// it can forge is no grant) only to name it at the pause when set; self-approval
-// comes solely from the human's literal `/build --auto` or a typed step range.
-// The per-worktree active-build cursor is NOT here: it lives in the STATE file
-// (see sidecar.ts), which keeps this overlay a human-authored file rather than
-// tool-managed state.
+// the whole entry), `grain` (`fine`, `default` or `coarse`: how coarsely a plan
+// cuts its steps; it follows the model, so a developer on a local model sets it
+// in settings.local.json, over any project default in settings.json), and
+// `contractPaths` (a list of seam-grammar entries: the paths the rest of the
+// repo depends on; the contract is the team's, so it belongs in settings.json).
+// `contractPaths` is the one key that skips the ladder: it is read from the
+// tracked file alone, since a personal overlay that narrowed it would hide a
+// touch from the one person who needed to see it. `auto` is NOT a checkpoint
+// grant: the approval latch never reads it to allow a land (a model can write
+// this file, and a grant it can forge is no grant) only to name it at the pause
+// when set; self-approval comes solely from the human's literal `/build --auto`
+// or a typed step range. The per-worktree active-build cursor is NOT here: it
+// lives in the STATE file (see sidecar.ts), which keeps this overlay a
+// human-authored file rather than tool-managed state.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -131,6 +138,23 @@ export function resolveNumber(root: string, key: string, fallback: number, flag?
 export function resolveRecord(root: string, key: string): Record<string, unknown> {
   const value = resolveSetting(root, key, undefined)
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
+}
+
+/**
+ * Read a list-of-strings setting (for example `contractPaths`) from the tracked
+ * settings.json alone: no flag rung, and no local overlay.
+ *
+ * A key read through here is the team's, so settings.local.json is never
+ * opened: an overlay can neither add to the list nor narrow it. A missing key,
+ * or a value that is not a list, yields []. An entry that is not a non-blank
+ * string is dropped and the others keep their order, so one bad entry never
+ * costs the whole list.
+ */
+export function resolveTrackedList(root: string, key: string): ReadonlyArray<string> {
+  const value = readSettings(settingsPath(root))[key]
+  if (!Array.isArray(value)) return []
+  const entries: ReadonlyArray<unknown> = value
+  return entries.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
 }
 
 /**
