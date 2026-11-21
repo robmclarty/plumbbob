@@ -1092,3 +1092,80 @@ describe('doctor — approval latch — D64 (approval-latch)', () => {
     expect(stdout).toContain('○ auto: set in settings but not a grant since D67 (auto-not-a-grant)')
   })
 })
+
+describe('doctor — contract paths — D164 (contract-paths)', () => {
+  const HEADER = 'plumbbob doctor — contract paths — D164 (contract-paths)'
+
+  // An override repo whose tracked settings also list contract paths, with a
+  // shared package and a schema in the tree.
+  function contractRepo(entries: ReadonlyArray<string>): string {
+    const dir = overrideRepo()
+    writeFileSync(settingsPath(dir), JSON.stringify({ check: 'true', contractPaths: entries }))
+    mkdirSync(join(dir, 'packages', 'shared'), { recursive: true })
+    mkdirSync(join(dir, 'schemas'), { recursive: true })
+    writeFileSync(join(dir, 'schemas', 'api.json'), '{}\n')
+    return dir
+  }
+
+  it('says nothing when the setting lists no contract path', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const { code, stdout } = await doctorWithHome(home, overrideRepo())
+    expect(code).toBe(0)
+    expect(stdout).not.toContain('contract paths')
+  })
+
+  it('counts the entries on one line when every one can match', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const { code, stdout } = await doctorWithHome(home, contractRepo(['packages/shared/', 'schemas/api.json']))
+    expect(code).toBe(0)
+    expect(stdout).toContain(`${HEADER}\n  ✓ contract: 2 paths\n`)
+    const one = await doctorWithHome(home, contractRepo(['schemas/api.json']))
+    expect(one.stdout).toContain(`${HEADER}\n  ✓ contract: 1 path\n`)
+  })
+
+  it('counts a folder written with no trailing slash as a problem, and prints the fix', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const { code, stdout } = await doctorWithHome(home, contractRepo(['packages/shared', 'schemas/api.json']))
+    expect(code).toBe(1)
+    expect(stdout).toContain(
+      [
+        HEADER,
+        '  ✗ contract: `packages/shared` names a folder, and an entry with no trailing slash is read as a file',
+        '      → write it `packages/shared/` in .plumbbob/settings.json',
+      ].join('\n'),
+    )
+    expect(stdout).not.toContain('✓ contract')
+    expect(stdout).toContain('plumbbob: 1 problem(s)')
+  })
+
+  it('counts an entry the seam grammar refuses as a problem', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const { code, stdout } = await doctorWithHome(home, contractRepo(['schemas/*.json']))
+    expect(code).toBe(1)
+    expect(stdout).toContain(
+      '  ✗ contract: `schemas/*.json` is a glob; an entry is a file or a `dir/` grant\n      → name the file, or the folder as `dir/` in .plumbbob/settings.json',
+    )
+  })
+
+  it('notes an entry that names nothing in the tree yet, and counts no problem for it', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const { code, stdout } = await doctorWithHome(home, contractRepo(['packages/shared/', 'schemas/next.json']))
+    expect(code).toBe(0)
+    expect(stdout).toContain(`${HEADER}\n  ○ contract: \`schemas/next.json\` names nothing in the tree yet\n`)
+  })
+
+  it('ignores a contractPaths the personal overlay sets, as every reader of the setting does', async () => {
+    const home = makeTempDir()
+    seedMarketplace(home, ['plumbbob@robmclarty'])
+    const dir = overrideRepo()
+    setLocalSetting(dir, 'contractPaths', ['src/*'])
+    const { code, stdout } = await doctorWithHome(home, dir)
+    expect(code).toBe(0)
+    expect(stdout).not.toContain('contract paths')
+  })
+})

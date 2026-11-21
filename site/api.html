@@ -414,6 +414,8 @@ class Component extends DCLogic {
       ['agents', 'Project-wide slot bindings for user-authored agents — the bottom rung, under a build\'s harness.json and the --agent flag.'],
       ['agentTimeout', 'Seconds before a spawned agent is killed. Absent or 0 means no timeout, since the human is present and Ctrl-C works.'],
       ['agentConfig', 'A record keyed by agent name: the named agent receives its entry as settings.agent in its envelope, an entry in settings.local.json replaces the tracked one whole rather than merging into it, and {} rides when neither file defines one.'],
+      ['contractPaths', 'The paths the rest of the repo depends on, each a file or a dir/ grant, the way a seam is written. Read from the tracked settings.json alone, so a personal overlay cannot narrow it. A finished report names the ones the build touched, and plumbbob doctor names an entry that can never match. Nothing refuses an edit to one.'],
+      ['grain', 'How coarsely a plan cuts its steps: fine, default or coarse. Under fine the plan card names a step whose seam lists more than 3 paths; under coarse it names a step proved in words. Guidance only, and no grain moves a stop. A personal preference for the model you run, so it belongs in settings.local.json.'],
     ].map(([key, body]) => ({ key, body }));
 
     // ---- skills (accordion) ----

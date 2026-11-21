@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { afterAll, describe, expect, it } from 'vitest'
-import { contractPaths, contractTouched } from '../contract.ts'
+import { contractIssues, contractPaths, contractTouched, type ContractTree } from '../contract.ts'
 import { localSettingsPath, settingsPath } from '../settings.ts'
 import { sidecarDir } from '../sidecar.ts'
 import { cleanupTempRepos, makeTempDir } from '../../../test/helpers/temp-repo.ts'
@@ -135,5 +135,66 @@ describe('contractTouched — D164 (contract-paths)', () => {
     contractTouched(paths, listed)
     expect(paths).toEqual(['schemas/api.json', 'packages/shared/a.ts'])
     expect(listed).toEqual(contract)
+  })
+})
+
+// A tree of the named files and folders (a folder ends on a slash), and nothing else.
+function treeOf(...names: ReadonlyArray<string>): ContractTree {
+  const folders = new Set(names.filter((n) => n.endsWith('/')).map((n) => n.slice(0, -1)))
+  const files = new Set(names.filter((n) => !n.endsWith('/')))
+  return { exists: (path) => folders.has(path) || files.has(path), isDirectory: (path) => folders.has(path) }
+}
+
+describe('contractIssues — D164 (contract-paths)', () => {
+  const tree = treeOf('packages/shared/', 'schemas/', 'schemas/api.json')
+
+  it('finds nothing wrong with a file that is a file and a grant that is a folder', () => {
+    expect(contractIssues(['packages/shared/', 'schemas/api.json'], tree)).toEqual([])
+    expect(contractIssues([], tree)).toEqual([])
+  })
+
+  it('names an entry the seam grammar refuses, with what it is and the remedy', () => {
+    const issues = contractIssues(['src/**/*.ts', '/etc/passwd', 'a\\b.ts', 'packages/../secrets/'], tree)
+    expect(issues.map((i) => [i.entry, i.kind, i.words])).toEqual([
+      ['src/**/*.ts', 'refused', 'is a glob; an entry is a file or a `dir/` grant'],
+      ['/etc/passwd', 'refused', 'is absolute; an entry is a file or a `dir/` grant'],
+      ['a\\b.ts', 'refused', 'holds a backslash; an entry is a file or a `dir/` grant'],
+      ['packages/../secrets/', 'refused', 'has an empty, `.` or `..` segment; an entry is a file or a `dir/` grant'],
+    ])
+    expect(issues.every((i) => i.fix === 'name the file, or the folder as `dir/`')).toBe(true)
+  })
+
+  it('names a folder written with no trailing slash, which would be read as a file and match nothing', () => {
+    expect(contractIssues(['packages/shared'], tree)).toEqual([
+      {
+        entry: 'packages/shared',
+        kind: 'mistyped',
+        words: 'names a folder, and an entry with no trailing slash is read as a file',
+        fix: 'write it `packages/shared/`',
+      },
+    ])
+  })
+
+  it('names a file written with a trailing slash, which would be read as a folder', () => {
+    expect(contractIssues(['schemas/api.json/'], tree)).toEqual([
+      {
+        entry: 'schemas/api.json/',
+        kind: 'mistyped',
+        words: 'names a file, and an entry with a trailing slash is read as a folder',
+        fix: 'write it `schemas/api.json`',
+      },
+    ])
+  })
+
+  it('reports an entry that names nothing in the tree with no fix, since a path still to be created reads the same', () => {
+    expect(contractIssues(['pakages/shared/', 'schemas/next.json'], tree)).toEqual([
+      { entry: 'pakages/shared/', kind: 'missing', words: 'names nothing in the tree yet', fix: null },
+      { entry: 'schemas/next.json', kind: 'missing', words: 'names nothing in the tree yet', fix: null },
+    ])
+  })
+
+  it("keeps the setting's order, and leaves the sound entries out", () => {
+    const issues = contractIssues(['schemas/', 'packages/shared', 'schemas/api.json', 'src/*'], tree)
+    expect(issues.map((i) => i.entry)).toEqual(['packages/shared', 'src/*'])
   })
 })

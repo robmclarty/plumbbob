@@ -9,6 +9,8 @@ what it says is what was measured on that day, at that version.
 
 Newest first:
 
+- [2026-11-21-grain.md](2026-11-21-grain.md), plumbbob 0.17.1 with the uncommitted doctor and eval work: c15 (steps cut to the grain), new, with `grain: fine` set, beside c8 (legible intent), latched arm only, 5/5 each. Every c15 plan ran to 4 steps whose widest seam names 2 paths.
+- [2026-11-21-grain-control.md](2026-11-21-grain-control.md), the same day and tree: c15's control, the same prompt with no grain set (`PLUMBBOB_EVAL_GRAIN=default`), 0/5. Every plan ran to 2 steps, the wider naming 6 or 7 paths, so the fails are the measurement: what a plan is cut to with no grain.
 - [2026-11-10-next.md](2026-11-10-next.md), plumbbob 0.14.3 with the uncommitted `/plumbbob:next` work: c14 (`/plumbbob:next` falls back to the dashboard with no question tool) beside c1, c4, c10, c11, c12, and c13, latched arm only, 5/5 each.
 - [2026-10-31-short-stop.md](2026-10-31-short-stop.md), plumbbob 0.13.6: c11 (a run ends on its stop card) and c13 (a short stop card after an approved halt), latched arm only, 5/5 each.
 - [2026-10-31-reply-order.md](2026-10-31-reply-order.md), 0.13.6: c10 (a question at the pause) and c12 (feedback at the pause), latched only, 5/5 each.

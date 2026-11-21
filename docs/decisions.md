@@ -2222,14 +2222,18 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   `settings.local.json` is never opened for it, so an overlay can neither add an entry nor drop one. A missing
   key, a value that is not a list, and an entry that is not a non-blank string each read as nothing, and one bad
   entry costs only itself. An entry is trimmed and loses a leading `./`, as a seam token does, and is named once;
-  none is validated, so a glob or an absolute path stays in the list and matches nothing. A changed path touches
+  none is validated when it is read, so a glob or an absolute path stays in the list and matches nothing.
+  `plumbbob doctor` is where that shows: an entry the seam grammar refuses, and one whose trailing slash
+  disagrees with the tree (a folder written as a file, or a file as a folder), is a `✗` row with its fix and a
+  counted problem, and an entry that names nothing in the tree yet is a `○` row, since a path still to be
+  created reads the same as a typo. A changed path touches
   an entry as it would sit in a seam: it is that file, or it lies under that `dir/` grant. Nothing refuses an
-  edit to a contract path ([**D10 (pause-not-lock)**](#d10)), and the setting has one reader so far, the report's
-  footprint ([**D166 (finish-footprint)**](#d166)). `plan.json` still exports `contract_paths` as `[]`
+  edit to a contract path ([**D10 (pause-not-lock)**](#d10)), and the setting has two readers, the report's
+  footprint ([**D166 (finish-footprint)**](#d166)) and `doctor`. `plan.json` still exports `contract_paths` as `[]`
   ([**D139 (field-mapping)**](#d139)), since what that field carries is runciter's contract to settle first.
   *because* the contract is the team's, and a personal overlay that narrowed it would hide a touch from the one
-  person who needed to see it. *Tagged in* `contract.ts`, `settings.ts`, `docs/cli-reference.md`, and
-  `docs/plan-export.md`.
+  person who needed to see it. *Tagged in* `contract.ts`, `settings.ts`, `intent.ts`, `verbs/doctor.ts`,
+  `docs/cli-reference.md`, and `docs/plan-export.md`.
 
 - <a id="d165"></a>**D165 (grain): A `grain` setting says how coarsely a plan cuts its steps, and the plan card
   names a step cut against it.** `grain` is `fine`, `default` or `coarse`, resolved through the whole ladder

@@ -1069,8 +1069,8 @@ namespace (skills can drop to flat names like `/status`); `--force` overrides th
 plumbbob doctor [--migrate]
 ```
 
-Seven sections under one verb: the plugin link, the sidecar layout, the repo setup, the
-user-authored agents, the check gate, the approval latch, and the reach.
+Eight sections under one verb: the plugin link, the sidecar layout, the repo setup, the
+user-authored agents, the check gate, the approval latch, the reach, and the contract paths.
 
 **Plugin link** (read-only). Across both install paths it verifies the skills-dir link
 resolves to a package carrying the manifest, the skills, and `hooks/hooks.json` with its four
@@ -1147,6 +1147,23 @@ plumbbob doctor — reach — D155 (reach-is-computed)
 With atis found, the line reads
 `✓ atis <version>: the pause splits a step's diff into seam, reach, and out`
 ([the reach](reach.md)).
+
+**Contract paths** ([**D164 (contract-paths)**](decisions.md#d164)). Printed only when
+[`contractPaths`](#settings) lists something. The setting is read without validation, so an
+entry that can never match would read `none touched` in every report; this section is where
+that shows. An entry the seam grammar refuses (a glob, a backslash, an absolute path, a `.`
+or `..` segment), and one whose trailing slash disagrees with the tree, is a `✗` row with
+its fix and a counted problem. An entry that names nothing in the tree yet is a `○` row and
+no problem, since a path still to be created reads the same as a typo:
+
+```text
+plumbbob doctor — contract paths — D164 (contract-paths)
+  ✗ contract: `packages/shared` names a folder, and an entry with no trailing slash is read as a file
+      → write it `packages/shared/` in .plumbbob/settings.json
+  ○ contract: `schemas/next.json` names nothing in the tree yet
+```
+
+With every entry sound, the section is one line: `✓ contract: 3 paths`.
 
 Exits 0 when everything passes, 1 when a check fails or an un-migrated legacy
 sidecar is present.

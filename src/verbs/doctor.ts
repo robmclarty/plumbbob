@@ -1,4 +1,4 @@
-// `plumbbob doctor`: the health report, six sections under one verb.
+// `plumbbob doctor`: the health report, eight sections under one verb.
 //
 // 1. The global plugin link (read-only). After `plumbbob init`, plumbbob lives as a
 //    symlink at ~/.claude/skills/plumbbob pointing at the installed package; Claude
@@ -40,9 +40,17 @@
 //    can latch on a recorded human turn) or dormant (guidance only): dormant is a
 //    state, never a failure.
 //
+// 7. The reach. Whether atis is on PATH to split a step's diff at the pause;
+//    optional, so never a failure.
+//
+// 8. The contract paths. When `contractPaths` lists any, each entry that can
+//    never match (one the seam grammar refuses, or a folder written without its
+//    slash) is a problem with its fix, since it would read `none touched` in
+//    every report; an entry that names nothing in the tree yet is a ○ line.
+//
 // Functional, node builtins plus checkride.
 
-import { accessSync, constants, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { accessSync, constants, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, isAbsolute, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -62,6 +70,7 @@ import {
   resolveBinding,
 } from '../lib/agents.ts'
 import { gateDetectsTools } from '../lib/check.ts'
+import { contractIssues, contractPaths } from '../lib/contract.ts'
 import { atisVersion } from '../lib/reachfile.ts'
 import { marketplacePlumbbob } from '../lib/plugins.ts'
 import { findRepoRoot, gitPath, hasCommit, stagePath } from '../lib/git.ts'
@@ -798,10 +807,49 @@ function reachReport(cwd: string): { readonly lines: string[]; readonly failed: 
 }
 
 /**
+ * The contract-paths probe: can every `contractPaths` entry match?
+ *
+ * The setting is read without validation, so an entry that can never match
+ * stays in the list and reads `none touched` in every report's footprint: the
+ * one silent failure the setting has. An entry the seam grammar refuses, and
+ * one whose trailing slash disagrees with the tree (a folder written as a
+ * file, or a file as a folder), is a `✗` row with its fix and a counted
+ * problem. An entry that names nothing in the tree yet is a `○` row and no
+ * problem, since a path still to be created reads the same as a typo. With
+ * every entry sound, one `✓` line counts them. Silent when the setting lists
+ * nothing, and outside a repo.
+ */
+function contractReport(cwd: string): { readonly lines: string[]; readonly failed: number } {
+  const root = findRepoRoot(cwd)
+  const contract = root === null ? [] : contractPaths(root)
+  if (root === null || contract.length === 0) return { lines: [], failed: 0 }
+  const issues = contractIssues(contract, {
+    exists: (path) => existsSync(join(root, path)),
+    isDirectory: (path) => {
+      try {
+        return statSync(join(root, path)).isDirectory()
+      } catch {
+        return false
+      }
+    },
+  })
+  const rows = issues.map((issue) =>
+    issue.fix === null
+      ? `  ○ contract: \`${issue.entry}\` ${issue.words}`
+      : `  ✗ contract: \`${issue.entry}\` ${issue.words}\n      → ${issue.fix} in .plumbbob/settings.json`,
+  )
+  const sound = `  ✓ contract: ${contract.length} ${contract.length === 1 ? 'path' : 'paths'}`
+  return {
+    lines: ['', 'plumbbob doctor — contract paths — D164 (contract-paths)', ...(rows.length === 0 ? [sound] : rows)],
+    failed: issues.filter((issue) => issue.fix !== null).length,
+  }
+}
+
+/**
  * Run every doctor section, print the report, and return the exit code.
  *
  * Sections in order: plugin install, sidecar layout (migrating under `--migrate`),
- * repo setup, agents, check gate, approval latch, reach. Exit 1 when any section reported a problem, so
+ * repo setup, agents, check gate, approval latch, reach, contract paths. Exit 1 when any section reported a problem, so
  * scripts can gate on it; the closing lines cover the restart and the PATH story
  * either way. `env` injects a deterministic toolchain probe for tests (see GateEnv),
  * and `tiers` moves the agent tiers outside the repo for them.
@@ -837,7 +885,10 @@ export async function doctor(
 
   out.push(...reachReport(cwd).lines)
 
-  const failed = checks.filter((c) => !c.ok).length + sidecar.failed + repo.failed + agents.failed + gate.failed + latch.failed
+  const contract = contractReport(cwd)
+  out.push(...contract.lines)
+
+  const failed = checks.filter((c) => !c.ok).length + sidecar.failed + repo.failed + agents.failed + gate.failed + latch.failed + contract.failed
   out.push('')
   out.push(
     failed === 0

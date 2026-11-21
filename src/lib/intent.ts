@@ -156,6 +156,29 @@ function hasBadSegment(token: string): boolean {
   return body.split('/').some((segment) => segment === '' || segment === '.' || segment === '..')
 }
 
+/**
+ * Why the seam grammar refuses an entry, in a few words that follow its name
+ * (`is a glob`), or null for one it takes: an exact repo-relative path or a
+ * `dir/` grant.
+ *
+ * The same four refusals `parseStepSeam` makes, in its order, for a reader
+ * that holds entries from somewhere other than a step's `seam:` line. The
+ * entry is read as given, so the caller trims it and drops a leading `./`
+ * first, as the seam parse does.
+ */
+export function seamEntryIssue(entry: string): string | null {
+  if (GLOB_CHARS.test(entry)) {
+    return 'is a glob'
+  }
+  if (entry.includes('\\')) {
+    return 'holds a backslash'
+  }
+  if (entry.startsWith('/')) {
+    return 'is absolute'
+  }
+  return hasBadSegment(entry) ? 'has an empty, `.` or `..` segment' : null
+}
+
 /** Where a step stops for a person, as its `- stop:` line names it. */
 export type StepStop = 'planned' | 'structural'
 

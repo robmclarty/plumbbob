@@ -155,6 +155,41 @@ export function intentBoxes(repo: string): ReadonlyMap<number, boolean> {
   return boxes
 }
 
+// Each step's seam under intent's `## Steps`: the backticked paths on its
+// `- seam:` sub-line, wrapped lines included, keyed by step number. A step
+// with no seam line maps to an empty list. Read here and not through the
+// product's parser, so a parser bug shows as a failed contract.
+export function stepSeams(repo: string): ReadonlyMap<number, ReadonlyArray<string>> {
+  const seams = new Map<number, string[]>()
+  let inSteps = false
+  let step: number | null = null
+  let inSeam = false
+  for (const raw of readOr(buildPath(repo, 'intent.md')).split('\n')) {
+    if (/^##\s+Steps\b/.test(raw)) {
+      inSteps = true
+      continue
+    }
+    if (!inSteps) continue
+    if (/^##\s/.test(raw)) break
+    const opener = /^(\d+)\.\s/.exec(raw)
+    if (opener !== null) {
+      step = Number(opener[1])
+      seams.set(step, [])
+      inSeam = false
+      continue
+    }
+    if (step === null) continue
+    const line = raw.split('<!--')[0] ?? ''
+    if (/^\s*-\s*seam:/.test(line)) {
+      inSeam = true
+    } else if (/^\s*-\s/.test(line) || !line.includes('`')) {
+      inSeam = false
+    }
+    if (inSeam) seams.get(step)?.push(...[...line.matchAll(/`([^`]+)`/g)].map((m) => (m[1] ?? '').trim()))
+  }
+  return seams
+}
+
 // Bullets under the build-log's `## Park list` — a *captured* deferral. Prose
 // that merely says "let's defer that" writes no line here.
 export function parkLines(repo: string): ReadonlyArray<string> {

@@ -14,6 +14,7 @@ import { c2 } from '../evals/contracts/c2-red.eval.ts'
 import { c8 } from '../evals/contracts/c8-legible.eval.ts'
 import { c10 } from '../evals/contracts/c10-question.eval.ts'
 import { c12 } from '../evals/contracts/c12-feedback.eval.ts'
+import { c15 } from '../evals/contracts/c15-grain.eval.ts'
 import { C11_PARK, C11_RANGES, c11 } from '../evals/contracts/c11-run.eval.ts'
 import { THREE_STEPS, TWO_STEPS } from '../evals/contracts/contract.ts'
 import { armRun, readLedger, turnParts, type EvalSession, type TurnResult } from '../evals/helpers/driver.ts'
@@ -26,6 +27,7 @@ import {
   gateIsRed,
   hasTemplatePlaceholder,
   intentBoxes,
+  stepSeams,
   intentSectionBullets,
   parkLines,
   snapshot,
@@ -1484,5 +1486,121 @@ describe('c11 run outcomes (stub session, live renderer)', () => {
     )
     expect(failed).not.toContain('checkpointed exactly steps 1 and 2')
     expect(outcome).toBe('fail')
+  })
+})
+
+// Contract 15's reader and its own logic, driven by a stub session as contract
+// 8's is: no model and no cost.
+describe('c15 steps cut to the grain (reader and stub-session outcomes)', () => {
+  const stubTurn = (): TurnResult => ({
+    prompt: '',
+    content: '',
+    finishReason: 'stop',
+    costUsd: 0,
+    inputTokens: 0,
+    outputTokens: 0,
+    durationMs: 1,
+    sessionId: null,
+  })
+
+  function sessionWriting(repo: string, body: string | null): EvalSession {
+    return {
+      repo,
+      sweep: 'latched',
+      model: 'stub',
+      warmup: async () => {},
+      transcript: () => '',
+      close: async () => {},
+      turn: async () => {
+        if (body !== null) writeFileSync(join(repo, '.plumbbob', 'builds', EVAL_SLUG, 'intent.md'), body)
+        return stubTurn()
+      },
+    }
+  }
+
+  // A plan whose steps carry the given seams, one step to a list; an empty
+  // list is a step with no seam line.
+  function planWith(seams: ReadonlyArray<ReadonlyArray<string>>): string {
+    return [
+      '# Greeting formats',
+      '',
+      '## Steps',
+      '',
+      ...seams.flatMap((seam, i) => [
+        `${i + 1}. [ ] feat(format): step ${i + 1} — **done when:** node check.js passes`,
+        ...(seam.length === 0 ? [] : [`   - seam: ${seam.map((path) => `\`${path}\``).join(', ')}`]),
+      ]),
+      '',
+      '## Open questions',
+      '',
+    ].join('\n')
+  }
+
+  it('stepSeams reads each step\'s seam, a wrapped line included, and stops at the next sub-line and the next section', () => {
+    const { repo } = makeEvalFixture({ steps: TWO_STEPS, gate: 'green' })
+    writeFileSync(
+      join(repo, '.plumbbob', 'builds', EVAL_SLUG, 'intent.md'),
+      [
+        '# Plan',
+        '',
+        '## Steps',
+        '',
+        '1. [ ] first',
+        '   - seam: `src/a.js`, `src/b.js`,',
+        '     `src/c.js` <!-- a note with `backticks` -->',
+        '   - model: `haiku` would do',
+        '2. [x] second, with no seam line',
+        '   - proof: `node check.js` passes',
+        '3. [ ] third',
+        '   - seam: `docs/`',
+        '',
+        '## Build ranges',
+        '',
+        '1. `/plumbbob:build 1-3`',
+        '   - seam: `not/a/step.js`',
+        '',
+      ].join('\n'),
+    )
+    expect([...stepSeams(repo)]).toEqual([
+      [1, ['src/a.js', 'src/b.js', 'src/c.js']],
+      [2, []],
+      [3, ['docs/']],
+    ])
+  })
+
+  it('a plan whose every seam names 3 paths at most passes', async () => {
+    const { deriveOutcome } = await import('../evals/run.ts')
+    const fixture = c15.makeFixture()
+    const body = planWith([['src/format/json.js', 'src/format/json.test.js'], ['src/format/index.js', 'README.md', 'src/format/csv.js']])
+    const result = await c15.run(sessionWriting(fixture.repo, body), fixture)
+    expect(result.checks.filter((c) => c.kind !== 'info' && !c.pass)).toEqual([])
+    expect(deriveOutcome(result)).toBe('pass')
+  })
+
+  it('a step whose seam names 4 paths fails, and the detail names the step and the count', async () => {
+    const { deriveOutcome } = await import('../evals/run.ts')
+    const fixture = c15.makeFixture()
+    const body = planWith([['a.js', 'b.js', 'c.js', 'd.js'], ['README.md']])
+    const result = await c15.run(sessionWriting(fixture.repo, body), fixture)
+    expect(deriveOutcome(result)).toBe('fail')
+    expect(result.checks.find((c) => c.name === "every step's seam names 3 paths at most")).toMatchObject({
+      pass: false,
+      detail: 'step 1 names 4',
+    })
+  })
+
+  it('an untouched intent, a one-step plan, and a step with no seam are each invalid', async () => {
+    const { deriveOutcome } = await import('../evals/run.ts')
+    for (const body of [null, planWith([['a.js']]), planWith([['a.js'], []])]) {
+      const fixture = c15.makeFixture()
+      expect(deriveOutcome(await c15.run(sessionWriting(fixture.repo, body), fixture))).toBe('invalid')
+    }
+  })
+
+  it('sets the grain in the personal overlay, which the fixture commit does not carry', () => {
+    const { repo } = c15.makeFixture()
+    expect(JSON.parse(readFileSync(join(repo, '.plumbbob', 'settings.local.json'), 'utf8'))).toEqual({ grain: 'fine' })
+    expect(runCli(repo, ['status']).stdout).toContain("grain  fine: a step's seam names 3 paths at most")
+    expect(execFileSync('git', ['-C', repo, 'status', '--porcelain'], { encoding: 'utf8' })).toBe('')
   })
 })
