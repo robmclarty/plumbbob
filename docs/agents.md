@@ -550,6 +550,14 @@ each page as [`evidence[]`](#evidence-something-to-look-at). It runs on Ollama, 
 OpenAI-compatible server, Anthropic or OpenRouter, and costs 10 to 30 model turns a walk,
 so bind it on the steps with a manual proof.
 
+One example takes the `build` slot. [`examples/agents/crew-builder/`](../examples/agents/crew-builder/)
+writes the step's diff with a crew of models: several candidates, each inside the seam,
+and one kept, picked by the step's own proof command, by a judge model, or by a critic's
+loop. It runs on a local Ollama by default, and its provider and flow are read from
+`agentConfig.crew-builder`. Bound in settings beside `grain: fine`, it is the local half of
+[**D167 (host-orchestration)**](decisions.md#d167): the fan-out is code inside the agent,
+where the host's own sub-agents are the other half.
+
 ## See also
 
 - [`skills-reference.md`](skills-reference.md#the-harness-slots): how `/plumbbob:plan`, `/plumbbob:step`,

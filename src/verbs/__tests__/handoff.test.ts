@@ -692,6 +692,38 @@ describe('handoff', () => {
     }
   })
 
+  it("names a wide step with no note under orchestration host, after the step's grain finding — D167 (host-orchestration)", async () => {
+    // Step 1 is wide and proved in words, so under the coarse grain it draws
+    // both kinds; step 2's one file is a single slice and draws nothing.
+    const plan = INTENT.replace('1. [x] First', '1. [ ] First').replace('`src/a.ts`', '`src/a.ts`, `src/a.test.ts`, `docs/a.md`')
+    const dir = await started(plan)
+    writeFileSync(localSettingsPath(dir), JSON.stringify({ grain: 'coarse', orchestration: 'host' }))
+    const { code, stdout } = captureIo(() => handoff(dir, ['--plan']))
+    const where = relative(dir, intentPath(dir))
+    expect(code).toBe(0) // guidance: the card names it and refuses nothing
+    expect(stdout).toContain(
+      [
+        `- [Step 1](${where}#L5) is proved in words; the grain is coarse, where a proof opens on a command.`,
+        `- [Step 1](${where}#L5)'s seam holds 2 slices and no note names the split; orchestration is host, where a wide step carries one.`,
+        `- [Step 2](${where}#L7) is proved in words; the grain is coarse, where a proof opens on a command.`,
+      ].join('\n'),
+    )
+    expect(stdout).not.toContain(`[Step 2](${where}#L7)'s seam holds`)
+  })
+
+  it('prints the card it printed before with orchestration off, absent, or naming nothing — D167 (host-orchestration)', async () => {
+    const plan = INTENT.replace('1. [x] First', '1. [ ] First').replace('`src/a.ts`', '`src/a.ts`, `docs/a.md`')
+    const dir = await started(plan)
+    const before = captureIo(() => handoff(dir, ['--plan'])).stdout
+    expect(before).not.toContain('orchestration is host')
+    for (const orchestration of ['off', 'workflow', true]) {
+      writeFileSync(settingsPath(dir), JSON.stringify({ orchestration }))
+      expect(captureIo(() => handoff(dir, ['--plan'])).stdout).toBe(before)
+    }
+    writeFileSync(settingsPath(dir), JSON.stringify({ orchestration: 'host' }))
+    expect(captureIo(() => handoff(dir, ['--plan'])).stdout).toContain("'s seam holds 2 slices and no note names the split")
+  })
+
   it('tables the open questions above the moves, with the move that settles them, and no Questions row — D118 (questions-table)', async () => {
     const questions = [
       '',

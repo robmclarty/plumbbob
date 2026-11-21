@@ -1,0 +1,8 @@
+{
+  "contract": 1,
+  "name": "crew-builder",
+  "command": "node \"$PLUMBBOB_AGENT_DIR/build.mjs\"",
+  "slots": ["build"],
+  "description": "Authors a step's diff with a crew of models (fascicle-composed): several candidates, picked by the step's own proof, a judge, or a critic's loop. Local Ollama by default. Writes only inside the step's seam; never checkpoints.",
+  "when": "bound to the build slot for steps cut fine enough for a local model: one to three files, with a proof that opens on a command"
+}

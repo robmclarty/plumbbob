@@ -151,6 +151,17 @@ prints beneath `NO ACTIVE SESSION`, and beneath the list of builds `status` prin
 is active, since `/plumbbob:plan` reads this output before it opens a session. With the grain
 at `default`, or no key at all, nothing prints, and `--questions` and `--json` never carry it.
 
+When the `orchestration` setting is `host`
+([**D167 (host-orchestration)**](decisions.md#d167)), a second line joins that block, beneath
+the grain's or alone:
+
+```text
+orchestration  host: a step may be built by sub-agents, inside its seam
+```
+
+It prints in the same places and under the same flags as the grain line. The plan skill reads
+it to write a wide step's split, and the build skill to hand that split out.
+
 When agents are bound, a `harness bindings:` block follows the dashboard: a `settings ·` row
 for each slot the settings ladder's `agents` key names, then the build's `harness.json`, its
 `defaults ·` rows and a `step N ·` row per step. The settings rows print with or without a
@@ -1280,6 +1291,7 @@ default. The known keys:
 { "agentConfig": { "reviewer": { … } } } // per-agent config, handed to that agent as settings.agent in its envelope
 { "contractPaths": ["packages/shared/", "schemas/api.json"] } // the paths the rest of the repo depends on, read from this file alone (D164 (contract-paths))
 { "grain": "coarse" }                    // how coarsely a plan cuts its steps: fine, default or coarse (D165 (grain))
+{ "orchestration": "host" }              // the host model may build a step with its own sub-agents (D167 (host-orchestration))
 
 // settings.local.json  (untracked — personal, per-worktree)
 { "check": "pnpm check --only types,lint" }   // the same keys, all but contractPaths, overriding the tracked file in this worktree only
@@ -1321,6 +1333,28 @@ step's proof opens on a command. [`status`](#status) prints the grain in one lin
 plan card names a step cut against it under `**Seams**:`
 ([the seams part](presentation.md#the-seams-part)). It is guidance: no plan is refused for
 it, and no grain moves a stop.
+
+`orchestration` says who builds a step once the grain has sized it: `host` lets the host
+model hand a step's slices to its own sub-agents, by a workflow where the host has one, and
+`off` (or any other value) is the step built by one model
+([**D167 (host-orchestration)**](decisions.md#d167)). It resolves through the whole ladder,
+since it follows the harness you run. [`status`](#status) prints it in one line. The step's
+seam, proof and stop are what they were, the builder still writes the one card, and the
+setting is never a grant: no sub-agent can land a step. The plan card names a step whose
+seam holds two slices or more with no note to split it
+([the seams part](presentation.md#the-seams-part)). A `build`-slot agent bound to a step
+outranks it. Two profiles cover most repos:
+
+```jsonc
+{ "grain": "coarse", "orchestration": "host" }   // a frontier model: wide steps, built by the host's sub-agents
+
+{ "grain": "fine",                               // local models: narrow steps, each authored by a build-slot agent
+  "agents": { "build": ["crew-builder"] },
+  "agentConfig": { "crew-builder": { "provider": "ollama", "flow": "proof" } } }
+```
+
+The second names [`crew-builder`](../examples/agents/crew-builder/), an example agent you copy
+into `.plumbbob/agents/`.
 
 ## Exit codes
 

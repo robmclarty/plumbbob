@@ -34,7 +34,8 @@ its sections **What this skill does, in order** (steps 2 to 5: entering a step, 
 plan, implementing within the seam, parking a tangent, and the verify tick with its pause),
 **`--auto`: let the agent be the clock (opt-in)** with its halt list, **A step range (`N-M`,
 or a list like `20,5-9`) is a bounded `--auto`**, **Running bound agents** when the dashboard
-shows a `harness bindings:` block, and **The hard contracts**.
+shows a `harness bindings:` block, **Building with the host's sub-agents** when it shows
+an `orchestration  host` line, and **The hard contracts**.
 
 Its rules about its own invocation are about `/plumbbob:build` and do not apply here: its
 first step (picking the step from its arguments) and its rule that the invocation outranks

@@ -190,6 +190,45 @@ export function stepSeams(repo: string): ReadonlyMap<number, ReadonlyArray<strin
   return seams
 }
 
+// Each step's notes under intent's `## Steps`: the text of every `- note:`
+// sub-line, wrapped continuation lines joined with a space, keyed by step
+// number. A step with no note maps to an empty list. Read here and not
+// through the product's parser, as the seams are.
+export function stepNotes(repo: string): ReadonlyMap<number, ReadonlyArray<string>> {
+  const notes = new Map<number, string[]>()
+  let inSteps = false
+  let step: number | null = null
+  let inNote = false
+  for (const raw of readOr(buildPath(repo, 'intent.md')).split('\n')) {
+    if (/^##\s+Steps\b/.test(raw)) {
+      inSteps = true
+      continue
+    }
+    if (!inSteps) continue
+    if (/^##\s/.test(raw)) break
+    const opener = /^(\d+)\.\s/.exec(raw)
+    if (opener !== null) {
+      step = Number(opener[1])
+      notes.set(step, [])
+      inNote = false
+      continue
+    }
+    if (step === null) continue
+    const line = raw.split('<!--')[0] ?? ''
+    const note = /^\s*-\s*note:\s*(.*)$/.exec(line)
+    const list = notes.get(step) ?? []
+    if (note !== null) {
+      inNote = true
+      list.push((note[1] ?? '').trim())
+    } else if (/^\s*-\s/.test(line) || line.trim().length === 0) {
+      inNote = false
+    } else if (inNote && list.length > 0) {
+      list[list.length - 1] = `${list.at(-1) ?? ''} ${line.trim()}`.trim()
+    }
+  }
+  return notes
+}
+
 // Bullets under the build-log's `## Park list` — a *captured* deferral. Prose
 // that merely says "let's defer that" writes no line here.
 export function parkLines(repo: string): ReadonlyArray<string> {

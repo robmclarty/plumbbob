@@ -3,8 +3,9 @@
 A **user-authored agent** is any executable that speaks PlumbBob's subprocess envelope — the
 doorway that lets a program plug into the loop as a step's `before`, `build`, or `after` slot.
 The full contract for authors is [`docs/agents.md`](../../docs/agents.md); this folder holds
-four working examples — the contract bare, the contract wrapping a real framework, the
-same reviewer made provider-switchable, and an agent that looks at the running app:
+five working examples — the contract bare, the contract wrapping a real framework, the
+same reviewer made provider-switchable, an agent that looks at the running app, and one
+that writes the step's diff:
 
 - [`echo-reviewer/`](echo-reviewer/) — POSIX `sh`, nothing to install; read it top to bottom.
 - [`ollama-reviewer/`](ollama-reviewer/) — a [fascicle](https://github.com/robmclarty/fascicle)-composed
@@ -16,6 +17,10 @@ same reviewer made provider-switchable, and an agent that looks at the running a
   MCP server, walks what the step's proof says should be true, and returns its screenshots
   as evidence. It runs on any of four model providers, a local Ollama among them; its
   [README](walkthrough/README.md) has the setup and the security notes.
+- [`crew-builder/`](crew-builder/): the one example for the **`build` slot**. A crew of
+  models writes candidates for the step's diff, inside its seam, and one is kept: picked by
+  the step's own proof command, by a judge, or by a critic's loop. Local Ollama by default;
+  the provider and the flow are settings. Its [README](crew-builder/README.md) has the flows.
 
 The two fascicle reviewers are two shapes of the same idea, worth holding side by side:
 

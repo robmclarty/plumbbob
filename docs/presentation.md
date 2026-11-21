@@ -1092,6 +1092,19 @@ One grain is set at a time, so a card carries one kind or the other. The
 count takes them in, they refuse nothing, and with the grain at `default` the
 part reads as it did before the setting existed.
 
+Under `orchestration: host` ([D167 (host-orchestration)](decisions.md#d167)),
+a step whose seam holds two slices or more and carries no `- note:` draws a
+line too, after its grain line. A `dir/` grant is one slice, and a file
+shares one with its test, so a module and its test draw nothing:
+
+```text
+- [Step 1](.plumbbob/builds/formats/intent.md#L5)'s seam holds 4 slices and no note names the split; orchestration is host, where a wide step carries one.
+```
+
+The note is where the builder reads the split it hands to sub-agents. The
+CLI cannot see what a folder will hold, so a single grant holding four
+modules draws nothing.
+
 An auto halt on trouble renders the standard card; the Verdict's worst
 component is the halt reason. A clean halt renders no card at all: its step
 has landed, and nothing is left for the human to decide.

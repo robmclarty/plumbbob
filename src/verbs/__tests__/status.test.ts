@@ -774,6 +774,69 @@ describe('status — the grain line — D165 (grain)', () => {
       expect(views.map(([cwd, args]) => captureIo(() => status(cwd, args)).stdout)).toEqual(before)
     }
   })
+
+  describe('the orchestration line — D167 (host-orchestration)', () => {
+    const HOST = 'orchestration  host: a step may be built by sub-agents, inside its seam'
+
+    it('adds one line beneath the dashboard under host, and changes nothing above it', async () => {
+      const dir = await grained()
+      const plain = captureIo(() => status(dir)).stdout
+      writeFileSync(settingsPath(dir), JSON.stringify({ orchestration: 'host' }))
+      const { code, stdout } = captureIo(() => status(dir))
+      expect(code).toBe(0)
+      expect(stdout).toBe(`${plain}\n${HOST}\n`)
+    })
+
+    it('rides beneath the grain line in one block, ahead of the harness bindings', async () => {
+      const home = makeTempDir()
+      const dir = await grained()
+      writeFileSync(settingsPath(dir), JSON.stringify({ grain: 'coarse', orchestration: 'host', agents: { after: ['reviewer'] } }))
+      putAgent(dir, 'reviewer')
+      const { stdout } = statusWithHome(home, dir)
+      expect(stdout.endsWith(`\n\n${COARSE}\n${HOST}\n\nharness bindings:\n  settings · after: reviewer\n`)).toBe(true)
+    })
+
+    it('reads it through the settings ladder, so an overlay turns a project default off', async () => {
+      const dir = await grained()
+      writeFileSync(settingsPath(dir), JSON.stringify({ orchestration: 'host' }))
+      writeFileSync(localSettingsPath(dir), JSON.stringify({ orchestration: 'off' }))
+      expect(captureIo(() => status(dir)).stdout).not.toContain('orchestration  ')
+    })
+
+    it('prints beneath the run dashboard and both sentinels, since the plan skill reads status before a session opens', async () => {
+      const dir = await grained()
+      const run = captureIo(() => status(dir, ['--run', ''])).stdout
+      writeFileSync(settingsPath(dir), JSON.stringify({ orchestration: 'host' }))
+      expect(captureIo(() => status(dir, ['--run', ''])).stdout).toBe(`${run}\n${HOST}\n`)
+
+      const lost = await withoutCursor()
+      const listed = captureIo(() => status(lost)).stdout
+      writeFileSync(settingsPath(lost), JSON.stringify({ orchestration: 'host' }))
+      expect(captureIo(() => status(lost)).stdout).toBe(`${listed}\n${HOST}\n`)
+
+      const bare = makeTempRepo()
+      mkdirSync(sidecarDir(bare), { recursive: true })
+      writeFileSync(settingsPath(bare), JSON.stringify({ orchestration: 'host' }))
+      expect(captureIo(() => status(bare)).stdout).toBe(`NO ACTIVE SESSION\n\n${HOST}\n`)
+    })
+
+    it('prints the bytes it printed before when the key is off, absent, or names nothing', async () => {
+      const dir = await grained()
+      const before = captureIo(() => status(dir)).stdout
+      for (const orchestration of ['off', 'workflow', true]) {
+        writeFileSync(settingsPath(dir), JSON.stringify({ orchestration }))
+        expect(captureIo(() => status(dir)).stdout).toBe(before)
+      }
+    })
+
+    it('leaves --json and --questions exactly as they are', async () => {
+      const dir = await grained()
+      const views: ReadonlyArray<ReadonlyArray<string>> = [['--json'], ['--json', '--run', ''], ['--questions']]
+      const before = views.map((args) => captureIo(() => status(dir, args)).stdout)
+      writeFileSync(settingsPath(dir), JSON.stringify({ orchestration: 'host' }))
+      expect(views.map((args) => captureIo(() => status(dir, args)).stdout)).toEqual(before)
+    })
+  })
 })
 
 describe('status — harness bindings — D48 (doctor-validates-agents)', () => {

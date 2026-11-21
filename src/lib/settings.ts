@@ -14,8 +14,10 @@
 // agent name, handed to that agent inside its envelope; a local overlay replaces
 // the whole entry), `grain` (`fine`, `default` or `coarse`: how coarsely a plan
 // cuts its steps; it follows the model, so a developer on a local model sets it
-// in settings.local.json, over any project default in settings.json), and
-// `contractPaths` (a list of seam-grammar entries: the paths the rest of the
+// in settings.local.json, over any project default in settings.json),
+// `orchestration` (`host` or `off`: whether the host model may build a step
+// with its own sub-agents; it follows the harness, so it rides the same
+// ladder), and `contractPaths` (a list of seam-grammar entries: the paths the rest of the
 // repo depends on; the contract is the team's, so it belongs in settings.json).
 // `contractPaths` is the one key that skips the ladder: it is read from the
 // tracked file alone, since a personal overlay that narrowed it would hide a

@@ -82,6 +82,12 @@ word up without reading the others first. Each entry points at the page that own
   grain, and the plan card names a step cut against it. Guidance, never a gate, and it
   moves no stop: the grain follows the model, and the ranges follow the person
   ([D165 (grain)](decisions.md#d165)). → [`cli-reference.md`](cli-reference.md#settings)
+- **Orchestration** (`orchestration`): who builds a step, a setting of `host` or `off`.
+  Under `host` the plan writes a wide step's split as a `- note:`, and the builder hands
+  the slices to the host's sub-agents, then joins the diff and writes the one card itself.
+  The seam, the proof and the stop do not move, and no sub-agent can land a step
+  ([D167 (host-orchestration)](decisions.md#d167)). →
+  [`cli-reference.md`](cli-reference.md#settings)
 - **Step lines for a scheduler** (`after:`, `stop:`, `effort:`): three optional lines
   under a step naming what it waits on, whether a stop follows it, and how hard its
   builder should work. A plan with none of them exports fully serial.

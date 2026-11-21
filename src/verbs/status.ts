@@ -8,8 +8,9 @@
 // `--run`, it prints the run a `/plumbbob:run` invocation names above the
 // dashboard, and names the waiting card again beneath the run's grant. A
 // `grain` setting other than the default adds one line beneath the dashboard,
-// and beneath either sentinel, since the plan skill reads this output before
-// it opens a session.
+// and an `orchestration` setting of `host` another, both beneath either
+// sentinel too, since the plan skill reads this output before it opens a
+// session.
 
 import { readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
@@ -23,6 +24,7 @@ import {
   resolveBinding,
 } from '../lib/agents.ts'
 import { FINE_SEAM_LIMIT, resolveGrain } from '../lib/grain.ts'
+import { HOST_ORCHESTRATION_LINE, resolveOrchestration } from '../lib/orchestration.ts'
 import { resolveRecord } from '../lib/settings.ts'
 import {
   buildFolder,
@@ -120,7 +122,9 @@ function grantText(grant: Grant | null): string | null {
  * A `grain` setting other than the default adds one line beneath the
  * dashboard, ahead of the harness bindings, and beneath either sentinel, so
  * the plan skill reads what to cut its steps to whether or not a session is
- * open. `--questions` and `--json` print what they printed without it, a
+ * open. An `orchestration` setting of `host` adds a second line to that block,
+ * beneath the grain's or alone, for the plan and build skills to read.
+ * `--questions` and `--json` print what they printed without either, a
  * sentinel included.
  */
 export function status(cwd: string, args: ReadonlyArray<string> = []): number {
@@ -130,10 +134,10 @@ export function status(cwd: string, args: ReadonlyArray<string> = []): number {
   const json = rest.includes('--json')
   const questions = rest.includes('--questions')
   if (root === null || !hasSession(root)) {
-    // The sentinel stays the first line, exact; the grain rides beneath it,
-    // read from the settings a repo keeps between sessions. `--questions`
+    // The sentinel stays the first line, exact; the grain and the orchestration
+    // ride beneath it, read from the settings a repo keeps between sessions. `--questions`
     // asked for the questions alone, so its sentinel stays bare.
-    const grain = json || questions || root === null ? [] : grainSection(root)
+    const grain = json || questions || root === null ? [] : planSection(root)
     process.stdout.write(json ? stateJson('no-session', [PLAN_MOVE], [], []) : `${['NO ACTIVE SESSION', ...grain].join('\n')}\n`)
     return 0
   }
@@ -148,7 +152,7 @@ export function status(cwd: string, args: ReadonlyArray<string> = []): number {
       return 0
     }
     if (builds.length > 0) {
-      const listed = ['NO ACTIVE BUILD — pick one with `plumbbob use <slug>`:', ...builds.map((b) => `  ${b}`), ...(questions ? [] : grainSection(root))]
+      const listed = ['NO ACTIVE BUILD — pick one with `plumbbob use <slug>`:', ...builds.map((b) => `  ${b}`), ...(questions ? [] : planSection(root))]
       process.stdout.write(`${listed.join('\n')}\n`)
       return 0
     }
@@ -195,7 +199,7 @@ export function status(cwd: string, args: ReadonlyArray<string> = []): number {
     run === null
       ? formatOrientation(orient(input))
       : withPlanEdits(withWaiting(formatRunDashboard(input, resolveRunArgs(run, input), grantText(readGrant(root))), card), root, slug)
-  const lines = [dashboard, ...grainSection(root), ...harnessSection(root, slug)]
+  const lines = [dashboard, ...planSection(root), ...harnessSection(root, slug)]
   process.stdout.write(`${lines.join('\n')}\n`)
   return 0
 }
@@ -270,20 +274,22 @@ function withPlanEdits(dashboard: string, root: string, slug: string | null): st
 }
 
 /**
- * The grain the plan is cut to, as its own block beneath whatever status
- * printed above it: a blank line, then one `grain` line saying what a step
- * takes under that grain.
+ * What the settings say about how the plan is cut and built, as its own block
+ * beneath whatever status printed above it: a blank line, then a `grain` line
+ * saying what a step takes under that grain, and an `orchestration` line when
+ * the host may build a step with its sub-agents.
  *
- * Nothing under the `default` grain, so a repo that sets none prints the bytes
- * it printed before. The line states the measure and refuses nothing: the plan
- * skill reads it where it cuts the steps, and the plan card names any step cut
- * against it.
+ * Nothing under the `default` grain with orchestration `off`, so a repo that
+ * sets neither prints the bytes it printed before. The lines state a measure
+ * and a permission and refuse nothing: the plan skill reads them where it cuts
+ * the steps, the build skill where it builds one, and the plan card names any
+ * step cut against the grain.
  */
-function grainSection(root: string): string[] {
+function planSection(root: string): string[] {
   const grain = resolveGrain(root)
-  if (grain === 'default') return []
   const takes = grain === 'fine' ? `a step's seam names ${FINE_SEAM_LIMIT} paths at most` : "a step's proof opens on a command"
-  return ['', `grain  ${grain}: ${takes}`]
+  const lines = [...(grain === 'default' ? [] : [`grain  ${grain}: ${takes}`]), ...(resolveOrchestration(root) === 'host' ? [HOST_ORCHESTRATION_LINE] : [])]
+  return lines.length === 0 ? [] : ['', ...lines]
 }
 
 /**

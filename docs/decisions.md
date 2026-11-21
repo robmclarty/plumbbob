@@ -2286,6 +2286,32 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   editor would not; the lines are facts, so the model writes none of them. *Tagged in* `footprint.ts`, `git.ts`,
   `orient.ts`, `verbs/finish.ts`, the `finish` skill, and `docs/cli-reference.md`.
 
+- <a id="d167"></a>**D167 (host-orchestration): An `orchestration` setting of `host` lets the host model build a
+  step with its own sub-agents, and the step's contract does not move.** `orchestration` is `host` or `off`,
+  resolved through the whole ladder ([**D27 (settings-ladder)**](#d27)), since it follows the harness a developer
+  runs; a missing key and any other value read as `off`. Under `host`, `plumbbob status` prints
+  `orchestration  host: a step may be built by sub-agents, inside its seam` in the block the grain line opens
+  ([**D165 (grain)**](#d165)), beneath it or alone, and beneath `NO ACTIVE SESSION` and the `NO ACTIVE BUILD` list
+  too; `--json` and `--questions` are as they were, and under `off` every surface prints the bytes it printed
+  before. The plan skill reads the line and writes a wide step's split as a `- note:` on the step: the slices by
+  path, and what they share. The build skill reads it and hands those slices to sub-agents, by the host's
+  workflow tool for a step of three slices or more, then joins the diff, runs the proof and writes the one card
+  itself. On the plan card, under `**Seams**:` and inside its count, an undone step whose seam holds two
+  slices or more and carries no note draws
+  `'s seam holds 4 slices and no note names the split; orchestration is host, where a wide step carries one.`,
+  after that step's grain finding; a `dir/` grant is one slice, and a file shares one with its test. The
+  passage alone left the note out of 3 of the first 10 plans eval c16 read under `host`. The split is prose and
+  the setting is a switch, so no control flow enters config
+  ([**C3 (bindings-not-logic)**](#c3)). No sub-agent runs a plumbbob verb, so none can land a step
+  ([**C6 (no-advance-verb)**](#c6)), and the latch never reads the setting
+  ([**D67 (auto-not-a-grant)**](#d67)). A `build`-slot agent bound to the step outranks it
+  ([**D43 (three-slots)**](#d43)), and it is independent of the grain: coarse steps built by one model are a
+  fair choice. *because* a step's seam, proof and stop were always blind to who wrote the diff
+  ([**D3 (author-blind-executor)**](#d3)), and a frontier harness that can run a workflow inside one turn was
+  being held to one model a step for want of a place to say otherwise. *Tagged in* `orchestration.ts`,
+  `verbs/status.ts`, `verbs/handoff.ts`, the `plan`, `build` and `run` skills, `docs/presentation.md`, and
+  `docs/cli-reference.md`.
+
 ### Superseded
 
 - <a id="d20"></a>**D20 (local-archive): The archive was local-only markdown.** Wrapping wrote a plain-markdown archive

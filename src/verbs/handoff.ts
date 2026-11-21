@@ -66,6 +66,7 @@ import { readProofRun } from '../lib/check.ts'
 import { type PlanEdit, planEdit, runEdits, type RunEdits, shownPlan, shownRunEdits } from '../lib/planmark.ts'
 import { rerootLinks } from '../lib/links.ts'
 import { type GrainFinding, grainFindings, resolveGrain } from '../lib/grain.ts'
+import { resolveOrchestration, type SplitFinding, splitFindings } from '../lib/orchestration.ts'
 import { type SeamFinding, seamFindings, type Tree } from '../lib/seamcheck.ts'
 import {
   buildFolder,
@@ -234,7 +235,7 @@ export function handoff(cwd: string, args: ReadonlyArray<string> = []): number {
     // question deferred to the work is no call to make now.
     const openRows = parseOpenQuestionRows(intent)
     const questions = questionsPart(openRows, where)
-    const seams = seamsPart(seamFindings(intent, repoTree(root)), grainFindings(intent, resolveGrain(root)), where)
+    const seams = seamsPart(seamFindings(intent, repoTree(root)), [...grainFindings(intent, resolveGrain(root)), ...splitFindings(intent, resolveOrchestration(root))], where)
     const plan = [
       SEAM_RULE,
       seams ?? '',
@@ -1592,14 +1593,16 @@ function planCallBlock(first: Step | undefined, run: Run, publish: Publish, toAn
 /**
  * The seams the plan card names, one line per finding, or null when there is
  * nothing to say: a seam the build would refuse, a token one edit away from
- * a file that exists, a `like:` path that does not exist, or a step cut
- * against the grain the settings name.
+ * a file that exists, a `like:` path that does not exist, a step cut
+ * against the grain the settings name, or, under `orchestration: host`, a
+ * wide step with no note to name its split.
  *
  * Each line links its step's opener, the way a question links its own, and
  * nothing here refuses the plan; the human reads it at the one pause where a
- * seam is still cheap to fix. A step's grain findings follow its seam and like
- * findings, in the same line shape and under the same count; with the grain
- * at its default there are none, and the part is the seam check's alone.
+ * seam is still cheap to fix. A step's grain and split findings follow its
+ * seam and like findings, in that order, in the same line shape and under the
+ * same count; with the grain at its default and orchestration off there are
+ * none, and the part is the seam check's alone.
  *
  * ```text
  * **Seams**: 3 to look at
@@ -1609,15 +1612,15 @@ function planCallBlock(first: Step | undefined, run: Run, publish: Publish, toAn
  * - [Step 4](…/intent.md#L17) has no `seam:` line.
  * ```
  */
-function seamsPart(seams: ReadonlyArray<SeamFinding>, grain: ReadonlyArray<GrainFinding>, where: string): string | null {
-  // Both lists run in step order and every finding carries its step's opener
-  // line, so a stable sort on that line sets a step's grain findings after its
-  // seam and like findings and moves nothing else.
-  const findings = [...seams, ...grain].sort((a, b) => a.line - b.line)
+function seamsPart(seams: ReadonlyArray<SeamFinding>, measures: ReadonlyArray<GrainFinding | SplitFinding>, where: string): string | null {
+  // Each list runs in step order and every finding carries its step's opener
+  // line, so a stable sort on that line sets a step's grain and split
+  // findings after its seam and like findings and moves nothing else.
+  const findings = [...seams, ...measures].sort((a, b) => a.line - b.line)
   if (findings.length === 0) {
     return null
   }
-  const line = (f: SeamFinding | GrainFinding): string => `- [Step ${f.step}](${where}#L${f.line})${f.words.startsWith("'") ? '' : ' '}${f.words}`
+  const line = (f: SeamFinding | GrainFinding | SplitFinding): string => `- [Step ${f.step}](${where}#L${f.line})${f.words.startsWith("'") ? '' : ' '}${f.words}`
   return [`**Seams**: ${findings.length} to look at`, '', ...findings.map(line)].join('\n')
 }
 
