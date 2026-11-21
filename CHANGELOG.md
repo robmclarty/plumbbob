@@ -5,6 +5,34 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.2] - 2026-11-20
+
+- **Added:** `contractPaths` in the tracked `settings.json` lists the paths the rest of the
+  repo depends on (the shared types, the schemas), each a file or a `dir/` grant, the way a
+  seam is written. It is read from that file alone, so a personal overlay cannot narrow it,
+  and nothing refuses an edit to one. D164 (contract-paths).
+- **Added:** `plumbbob finish` appends a `## Footprint` section to the report, ahead of
+  `## Checkpoints`: the contract paths the build touched, how many landed steps a command
+  proved, and the size of what they changed. `Contract` renders only when `contractPaths`
+  lists something, and it reads the whole build, so a path changed outside a step's commit
+  reads `(outside a step)`. The CLI writes every line; a report with no landed step is as
+  it was. D166 (finish-footprint).
+- **Added:** a `grain` setting, `fine`, `default` or `coarse`, says how coarsely a plan cuts
+  its steps. Under `fine` the plan card names a step whose seam lists more than 3 paths;
+  under `coarse` it names a step proved in words. `status` prints a `grain` line when it is
+  not `default`, and the `plan` skill cuts steps to it. It is guidance: nothing is refused,
+  no range moves, and with `default` every surface prints what it printed before. D165
+  (grain).
+- **Added:** `plumbbob doctor` gains a contract-paths section, printed when `contractPaths`
+  lists something. An entry that can never match (a glob, an absolute path, a folder written
+  without its trailing slash) is a problem with its fix, and one that names nothing in the
+  tree yet is a note.
+- **Added:** eval contract c15 (steps cut to the grain) measures the `plan` skill under
+  `grain: fine`: 5/5, against 0/5 for the same prompt with no grain set.
+- **Fixed:** a changed path holding a byte outside ASCII, a double quote or a tab was read in
+  git's quoted form, so it sat under no seam in the pause's `diff` and `seam` rows. Both
+  numstat reads now take the path as it is on disk.
+
 ## [0.17.1] - 2026-11-17
 
 - **Added:** a step's `- proof:` sub-line replaces the `**done when:**` clause. It opens on
