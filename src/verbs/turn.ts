@@ -18,7 +18,8 @@
 // ending `RELAY` holds from an earlier turn. A typed prompt also emits ONE
 // `UserPromptSubmit` additionalContext line when there is a beat to keep, so a
 // fresh session (post-compaction, or a scripted `-p` turn where no skill prose
-// is in context) still knows it: mid-step, a tangent is parked, not chased;
+// is in context) still knows it: mid-step, a change the human asks for is
+// made and an idea they only raise is parked, not chased;
 // at a pause or a stop whose card has shown, the message is the human's reply,
 // answered in the model's own words and closed on the one line `handoff`
 // prints, never on the card again (D110 (reply-after-the-card)). Every tool
@@ -84,7 +85,8 @@ export function turn(cwd: string, _args: ReadonlyArray<string>): number {
  * words after every tool call, and closed on the one line `handoff` prints
  * rather than the card again (D110 (reply-after-the-card),
  * D121 (reply-after-the-tools)). A step in flight with no card yet is
- * mid-build, where a tangent is a park and not an edit. A stop card waiting
+ * mid-build, where a change the human asks for is made and an idea they only
+ * raise is a park, not an edit (D168 (asked-is-made)). A stop card waiting
  * for its reply is the pause's beat at a stop. At a pause or a stop, a
  * `prompt` asking to see the card (`show the pause`, the phrase the card's
  * `expand` move teaches) gets the one instruction that matters for it: paste
@@ -174,10 +176,24 @@ function showNudge(card: string, command: string): string {
   )
 }
 
-/** The mid-build nudge: a tangent is a park, not an edit, and the step lands on approval. */
+/**
+ * What both step nudges say about a change the human asks for: the human's
+ * explicit request is the decision, so it is made, with the lean taken and the
+ * seam stray named, never refused or parked in their place.
+ */
+const ASKED_IS_MADE =
+  `A change the human asks you to make is theirs to decide, so make it, even when it reaches past the step or the seam: ` +
+  `where it leaves a choice open, take the lean you would recommend and name it in your reply, and name any path it touched outside the seam, so they can redirect. ` +
+  `Recommend parking it instead when you think it belongs to its own step, but do not park it in place of making it. `
+
+/**
+ * The mid-build nudge: a change the human asks for is made, a new idea is a
+ * park, and the step lands on approval.
+ */
 function parkNudge(step: number): string {
   return (
-    `plumbbob: step ${step} is in flight — a new idea or tangent is a park, not an edit: ` +
+    `plumbbob: step ${step} is in flight. ${ASKED_IS_MADE}` +
+    `A new idea the human raises without asking for it now, or a tangent you notice yourself, is a park, not an edit: ` +
     `capture it with \`plumbbob park "<one line>"\` and relay the block it prints whole, ` +
     `with nothing written around it, since that block is the whole turn. ` +
     `The one exception is a message that also asks something: run \`plumbbob park\` first, then answer the question, ` +
@@ -196,10 +212,8 @@ function pauseNudge(step: number): string {
     `plumbbob: step ${step}'s card has shown, and this message is the human's reply to it. ` +
     `An approval lands the step: run \`plumbbob checkpoint ${step}\` and relay its ending. ` +
     `Anything else is answered in your own words, after every tool call and with none after it: ` +
-    `first read what you need, then tell direction from a tangent. ` +
-    `A change the human spells out for what step ${step} built is direction: make the change it asks for. ` +
-    `A change that leaves a choice open (how new behaviour should act, what a refactor covers) or reaches past the step is a tangent, even when the human asks you to do it now and even in part: ` +
-    `capture it with \`plumbbob park "<one line>"\`, edit no source for it, and say which choice it waits on. ` +
+    `first read what you need. ${ASKED_IS_MADE}` +
+    `An idea the human raises without asking for it now is a park: capture it with \`plumbbob park "<one line>"\` and edit no source for it. ` +
     `Then write \`.plumbbob/detail.md\` again when a change moves what the card said, so the record matches what lands, ` +
     `and run \`plumbbob handoff\` last among them, keeping the one line it prints. ` +
     REPLY_LAST +

@@ -13,6 +13,11 @@ import { describe, expect, it } from 'vitest'
 
 const skillsDir = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'skills')
 
+/** A file a skill reads on demand, beside its SKILL.md. */
+function readBeside(dir: string, file: string): string {
+  return readFileSync(join(skillsDir, dir, file), 'utf8')
+}
+
 // A minimal hand-rolled frontmatter split: `---` fence, `key: value` lines, body.
 function parseSkill(dir: string): { data: Record<string, string>; body: string } {
   const src = readFileSync(join(skillsDir, dir, 'SKILL.md'), 'utf8')
@@ -377,9 +382,11 @@ describe('build — the default engine: implement the planned step, then verify'
     expect(body).toMatch(/type\s+`?\/(?:plumbbob:)?build --auto`?\s+again/i) // the sanctioned route instead
   })
 
-  it('lifts slot mechanics into a gated "Running bound agents" section, keeping the default path slim (3b)', () => {
-    // (1) the consolidated section exists — all five slot passages live behind one trigger.
-    expect(body).toContain('## Running bound agents')
+  it('lifts slot mechanics into a gated "Running bound agents" file, keeping the default path slim (3b)', () => {
+    // (1) the consolidated section exists, all five slot passages behind one
+    // trigger, in a file beside the skill that is read only on its cue.
+    expect(readBeside('build', 'agents.md')).toContain('## Running bound agents')
+    expect(body).toContain('**`agents.md`** when the dashboard shows a `harness bindings:` block')
     // (2) the default-path region (steps 1–5, from its heading to the next `## `) carries
     // no slot mechanics — only conditional pointers. A location-aware pin, not a
     // presence-anywhere one, so the slimming can't silently regress.
@@ -399,10 +406,11 @@ describe('build — the default engine: implement the planned step, then verify'
 })
 
 describe('build — a run hands its range section a range the plan names — D96 (plan-names-the-grant)', () => {
-  const { body } = parseSkill('build')
+  // The range rules sit beside the build skill, read on demand under `--auto`, a range, or a run.
+  const body = readBeside('build', 'auto.md')
 
   it('says a run hands it a range the plan names, walked the same way', () => {
-    const section = body.slice(body.indexOf('### A step range'), body.indexOf('## The hard contracts'))
+    const section = body.slice(body.indexOf('### A step range'))
     expect(section).toMatch(/\/plumbbob:run/)
     expect(section).toMatch(/walked the same way/i)
     // The early-stop note names the run the card's range line prints, not the old explicit command.
@@ -461,12 +469,17 @@ describe('run — a range of the plan, walked by the build skill — D95 (run-ve
     expect(body).toMatch(/base directory/i)
     expect(body).not.toMatch(/SKILL\.md:\d+/)
     // Every heading it names is one the build skill carries.
-    for (const heading of ['What this skill does, in order', '`--auto`: let the agent be the clock (opt-in)', 'Running bound agents', 'The hard contracts']) {
+    for (const heading of ['What this skill does, in order', 'The hard contracts']) {
       expect(body, heading).toContain(heading)
       expect(build.body, heading).toContain(`## ${heading}`)
     }
-    expect(body.replace(/\s+/g, ' ')).toContain('A step range (`N-M`, or a list like `20,5-9`) is a bounded `--auto`')
-    expect(build.body).toContain('### A step range (`N-M`, or a list like `20,5-9`) is a bounded `--auto`')
+    // And every file beside it that it reads exists, with the part it is read for.
+    expect(body).toContain('`../build/auto.md`')
+    expect(readBeside('build', 'auto.md')).toContain('### A step range (`N-M`, or a list like `20,5-9`) is a bounded `--auto`')
+    expect(body).toContain('`../build/agents.md`')
+    expect(readBeside('build', 'agents.md')).toContain('## Running bound agents')
+    expect(body).toContain('`../build/orchestration.md`')
+    expect(readBeside('build', 'orchestration.md')).toContain("## Building with the host's sub-agents")
   })
 
   it("builds a bare range to its pause, ending on its step's checkpoint block once it lands", () => {

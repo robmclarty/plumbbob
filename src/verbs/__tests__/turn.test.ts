@@ -568,9 +568,12 @@ describe('turnContext — the nudge, D64 (approval-latch) amended: guidance, not
       'Only when the human asks to see the card again, run `plumbbob handoff --full` and paste its output exactly as it printed, as the whole turn',
     )
     // Feedback at a pause is not a tangent: the park line would swallow it.
-    expect(context).not.toContain('a new idea or tangent is a park, not an edit')
-    expect(context).toContain('A change the human spells out for what step 2 built is direction')
-    expect(context).toContain('is a tangent, even when the human asks you to do it now and even in part')
+    expect(context).not.toContain('or a tangent you notice yourself, is a park, not an edit')
+    // The human's explicit request is made, even past the step: a guide, not a police. D168 (asked-is-made).
+    expect(context).toContain('A change the human asks you to make is theirs to decide, so make it, even when it reaches past the step or the seam')
+    expect(context).toContain('take the lean you would recommend and name it in your reply')
+    expect(context).toContain('do not park it in place of making it')
+    expect(context).toContain('An idea the human raises without asking for it now is a park')
   })
 
   it('keeps the park nudge while the stamp names another card: the boundary before, or another step', async () => {

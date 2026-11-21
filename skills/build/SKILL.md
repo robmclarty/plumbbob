@@ -32,12 +32,28 @@ it. If the step you're about to build carries a `- model:` recommendation that
 differs from the model you're running as, say so before implementing; the human can
 switch with `/model` and rerun to honor it, or wave you on. Advisory, never a gate.
 
+## Read on demand
+
+Three parts of this skill sit beside it, in files you read only when the build needs them.
+Read each whole, from this skill's base directory (`<base directory>/auto.md`), before the
+step it applies to, and never from memory:
+
+- **`auto.md`** when you were invoked with `--auto`, a step range or a step list, or by
+  `/plumbbob:run`: who the clock is, the halt list, and how a range is walked.
+- **`agents.md`** when the dashboard shows a `harness bindings:` block: the before, build
+  and after slots, and how an envelope is routed.
+- **`orchestration.md`** when the dashboard shows the line
+  `orchestration  host: a step may be built by sub-agents, inside its seam`: how the step's
+  slices go to sub-agents and come back as one step.
+
+Without its cue a file does not apply, so leave it unread.
+
 ## What this skill does, in order
 
 1. **Pick the step.** Use the number you were invoked with (for example `/plumbbob:build 4`), or,
    if you were given a range like `/plumbbob:build 1-3` or a list like `/plumbbob:build 20,5-9`,
    start at its first undone step in build order, the one the dashboard above marks
-   `← requested`, and land only the steps it names (see the range note under `--auto`).
+   `← requested`, and land only the steps it names, by the range rules in `auto.md` (below).
    With no argument, don't resolve the next step yourself; the CLI does: bare `plumbbob build`
    (step 2) enters the next undone step in build order (the `## Build order` line when the
    plan has one, else the numbering) and refuses with a `/plumbbob:step` nudge when every
@@ -77,14 +93,21 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
      so in the Summary and build from the nearest neighbor
      ([D156 (like-is-advice)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d156)).
    - **Bound `before`-agents load context first.** If `plumbbob status` shows a
-     `harness bindings:` block, this build binds agents; see **§ Running bound agents**
+     `harness bindings:` block, this build binds agents; read `agents.md` (below)
      and load their context in before you write. No bindings, no harness: just build.
 4. **Implement** the step, and only that step, staying within the declared seam. A
-   new problem or "ooh what if" that surfaces mid-build is a park, **not** an edit:
+   new problem or "ooh what if" that you notice mid-build is a park, **not** an edit:
    capture it by running `plumbbob park "<one tidy line>"`: **saying "let's defer
    that" writes nothing; only the park line in the build log is a capture.** When the
-   *human* hands you the tangent mid-build, their message **is** the approval to park
-   it; capture it right away, say what you parked, and stay on the step. An open question
+   *human* raises an idea without asking you to do it now ("we should someday…", a side
+   thought), their message **is** the approval to park it; capture it right away, say
+   what you parked, and stay on the step. **When the human asks you to make a change, make
+   it.** Their explicit request is the decision, and plumbbob is a guide, not a police
+   ([D168 (asked-is-made)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d168)): make it even when it reaches past the step or the
+   seam, take the lean you would recommend where it leaves a choice open and name it, and
+   name any path it touched outside the seam, so they can redirect. Recommend parking it
+   as a step of its own when you think it belongs there, but never park it in place of
+   making it. An open question
    the human sets aside to wait on other work is deferred, not parked: run
    `plumbbob defer Q3 "<what settles it>"`, because the card counts questions by the
    marker on each opener and never by the park list
@@ -101,10 +124,10 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    - **Bound agents can shape the build.** If `plumbbob status` shows a
      `harness bindings:` block, a `build`-slot agent may author the diff, a `when`-cue may
      fire an agent mid-build, and a non-`done` envelope routes by its status; see
-     **§ Running bound agents**.
+     `agents.md` (below).
    - **The host's sub-agents can build it.** If `plumbbob status` shows an
      `orchestration  host` line, a step with slices to hand out is built by sub-agents;
-     see **§ Building with the host's sub-agents**. Without the line, you build it.
+     read `orchestration.md` (below). Without the line, you build it.
 5. **Verify, through to the pause.** Run the verify tick exactly as `/plumbbob:verify`
    does: `plumbbob check` (on red, read `.check/summary.json` and the failing slot's
    raw output under `.check/` for the actual diagnostics; while iterating on a fix,
@@ -148,8 +171,8 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
      not a quiet `-m` swap (which is the agent-authored subject [D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68)
      refuses).
    - **If `plumbbob status` shows a `harness bindings:` block**, fold any bound
-     `after`-agents into that self-review as advisory input; see **§ Running bound
-     agents**.
+     `after`-agents into that self-review as advisory input; see
+     `agents.md`.
 
    **The latch makes this pause real.** On the default (non-`--auto`) path you
    build the step and reach the pause *in one turn*, so under plumbbob's turn hook the
@@ -295,11 +318,11 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    or in a fresh session; what it prints is the turn's ending, and the relay check holds a
    turn that does not close on it. Read the detail file and `plumbbob status` instead.
 
-   Tell direction from a tangent. A change the human spells out for what the step built is
-   direction: make it. A change that leaves a choice open (how new behaviour should act,
-   what a refactor covers) or reaches past the step is a tangent, even when the human asks
-   you to do it now and even in part: park it, edit no source for it, and say which choice
-   it waits on.
+   A change the human asks for at the pause is made, as one asked for mid-build is
+   ([D168 (asked-is-made)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d168)): make it, name the lean you took where it left a
+   choice open and any path outside the seam, and write the detail file again. Recommend a
+   step of its own in the reply when you think it belongs there. An idea the human raises
+   without asking for it now is a park, with no source edit for it.
 
    **Then hand off with the next model.** `plumbbob checkpoint` prints the whole boundary
    ending itself: `**Checkpoint**: Step N complete (<sha>)`, any advisory (a staged path
@@ -317,201 +340,6 @@ switch with `/model` and rerun to honor it, or wave you on. Advisory, never a ga
    running `/plumbbob:build` again. It is what carries the plan's suggestion across a fresh
    context window, which inherits the session model, not the plan's. No `- model:` line
    means any model will do. Guidance, never a gate.
-
-## Running bound agents
-
-Skip this section unless `plumbbob status` shows a `harness bindings:` block. Nearly every
-build binds **no** agents; for them the default path above is the whole story. When a
-harness *is* bound, this is what each affected step gains, in lifecycle order.
-
-- **`before`: load context in (step 3).** If the `harness bindings:` block binds agents to
-  this step's `before` slot (in `harness.json` or in settings), run `plumbbob agent run --step <n> --mode before` first: each
-  returns a validated envelope on stdout that plumbbob also appends to the step's
-  `handoff.json`, and its `summary`/`body` become **context you read into the build** (that
-  is the whole point of the slot: load the context in before you write). No binding, or no
-  harness, is a clean no-op: just build.
-- **`build`: delegate the diff (step 4).** If a `build`-slot agent is bound, run
-  `plumbbob agent run --step <n> --mode build` and let that agent author the step's code
-  instead of writing it yourself; its envelope reports what it did. You still own the verify
-  tick; the diff is reviewed the same way whoever wrote it.
-- **A manifest's `when` prose is your cue to run an agent mid-build (step 4).** The three
-  slots are the only *declarative* lifecycle points; there is no config for "a salient
-  moment in the middle." That is judgment, and you are the frontier model in the room: when
-  the work reaches the situation a bound agent's `when` (or a step `note`) describes, run
-  `plumbbob agent run <name> --step <n>` yourself. Prose is the orchestration language; you
-  are the workflow engine.
-- **Route a non-`done` envelope by its status (step 4).** An agent that returns `blocked`
-  couldn't finish (missing input, failed precondition): surface its `notes`, let the human
-  unblock, and re-run it; don't work around it. One that returns `drift` finished but found
-  the plan no longer matches reality: **stop and send the human to `/plumbbob:refine`** to repair
-  the plan before continuing, rather than building on a plan that's now wrong. A non-zero
-  exit is a failed run: report it and stop.
-- **`after`: advisory input to the verify tick (step 5).** After `plumbbob check`, run any
-  bound `after`-agents (`plumbbob agent run --step <n> --mode after`) and fold their
-  envelopes into the self-review as **advisory input**; they inform, they never gate
-  (checkride gates, the human is the clock; an `after`-agent that could fail a step would
-  be the old lock back in another form). What an agent saved and named in its envelope's
-  `evidence[]` (a screenshot, a trace) is the CLI's to show: `plumbbob handoff` lists each
-  piece as a link under the Readout, so leave the paths out of your review, and never
-  treat one as proof the step is done
-  ([D157 (evidence-is-shown)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d157)).
-
-## Building with the host's sub-agents
-
-When the dashboard carries the line
-`orchestration  host: a step may be built by sub-agents, inside its seam`, the human has
-set `orchestration` to `host` in the settings
-([D167 (host-orchestration)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d167)). You are then the step's orchestrator as well as
-its builder: you cut the work, hand it out, and answer for what comes back. Without the
-line this section does not apply, and you never fan a step out on your own judgment.
-
-- **Find the slices.** The step's `- note:` line names its split when the plan wrote one;
-  follow it. With no note, cut along the seam's entries: one slice per `dir/` grant or
-  per group of files that change together. Two slices that would touch one file are one
-  slice. A step with a single slice is built by you, directly, as step 4 says.
-- **Settle what the slices share before they run apart.** When one slice builds against
-  another (a type, a function's signature, a file's name), write that part yourself first,
-  or state it in every brief. Sub-agents that guess at each other's names cost a second
-  round.
-- **Brief each sub-agent with the step's contract, not your summary of it.** Give it its
-  slice of the seam as paths, the step's proof as written, the Decisions and Constraints
-  from `intent.md` verbatim, and the `like` files to read first. Tell it three things in
-  as many lines: edit only inside the slice; run no `plumbbob` verb and no `git commit`;
-  report anything it wanted to change outside the slice in its reply, without changing it.
-- **Use the host's workflow tool for a wide step.** Where the host has one (in Claude Code,
-  the Workflow tool), this skill, typed by the human with the setting on, is the
-  instruction to use it for a step of three slices or more, or one whose note asks for a
-  review stage: one agent per slice, then a reviewer over the joined diff when the note
-  names one. For two slices, start plain sub-agents side by side. On a host with neither,
-  build the step yourself and say so in the Summary's lead.
-- **Join the work yourself.** When the sub-agents return, read the whole diff against the
-  seam and the proof. Park each tangent they reported with `plumbbob park`; a change one
-  made outside its slice is scope drift, to surface as step 4 says. Run the proof's
-  command and fix what it shows, with a sub-agent or by hand, before the verify tick.
-- **One step, one card.** However many agents built it, the step ends on one verify tick
-  and one pause, written by you. Name the split in the Summary: how many slices, what
-  each covered, and what the join changed. No sub-agent runs `plumbbob handoff` or
-  `plumbbob checkpoint`, and none is asked whether the step is done.
-
-A `build`-slot agent bound to the step outranks the setting: run it as **§ Running bound
-agents** says and do not fan out beside it, since a step has one author. `before` and
-`after` agents run as they always do, around the whole step. Under `--auto` or a range
-the setting changes nothing about the halts: a red check, a red proof or a mismatch still
-stops the run.
-
-## `--auto`: let the agent be the clock (opt-in)
-
-`/plumbbob:build --auto` is the explicit escape hatch when the human wants unattended
-progress instead of approving each step. It does the same work, but **the agent reviews
-and approves in the human's place**, and it **chains**:
-
-- Build the next step, running its slots (see **§ Running bound agents**) in the same
-  order as the default path: bound `before`-agents → implement (or the bound `build`-agent) → bound
-  `after`-agents → `check` → self-review → **if the check is green AND the
-  self-review finds no proof / Decision / Constraint mismatch, checkpoint** and move
-  straight on to the next planned step. Repeat. `--auto` adds no new machinery; the
-  `after`-agent output simply feeds the *existing* self-review halt condition.
-- **Stop and hand back to the human** the moment a halt arrives, and end the turn by the
-  kind of halt it is
-  ([D85 (range-top-lands)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d85)):
-  - **A halt on trouble leaves a step unlanded.** The check is red (a red `plan` check
-    that `plumbbob export` clears, as step 5 says, is no halt), the step's proof
-    command is red (the checkpoint refused and recorded nothing), the checkpoint
-    refused because `intent.md` was edited during the step (a grant covers the plan the
-    human approved, so it recorded nothing and the step waits at its pause), the self-review finds
-    a mismatch (surface exactly what, and do not checkpoint it), a bound agent returns
-    `blocked` or `drift` (unblock-and-re-run, or `/plumbbob:refine`; an agent cannot
-    advance the loop), or a new decision is needed. The step is still in flight and the
-    human has a call to make about it, so end on the same turn the default pause does:
-    write the detail file, run `plumbbob handoff`, and paste its block.
-  - **A call the plan reserves halts at its pause.** A step the plan's `## Build ranges`
-    names as a bare range (`/plumbbob:build 10`) is a decision the plan left for the human,
-    and `plumbbob build` says so as it enters the step (`step 10 ends at its pause, where
-    the plan reserves the call for the human`). Build it, verify it, and end on the same
-    turn a halt on trouble does: write the detail file, run `plumbbob handoff`, and paste
-    its block. The latch would let it land, since `--auto` grants every step, so keeping
-    the step open is yours to do
-    ([D94 (auto-and-stops)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d94)).
-    A range that lands its steps runs through, since its stop is a review that can wait
-    for the end of the run, and a typed range stays exactly as typed.
-  - **A clean halt lands its step first.** The top of a requested range is reached (the
-    next step in build order is one the range does not name, or none is left), or no
-    planned steps remain, and `plumbbob build` names that step as it enters it (for
-    example `step 3 is the last undone step in the plan`). That step checkpoints like
-    every step before it, and its
-    checkpoint's block is the whole ending: relay it with nothing written around it, then
-    end the turn. Write no detail file and run no `handoff`, because nothing is pending.
-    The block already carries the Verdict the step earned and a Next Up pointing at what
-    comes next (the next undone step and its `- model:` recommendation, or the finish),
-    which is what a fresh context window needs to pick the right `/model`.
-
-`--auto` and a step range are the only paths that checkpoint without a human pause, and
-only because the human asked for it by name. A range hands the clock back once its top
-step has landed: the step after it waits for the human's next run. The default (no flag,
-no range) always ends at the pause.
-
-### A step range (`N-M`, or a list like `20,5-9`) is a bounded `--auto`
-
-`/plumbbob:build 1-3` self-approves steps 1 through 3 exactly as `--auto` does, then **stops
-once step 3 has landed** instead of chaining to done. A range may also list its steps, numbers
-and spans joined by commas (`/plumbbob:build 20,5-9`, typed with or without a space after a
-comma), and it grants exactly the steps it names: the checkpoint refuses any other
-([D91 (step-list-grants)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d91)).
-The range *is* the opt-in; you do not also pass `--auto`.
-
-**A run hands you a range the plan names, walked the same way.** `/plumbbob:run` (the run
-skill) reads this section for its walk: its grant is the `steps` list the turn hook minted
-from the plan's `## Build ranges` when the human typed the run, in the normal form a typed
-list mints, so the latch, `plumbbob build`'s notice at the top step, and every halt below
-read it exactly as they read a typed range
-([D96 (plan-names-the-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d96)).
-
-Run it as the `--auto` loop, walked in build order. **Start at the range's first undone step
-in build order, however it is written** (`5-9,20` under an order that puts 20 first starts at
-20), and after each landing take the next undone step in build order. Build it if the range
-names it; **stop before building any step the range does not name**, or once none is left. It
-adds no machinery: just the one more entry already in the halt list above, and it is a clean
-halt, so the top step is never held back for approval. The human approved it by typing the
-range, and `plumbbob build` says so as it enters that step:
-`step 3 is the top of the range you granted`, or, when the walk ends early (the plan runs
-out, or the next step in build order is one the range does not name),
-`the last undone step in the range you granted`.
-
-- **A range that parses**: build each step it names in build order, self-approving and
-  checkpointing each, the last included, then relay the last one's checkpoint block and end
-  the turn. `N-N` is a range like any other: it builds and lands the single step `N`. Only a
-  bare `/plumbbob:build N` ends at the pause.
-- **A range that does not parse** (for example `3-1`, or `1--3`): that is not a range you can
-  walk, and it grants nothing; report it and stop rather than guess the intent.
-- **A number past the last planned step** (for example `1-9` with three steps): build through
-  the last planned step the range names and stop; that is the existing "no planned steps
-  remain" halt, not an error. A number the plan lacks is never reached.
-- **A step inside the range won't build** (its seam won't parse): `plumbbob build <n>` fails
-  exactly as it always does; surface it and stop, the same as a red check. Do not skip past
-  the gap.
-- **The range starts above the next undone step** (the order reads `6, 4, 5` under
-  `/plumbbob:build 4-5`): the first step enters as a single-number jump like `/plumbbob:build 4`
-  would, with the skipped step noted. Once it lands, the next undone step in build order is
-  the one you jumped, which the range does not name, so the halt above fires there, and
-  `plumbbob build` names step 4 as the last undone step in the range, its detail naming step 6
-  as the step the walk halts before. The range that walks the whole stretch names the jumped
-  step too (`/plumbbob:build 6,4-5`).
-- **The build order puts a step the range does not name inside it** (the order reads
-  `1, 4, 2, 3` under `/plumbbob:build 1-3`): the halt above fires before step 4, and
-  `plumbbob build` names step 1 as the last undone step in the range. The range that walks
-  the whole stretch lists step 4 too (`/plumbbob:build 1-4`, or `/plumbbob:build 1,4,2,3`).
-- **At a range's stop, harvest before the next range.** No harvest runs between the steps
-  inside a range, so the parks pile up, and a blocker among them would otherwise ride into
-  the next one. A run's range ends on the stop card, which lists every open park with a
-  proposed class, and the reply that settles the card records them (the run skill's
-  section on the reply at a stop). A range landed here, by a typed range, ends on the plain
-  boundary instead; when the human asks what comes next there with parks open (the table's
-  `Parked` row, `2 of 7 open`), the move is `/plumbbob:harvest`, then the run the card names.
-- **After an early stop, settle the step, then rerun what is left.** A halt on trouble
-  inside a range ends at that step's pause, and the grant ends with the turn. Once the
-  human approves and the step lands, the range line beneath Next Up names the run that lands
-  what is left of the range (`|  | **Range 3** on Opus: /plumbbob:run (steps 8-9) |`), and that is
-  what the human types to carry on; `/plumbbob:build 8-9` lands the same steps by hand.
 
 ## The hard contracts
 
@@ -537,8 +365,7 @@ out, or the next step in build order is one the range does not name),
 - **Agents feed the beat; they never advance it**. `before` loads context,
   `build` writes the diff, `after` is advisory; none can checkpoint, flip a step, or
   chain. `blocked` → unblock and re-run; `drift` → `/plumbbob:refine`. You are still the one
-  who verifies and (bar `--auto`) the human is still the clock. See **§ Running bound
-  agents** for the mechanics.
+  who verifies and (bar `--auto`) the human is still the clock. `agents.md` has the mechanics.
 - **A refused checkpoint is the pause, not an error.** Under plumbbob's turn
   hook a same-turn `checkpoint` is refused by design: write the file, run `plumbbob
   handoff`, paste its block, **end the turn there**; the human's approval on their next

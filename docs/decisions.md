@@ -2312,6 +2312,33 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   `verbs/status.ts`, `verbs/handoff.ts`, the `plan`, `build` and `run` skills, `docs/presentation.md`, and
   `docs/cli-reference.md`.
 
+- <a id="d168"></a>**D168 (asked-is-made): A change the human asks for is made, mid-build or at the pause, even when it
+  reaches past the step or the seam; only an idea they raise without asking for it now is parked.** The human's
+  explicit request is the decision ([**P1 (decide-not-execute)**](../keyframes.md)), so the builder makes it, takes the
+  lean it would recommend where the request leaves a choice open and names it, and names any path it touched outside
+  the seam, so the person can redirect. It may recommend parking the change as a step of its own; it never parks
+  it in place of making it. A new idea the model notices, and one the human raises as a side thought, are still
+  parks, not edits ([**P5 (capture-not-chase)**](../keyframes.md)), and a typed `/plumbbob:park` is itself the request to
+  park. A request is no approval: nothing lands until the human approves, and the latch is unchanged
+  ([**D64 (approval-latch)**](#d64)). This reverses the 0.17.1 wording that split "direction" from a "tangent" and
+  parked a requested change that left a choice open or reached past the step, "even when the human asks you to do
+  it now and even in part". The turn hook's mid-build and pause nudges, the build skill and eval c5 change with
+  it. *because* plumbbob is a guide, not a police: it exists to help a person express what they want, and a tool
+  that refuses an explicit request to protect its own process has its priorities backwards. *Tagged in*
+  `verbs/turn.ts`, the `build` skill, and `test/evals/contracts/c5-park.eval.ts`.
+
+- <a id="d169"></a>**D169 (build-on-demand): The build skill keeps its default loop in `SKILL.md` and reads three
+  conditional parts from files beside it, each only on its cue.** `skills/build/auto.md` holds `--auto` and the
+  step range, read when the build is invoked with `--auto`, a range or a list, and by every `/plumbbob:run`;
+  `agents.md` holds the slots, read when the dashboard shows a `harness bindings:` block; `orchestration.md` holds
+  building with sub-agents, read when it shows an `orchestration  host` line
+  ([**D167 (host-orchestration)**](#d167)). The run skill reads the build skill and `auto.md` every run, and the
+  other two on the same cues, from its own base directory as before ([**D99 (one-loop)**](#d99)). `SKILL.md`
+  went from 42.8 kB to 29 kB, so a plain `/plumbbob:build <n>` with no agents and no orchestration reads a
+  third less. *because* every build turn paid for prose that applied to a minority of builds, and a skill read
+  whole every run is a token cost the person pays each step. *Tagged in* the `build` and `run` skills and
+  `test/contract/skills.test.ts`.
+
 ### Superseded
 
 - <a id="d20"></a>**D20 (local-archive): The archive was local-only markdown.** Wrapping wrote a plain-markdown archive

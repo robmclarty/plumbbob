@@ -29,13 +29,14 @@ than recall them
 
 Before anything else, read `../build/SKILL.md` from this skill's base directory: the path
 printed above this skill as its base directory, so `<base directory>/../build/SKILL.md`.
-Read the file every run, whole; a copy of it from memory drifts. The parts a run follows are
-its sections **What this skill does, in order** (steps 2 to 5: entering a step, reading the
-plan, implementing within the seam, parking a tangent, and the verify tick with its pause),
-**`--auto`: let the agent be the clock (opt-in)** with its halt list, **A step range (`N-M`,
-or a list like `20,5-9`) is a bounded `--auto`**, **Running bound agents** when the dashboard
-shows a `harness bindings:` block, **Building with the host's sub-agents** when it shows
-an `orchestration  host` line, and **The hard contracts**.
+Read the file every run, whole; a copy of it from memory drifts. Then read `../build/auto.md`
+from the same base directory, whole, every run: a run is a range, and that file holds the
+halt list and how a range is walked. Read `../build/agents.md` too when the dashboard shows a
+`harness bindings:` block, and `../build/orchestration.md` when it shows an
+`orchestration  host` line. The parts a run follows are the build skill's
+**What this skill does, in order** (steps 2 to 5: entering a step, reading the plan,
+implementing within the seam, parking an idea, and the verify tick with its pause), its
+**The hard contracts**, and those files.
 
 Its rules about its own invocation are about `/plumbbob:build` and do not apply here: its
 first step (picking the step from its arguments) and its rule that the invocation outranks
@@ -120,7 +121,7 @@ too.
 in its section on step ranges: start at the header's first undone step, build each step the
 grant names in build order, check, self-review, and checkpoint it on green, and take the
 next undone step in build order after each landing. A step the grant does not name halts the
-walk before it, since the checkpoint would refuse it. The halt list is the build skill's: a
+walk before it, since the checkpoint would refuse it. The halt list is the build skill's, in `auto.md`: a
 red check (a red `plan` check that `plumbbob export` clears is no halt), a red proof, a checkpoint refused because `intent.md` was edited during the step, a self-review mismatch, a bound agent's `blocked` or `drift`, or a new decision
 ends at that step's pause card. At a halt for a plan edit the card's `plan` row and its
 Plan Edit part are measured by the CLI and are the CLI's to show. You never edit `intent.md`
@@ -302,5 +303,5 @@ the same turn, which records; `plumbbob handoff --stop` would refuse there.
   control file; ask the human to type the run again instead.
 - **The reply records the stop.** Never run `plumbbob harvest` in the turn the stop card
   printed; the human's reply to the card is what records it, and the classes stay their call.
-- **One loop.** Read `../build/SKILL.md` every run; the build skill is the engine both verbs
+- **One loop.** Read `../build/SKILL.md` and `../build/auto.md` every run; the build skill is the engine both verbs
   drive, and two copies of it would drift apart.
