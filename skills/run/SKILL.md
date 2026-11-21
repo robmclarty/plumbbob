@@ -13,17 +13,17 @@ Current session state (injected when this skill runs): !`plumbbob status --run "
 A run is one range of the plan being built. `/plumbbob:run` runs what is left of the range
 holding the next undone step in build order, the step in flight counted undone, and
 `/plumbbob:run 3` runs range 3, by the item number the plan's `## Build ranges` gives it
-([D95 (run-verb)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d95)).
+(D95 (run-verb)).
 The plan names the steps, so you never work them out from the chat: the run header above the
 dashboard names them, and the turn hook minted their grant from the plan when the human typed
 the run
-([D96 (plan-names-the-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d96)).
+(D96 (plan-names-the-grant)).
 
 This skill carries only what is the run's own: reading the header, refusing, how a run
 starts, and the stop card it ends on. The loop that builds each step belongs to the build
 skill, and the classes a park settles as belong to the harvest skill; you read both rather
 than recall them
-([D99 (one-loop)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d99)).
+(D99 (one-loop)).
 
 ## 1. Read the build skill first
 
@@ -79,13 +79,13 @@ no step could land without a pause. Report that in a sentence or two, name the r
 command from the plan's `## Build ranges` (`/plumbbob:build 6-9`) as the way to land it by
 hand, and stop without building. **Never write a grant yourself to get past it: a grant you
 mint is no grant, and the latch ignores it
-([D67 (auto-not-a-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d67)).**
+(D67 (auto-not-a-grant)).**
 
 ## 3. Refuse what the run cannot walk
 
 No run header above the dashboard means the run names nothing it can walk, and the hook
 minted nothing for it
-([D97 (run-refuses)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d97)).
+(D97 (run-refuses)).
 The dashboard's `next →` line carries the refusal and the move that unblocks it: a plan
 without ranges (`/plumbbob:refine ranges`, or `/plumbbob:build` for the next step alone), a
 next step no range names or a flagged range (`/plumbbob:refine ranges`), a range that has
@@ -126,11 +126,11 @@ red check (a red `plan` check that `plumbbob export` clears is no halt), a red p
 ends at that step's pause card. At a halt for a plan edit the card's `plan` row and its
 Plan Edit part are measured by the CLI and are the CLI's to show. You never edit `intent.md`
 during a step; if you find you must, stop and say so
-([D162 (plan-edit-shown)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d162)).
+(D162 (plan-edit-shown)).
 When the human typed `--plan-edits` with the run, the build skill's exception applies: an
 edit that sharpens a step still ahead lands and is listed at the next card, and one that
 changes a Decision, a Constraint, or a landed step still halts
-([D163 (plan-edits-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d163)).
+(D163 (plan-edits-grant)).
 `plumbbob build` names the top step as the top of the range
 you granted when it enters it. Once that step lands, its checkpoint prints the boundary
 with the Stop row (`| Stop | **Range 3** landed - <its stop> |`); relay none of it, and end
@@ -141,7 +141,7 @@ the run's range on it as the build skill's entering step says, reading the steps
 `plumbbob status --run "<this run's arguments>" --json`: one entry per step, its
 `subject` verbatim, in progress while it is in flight and complete once it lands, so the
 human watches the range tick down. Every task call comes before `plumbbob handoff`
-([D130 (step-mirror)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d130)).
+(D130 (step-mirror)).
 
 **A bare range.** `grant: none, as a bare range builds to its pause`: build the range's one
 step to its pause exactly as the build skill's default path does for `/plumbbob:build <n>`:
@@ -152,11 +152,11 @@ line names it, so your recommendation speaks to that call.
 ## 5. End on the stop card
 
 A run that lands its range ends on the stop card
-([D100 (stop-card)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d100)):
+(D100 (stop-card)):
 the review the plan's stop asked for, with every open park on it and a lean proposed for
 each. The checkpoint that landed the range's last step marked its ending as owing the card,
 and the turn will not close on that boundary
-([D103 (stop-latched)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d103)).
+(D103 (stop-latched)).
 
 *Write the range's detail file.* Overwrite `.plumbbob/detail.md` in the range's shape:
 
@@ -195,7 +195,7 @@ checkpoint bodies (`git log` over its commits) and their entries in the build-lo
 never from recall, since a long run can compact its context partway through and lose its
 early steps. A step that landed a hair off comes first among the sections; five at most. The
 card prints the Summary and links the rest
-([D113 (short-card)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d113)). A caveat the human must see before they
+(D113 (short-card)). A caveat the human must see before they
 reply goes in the Summary or the Recommendation, the two parts the card prints, and never in
 text you add around the card: a card you annotate or rewrite is caught by the relay check
 after it has shown, and since shown text cannot be taken back, the recovery prints the card
@@ -206,18 +206,18 @@ The `## Harvest` section carries one proposal for every open park in the build-l
 lines too, which is the count the table's Parked row sizes as `3 of 8 open`: the third line
 ever parked is `P3` whether or not the two above it are flipped, and the card, the detail
 file, and the human's reply all name it `P3`
-([D105 (park-handles)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d105)).
+(D105 (park-handles)).
 Propose one class per park by the harvest skill's rules, `tangent` for anything uncertain,
 with the reason in one clause, and beneath it two indented lines: a title of two to five
 words that names the park, and why it matters in one clause. The card prints each park as a
 row of the lean table: its handle and your title linked to the park's line in the build log,
 your why, and the lean (`tangent: <the reason>`)
-([D112 (lean-table)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d112),
-[D125 (linked-park-names)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d125)),
+(D112 (lean-table),
+D125 (linked-park-names)),
 so write the class, the reason, the title, and the why alone and leave the table to handoff.
 A park you leave out reads `no lean proposed` on the card and stays open, and a missing why
 reads `not given`. The section vanishes when no park is open, and so does the card's Harvested part
-([D100 (stop-card)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d100)).
+(D100 (stop-card)).
 The recommendation speaks to the plan's stop, the header's `stop:` line, and to the
 proposals: the move you would take on both, then why. A shell command you want the human to
 run never rides inside a sentence: end the sentence on a colon and give the command a fenced
@@ -234,7 +234,7 @@ is still owed, do exactly what the reason says.
 range halted at its pause and `looks good` landed it, the human read that step's Summary,
 Readout, and recommendation a moment ago, so `plumbbob handoff --stop` prints only the
 Harvested table, the moves, the state table with its Stop row, and the link
-([D119 (short-stop-after-a-halt)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d119)).
+(D119 (short-stop-after-a-halt)).
 Write the range's detail file all the same, in full: the stop's record reads it, and
 `show the stop` prints the card whole from it. Paste the short card exactly as it printed;
 never add back the parts it left out.
@@ -242,7 +242,7 @@ never add back the parts it left out.
 ## 6. The reply at a stop
 
 The card's proposals are settled in one reply
-([D102 (settle-in-one-reply)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d102)),
+(D102 (settle-in-one-reply)),
 and the Your Call block names the replies. Read the human's message as one of them:
 
 - **`looks good`** confirms the review and locks in every lean as proposed, as the line
@@ -256,11 +256,11 @@ and the Your Call block names the replies. Read the human's message as one of th
   turn. It commits nothing; the record rides the next step's checkpoint.
 - **A change** (`make P7 a tangent`, or a change to the review) is direction, and the turn
   that makes it is your reply
-  ([D110 (reply-after-the-card)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d110)).
+  (D110 (reply-after-the-card)).
   Rewrite the detail file's line or section, run `plumbbob handoff --stop` last among your
   tool calls and keep the one-line reminder it prints, then say in your own words what
   moved and end the turn on that line, with no tool call after your reply
-  ([D121 (reply-after-the-tools)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d121)).
+  (D121 (reply-after-the-tools)).
   The card does not come back for a change; nothing is recorded until `looks good`, which
   records every lean as the detail file then reads.
 - **A question**, or `expand 2`, is answered from the detail file, the range's commits, or
@@ -276,7 +276,7 @@ and the Your Call block names the replies. Read the human's message as one of th
   step in it), and the grant the hook minted before the record no longer covers it: relay
   the record's ending whole and end the turn there, where the range line beneath its Next Up names the re-cut run
   for the human to type
-  ([D102 (settle-in-one-reply)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d102)).
+  (D102 (settle-in-one-reply)).
   Otherwise relay the record's ending and walk the run from section 4.
 - **`/plumbbob:finish`** at the plan's last range is the finish skill's to settle: it
   records the card the way `looks good` would before it writes the report.

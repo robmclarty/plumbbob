@@ -28,7 +28,7 @@ human's call, never a gate.
 Look at the argument the human gave and pick the mode yourself:
 
 1. **No argument → interview.** Walk the human through a short, friendly Q&A to draw
-   the plan out of their head (see *The interview* below).
+   the plan out of their head: read `interview.md` beside this skill first.
 2. **The argument points at a file → absorb the spec.** A bare path, an `@spec.md`
    mention, or a path wrapped in a sentence all count. Strip any leading `@` and probe
    the token with the `Read` tool; if Claude Code has already injected the referenced
@@ -92,7 +92,7 @@ The argument only seeds how you get there.
    written: it puts the stamp above the findings (the date, each lockfile's hash, each
    named dependency's installed version) and rewrites nothing beneath it. That line is how
    the plan card and the dashboard later say the research has gone out of date
-   ([D158 (research-is-dated)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d158)).
+   (D158 (research-is-dated)).
 
    Then carry each finding that changes something into `intent.md` as a **proposal**: a
    Decision, an Open question with its lean, or a `- like:` line on the step it serves.
@@ -102,17 +102,16 @@ The argument only seeds how you get there.
    `research.md` and does not redo it: whether this is the right thing to build was asked
    there.
 4. **Decisions & Constraints.** Record the settled calls (one line each, with the
-   *because*) and the hard rules the build must honor. **Anchor and slug each at birth**:
-   mint a two- or three-word slug where the item is born and give it an anchor for
-   references to land on (`- <a id="d1"></a>**D1 (default-waves)**: …`,
-   `- <a id="c1"></a>**C1 (no-new-deps)**: …`), then cite it everywhere else in the file
-   as `[D4 (default-waves)](#d4)`, carrying that slug verbatim: **never a bare
-   `D4`/`C6`/`Q2` reference, and never a linkless one**: one link to the definition,
-   one glance at the gloss, so a cold reader never has to hunt the number down.
+   *because*) and the hard rules the build must honor. **Slug each at birth**: mint a two-
+   or three-word slug where the item is born (`- **D1 (default-waves)**: …`,
+   `- **C1 (no-new-deps)**: …`), then cite it everywhere else in the file as
+   `D4 (default-waves)` in plain text, carrying that slug verbatim: **never a bare
+   `D4`/`C6`/`Q2` reference**, so a cold reader never has to hunt the number down. Write
+   no `<a id>` anchor and no `(#d4)` link: the file is read as text, and markup there is
+   noise (D170 (plain-intent)).
    An unresolved hole goes to **Open questions**, never guessed into a Decision,
-   and it goes in the expanded form the template shows: an anchored, slugged opener
-   (the hole as a question, `- <a id="q1"></a>**Q1 (default-waves)**: …`, so
-   `[Q1 (default-waves)](#q1)` has somewhere to land), a `*plain:*` sub-line (what's at
+   and it goes in the expanded form the template shows: a slugged opener (the hole as a
+   question, `- **Q1 (default-waves)**: …`), a `*plain:*` sub-line (what's at
    stake, in plain words, enough to judge it cold), then a `*lean:*` sub-line (your
    proposed resolution: one answer to react to, not a menu), so the human settles it in
    one pass without a round-trip. (A tiny, obvious question may stay one bare line; the
@@ -120,10 +119,10 @@ The argument only seeds how you get there.
    card tables the open questions, one row each, and a cell shows only the first sentence
    of its line, so write each to stand on that sentence: the opener asks one question in
    one sentence, `*plain:*` opens on why it matters, and `*lean:*` opens on the answer
-   ([D118 (questions-table)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d118)).
+   (D118 (questions-table)).
    Keep the question about as long as the why and the lean: the table is a review, and it
    cuts a question at twelve words, leaving the rest to its link to the entry
-   ([D124 (brief-questions)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d124)).
+   (D124 (brief-questions)).
    The rest of each line is for the cold reader of `intent.md`. The card's
    `yes to all leans` move (or `yes to all leans except Q3: <their answer>`) settles them
    in one reply: on each opener line swap `*resolve by:*` for `*resolved:* <date>, <the
@@ -136,11 +135,11 @@ The argument only seeds how you get there.
    beneath the questions table, out of reach of `yes to all leans`, and the Questions row counts it
    apart (`**1** to answer · 2 deferred`); once the work answers it, swap the marker for
    `*resolved:*` as above
-   ([D120 (deferred-questions)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d120)).
+   (D120 (deferred-questions)).
    A question the human keeps open on purpose, as the running log of something the build
    tunes, is deferred the same way, until the work it logs; left on `*resolve by:*`, the
    card counts it as a call still owed
-   ([D123 (defer-records)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d123)).
+   (D123 (defer-records)).
    Deferring is the human's call, never yours: a lean you are unsure of is still a lean.
 5. **Author the Steps.** Write the **full build plan** under `## Steps` (each step a
    small, verifiable increment) in the exact format the parser reads:
@@ -171,11 +170,11 @@ The argument only seeds how you get there.
    no such file, leave the line out, since a loose resemblance teaches the wrong pattern.
    It is advice and never a gate: nothing refuses on it, and the card names a like path
    that does not exist under `**Seams**:`
-   ([D156 (like-is-advice)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d156)). When the card shows a `**Seams**:` part, it has read a seam the build
+   (D156 (like-is-advice)). When the card shows a `**Seams**:` part, it has read a seam the build
    would refuse, or a path one edit from a file that exists: fix the seam in `intent.md`
    and run `plumbbob handoff --plan` again, or, when the path is a new file on purpose, say
    so in one line and leave it
-   ([D131 (seams-at-the-plan)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d131)). Later steps may be fuzzier than the first (that's fine); they get
+   (D131 (seams-at-the-plan)). Later steps may be fuzzier than the first (that's fine); they get
    sharpened just-in-time when you reach them with `/plumbbob:step`. Keep each small enough to
    verify in one review pass. Number them in the sequence you expect to build them and
    leave `## Build order` alone: it is for later, when a refine appends a step that has to
@@ -190,30 +189,9 @@ The argument only seeds how you get there.
    `**Seams**:`, as guidance. Leave the ranges where the human calls are; no grain moves
    one.
 
-   **When status names `orchestration  host`, write each wide step's split.** That line
-   says the builder may hand a step's slices to the host's sub-agents
-   ([D167 (host-orchestration)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d167)). So a step is cut as a domain, a part of the
-   work one orchestrator can own, and a step whose seam holds slices that can be built
-   apart carries its split in a `- note:` line: the slices by path, what one slice needs
-   from another, and what is agreed before they run apart.
-
-   ```markdown
-   3. [ ] feat(limiter): rate-limit every auth route
-      - seam: `src/limiter/`, `src/routes/auth/`, `docs/limits.md`
-      - proof: `pnpm vitest run limiter auth` passes; the 6th request in 60s returns 429
-      - note: split three ways: the limiter and its tests under `src/limiter/`; the
-        routes under `src/routes/auth/`, built against the limiter's exported type; the
-        page in `docs/`. The limiter's type is agreed first, then the three run apart.
-   ```
-
-   Cut the slices along the seam's entries, so that no two share a file, and give the step
-   a proof that opens on a command, since nobody reads a diff this size line by line. A
-   step with one slice gets no note and is built by one model. The note is prose for the
-   builder: it names no agent, no tool and no order of calls beyond what must come first.
-   Without the line in status, write no split. The plan card names a step whose seam holds
-   two slices or more (a file and its test are one) and carries no note, under
-   `**Seams**:`: write its split, or, when the step is one piece of work after all, say so
-   in one line and leave it.
+   **When status names `orchestration  host`, read `orchestration.md` beside this skill
+   before writing the Steps**: it says how a wide step carries its split, and what the
+   plan card names when one does not (D167 (host-orchestration)).
 
    **Three lines a scheduler reads are optional.** `- after:`, `- stop:` and `- effort:`
    each ride a step at most once, and a plan with none of them exports fully serial, which
@@ -224,10 +202,10 @@ The argument only seeds how you get there.
    build folder already holds a `plan.json`, any edit you make to `intent.md` leaves it
    behind and turns the next check red, so run `plumbbob export` after the edit, before
    the plan card
-   ([D146 (cli-keeps-current)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d146)).
+   (D146 (cli-keeps-current)).
 
    **The title *is* the commit subject; author it as one**
-   ([D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68)): write each
+   (D68 (conventional-subjects)): write each
    `<title>` as a plain, single-line Conventional-Commit subject,
    `type(scope): description`, and it lands in `git log` verbatim (its breaking `!`
    honored); this is how each step lands a *real* `feat`/`fix`/`chore` in the history.
@@ -254,9 +232,10 @@ The argument only seeds how you get there.
    It is advisory metadata for the human (`/plumbbob:status` surfaces it before each build),
    never a gate, and nothing switches models automatically. Write it plain (no
    backticks) and omit it when any model would do.
+
 6. **Cut the build ranges.** With the steps written, say where the build stops for a
    human call, under `## Build ranges`
-   ([D92 (build-ranges)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d92)):
+   (D92 (build-ranges)):
    one sentence on how to drive the build, a `/plumbbob:run` per range, then one numbered
    item per range, in the format the parser reads:
 
@@ -274,7 +253,7 @@ The argument only seeds how you get there.
    can do, such as a push, a live key, or spending money. A range that runs through one
    has the model make the human's call; a stop that marks none of them is a pause nobody
    needed. The command's form says what kind of stop it is
-   ([D85 (range-top-lands)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d85)).
+   (D85 (range-top-lands)).
    A span such as `2-5` lands every step it names and stops at the boundary after the
    last, so its stop is a review of what landed, or a decision the next steps need before
    they build. A bare `N` builds step N to its pause, so write one for a call that has to
@@ -299,39 +278,15 @@ The argument only seeds how you get there.
    definition: the form the parser reads, and the kind of stop it makes. The card names
    `/plumbbob:run` on the range line beneath Next Up for the range holding the next step,
    with the steps it will land beside it, and `/plumbbob:run 3` runs range 3 by its item number
-   ([D95 (run-verb)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d95)).
+   (D95 (run-verb)).
    A range grants nothing until the human types the run that names it, and then the turn
    hook mints the grant from the plan as it stands
-   ([D96 (plan-names-the-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d96)),
+   (D96 (plan-names-the-grant)),
    so a range you cut is never a grant you mint
-   ([D67 (auto-not-a-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d67)).
-7. **Offer harness bindings** *(optional)*. If the build will lean on
-   user-authored agents, author `harness.json` in the build folder (beside `intent.md`)
-   and review it at the **same plan pause**, alongside the steps; bindings are
-   plan-adjacent configuration, so they converge with the plan. It binds agents to a
-   step's three lifecycle slots, `before` (context in), `build` (the diff), and `after`
-   (advisory review), with an optional prose `note`; a `defaults` block binds every
-   step. Run `plumbbob agent list` to see what's resolvable, per step:
-
-   ```json
-   {
-     "contract": 1,
-     "defaults": { "after": ["reviewer"] },
-     "steps": { "3": { "before": ["context-loader"], "note": "watch the auth seam" } }
-   }
-   ```
-
-   Keep it **bindings + prose only, never a conditional**: the file says *which*
-   agent, not *when*; the host model reads each manifest's `when` prose and a step's
-   `note` and decides when to run one mid-build. Skip the file entirely when no step
-   uses an agent; the loop runs identically without it. The plan commit picks it
-   up automatically (it lives in the build folder). A binding may be a path in place of
-   a name: `./tools/walk` resolves from the repo root and must stay inside it, so an
-   agent kept in the repo outside `.plumbbob/agents/` is bound by its path and every
-   clone runs it, where a name only your personal tier holds is skipped with a warning
-   on a teammate's machine. `plumbbob agent list` walks the tiers, so an
-   agent bound by its path does not show there
-   ([D160 (path-bindings)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d160)).
+   (D67 (auto-not-a-grant)).
+7. **Offer harness bindings** *(optional)*. If the build will lean on user-authored
+   agents, read `agents.md` beside this skill and author `harness.json` at the same
+   plan pause. Skip it when no step uses an agent; the loop runs identically without it.
 8. **Commit the plan.** Once the human approves the frame and steps, run
    `plumbbob checkpoint --plan` to commit the scaffold on its own: subject
    `chore(<scope>): plan` (with a `plumbbob plan` body marker), only `.plumbbob/builds/<slug>/`,
@@ -361,7 +316,7 @@ The argument only seeds how you get there.
      include `AskUserQuestion` and the plan holds a question that waits on the human, ask
      before you write any text this turn: before the framed plan, and before
      `plumbbob handoff --plan`
-     ([D129 (ask-first)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d129)).
+     (D129 (ask-first)).
      With two or more waiting, ask one question first, `<N> open questions, each with a
      lean. How do you want to settle them?`, under the header `Questions`, with three
      options: `Take every lean (Recommended)`, `Go through them`, and
@@ -453,22 +408,6 @@ state table, then the `more details` link to the file, "expand 2" opens `## 2`, 
 plan's line in the build-log's `## Log`, the build's first entry. The cold read is the tip of refine: it makes the
 full attack discoverable at the moment it would pay, and lets a sound plan skip it. Refine
 is where the real adversary looks; this is an estimate, and it says so by staying short.
-
-## The interview (mode 1)
-
-Make it easy and non-intrusive:
-
-- **Triage size first.** A tiny change earns a 3-line Frame and one Step, fast: never
-  ceremony on a one-liner. Scale the questions to the work.
-- **Propose, don't interrogate.** Offer concrete suggestions the human can **accept as-is
-  without typing** ("proof: the 6th request in 60s returns 429, good?"), while
-  taking arbitrary detail when they want to give it, including pointers to other files.
-- **A fork with real alternatives can be a choice.** When the interview reaches a call
-  with two to four concrete answers, and your tools include `AskUserQuestion`, ask it
-  there, your suggestion first and marked `(Recommended)`, before any text in that turn.
-  The tool's free-text choice carries whatever detail they want to give.
-- **Let them double back.** They will revise as the picture sharpens; that's expected.
-  They can also edit `intent.md` by hand at any time, or call `/plumbbob:refine` to repair it.
 
 ## The hard contracts
 

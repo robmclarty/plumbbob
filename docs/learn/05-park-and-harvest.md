@@ -151,7 +151,7 @@ Three places in `intent.md` grew. Your model's wording will differ; check for
 the slug, the step's number, and the order line:
 
 ```markdown
-- <a id="d5"></a>**D5 (weeks-are-days)**: `w` is sugar for seven `d`, *because* the store keeps days and the parser stays one function (step 5's boundary, P2)
+- **D5 (weeks-are-days)**: `w` is sugar for seven `d`, *because* the store keeps days and the parser stays one function (step 5's boundary, P2)
 
 8. [ ] feat(life): accept a shelf life written in weeks
    - seam: `src/life.ts`, `src/__tests__/life.test.ts`

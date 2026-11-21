@@ -132,9 +132,9 @@ them, `D3` to `D5`, came from three different places. Here they are as `intent.m
 them; yours carry the model's own reasons:
 
 ```markdown
-- <a id="d3"></a>**D3 (default-life)**: an item left without `--for` lives 5 days, *because* a work week is as long as I leave a thing before I stop seeing it
-- <a id="d4"></a>**D4 (archive-not-delete)**: a fallen item moves to `$SIFT_ARCHIVE`, default `~/.sift.archive.json`, *because* I want to look back once before it is gone (range 2's stop, by hand)
-- <a id="d5"></a>**D5 (weeks-are-days)**: `w` is sugar for seven `d`, *because* the store keeps days and the parser stays one function (step 5's boundary, P2)
+- **D3 (default-life)**: an item left without `--for` lives 5 days, *because* a work week is as long as I leave a thing before I stop seeing it
+- **D4 (archive-not-delete)**: a fallen item moves to `$SIFT_ARCHIVE`, default `~/.sift.archive.json`, *because* I want to look back once before it is gone (range 2's stop, by hand)
+- **D5 (weeks-are-days)**: `w` is sugar for seven `d`, *because* the store keeps days and the parser stays one function (step 5's boundary, P2)
 ```
 
 `D3` came from the plan card and your pen. `yes to all leans` resolved `Q1` and the skill

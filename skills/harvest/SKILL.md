@@ -27,7 +27,7 @@ A range's stop is the boundary that matters most. No harvest runs between the st
 inside a range, so the parks it piled up wait for the stop where it lands, and a
 blocker among them is caught there before the next range builds on it. A run's stop card
 carries its harvest
-([D100 (stop-card)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d100)):
+(D100 (stop-card)):
 every open park is on the card with a proposed lean, and the reply that settles the card
 records them, so there is nothing left for this skill to do there. If
 `.plumbbob/detail.md` opens on a `# Detail · Range <N>` header, that card is still waiting:
@@ -48,7 +48,7 @@ class**, all of them at once:
 
 You **propose**; the **human calls it**. Propose a class for every open item at once,
 with one line of reasoning each, and the human settles them all in one reply
-([D102 (settle-in-one-reply)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d102)):
+(D102 (settle-in-one-reply)):
 one reply per item is what made a harvest a chore, and seeing every proposal at once keeps
 the call on each one theirs. The detail file you write first is the proposal; record
 **only after** that reply confirms them:
@@ -67,13 +67,13 @@ the call on each one theirs. The detail file you write first is the proposal; re
   handle is `P` and its place in the Park list, counting the harvested lines too (the
   count the state table's Parked row sizes as `3 of 8 open`), and it is the one name the
   detail file, the turn, and the human's reply all use
-  ([D105 (park-handles)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d105)).
+  (D105 (park-handles)).
   Then run `plumbbob handoff --harvest` and paste its output whole, verbatim, and end the
   turn there: it prints the lean table, one row per open park with its handle and your
   title linked to the park's line in the build log, your why, and your lean, then the moves
   that settle it
-  ([D112 (lean-table)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d112),
-  [D125 (linked-park-names)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d125)).
+  (D112 (lean-table),
+  D125 (linked-park-names)).
   Write nothing before or after it; the table is the CLI's to print, never yours.
 - A reply that changes a proposal (`make P7 a tangent`) is the human's call and your
   reply: rewrite that line, say in your own words which lean moved, and end the turn
@@ -81,7 +81,7 @@ the call on each one theirs. The detail file you write first is the proposal; re
   `plumbbob handoff --harvest` prints it. A reply that confirms them (`looks good`) is what
   lets you write.
 - On that confirmation, run `plumbbob harvest`
-  ([D104 (harvest-records)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d104)).
+  (D104 (harvest-records)).
   It flips each settled item from `- [ ]` to `- [x]` in the Park list, so
   `/plumbbob:status` stops counting it as open, and records each confirmed class under
   `build-log.md`'s `## Harvest` section. Relay its ending whole, the `**Recorded**:` line
@@ -89,8 +89,8 @@ the call on each one theirs. The detail file you write first is the proposal; re
   with eight parked) or a class other than blocker, tangent, or pivot; fix the line it
   names and run it again.
 - A confirmed **blocker** also folds its decision into `intent.md`, slugged at birth
-  like any Decision, anchored the same way
-  (`- <a id="d5"></a>**D5 (retry-cap)**: <the call>, *because* <why>`), never a bare `D5`.
+  like any Decision (`- **D5 (retry-cap)**: <the call>, *because* <why>`), never a bare
+  `D5`.
   A blocker that becomes a new step takes the next free number under `## Steps` and its
   place in the sequence through `plumbbob order 7 8 5` (the `## Build order` line, every
   undone step in the sequence to build them), never by renumbering, even when it builds
@@ -99,12 +99,12 @@ the call on each one theirs. The detail file you write first is the proposal; re
   to come that the order puts it in, the one it builds ahead of when it lands first, and
   never a range that has landed, since that range's call was made and the step would
   reopen it
-  ([D109 (ranges-follow-the-order)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d109)).
+  (D109 (ranges-follow-the-order)).
   Give the step a bare range of its own instead, written before you run the verb, when it
   brings a call the human has to make before it lands. A new range takes the next free item
   number, and no item is renumbered, because the stop card's stamp, the detail file's
   header, and `plumbbob harvest` find a landed range by its number
-  ([D92 (build-ranges)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d92)).
+  (D92 (build-ranges)).
   The verb's ending names each range it re-cut, and an advisory names any it left for
   you; re-cut that one in the same confirmed edit, and `plumbbob status` afterward carries
   a `⚠` row for any range still broken.
@@ -115,10 +115,10 @@ the call on each one theirs. The detail file you write first is the proposal; re
   deferral. The park list never moves the Questions count, so a tangent alone leaves the
   card reading a call still owed, and the record's ending warns of any question a tangent
   names that still counts as one to answer
-  ([D123 (defer-records)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d123)).
+  (D123 (defer-records)).
 - Fold a confirmed blocker into `intent.md`, and defer each question a confirmed tangent
   sets aside, before you run `plumbbob harvest`, so the record and the plan agree when it
   lands. `plumbbob harvest` brings an exported `plan.json` up to the fold as it starts
-  ([D146 (cli-keeps-current)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d146)).
+  (D146 (cli-keeps-current)).
 - Never reclassify or resolve an item the human hasn't confirmed, and default every
   uncertain item to **tangent**, never to blocker.

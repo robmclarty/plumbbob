@@ -40,10 +40,10 @@ and two open questions in the expanded form:
 ```markdown
 ## Open questions
 
-- <a id="q1"></a>**Q1 (default-life)**: How long does an item live when `--for` is left off?, *resolve by:* decide
+- **Q1 (default-life)**: How long does an item live when `--for` is left off?, *resolve by:* decide
   - *plain:* every `sift add` without a number needs an answer, and the number is the one most people will live with.
   - *lean:* 7 days; a week is the span most things I mean to do fall into.
-- <a id="q2"></a>**Q2 (fall-off-fate)**: Is an item that falls off deleted or archived to a second file?, *resolve by:* decide
+- **Q2 (fall-off-fate)**: Is an item that falls off deleted or archived to a second file?, *resolve by:* decide
   - *plain:* deleting is one line and forgets for good; an archive is a second file and a second path to keep.
   - *lean:* deleted, because a list that forgets should forget.
 ```
@@ -137,7 +137,7 @@ questions table, what will settle it where the lean was. In the file, the opener
 line now reads:
 
 ```markdown
-- <a id="q2"></a>**Q2 (fall-off-fate)**: Is an item that falls off deleted or archived to a second file?, *deferred:* 2026-11-04, until range 2's stop shows what falling off looks like
+- **Q2 (fall-off-fate)**: Is an item that falls off deleted or archived to a second file?, *deferred:* 2026-11-04, until range 2's stop shows what falling off looks like
 ```
 
 A deferred question is still open and every count says so, but it is no longer a
@@ -157,7 +157,7 @@ One reply resolves every question still in the table. `Q1`'s opener swaps its
 with the reason the lean gave:
 
 ```markdown
-- <a id="d3"></a>**D3 (default-life)**: an item left without `--for` lives 7 days, *because* a week is the span most things I mean to do fall into
+- **D3 (default-life)**: an item left without `--for` lives 7 days, *because* a week is the span most things I mean to do fall into
 ```
 
 The card comes back with no questions table, only `**Deferred**: 1 left to the work`
@@ -170,13 +170,13 @@ stop seeing it, and the plan is a text file. Open `intent.md` and change this li
 by hand:
 
 ```markdown
-- <a id="d3"></a>**D3 (default-life)**: an item left without `--for` lives 7 days, *because* a week is the span most things I mean to do fall into
+- **D3 (default-life)**: an item left without `--for` lives 7 days, *because* a week is the span most things I mean to do fall into
 ```
 
 to
 
 ```markdown
-- <a id="d3"></a>**D3 (default-life)**: an item left without `--for` lives 5 days, *because* a work week is as long as I leave a thing before I stop seeing it
+- **D3 (default-life)**: an item left without `--for` lives 5 days, *because* a work week is as long as I leave a thing before I stop seeing it
 ```
 
 If `Q1`'s resolved marker names the number too, change it there as well, so the

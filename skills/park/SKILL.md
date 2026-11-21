@@ -50,7 +50,7 @@ Then:
 4. **A question beside the tangent is answered after the capture.** When the human's
    message also asks something, run `plumbbob park` first, then answer the question, then
    end the turn on the park's block, typed as it printed, with no tool call after the
-   answer ([D121 (reply-after-the-tools)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d121)):
+   answer (D121 (reply-after-the-tools)):
    a client that folds text written before a tool call would show the block and hide the
    answer. A message that is only a tangent ends on the block alone. Either way the
    block's pointer back at the step closes the turn, so run no `plumbbob handoff` after
@@ -65,7 +65,7 @@ once other work lands (`leave Q3 until the latency numbers are in`), run
 `plumbbob defer Q3 "<what settles it>"` in place of the park. The question's own opener
 is where it waits, and the card counts it apart from the questions to answer; a park line
 beside it would leave the card counting it as a call still owed
-([D123 (defer-records)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d123)).
+(D123 (defer-records)).
 `plumbbob defer` prints the same kind of block, `**Deferred**: Q3 (<slug>) until <what
 settles it>` and the pointer, and you relay it the same way. When `plumbbob park` warns that
 a question it names still counts as one to answer, relay the block as printed; whether to

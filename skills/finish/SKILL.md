@@ -20,7 +20,7 @@ record.
 1. **Settle a stop card still waiting.** Read `.plumbbob/detail.md`. When it opens on a
    `# Detail · Range <N>` header, the last range's stop card is waiting for its reply, and
    `/plumbbob:finish` typed at it is that reply, the move its Your Call block names
-   ([D102 (settle-in-one-reply)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d102)).
+   (D102 (settle-in-one-reply)).
    Record it the way `looks good` would before anything else: fold each blocker its
    `## Harvest` section proposes into `intent.md` by the harvest skill's rules (read
    `../harvest/SKILL.md` from this skill's base directory), then run `plumbbob harvest`,
@@ -43,13 +43,13 @@ record.
      the report reads without flipping back to the intent.
    - `## Parked & harvested`: what was captured and how each was classified, as the
      table the stop card's leans use, with the settled class where the card had the lean
-     ([D112 (lean-table)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d112)):
+     (D112 (lean-table)):
      `| Park | Why it matters | Settled |`, one row per park: its handle in bold and a short
      title linked to the park's line in `build-log.md`, beside the report
      (`**P6**: [note on the card](build-log.md#L31)`), why it matters (the why the stop's
      record kept, or your own clause for a park harvested before the table), and the class
      it settled as with its reason
-     ([D125 (linked-park-names)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d125)).
+     (D125 (linked-park-names)).
    - `## Final status`: done or partial, and what is left.
    - `## Deferred tangents`: the harvested items that become future work.
    Stop there. `plumbbob finish` appends `## Footprint` (the contract paths touched, how

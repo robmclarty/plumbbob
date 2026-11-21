@@ -12,7 +12,7 @@ Current session state (injected when this skill runs): !`plumbbob status 2>/dev/
 This is the **tick**: the one beat where the human is the clock. Whatever produced
 the current diff (`/plumbbob:build`, your own hands, a vibe session, another harness),
 this skill verifies it the same way: **it reads the diff, not the author**
-([D3 (author-blind-executor)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d3)).
+(D3 (author-blind-executor)).
 
 ## What this skill does, in order
 
@@ -106,12 +106,12 @@ this skill verifies it the same way: **it reads the diff, not the author**
    `seam` row prints as `plumb` (`seam 3 · reach 1 · out 1`): a changed file is in the
    seam, in the reach the plan could have expected, or outside both, and only an `out`
    file is a stray
-   ([D155 (reach-is-computed)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d155)).
+   (D155 (reach-is-computed)).
    A `plan` row is the CLI's too, measured and shown by `plumbbob handoff`: when
    `intent.md` was edited during the step, the Readout counts the lines and a Plan Edit
    part beneath it shows the diff. You never edit `intent.md` during a step. If you find
    you must, stop and say so
-   ([D162 (plan-edit-shown)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d162)).
+   (D162 (plan-edit-shown)).
    Keep the rows contiguous (the first blank line ends them). Each opens with
    a verdict word from the closed set in the turn anatomy (`met`, `not met`, `drift`;
    `honored`, `none exercised`, `bent`, `drift`; `all honored`, `bent`, `drift`); a cited
@@ -165,10 +165,10 @@ this skill verifies it the same way: **it reads the diff, not the author**
    turn is not yours to relay or repeat; the trailing blank line you kept is what lands it
    on its own line. Relayed CLI strings keep their em-dashes; your own lines never use
    one, the write-versus-relay line of
-   [D78 (em-dash-ban)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d78).
+   D78 (em-dash-ban).
 
    *Then answer the reply in your own words, after every tool call.* The card shows once
-   ([D110 (reply-after-the-card)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d110)):
+   (D110 (reply-after-the-card)):
    every later turn at this pause is your reply, closed by one line. A message that
    **asks** ("expand 2", "what does that mean?", "why did the seam row flag that?") is an
    expand: answer it from the detail file, from `git diff`, or from the build-log's
@@ -177,7 +177,7 @@ this skill verifies it the same way: **it reads the diff, not the author**
    change moves what the card said, write the detail file again so the record matches what
    lands. Nothing lands until the human says `looks good`. Either way, every tool call
    comes before your reply and none after it
-   ([D121 (reply-after-the-tools)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d121)):
+   (D121 (reply-after-the-tools)):
    read, edit, run the check, write the detail file, and run `plumbbob handoff <n>` last
    among them. At a pause whose card has shown it prints one line,
    `**Next Up**: Back to **Step N** on <Model> - <title>`, whatever changed since. Keep
@@ -194,7 +194,7 @@ this skill verifies it the same way: **it reads the diff, not the author**
    turn that does not close on it. Read the detail file and `plumbbob status` instead.
 
    - **Reconcile a drifted subject here, in the open.** The planned title *is* the
-     checkpoint subject ([D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68)). If the diff drifted from it (the
+     checkpoint subject (D68 (conventional-subjects)). If the diff drifted from it (the
      step landed something the title no longer describes), the body pass may propose a
      corrected subject, but it **presents** it at this pause for explicit approval, in
      the recommendation the card shows (`Approve it, landing it as <proposed subject>.`),
@@ -202,7 +202,7 @@ this skill verifies it the same way: **it reads the diff, not the author**
      detail file titled `planned title → proposed subject`.
      This is the exception, not the default: with **nothing presented**, the deterministic
      title-derived subject lands untouched. A silent `-m` swap is exactly the
-     agent-authored subject [D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68) refuses, so a reconcile is
+     agent-authored subject D68 (conventional-subjects) refuses, so a reconcile is
      *only ever* the visible, approved kind.
 6. **Checkpoint** *(only after approval)*. Run `plumbbob checkpoint`: it makes the WIP
    commit, records the SHA, flips the step to done, appends the step to the build-log's
@@ -264,7 +264,7 @@ commit-ask hook asks the human about it anyway. The refusal is a healthy latch d
 job on the *record* while the *work* plane stays free; a `/plumbbob:build --auto` or
 a typed step range (`1-3`, or a list like `20,5-9`) in the human's own prompt is the only self-approval; **never write
 `auto` into a settings file to unlock the land; the latch ignores a model-minted grant
-([D67 (auto-not-a-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d67)), so ask the human to type `/plumbbob:build --auto` again
+(D67 (auto-not-a-grant)), so ask the human to type `/plumbbob:build --auto` again
 instead.**
 
 ## The hard contracts

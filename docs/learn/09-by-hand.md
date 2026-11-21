@@ -55,11 +55,11 @@ Delete the two placeholder steps the template ships (they parse as real steps), 
 
 ## Decisions
 
-- <a id="d1"></a>**D1 (path-is-a-command)**: `sift path` is a third command, not a flag, *because* sift's two commands are words, and a flag would be its first.
+- **D1 (path-is-a-command)**: `sift path` is a third command, not a flag, *because* sift's two commands are words, and a flag would be its first.
 
 ## Constraints
 
-- <a id="c1"></a>**C1 (no-runtime-deps)**: Node built-ins only, as the first build held.
+- **C1 (no-runtime-deps)**: Node built-ins only, as the first build held.
 
 ## Steps
 

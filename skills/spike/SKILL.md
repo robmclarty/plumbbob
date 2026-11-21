@@ -20,7 +20,7 @@ This is a **driver skill**: a chat-side trigger for the mechanical `plumbbob spi
 3. Report the verb's output verbatim: the worktree it created or removed, the spike report it scaffolded, or any refusal. When the verb names a `spike-NN-<slug>.md` report, point the human at it; when `spike done` nudges that a verdict is unrecorded, that nudge is already inside the block, so relay it there rather than restating it.
 4. A successful transition prints its own ending (the driver tier of the [turn anatomy](https://github.com/robmclarty/plumbbob/blob/main/docs/presentation.md)): the lead line, any nudge, and the pointer, which names closing the spike while one is live and points forward from the boundary once `spike done` closes it. Relay that block whole and run no second command. A refusal is not a transition; it carries no pointer, so relay it and stop.
 
-## The spike report ([D70 (spike-reports)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d70))
+## The spike report (D70 (spike-reports))
 
 Every spike leaves a durable `spike-NN-<slug>.md` in the build folder, beside `intent.md`/`report.md`, so the fork's verdict rides the branch into the PR instead of evaporating. The CLI scaffolds it from a template and numbers it; you never create or number the file:
 

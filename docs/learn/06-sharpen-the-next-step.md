@@ -75,18 +75,18 @@ days from gone. The lean was deleted; you want to look back once. Nothing about 
 a skill. Open `intent.md` and change this line by hand:
 
 ```markdown
-- <a id="q2"></a>**Q2 (fall-off-fate)**: Is an item that falls off deleted or archived to a second file?, *deferred:* 2026-11-04, until range 2's stop shows what falling off looks like
+- **Q2 (fall-off-fate)**: Is an item that falls off deleted or archived to a second file?, *deferred:* 2026-11-04, until range 2's stop shows what falling off looks like
 ```
 
 ```markdown
-- <a id="q2"></a>**Q2 (fall-off-fate)**: Is an item that falls off deleted or archived to a second file?, *resolved:* 2026-11-04, archived to a second file
+- **Q2 (fall-off-fate)**: Is an item that falls off deleted or archived to a second file?, *resolved:* 2026-11-04, archived to a second file
 ```
 
 Then add the decision under `## Decisions`, between `D3` and the harvest's `D5`, with the
 one reason that settled it and where it was made:
 
 ```markdown
-- <a id="d4"></a>**D4 (archive-not-delete)**: a fallen item moves to `$SIFT_ARCHIVE`, default `~/.sift.archive.json`, *because* I want to look back once before it is gone (range 2's stop, by hand)
+- **D4 (archive-not-delete)**: a fallen item moves to `$SIFT_ARCHIVE`, default `~/.sift.archive.json`, *because* I want to look back once before it is gone (range 2's stop, by hand)
 ```
 
 The harvest took the next free number when it wrote its line; if yours reads `D4`, give

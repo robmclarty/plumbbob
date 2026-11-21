@@ -18,7 +18,7 @@ reads it: the `## Build order` line in `intent.md`, which `plumbbob status`, a b
 `/plumbbob:build`, `plumbbob checkpoint`, and the card's Next Up all follow. When the plan
 carries `## Build ranges`, the same verb re-cuts them to follow the sequence, so
 `/plumbbob:run` walks the steps the new order put in its range
-([D109 (ranges-follow-the-order)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d109)).
+(D109 (ranges-follow-the-order)).
 
 ## Wrong-state refusal
 

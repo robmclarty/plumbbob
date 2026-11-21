@@ -225,3 +225,18 @@ describe('scanRepo — walks the surfaces and honors the skip list', () => {
     expect(scriptViolation?.kind).toBe('missing-slug')
   })
 })
+
+describe('checkCitation — the skill surface — D170 (plain-intent)', () => {
+  it('passes a plain citation carrying its canonical slug', () => {
+    expect(violationsFor('the agent-authored subject D26 (build-folders) refuses', 'skill')).toEqual([])
+  })
+
+  it('refuses a linked citation, since a skill is read as text', () => {
+    expect(violationsFor('[D26 (build-folders)](https://example.com/decisions.md#d26)', 'skill').map((v) => v.kind)).toEqual(['link-forbidden'])
+  })
+
+  it('refuses a citation with no slug, and leaves a tag inside a code span alone', () => {
+    expect(violationsFor('see D26 for it', 'skill').map((v) => v.kind)).toEqual(['missing-slug'])
+    expect(violationsFor('never a bare `D26` reference', 'skill')).toEqual([])
+  })
+})

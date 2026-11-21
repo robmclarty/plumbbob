@@ -2486,9 +2486,9 @@ lowercase way still parses.
 
 **A link is written from where the file lives, and the record moves it.** A
 relative link in the detail file resolves from `.plumbbob/`, so a decision in
-the plan is `builds/<slug>/intent.md#d5` there. The build log that records
+the plan is `builds/<slug>/intent.md#L14` there. The build log that records
 the file sits one folder deeper, in `builds/<slug>/`, so the record re-aims
-every relative link at the same target from there (`intent.md#d5`), leaving
+every relative link at the same target from there (`intent.md#L14`), leaving
 a URL, a root-relative path, a bare `#anchor`, and anything inside code as
 written ([D116 (links-re-rooted)](decisions.md#d116)). The same text is read
 from two folders, and only the copy knows both; a link written for the log

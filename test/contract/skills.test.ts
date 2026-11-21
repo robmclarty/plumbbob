@@ -401,7 +401,7 @@ describe('build — the default engine: implement the planned step, then verify'
   it('reconciles a drifted subject only at the pause — presented for approval, else the deterministic subject lands — D68 (conventional-subjects)', () => {
     expect(body).toMatch(/planned title → proposed\s+subject/) // the presented reconcile shape
     expect(body).toMatch(/-m/) // landed via the existing -m subject override
-    expect(body).toMatch(/D68 \(conventional-subjects\)\]\([^)]+\)\s+refuses/) // determinism preserved — no silent agent-authored swap
+    expect(body).toMatch(/D68 \(conventional-subjects\)\s+refuses/) // determinism preserved — no silent agent-authored swap
   })
 })
 
@@ -619,7 +619,7 @@ describe('verify — the tick: check, self-review, validate, PAUSE, checkpoint',
   it('reconciles a drifted subject only at the pause — presented for approval, else the deterministic subject lands — D68 (conventional-subjects)', () => {
     expect(body).toMatch(/planned title → proposed\s+subject/) // the presented reconcile shape
     expect(body).toMatch(/-m/) // landed via the existing -m subject override
-    expect(body).toMatch(/D68 \(conventional-subjects\)\]\([^)]+\)\s+refuses/) // determinism preserved — no silent agent-authored swap
+    expect(body).toMatch(/D68 \(conventional-subjects\)\s+refuses/) // determinism preserved — no silent agent-authored swap
   })
 })
 
@@ -1020,5 +1020,18 @@ describe("the range rides the host's task list, a mirror the build never reads b
   it('run mirrors its own range', () => {
     expect(flat('run')).toContain('`plumbbob status --run "<this run\'s arguments>" --json`')
     expect(flat('run')).toContain('Every task call comes before `plumbbob handoff`')
+  })
+})
+
+describe('plan — the parts read on demand — D169 (build-on-demand)', () => {
+  const { body } = parseSkill('plan')
+
+  it('names each file beside it with its cue, and each file holds its part', () => {
+    expect(body).toContain('read `interview.md` beside this skill first')
+    expect(readBeside('plan', 'interview.md')).toContain('## The interview (mode 1)')
+    expect(body).toContain('read `agents.md` beside this skill and author `harness.json`')
+    expect(readBeside('plan', 'agents.md')).toContain('bindings + prose only, never a conditional')
+    expect(body).toContain('read `orchestration.md` beside this skill')
+    expect(readBeside('plan', 'orchestration.md')).toContain("write each wide step's split")
   })
 })

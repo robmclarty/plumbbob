@@ -10,7 +10,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { collectMaskSpans, isWithin } from './prose-mask.ts'
 
-export type Surface = 'markdown' | 'src'
+export type Surface = 'markdown' | 'skill' | 'src'
 
 export type ViolationKind = 'unlinked' | 'bad-anchor' | 'missing-slug' | 'wrong-slug' | 'link-forbidden'
 
@@ -48,8 +48,11 @@ const TAG_RE = /\b([DC]\d+)\b/g
 // category `.plumbbob/builds/*/` is exempt for), and not one of the surfaces the rule
 // covers. The root `keyframes.md` is the fourth carve-out: it mirrors
 // docs/decisions.md's numbers and slugs in keyframes' own item grammar, and the
-// gate's `intent` slot (`keyframes check`) reads it, not this scanner.
-const SKIP_DIRS = new Set(['node_modules', 'dist', 'coverage', 'research', 'test', '__tests__', 'examples'])
+// gate's `intent` slot (`keyframes check`) reads it, not this scanner. `templates/` is
+// the fifth: its intent.md is the plan a build starts from, with the same build-local
+// numbering, and a plan's items carry no anchor and its citations no link
+// (D170 (plain-intent)), so the link rule would refuse the very shape it teaches.
+const SKIP_DIRS = new Set(['node_modules', 'dist', 'coverage', 'research', 'test', '__tests__', 'examples', 'templates'])
 
 /**
  * The repo's canonical D#/C# -> slug map, parsed from docs/decisions.md's
@@ -85,11 +88,11 @@ function collectExclusionSpans(text: string): ReadonlyArray<readonly [number, nu
  * Every D#/C# citation in a chunk of text, outside a code span/fence and outside a
  * decisions.md definition line: a tag inside a code span is a mention, never a
  * citation, which is D74 (glossed-citations)'s own escape hatch. `surface: 'markdown'`
- * applies the code-span/definition exclusions; `surface: 'src'` scans raw, since a
- * TypeScript template-literal backtick is not a markdown code span.
+ * and `surface: 'skill'` apply the code-span/definition exclusions; `surface: 'src'`
+ * scans raw, since a TypeScript template-literal backtick is not a markdown code span.
  */
 export function findCitations(text: string, surface: Surface): ReadonlyArray<RawCitation> {
-  const exclusions = surface === 'markdown' ? collectExclusionSpans(text) : []
+  const exclusions = surface === 'src' ? [] : collectExclusionSpans(text)
   const linkSpans = [...text.matchAll(CITATION_LINK_RE)].map((match) => {
     const start = match.index ?? 0
     return {
@@ -140,13 +143,10 @@ export function checkCitation(
 ): Omit<Violation, 'file' | 'line'> | null {
   const canonicalSlug = definitions.get(citation.tag) ?? null
 
-  if (surface === 'src') {
+  if (surface === 'src' || surface === 'skill') {
     if (citation.linked) {
-      return {
-        tag: citation.tag,
-        kind: 'link-forbidden',
-        message: `${citation.tag} is wrapped in a markdown link; printed strings carry a gloss only (D74 (glossed-citations))`,
-      }
+      const what = surface === 'src' ? 'printed strings carry a gloss only (D74 (glossed-citations))' : 'a skill is read by the model as text, so it carries a gloss only (D170 (plain-intent))'
+      return { tag: citation.tag, kind: 'link-forbidden', message: `${citation.tag} is wrapped in a markdown link; ${what}` }
     }
     if (citation.slug === null) {
       return { tag: citation.tag, kind: 'missing-slug', message: `${citation.tag} is printed without its gloss` }
@@ -223,7 +223,7 @@ export function scanRepo(root: string): ScanResult {
   for (const file of walkFiles(root, root)) {
     filesScanned++
     const text = readFileSync(file, 'utf8')
-    const surface: Surface = file.endsWith('.md') ? 'markdown' : 'src'
+    const surface: Surface = !file.endsWith('.md') ? 'src' : relative(root, file).startsWith(`skills${sep}`) ? 'skill' : 'markdown'
     for (const citation of findCitations(text, surface)) {
       const violation = checkCitation(citation, definitions, surface)
       if (violation !== null) {

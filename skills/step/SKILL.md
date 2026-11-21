@@ -49,14 +49,14 @@ grew, but its everyday job is to sharpen, not to invent.
    exemplar, a file in the repo that already does what this step does; the builder reads
    it before its first edit. Without one, leave the line out, and cut a like line whose
    file has moved or no longer fits
-   ([D156 (like-is-advice)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d156)). Keep the
+   (D156 (like-is-advice)). Keep the
    sharpened `<title>` a plain, single-line Conventional-Commit subject,
    `type(scope): description`; it lands in `git log` verbatim, so as the step tightens
    keep load-bearing detail (file paths, module names) in `seam` and `proof`,
    **never jammed into the title**. A sharpened step carries its own `(scope)`
    when it touches a distinct code area, one that **overrides the build-default**
    `**Scope:**` header; drop the scope and it falls back to that default → build slug →
-   bare, and the type to `feat` ([D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68)). Aim for a soft
+   bare, and the type to `feat` (D68 (conventional-subjects)). Aim for a soft
    ≤72 chars, no gate. Revise the existing step in place; only append when you are
    genuinely adding an increment. An appended step keeps the next free number for life,
    and it takes its place by sequence, never by renumbering: shell `plumbbob order 7 8 5`
@@ -68,12 +68,12 @@ grew, but its everyday job is to sharpen, not to invent.
    `plumbbob order` files the step for you: it re-cuts the ranges to follow the sequence it
    writes, so a step joins the range whose steps sit on both sides of it, else the range it
    builds ahead of, else the one it builds after
-   ([D109 (ranges-follow-the-order)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d109)):
+   (D109 (ranges-follow-the-order)):
    never a bare range, and never a range that has landed, since that range's call was made
    and the step would reopen it. Edit `## Build ranges` yourself only where the order
    cannot say what you mean, and before you run the verb. A step that brings a call the
    human has to make before it lands gets a bare range of its own
-   ([D92 (build-ranges)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d92)).
+   (D92 (build-ranges)).
    A new range takes the next free item number, and no item is renumbered, because the
    stop card's stamp, the detail file's header, and `plumbbob harvest` find a landed range
    by its number. A split or re-cut that moves where a call falls moves the stop with it. Show
@@ -85,7 +85,7 @@ grew, but its everyday job is to sharpen, not to invent.
    the card names: the card names `/plumbbob:run` for the range, and the turn hook mints a
    run's grant from the plan as the human types the run, so the next run lands the range
    as re-cut, while a run already typed keeps the grant it minted
-   ([D96 (plan-names-the-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d96)).
+   (D96 (plan-names-the-grant)).
    Then read `plumbbob status`: its ranges block carries a `⚠` row for any range still
    broken, and none once every undone step sits in exactly one range.
 
@@ -93,7 +93,7 @@ grew, but its everyday job is to sharpen, not to invent.
    you just wrote leaves it behind, and the next check fails until it is current again.
    `plumbbob order` re-exports on its own; an edit made by hand does not, so run
    `plumbbob export` once the step is written, and read its findings when it refuses
-   ([D146 (cli-keeps-current)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d146)).
+   (D146 (cli-keeps-current)).
    A step that waits on less than the one before it, or wants a stop or an effort of its
    own, carries `- after:`, `- stop:` or `- effort:` beneath its seam, in the grammar
    [docs/plan-export.md](https://github.com/robmclarty/plumbbob/blob/main/docs/plan-export.md)
@@ -105,7 +105,7 @@ grew, but its everyday job is to sharpen, not to invent.
    counterpart to `/plumbbob:plan`'s plan-time binding. `plumbbob agent list` shows what's
    resolvable by name; a binding may also be a `./` path to an agent kept elsewhere in
    the repo
-   ([D160 (path-bindings)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d160)). Same rule as the plan move: bindings + prose only, never a conditional
+   (D160 (path-bindings)). Same rule as the plan move: bindings + prose only, never a conditional
   . Leave it untouched when the step's agents are still right, or when the build
    uses none.
 
@@ -118,9 +118,9 @@ grew, but its everyday job is to sharpen, not to invent.
   moves): never the Roadmap, never loose prose. A done step (`[x]`) is history; do not
   rewrite it. The `## Build order` line is `plumbbob order`'s to write, never yours to
   edit, and so is a range the order re-cuts.
-- **Cite the plan's own numbers in the linked form.** A `D`/`C`/`Q` you write into a
-  step's proof, seam, or notes reads `[D4 (default-waves)](#d4)`; the slug travels
-  with the number, and the link lands on the `<a id="d4">` anchor minted where the item
-  was born. Never a bare `D4`; if the item you want to cite has no anchor yet, that is a
-  `/plumbbob:refine` repair, not something to invent here.
+- **Cite the plan's own numbers by their slug, in plain text.** A `D`/`C`/`Q` you write
+  into a step's proof, seam, or notes reads `D4 (default-waves)`; the slug travels with
+  the number, copied from where the item was born, with no anchor and no link. Never a
+  bare `D4`; if the item you want to cite has no slug yet, that is a `/plumbbob:refine`
+  repair, not something to invent here.
 - **The human approves the revision** before it lands. You propose; they decide.

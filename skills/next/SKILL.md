@@ -13,17 +13,17 @@ Current session state as data (injected when this skill runs): !`plumbbob status
 state as one JSON object: `state` names where the build stands, and `moves` lists every
 move open from there, the likeliest first. You show those moves as choices, the human
 picks one, and you make it
-([D128 (one-door)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d128)).
+(D128 (one-door)).
 The CLI wrote each move's `label` and `description`; you pass them through and compose
 neither
-([D127 (state-as-data)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d127)).
+(D127 (state-as-data)).
 
 ## 1. Ask first, before any text
 
 When your tools include `AskUserQuestion` and `moves` holds two or more, call it as the
 first thing in the turn, with no sentence before it: a client that folds text written
 before a tool call would hide the sentence and show the question alone
-([D129 (ask-first)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d129)).
+(D129 (ask-first)).
 
 - One question, `What next?`, with the header `Next move`.
 - Its options are the first four `moves`, in the order given: each option's label is the
@@ -72,7 +72,7 @@ close the build, or discard work. Run exactly one command and end the turn on it
 Then write one sentence, the picked move's `description` verbatim, and end the turn on
 the command's output, whole, with nothing after it. Every tool call comes before the
 sentence and none after it
-([D121 (reply-after-the-tools)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d121)).
+(D121 (reply-after-the-tools)).
 
 **The human dismissed the question, or typed something else.** A dismissal is the
 fallback above: relay `plumbbob status` and stop. Free text that names a move in the list
@@ -102,7 +102,7 @@ End the turn on `plumbbob status --questions`, relayed whole, or on its
 - **A choice never lands work.** This skill never runs `plumbbob checkpoint`,
   `plumbbob harvest`, `plumbbob finish`, `plumbbob revert`, or `plumbbob abandon`, and its
   tools leave them out. Those moves are typed, and the choice for each says what to type
-  ([D64 (approval-latch)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d64)).
+  (D64 (approval-latch)).
 - **The CLI names the moves.** You relay `label` and `description`; you never invent a
   move, and never offer one the list lacks.
 - **The question comes first, the CLI's output last.** No text before the question; no

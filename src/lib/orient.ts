@@ -1484,10 +1484,10 @@ export function markStepDone(intent: string, n: number): string {
  * Count the questions still open: `- Q\d+:` openers under `## Open questions`
  * that carry neither a resolution marker nor an unfilled scaffold body.
  *
- * The opener may carry a slug-at-birth gloss (`- Q2 (some-slug): ...`) and the
- * anchored form a citable question is born in:
- * `- <a id="q2"></a>**Q2 (some-slug)**: ...`, which is what a `[Q2 (some-slug)](#q2)`
- * reference site elsewhere in the file lands on. The count reads through both, and
+ * The opener may carry a slug-at-birth gloss (`- Q2 (some-slug): ...`), in bold
+ * as a plan writes it (`- **Q2 (some-slug)**: ...`), or in the anchored form a plan
+ * written before D170 (plain-intent) carries (`- <a id="q2"></a>**Q2 (some-slug)**: ...`).
+ * The count reads through all three, and
  * through any mix of them a hand-edited intent leaves mid-build; sub-lines
  * (`*plain:*`/`*lean:*`) never match.
  *

@@ -28,9 +28,9 @@ is fine; refining is always available.
   **Architecture sketch** a cold, adversarial read and surface holes: ambiguities,
   unhandled edge cases, hidden assumptions, collisions with the existing code. Append
   each under `## Open questions` in the expanded form the template shows: an opener
-  line (the hole as a question, anchored and slugged at birth like any Decision,
-  `- <a id="q2"></a>**Q2 (some-slug)**: …`, so a `[Q2 (some-slug)](#q2)` reference
-  elsewhere in the file lands on it), a `*plain:*` sub-line (what's at stake in plain
+  line (the hole as a question, slugged at birth like any Decision,
+  `- **Q2 (some-slug)**: …`, cited elsewhere in the file as `Q2 (some-slug)`), a
+  `*plain:*` sub-line (what's at stake in plain
   words, enough to judge it cold), and a `*lean:*` sub-line (your proposed resolution:
   one answer to react to, not a menu). Never
   append a hole as a Decision: resolving it is the human's convergence, not yours;
@@ -41,7 +41,7 @@ is fine; refining is always available.
   **Ask by choice where the host can.** When your tools include `AskUserQuestion` and a
   question waits on the human, ask before you write any text this turn, since a client
   that folds text written before a tool call would hide it
-  ([D129 (ask-first)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d129)).
+  (D129 (ask-first)).
   With two or more waiting, ask one question first, `<N> open questions, each with a
   lean. How do you want to settle them?`, under the header `Questions`, with three
   options: `Take every lean (Recommended)`, `Go through them`, and
@@ -57,7 +57,7 @@ is fine; refining is always available.
   table whole, one row per open question with why it matters and your lean, each cell
   the first sentence of its line, so write each line to stand on that sentence, and keep
   the question about as long as the other two, since the table cuts it at twelve words
-  ([D124 (brief-questions)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d124)). Then
+  (D124 (brief-questions)). Then
   invite per-question answers; the human can settle any of them right there in one
   message (`yes to all leans`, or `yes to all leans except Q3: <their answer>`), no
   doc-flipping, no extra round-trip per hole. A resolved question gets
@@ -66,20 +66,20 @@ is fine; refining is always available.
   `plumbbob defer Q3 "<what settles it>"`, which keeps the question and swaps its
   `*resolve by:*` for `*deferred:* <date>, until <what settles it>` on the opener line,
   and the card moves it to the `Deferred` table beneath, still open
-  ([D120 (deferred-questions)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d120)).
+  (D120 (deferred-questions)).
   A question the table still shows that the human has already set aside (parked, settled
   as a tangent, or kept open as a log) is drift: propose deferring it, until what the
   build says it waits on, rather than asking it again
-  ([D123 (defer-records)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d123)).
+  (D123 (defer-records)).
   Never retype the table as a list of your own
-  ([D118 (questions-table)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d118)).
+  (D118 (questions-table)).
 - **Repair (re-sync to reality).** When the plan has drifted (a Decision was overtaken
   by what you built, a Constraint changed, a Step no longer matches the seam, a `- like:`
   line names a file that moved, a step still carries its proof as a `**done when:**`
   clause on the title line, or a
   **step's title no longer describes what the diff actually does**), propose the edits
   that bring `intent.md` back in line with the truth. A step title *is* its checkpoint
-  commit subject ([D68 (conventional-subjects)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d68)), so bringing a drifted one back in line
+  commit subject (D68 (conventional-subjects)), so bringing a drifted one back in line
   means keeping it a plain, single-line `type(scope): description` subject, with
   load-bearing detail (file paths, module names) in `seam` and `proof`,
   **never jammed into the title**; the checkpoint body pass then reconciles and lands
@@ -93,7 +93,7 @@ is fine; refining is always available.
 
   **A repair keeps the build ranges true.** When the plan carries `## Build ranges`,
   `plumbbob order` re-cuts them to follow the sequence it writes
-  ([D109 (ranges-follow-the-order)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d109)):
+  (D109 (ranges-follow-the-order)):
   a step it places joins the range whose steps sit on both sides of it, else the one it
   builds ahead of, else the one it builds after, never a bare range, and never a range that
   has landed, since that range's call was made and the step would reopen it; its ending
@@ -101,7 +101,7 @@ is fine; refining is always available.
   order cannot say it, and before you run the verb: a bare range of its own for a step
   that brings a call the human has to make before it lands, or a re-cut that moves where a
   call falls, shown in the same before/after
-  ([D92 (build-ranges)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d92)).
+  (D92 (build-ranges)).
   A new range takes the next free item number, and no item is renumbered, because the stop
   card's stamp, the detail file's header, and `plumbbob harvest` find a landed range by its
   number. A range the verb's ending names as still needing a re-cut is yours to re-cut in
@@ -139,7 +139,7 @@ it already holds. A finding that changes the plan becomes an Open question or a 
 repair, by the two modes above; it never becomes a Decision by itself. The codebase and
 record sections do not age with a lockfile, so leave them. On a no, go on: the row is
 advice and gates nothing
-([D158 (research-is-dated)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d158)).
+(D158 (research-is-dated)).
 With no such row, say nothing about research. With no web tool on the host, say that the
 lens cannot run here and leave the stamp as it is; never write an ecosystem finding from
 memory.
@@ -157,4 +157,4 @@ memory.
   approved edit to `intent.md` leaves it behind and turns the next check red. Run
   `plumbbob export` once the edits are written; when it refuses, its findings name the
   step and the line, and fixing them is part of the same refine
-  ([D146 (cli-keeps-current)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d146)).
+  (D146 (cli-keeps-current)).

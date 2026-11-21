@@ -29,12 +29,12 @@ request → [ limiter (per-IP token bucket) ] → login handler
 
 ## Decisions
 
-- <a id="d1"></a>**D1 (in-memory-bucket)**: in-memory token bucket, *because* single instance today; defer Redis.
-- <a id="d2"></a>**D2 (five-per-minute)**: 5 attempts / 60s / IP, *because* it matches the existing lockout policy.
+- **D1 (in-memory-bucket)**: in-memory token bucket, *because* single instance today; defer Redis.
+- **D2 (five-per-minute)**: 5 attempts / 60s / IP, *because* it matches the existing lockout policy.
 
 ## Constraints
 
-- <a id="c1"></a>**C1 (no-new-deps)**: no new runtime dependencies.
+- **C1 (no-new-deps)**: no new runtime dependencies.
 
 ## Steps
 
@@ -63,7 +63,7 @@ Run step 1 alone to settle how the bucket refills, then run the rest straight th
 
 ## Open questions
 
-- <a id="q1"></a>**Q1 (proxy-trust)**: resolved 2026-07-03: the reverse proxy strips and re-sets `X-Forwarded-For`, so the limiter keys on it (confirmed with ops).
+- **Q1 (proxy-trust)**: resolved 2026-07-03: the reverse proxy strips and re-sets `X-Forwarded-For`, so the limiter keys on it (confirmed with ops).
 
 ## Verdicts
 

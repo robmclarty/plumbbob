@@ -166,7 +166,7 @@ the range unread:
 2. `/plumbbob:build 2-3`, **stop:** try six logins yourself, then finish
 ```
 
-An open question opens `- <a id="q1"></a>**Q1 (slug)**: …, *resolve by:* …`, and
+An open question opens `- **Q1 (slug)**: …, *resolve by:* …`, and
 leaving one to the work is a verb, not an edit
 ([D123 (defer-records)](decisions.md#d123)):
 

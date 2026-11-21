@@ -18,7 +18,7 @@ and approves in the human's place**, and it **chains**:
   `after`-agent output simply feeds the *existing* self-review halt condition.
 - **Stop and hand back to the human** the moment a halt arrives, and end the turn by the
   kind of halt it is
-  ([D85 (range-top-lands)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d85)):
+  (D85 (range-top-lands)):
   - **A halt on trouble leaves a step unlanded.** The check is red (a red `plan` check
     that `plumbbob export` clears, as step 5 says, is no halt), the step's proof
     command is red (the checkpoint refused and recorded nothing), the checkpoint
@@ -36,7 +36,7 @@ and approves in the human's place**, and it **chains**:
     turn a halt on trouble does: write the detail file, run `plumbbob handoff`, and paste
     its block. The latch would let it land, since `--auto` grants every step, so keeping
     the step open is yours to do
-    ([D94 (auto-and-stops)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d94)).
+    (D94 (auto-and-stops)).
     A range that lands its steps runs through, since its stop is a review that can wait
     for the end of the run, and a typed range stays exactly as typed.
   - **A clean halt lands its step first.** The top of a requested range is reached (the
@@ -61,7 +61,7 @@ no range) always ends at the pause.
 once step 3 has landed** instead of chaining to done. A range may also list its steps, numbers
 and spans joined by commas (`/plumbbob:build 20,5-9`, typed with or without a space after a
 comma), and it grants exactly the steps it names: the checkpoint refuses any other
-([D91 (step-list-grants)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d91)).
+(D91 (step-list-grants)).
 The range *is* the opt-in; you do not also pass `--auto`.
 
 **A run hands you a range the plan names, walked the same way.** `/plumbbob:run` (the run
@@ -69,7 +69,7 @@ skill) reads this section for its walk: its grant is the `steps` list the turn h
 from the plan's `## Build ranges` when the human typed the run, in the normal form a typed
 list mints, so the latch, `plumbbob build`'s notice at the top step, and every halt below
 read it exactly as they read a typed range
-([D96 (plan-names-the-grant)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d96)).
+(D96 (plan-names-the-grant)).
 
 Run it as the `--auto` loop, walked in build order. **Start at the range's first undone step
 in build order, however it is written** (`5-9,20` under an order that puts 20 first starts at

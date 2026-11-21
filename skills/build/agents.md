@@ -39,4 +39,4 @@ harness *is* bound, this is what each affected step gains, in lifecycle order.
   `evidence[]` (a screenshot, a trace) is the CLI's to show: `plumbbob handoff` lists each
   piece as a link under the Readout, so leave the paths out of your review, and never
   treat one as proof the step is done
-  ([D157 (evidence-is-shown)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d157)).
+  (D157 (evidence-is-shown)).

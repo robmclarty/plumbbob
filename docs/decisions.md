@@ -2335,9 +2335,27 @@ enforcement of the checkpoint tick, while the work plane stays guidance ([**D10 
   ([**D167 (host-orchestration)**](#d167)). The run skill reads the build skill and `auto.md` every run, and the
   other two on the same cues, from its own base directory as before ([**D99 (one-loop)**](#d99)). `SKILL.md`
   went from 42.8 kB to 29 kB, so a plain `/plumbbob:build <n>` with no agents and no orchestration reads a
-  third less. *because* every build turn paid for prose that applied to a minority of builds, and a skill read
-  whole every run is a token cost the person pays each step. *Tagged in* the `build` and `run` skills and
-  `test/contract/skills.test.ts`.
+  third less. The plan skill does the same with `interview.md` (no argument), `agents.md` (a build that leans on
+  agents) and `orchestration.md` (the `orchestration  host` line). A later pass tightened the build skill's
+  verify-and-pause step and cited decisions in the skills in plain text, which the citation scanner now holds as
+  a surface of its own ([**D170 (plain-intent)**](#d170)): `skills/build/SKILL.md` reads 20.2 kB, and
+  `skills/plan/SKILL.md` 28.6 kB from 33.6. *because* every build turn paid for prose that applied to a minority
+  of builds, and a skill read whole every run is a token cost the person pays each step. *Tagged in* the
+  `build`, `plan` and `run` skills and `test/contract/skills.test.ts`.
+
+- <a id="d170"></a>**D170 (plain-intent): A plan's items are born with their slug and no anchor, and the plan cites
+  them in plain text.** A Decision, Constraint or open question in a build's `intent.md` opens
+  `- **D1 (in-memory-bucket)**: …`, and a citation anywhere in the plan, a step's lines, or the detail file reads
+  `D1 (in-memory-bucket)`, with no `<a id>` anchor and no `(#d1)` link. The template and the plan, step, refine,
+  harvest and build skills teach it, and the examples and the course show it. A plan written before keeps its
+  anchors and every reader still parses it: the question opener, the eval helpers and the StepContext scrape
+  accept either form. The CLI's own links into a plan were already by line (`intent.md#L14`), so nothing it
+  prints changes. `docs/decisions.md` keeps its anchors and links ([**D74 (glossed-citations)**](#d74)), since it is
+  read rendered, on GitHub and the site. *because* a plan is read as text in an editor far more than rendered,
+  the anchor was markup to read around on every item, and the slug already does the work the link did: the
+  reader sees what `D1` is without following anything. *Tagged in* `templates/intent.md`, the `plan`, `step`,
+  `refine`, `harvest` and `build` skills, `orient.ts`, `scripts/check-refs.ts` (which now skips `templates/`, as it
+  skips `examples/`), and `docs/cli-only.md`.
 
 ### Superseded
 

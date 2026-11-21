@@ -137,6 +137,7 @@ export const c8: Contract = {
           }),
         ),
         info('authored a Steps list (boxes parse)', intentBoxes(repo).size > 0),
+        info('no `<a id>` anchors in the plan (D170 (plain-intent))', !t1.intent.includes('<a id')),
         info(
           'plan checkpoint landed (latch-legal either way)',
           checkpointLines(repo).some((line) => line.kind === 'plan'),

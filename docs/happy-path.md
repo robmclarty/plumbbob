@@ -64,11 +64,11 @@ seam**, and the build ranges last:
 - **Explicitly NOT doing:** distributed/multi-instance limits; CAPTCHA.
 
 ## Decisions
-- <a id="d1"></a>**D1 (in-memory-bucket)**: in-memory token bucket, *because* single instance today; defer Redis.
-- <a id="d2"></a>**D2 (five-per-minute)**: 5 attempts / 60s / IP, *because* it matches the existing lockout policy.
+- **D1 (in-memory-bucket)**: in-memory token bucket, *because* single instance today; defer Redis.
+- **D2 (five-per-minute)**: 5 attempts / 60s / IP, *because* it matches the existing lockout policy.
 
 ## Constraints
-- <a id="c1"></a>**C1 (no-new-deps)**: no new runtime dependencies.
+- **C1 (no-new-deps)**: no new runtime dependencies.
 
 ## Steps
 1. [ ] feat(limiter): add a token-bucket limiter

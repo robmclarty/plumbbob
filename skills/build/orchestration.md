@@ -9,7 +9,7 @@ below are the build skill's own loop (`SKILL.md` beside this file).
 When the dashboard carries the line
 `orchestration  host: a step may be built by sub-agents, inside its seam`, the human has
 set `orchestration` to `host` in the settings
-([D167 (host-orchestration)](https://github.com/robmclarty/plumbbob/blob/main/docs/decisions.md#d167)). You are then the step's orchestrator as well as
+(D167 (host-orchestration)). You are then the step's orchestrator as well as
 its builder: you cut the work, hand it out, and answer for what comes back. Without the
 line this section does not apply, and you never fan a step out on your own judgment.
 
