@@ -270,6 +270,11 @@ this one, never had. Two seams overlap by runciter's own test (`seams_overlap`):
 entry of the other, or a `dir/` grant in either covers an entry of the other, so `src/lib/`
 overlaps `src/lib/intent.ts` and `src/lib`, but not `src/library/a.ts`. Where the two
 entries differ, the message names both (``overlap at `src/lib/` and `src/lib/intent.ts` ``).
+Runciter's test has since widened (its `2fe2435`, 2026-11-20): an entry with no trailing
+slash covers what is under it there, so `src/lib` and `src/lib/intent.ts` overlap in
+runciter and not here. A plan this check passes can still name two such steps with neither
+waiting on the other, and runciter then runs them one after the other, which costs
+parallelism and nothing else. Matching the two tests again is open work.
 The check passes when either step reaches the other through `depends_on`, directly or
 through steps between ([D142 (reaches-not-names)](decisions.md#d142)): a chain serializes
 two steps as surely as a direct edge, and demanding the edge would fill plans with
