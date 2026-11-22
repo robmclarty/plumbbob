@@ -5,6 +5,37 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.3] - 2026-11-21
+
+- **Added:** an `orchestration` setting, `host` or `off`, says who builds a step once the
+  grain has sized it. Under `host`, `status` prints an `orchestration` line, the `plan`
+  skill writes a wide step's split as a `- note:`, and the `build` skill hands the slices to
+  the host's sub-agents (the Workflow tool at three slices or more), then joins the diff,
+  runs the proof and writes the one card itself. The plan card names an undone step whose
+  seam holds two slices or more and carries no note. The seam, the proof and the stop do
+  not move, no sub-agent can land a step, and with `off` every surface prints what it
+  printed before. D167 (host-orchestration).
+- **Added:** `examples/agents/crew-builder`, the first example for the `build` slot: a
+  fascicle agent that writes candidates for a step's diff inside its seam and keeps one,
+  picked by the step's proof command, a judge model, or a critic's loop. Its provider
+  (`ollama` by default, or `claude_cli`), flow and limits are read from
+  `agentConfig.crew-builder`.
+- **Added:** eval contract c16 (a wide step carries its split) measures the `plan` skill
+  under `orchestration: host`: 5/5, against 0/10 for the same prompt with the key off.
+- **Changed:** a change the human asks for, mid-build or at the pause, is made, even when it
+  reaches past the step or the seam. The model takes the lean it would recommend where the
+  request leaves a choice open, names any path outside the seam, and may recommend a step
+  of its own, but never parks the change in its place. Only an idea raised without asking
+  for it now is parked, and a request is still no approval. This reverses 0.17.1, which
+  parked such a request. D168 (asked-is-made).
+- **Changed:** a plan's Decisions, Constraints and open questions are written
+  `- **D1 (slug)**: …` and cited as plain `D1 (slug)`, with no `<a id>` anchor and no link.
+  A plan written before keeps its anchors and still parses. D170 (plain-intent).
+- **Changed:** the `build` skill reads `auto.md`, `agents.md` and `orchestration.md` from
+  beside it, each only on its cue, and its verify-and-pause step is shorter: `SKILL.md` is
+  20 kB, from 43. The `plan` skill reads its interview, harness bindings and split rules the
+  same way, 29 kB from 34. The skills cite decisions in plain text. D169 (build-on-demand).
+
 ## [0.17.2] - 2026-11-20
 
 - **Added:** `contractPaths` in the tracked `settings.json` lists the paths the rest of the
